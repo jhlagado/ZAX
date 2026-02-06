@@ -20,6 +20,12 @@ This spec intentionally avoids “future ideas”; anything not defined here is 
 * In `asm` regions, newlines terminate instructions/keywords.
 * Spaces/tabs separate tokens.
 
+Multi-line constructs (v0.1):
+* ZAX does not use significant whitespace (indentation is ignored).
+* Multi-line constructs are delimited by explicit keywords:
+  * `end` terminates `func`, `op`, `type` record bodies, `extern <binName>` blocks, and `if`/`while` blocks.
+  * `until <cc>` terminates a `repeat` block.
+
 ### 1.2 Comments
 * `;` starts a comment that runs to end of line.
 * Comments are allowed everywhere.
@@ -44,8 +50,8 @@ ZAX treats the following as **reserved** (case-insensitive):
 * Z80 mnemonics and assembler keywords used inside `asm` (e.g., `ld`, `add`, `ret`, `jp`, ...).
 * Register names: `A B C D E H L HL DE BC SP`.
 * Condition codes used by structured control flow: `Z NZ C NC M P`.
-* Structured-control keywords: `if`, `else`, `while`, `repeat`, `until`.
-* Module and declaration keywords: `module`, `import`, `type`, `enum`, `const`, `var`, `data`, `bin`, `hex`, `extern`, `func`, `op`, `asm`, `export`, `section`, `align`, `at`, `from`, `in`.
+* Structured-control keywords: `if`, `else`, `while`, `repeat`, `until`, `end`.
+* Module and declaration keywords: `module`, `import`, `type`, `enum`, `const`, `var`, `data`, `bin`, `hex`, `extern`, `func`, `op`, `asm`, `export`, `section`, `align`, `at`, `from`, `in`, `end`.
 
 User-defined symbol names (modules, types, enums, consts, vars/data/bins, funcs, ops) must not collide with any reserved name, ignoring case.
 
@@ -81,6 +87,13 @@ Directives:
 * `section <name> at <imm16>`: selects section and sets its starting address.
 * `section <name>`: selects section without changing its current counter.
 * `align <imm>`: advances the current section counter to the next multiple of `<imm>`.
+
+Scope rules (v0.1):
+* `section` and `align` directives are module-scope only. They may not appear inside `func`/`op` bodies or inside `asm` streams.
+
+Address rules (v0.1):
+* A section’s starting address may be set at most once. A second `section <name> at <imm16>` for the same section is a compile error.
+* `section <name>` (without `at`) may be used any number of times to switch the active section.
 
 Packing order:
 1. Resolve imports and determine a deterministic module order (topological; ties broken by module ID/path string).
@@ -130,6 +143,9 @@ Types exist for layout/width/intent only. No runtime type checks are emitted.
 * `ptr` (16-bit pointer; treated as `addr` for codegen)
 * `void` (function return type only)
 
+Notes (v0.1):
+* `ptr` is untyped in v0.1 (there is no `ptr<T>`). This is intentional; future versions may add optional pointer parameterization.
+
 ### 4.2 Type Aliases
 Syntax:
 ```
@@ -137,16 +153,30 @@ type Name byte
 type Ptr16 ptr
 ```
 
+Type expressions (v0.1):
+* Scalar types: `byte`, `word`, `addr`, `ptr`
+* Arrays: `T[n]` (nested arrays allowed)
+* Records: a record body starting on the next line and terminated by `end`
+
+Arrays and nesting (v0.1):
+* Array types may be used in aliases (`type Buffer byte[256]`) and as record field types.
+* Record field types may reference other record types (nested records).
+
 ### 4.3 Enums
 Syntax:
 ```
-enum Mode { Read, Write, Append }
+enum Mode Read, Write, Append
 ```
 
 Semantics:
 * Enum members are sequential integers starting at 0.
 * Storage width is `byte` if member count ≤ 256, else `word`.
-* Enum names and members are immediate values usable in `imm` expressions.
+* Enum members are immediate values usable in `imm` expressions.
+
+Enum name binding (v0.1):
+* Enum member names are introduced into the global namespace as immediate values.
+  * Example: after `enum Mode Read, Write`, `Read` and `Write` may be used in `imm` expressions.
+* Qualified member access (e.g., `Mode.Read`) is not supported in v0.1.
 
 ### 4.4 Consts
 Syntax:
@@ -175,7 +205,7 @@ Layout:
 * Arrays are contiguous, row-major (C style).
 * `a[r][c]` addresses `base + (r*COLS + c) * sizeof(T)`.
 
-Index forms (v1):
+Index forms (v0.1):
 * constant immediate
 * 8-bit register
 * `(HL)` (byte read from memory at `HL`)
@@ -186,13 +216,13 @@ Notes (v0.1):
 ### 5.2 Records (Packed Structs)
 Record types are layout descriptions:
 ```
-type Sprite {
+type Sprite
   x: word
   y: word
   w: byte
   h: byte
   flags: byte
-}
+end
 ```
 
 Layout rules:
@@ -229,6 +259,18 @@ Lowering rules (v0.1):
 * The lowered sequence must preserve registers other than the instruction’s explicit destination(s).
 * Any internal stack usage must have net stack delta 0.
 
+Lowering limitations (v0.1):
+* Some source forms may be rejected if no correct lowering exists under the constraints above (e.g., operations whose operand ordering cannot be preserved without clobbering).
+
+Lowering guarantees and rejected patterns (v0.1):
+* The compiler guarantees lowering for SP-relative loads/stores of locals/args for the following families:
+  * `LD r8, (ea)` and `LD (ea), r8`
+  * `LD r16, (ea)` and `LD (ea), r16`
+  where `ea` is a local/arg slot, `rec.field`, `arr[i]`, or `ea +/- imm`.
+* The compiler rejects source forms that are not meaningful on Z80 and do not have a well-defined lowering under the preservation constraints, including:
+  * memory-to-memory forms (e.g., `LD (ea1), (ea2)`).
+  * instructions where both operands require lowering and a correct sequence cannot be produced without clobbering non-destination registers or flags that must be preserved.
+
 ### 6.2 `var` (Uninitialized Storage)
 Syntax:
 ```
@@ -245,16 +287,22 @@ var
 Syntax:
 ```
 data
-  table: word = { 1, 2, 3, 4 }
-  banner: byte = "HELLO"
-  bytes: byte = { $00, $01, $FF }
+  table: word[4] = { 1, 2, 3, 4 }
+  banner: byte[5] = "HELLO"
+  bytes: byte[3] = { $00, $01, $FF }
 ```
 
 Initialization:
-* `byte = { imm8, ... }` emits bytes.
-* `word = { imm16, ... }` emits little-endian words.
-* `byte = "TEXT"` emits the ASCII bytes of the string, no terminator.
+* `byte[n] = { imm8, ... }` emits `n` bytes.
+* `word[n] = { imm16, ... }` emits `n` little-endian words.
+* `byte[n] = "TEXT"` emits the ASCII bytes of the string; length must equal `n` (no terminator).
 * A `data` block continues until the next line whose first non-comment token starts a new module-scope declaration/directive (`type`, `enum`, `const`, `var`, `data`, `bin`, `hex`, `extern`, `func`, `op`, `import`, `module`, `section`, `align`, `export`) or until end of file/scope.
+
+Type vs initializer (v0.1):
+* Initializers must match the declared type; ZAX does not infer array lengths from initializer length.
+  * Example: write `table: word[3] = { 1, 2, 3 }`, not `table: word = { 1, 2, 3 }`.
+* For array types (e.g., `word[8]` or `Sprite[4]`), the initializer element count must match the total number of scalar elements implied by the array type.
+* Record initializers must supply field values in field order; for arrays of records, initializers are flattened in element order.
 
 ### 6.4 `bin` / `hex` (External Bytes)
 `bin` emits a contiguous byte blob into a target section and binds a base name to its start address:
@@ -278,11 +326,15 @@ extern func bios_putc(ch: byte): void at $F003
 Bind multiple entry points relative to a `bin` base:
 ```
 bin legacy in code from "asm80/legacy.bin"
-extern legacy {
+extern legacy
   func legacy_init(): void at $0000
   func legacy_putc(ch: byte): void at $0030
-}
+end
 ```
+
+Relative `extern` semantics (v0.1):
+* In an `extern <binName> ... end` block, the `at <imm16>` value is an **offset** from the base address of `<binName>`.
+  * Example: if `legacy` is placed at `$C000`, then `legacy_putc ... at $0030` resolves to absolute address `$C030`.
 
 `extern`-declared names are normal global symbols; collisions are errors. Prefer `<binName>_name` conventions (e.g., `legacy_putc`).
 
@@ -328,22 +380,28 @@ Precedence (v0.1):
 ### 8.1 Declaration Form
 Syntax:
 ```
-export func add(a: word, b: word): word {
+export func add(a: word, b: word): word
   var
     temp: word
   asm
     ld hl, (a)
+    ; Lowered by the compiler (Z80 cannot encode `add hl, (ea)` directly).
     add hl, (b)
     ret
-}
+end
 ```
 
 Rules:
 * Module-scope only; no inner functions.
 * Inside a function body:
-  * optional `var` block (locals, one per line)
-  * required `asm` block
+  * at most one optional `var` block (locals, one per line)
+  * exactly one required `asm` block
+  * `end` terminates the function body
 * `asm` blocks may contain Z80 mnemonics, `op` invocations, and structured control flow (Section 10).
+
+Function-body block termination (v0.1):
+* Inside a function/op body, a `var` block (if present) continues until the `asm` keyword.
+* `asm` bodies may be empty (no instructions).
 
 ### 8.2 Calling Convention
 * Arguments are passed on the stack, each argument occupying 16 bits.
@@ -421,22 +479,23 @@ Stack-depth constraints (v0.1):
 ### 9.2 Declaration Form
 Syntax:
 ```
-op add16(dst: HL, src: reg16) {
+op add16(dst: HL, src: reg16)
   asm
     add hl, src
-}
+end
 
-op add16(dst: DE, src: reg16) {
+op add16(dst: DE, src: reg16)
   asm
     ex de, hl
     add hl, src
     ex de, hl
-}
+end
 ```
 
 Rules:
 * `op` is module-scope only.
 * `op` bodies contain an `asm` stream.
+* `end` terminates the `op` body.
 * `op` invocations are permitted inside `asm` streams of `func` and `op`.
 * Cyclic `op` expansion is a compile error.
 
@@ -455,10 +514,20 @@ Address/deref matchers:
 * `ea`: effective address expressions (Section 7.2)
 * `mem8`, `mem16`: dereference operands written as `(ea)` with implied width
 
+Notes (v0.1):
+* Matchers constrain call sites, but the `op` body must still be valid for all matched operands. If an expansion yields an illegal instruction form for a given call, compilation fails at that call site.
+* In `op` parameters, `mem8` and `mem16` disambiguate dereference width. In raw Z80 mnemonics, dereference width is implied by the instruction form (destination/source registers).
+* `reg16` includes `SP`; `op` authors should use fixed-register matchers if an expansion is only valid for a subset of register pairs.
+
 ### 9.4 Overload Resolution
 * `op` overloads are selected by best match on matcher types and fixed-register patterns.
 * If no overload matches, compilation fails.
 * If multiple overloads match equally, compilation fails (ambiguous).
+
+Specificity (v0.1):
+* Fixed-register matchers (e.g., `HL`) are more specific than class matchers (e.g., `reg16`).
+* `imm8` is more specific than `imm16` for values that fit in 8 bits.
+* `mem8`/`mem16` are more specific than `ea`.
 
 ### 9.5 Autosave Clobber Policy
 To keep `op` expansions transparent:
@@ -480,35 +549,36 @@ ZAX supports structured control flow only inside `asm` blocks. Conditions are fl
 * `M` / `P`: sign flag set (minus) / not set (plus)
 
 ### 10.2 Forms
-* `if <cc> { ... } else { ... }`
-* `while <cc> { ... }`
-* `repeat { ... } until <cc>`
+* `if <cc> ... end` (optional `else`)
+* `while <cc> ... end`
+* `repeat ... until <cc>`
 
 These forms lower to compiler-generated hidden labels and conditional/unconditional jumps. Control-flow constructs do not themselves set flags.
 
 Notes:
-* `else { ... }` is optional.
+* `else` is optional.
+* `else` must immediately follow the `if` body with only whitespace/comments/newlines in between.
 
 Condition evaluation points (v0.1):
-* `if <cc> { ... }`: `<cc>` is evaluated at the `if` keyword using the current flags.
-* `while <cc> { ... }`: `<cc>` is evaluated at the `while` keyword on entry and after each iteration. The back-edge jumps to the `while` keyword.
-* `repeat { ... } until <cc>`: `<cc>` is evaluated at the `until` keyword using the current flags.
+* `if <cc> ... end`: `<cc>` is evaluated at the `if` keyword using the current flags.
+* `while <cc> ... end`: `<cc>` is evaluated at the `while` keyword on entry and after each iteration. The back-edge jumps to the `while` keyword. The loop body is responsible for establishing flags for the next condition check.
+* `repeat ... until <cc>`: `<cc>` is evaluated at the `until` keyword using the current flags.
 
 ### 10.3 Examples
 ```
 ; if A == 0 then ...
 or a
-if Z {
+if Z
   ; ...
-} else {
+else
   ; ...
-}
+end
 
 ; repeat-until A becomes zero
-repeat {
+repeat
   dec a
   or a
-} until Z
+until Z
 ```
 
 ### 10.4 Local Labels (Discouraged, Allowed)
@@ -520,7 +590,8 @@ Label definition syntax (v0.1):
 Scope and resolution (v0.1):
 * Local labels are scoped to the enclosing `func` or `op` body and are not exported.
 * A local label may be referenced before its definition within the same `asm` block (forward reference).
-* When resolving an identifier in an instruction operand, local labels take precedence over global symbols.
+* Local label names must not collide with reserved names (Section 1.5), ignoring case.
+* When resolving an identifier in an instruction operand, local labels take precedence over locals/args, which take precedence over global symbols.
 
 Usage (v0.1):
 * A local label name may be used anywhere a Z80 mnemonic expects an address/immediate (e.g., `jp loop`, `jr nz, loop`, `djnz loop`).
@@ -537,18 +608,18 @@ import IO
 import Mem
 import "vendor/legacy_io.zax"
 
-enum Mode { Read, Write, Append }
+enum Mode Read, Write, Append
 
 type Index byte
 type WordPtr ptr
 
-type Sprite {
+type Sprite
   x: word
   y: word
   w: byte
   h: byte
   flags: byte
-}
+end
 
 export const MaxValue = 1024
 const TableSize = 8
@@ -559,15 +630,15 @@ var
   hero: Sprite
 
 data
-  table: word = { 1, 2, 3, 4, 5, 6, 7, 8 }
-  banner: byte = "HELLO"
+  table: word[8] = { 1, 2, 3, 4, 5, 6, 7, 8 }
+  banner: byte[5] = "HELLO"
 
 bin legacy in code from "asm80/legacy.bin"
-extern legacy {
+extern legacy
   func legacy_print(msg: addr): void at $0000
-}
+end
 
-export func add(a: word, b: word): word {
+export func add(a: word, b: word): word
   var
     temp: word
   asm
@@ -576,19 +647,20 @@ export func add(a: word, b: word): word {
     ld (temp), hl
     ld hl, (temp)
     ret
-}
+end
 
-func demo(): word {
+func demo(): word
   asm
+    ; `print` is assumed to be provided by the imported `IO` module.
     print HL
     legacy_print HL
     ld hl, (hero.x)
     or a
-    if Z {
+    if Z
       ; ...
-    } else {
+    else
       ; ...
-    }
+    end
     ret
-}
+end
 ```

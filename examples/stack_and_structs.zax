@@ -6,17 +6,17 @@ module StackAndStructs
 ; - array addressing (arr[i] is an ea)
 ; - stack-delta tracking for push/pop and calls
 
-type Sprite {
+type Sprite
   x: word
   y: word
   flags: byte
-}
+end
 
 var
   sprites: Sprite[4]
 
 ; Simple function that uses push/pop (net stack delta 0) around scratch usage.
-export func sum_words(a: word, b: word): word {
+export func sum_words(a: word, b: word): word
   asm
     push de
     ld hl, (a)
@@ -24,10 +24,10 @@ export func sum_words(a: word, b: word): word {
     add hl, de
     pop de
     ret
-}
+end
 
 ; Bump sprites[i].x by dx (dx is zero-extended in v0.1).
-export func bump_sprite_x(i: byte, dx: byte): void {
+export func bump_sprite_x(i: byte, dx: byte): void
   asm
     ; Convert i to an index register
     ld a, (i)
@@ -46,4 +46,4 @@ export func bump_sprite_x(i: byte, dx: byte): void {
     ; sprites[i].x = HL
     ld (sprites[C].x), hl
     ret
-}
+end

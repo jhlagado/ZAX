@@ -12,9 +12,9 @@ extern func bios_putc(ch: byte): void at $F003
 const MsgLen = 10
 
 data
-  msg: byte = "HELLO, ZAX"
+  msg: byte[10] = "HELLO, ZAX"
 
-export func main(): void {
+export func main(): void
   var
     p: addr
   asm
@@ -23,7 +23,7 @@ export func main(): void {
     ld (p), hl
 
     ld b, MsgLen
-    repeat {
+    repeat
       ; load byte at *p into A
       ld hl, (p)
       ld a, (hl)
@@ -34,7 +34,7 @@ export func main(): void {
 
       ; repeat until B reaches 0
       dec b
-    } until Z
+    until Z
 
     ret
-}
+end

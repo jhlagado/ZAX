@@ -68,7 +68,10 @@ All locals/args are 16‑bit words unless explicitly declared as byte.
 * `;` is the comment delimiter (assembly‑style).
 * No semicolons are used for termination.
 * Newlines terminate declarations and directives.
-* Any **multi‑line construct must be wrapped in `{ ... }`**.
+* ZAX does not use significant whitespace (indentation is ignored).
+* Multi-line constructs are delimited by keywords:
+  * `end` terminates `func`, `op`, record `type` bodies, `extern <binName>` blocks, and `if`/`while` blocks.
+  * `until <cc>` terminates a `repeat` block.
 
 ---
 
@@ -119,16 +122,16 @@ extern func bios_putc(ch: byte): void at $F003
 To interop with external assemblers (e.g., asm80), ZAX supports:
 * `bin` / `hex` declarations to **emit raw bytes** into a target segment and bind a name to the base address.
 * `extern func` declarations to bind callable names to absolute addresses or offsets within a `bin`/`hex` include.
-* `extern <binName> { ... }` blocks to bind multiple entry points **relative to a `bin` base**.
-* Names declared inside an `extern <binName> { ... }` block are regular top‑level symbols; to avoid collisions, prefer the convention `<binName>_name` (e.g., `legacy_putc`).
+* `extern <binName> ... end` blocks to bind multiple entry points **relative to a `bin` base**.
+* Names declared inside an `extern <binName> ... end` block are regular top‑level symbols; to avoid collisions, prefer the convention `<binName>_name` (e.g., `legacy_putc`).
 
 Example patterns:
 ```
 bin legacy in code from "legacy.bin"    ; legacy: addr (base of blob)
-extern legacy {
+extern legacy
   func legacy_init(): void at $0000
   func legacy_putc(ch: byte): void at $0030
-}
+end
 
 hex bios from "rom/bios.hex"            ; writes bytes at absolute addresses from HEX records
 extern func bios_print(ch: byte): void at $F003
@@ -141,15 +144,15 @@ extern func bios_print(ch: byte): void at $F003
 ZAX supports structured control flow inside function bodies (within `asm` blocks). These constructs compile to labels and conditional/unconditional jumps.
 
 Core forms:
-* `if <cc> { ... } else { ... }`
-* `while <cc> { ... }`
-* `repeat { ... } until <cc>`
+* `if <cc> ... end` (optional `else`)
+* `while <cc> ... end`
+* `repeat ... until <cc>`
 * (Optional) `for` (defer until needed)
 
 Rules:
 * Conditions are **flag-based** (assembly-style). `<cc>` is one of: `Z NZ C NC M P` (extend later if needed).
 * Control-flow keywords are only recognized inside `asm` blocks.
-* No user labels; the compiler generates hidden labels for structured blocks.
+* Labels are discouraged; prefer structured control flow. Local labels may be used inside an `asm` block when needed.
 * No GOTO in the core language (possible future extension).
 * Minimal nesting encouraged; syntax should compile to straightforward branch sequences.
 
@@ -158,7 +161,7 @@ Note: the implementable v0.1 spec permits *local* labels inside an `asm` block (
 **Flag-based conditions**
 ZAX does not introduce expression-based boolean conditions. Instead, structured control flow branches on CPU flags that are set by the immediately preceding instructions, just like hand-written Z80.
 
-Condition codes (v1):
+Condition codes (v0.1):
 * `Z` / `NZ`: zero flag set / not set
 * `C` / `NC`: carry flag set / not set
 * `M` / `P`: sign flag set (minus) / not set (plus)
@@ -167,13 +170,13 @@ The programmer is responsible for establishing flags before the control-flow sta
 * Test `A` for zero/non-zero: `or a` (sets Z if A==0)
 * Compare `A` to an immediate: `cp 10` (sets Z/C/M based on `A-10`)
 * Compare two registers via `cp r` (for 8-bit comparisons)
-* 16-bit comparisons are typically sequences (e.g., compare high bytes then low bytes); ZAX does not hide this in v1.
+* 16-bit comparisons are typically sequences (e.g., compare high bytes then low bytes); ZAX does not hide this in v0.1.
 
 **Lowering model (what the compiler emits)**
 These forms are syntax for generating hidden labels and jumps:
-* `if <cc> { T } else { F }` lowers to a conditional branch around `T` or into `F`.
-* `while <cc> { B }` lowers to a loop header label, a conditional exit branch, then a back-edge jump.
-* `repeat { B } until <cc>` lowers to a body label, then a conditional exit branch (post-test).
+* `if <cc> ... end` (optional `else`) lowers to a conditional branch around the `if` body or into the `else` body.
+* `while <cc> ... end` lowers to a loop header label, a conditional exit branch, then a back-edge jump.
+* `repeat ... until <cc>` lowers to a body label, then a conditional exit branch (post-test).
 
 No flags or registers are implicitly modified by the control-flow construct itself; only your surrounding Z80 instructions affect flags.
 
@@ -181,24 +184,24 @@ No flags or registers are implicitly modified by the control-flow construct itse
 ```
 ; if A == 0 then ...
 or a
-if Z {
+if Z
   ; A was zero
-} else {
+else
   ; A was non-zero
-}
+end
 
 ; while C is clear (e.g., after a compare)
 cp 10
-while NC {
+while NC
   ; ...
   cp 10
-}
+end
 
 ; repeat-until A becomes zero
-repeat {
+repeat
   dec a
   or a
-} until Z
+until Z
 ```
 
 ---
@@ -207,22 +210,22 @@ repeat {
 
 **Syntax model**
 * Type annotations use `name: type`.
-* Blocks use `{ ... }`.
+* Multi-line blocks are terminated with `end` (and `repeat` blocks terminate with `until <cc>`).
 * Function declarations use `func` and type‑annotated parameters.
 
 Example signature:
 ```
-func add(a: word, b: word): word {
+func add(a: word, b: word): word
   ; raw Z80 mnemonics only
   ld hl, (a)
   add hl, (b)
   ret
-}
+end
 ```
 
 **Function body template**
 ```
-func name(a: word, b: word): word {
+func name(a: word, b: word): word
   var
     temp: word
     flag: byte
@@ -230,7 +233,7 @@ func name(a: word, b: word): word {
     ; Z80 mnemonics + structured control flow
     ; (structured control flow compiles to hidden labels + jumps)
     ...
-}
+end
 ```
 
 **Syntax (opcode‑style)**
@@ -246,7 +249,7 @@ myproc HL, DE
   * 8‑bit in `L`
   * (Optional) 32‑bit in `HL:DE`
 
-**Registers are preserved only if specified.** By default, the callee is free to clobber registers unless it declares a preservation set.
+**Register/flag volatility:** by default, functions may clobber registers and flags. The caller saves anything it needs preserved.
 
 **Reserved identifiers**
 To keep parsing simple and assembly-like, ZAX reserves Z80 mnemonics, register names, and structured-control keywords. User-defined symbols must not collide with these names (case-insensitive).
@@ -333,44 +336,44 @@ Tradeoff:
 
 **Examples**
 ```
-op add16(dst: HL, src: reg16) {
+op add16(dst: HL, src: reg16)
   asm
     add hl, src
-}
+end
 
-op add16(dst: DE, src: reg16) {
+op add16(dst: DE, src: reg16)
   asm
     ; autosave scratch + flags as needed
     ex de, hl
     add hl, src
     ex de, hl
-}
+end
 
-op lea(dst: reg16, src: ea) {
+op lea(dst: reg16, src: ea)
   asm
     ; compute address of src into dst
     ld dst, src
-}
+end
 
-op load16(dst: reg16, src: mem16) {
+op load16(dst: reg16, src: mem16)
   asm
     ; conceptually: dst = *(word*)src
     ; compiler may expand and autosave as needed
     ld dst, src
-}
+end
 
-op store16(dst: mem16, src: reg16) {
+op store16(dst: mem16, src: reg16)
   asm
     ; conceptually: *(word*)dst = src
     ld dst, src
-}
+end
 
-op add16(dst: HL, src: imm16) {
+op add16(dst: HL, src: imm16)
   asm
     ; expand via a scratch regpair if needed
     ; (autosave policy applies)
     add16 HL, DE
-}
+end
 
 ; call sites look like opcodes
 add16 HL, DE
@@ -422,14 +425,14 @@ ZAX uses a simple `type` alias and `enum` declarations:
 ```
 type Index byte
 type WordPtr ptr
-enum Mode { Read, Write, Append }
+enum Mode Read, Write, Append
 ```
 
 **Arrays (nested, C‑style)**
 * Arrays are declared as nested fixed-size arrays: `T[rows][cols]` (not `T[rows, cols]`).
 * Indexing is nested postfix: `a[r][c]`.
 * Layout is contiguous **row‑major** (C‑style): `a[r][c]` addresses `base + (r*COLS + c) * sizeof(T)`.
-* For v1, indices inside `[]` should be simple (constant, 8‑bit register, or `(HL)`).
+* For v0.1, indices inside `[]` should be simple (constant, 8‑bit register, or `(HL)`).
 * Arrays are **0-based**. Valid indices are `0..len-1`. No runtime bounds checks are emitted by default.
 
 **Records (structs)**
@@ -437,16 +440,16 @@ Records are compile-time layout descriptions (like C structs).
 
 Syntax:
 ```
-type Sprite {
+type Sprite
   x: word
   y: word
   w: byte
   h: byte
   flags: byte
-}
+end
 ```
 
-Layout rules (v1):
+Layout rules (v0.1):
 * Fields are laid out in source order.
 * Default layout is **packed** (no implicit padding).
 * `byte` fields consume 1 byte; `word` fields consume 2 bytes (little endian when accessed as a word).
@@ -464,7 +467,7 @@ Layout rules (v1):
   * `LD (expr), HL` writes a word.
 
 **Enums**
-* `enum { A, B, C }` defines sequential constants starting at 0.
+* `enum Name A, B, C` defines sequential constants starting at 0.
 * Enum values default to `byte` if count ≤ 256, else `word`.
 * Enums are distinct type names for readability; no runtime checks.
 
@@ -524,20 +527,20 @@ module Math
 
 import IO
 import Mem
-	import "vendor/legacy_io.zax"
+import "vendor/legacy_io.zax"
 
 type Index byte
 type WordPtr ptr
 
-enum Mode { Read, Write, Append }
+enum Mode Read, Write, Append
 
-type Sprite {
+type Sprite
   x: word
   y: word
   w: byte
   h: byte
   flags: byte
-}
+end
 
 export const MaxValue = 1024
 const TableSize = 8
@@ -548,16 +551,16 @@ var
   hero: Sprite
 
 data
-  table: word = { 1, 2, 3, 4, 5, 6, 7, 8 }
-  banner: byte = { 72, 69, 76, 76, 79 } ; "HELLO"
+  table: word[8] = { 1, 2, 3, 4, 5, 6, 7, 8 }
+  banner: byte[5] = { 72, 69, 76, 76, 79 } ; "HELLO"
 
 bin legacy in code from "asm80/legacy.bin"
-extern legacy {
+extern legacy
   func legacy_print(msg: addr): void at $0000
   func legacy_read(out: addr): void at $0040
-}
+end
 
-export func add(a: word, b: word): word {
+export func add(a: word, b: word): word
   var
     temp: word
   asm
@@ -566,16 +569,16 @@ export func add(a: word, b: word): word {
     ld (temp), hl
     ld hl, (temp)
     ret
-}
+end
 
-export func mul(a: word, b: word): word {
+export func mul(a: word, b: word): word
   asm
     ; naive multiply (placeholder)
     ld hl, 0
     ret
-}
+end
 
-func demo(): word {
+func demo(): word
   asm
     ; imported functions are callable like opcodes
     print HL
@@ -586,11 +589,11 @@ func demo(): word {
     ld hl, (hero.x)
     ; structured control flow uses flag conditions
     or a
-    if Z {
+    if Z
       ; ...
-    } else {
+    else
       ; ...
-    }
+    end
     ret
-}
+end
 ```
