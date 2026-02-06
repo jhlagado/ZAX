@@ -13,6 +13,34 @@ This spec intentionally avoids “future ideas”; anything not defined here is 
 
 ---
 
+## 0. Overview (Non-normative)
+
+This section is explanatory and does not define behavior.
+
+### 0.1 Purpose
+**SAX** (“Structured Assembler”) is a CPU-agnostic category: a family of structured assemblers that compile directly to native machine code while keeping assembly-like semantics. **ZAX** is the Z80-family SAX instance defined by this specification.
+
+### 0.2 Design Philosophy
+* **High-level structure, low-level semantics.**
+* **Registers are first-class.** Register names are visible and directly used.
+* **No significant whitespace.** Indentation is ignored; multi-line constructs use explicit terminators (`end`, `until`).
+* **Compiler, not preprocessor.** Parse to an AST and emit code with fixups; no textual macros.
+
+### 0.3 Compilation Model
+* Parse the whole program into an AST and symbol table.
+* Emit code/data with forward-reference fixups.
+* Workflow: edit → full recompile → run.
+
+Outputs (typical):
+* Binary image
+* Optional HEX
+* Optional listing with symbols (for debuggers/simulators)
+
+### 0.4 Naming
+* **SAX** = “Structured Assembler” (CPU-agnostic category)
+* **ZAX** = Z80-family SAX instance (this project)
+* ZAX source file extension: `.zax`
+
 ## 1. Lexical Rules
 
 ### 1.1 Whitespace and Newlines
