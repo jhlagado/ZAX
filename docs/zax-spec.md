@@ -483,6 +483,10 @@ Notes (v0.1):
 
 - In instruction-operand position, parentheses always mean dereference/indirection. They are not grouping parentheses.
   - Example: `LD A, (X)` always means “load `A` from memory at address `X`”, even if `X` is a `const`.
+- Z80 also has **I/O port indirection** operands for `in`/`out`:
+  - `(C)` means “port addressed by register `C`”.
+  - `($imm8)` means “port addressed by an immediate 8-bit port number”.
+  - These port forms refer to the Z80 I/O space (not memory) and are only valid where a raw Z80 mnemonic expects a port operand. They are not `ea` expressions.
 - Grouping parentheses apply only inside `imm` expressions (e.g., `const X = (1+2)*3`, or `ea + (1+2)`).
 
 ### 6.1.1 Lowering of Non-Encodable Operands
@@ -693,6 +697,7 @@ Precedence (v0.1):
 Notes (v0.1):
 
 - `imm + ea` is not permitted; write `ea + imm`.
+- `ea` describes memory addresses. Z80 I/O port operands (e.g., `(C)` and `($imm8)` used by `in`/`out`) are not `ea` expressions.
 
 ---
 
