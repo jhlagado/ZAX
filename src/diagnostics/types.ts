@@ -1,7 +1,7 @@
 export type DiagnosticSeverity = 'error' | 'warning' | 'info';
 
 export interface Diagnostic {
-  id: string; // stable (e.g., ZAX001)
+  id: DiagnosticId; // stable (e.g., ZAX001)
   severity: DiagnosticSeverity;
   message: string;
   file: string;
@@ -15,4 +15,3 @@ export const DiagnosticIds = {
 } as const;
 
 export type DiagnosticId = (typeof DiagnosticIds)[keyof typeof DiagnosticIds];
-

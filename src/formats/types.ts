@@ -9,11 +9,8 @@ export interface EmittedByteMap {
   writtenRange?: AddressRange;
 }
 
-export interface SymbolKind {
+export interface SymbolEntry {
   kind: 'label' | 'constant' | 'data' | 'unknown';
-}
-
-export interface SymbolEntry extends SymbolKind {
   name: string;
   address: number;
   file?: string;
@@ -52,10 +49,17 @@ export interface ListingArtifact {
 export interface D8mArtifact {
   kind: 'd8m';
   path?: string;
-  json: unknown;
+  json: D8mJson;
 }
 
 export type Artifact = HexArtifact | BinArtifact | ListingArtifact | D8mArtifact;
+
+export type D8mJson = {
+  format: 'd8-debug-map';
+  version: 1;
+  arch: 'z80';
+  [key: string]: unknown;
+};
 
 export interface FormatWriters {
   writeHex(map: EmittedByteMap, symbols: SymbolEntry[], opts?: WriteHexOptions): HexArtifact;
@@ -67,4 +71,3 @@ export interface FormatWriters {
     opts?: Record<string, unknown>,
   ): ListingArtifact;
 }
-

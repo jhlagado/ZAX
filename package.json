@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "description": "ZAX assembler (Node.js)",
-  "license": "UNLICENSED",
+  "license": "GPL-3.0-or-later",
   "engines": {
     "node": ">=20"
   },
@@ -22,4 +22,3 @@
     "vitest": "^2.1.9"
   }
 }
-

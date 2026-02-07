@@ -58,12 +58,12 @@ export interface ImportNode extends BaseNode {
 export interface SectionDirectiveNode extends BaseNode {
   kind: 'Section';
   section: 'code' | 'data' | 'var';
-  at?: number;
+  at?: ImmExprNode;
 }
 
 export interface AlignDirectiveNode extends BaseNode {
   kind: 'Align';
-  value: number;
+  value: ImmExprNode;
 }
 
 export interface TypeDeclNode extends BaseNode {
@@ -143,7 +143,7 @@ export interface ExternFuncNode extends BaseNode {
   name: string;
   params: ParamNode[];
   returnType: TypeExprNode;
-  at: number;
+  at: ImmExprNode;
 }
 
 export interface FuncDeclNode extends BaseNode {
@@ -262,3 +262,22 @@ export type EaIndexNode =
   | { kind: 'IndexReg8'; span: SourceSpan; reg: string }
   | { kind: 'IndexMemHL'; span: SourceSpan };
 
+export type Node =
+  | ProgramNode
+  | ModuleFileNode
+  | ModuleItemNode
+  | VarDeclNode
+  | DataDeclNode
+  | ParamNode
+  | OpParamNode
+  | RecordFieldNode
+  | AsmBlockNode
+  | AsmItemNode
+  | AsmControlNode
+  | AsmOperandNode
+  | TypeExprNode
+  | ImmExprNode
+  | EaExprNode
+  | EaIndexNode
+  | DataInitializerNode
+  | OpMatcherNode;

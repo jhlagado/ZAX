@@ -20,11 +20,8 @@ export interface PipelineDeps {
   formats: FormatWriters;
 }
 
-export async function compile(entryFile: string, options: CompilerOptions, deps: PipelineDeps) {
-  void entryFile;
-  void options;
-  void deps;
-  const result: CompileResult = { diagnostics: [], artifacts: [] };
-  return result;
-}
-
+export type CompileFn = (
+  entryFile: string,
+  options: CompilerOptions,
+  deps: PipelineDeps,
+) => Promise<CompileResult>;
