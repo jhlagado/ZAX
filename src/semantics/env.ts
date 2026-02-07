@@ -8,6 +8,7 @@ import type {
   ProgramNode,
   TypeDeclNode,
 } from '../frontend/ast.js';
+import { sizeOfTypeExpr } from './layout.js';
 
 /**
  * Immutable compilation environment for PR2: resolved constant and enum member values.
@@ -60,6 +61,9 @@ export function evalImmExpr(
       const fromEnum = env.enums.get(expr.name);
       if (fromEnum !== undefined) return fromEnum;
       return undefined;
+    }
+    case 'ImmSizeof': {
+      return sizeOfTypeExpr(expr.typeExpr, env, diagnostics);
     }
     case 'ImmUnary': {
       const v = evalImmExpr(expr.expr, env, diagnostics);
