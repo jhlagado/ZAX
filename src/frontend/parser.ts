@@ -97,6 +97,12 @@ function tokenizeImm(text: string): ImmToken[] | undefined {
       i += 2;
       continue;
     }
+    const num = /^(\$[0-9A-Fa-f]+|%[01]+|0b[01]+|[0-9]+)/.exec(s.slice(i));
+    if (num) {
+      out.push({ kind: 'num', text: num[0] });
+      i += num[0].length;
+      continue;
+    }
     if ('+-*/%&^|~'.includes(ch)) {
       out.push({ kind: 'op', text: ch });
       i++;
@@ -106,12 +112,6 @@ function tokenizeImm(text: string): ImmToken[] | undefined {
     if (ident) {
       out.push({ kind: 'ident', text: ident[0] });
       i += ident[0].length;
-      continue;
-    }
-    const num = /^(\$[0-9A-Fa-f]+|%[01]+|0b[01]+|[0-9]+)/.exec(s.slice(i));
-    if (num) {
-      out.push({ kind: 'num', text: num[0] });
-      i += num[0].length;
       continue;
     }
     return undefined;
@@ -483,7 +483,20 @@ export function parseProgram(
       const isTopLevelStart = (t: string): boolean => {
         const w = t.startsWith('export ') ? t.slice('export '.length).trimStart() : t;
         return (
-          w.startsWith('func ') || w.startsWith('const ') || w === 'data' || w.startsWith('enum ')
+          w.startsWith('func ') ||
+          w.startsWith('const ') ||
+          w.startsWith('enum ') ||
+          w === 'data' ||
+          w.startsWith('import ') ||
+          w.startsWith('type ') ||
+          w.startsWith('union ') ||
+          w.startsWith('var') ||
+          w.startsWith('extern ') ||
+          w.startsWith('bin ') ||
+          w.startsWith('hex ') ||
+          w.startsWith('op ') ||
+          w.startsWith('section ') ||
+          w.startsWith('align ')
         );
       };
 

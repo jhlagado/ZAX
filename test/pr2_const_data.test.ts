@@ -22,7 +22,7 @@ describe('PR2 const + data', () => {
 
     expect(bin!.bytes).toEqual(Uint8Array.of(0x3e, 0x05, 0xc9, 0x00, 0x48, 0x45, 0x4c, 0x4c, 0x4f));
 
-    const symbols = (d8m!.json as any).symbols as Array<{
+    const symbols = d8m!.json['symbols'] as unknown as Array<{
       name: string;
       kind: string;
       address: number;

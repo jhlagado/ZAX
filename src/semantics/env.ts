@@ -32,7 +32,11 @@ function diag(diagnostics: Diagnostic[], file: string, message: string): void {
  * - Supports literals, names, unary `+ - ~`, and binary `* / % + - & ^ | << >>`.
  * - Division/modulo use JavaScript semantics and truncate toward zero.
  */
-export function evalImmExpr(expr: ImmExprNode, env: CompileEnv): number | undefined {
+export function evalImmExpr(
+  expr: ImmExprNode,
+  env: CompileEnv,
+  diagnostics?: Diagnostic[],
+): number | undefined {
   switch (expr.kind) {
     case 'ImmLiteral':
       return expr.value;
@@ -44,7 +48,7 @@ export function evalImmExpr(expr: ImmExprNode, env: CompileEnv): number | undefi
       return undefined;
     }
     case 'ImmUnary': {
-      const v = evalImmExpr(expr.expr, env);
+      const v = evalImmExpr(expr.expr, env, diagnostics);
       if (v === undefined) return undefined;
       switch (expr.op) {
         case '+':
@@ -58,15 +62,37 @@ export function evalImmExpr(expr: ImmExprNode, env: CompileEnv): number | undefi
       return undefined;
     }
     case 'ImmBinary': {
-      const l = evalImmExpr(expr.left, env);
-      const r = evalImmExpr(expr.right, env);
+      const l = evalImmExpr(expr.left, env, diagnostics);
+      const r = evalImmExpr(expr.right, env, diagnostics);
       if (l === undefined || r === undefined) return undefined;
       switch (expr.op) {
         case '*':
           return l * r;
         case '/':
+          if (r === 0) {
+            diagnostics?.push({
+              id: DiagnosticIds.Unknown,
+              severity: 'error',
+              message: 'Divide by zero in imm expression.',
+              file: expr.span.file,
+              line: expr.span.start.line,
+              column: expr.span.start.column,
+            });
+            return undefined;
+          }
           return (l / r) | 0;
         case '%':
+          if (r === 0) {
+            diagnostics?.push({
+              id: DiagnosticIds.Unknown,
+              severity: 'error',
+              message: 'Modulo by zero in imm expression.',
+              file: expr.span.file,
+              line: expr.span.start.line,
+              column: expr.span.start.column,
+            });
+            return undefined;
+          }
           return l % r;
         case '+':
           return l + r;
@@ -128,7 +154,15 @@ export function buildEnv(program: ProgramNode, diagnostics: Diagnostic[]): Compi
 
   for (const item of moduleFile.items) {
     if (item.kind !== 'ConstDecl') continue;
-    const v = evalImmExpr(item.value, env);
+    if (consts.has(item.name)) {
+      diag(diagnostics, item.span.file, `Duplicate const name "${item.name}".`);
+      continue;
+    }
+    if (enums.has(item.name)) {
+      diag(diagnostics, item.span.file, `Const name "${item.name}" collides with an enum member.`);
+      continue;
+    }
+    const v = evalImmExpr(item.value, env, diagnostics);
     if (v === undefined) {
       diag(diagnostics, item.span.file, `Failed to evaluate const "${item.name}".`);
       continue;
