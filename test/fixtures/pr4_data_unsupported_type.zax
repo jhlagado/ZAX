@@ -1,0 +1,13 @@
+type Point
+  x: byte
+  y: byte
+end
+
+data
+  p: Point = [0]
+
+export func main(): void
+  asm
+    ret
+end
+
