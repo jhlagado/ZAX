@@ -18,7 +18,13 @@ export interface SourceFile {
 export function makeSourceFile(path: string, text: string): SourceFile {
   const lineStarts = [0];
   for (let i = 0; i < text.length; i++) {
-    if (text[i] === '\n') {
+    const ch = text[i];
+    if (ch === '\n') {
+      lineStarts.push(i + 1);
+      continue;
+    }
+    // CR-only line endings (old Mac) should be treated as newlines as well.
+    if (ch === '\r' && text[i + 1] !== '\n') {
       lineStarts.push(i + 1);
     }
   }

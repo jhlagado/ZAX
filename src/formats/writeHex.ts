@@ -1,4 +1,5 @@
 import type { EmittedByteMap, HexArtifact, SymbolEntry, WriteHexOptions } from './types.js';
+import { getWrittenRange } from './range.js';
 
 function toHexByte(n: number): string {
   return (n & 0xff).toString(16).toUpperCase().padStart(2, '0');
@@ -7,18 +8,6 @@ function toHexByte(n: number): string {
 function checksum(bytes: number[]): number {
   const sum = bytes.reduce((acc, b) => acc + (b & 0xff), 0) & 0xff;
   return ((0x100 - sum) & 0xff) >>> 0;
-}
-
-function getRange(map: EmittedByteMap): { start: number; end: number } {
-  if (map.writtenRange) return map.writtenRange;
-  let min = Number.POSITIVE_INFINITY;
-  let max = Number.NEGATIVE_INFINITY;
-  for (const addr of map.bytes.keys()) {
-    min = Math.min(min, addr);
-    max = Math.max(max, addr);
-  }
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return { start: 0, end: 0 };
-  return { start: min, end: max + 1 };
 }
 
 /**
@@ -34,7 +23,7 @@ export function writeHex(
   opts?: WriteHexOptions,
 ): HexArtifact {
   const lineEnding = opts?.lineEnding ?? '\n';
-  const { start, end } = getRange(map);
+  const { start, end } = getWrittenRange(map);
   const recordSize = 16;
   const lines: string[] = [];
 

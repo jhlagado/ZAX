@@ -5,18 +5,7 @@ import type {
   SymbolEntry,
   WriteD8mOptions,
 } from './types.js';
-
-function getRange(map: EmittedByteMap): { start: number; end: number } {
-  if (map.writtenRange) return map.writtenRange;
-  let min = Number.POSITIVE_INFINITY;
-  let max = Number.NEGATIVE_INFINITY;
-  for (const addr of map.bytes.keys()) {
-    min = Math.min(min, addr);
-    max = Math.max(max, addr);
-  }
-  if (!Number.isFinite(min) || !Number.isFinite(max)) return { start: 0, end: 0 };
-  return { start: min, end: max + 1 };
-}
+import { getWrittenRange } from './range.js';
 
 /**
  * Create a minimal D8 Debug Map (D8M) v1 JSON artifact.
@@ -30,7 +19,7 @@ export function writeD8m(
   symbols: SymbolEntry[],
   _opts?: WriteD8mOptions,
 ): D8mArtifact {
-  const { start, end } = getRange(map);
+  const { start, end } = getWrittenRange(map);
 
   const json: D8mJson = {
     format: 'd8-debug-map',
@@ -41,10 +30,10 @@ export function writeD8m(
       name: s.name,
       kind: s.kind,
       address: s.address,
-      file: s.file,
-      line: s.line,
-      scope: s.scope,
-      size: s.size,
+      ...(s.file !== undefined ? { file: s.file } : {}),
+      ...(s.line !== undefined ? { line: s.line } : {}),
+      ...(s.scope !== undefined ? { scope: s.scope } : {}),
+      ...(s.size !== undefined ? { size: s.size } : {}),
     })),
   };
 

@@ -23,6 +23,15 @@ export function emitProgram(
   const bytes = new Map<number, number>();
   const symbols: SymbolEntry[] = [];
 
+  if (program.files.length !== 1) {
+    diag(
+      diagnostics,
+      program.entryFile,
+      `PR1 supports single-file programs only (got ${program.files.length}).`,
+    );
+    return { map: { bytes }, symbols };
+  }
+
   let pc = 0;
   const module = program.files[0];
   if (!module) {

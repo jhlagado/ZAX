@@ -43,12 +43,12 @@ export interface WriteHexOptions {
 }
 
 /**
- * Options for BIN writing.
+ * Options for BIN writing (reserved for future options).
  */
 export interface WriteBinOptions {}
 
 /**
- * Options for D8M writing.
+ * Options for D8M writing (reserved for future options).
  */
 export interface WriteD8mOptions {}
 

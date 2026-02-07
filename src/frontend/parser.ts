@@ -66,7 +66,7 @@ function parseAsmOperand(
   const t = operandText.trim();
   if (t.length === 0) return undefined;
 
-  if (/^(A|B|C|D|E|H|L|HL|DE|BC|SP|IX|IY|AF|F|I|R)$/i.test(t)) {
+  if (/^(A|B|C|D|E|H|L|HL|DE|BC|SP|IX|IY|AF|I|R)$/i.test(t)) {
     return { kind: 'Reg', span: operandSpan, name: t };
   }
 
@@ -120,13 +120,22 @@ export function parseProgram(
   diagnostics: Diagnostic[],
 ): ProgramNode {
   const file = makeSourceFile(entryFile, sourceText);
-  const lines = sourceText.split(/\n/);
+  const lineCount = file.lineStarts.length;
+
+  function getRawLine(lineIndex: number): { raw: string; startOffset: number; endOffset: number } {
+    const startOffset = file.lineStarts[lineIndex] ?? 0;
+    const nextStart = file.lineStarts[lineIndex + 1] ?? file.text.length;
+    let rawWithEol = file.text.slice(startOffset, nextStart);
+    if (rawWithEol.endsWith('\n')) rawWithEol = rawWithEol.slice(0, -1);
+    if (rawWithEol.endsWith('\r')) rawWithEol = rawWithEol.slice(0, -1);
+    return { raw: rawWithEol, startOffset, endOffset: startOffset + rawWithEol.length };
+  }
 
   const items: ModuleItemNode[] = [];
 
   let i = 0;
-  while (i < lines.length) {
-    const raw = lines[i] ?? '';
+  while (i < lineCount) {
+    const { raw, startOffset: lineStartOffset, endOffset: lineEndOffset } = getRawLine(i);
     const text = stripComment(raw).trim();
     const lineNo = i + 1;
     if (text.length === 0) {
@@ -166,18 +175,20 @@ export function parseProgram(
         });
       }
 
-      const funcStartOffset = file.lineStarts[i] ?? 0;
-      const headerSpan = span(file, funcStartOffset, funcStartOffset + raw.length);
+      const funcStartOffset = lineStartOffset;
+      const headerSpan = span(file, lineStartOffset, lineEndOffset);
       i++;
 
       /* Expect "asm". */
-      while (i < lines.length) {
-        const raw2 = lines[i] ?? '';
+      let asmStartOffset: number | undefined;
+      while (i < lineCount) {
+        const { raw: raw2, startOffset: so2 } = getRawLine(i);
         const t2 = stripComment(raw2).trim();
         if (t2.length === 0) {
           i++;
           continue;
         }
+        asmStartOffset = so2;
         if (t2 !== 'asm') {
           diag(diagnostics, entryFile, `PR1 expects "asm" immediately inside func`, {
             line: i + 1,
@@ -188,22 +199,30 @@ export function parseProgram(
         break;
       }
 
+      if (asmStartOffset === undefined) {
+        diag(diagnostics, entryFile, `Unterminated func "${name}": expected "asm"`, {
+          line: lineNo,
+          column: 1,
+        });
+        break;
+      }
+
       const asmItems: AsmItemNode[] = [];
-      while (i < lines.length) {
-        const rawLine = lines[i] ?? '';
-        const lineOffset = file.lineStarts[i] ?? 0;
+      let terminated = false;
+      while (i < lineCount) {
+        const { raw: rawLine, startOffset: lineOffset, endOffset } = getRawLine(i);
         const withoutComment = stripComment(rawLine);
-        const trimmedLine = withoutComment.trimEnd();
-        const content = trimmedLine.trim();
+        const content = withoutComment.trim();
         if (content.length === 0) {
           i++;
           continue;
         }
 
         if (content === 'end') {
-          const funcEndOffset = (file.lineStarts[i] ?? 0) + (lines[i]?.length ?? 0);
+          terminated = true;
+          const funcEndOffset = endOffset;
           const funcSpan = span(file, funcStartOffset, funcEndOffset);
-          const asmSpan = span(file, lineOffset, funcEndOffset);
+          const asmSpan = span(file, asmStartOffset, funcEndOffset);
           const asm: AsmBlockNode = { kind: 'AsmBlock', span: asmSpan, items: asmItems };
 
           const returnTypeNode: TypeExprNode = { kind: 'TypeName', span: headerSpan, name: 'void' };
@@ -222,7 +241,7 @@ export function parseProgram(
           break;
         }
 
-        const fullSpan = span(file, lineOffset, lineOffset + rawLine.length);
+        const fullSpan = span(file, lineOffset, endOffset);
 
         /* label: */
         const labelMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$/.exec(content);
@@ -242,6 +261,14 @@ export function parseProgram(
         const instrNode = parseAsmInstruction(entryFile, content, fullSpan, diagnostics);
         if (instrNode) asmItems.push(instrNode);
         i++;
+      }
+
+      if (!terminated) {
+        diag(diagnostics, entryFile, `Unterminated func "${name}": missing "end"`, {
+          line: lineNo,
+          column: 1,
+        });
+        break;
       }
 
       continue;
