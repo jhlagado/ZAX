@@ -7,6 +7,7 @@ import type {
   ConstDeclNode,
   DataBlockNode,
   DataDeclNode,
+  EnumDeclNode,
   EaExprNode,
   EaIndexNode,
   FuncDeclNode,
@@ -721,6 +722,59 @@ export function parseProgram(
         break;
       }
 
+      continue;
+    }
+
+    if (rest.startsWith('enum ')) {
+      if (exportPrefix.length > 0) {
+        diag(diagnostics, entryFile, `export not supported on enum declarations in PR4 subset`, {
+          line: lineNo,
+          column: 1,
+        });
+      }
+
+      const decl = rest.slice('enum '.length).trimStart();
+      const nameMatch = /^([A-Za-z_][A-Za-z0-9_]*)(?:\s+(.*))?$/.exec(decl);
+      if (!nameMatch) {
+        diag(diagnostics, entryFile, `Invalid enum declaration`, { line: lineNo, column: 1 });
+        i++;
+        continue;
+      }
+
+      const name = nameMatch[1]!;
+      const membersText = (nameMatch[2] ?? '').trim();
+      if (membersText.length === 0) {
+        diag(diagnostics, entryFile, `Enum "${name}" must declare at least one member`, {
+          line: lineNo,
+          column: 1,
+        });
+        i++;
+        continue;
+      }
+
+      const rawParts = membersText.split(',').map((p) => p.trim());
+      if (rawParts.some((p) => p.length === 0)) {
+        diag(diagnostics, entryFile, `Trailing commas are not permitted in enum member lists`, {
+          line: lineNo,
+          column: 1,
+        });
+        i++;
+        continue;
+      }
+
+      const members: string[] = [];
+      for (const m of rawParts) {
+        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(m)) {
+          diag(diagnostics, entryFile, `Invalid enum member name`, { line: lineNo, column: 1 });
+          continue;
+        }
+        members.push(m);
+      }
+
+      const enumSpan = span(file, lineStartOffset, lineEndOffset);
+      const enumNode: EnumDeclNode = { kind: 'EnumDecl', span: enumSpan, name, members };
+      items.push(enumNode);
+      i++;
       continue;
     }
 

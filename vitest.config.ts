@@ -17,10 +17,10 @@ export default defineConfig({
     ],
     thresholds: {
       // Start moderate; raise over time as coverage improves.
-      statements: 60,
-      branches: 45,
-      functions: 55,
-      lines: 60,
+      statements: 62,
+      branches: 47,
+      functions: 57,
+      lines: 62,
     },
   },
 });
