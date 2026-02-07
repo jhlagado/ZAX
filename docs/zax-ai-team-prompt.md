@@ -2,7 +2,7 @@
 
 Use this prompt to instruct an AI (or multiple AIs acting as a team) to **plan and execute** the implementation of the ZAX assembler and its Debug80 integration.
 
-This prompt is intentionally "meta": it comes *before* detailed planning. Its job is to force the AI to produce a robust plan, break work into PR-sized chunks, coordinate agents, and follow a rigorous testing and review workflow.
+This prompt is intentionally "meta": it comes _before_ detailed planning. Its job is to force the AI to produce a robust plan, break work into PR-sized chunks, coordinate agents, and follow a rigorous testing and review workflow.
 
 ---
 
@@ -39,13 +39,17 @@ CLI design is specified in `docs/zax-cli.md`. Do not deviate from it without dis
   - Do not assume `/` path separators in user input.
   - Do not rely on case-sensitive filesystem behavior.
   - Do not use platform-specific shell utilities in core logic.
+  - Paths in diagnostics should use the path form the user provided (do not rewrite separators in user-facing output; canonicalize only internally).
+  - Treat `.ZAX` and `.zax` as equivalent for file discovery on case-insensitive filesystems.
 - **Determinism**
   - Same inputs → identical outputs (binary, HEX, D8M, listing).
   - Never depend on filesystem enumeration order, `Map` iteration assumptions, or `Date.now()`.
+  - No timestamps or absolute machine paths in any output artifact. Outputs are reproducible by default.
   - Make ordering rules explicit and tested.
 - **Diagnostics**
   - Every error includes file + line/column (when possible) and a clear message.
-  - Each diagnostic has a stable error ID (e.g., `ZAX001`) for programmatic use.
+  - Each diagnostic (errors and warnings) has a stable ID (e.g., `ZAX001`) for programmatic use.
+  - IDs are stable across releases once introduced: no renumbering, no reusing an ID for a different diagnostic.
   - Fail with non-zero exit code on error.
 - **Artifacts required**
   - `.bin`, `.hex`, and `.d8dbg.json` are first-class and must be supported from the first vertical slice.
@@ -74,7 +78,7 @@ Before writing compiler logic, the first PR must define the **interface contract
 
 Phase 0 deliverables (all in one PR):
 
-1. **AST node types** (`src/frontend/ast.ts`) — every node kind the parser will produce, with source-span fields. Cover all spec constructs: imports, type/enum/const, var/data/bin/hex/extern, func/op, asm statements, structured control flow, expressions.
+1. **AST node types** (`src/frontend/ast.ts`) — define the stable top-level shape: discriminated union convention, source-span fields, and the concrete node kinds needed for PRs 1–2 (module file, func declaration, asm block, Z80 instruction nodes, const/enum/data). For constructs not yet needed (imports, op, structured control flow, etc.), define placeholder members in the union (e.g., a comment or a generic `UnimplementedNode` kind with a span) so the union is forward-compatible. Later PRs add concrete node kinds as they go via the contract-change mechanism in §6.2.
 2. **Diagnostic types** (`src/diagnostics/types.ts`) — a `Diagnostic` interface with `id` (stable string), `severity`, `message`, `file`, `line`, `column`. An enum or namespace of all diagnostic IDs.
 3. **Compiler pipeline interface** (`src/pipeline.ts`) — the top-level function signature: input (entry path + options) → output (artifacts + diagnostics). Define the artifact types (binary buffer, HEX string, D8M JSON object, listing string).
 4. **Format writer interfaces** (`src/formats/types.ts`) — each writer takes the compiler's internal address→byte map (or equivalent) plus symbol table and produces an output artifact.
@@ -94,8 +98,8 @@ The normative spec is the test plan. Every testable rule in `docs/zax-spec.md` m
   - `.d8dbg.json` output (structural comparison on key fields)
   - `.lst` output if produced (golden file)
 - **Negative fixtures** — one per error class. Each fixture must:
-  - trigger exactly one diagnostic
-  - assert the diagnostic ID (stable string, not message text)
+  - assert the **first** diagnostic ID (stable string, not message text) and its primary source span
+  - additional cascaded diagnostics are allowed but must be explicitly asserted if checked (don't assert count unless the test is specifically about cascade behavior)
   - cover: syntax errors, symbol collisions, reserved-name violations, type mismatches, overlap errors, invalid HEX checksums, out-of-range addresses, circular imports, ambiguous `op` overloads, stack-depth mismatches, etc.
 - **Spec traceability** — test file names or descriptions must reference the spec section they exercise (e.g., `test/section-6.4/hex-overlap.test.ts`, or a comment `// §6.4: overlap is an error regardless of byte equality`).
 
@@ -111,23 +115,23 @@ All `.zax` files under `examples/` must compile without errors as a CI gate. Thi
 
 ### 5) Vertical-slice PR plan (required ordering)
 
-Work in **vertical slices**, not horizontal layers. Each PR compiles a *slightly larger subset* of ZAX from source to artifact output. This ensures the pipeline is always integrated and testable.
+Work in **vertical slices**, not horizontal layers. Each PR compiles a _slightly larger subset_ of ZAX from source to artifact output. This ensures the pipeline is always integrated and testable.
 
 Required PR sequence (adjust scope as needed, but preserve the vertical-slice principle):
 
-| PR | Scope | Key spec sections |
-|----|-------|-------------------|
-| 0 | **Contracts**: AST types, diagnostic types, pipeline interface, format writer interfaces. No implementation. | — |
-| 1 | **Minimal end-to-end**: lex + parse + encode + emit a single `func` with inline `asm` (raw Z80 mnemonics only, no locals, no imports). Produce `.bin` and `.hex`. | §1, §2.1, §2.2, §8.1, §8.2 |
-| 2 | **Constants and data**: `const`, `enum`, `data` declarations, `imm` expressions, section packing. | §4.3, §4.4, §6.3, §7.1 |
-| 3 | **Module-scope `var`, types, records, arrays**: layout, `sizeof`, `ea` expressions, field access, array indexing, lowering of non-encodable operands. | §4.1, §4.2, §5, §6.2, §6.1.1, §7.2 |
-| 4 | **Function locals and calling convention**: `var` block in `func`, SP-relative addressing, stack frame/trampoline mechanism, `func` calls from `asm`. | §8.1–§8.5 |
-| 5 | **Structured control flow**: `if`/`else`/`while`/`repeat`/`until`, `select`/`case`, stack-depth matching at joins. | §10 |
-| 6 | **`op` declarations**: matcher types, overload resolution, autosave, expansion, cyclic-expansion detection. | §9 |
-| 7 | **Imports and multi-module**: `import`, name resolution, collision detection, packing order, forward references. | §3 |
-| 8 | **`bin`/`hex`/`extern`**: external bytes, Intel HEX ingestion + validation, extern bindings. | §6.4, §6.5 |
-| 9 | **Formats and Debug80**: D8M writer, LST writer, CLI polish (all switches per `docs/zax-cli.md`). | Appendix B, CLI doc |
-| 10 | **`examples/` acceptance + hardening**: all examples compile, negative-test coverage sweep, edge cases. | All |
+| PR  | Scope                                                                                                                                                             | Key spec sections                  |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| 0   | **Contracts**: AST types, diagnostic types, pipeline interface, format writer interfaces. No implementation.                                                      | —                                  |
+| 1   | **Minimal end-to-end**: lex + parse + encode + emit a single `func` with inline `asm` (raw Z80 mnemonics only, no locals, no imports). Produce `.bin` and `.hex`. | §1, §2.1, §2.2, §8.1, §8.2         |
+| 2   | **Constants and data**: `const`, `enum`, `data` declarations, `imm` expressions, section packing.                                                                 | §4.3, §4.4, §6.3, §7.1             |
+| 3   | **Module-scope `var`, types, records, arrays**: layout, `sizeof`, `ea` expressions, field access, array indexing, lowering of non-encodable operands.             | §4.1, §4.2, §5, §6.2, §6.1.1, §7.2 |
+| 4   | **Function locals and calling convention**: `var` block in `func`, SP-relative addressing, stack frame/trampoline mechanism, `func` calls from `asm`.             | §8.1–§8.5                          |
+| 5   | **Structured control flow**: `if`/`else`/`while`/`repeat`/`until`, `select`/`case`, stack-depth matching at joins.                                                | §10                                |
+| 6   | **Imports and multi-module**: `import`, name resolution, collision detection, packing order, forward references.                                                  | §3                                 |
+| 7   | **`op` declarations**: matcher types, overload resolution, autosave, expansion, cyclic-expansion detection.                                                       | §9                                 |
+| 8   | **`bin`/`hex`/`extern`**: external bytes, Intel HEX ingestion + validation, extern bindings.                                                                      | §6.4, §6.5                         |
+| 9   | **Formats and Debug80**: D8M writer, LST writer, CLI polish (all switches per `docs/zax-cli.md`).                                                                 | Appendix B, CLI doc                |
+| 10  | **`examples/` acceptance + hardening**: all examples compile, negative-test coverage sweep, edge cases.                                                           | All                                |
 
 Each PR must include tests for its scope and must not break any previously passing tests.
 
@@ -167,8 +171,7 @@ Debug80 currently integrates `asm80` by spawning it and expecting `.hex` + `.lst
 You must plan and implement:
 
 - A way for Debug80 to detect `.zax` projects (or entry files) and invoke `zax` instead of `asm80`.
-- Ensure the ZAX assembler can be invoked from a working directory like Debug80 does:
-  - Debug80 often sets `cwd` to the source directory and passes relative output paths.
+- The assembler must work correctly when invoked the way Debug80 does: `cwd` set to the source directory, output paths passed as relative. Do not "fix" this by changing Debug80's cwd assumptions.
 - Artifact naming must fit Debug80 expectations (per `docs/zax-cli.md`).
 
 Deliverables for integration:
