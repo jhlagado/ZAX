@@ -140,6 +140,9 @@ A compilation unit is a module file containing:
 
 No nested functions are permitted.
 
+Source files (v0.1):
+* ZAX source files use the `.zax` extension.
+
 Module header (v0.1):
 * Syntax: `module <Ident>`
 * If present, the `module` header must appear before any `import` or other declaration/directive.
@@ -209,7 +212,7 @@ Default placement (if not specified):
 `import "<path>"` loads a module from an explicit path. For v0.1, quoted paths should include the `.zax` extension and are resolved relative to the importing file (then search paths, if not found).
 
 ### 3.2 Visibility and Collisions
-* In v0.1, all module-scope names are public. The `export` keyword is accepted on `const` and `func` declarations for clarity and forward compatibility, but has no effect. Using `export` on any other declaration form is a compile error.
+* In v0.1, all module-scope names are public. The `export` keyword is accepted on `const`, `func`, and `op` declarations for clarity and forward compatibility, but has no effect. Using `export` on any other declaration form is a compile error.
 * All names from an imported module are brought into the importing module’s global namespace.
 * The program has a single global namespace across all modules.
 * Any symbol collision is a compile error (no implicit renaming).
@@ -479,7 +482,7 @@ hex bios from "rom/bios.hex"
 * Intel HEX checksums must be validated. A record with an invalid checksum is a compile error.
 * `hex <name> from "<path>"` binds `<name>` to the lowest address written by the HEX file (type `addr`). If the HEX file contains no data records, it is a compile error.
 * HEX output is written to absolute addresses in the final address space and does not advance any section’s location counter.
-* If a HEX-written byte overlaps any byte emitted by section packing (`code`/`data`/`bin`) or another HEX include, it is a compile error (regardless of whether the bytes are equal).
+* If a HEX-written byte overlaps any other emission, it is a compile error (regardless of whether the bytes are equal). This is an instance of the general overlap rule in Section 2.2.
 * The compiler’s output is an address→byte map. When producing a flat binary image, the compiler emits bytes from the lowest written address to the highest written address. Unwritten addresses within this range are filled with the **gap fill byte**, `$00`. `var` contributes no bytes.
   * When producing Intel HEX output, the compiler emits only written bytes/records; gap fill bytes are not emitted.
 
@@ -803,7 +806,7 @@ Structured control flow is only available inside `asm` streams. For `if`/`while`
 * `if <cc> ... end` (optional `else`)
 * `while <cc> ... end`
 * `repeat ... until <cc>`
-* `select <operand> ... end` (case dispatch)
+* `select <selector> ... end` (case dispatch)
 
 These forms lower to compiler-generated hidden labels and conditional/unconditional jumps. `if`/`while`/`repeat` do not themselves set flags; `select` lowering may set flags as part of dispatch.
 
@@ -964,7 +967,7 @@ In D8M, the top-level `files` object is keyed by source file path strings. Recom
 Each segment maps a byte range to a source location:
 * `start`: start address (inclusive)
 * `end`: end address (exclusive)
-* `lstLine`: a listing line number (required by D8M; if you do not produce a listing, a compiler may set `lstLine` equal to the source `line` or to `0`)
+* `lstLine`: a listing line number (required by D8M; if not available, set `0`)
 * `line` / `column`: 1-based source location (when known)
 * `kind`: `code` / `data` / `directive` / `label` / `macro` / `unknown`
 * `confidence`: `high` / `medium` / `low` (useful if mapping is inferred rather than emitted directly)
@@ -987,7 +990,7 @@ Recommended (non-normative) policy for a ZAX compiler:
   * Lowering may produce multiple segments tied to the same source location.
 * Emit `data` segments for `data` initializers and `bin` includes.
 * Record local labels as `symbols` of `scope: local`.
-* Record `const` and enum members as `symbols` of `kind: constant` by storing the constant value in the symbol’s `address` field.
+* Record `const` and enum members as `symbols` of `kind: constant` by storing the low 16 bits of the constant value in the symbol’s `address` field.
 
 ### B.6 Minimal example (illustrative)
 
