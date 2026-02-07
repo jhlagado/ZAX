@@ -726,8 +726,15 @@ export function parseProgram(
     }
 
     if (rest.startsWith('enum ')) {
+      if (exportPrefix.length > 0) {
+        diag(diagnostics, entryFile, `export not supported on enum declarations in PR4 subset`, {
+          line: lineNo,
+          column: 1,
+        });
+      }
+
       const decl = rest.slice('enum '.length).trimStart();
-      const nameMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s+(.+)$/.exec(decl);
+      const nameMatch = /^([A-Za-z_][A-Za-z0-9_]*)(?:\s+(.*))?$/.exec(decl);
       if (!nameMatch) {
         diag(diagnostics, entryFile, `Invalid enum declaration`, { line: lineNo, column: 1 });
         i++;
@@ -735,7 +742,7 @@ export function parseProgram(
       }
 
       const name = nameMatch[1]!;
-      const membersText = nameMatch[2]!.trim();
+      const membersText = (nameMatch[2] ?? '').trim();
       if (membersText.length === 0) {
         diag(diagnostics, entryFile, `Enum "${name}" must declare at least one member`, {
           line: lineNo,

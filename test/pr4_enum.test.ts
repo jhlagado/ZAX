@@ -17,6 +17,7 @@ describe('PR4 enum parsing', () => {
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
+    /* ld a, 1 (Write is member index 1, 0-based); ret */
     expect(bin!.bytes).toEqual(Uint8Array.of(0x3e, 0x01, 0xc9));
   });
 });

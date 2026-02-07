@@ -2,6 +2,7 @@ import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
 import type {
   EnumDeclNode,
+  ConstDeclNode,
   ImmExprNode,
   ModuleItemNode,
   ProgramNode,
@@ -149,6 +150,11 @@ export function buildEnv(program: ProgramNode, diagnostics: Diagnostic[]): Compi
     return { consts, enums, types };
   }
 
+  const constDeclNames = new Set(
+    moduleFile.items.filter((i): i is ConstDeclNode => i.kind === 'ConstDecl').map((i) => i.name),
+  );
+  const enumDeclNames = new Set<string>();
+
   for (const item of moduleFile.items) {
     if (item.kind !== 'TypeDecl') continue;
     if (types.has(item.name)) {
@@ -159,10 +165,26 @@ export function buildEnv(program: ProgramNode, diagnostics: Diagnostic[]): Compi
   }
 
   for (const e of collectEnumMembers(moduleFile.items)) {
+    if (enumDeclNames.has(e.name)) {
+      diag(diagnostics, e.span.file, `Duplicate enum name "${e.name}".`);
+    } else {
+      enumDeclNames.add(e.name);
+    }
+    if (types.has(e.name)) {
+      diag(diagnostics, e.span.file, `Enum name "${e.name}" collides with a type name.`);
+    }
+    if (constDeclNames.has(e.name)) {
+      diag(diagnostics, e.span.file, `Enum name "${e.name}" collides with a const name.`);
+    }
+
     for (let idx = 0; idx < e.members.length; idx++) {
       const name = e.members[idx]!;
       if (types.has(name)) {
         diag(diagnostics, e.span.file, `Enum member name "${name}" collides with a type name.`);
+        continue;
+      }
+      if (constDeclNames.has(name)) {
+        diag(diagnostics, e.span.file, `Enum member name "${name}" collides with a const name.`);
         continue;
       }
       if (enums.has(name)) {
