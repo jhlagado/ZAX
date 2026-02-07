@@ -1,0 +1,266 @@
+import type {
+  AsmBlockNode,
+  AsmInstructionNode,
+  AsmItemNode,
+  AsmLabelNode,
+  AsmOperandNode,
+  FuncDeclNode,
+  ImmExprNode,
+  ModuleFileNode,
+  ModuleItemNode,
+  ProgramNode,
+  SourceSpan,
+  TypeExprNode,
+} from './ast.js';
+import { makeSourceFile, span } from './source.js';
+import type { Diagnostic } from '../diagnostics/types.js';
+import { DiagnosticIds } from '../diagnostics/types.js';
+
+function diag(
+  diagnostics: Diagnostic[],
+  file: string,
+  message: string,
+  where?: { line: number; column: number },
+): void {
+  diagnostics.push({
+    id: DiagnosticIds.Unknown,
+    severity: 'error',
+    message,
+    file,
+    ...(where ? { line: where.line, column: where.column } : {}),
+  });
+}
+
+function stripComment(line: string): string {
+  const semi = line.indexOf(';');
+  return semi >= 0 ? line.slice(0, semi) : line;
+}
+
+function immLiteral(filePath: string, s: SourceSpan, value: number): ImmExprNode {
+  return { kind: 'ImmLiteral', span: { ...s, file: filePath }, value };
+}
+
+function parseNumberLiteral(text: string): number | undefined {
+  const t = text.trim();
+  if (/^\$[0-9A-Fa-f]+$/.test(t)) {
+    return Number.parseInt(t.slice(1), 16);
+  }
+  if (/^%[01]+$/.test(t)) {
+    return Number.parseInt(t.slice(1), 2);
+  }
+  if (/^0b[01]+$/.test(t)) {
+    return Number.parseInt(t.slice(2), 2);
+  }
+  if (/^[0-9]+$/.test(t)) {
+    return Number.parseInt(t, 10);
+  }
+  return undefined;
+}
+
+function parseAsmOperand(
+  filePath: string,
+  operandText: string,
+  operandSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+): AsmOperandNode | undefined {
+  const t = operandText.trim();
+  if (t.length === 0) return undefined;
+
+  // Minimal PR1 subset: registers and immediate literals only.
+  if (/^(A|B|C|D|E|H|L|HL|DE|BC|SP|IX|IY|AF|F|I|R)$/i.test(t)) {
+    return { kind: 'Reg', span: operandSpan, name: t };
+  }
+
+  const n = parseNumberLiteral(t);
+  if (n !== undefined) {
+    return { kind: 'Imm', span: operandSpan, expr: immLiteral(filePath, operandSpan, n) };
+  }
+
+  diag(diagnostics, filePath, `Unsupported operand in PR1 subset: ${t}`, {
+    line: operandSpan.start.line,
+    column: operandSpan.start.column,
+  });
+  return undefined;
+}
+
+function parseAsmInstruction(
+  filePath: string,
+  text: string,
+  instrSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+): AsmInstructionNode | undefined {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return undefined;
+  const firstSpace = trimmed.search(/\s/);
+  const head = firstSpace === -1 ? trimmed : trimmed.slice(0, firstSpace);
+  const rest = firstSpace === -1 ? '' : trimmed.slice(firstSpace).trim();
+
+  const operands: AsmOperandNode[] = [];
+  if (rest.length > 0) {
+    const parts = rest.split(',').map((p) => p.trim());
+    for (const part of parts) {
+      const opNode = parseAsmOperand(filePath, part, instrSpan, diagnostics);
+      if (opNode) operands.push(opNode);
+    }
+  }
+
+  return { kind: 'AsmInstruction', span: instrSpan, head, operands };
+}
+
+export function parseProgram(
+  entryFile: string,
+  sourceText: string,
+  diagnostics: Diagnostic[],
+): ProgramNode {
+  const file = makeSourceFile(entryFile, sourceText);
+  const lines = sourceText.split(/\n/);
+
+  const items: ModuleItemNode[] = [];
+
+  let i = 0;
+  while (i < lines.length) {
+    const raw = lines[i] ?? '';
+    const text = stripComment(raw).trim();
+    const lineNo = i + 1;
+    if (text.length === 0) {
+      i++;
+      continue;
+    }
+
+    const exportPrefix = text.startsWith('export ') ? 'export ' : '';
+    const rest = exportPrefix ? text.slice('export '.length).trimStart() : text;
+
+    if (rest.startsWith('func ')) {
+      const exported = exportPrefix.length > 0;
+      const header = rest.slice('func '.length).trimStart();
+      const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*\(\s*\)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)\s*$/.exec(
+        header,
+      );
+      if (!m) {
+        diag(
+          diagnostics,
+          entryFile,
+          `Invalid func header (PR1 supports only "func name(): void")`,
+          {
+            line: lineNo,
+            column: 1,
+          },
+        );
+        i++;
+        continue;
+      }
+
+      const name = m[1]!;
+      const retType = m[2]!;
+      if (retType !== 'void') {
+        diag(diagnostics, entryFile, `PR1 supports only return type void`, {
+          line: lineNo,
+          column: 1,
+        });
+      }
+
+      const funcStartOffset = file.lineStarts[i] ?? 0;
+      const headerSpan = span(file, funcStartOffset, funcStartOffset + raw.length);
+      i++;
+
+      // Expect "asm"
+      while (i < lines.length) {
+        const raw2 = lines[i] ?? '';
+        const t2 = stripComment(raw2).trim();
+        if (t2.length === 0) {
+          i++;
+          continue;
+        }
+        if (t2 !== 'asm') {
+          diag(diagnostics, entryFile, `PR1 expects "asm" immediately inside func`, {
+            line: i + 1,
+            column: 1,
+          });
+        }
+        i++;
+        break;
+      }
+
+      const asmItems: AsmItemNode[] = [];
+      while (i < lines.length) {
+        const rawLine = lines[i] ?? '';
+        const lineOffset = file.lineStarts[i] ?? 0;
+        const withoutComment = stripComment(rawLine);
+        const trimmedLine = withoutComment.trimEnd();
+        const content = trimmedLine.trim();
+        if (content.length === 0) {
+          i++;
+          continue;
+        }
+
+        if (content === 'end') {
+          const funcEndOffset = (file.lineStarts[i] ?? 0) + (lines[i]?.length ?? 0);
+          const funcSpan = span(file, funcStartOffset, funcEndOffset);
+          const asmSpan = span(file, lineOffset, funcEndOffset);
+          const asm: AsmBlockNode = { kind: 'AsmBlock', span: asmSpan, items: asmItems };
+
+          const returnTypeNode: TypeExprNode = { kind: 'TypeName', span: headerSpan, name: 'void' };
+
+          const funcNode: FuncDeclNode = {
+            kind: 'FuncDecl',
+            span: funcSpan,
+            name,
+            exported,
+            params: [],
+            returnType: returnTypeNode,
+            asm,
+          };
+          items.push(funcNode);
+          i++;
+          break;
+        }
+
+        const fullSpan = span(file, lineOffset, lineOffset + rawLine.length);
+
+        // label:
+        const labelMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$/.exec(content);
+        if (labelMatch) {
+          const label = labelMatch[1]!;
+          const remainder = labelMatch[2] ?? '';
+          const labelNode: AsmLabelNode = { kind: 'AsmLabel', span: fullSpan, name: label };
+          asmItems.push(labelNode);
+          if (remainder.trim().length > 0) {
+            const instrNode = parseAsmInstruction(entryFile, remainder, fullSpan, diagnostics);
+            if (instrNode) asmItems.push(instrNode);
+          }
+          i++;
+          continue;
+        }
+
+        const instrNode = parseAsmInstruction(entryFile, content, fullSpan, diagnostics);
+        if (instrNode) asmItems.push(instrNode);
+        i++;
+      }
+
+      continue;
+    }
+
+    diag(diagnostics, entryFile, `Unsupported top-level construct in PR1 subset: ${text}`, {
+      line: lineNo,
+      column: 1,
+    });
+    i++;
+  }
+
+  const moduleSpan = span(file, 0, sourceText.length);
+  const moduleFile: ModuleFileNode = {
+    kind: 'ModuleFile',
+    span: moduleSpan,
+    path: entryFile,
+    items,
+  };
+
+  const program: ProgramNode = {
+    kind: 'Program',
+    span: moduleSpan,
+    entryFile,
+    files: [moduleFile],
+  };
+
+  return program;
+}
