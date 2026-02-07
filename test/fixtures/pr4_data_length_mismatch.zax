@@ -1,0 +1,8 @@
+data
+  msg: byte[2] = "HEY"
+
+export func main(): void
+  asm
+    ret
+end
+

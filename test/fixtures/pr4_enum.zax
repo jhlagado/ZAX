@@ -1,0 +1,8 @@
+enum Mode Read, Write, Append
+
+export func main(): void
+  asm
+    ld a, Write
+    ret
+end
+
