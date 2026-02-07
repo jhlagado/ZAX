@@ -357,6 +357,7 @@ export interface RecordFieldNode extends BaseNode {
 export type ImmExprNode =
   | { kind: 'ImmLiteral'; span: SourceSpan; value: number }
   | { kind: 'ImmName'; span: SourceSpan; name: string }
+  | { kind: 'ImmSizeof'; span: SourceSpan; typeExpr: TypeExprNode }
   | { kind: 'ImmUnary'; span: SourceSpan; op: '+' | '-' | '~'; expr: ImmExprNode }
   | {
       kind: 'ImmBinary';

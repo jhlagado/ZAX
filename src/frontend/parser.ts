@@ -221,6 +221,19 @@ function parseImmExprFromText(
       return immLiteral(filePath, exprSpan, n);
     }
     if (t.kind === 'ident') {
+      if (t.text === 'sizeof' && tokens[idx + 1]?.kind === 'lparen') {
+        idx += 2; // sizeof (
+        const arg = tokens[idx];
+        if (!arg || arg.kind !== 'ident') return undefined;
+        idx++;
+        if (tokens[idx]?.kind !== 'rparen') return undefined;
+        idx++;
+        return {
+          kind: 'ImmSizeof',
+          span: exprSpan,
+          typeExpr: { kind: 'TypeName', span: exprSpan, name: arg.text },
+        };
+      }
       idx++;
       return immName(filePath, exprSpan, t.text);
     }
