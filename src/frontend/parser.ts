@@ -490,7 +490,8 @@ export function parseProgram(
           w.startsWith('import ') ||
           w.startsWith('type ') ||
           w.startsWith('union ') ||
-          w.startsWith('var') ||
+          w === 'var' ||
+          w.startsWith('var ') ||
           w.startsWith('extern ') ||
           w.startsWith('bin ') ||
           w.startsWith('hex ') ||
