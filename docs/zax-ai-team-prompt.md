@@ -48,21 +48,43 @@ Implement a Node-based assembler for ZAX that:
 
 Design the CLI like conventional assemblers (e.g., `asm80`): one “simple” invocation and a focused set of switches.
 
+#### 2.0 CLI contract (required)
+
+Implement the CLI to follow this contract (assembler-like, `asm80`-style):
+
+- Invocation: `zax [options] <entry.zax>`
+  - `<entry.zax>` must be the **last** argument.
+- Primary output:
+  - `-o, --output <file>` sets the **primary output file path**.
+  - If `-o` is omitted, the primary output path is `<entryDir>/<base>.hex`.
+  - Default primary output type is **HEX**.
+- Artifact base:
+  - `artifactBase = primaryOutputPath without its extension`
+  - Sibling outputs (when enabled) are written alongside the primary output:
+    - BIN: `artifactBase + ".bin"`
+    - LST: `artifactBase + ".lst"`
+    - D8M: `artifactBase + ".d8dbg.json"`
+- Directory handling:
+  - If `--output` points into a directory that does not exist, create it.
+  - Accept user-supplied paths as-is; do not rewrite path separators on write.
+
+This naming and co-location rule is required for Debug80 integration.
+
 #### 2.1 Default behavior (simple mode)
 
 - `zax [options] <entry.zax>`
-- By default, produce **HEX + LST + D8M** next to the chosen output target (or in `./build` if you choose that convention—justify it).
-- Also produce BIN (either default-on or via an explicit flag; propose and justify).
+- By default, produce **HEX + LST + D8M + BIN** next to the primary output.
+  - Users can opt out of any output via switches (`--nolist`, `--nobin`, `--nod8m`, or equivalent).
 
 #### 2.2 Switches (must propose final set; keep it small)
 
 Your proposal must include at least:
 
 - `-o, --output <file>`: assembler-style output target (like `asm80 -o`)
-  - If `-o` points to a `.hex` file, derive base name for other outputs beside it.
-  - If `-o` is a directory or base path, define deterministic naming rules.
+- `-t, --type <type>`: primary output type (default: `hex`)
+  - Supported types for ZAX should include at least: `hex`, `bin`.
 - Output selection:
-  - `--hex [path]`, `--bin [path]`, `--lst [path]`, `--d8m [path]`
+  - `--nolist`, `--nobin`, `--nod8m` (or equivalent)
   - `--nolist` to suppress `.lst`
   - If user disables an output, do not produce it.
 - Module resolution:
@@ -150,7 +172,5 @@ Before coding, output:
 
 Topics to decide in future revisions of this prompt:
 
-- Exact CLI contract (default outputs, naming, default output directory vs “next to input”)
 - Whether to support multiple commands (`zax build`, `zax parse`, `zax lex`) in addition to the classic `zax file.zax` flow
 - How strict to make diagnostics snapshot testing (string-based) vs stable error IDs
-

@@ -4,7 +4,7 @@ This document is the implementable first draft specification for **ZAX**, a stru
 
 ZAX aims to make assembly code easier to read and refactor by providing:
 
-- module structure (`import`, declarations)
+- file structure (`import`, declarations)
 - simple layout types (arrays/records) used for addressing
 - functions with stack arguments and optional locals
 - structured control flow inside `asm` (`if`/`while`/`repeat`/`select`)
@@ -30,7 +30,7 @@ ZAX is not a “high-level language”. It is still assembly: you choose registe
 const MsgLen = 5
 
 data
-  msg: byte[] = "HELLO"
+  msg: byte[5] = "HELLO"
 
 extern func bios_putc(ch: byte): void at $F003
 
@@ -301,8 +301,14 @@ Type expressions (v0.1):
 - Records: a record body starting on the next line and terminated by `end`
 
 Inferred-length arrays (v0.1):
+
 - `T[]` (with no length) is permitted only in `data` declarations that have an initializer. The compiler infers the element count from the initializer.
-- `T[]` is not permitted in `var` declarations, function-local `var` blocks, record fields, or type aliases (all of these require a known size).
+- `T[]` is not permitted in any other type position in v0.1 (all other uses require a known size), including:
+  - `var` declarations
+  - function-local `var` blocks
+  - record fields
+  - type aliases
+  - function parameter and return types
 
 Arrays and nesting (v0.1):
 
