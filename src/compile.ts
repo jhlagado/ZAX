@@ -69,6 +69,12 @@ function resolveImportCandidates(
   return out.filter((p) => (seen.has(p) ? false : (seen.add(p), true)));
 }
 
+function isIgnorableImportProbeError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const code = (err as { code?: unknown }).code;
+  return code === 'ENOENT' || code === 'ENOTDIR';
+}
+
 async function loadProgram(
   entryFile: string,
   diagnostics: Diagnostic[],
@@ -122,6 +128,7 @@ async function loadProgram(
       const candidates = resolveImportCandidates(p, imp, includeDirs);
       let resolved: string | undefined;
       let resolvedText: string | undefined;
+      let hardFailure = false;
 
       for (const c of candidates) {
         try {
@@ -129,15 +136,31 @@ async function loadProgram(
           resolvedText = await readFile(c, 'utf8');
           resolved = c;
           break;
-        } catch {
-          // keep trying
+        } catch (err) {
+          if (isIgnorableImportProbeError(err)) {
+            // keep trying
+            continue;
+          }
+
+          diagnostics.push({
+            id: DiagnosticIds.IoReadFailed,
+            severity: 'error',
+            message: `Failed to read import candidate "${c}" while resolving imports for "${p}": ${String(
+              err,
+            )}`,
+            file: p,
+          });
+          hardFailure = true;
+          break;
         }
       }
+
+      if (hardFailure) return;
 
       if (!resolved || resolvedText === undefined) {
         const pretty = imp.form === 'path' ? `"${imp.specifier}"` : imp.specifier;
         diagnostics.push({
-          id: DiagnosticIds.IoReadFailed,
+          id: DiagnosticIds.ImportNotFound,
           severity: 'error',
           message: `Failed to resolve import ${pretty} from "${p}". Tried:\n${candidates
             .map((c) => `- ${c}`)

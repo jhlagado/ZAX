@@ -40,9 +40,16 @@ describe('PR11 includeDirs (import search paths)', () => {
     );
     expect(res.artifacts).toEqual([]);
 
-    const d = res.diagnostics.find((x) => x.id === DiagnosticIds.IoReadFailed);
+    const d = res.diagnostics.find((x) => x.id === DiagnosticIds.ImportNotFound);
     expect(d).toBeDefined();
     expect(d!.message).toContain('Failed to resolve import');
-    expect(d!.message).toContain(`- ${join(includeDir, 'missing.zax')}`);
+
+    const importerRelative = join(dirname(entry), 'missing.zax');
+    const includeRelative = join(includeDir, 'missing.zax');
+    expect(d!.message).toContain(`- ${importerRelative}`);
+    expect(d!.message).toContain(`- ${includeRelative}`);
+    expect(d!.message.indexOf(`- ${importerRelative}`)).toBeLessThan(
+      d!.message.indexOf(`- ${includeRelative}`),
+    );
   });
 });
