@@ -5,5 +5,4 @@ end
 export func main(): void
   asm
     loadi B, 7
-    ret
 end

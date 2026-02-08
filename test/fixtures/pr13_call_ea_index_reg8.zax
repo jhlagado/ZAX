@@ -11,6 +11,5 @@ export func main(): void
   asm
     ld b, 2
     takeAddr arr[B]
-    ret
 end
 

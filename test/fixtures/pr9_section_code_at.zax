@@ -3,6 +3,5 @@ section code at 16
 export func main(): void
   asm
     nop
-    ret
 end
 

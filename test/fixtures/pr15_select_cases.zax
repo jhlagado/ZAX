@@ -9,5 +9,4 @@ export func main(): void
       else
         ld d, 4
     end
-    ret
 end

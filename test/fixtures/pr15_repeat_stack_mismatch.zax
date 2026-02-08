@@ -3,5 +3,4 @@ export func main(): void
     repeat
       push bc
     until NZ
-    ret
 end

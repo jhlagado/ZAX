@@ -5,6 +5,5 @@ export func main(): void
   asm
     main_start:
     ld a, LibConst
-    ret
 end
 

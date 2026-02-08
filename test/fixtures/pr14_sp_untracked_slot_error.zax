@@ -4,5 +4,4 @@ export func main(): void
   asm
     ld sp, hl
     ld a, (x)
-    ret
 end

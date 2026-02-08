@@ -11,5 +11,4 @@ data
 export func main(): void
   asm
     takeAddr arr[table[0]]
-    ret
 end

@@ -2,5 +2,4 @@ export func main(): void
   var
     x: byte
   asm
-    ret
 end

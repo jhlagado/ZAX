@@ -36,5 +36,4 @@ export func main(): void
       dec b
     until Z
 
-    ret
 end
