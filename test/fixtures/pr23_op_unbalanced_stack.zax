@@ -1,0 +1,9 @@
+op leak()
+  push bc
+end
+
+export func main(): void
+  asm
+    leak
+    ret
+end

@@ -1630,6 +1630,7 @@ export function emitProgram(
               );
               return;
             }
+            const entryFlow = snapshotFlow();
 
             const bindings = new Map<string, AsmOperandNode>();
             for (let idx = 0; idx < opDecl.params.length; idx++) {
@@ -1684,32 +1685,51 @@ export function emitProgram(
             };
 
             opExpansionStack.push(opKey);
-            for (const bodyItem of opDecl.body.items) {
-              if (bodyItem.kind === 'AsmInstruction') {
-                const expanded: AsmInstructionNode = {
-                  kind: 'AsmInstruction',
-                  span: bodyItem.span,
-                  head: bodyItem.head,
-                  operands: bodyItem.operands.map((o) => substituteOperand(o)),
-                };
-                emitAsmInstruction(expanded);
-                continue;
-              }
-              if (bodyItem.kind === 'AsmLabel') {
+            try {
+              for (const bodyItem of opDecl.body.items) {
+                if (bodyItem.kind === 'AsmInstruction') {
+                  const expanded: AsmInstructionNode = {
+                    kind: 'AsmInstruction',
+                    span: bodyItem.span,
+                    head: bodyItem.head,
+                    operands: bodyItem.operands.map((o) => substituteOperand(o)),
+                  };
+                  emitAsmInstruction(expanded);
+                  continue;
+                }
+                if (bodyItem.kind === 'AsmLabel') {
+                  diagAt(
+                    diagnostics,
+                    bodyItem.span,
+                    `Labels inside op bodies are not supported in current subset.`,
+                  );
+                  continue;
+                }
                 diagAt(
                   diagnostics,
                   bodyItem.span,
-                  `Labels inside op bodies are not supported in current subset.`,
+                  `Structured control inside op bodies is not supported in current subset.`,
                 );
-                continue;
               }
-              diagAt(
-                diagnostics,
-                bodyItem.span,
-                `Structured control inside op bodies is not supported in current subset.`,
-              );
+            } finally {
+              opExpansionStack.pop();
             }
-            opExpansionStack.pop();
+            const exitFlow = snapshotFlow();
+            if (entryFlow.reachable && exitFlow.reachable) {
+              if (entryFlow.spValid && exitFlow.spValid && entryFlow.spDelta !== exitFlow.spDelta) {
+                diagAt(
+                  diagnostics,
+                  asmItem.span,
+                  `op "${opDecl.name}" expansion has non-zero net stack delta (${entryFlow.spDelta} -> ${exitFlow.spDelta}).`,
+                );
+              } else if (entryFlow.spValid && !exitFlow.spValid) {
+                diagAt(
+                  diagnostics,
+                  asmItem.span,
+                  `op "${opDecl.name}" expansion performs untracked SP mutation; cannot verify net stack delta.`,
+                );
+              }
+            }
             syncToFlow();
             return;
           }
@@ -1717,6 +1737,13 @@ export function emitProgram(
           const head = asmItem.head.toLowerCase();
           if (head === 'ret') {
             if (asmItem.operands.length === 0) {
+              if (spTrackingValid && spDeltaTracked !== 0) {
+                diagAt(
+                  diagnostics,
+                  asmItem.span,
+                  `ret with non-zero tracked stack delta (${spDeltaTracked}); function stack is imbalanced.`,
+                );
+              }
               if (emitSyntheticEpilogue) {
                 emitJumpTo(epilogueLabel, asmItem.span);
               } else {
@@ -1731,6 +1758,13 @@ export function emitProgram(
               if (op === undefined) {
                 diagAt(diagnostics, asmItem.span, `Unsupported ret condition.`);
                 return;
+              }
+              if (spTrackingValid && spDeltaTracked !== 0) {
+                diagAt(
+                  diagnostics,
+                  asmItem.span,
+                  `ret with non-zero tracked stack delta (${spDeltaTracked}); function stack is imbalanced.`,
+                );
               }
               emitSyntheticEpilogue = true;
               emitJumpCondTo(op, epilogueLabel, asmItem.span);
@@ -1991,6 +2025,13 @@ export function emitProgram(
           diagAt(diagnostics, items[consumed]!.span, `Internal control-flow lowering error.`);
         }
         syncToFlow();
+        if (flow.reachable && flow.spValid && flow.spDelta !== 0) {
+          diagAt(
+            diagnostics,
+            item.span,
+            `Function "${item.name}" has non-zero stack delta at fallthrough (${flow.spDelta}).`,
+          );
+        }
 
         if (emitSyntheticEpilogue) {
           emitAbs16Fixup(0xc3, epilogueLabel.toLowerCase(), 0, item.span);
