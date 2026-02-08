@@ -14,5 +14,4 @@ export func main(): void
   asm
     loadx (b)
     loadx (w)
-    ret
 end

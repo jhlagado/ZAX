@@ -3,6 +3,5 @@ data
 
 export func main(): void
   asm
-    ret
 end
 

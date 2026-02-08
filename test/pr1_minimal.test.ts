@@ -22,8 +22,8 @@ describe('PR1 minimal end-to-end', () => {
     expect(hex).toBeDefined();
     expect(d8m).toBeDefined();
 
-    expect(bin!.bytes).toEqual(Uint8Array.of(0x00, 0x3e, 0x2a, 0xc3, 0x34, 0x12, 0xc9));
-    expect(hex!.text).toContain(':07000000003E2AC33412C9BF');
+    expect(bin!.bytes).toEqual(Uint8Array.of(0x00, 0x3e, 0x2a, 0xc3, 0x34, 0x12));
+    expect(hex!.text).toContain(':06000000003E2AC3341289');
 
     expect(d8m!.json.format).toBe('d8-debug-map');
     expect(d8m!.json.version).toBe(1);

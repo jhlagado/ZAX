@@ -6,6 +6,5 @@ data
 export func main(): void
   asm
     ld a, MsgLen
-    ret
 end
 

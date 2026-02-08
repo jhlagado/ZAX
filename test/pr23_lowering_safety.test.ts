@@ -24,6 +24,26 @@ describe('PR23 lowering safety checks', () => {
     ).toBe(true);
   });
 
+  it('diagnoses conditional ret with non-zero tracked stack delta', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr23_ret_cc_stack_imbalance.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(
+      res.diagnostics.some((d) => d.message.includes('ret with non-zero tracked stack delta')),
+    ).toBe(true);
+  });
+
+  it('diagnoses op expansions that mutate SP in untracked ways', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr23_op_untracked_sp_mutation.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(
+      res.diagnostics.some((d) =>
+        d.message.includes(
+          'expansion performs untracked SP mutation; cannot verify net stack delta',
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it('emits an implicit ret for fallthrough functions without locals', async () => {
     const entry = join(__dirname, 'fixtures', 'pr23_implicit_ret_no_locals.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });

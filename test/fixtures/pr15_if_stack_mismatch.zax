@@ -3,5 +3,4 @@ export func main(): void
     if NZ
       push bc
     end
-    ret
 end

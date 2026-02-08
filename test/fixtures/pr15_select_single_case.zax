@@ -5,5 +5,4 @@ export func main(): void
       case 1
         ld b, 2
     end
-    ret
 end

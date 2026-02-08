@@ -18,7 +18,7 @@ describe('PR14 frame slots and epilogue rewriting', () => {
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
 
-    expect(bin!.bytes).toEqual(Uint8Array.of(0xc5, 0xc3, 0x07, 0x00, 0xc3, 0x07, 0x00, 0xc1, 0xc9));
+    expect(bin!.bytes).toEqual(Uint8Array.of(0xc5, 0xc3, 0x04, 0x00, 0xc1, 0xc9));
   });
 
   it('rewrites conditional ret to a conditional jp to epilogue', async () => {
@@ -84,10 +84,7 @@ describe('PR14 frame slots and epilogue rewriting', () => {
         0x39,
         0x7e,
         0xc3,
-        0x17,
-        0x00,
-        0xc3,
-        0x17,
+        0x14,
         0x00,
         0xc1,
         0xc1,
