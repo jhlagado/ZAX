@@ -1787,39 +1787,38 @@ export function emitProgram(
           }
 
           const head = asmItem.head.toLowerCase();
-          if (head === 'jr') {
-            const emitRelFromOperand = (
-              operand: AsmOperandNode,
-              opcode: number,
-              mnemonic: string,
-            ): boolean => {
-              if (operand.kind !== 'Imm') {
-                diagAt(diagnostics, asmItem.span, `${mnemonic} expects an immediate target.`);
-                return false;
-              }
-              if (operand.expr.kind === 'ImmName') {
-                emitRel8Fixup(opcode, operand.expr.name.toLowerCase(), 0, asmItem.span, mnemonic);
-                return true;
-              }
-              const value = evalImmExpr(operand.expr, env, diagnostics);
-              if (value === undefined) {
-                diagAt(diagnostics, asmItem.span, `Failed to evaluate ${mnemonic} target.`);
-                return false;
-              }
-              if (value < -128 || value > 127) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `${mnemonic} relative branch displacement out of range (-128..127): ${value}.`,
-                );
-                return false;
-              }
-              emitCodeBytes(Uint8Array.of(opcode, value & 0xff), asmItem.span.file);
+          const emitRel8FromOperand = (
+            operand: AsmOperandNode,
+            opcode: number,
+            mnemonic: string,
+          ): boolean => {
+            if (operand.kind !== 'Imm') {
+              diagAt(diagnostics, asmItem.span, `${mnemonic} expects an immediate target.`);
+              return false;
+            }
+            if (operand.expr.kind === 'ImmName') {
+              emitRel8Fixup(opcode, operand.expr.name.toLowerCase(), 0, asmItem.span, mnemonic);
               return true;
-            };
-
+            }
+            const value = evalImmExpr(operand.expr, env, diagnostics);
+            if (value === undefined) {
+              diagAt(diagnostics, asmItem.span, `Failed to evaluate ${mnemonic} target.`);
+              return false;
+            }
+            if (value < -128 || value > 127) {
+              diagAt(
+                diagnostics,
+                asmItem.span,
+                `${mnemonic} relative branch displacement out of range (-128..127): ${value}.`,
+              );
+              return false;
+            }
+            emitCodeBytes(Uint8Array.of(opcode, value & 0xff), asmItem.span.file);
+            return true;
+          };
+          if (head === 'jr') {
             if (asmItem.operands.length === 1) {
-              if (!emitRelFromOperand(asmItem.operands[0]!, 0x18, 'jr')) return;
+              if (!emitRel8FromOperand(asmItem.operands[0]!, 0x18, 'jr')) return;
               flow.reachable = false;
               syncToFlow();
               return;
@@ -1837,7 +1836,7 @@ export function emitProgram(
                 diagAt(diagnostics, asmItem.span, `Unsupported jr condition.`);
                 return;
               }
-              if (!emitRelFromOperand(asmItem.operands[1]!, opcode, `jr ${ccName!.toLowerCase()}`))
+              if (!emitRel8FromOperand(asmItem.operands[1]!, opcode, `jr ${ccName!.toLowerCase()}`))
                 return;
               syncToFlow();
               return;
@@ -1853,24 +1852,7 @@ export function emitProgram(
               diagAt(diagnostics, asmItem.span, `djnz expects an immediate target.`);
               return;
             }
-            if (target.expr.kind === 'ImmName') {
-              emitRel8Fixup(0x10, target.expr.name.toLowerCase(), 0, asmItem.span, 'djnz');
-            } else {
-              const value = evalImmExpr(target.expr, env, diagnostics);
-              if (value === undefined) {
-                diagAt(diagnostics, asmItem.span, `Failed to evaluate djnz target.`);
-                return;
-              }
-              if (value < -128 || value > 127) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `djnz relative branch displacement out of range (-128..127): ${value}.`,
-                );
-                return;
-              }
-              emitCodeBytes(Uint8Array.of(0x10, value & 0xff), asmItem.span.file);
-            }
+            if (!emitRel8FromOperand(target, 0x10, 'djnz')) return;
             syncToFlow();
             return;
           }
