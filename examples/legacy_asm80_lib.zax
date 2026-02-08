@@ -1,0 +1,28 @@
+; legacy_asm80_lib.zax
+;
+; Example: importing a prebuilt library assembled elsewhere (e.g. asm80),
+; then exposing its entry points to ZAX via `extern`.
+;
+; Pattern:
+;   - This module owns the bytes: `bin legacy ... from ".../legacy.bin"`
+;   - This module owns the signatures: `extern legacy ... end`
+;   - Other ZAX modules `import legacy_asm80_lib` and call the functions.
+;
+; Notes:
+; - In v0.1, `extern <binName> ... at $NNNN` uses an *offset* from the base
+;   address where the `bin` blob is placed (spec §6.5).
+; - This file is intended as a re-usable "library wrapper" module.
+
+; Bring a prebuilt blob into the final image.
+; (In real projects this might be in `data` or `code` depending on what it contains.)
+bin legacy in code from "asm80/legacy.bin"
+
+; Optional: constants/types that are part of the library's public API.
+const LegacyPutcOffset = $0030
+
+; Bind callable names to entry points inside the imported blob.
+extern legacy
+  func legacy_init(): void at $0000
+  func legacy_putc(ch: byte): void at LegacyPutcOffset
+end
+
