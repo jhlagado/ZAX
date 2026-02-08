@@ -3,5 +3,4 @@ export func main(): void
     repeat
       nop
     until NZ
-    ret
 end

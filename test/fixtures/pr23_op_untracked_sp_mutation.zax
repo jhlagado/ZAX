@@ -1,8 +1,8 @@
-op leak()
-  push bc
+op smash()
+  ld sp, hl
 end
 
 export func main(): void
   asm
-    leak
+    smash
 end

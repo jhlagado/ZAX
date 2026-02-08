@@ -1436,6 +1436,15 @@ export function emitProgram(
         };
 
         const emitAsmInstruction = (asmItem: AsmInstructionNode): void => {
+          const diagIfRetStackImbalanced = (): void => {
+            if (spTrackingValid && spDeltaTracked !== 0) {
+              diagAt(
+                diagnostics,
+                asmItem.span,
+                `ret with non-zero tracked stack delta (${spDeltaTracked}); function stack is imbalanced.`,
+              );
+            }
+          };
           const callable = callables.get(asmItem.head.toLowerCase());
           if (callable) {
             const args = asmItem.operands;
@@ -1717,10 +1726,11 @@ export function emitProgram(
             const exitFlow = snapshotFlow();
             if (entryFlow.reachable && exitFlow.reachable) {
               if (entryFlow.spValid && exitFlow.spValid && entryFlow.spDelta !== exitFlow.spDelta) {
+                const delta = exitFlow.spDelta - entryFlow.spDelta;
                 diagAt(
                   diagnostics,
                   asmItem.span,
-                  `op "${opDecl.name}" expansion has non-zero net stack delta (${entryFlow.spDelta} -> ${exitFlow.spDelta}).`,
+                  `op "${opDecl.name}" has non-zero net stack delta (${delta} byte(s)).`,
                 );
               } else if (entryFlow.spValid && !exitFlow.spValid) {
                 diagAt(
@@ -1737,13 +1747,7 @@ export function emitProgram(
           const head = asmItem.head.toLowerCase();
           if (head === 'ret') {
             if (asmItem.operands.length === 0) {
-              if (spTrackingValid && spDeltaTracked !== 0) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `ret with non-zero tracked stack delta (${spDeltaTracked}); function stack is imbalanced.`,
-                );
-              }
+              diagIfRetStackImbalanced();
               if (emitSyntheticEpilogue) {
                 emitJumpTo(epilogueLabel, asmItem.span);
               } else {
@@ -1759,13 +1763,7 @@ export function emitProgram(
                 diagAt(diagnostics, asmItem.span, `Unsupported ret condition.`);
                 return;
               }
-              if (spTrackingValid && spDeltaTracked !== 0) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `ret with non-zero tracked stack delta (${spDeltaTracked}); function stack is imbalanced.`,
-                );
-              }
+              diagIfRetStackImbalanced();
               emitSyntheticEpilogue = true;
               emitJumpCondTo(op, epilogueLabel, asmItem.span);
               syncToFlow();

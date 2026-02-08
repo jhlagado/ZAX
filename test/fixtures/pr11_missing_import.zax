@@ -3,6 +3,5 @@ import "missing.zax"
 
 export func main(): void
   asm
-    ret
 end
 

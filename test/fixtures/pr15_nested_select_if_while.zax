@@ -10,5 +10,4 @@ export func main(): void
       else
         nop
     end
-    ret
 end

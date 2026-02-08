@@ -21,7 +21,6 @@ func print_mode(mode: byte): void
       ld a, 'W'
     end
     bios_putc A
-    ret
 end
 
 export func main(): void
@@ -39,5 +38,4 @@ loop:
         pop bc
     end
     djnz loop
-    ret
 end

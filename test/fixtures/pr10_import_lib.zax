@@ -5,6 +5,5 @@ func lib(): void
   asm
     lib_start:
     nop
-    ret
 end
 

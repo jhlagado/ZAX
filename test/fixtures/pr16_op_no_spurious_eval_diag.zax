@@ -9,5 +9,4 @@ end
 export func main(): void
   asm
     pick missingName
-    ret
 end

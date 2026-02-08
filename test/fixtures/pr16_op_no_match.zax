@@ -5,5 +5,4 @@ end
 export func main(): void
   asm
     only8 HL
-    ret
 end

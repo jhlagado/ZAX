@@ -3,5 +3,4 @@ export func main(): void
     while NZ
       nop
     end
-    ret
 end

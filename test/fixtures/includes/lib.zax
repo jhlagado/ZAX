@@ -4,6 +4,5 @@ const IncConst = 7
 func inc(): void
   asm
     nop
-    ret
 end
 
