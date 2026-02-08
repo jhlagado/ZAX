@@ -1,0 +1,13 @@
+export func main(): void
+  asm
+    ld a, 5
+    sub 1
+    and $F0
+    or a
+    xor $55
+    cp (hl)
+    jr nz, skip
+    djnz skip
+  skip:
+    nop
+end
