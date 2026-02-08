@@ -19,8 +19,11 @@ describe('PR24 ISA core tranche', () => {
     expect(bin).toBeDefined();
     expect(bin!.bytes).toEqual(
       Uint8Array.of(
+        0x06,
+        0x02,
         0x3e,
         0x05,
+        0x90,
         0xd6,
         0x01,
         0xe6,
@@ -46,5 +49,15 @@ describe('PR24 ISA core tranche', () => {
     expect(res.diagnostics.some((d) => d.message.includes('out of range for rel8 branch'))).toBe(
       true,
     );
+  });
+
+  it('encodes backwards rel8 branch displacements', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr24_rel8_backward.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    expect(bin!.bytes).toEqual(Uint8Array.of(0x10, 0xfe, 0xc9));
   });
 });

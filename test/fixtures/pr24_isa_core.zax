@@ -1,6 +1,8 @@
 export func main(): void
   asm
+    ld b, 2
     ld a, 5
+    sub a, b
     sub 1
     and $F0
     or a
