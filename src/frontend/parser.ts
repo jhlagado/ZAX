@@ -353,6 +353,10 @@ function parseEaIndexFromText(
   const ea = parseEaExprFromText(filePath, t, indexSpan, diagnostics);
   if (ea) return { kind: 'IndexEa', span: indexSpan, expr: ea };
 
+  diag(diagnostics, filePath, `Invalid index expression: ${t}`, {
+    line: indexSpan.start.line,
+    column: indexSpan.start.column,
+  });
   return undefined;
 }
 

@@ -180,4 +180,15 @@ describe('PR12 calls (extern + func)', () => {
 
     expect(bin!.bytes).toEqual(expected);
   });
+
+  it('diagnoses nested indexed addresses as unsupported during lowering', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr22_call_ea_index_nested.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.artifacts).toEqual([]);
+    expect(
+      res.diagnostics.some((d) =>
+        d.message.includes('Nested indexed addresses are not supported yet'),
+      ),
+    ).toBe(true);
+  });
 });
