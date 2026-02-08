@@ -1,6 +1,6 @@
 # ZAX Assembler (Node CLI) — AI Team Prompt
 
-Use this prompt to instruct an AI (or multiple AIs acting as a team) to **plan and execute** the implementation of the ZAX assembler and its Debug80 integration.
+Use this prompt to instruct an AI (or multiple AIs acting as a team) to **plan and execute** the implementation of the ZAX assembler.
 
 This prompt is intentionally "meta": it comes _before_ detailed planning. Its job is to force the AI to produce a robust plan, break work into PR-sized chunks, coordinate agents, and follow a rigorous testing and review workflow.
 
@@ -28,7 +28,7 @@ Implement a Node-based assembler for ZAX that:
   - Intel HEX output (`.hex`) (per the spec constraints)
   - Debug80-compatible debug map: **D8 Debug Map (D8M) v1 JSON** (`.d8dbg.json`)
 - optionally produces a listing (`.lst`) and/or a human-readable map/symbol report
-- integrates cleanly with the **Debug80** project so Debug80 can build + debug `.zax` sources alongside existing `.asm` flows (currently assembled via `asm80`)
+- reaches a **fully working assembler** baseline before any external integration work
 
 CLI design is specified in `docs/zax-cli.md`. Do not deviate from it without discussion.
 
@@ -115,6 +115,17 @@ All test code lives under `test/` (not `tests/`). Do not create a parallel direc
 
 All `.zax` files under `examples/` must compile without errors as a CI gate. This is the simplest end-to-end smoke test.
 
+#### 4.4 Fully working assembler gate (required before integrations)
+
+Treat the assembler as "complete enough for integration" only when all of the following are true:
+
+- All v0.1 language features in `docs/zax-spec.md` are implemented, or explicitly rejected with intentional diagnostics.
+- CLI baseline behavior in `docs/zax-cli.md` is implemented (`-o`, `-t`, include paths, output suppression switches, help/version).
+- CI passes on macOS, Linux, and Windows with deterministic outputs.
+- `examples/*.zax` compile successfully and artifact tests are stable.
+- Negative tests cover major diagnostic classes and stable IDs.
+- Remaining work is polish/hardening only, not missing core compiler capability.
+
 ### 5) Vertical-slice PR plan (required ordering)
 
 Work in **vertical slices**, not horizontal layers. Each PR compiles a _slightly larger subset_ of ZAX from source to artifact output. This ensures the pipeline is always integrated and testable.
@@ -132,8 +143,9 @@ Required PR sequence (adjust scope as needed, but preserve the vertical-slice pr
 | 6   | **Imports and multi-module**: `import`, name resolution, collision detection, packing order, forward references.                                                                          | §3                                              |
 | 7   | **`op` declarations**: matcher types, overload resolution, autosave, expansion, cyclic-expansion detection.                                                                               | §9                                              |
 | 8   | **`bin`/`hex`/`extern`**: external bytes, Intel HEX ingestion + validation, extern bindings.                                                                                              | §6.4, §6.5                                      |
-| 9   | **Formats and Debug80**: extend D8M writer (source mapping, local scopes), LST writer, CLI polish (all switches per `docs/zax-cli.md`).                                                   | Appendix B, CLI doc                             |
-| 10  | **`examples/` acceptance + hardening**: all examples compile, negative-test coverage sweep, edge cases.                                                                                   | All                                             |
+| 9   | **Assembler completeness pass**: finish CLI polish (all switches per `docs/zax-cli.md`), complete D8M/LST quality, and close remaining core compiler gaps.                                | CLI doc, Appendix B, relevant spec sections     |
+| 10  | **`examples/` acceptance + hardening**: all examples compile, negative-test coverage sweep, cross-platform path edge cases, determinism audit.                                            | All                                             |
+| 11  | **Debug80 integration (deferred)**: integrate Debug80 only after PR10 and the fully-working-assembler gate (§4.4) are satisfied.                                                          | CLI doc, Appendix B                             |
 
 Each PR must include tests for its scope and must not break any previously passing tests.
 
@@ -145,7 +157,7 @@ When using multiple agents in parallel:
 
 - **Agent A (frontend)**: `src/frontend/`, `src/semantics/`, `src/diagnostics/`. Owns lexer, parser, AST construction, name resolution, const eval.
 - **Agent B (backend)**: `src/lowering/`, `src/backend/`, `src/formats/`. Owns control-flow lowering, Z80 encoding, fixups, section packing, format writers.
-- **Agent C (CLI + integration)**: `src/cli/`, `test/integration/`, Debug80 integration PR.
+- **Agent C (CLI + integration)**: `src/cli/`, `test/integration/`, and deferred Debug80 integration after the assembler-complete gate.
 
 #### 6.2 Coordination rules
 
@@ -166,9 +178,13 @@ Every PR must satisfy before merge:
 - [ ] PR description references spec sections covered
 - [ ] Linter clean (ESLint + Prettier, or equivalent)
 
-### 7) Debug80 integration (first-class requirement)
+### 7) Debug80 integration (deferred requirement)
 
 Debug80 currently integrates `asm80` by spawning it and expecting `.hex` + `.lst`, and it uses D8M debug maps.
+
+This work is intentionally deferred until the assembler is fully working per §4.4.
+
+Do not prioritize Debug80 integration while core compiler behavior, CLI behavior, or test completeness is still in progress.
 
 You must plan and implement:
 
@@ -187,7 +203,7 @@ Before coding, output:
 
 1. The **Phase 0 contracts PR** (AST types, diagnostic types, pipeline interface, format writer interfaces).
 2. A **phased plan** confirming or adjusting the vertical-slice PR table above, with estimated scope per PR.
-3. A **Debug80 integration plan** (even if implemented later).
+3. A **clear assembler-complete gate checklist** (feature coverage, CLI readiness, tests, determinism, diagnostics).
 
 Do not write compiler logic until Phase 0 is merged.
 

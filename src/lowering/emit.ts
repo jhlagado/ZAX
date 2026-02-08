@@ -382,7 +382,16 @@ export function emitProgram(
       case 'EaField':
         return { ...ea, base: cloneEaExpr(ea.base) };
       case 'EaIndex':
-        return { ...ea, base: cloneEaExpr(ea.base) };
+        return {
+          ...ea,
+          base: cloneEaExpr(ea.base),
+          index:
+            ea.index.kind === 'IndexEa'
+              ? { ...ea.index, expr: cloneEaExpr(ea.index.expr) }
+              : ea.index.kind === 'IndexImm'
+                ? { ...ea.index, value: cloneImmExpr(ea.index.value) }
+                : { ...ea.index },
+        };
       case 'EaAdd':
       case 'EaSub':
         return { ...ea, base: cloneEaExpr(ea.base), offset: cloneImmExpr(ea.offset) };
@@ -491,6 +500,10 @@ export function emitProgram(
             diagAt(diagnostics, span, `Indexing requires an array type.`);
             return undefined;
           }
+          if (expr.index.kind === 'IndexEa') {
+            diagAt(diagnostics, span, `Nested indexed addresses are not supported yet.`);
+            return undefined;
+          }
           if (expr.index.kind !== 'IndexImm') return undefined;
           const idx = evalImmExpr(expr.index.value, env, diagnostics);
           if (idx === undefined) {
@@ -538,6 +551,9 @@ export function emitProgram(
           span,
           `Non-constant indexing is supported only for element sizes 1 and 2 (got ${elemSize}).`,
         );
+        return false;
+      }
+      if (ea.index.kind === 'IndexEa') {
         return false;
       }
 
