@@ -463,6 +463,12 @@ function parseAsmStatement(
   if (lower === 'else') {
     const top = controlStack[controlStack.length - 1];
     if (top === 'Select') return { kind: 'SelectElse', span: stmtSpan };
+    if (top !== 'If') {
+      diag(diagnostics, filePath, `"else" without matching "if" or "select"`, {
+        line: stmtSpan.start.line,
+        column: stmtSpan.start.column,
+      });
+    }
     return { kind: 'Else', span: stmtSpan };
   }
 

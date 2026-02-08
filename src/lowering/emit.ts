@@ -232,13 +232,8 @@ export function emitProgram(
     fixups.push({ offset: start + 1, baseLower, addend, file: span.file });
   };
 
-  const conditionOpcode = (op: AsmOperandNode): number | undefined => {
-    const asName =
-      op.kind === 'Imm' && op.expr.kind === 'ImmName'
-        ? op.expr.name.toUpperCase()
-        : op.kind === 'Reg'
-          ? op.name.toUpperCase()
-          : undefined;
+  const conditionOpcodeFromName = (nameRaw: string): number | undefined => {
+    const asName = nameRaw.toUpperCase();
     switch (asName) {
       case 'NZ':
         return 0xc2;
@@ -261,28 +256,14 @@ export function emitProgram(
     }
   };
 
-  const conditionOpcodeFromName = (nameRaw: string): number | undefined => {
-    const name = nameRaw.toUpperCase();
-    switch (name) {
-      case 'NZ':
-        return 0xc2;
-      case 'Z':
-        return 0xca;
-      case 'NC':
-        return 0xd2;
-      case 'C':
-        return 0xda;
-      case 'PO':
-        return 0xe2;
-      case 'PE':
-        return 0xea;
-      case 'P':
-        return 0xf2;
-      case 'M':
-        return 0xfa;
-      default:
-        return undefined;
-    }
+  const conditionOpcode = (op: AsmOperandNode): number | undefined => {
+    const asName =
+      op.kind === 'Imm' && op.expr.kind === 'ImmName'
+        ? op.expr.name
+        : op.kind === 'Reg'
+          ? op.name
+          : undefined;
+    return asName ? conditionOpcodeFromName(asName) : undefined;
   };
 
   const inverseConditionName = (nameRaw: string): string | undefined => {
@@ -1034,6 +1015,8 @@ export function emitProgram(
           emitJumpCondTo(0xc2, mismatchLabel, span); // jp nz, mismatch
         };
         const loadSelectorIntoHL = (selector: AsmOperandNode, span: SourceSpan): boolean => {
+          // Current select lowering may reload selector operands per-case during dispatch.
+          // For memory-based selectors, this means repeated reads by design in v0.1.
           if (selector.kind === 'Reg') {
             const r = selector.name.toUpperCase();
             if (r === 'BC' || r === 'DE' || r === 'HL') {
