@@ -1,0 +1,15 @@
+; PR22 fixture: nested indexed EA currently rejected in lowering with clear diagnostic
+section code at $0000
+section data at $0040
+
+extern func takeAddr(p: word): void at $1234
+
+data
+  arr: byte[4] = [ 10, 20, 30, 40 ]
+  table: byte[2] = [ 1, 2 ]
+
+export func main(): void
+  asm
+    takeAddr arr[table[0]]
+    ret
+end
