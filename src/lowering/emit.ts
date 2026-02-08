@@ -235,10 +235,7 @@ export function emitProgram(
             diagAt(diagnostics, span, `Indexing requires an array type.`);
             return undefined;
           }
-          if (expr.index.kind !== 'IndexImm') {
-            diagAt(diagnostics, span, `Non-constant array indices are not supported yet.`);
-            return undefined;
-          }
+          if (expr.index.kind !== 'IndexImm') return undefined;
           const idx = evalImmExpr(expr.index.value, env, diagnostics);
           if (idx === undefined) {
             diagAt(diagnostics, span, `Failed to evaluate array index.`);
@@ -260,7 +257,127 @@ export function emitProgram(
 
   const pushEaAddress = (ea: EaExprNode, span: SourceSpan): boolean => {
     const r = resolveEa(ea, span);
-    if (!r) return false;
+    if (!r) {
+      // Fallback: support `arr[reg8]` and `arr[HL]` (index byte read from memory at HL)
+      // for element sizes 1 or 2, by computing the address into HL at runtime.
+      if (ea.kind !== 'EaIndex') return false;
+      const base = resolveEa(ea.base, span);
+      if (!base || !base.typeExpr || base.typeExpr.kind !== 'ArrayType') {
+        diagAt(diagnostics, span, `Unsupported ea argument: cannot lower indexed address.`);
+        return false;
+      }
+      const elemSize = sizeOfTypeExpr(base.typeExpr.element, env, diagnostics);
+      if (elemSize === undefined) return false;
+      if (elemSize !== 1 && elemSize !== 2) {
+        diagAt(
+          diagnostics,
+          span,
+          `Non-constant indexing is supported only for element sizes 1 and 2 (got ${elemSize}).`,
+        );
+        return false;
+      }
+
+      // If the index is sourced from (HL), read it before clobbering HL with the base address.
+      if (ea.index.kind === 'IndexMemHL') {
+        emitCodeBytes(Uint8Array.of(0x7e), span.file); // ld a, (hl)
+      }
+
+      emitAbs16Fixup(0x21, base.baseLower, base.addend, span); // ld hl, base
+
+      if (ea.index.kind === 'IndexReg8') {
+        const r8 = ea.index.reg.toUpperCase();
+        if (!reg8.has(r8)) {
+          diagAt(diagnostics, span, `Invalid reg8 index "${ea.index.reg}".`);
+          return false;
+        }
+        if (elemSize === 2) {
+          if (
+            !emitInstr(
+              'ld',
+              [
+                { kind: 'Reg', span, name: 'A' },
+                { kind: 'Reg', span, name: r8 },
+              ],
+              span,
+            )
+          ) {
+            return false;
+          }
+          emitCodeBytes(Uint8Array.of(0x87), span.file); // add a, a
+          if (
+            !emitInstr(
+              'ld',
+              [
+                { kind: 'Reg', span, name: 'E' },
+                { kind: 'Reg', span, name: 'A' },
+              ],
+              span,
+            )
+          ) {
+            return false;
+          }
+        } else {
+          if (
+            !emitInstr(
+              'ld',
+              [
+                { kind: 'Reg', span, name: 'E' },
+                { kind: 'Reg', span, name: r8 },
+              ],
+              span,
+            )
+          ) {
+            return false;
+          }
+        }
+      } else if (ea.index.kind === 'IndexMemHL') {
+        // Index already in A from `ld a,(hl)` above.
+        if (elemSize === 2) {
+          emitCodeBytes(Uint8Array.of(0x87), span.file); // add a, a
+        }
+        if (
+          !emitInstr(
+            'ld',
+            [
+              { kind: 'Reg', span, name: 'E' },
+              { kind: 'Reg', span, name: 'A' },
+            ],
+            span,
+          )
+        ) {
+          return false;
+        }
+      } else {
+        diagAt(diagnostics, span, `Non-constant array indices are not supported yet.`);
+        return false;
+      }
+
+      if (
+        !emitInstr(
+          'ld',
+          [
+            { kind: 'Reg', span, name: 'D' },
+            { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } },
+          ],
+          span,
+        )
+      ) {
+        return false;
+      }
+      if (
+        !emitInstr(
+          'add',
+          [
+            { kind: 'Reg', span, name: 'HL' },
+            { kind: 'Reg', span, name: 'DE' },
+          ],
+          span,
+        )
+      ) {
+        return false;
+      }
+      return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
+    }
     emitAbs16Fixup(0x21, r.baseLower, r.addend, span); // ld hl, nn
     return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
   };
