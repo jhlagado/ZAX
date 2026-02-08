@@ -23,7 +23,6 @@ export func sum_words(a: word, b: word): word
     ld de, (b)
     add hl, de
     pop de
-    ret
 end
 
 ; Bump sprites[i].x by dx (dx is zero-extended in v0.1).
@@ -45,5 +44,4 @@ export func bump_sprite_x(i: byte, dx: byte): void
 
     ; sprites[i].x = HL
     ld (sprites[C].x), hl
-    ret
 end

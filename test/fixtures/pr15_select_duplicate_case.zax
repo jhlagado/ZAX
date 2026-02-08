@@ -6,5 +6,4 @@ export func main(): void
       case 1
         nop
     end
-    ret
 end

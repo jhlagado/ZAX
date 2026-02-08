@@ -1,4 +1,4 @@
 export func main(): void
   asm
-    until NZ
+    nop
 end

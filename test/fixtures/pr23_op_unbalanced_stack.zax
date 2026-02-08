@@ -1,4 +1,8 @@
+op leak()
+  push bc
+end
+
 export func main(): void
   asm
-    until NZ
+    leak
 end

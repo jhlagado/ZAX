@@ -10,5 +10,4 @@ end
 export func main(): void
   asm
     initbc
-    ret
 end

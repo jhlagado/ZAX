@@ -14,6 +14,5 @@ export func main(): void
     legacy_putc 'H'
     legacy_putc 'i'
     legacy_putc '!'
-    ret
 end
 

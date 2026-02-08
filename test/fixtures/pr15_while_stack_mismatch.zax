@@ -3,5 +3,4 @@ export func main(): void
     while NZ
       push bc
     end
-    ret
 end
