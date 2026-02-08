@@ -1,0 +1,19 @@
+; legacy_asm80_main.zax
+;
+; Example entry file that imports a "library wrapper" module which:
+;   - imports a prebuilt `bin`
+;   - declares `extern` signatures for entry points inside that blob
+;
+; Compile this file as the entry module (it imports the wrapper).
+
+import legacy_asm80_lib
+
+export func main(): void
+  asm
+    legacy_init
+    legacy_putc 'H'
+    legacy_putc 'i'
+    legacy_putc '!'
+    ret
+end
+
