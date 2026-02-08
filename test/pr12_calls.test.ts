@@ -45,14 +45,67 @@ describe('PR12 calls (extern + func)', () => {
     expect(res.diagnostics[0]?.column).toBe(1);
   });
 
-  it('diagnoses out-of-range byte arguments with a source location', async () => {
+  it('truncates byte immediates to low 8 bits', async () => {
     const entry = join(__dirname, 'fixtures', 'pr12_call_byte_oob.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.artifacts).toEqual([]);
-    expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toContain('Byte argument out of range');
-    expect(res.diagnostics[0]?.file).toBe(entry);
-    expect(res.diagnostics[0]?.line).toBe(6);
-    expect(res.diagnostics[0]?.column).toBe(1);
+    expect(res.diagnostics).toEqual([]);
+
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+
+    // puts 256 => low8 = 0 => ld hl,0; push hl; call $1234; pop bc; ret
+    expect(bin!.bytes).toEqual(Uint8Array.of(0x21, 0x00, 0x00, 0xe5, 0xcd, 0x34, 0x12, 0xc1, 0xc9));
+  });
+
+  it('supports ea and (ea) arguments for module-scope data symbols', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr13_call_ea_mem.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+
+    const code = Uint8Array.of(
+      // takeWord w (address $0040)
+      0x21,
+      0x40,
+      0x00,
+      0xe5,
+      0xcd,
+      0x34,
+      0x12,
+      0xc1,
+      // takeWord (w)
+      0x2a,
+      0x40,
+      0x00,
+      0xe5,
+      0xcd,
+      0x34,
+      0x12,
+      0xc1,
+      // takeByte (b) where b at $0042
+      0x3a,
+      0x42,
+      0x00,
+      0x26,
+      0x00,
+      0x6f,
+      0xe5,
+      0xcd,
+      0x34,
+      0x12,
+      0xc1,
+      // ret
+      0xc9,
+    );
+    const gap = new Uint8Array(0x40 - code.length);
+    const data = Uint8Array.of(0xef, 0xbe, 0x7f);
+    const expected = new Uint8Array(code.length + gap.length + data.length);
+    expected.set(code, 0);
+    expected.set(gap, code.length);
+    expected.set(data, code.length + gap.length);
+
+    expect(bin!.bytes).toEqual(expected);
   });
 });
