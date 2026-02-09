@@ -9,12 +9,14 @@
   },
   "type": "module",
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "format": "prettier -w .",
-    "format:check": "prettier -c ."
+    "format:check": "prettier -c .",
+    "zax": "yarn -s build && node dist/src/cli.js"
   },
   "devDependencies": {
     "@types/node": "^22.13.1",
