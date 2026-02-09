@@ -580,7 +580,7 @@ function parseAsmInstruction(
 }
 
 type AsmControlFrame =
-  | { kind: 'If' }
+  | { kind: 'If'; elseSeen: boolean }
   | { kind: 'While' }
   | { kind: 'Repeat' }
   | { kind: 'Select'; elseSeen: boolean; armSeen: boolean };
@@ -621,6 +621,14 @@ function parseAsmStatement(
       });
       return undefined;
     }
+    if (top.elseSeen) {
+      diag(diagnostics, filePath, `"else" duplicated in if`, {
+        line: stmtSpan.start.line,
+        column: stmtSpan.start.column,
+      });
+      return undefined;
+    }
+    top.elseSeen = true;
     return { kind: 'Else', span: stmtSpan };
   }
 
@@ -653,7 +661,7 @@ function parseAsmStatement(
   const ifMatch = /^if\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
   if (ifMatch) {
     const cc = ifMatch[1]!;
-    controlStack.push({ kind: 'If' });
+    controlStack.push({ kind: 'If', elseSeen: false });
     return { kind: 'If', span: stmtSpan, cc };
   }
 
