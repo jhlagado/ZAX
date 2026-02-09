@@ -12,6 +12,16 @@ zax [options] <entry.zax>
 
 `<entry.zax>` is the entry module and must be the **last** argument (assembler-style).
 
+## Status (current implementation)
+
+The v0.1 CLI exists as `src/cli.ts` and is exposed via:
+
+```
+yarn -s zax -- [options] <entry.zax>
+```
+
+This runs `yarn -s build` first and then executes `dist/src/cli.js`.
+
 ## Primary output and derived artifacts
 
 ZAX uses a single “primary output path” to derive sibling artifacts.
