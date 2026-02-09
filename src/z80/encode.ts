@@ -220,6 +220,27 @@ export function encodeInstruction(
     return Uint8Array.of(opcode, n & 0xff, (n >> 8) & 0xff);
   }
 
+  if (head === 'rst' && ops.length === 1) {
+    const n = immValue(ops[0]!, env);
+    if (n === undefined || n < 0 || n > 0x38 || (n & 0x07) !== 0) {
+      diag(diagnostics, node, `rst expects an imm8 multiple of 8 (0..56)`);
+      return undefined;
+    }
+    return Uint8Array.of(0xc7 + n);
+  }
+
+  if (head === 'im' && ops.length === 1) {
+    const n = immValue(ops[0]!, env);
+    if (n === 0) return Uint8Array.of(0xed, 0x46);
+    if (n === 1) return Uint8Array.of(0xed, 0x56);
+    if (n === 2) return Uint8Array.of(0xed, 0x5e);
+    diag(diagnostics, node, `im expects 0, 1, or 2`);
+    return undefined;
+  }
+
+  if (head === 'reti' && ops.length === 0) return Uint8Array.of(0xed, 0x4d);
+  if (head === 'retn' && ops.length === 0) return Uint8Array.of(0xed, 0x45);
+
   if (head === 'jp' && ops.length === 1) {
     const n = immValue(ops[0]!, env);
     if (n === undefined || n < 0 || n > 0xffff) {
