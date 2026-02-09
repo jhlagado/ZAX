@@ -90,7 +90,10 @@ export function sizeOfTypeExpr(
         const es = sizeOf(te.element);
         if (es === undefined) return undefined;
         if (te.length === undefined) {
-          diag(te.span.file, `Array length is required in PR3 subset.`);
+          diag(
+            te.span.file,
+            `Array length is required here (inferred-length arrays like "T[]" are only permitted in data declarations with an initializer).`,
+          );
           return undefined;
         }
         return es * te.length;

@@ -34,6 +34,8 @@ describe('PR4 negative cases', () => {
     const entry = join(__dirname, 'fixtures', 'pr4_data_unsupported_type.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe('Unsupported data type in PR2 subset for "p".');
+    expect(res.diagnostics[0]?.message).toBe(
+      'Unsupported data type for "p" (expected byte/word/addr/ptr or fixed-length arrays of those).',
+    );
   });
 });

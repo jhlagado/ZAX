@@ -84,7 +84,7 @@ describe('sizeOfTypeExpr', () => {
     );
   });
 
-  it('requires array length in PR3 subset', () => {
+  it('requires array length outside data declarations', () => {
     const diagnostics: Diagnostic[] = [];
     const env = emptyEnv();
     const res = sizeOfTypeExpr(
@@ -98,7 +98,9 @@ describe('sizeOfTypeExpr', () => {
     );
     expect(res).toBeUndefined();
     expect(diagnostics[0]?.id).toBe(DiagnosticIds.TypeError);
-    expect(diagnostics.map((d) => d.message)).toContain('Array length is required in PR3 subset.');
+    expect(diagnostics.map((d) => d.message)).toContain(
+      'Array length is required here (inferred-length arrays like "T[]" are only permitted in data declarations with an initializer).',
+    );
   });
 
   it('computes union sizes as max field size', () => {
