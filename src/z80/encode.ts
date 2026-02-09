@@ -277,6 +277,11 @@ export function encodeInstruction(
         if (mem.expr.kind === 'EaName' && mem.expr.name.toUpperCase() === 'HL') {
           return Uint8Array.of(0x46 + (d << 3));
         }
+        if (dst.toUpperCase() === 'A' && mem.expr.kind === 'EaName') {
+          const ea = mem.expr.name.toUpperCase();
+          if (ea === 'BC') return Uint8Array.of(0x0a); // ld a,(bc)
+          if (ea === 'DE') return Uint8Array.of(0x1a); // ld a,(de)
+        }
       }
     }
 
@@ -288,6 +293,11 @@ export function encodeInstruction(
         if (s !== undefined) {
           return Uint8Array.of(0x70 + s);
         }
+      }
+      if (mem.expr.kind === 'EaName' && src?.toUpperCase() === 'A') {
+        const ea = mem.expr.name.toUpperCase();
+        if (ea === 'BC') return Uint8Array.of(0x02); // ld (bc),a
+        if (ea === 'DE') return Uint8Array.of(0x12); // ld (de),a
       }
     }
 

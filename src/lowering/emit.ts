@@ -819,10 +819,13 @@ export function emitProgram(
     const src = inst.operands[1]!;
     const isEaNameHL = (ea: EaExprNode): boolean =>
       ea.kind === 'EaName' && ea.name.toUpperCase() === 'HL';
+    const isEaNameBCorDE = (ea: EaExprNode): boolean =>
+      ea.kind === 'EaName' && (ea.name.toUpperCase() === 'BC' || ea.name.toUpperCase() === 'DE');
 
     // LD r8, (ea)
     if (dst.kind === 'Reg' && src.kind === 'Mem') {
       if (isEaNameHL(src.expr)) return false; // let the encoder handle (hl)
+      if (dst.name.toUpperCase() === 'A' && isEaNameBCorDE(src.expr)) return false; // ld a,(bc|de)
       if (dst.name.toUpperCase() === 'A') {
         const r = resolveEa(src.expr, inst.span);
         if (r?.kind === 'abs') {
@@ -881,6 +884,7 @@ export function emitProgram(
     // LD (ea), r8/r16
     if (dst.kind === 'Mem' && src.kind === 'Reg') {
       if (isEaNameHL(dst.expr)) return false; // let the encoder handle (hl)
+      if (src.name.toUpperCase() === 'A' && isEaNameBCorDE(dst.expr)) return false; // ld (bc|de),a
       if (src.name.toUpperCase() === 'A') {
         const r = resolveEa(dst.expr, inst.span);
         if (r?.kind === 'abs') {
