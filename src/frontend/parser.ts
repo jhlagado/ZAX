@@ -104,15 +104,15 @@ function diagIfInferredArrayLengthNotAllowed(
   filePath: string,
   typeText: string,
   where: { line: number; column: number },
-): void {
-  if (/\[\s*\]/.test(typeText)) {
-    diag(
-      diagnostics,
-      filePath,
-      `Inferred-length arrays (T[]) are only permitted in data declarations with an initializer.`,
-      where,
-    );
-  }
+): boolean {
+  if (!/\[\s*\]/.test(typeText)) return false;
+  diag(
+    diagnostics,
+    filePath,
+    `Inferred-length arrays (T[]) are only permitted in data declarations with an initializer.`,
+    where,
+  );
+  return true;
 }
 
 function parseNumberLiteral(text: string): number | undefined {
@@ -729,10 +729,13 @@ function parseParamsFromText(
       allowInferredArrayLength: false,
     });
     if (!typeExpr) {
-      diagIfInferredArrayLengthNotAllowed(diagnostics, filePath, typeText, {
-        line: paramsSpan.start.line,
-        column: paramsSpan.start.column,
-      });
+      if (
+        diagIfInferredArrayLengthNotAllowed(diagnostics, filePath, typeText, {
+          line: paramsSpan.start.line,
+          column: paramsSpan.start.column,
+        })
+      )
+        return undefined;
       diag(diagnostics, filePath, `Unsupported type in parameter declaration`, {
         line: paramsSpan.start.line,
         column: paramsSpan.start.column,
@@ -930,10 +933,15 @@ export function parseModuleFile(
         const stmtSpan = span(file, lineStartOffset, lineEndOffset);
         const typeExpr = parseTypeExprFromText(tail, stmtSpan, { allowInferredArrayLength: false });
         if (!typeExpr) {
-          diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, tail, {
-            line: lineNo,
-            column: 1,
-          });
+          if (
+            diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, tail, {
+              line: lineNo,
+              column: 1,
+            })
+          ) {
+            i++;
+            continue;
+          }
           diag(diagnostics, modulePath, `Invalid type alias`, { line: lineNo, column: 1 });
           i++;
           continue;
@@ -984,10 +992,15 @@ export function parseModuleFile(
           allowInferredArrayLength: false,
         });
         if (!typeExpr) {
-          diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, typeText, {
-            line: i + 1,
-            column: 1,
-          });
+          if (
+            diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, typeText, {
+              line: i + 1,
+              column: 1,
+            })
+          ) {
+            i++;
+            continue;
+          }
           diag(diagnostics, modulePath, `Unsupported field type`, { line: i + 1, column: 1 });
           i++;
           continue;
@@ -1072,10 +1085,15 @@ export function parseModuleFile(
           allowInferredArrayLength: false,
         });
         if (!typeExpr) {
-          diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, typeText, {
-            line: i + 1,
-            column: 1,
-          });
+          if (
+            diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, typeText, {
+              line: i + 1,
+              column: 1,
+            })
+          ) {
+            i++;
+            continue;
+          }
           diag(diagnostics, modulePath, `Unsupported field type`, { line: i + 1, column: 1 });
           i++;
           continue;
@@ -1149,10 +1167,13 @@ export function parseModuleFile(
           allowInferredArrayLength: false,
         });
         if (!typeExpr) {
-          diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, typeText, {
-            line: i + 1,
-            column: 1,
-          });
+          if (
+            diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, typeText, {
+              line: i + 1,
+              column: 1,
+            })
+          )
+            break;
           diag(diagnostics, modulePath, `Unsupported type in var declaration`, {
             line: i + 1,
             column: 1,
@@ -1219,10 +1240,15 @@ export function parseModuleFile(
         allowInferredArrayLength: false,
       });
       if (!returnType) {
-        diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, retTypeText, {
-          line: lineNo,
-          column: 1,
-        });
+        if (
+          diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, retTypeText, {
+            line: lineNo,
+            column: 1,
+          })
+        ) {
+          i++;
+          continue;
+        }
         diag(diagnostics, modulePath, `Unsupported return type`, { line: lineNo, column: 1 });
         i++;
         continue;
@@ -1278,10 +1304,15 @@ export function parseModuleFile(
               allowInferredArrayLength: false,
             });
             if (!typeExpr) {
-              diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, typeText, {
-                line: i + 1,
-                column: 1,
-              });
+              if (
+                diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, typeText, {
+                  line: i + 1,
+                  column: 1,
+                })
+              ) {
+                i++;
+                continue;
+              }
               diag(diagnostics, modulePath, `Unsupported type in var declaration`, {
                 line: i + 1,
                 column: 1,
@@ -1562,10 +1593,15 @@ export function parseModuleFile(
         allowInferredArrayLength: false,
       });
       if (!returnType) {
-        diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, retTypeText, {
-          line: lineNo,
-          column: 1,
-        });
+        if (
+          diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, retTypeText, {
+            line: lineNo,
+            column: 1,
+          })
+        ) {
+          i++;
+          continue;
+        }
         diag(diagnostics, modulePath, `Unsupported extern func return type`, {
           line: lineNo,
           column: 1,
