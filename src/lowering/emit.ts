@@ -867,6 +867,34 @@ export function emitProgram(
       }
     }
 
+    // LD (ea), imm8 (only for byte-typed destinations)
+    if (dst.kind === 'Mem' && src.kind === 'Imm') {
+      if (isEaNameHL(dst.expr)) return false; // let the encoder handle (hl)
+      const resolved = resolveEa(dst.expr, inst.span);
+      const scalar =
+        resolved?.typeExpr !== undefined
+          ? resolveScalarKind(resolved.typeExpr, new Set())
+          : undefined;
+      if (scalar !== 'byte') {
+        diagAt(diagnostics, inst.span, `ld (ea), imm is supported only for byte destinations.`);
+        return true;
+      }
+      const v = evalImmExpr(src.expr, env, diagnostics);
+      if (v === undefined || v < 0 || v > 0xff) {
+        diagAt(diagnostics, inst.span, `ld (ea), imm expects imm8.`);
+        return true;
+      }
+      if (!materializeEaAddressToHL(dst.expr, inst.span)) return true;
+      return emitInstr(
+        'ld',
+        [
+          { kind: 'Mem', span: inst.span, expr: { kind: 'EaName', span: inst.span, name: 'HL' } },
+          { kind: 'Imm', span: inst.span, expr: { kind: 'ImmLiteral', span: inst.span, value: v } },
+        ],
+        inst.span,
+      );
+    }
+
     return false;
   };
 
