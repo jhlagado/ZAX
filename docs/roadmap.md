@@ -182,26 +182,28 @@ Use only real GitHub PR numbers:
 
 Completed (anchored, most recent first):
 
-1. #38: Document examples as compiled contract (`examples/README.md`).
-2. #37: Fixups and forward references (spec + tests).
-3. #36: Expand char literal escape coverage (tests).
-4. #35: Char literals in `imm` expressions (parser + tests).
-5. #34: Examples compile gate (CI contract test + example updates).
-6. #33: Parser `select` arm ordering hardening.
-7. #32: Harden asm control keyword parsing (prevent cascaded diagnostics).
-8. #31: Roadmap anchors updated to real PR numbers (remove placeholders).
-9. #30: Diagnose `case` outside `select` during parsing (negative fixtures).
-10. #29: Deduplicate `select` join mismatch diagnostics (regression test).
-11. #28: Stacked `select case` labels share one body (spec + tests).
+1. #39: Listing output (`.lst`) artifact + contract test + CLI note.
+2. #38: Document examples as compiled contract (`examples/README.md`).
+3. #37: Fixups and forward references (spec + tests).
+4. #36: Expand char literal escape coverage (tests).
+5. #35: Char literals in `imm` expressions (parser + tests).
+6. #34: Examples compile gate (CI contract test + example updates).
+7. #33: Parser `select` arm ordering hardening.
+8. #32: Harden asm control keyword parsing (prevent cascaded diagnostics).
+9. #31: Roadmap anchors updated to real PR numbers (remove placeholders).
+10. #30: Diagnose `case` outside `select` during parsing (negative fixtures).
+11. #29: Deduplicate `select` join mismatch diagnostics (regression test).
+12. #28: Stacked `select case` labels share one body (spec + tests).
 
 Next (assembler-first):
 
-1. Next PR: Parser/AST closure pass (tighten remaining edge cases, eliminate core TODOs, expand negative fixtures).
-2. Following PR: Lowering/frame/op safety pass (SP/control/cleanup invariants + tests).
-3. Following PR: ISA coverage tranche (prioritize v0.1 workflows + fixtures).
-4. Following PR: CLI parity + `.lst` completion (contract tests).
-5. Following PR: Hardening sweep (determinism + negative coverage + cross-platform gates).
-6. Following PR: Debug80 integration (only after all gates pass).
+1. #40: Allow implicit return after label fallthrough (remove trailing explicit ret from non-ret fixtures).
+2. Following PR: Parser/AST closure pass (tighten remaining edge cases, eliminate core TODOs, expand negative fixtures).
+3. Following PR: Lowering/frame/op safety pass (SP/control/cleanup invariants + tests).
+4. Following PR: ISA coverage tranche (prioritize v0.1 workflows + fixtures).
+5. Following PR: CLI parity + `.lst` completion (CLI wiring + contract tests).
+6. Following PR: Hardening sweep (determinism + negative coverage + cross-platform gates).
+7. Following PR: Debug80 integration (only after all gates pass).
 
 ---
 
