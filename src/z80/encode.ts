@@ -694,6 +694,16 @@ export function encodeInstruction(
       return undefined;
     }
     const src = ops[1]!;
+    const idx = memIndexed(src, env);
+    if (idx) {
+      const disp = idx.disp;
+      if (disp < -128 || disp > 127) {
+        diag(diagnostics, node, `${mnemonic} (ix/iy+disp) expects disp8`);
+        return undefined;
+      }
+      // DD/FD CB disp <op> (where <op> matches the (HL) encoding)
+      return Uint8Array.of(idx.prefix, 0xcb, disp & 0xff, base + (bit << 3) + 0x06);
+    }
     if (isMemHL(src)) {
       return Uint8Array.of(0xcb, base + (bit << 3) + 0x06);
     }
