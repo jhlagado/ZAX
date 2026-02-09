@@ -18,6 +18,16 @@ describe('PR37 fixup negatives', () => {
     ).toBe(true);
   });
 
+  it('diagnoses unresolved rel8 fixup symbols', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr37_unresolved_symbol_rel8.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.artifacts).toEqual([]);
+    expect(
+      res.diagnostics.some((d) => d.message.includes('Unresolved symbol "missing_label"')),
+    ).toBe(true);
+    expect(res.diagnostics.some((d) => d.message.includes('rel8 jr fixup'))).toBe(true);
+  });
+
   it('diagnoses rel8 out-of-range fixups', async () => {
     const entry = join(__dirname, 'fixtures', 'pr37_rel8_out_of_range.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
