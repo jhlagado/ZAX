@@ -518,7 +518,7 @@ function parseAsmOperand(
     return undefined;
   }
 
-  diag(diagnostics, filePath, `Unsupported operand in PR3 subset: ${t}`, {
+  diag(diagnostics, filePath, `Unsupported operand: ${t}`, {
     line: operandSpan.start.line,
     column: operandSpan.start.column,
   });
@@ -1540,13 +1540,6 @@ export function parseModuleFile(
     }
 
     if (rest.startsWith('enum ')) {
-      if (exportPrefix.length > 0) {
-        diag(diagnostics, modulePath, `export not supported on enum declarations in PR4 subset`, {
-          line: lineNo,
-          column: 1,
-        });
-      }
-
       const decl = rest.slice('enum '.length).trimStart();
       const nameMatch = /^([A-Za-z_][A-Za-z0-9_]*)(?:\s+(.*))?$/.exec(decl);
       if (!nameMatch) {
@@ -1820,7 +1813,7 @@ export function parseModuleFile(
       continue;
     }
 
-    diag(diagnostics, modulePath, `Unsupported top-level construct in PR3 subset: ${text}`, {
+    diag(diagnostics, modulePath, `Unsupported top-level construct: ${text}`, {
       line: lineNo,
       column: 1,
     });
