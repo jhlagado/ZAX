@@ -11,8 +11,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 async function buildOnce(): Promise<void> {
-  const yarn = process.platform === 'win32' ? 'yarn.cmd' : 'yarn';
-  await execFileAsync(yarn, ['-s', 'build'], { encoding: 'utf8' });
+  await execFileAsync('yarn', ['-s', 'build'], {
+    encoding: 'utf8',
+    // On Windows, yarn is a .cmd shim; running via the shell ensures it resolves correctly.
+    shell: process.platform === 'win32',
+  });
 }
 
 async function runCli(args: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
