@@ -2538,7 +2538,7 @@ export function emitProgram(
             diag(
               diagnostics,
               decl.span.file,
-              `Unsupported data type in PR2 subset for "${decl.name}".`,
+              `Unsupported data type for "${decl.name}" (expected byte/word/addr/ptr or fixed-length arrays of those).`,
             );
             continue;
           }

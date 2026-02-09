@@ -552,6 +552,6 @@ export function encodeInstruction(
     if (encoded) return encoded;
   }
 
-  diag(diagnostics, node, `Unsupported instruction in PR1 subset: ${node.head}`);
+  diag(diagnostics, node, `Unsupported instruction: ${node.head}`);
   return undefined;
 }
