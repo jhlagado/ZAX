@@ -1,0 +1,15 @@
+section code at $0000
+section var at $1000
+
+var
+  x: byte[2]
+  y: word
+
+export func main(): void
+  asm
+    ld a, (x)
+    ld (x + 1), a
+    ld hl, (y)
+    ld (y), hl
+  end
+

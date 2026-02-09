@@ -58,8 +58,8 @@ describe('PR16 op declarations and expansion', () => {
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
-    expect([...bin!.bytes]).toContain(0x7e); // ld a,(hl) after addr materialization
-    expect([...bin!.bytes]).toContain(0x6f); // part of ld hl,(ea) lowering path
+    expect([...bin!.bytes]).toContain(0x3a); // ld a,(nn) fast-path for absolute EA
+    expect([...bin!.bytes]).toContain(0x2a); // ld hl,(nn) fast-path for absolute EA
     expect([...bin!.bytes]).toContain(0x34); // data low byte of $1234
     expect([...bin!.bytes]).toContain(0x12); // data high byte of $1234
   });

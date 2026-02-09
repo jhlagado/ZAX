@@ -182,30 +182,33 @@ Use only real GitHub PR numbers:
 
 Completed (anchored, most recent first):
 
-1. #41: ISA: `inc`/`dec` reg8 + `(hl)`, and `ld (hl), imm8` (fixture + test).
-2. #40: Implicit return after label (treat labels as re-entry points).
-3. #39: Listing output (`.lst`) artifact + contract test + CLI note.
-4. #38: Document examples as compiled contract (`examples/README.md`).
-5. #37: Fixups and forward references (spec + tests).
-6. #36: Expand char literal escape coverage (tests).
-7. #35: Char literals in `imm` expressions (parser + tests).
-8. #34: Examples compile gate (CI contract test + example updates).
-9. #33: Parser `select` arm ordering hardening.
-10. #32: Harden asm control keyword parsing (prevent cascaded diagnostics).
-11. #31: Roadmap anchors updated to real PR numbers (remove placeholders).
-12. #30: Diagnose `case` outside `select` during parsing (negative fixtures).
-13. #29: Deduplicate `select` join mismatch diagnostics (regression test).
-14. #28: Stacked `select case` labels share one body (spec + tests).
+1. #43: Lower `ld (ea), imm8` for byte destinations (tests).
+2. #42: Roadmap anchor update for #40/#41.
+3. #41: ISA: `inc`/`dec` reg8 + `(hl)`, and `ld (hl), imm8` (fixture + test).
+4. #40: Implicit return after label (treat labels as re-entry points).
+5. #39: Listing output (`.lst`) artifact + contract test + CLI note.
+6. #38: Document examples as compiled contract (`examples/README.md`).
+7. #37: Fixups and forward references (spec + tests).
+8. #36: Expand char literal escape coverage (tests).
+9. #35: Char literals in `imm` expressions (parser + tests).
+10. #34: Examples compile gate (CI contract test + example updates).
+11. #33: Parser `select` arm ordering hardening.
+12. #32: Harden asm control keyword parsing (prevent cascaded diagnostics).
+13. #31: Roadmap anchors updated to real PR numbers (remove placeholders).
+14. #30: Diagnose `case` outside `select` during parsing (negative fixtures).
+15. #29: Deduplicate `select` join mismatch diagnostics (regression test).
+16. #28: Stacked `select case` labels share one body (spec + tests).
 
 Next (assembler-first):
 
-1. #40: Allow implicit return after label fallthrough (remove trailing explicit ret from non-ret fixtures).
-2. Following PR: Parser/AST closure pass (tighten remaining edge cases, eliminate core TODOs, expand negative fixtures).
-3. Following PR: Lowering/frame/op safety pass (SP/control/cleanup invariants + tests).
-4. Following PR: ISA coverage tranche (prioritize v0.1 workflows + fixtures).
-5. Following PR: CLI parity + `.lst` completion (CLI wiring + contract tests).
-6. Following PR: Hardening sweep (determinism + negative coverage + cross-platform gates).
-7. Following PR: Debug80 integration (only after all gates pass).
+1. #44: Use abs16 load/store encodings for `A`/`HL` when `(ea)` is absolute.
+2. Following PR: Continue load/store coverage (targeted abs16 forms + fixtures).
+3. Following PR: Parser/AST closure pass (tighten remaining edge cases, eliminate core TODOs, expand negative fixtures).
+4. Following PR: Lowering/frame/op safety pass (SP/control/cleanup invariants + tests).
+5. Following PR: ISA coverage tranche (prioritize v0.1 workflows + fixtures).
+6. Following PR: CLI parity + `.lst` completion (CLI wiring + contract tests).
+7. Following PR: Hardening sweep (determinism + negative coverage + cross-platform gates).
+8. Following PR: Debug80 integration (only after all gates pass).
 
 ---
 

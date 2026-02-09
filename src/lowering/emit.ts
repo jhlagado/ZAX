@@ -809,6 +809,13 @@ export function emitProgram(
     // LD r8, (ea)
     if (dst.kind === 'Reg' && src.kind === 'Mem') {
       if (isEaNameHL(src.expr)) return false; // let the encoder handle (hl)
+      if (dst.name.toUpperCase() === 'A') {
+        const r = resolveEa(src.expr, inst.span);
+        if (r?.kind === 'abs') {
+          emitAbs16Fixup(0x3a, r.baseLower, r.addend, inst.span); // ld a, (nn)
+          return true;
+        }
+      }
       const d = reg8Code.get(dst.name.toUpperCase());
       if (d !== undefined) {
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
@@ -818,6 +825,11 @@ export function emitProgram(
 
       const r16 = dst.name.toUpperCase();
       if (r16 === 'HL') {
+        const r = resolveEa(src.expr, inst.span);
+        if (r?.kind === 'abs') {
+          emitAbs16Fixup(0x2a, r.baseLower, r.addend, inst.span); // ld hl, (nn)
+          return true;
+        }
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         emitCodeBytes(Uint8Array.of(0x7e, 0x23, 0x66, 0x6f), inst.span.file);
         return true;
@@ -837,6 +849,13 @@ export function emitProgram(
     // LD (ea), r8/r16
     if (dst.kind === 'Mem' && src.kind === 'Reg') {
       if (isEaNameHL(dst.expr)) return false; // let the encoder handle (hl)
+      if (src.name.toUpperCase() === 'A') {
+        const r = resolveEa(dst.expr, inst.span);
+        if (r?.kind === 'abs') {
+          emitAbs16Fixup(0x32, r.baseLower, r.addend, inst.span); // ld (nn), a
+          return true;
+        }
+      }
       const s8 = reg8Code.get(src.name.toUpperCase());
       if (s8 !== undefined) {
         if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
@@ -846,6 +865,11 @@ export function emitProgram(
 
       const r16 = src.name.toUpperCase();
       if (r16 === 'HL') {
+        const r = resolveEa(dst.expr, inst.span);
+        if (r?.kind === 'abs') {
+          emitAbs16Fixup(0x22, r.baseLower, r.addend, inst.span); // ld (nn), hl
+          return true;
+        }
         // Preserve HL value while materializing the destination address into HL.
         if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
           return false;
