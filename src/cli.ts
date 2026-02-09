@@ -1,0 +1,246 @@
+#!/usr/bin/env node
+import { mkdir, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import { dirname, extname, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+import { compile } from './compile.js';
+import { defaultFormatWriters } from './formats/index.js';
+import type { Artifact } from './formats/types.js';
+
+type CliExit = { code: number };
+
+type CliOptions = {
+  entryFile: string;
+  outputPath?: string;
+  outputType: 'hex' | 'bin';
+  emitBin: boolean;
+  emitHex: boolean;
+  emitD8m: boolean;
+  emitListing: boolean;
+  includeDirs: string[];
+};
+
+function usage(): string {
+  return [
+    'zax [options] <entry.zax>',
+    '',
+    'Options:',
+    '  -o, --output <file>   Primary output path (must match --type extension)',
+    '  -t, --type <type>     Primary output type: hex|bin (default: hex)',
+    '  -n, --nolist          Suppress .lst',
+    '      --nobin           Suppress .bin',
+    '      --nod8m           Suppress .d8dbg.json',
+    '  -I, --include <dir>   Add import search path (repeatable)',
+    '  -V, --version         Print version',
+    '  -h, --help            Show help',
+    '',
+    'Notes:',
+    '  - <entry.zax> must be the last argument (assembler-style).',
+    '  - Output artifacts are written next to the primary output using the artifact base name.',
+    '',
+  ].join('\n');
+}
+
+function fail(message: string): never {
+  throw Object.assign(new Error(message), { name: 'CliError' });
+}
+
+function parseArgs(argv: string[]): CliOptions | CliExit {
+  let outputPath: string | undefined;
+  let outputType: 'hex' | 'bin' = 'hex';
+  let emitBin = true;
+  let emitHex = true;
+  let emitD8m = true;
+  let emitListing = true;
+  const includeDirs: string[] = [];
+
+  const positional: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]!;
+    if (a === '-h' || a === '--help') {
+      process.stdout.write(usage());
+      return { code: 0 };
+    }
+    if (a === '-V' || a === '--version') {
+      // Avoid importing package.json via assert/JSON modules; keep it simple.
+      const require = createRequire(import.meta.url);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const pkg = require('../package.json') as { version?: unknown };
+      process.stdout.write(`${String(pkg.version ?? '0.0.0')}\n`);
+      return { code: 0 };
+    }
+    if (a === '-o' || a === '--output') {
+      const v = argv[++i];
+      if (!v) fail(`${a} expects a value`);
+      outputPath = v;
+      continue;
+    }
+    if (a === '-t' || a === '--type') {
+      const v = argv[++i];
+      if (!v) fail(`${a} expects a value`);
+      if (v !== 'hex' && v !== 'bin') fail(`Unsupported --type "${v}" (expected hex|bin)`);
+      outputType = v;
+      continue;
+    }
+    if (a === '-n' || a === '--nolist') {
+      emitListing = false;
+      continue;
+    }
+    if (a === '--nobin') {
+      emitBin = false;
+      continue;
+    }
+    if (a === '--nod8m') {
+      emitD8m = false;
+      continue;
+    }
+    if (a === '-I' || a === '--include') {
+      const v = argv[++i];
+      if (!v) fail(`${a} expects a value`);
+      includeDirs.push(v);
+      continue;
+    }
+    if (a.startsWith('-')) {
+      fail(`Unknown option "${a}"`);
+    }
+    positional.push(a);
+  }
+
+  if (positional.length !== 1) {
+    fail(`Expected exactly one <entry.zax> argument (and it must be last)`);
+  }
+  const entryFile = positional[0]!;
+
+  if (outputType === 'hex' && !emitHex) fail(`--type hex requires HEX output to be enabled`);
+  if (outputType === 'bin' && !emitBin) fail(`--type bin requires BIN output to be enabled`);
+
+  if (outputPath) {
+    const ext = extname(outputPath).toLowerCase();
+    const wantExt = outputType === 'hex' ? '.hex' : '.bin';
+    if (ext !== wantExt) {
+      fail(`--output must end with "${wantExt}" when --type is "${outputType}"`);
+    }
+  }
+
+  // If any primary output type is explicitly suppressed, suppress it here too.
+  // Default behavior is to emit BIN+HEX+D8M+LST unless explicitly suppressed.
+  if (!emitBin || !emitHex || !emitD8m) {
+    // nothing else to do (defaults already set)
+  }
+
+  return {
+    entryFile,
+    ...(outputPath ? { outputPath } : {}),
+    outputType,
+    emitBin,
+    emitHex,
+    emitD8m,
+    emitListing,
+    includeDirs,
+  };
+}
+
+function artifactBase(entryFile: string, outputType: 'hex' | 'bin', outputPath?: string): string {
+  if (outputPath) {
+    const resolved = resolve(outputPath);
+    const ext = extname(resolved);
+    return ext.length > 0 ? resolved.slice(0, -ext.length) : resolved;
+  }
+  const entry = resolve(entryFile);
+  const ext = extname(entry);
+  const stem = ext.length > 0 ? entry.slice(0, -ext.length) : entry;
+  // Default primary output path is sibling of entry with extension derived from outputType.
+  return stem;
+}
+
+async function writeArtifacts(
+  base: string,
+  artifacts: Artifact[],
+  outputType: 'hex' | 'bin',
+): Promise<void> {
+  const byKind = new Map<string, Artifact>();
+  for (const a of artifacts) byKind.set(a.kind, a);
+
+  const hexPath = `${base}.hex`;
+  const binPath = `${base}.bin`;
+  const d8mPath = `${base}.d8dbg.json`;
+  const lstPath = `${base}.lst`;
+
+  const writes: Array<Promise<void>> = [];
+  const ensureDir = async (p: string) => mkdir(dirname(p), { recursive: true });
+
+  const hex = byKind.get('hex');
+  if (hex && hex.kind === 'hex') {
+    await ensureDir(hexPath);
+    writes.push(writeFile(hexPath, hex.text, 'utf8'));
+  }
+  const bin = byKind.get('bin');
+  if (bin && bin.kind === 'bin') {
+    await ensureDir(binPath);
+    writes.push(writeFile(binPath, Buffer.from(bin.bytes)));
+  }
+  const d8m = byKind.get('d8m');
+  if (d8m && d8m.kind === 'd8m') {
+    await ensureDir(d8mPath);
+    writes.push(writeFile(d8mPath, JSON.stringify(d8m.json, null, 2) + '\n', 'utf8'));
+  }
+  const lst = byKind.get('lst');
+  if (lst && lst.kind === 'lst') {
+    await ensureDir(lstPath);
+    writes.push(writeFile(lstPath, lst.text, 'utf8'));
+  }
+
+  await Promise.all(writes);
+
+  // Primary output path is always the canonical sibling of the base.
+  // (The `--output` flag is used only to choose the artifact base.)
+  const primaryPath = outputType === 'hex' ? hexPath : binPath;
+  process.stdout.write(`${primaryPath}\n`);
+}
+
+export async function runCli(argv: string[]): Promise<number> {
+  try {
+    const parsed = parseArgs(argv);
+    if ('code' in parsed) return parsed.code;
+
+    const base = artifactBase(parsed.entryFile, parsed.outputType, parsed.outputPath);
+
+    const res = await compile(
+      parsed.entryFile,
+      {
+        emitBin: parsed.emitBin,
+        emitHex: parsed.emitHex,
+        emitD8m: parsed.emitD8m,
+        emitListing: parsed.emitListing,
+        includeDirs: parsed.includeDirs,
+      },
+      { formats: defaultFormatWriters },
+    );
+
+    if (res.diagnostics.some((d) => d.severity === 'error')) {
+      for (const d of res.diagnostics) {
+        const loc =
+          d.line !== undefined && d.column !== undefined
+            ? `${d.file}:${d.line}:${d.column}`
+            : d.file;
+        process.stderr.write(`${loc}: ${d.severity}: ${d.message}\n`);
+      }
+      return 1;
+    }
+
+    await writeArtifacts(base, res.artifacts, parsed.outputType);
+    return 0;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`zax: ${msg}\n`);
+    process.stderr.write(usage());
+    return 2;
+  }
+}
+
+const invokedAs = process.argv[1];
+if (invokedAs && import.meta.url === pathToFileURL(invokedAs).href) {
+  // eslint-disable-next-line no-void
+  void runCli(process.argv.slice(2)).then((code) => process.exit(code));
+}
