@@ -203,6 +203,14 @@ describe('PR15 structured asm control flow', () => {
     expect(res.diagnostics[0]?.message).toBe('"else" without matching "if" or "select"');
   });
 
+  it('diagnoses duplicate else in if', async () => {
+    const entry = join(__dirname, 'fixtures', 'parser_if_duplicate_else.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.artifacts).toEqual([]);
+    expect(res.diagnostics).toHaveLength(1);
+    expect(res.diagnostics[0]?.message).toBe('"else" duplicated in if');
+  });
+
   it('diagnoses repeat closed by end (until required)', async () => {
     const entry = join(__dirname, 'fixtures', 'pr32_repeat_closed_by_end.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
