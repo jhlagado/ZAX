@@ -1,6 +1,6 @@
 import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
-import type { TypeDeclNode, TypeExprNode } from '../frontend/ast.js';
+import type { TypeDeclNode, TypeExprNode, UnionDeclNode } from '../frontend/ast.js';
 import type { CompileEnv } from './env.js';
 
 /**
@@ -28,13 +28,24 @@ export function sizeOfTypeExpr(
         return 1;
       case 'word':
       case 'addr':
+      case 'ptr':
         return 2;
       default:
         return undefined;
     }
   };
 
-  const sizeOfDecl = (decl: TypeDeclNode): number | undefined => {
+  const sizeOfDecl = (decl: TypeDeclNode | UnionDeclNode): number | undefined => {
+    if (decl.kind === 'UnionDecl') {
+      let max = 0;
+      for (const f of decl.fields) {
+        const fs = sizeOf(f.typeExpr);
+        if (fs === undefined) return undefined;
+        if (fs > max) max = fs;
+      }
+      return max;
+    }
+
     const te = decl.typeExpr;
     if (te.kind === 'RecordType') {
       let sum = 0;

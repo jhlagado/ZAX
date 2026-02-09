@@ -9,6 +9,7 @@ import type {
   SourceSpan,
   TypeDeclNode,
   TypeExprNode,
+  UnionDeclNode,
 } from '../src/frontend/ast.js';
 
 const s = (file = 'test.zax'): SourceSpan => ({
@@ -29,6 +30,13 @@ const typeDecl = (name: string, typeExpr: TypeExprNode): TypeDeclNode => ({
   span: s(),
   name,
   typeExpr,
+});
+
+const unionDecl = (name: string, fields: RecordFieldNode[]): UnionDeclNode => ({
+  kind: 'UnionDecl',
+  span: s(),
+  name,
+  fields,
 });
 
 const emptyEnv = (): CompileEnv => ({
@@ -91,5 +99,28 @@ describe('sizeOfTypeExpr', () => {
     expect(res).toBeUndefined();
     expect(diagnostics[0]?.id).toBe(DiagnosticIds.TypeError);
     expect(diagnostics.map((d) => d.message)).toContain('Array length is required in PR3 subset.');
+  });
+
+  it('computes union sizes as max field size', () => {
+    const diagnostics: Diagnostic[] = [];
+    const env = emptyEnv();
+    env.types.set(
+      'Value',
+      unionDecl('Value', [
+        recordField('b', { kind: 'TypeName', span: s(), name: 'byte' }),
+        recordField('w', { kind: 'TypeName', span: s(), name: 'word' }),
+      ]),
+    );
+    const res = sizeOfTypeExpr({ kind: 'TypeName', span: s(), name: 'Value' }, env, diagnostics);
+    expect(res).toBe(2);
+    expect(diagnostics).toEqual([]);
+  });
+
+  it('treats ptr as 16-bit scalar', () => {
+    const diagnostics: Diagnostic[] = [];
+    const env = emptyEnv();
+    const res = sizeOfTypeExpr({ kind: 'TypeName', span: s(), name: 'ptr' }, env, diagnostics);
+    expect(res).toBe(2);
+    expect(diagnostics).toEqual([]);
   });
 });

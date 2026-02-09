@@ -9,6 +9,7 @@ import type {
   ModuleItemNode,
   ProgramNode,
   TypeDeclNode,
+  UnionDeclNode,
 } from '../frontend/ast.js';
 import { sizeOfTypeExpr } from './layout.js';
 
@@ -35,7 +36,7 @@ export interface CompileEnv {
    *
    * PR3 uses this for layout calculation for module-scope `var` declarations.
    */
-  types: Map<string, TypeDeclNode>;
+  types: Map<string, TypeDeclNode | UnionDeclNode>;
 }
 
 function diag(diagnostics: Diagnostic[], file: string, message: string): void {
@@ -148,7 +149,7 @@ function collectEnumMembers(items: ModuleItemNode[]): EnumDeclNode[] {
 export function buildEnv(program: ProgramNode, diagnostics: Diagnostic[]): CompileEnv {
   const consts = new Map<string, number>();
   const enums = new Map<string, number>();
-  const types = new Map<string, TypeDeclNode>();
+  const types = new Map<string, TypeDeclNode | UnionDeclNode>();
 
   if (program.files.length === 0) {
     diag(diagnostics, program.entryFile, 'No module files to compile.');
@@ -177,9 +178,11 @@ export function buildEnv(program: ProgramNode, diagnostics: Diagnostic[]): Compi
 
   for (const mf of program.files) {
     for (const item of mf.items) {
-      if (item.kind !== 'TypeDecl') continue;
-      if (!claim('type', item.name, item.span.file)) continue;
-      types.set(item.name, item);
+      if (item.kind !== 'TypeDecl' && item.kind !== 'UnionDecl') continue;
+      const kind = item.kind === 'TypeDecl' ? 'type' : 'union';
+      const name = item.name;
+      if (!claim(kind, name, item.span.file)) continue;
+      types.set(name, item);
     }
   }
 

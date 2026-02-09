@@ -842,16 +842,21 @@ export function parseModuleFile(
     const exportPrefix = text.startsWith('export ') ? 'export ' : '';
     const rest = exportPrefix ? text.slice('export '.length).trimStart() : text;
 
-    if (rest.startsWith('import ')) {
-      if (exportPrefix.length > 0) {
-        diag(diagnostics, modulePath, `export not supported on import statements`, {
+    // In v0.1, `export` is accepted only on `const`, `func`, and `op` declarations.
+    // It has no semantic effect today, but we still reject it on all other constructs
+    // to keep the surface area explicit and future-proof.
+    if (exportPrefix.length > 0) {
+      const allowed =
+        rest.startsWith('const ') || rest.startsWith('func ') || rest.startsWith('op ');
+      if (!allowed) {
+        diag(diagnostics, modulePath, `export is only permitted on const/func/op declarations`, {
           line: lineNo,
           column: 1,
         });
-        i++;
-        continue;
       }
+    }
 
+    if (rest.startsWith('import ')) {
       const spec = rest.slice('import '.length).trim();
       const stmtSpan = span(file, lineStartOffset, lineEndOffset);
       if (spec.startsWith('"') && spec.endsWith('"') && spec.length >= 2) {
@@ -882,13 +887,34 @@ export function parseModuleFile(
     }
 
     if (rest.startsWith('type ')) {
-      const name = rest.slice('type '.length).trim();
+      const afterType = rest.slice('type '.length).trim();
+      const parts = afterType.split(/\s+/, 2);
+      const name = parts[0] ?? '';
+      const tail = afterType.slice(name.length).trimStart();
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
         diag(diagnostics, modulePath, `Invalid type name`, { line: lineNo, column: 1 });
         i++;
         continue;
       }
 
+      // Alias form: `type Name <typeExpr>`
+      if (tail.length > 0) {
+        const stmtSpan = span(file, lineStartOffset, lineEndOffset);
+        const typeExpr = parseTypeExprFromText(tail, stmtSpan);
+        if (!typeExpr) {
+          diag(diagnostics, modulePath, `Invalid type alias`, { line: lineNo, column: 1 });
+          i++;
+          continue;
+        }
+        items.push({ kind: 'TypeDecl', span: stmtSpan, name, typeExpr });
+        i++;
+        continue;
+      }
+
+      // Record form:
+      // type Name
+      //   field: type
+      // end
       const typeStart = lineStartOffset;
       const fields: RecordFieldNode[] = [];
       let terminated = false;
@@ -945,15 +971,98 @@ export function parseModuleFile(
         });
       }
 
+      if (fields.length === 0) {
+        diag(diagnostics, modulePath, `Type "${name}" must contain at least one field`, {
+          line: lineNo,
+          column: 1,
+        });
+      }
+
       const typeEnd = terminated ? typeEndOffset : file.text.length;
       const typeSpan = span(file, typeStart, typeEnd);
-      const typeNode: TypeDeclNode = {
+      items.push({
         kind: 'TypeDecl',
         span: typeSpan,
         name,
         typeExpr: { kind: 'RecordType', span: typeSpan, fields },
-      };
-      items.push(typeNode);
+      });
+      continue;
+    }
+
+    if (rest.startsWith('union ')) {
+      const name = rest.slice('union '.length).trim();
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+        diag(diagnostics, modulePath, `Invalid union name`, { line: lineNo, column: 1 });
+        i++;
+        continue;
+      }
+
+      const unionStart = lineStartOffset;
+      const fields: RecordFieldNode[] = [];
+      let terminated = false;
+      let unionEndOffset = file.text.length;
+      i++;
+
+      while (i < lineCount) {
+        const { raw: rawField, startOffset: so, endOffset: eo } = getRawLine(i);
+        const t = stripComment(rawField).trim();
+        if (t.length === 0) {
+          i++;
+          continue;
+        }
+        if (t === 'end') {
+          terminated = true;
+          unionEndOffset = eo;
+          i++;
+          break;
+        }
+
+        const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(t);
+        if (!m) {
+          diag(diagnostics, modulePath, `Invalid union field declaration`, {
+            line: i + 1,
+            column: 1,
+          });
+          i++;
+          continue;
+        }
+
+        const fieldName = m[1]!;
+        const typeText = m[2]!.trim();
+        const fieldSpan = span(file, so, eo);
+        const typeExpr = parseTypeExprFromText(typeText, fieldSpan);
+        if (!typeExpr) {
+          diag(diagnostics, modulePath, `Unsupported field type`, { line: i + 1, column: 1 });
+          i++;
+          continue;
+        }
+
+        fields.push({
+          kind: 'RecordField',
+          span: fieldSpan,
+          name: fieldName,
+          typeExpr,
+        });
+        i++;
+      }
+
+      if (!terminated) {
+        diag(diagnostics, modulePath, `Unterminated union "${name}": missing "end"`, {
+          line: lineNo,
+          column: 1,
+        });
+      }
+
+      if (fields.length === 0) {
+        diag(diagnostics, modulePath, `Union "${name}" must contain at least one field`, {
+          line: lineNo,
+          column: 1,
+        });
+      }
+
+      const unionEnd = terminated ? unionEndOffset : file.text.length;
+      const unionSpan = span(file, unionStart, unionEnd);
+      items.push({ kind: 'UnionDecl', span: unionSpan, name, fields });
       continue;
     }
 
