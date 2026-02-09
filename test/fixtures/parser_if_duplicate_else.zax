@@ -1,0 +1,11 @@
+export func main(): void
+  asm
+    if z
+      nop
+    else
+      nop
+    else
+      nop
+    end
+  end
+
