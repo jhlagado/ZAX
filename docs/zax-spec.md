@@ -78,6 +78,8 @@ The compiler parses the whole program, resolves forward references, and emits:
 - Optionally, Intel HEX output
 - Optionally, a listing with symbols (for debuggers/simulators — see Appendix B)
 
+Implementation note (non-normative): `docs/assembler-pipeline.md` maps these stages to the current source files.
+
 ### 0.5 Entry Point (Non-normative)
 
 Entry-point selection is outside v0.1 scope. A typical convention is `export func main(): void`, but loaders/ROMs may enter at any address.
