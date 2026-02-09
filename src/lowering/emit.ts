@@ -122,6 +122,7 @@ export function emitProgram(
     seen.add(lower);
     const decl = env.types.get(typeExpr.name);
     if (!decl) return undefined;
+    if (decl.kind !== 'TypeDecl') return undefined;
     return resolveScalarKind(decl.typeExpr, seen);
   };
 
@@ -490,12 +491,16 @@ export function emitProgram(
     }
   };
 
-  const resolveRecordType = (te: TypeExprNode): TypeExprNode | undefined => {
-    if (te.kind === 'RecordType') return te;
+  type AggregateType = { kind: 'record' | 'union'; fields: RecordFieldNode[] };
+
+  const resolveAggregateType = (te: TypeExprNode): AggregateType | undefined => {
+    if (te.kind === 'RecordType') return { kind: 'record', fields: te.fields };
     if (te.kind === 'TypeName') {
       const decl = env.types.get(te.name);
       if (!decl) return undefined;
-      return decl.typeExpr;
+      if (decl.kind === 'UnionDecl') return { kind: 'union', fields: decl.fields };
+      if (decl.typeExpr.kind === 'RecordType')
+        return { kind: 'record', fields: decl.typeExpr.fields };
     }
     return undefined;
   };
@@ -537,14 +542,18 @@ export function emitProgram(
             diagAt(diagnostics, span, `Cannot resolve field "${expr.field}" without a typed base.`);
             return undefined;
           }
-          const record = resolveRecordType(base.typeExpr);
-          if (!record || record.kind !== 'RecordType') {
-            diagAt(diagnostics, span, `Field access ".${expr.field}" requires a record type.`);
+          const agg = resolveAggregateType(base.typeExpr);
+          if (!agg) {
+            diagAt(
+              diagnostics,
+              span,
+              `Field access ".${expr.field}" requires a record or union type.`,
+            );
             return undefined;
           }
 
           let off = 0;
-          for (const f of record.fields) {
+          for (const f of agg.fields) {
             if (f.name === expr.field) {
               if (base.kind === 'abs') {
                 return {
@@ -560,11 +569,14 @@ export function emitProgram(
                 typeExpr: f.typeExpr,
               };
             }
-            const sz = sizeOfTypeExpr(f.typeExpr, env, diagnostics);
-            if (sz === undefined) return undefined;
-            off += sz;
+            if (agg.kind === 'record') {
+              const sz = sizeOfTypeExpr(f.typeExpr, env, diagnostics);
+              if (sz === undefined) return undefined;
+              off += sz;
+            }
           }
-          diagAt(diagnostics, span, `Unknown record field "${expr.field}".`);
+          const kind = agg.kind === 'union' ? 'union' : 'record';
+          diagAt(diagnostics, span, `Unknown ${kind} field "${expr.field}".`);
           return undefined;
         }
         case 'EaIndex': {

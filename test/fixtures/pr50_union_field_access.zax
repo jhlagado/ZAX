@@ -1,0 +1,14 @@
+union Value
+  b: byte
+  w: word
+end
+
+var
+  v: Value
+
+export func main(): void
+  asm
+    ld a, (v.b)
+    ld hl, (v.w)
+end
+
