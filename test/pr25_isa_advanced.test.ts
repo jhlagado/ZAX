@@ -54,4 +54,34 @@ describe('PR25 ISA advanced tranche', () => {
       true,
     );
   });
+
+  it('encodes parity/sign conditional jp/call and label-target fixups', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr25_conditional_control_forms.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    expect(bin!.bytes).toEqual(
+      Uint8Array.of(
+        0xe2,
+        0x00,
+        0x10, // jp po, $1000
+        0xfa,
+        0x00,
+        0x20, // jp m, $2000
+        0xec,
+        0x00,
+        0x30, // call pe, $3000
+        0xc2,
+        0x0d,
+        0x00, // jp nz, skip
+        0x00, // nop
+        0xdc,
+        0x10,
+        0x00, // call c, tail
+        0xc9, // implicit return at tail
+      ),
+    );
+  });
 });
