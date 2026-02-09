@@ -16,9 +16,9 @@ func print_mode(mode: byte): void
     ld a, (mode)
     or a
     if Z
-      ld a, $52 ; 'R'
+      ld a, 'R'
     else
-      ld a, $57 ; 'W'
+      ld a, 'W'
     end
     bios_putc A
 end
