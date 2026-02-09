@@ -155,6 +155,61 @@ function tokenizeImm(text: string): ImmToken[] | undefined {
       i += 2;
       continue;
     }
+    if (ch === "'") {
+      i++; // '
+      if (i >= s.length) return undefined;
+
+      let value: number | undefined;
+      if (s[i] === '\\') {
+        i++; // \
+        if (i >= s.length) return undefined;
+        const esc = s[i]!;
+        i++;
+        switch (esc) {
+          case 'n':
+            value = 10;
+            break;
+          case 'r':
+            value = 13;
+            break;
+          case 't':
+            value = 9;
+            break;
+          case '0':
+            value = 0;
+            break;
+          case '\\':
+            value = 92;
+            break;
+          case "'":
+            value = 39;
+            break;
+          case '"':
+            value = 34;
+            break;
+          case 'x': {
+            const hex = s.slice(i, i + 2);
+            if (!/^[0-9A-Fa-f]{2}$/.test(hex)) return undefined;
+            value = Number.parseInt(hex, 16);
+            i += 2;
+            break;
+          }
+          default:
+            return undefined;
+        }
+      } else {
+        if (s[i] === "'" || s[i] === '\n' || s[i] === '\r') return undefined;
+        const cp = s.codePointAt(i);
+        if (cp === undefined) return undefined;
+        value = cp;
+        i += cp > 0xffff ? 2 : 1;
+      }
+
+      if (i >= s.length || s[i] !== "'") return undefined;
+      i++; // closing '
+      out.push({ kind: 'num', text: String(value) });
+      continue;
+    }
     const num = /^(\$[0-9A-Fa-f]+|%[01]+|0b[01]+|[0-9]+)/.exec(s.slice(i));
     if (num) {
       out.push({ kind: 'num', text: num[0] });
