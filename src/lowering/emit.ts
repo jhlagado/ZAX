@@ -835,9 +835,16 @@ export function emitProgram(
       ea.kind === 'EaName' && ea.name.toUpperCase() === 'HL';
     const isEaNameBCorDE = (ea: EaExprNode): boolean =>
       ea.kind === 'EaName' && (ea.name.toUpperCase() === 'BC' || ea.name.toUpperCase() === 'DE');
+    const isIxIyDispMem = (op: AsmOperandNode): boolean =>
+      op.kind === 'Mem' &&
+      op.expr.kind === 'EaIndex' &&
+      op.expr.base.kind === 'EaName' &&
+      (op.expr.base.name.toUpperCase() === 'IX' || op.expr.base.name.toUpperCase() === 'IY') &&
+      op.expr.index.kind === 'IndexImm';
 
     // LD r8, (ea)
     if (dst.kind === 'Reg' && src.kind === 'Mem') {
+      if (isIxIyDispMem(src) && reg8Code.has(dst.name.toUpperCase())) return false; // let encoder handle (ix/iy+disp)
       if (isEaNameHL(src.expr)) return false; // let the encoder handle (hl)
       if (dst.name.toUpperCase() === 'A' && isEaNameBCorDE(src.expr)) return false; // ld a,(bc|de)
       if (dst.name.toUpperCase() === 'A') {
@@ -897,6 +904,7 @@ export function emitProgram(
 
     // LD (ea), r8/r16
     if (dst.kind === 'Mem' && src.kind === 'Reg') {
+      if (isIxIyDispMem(dst) && reg8Code.has(src.name.toUpperCase())) return false; // let encoder handle (ix/iy+disp)
       if (isEaNameHL(dst.expr)) return false; // let the encoder handle (hl)
       if (src.name.toUpperCase() === 'A' && isEaNameBCorDE(dst.expr)) return false; // ld (bc|de),a
       if (src.name.toUpperCase() === 'A') {
