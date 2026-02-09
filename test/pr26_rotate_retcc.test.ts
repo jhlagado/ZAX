@@ -28,4 +28,17 @@ describe('PR26 rotate and ret cc tranche', () => {
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics.some((d) => d.message.includes('Unsupported ret condition'))).toBe(true);
   });
+
+  it('rewrites ret z/c/m to conditional jumps to epilogue', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr26_retcc_conditions.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    expect([...bin!.bytes]).toContain(0xca); // jp z, epilogue
+    expect([...bin!.bytes]).toContain(0xda); // jp c, epilogue
+    expect([...bin!.bytes]).toContain(0xfa); // jp m, epilogue
+    expect(bin!.bytes[bin!.bytes.length - 1]).toBe(0xc9); // epilogue ret
+  });
 });
