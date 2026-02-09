@@ -20,6 +20,10 @@ describe('PR27 CB rotate/shift family', () => {
     expect(bin!.bytes).toEqual(
       Uint8Array.of(
         0xcb,
+        0x00, // rlc b
+        0xcb,
+        0x09, // rrc c
+        0xcb,
         0x10, // rl b
         0xcb,
         0x19, // rr c

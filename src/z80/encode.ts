@@ -514,6 +514,14 @@ export function encodeInstruction(
     const encoded = encodeCbRotateShift(0x38, 'srl');
     if (encoded) return encoded;
   }
+  if (head === 'rlc') {
+    const encoded = encodeCbRotateShift(0x00, 'rlc');
+    if (encoded) return encoded;
+  }
+  if (head === 'rrc') {
+    const encoded = encodeCbRotateShift(0x08, 'rrc');
+    if (encoded) return encoded;
+  }
 
   diag(diagnostics, node, `Unsupported instruction in PR1 subset: ${node.head}`);
   return undefined;
