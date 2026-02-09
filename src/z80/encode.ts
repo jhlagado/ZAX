@@ -732,6 +732,16 @@ export function encodeInstruction(
   const encodeCbRotateShift = (base: number, mnemonic: string): Uint8Array | undefined => {
     if (ops.length !== 1) return undefined;
     const operand = ops[0]!;
+    const idx = memIndexed(operand, env);
+    if (idx) {
+      const disp = idx.disp;
+      if (disp < -128 || disp > 127) {
+        diag(diagnostics, node, `${mnemonic} (ix/iy+disp) expects disp8`);
+        return undefined;
+      }
+      // DD/FD CB disp <op> (where <op> matches the (HL) encoding)
+      return Uint8Array.of(idx.prefix, 0xcb, disp & 0xff, base + 0x06);
+    }
     if (isMemHL(operand)) return Uint8Array.of(0xcb, base + 0x06);
     const reg = regName(operand);
     const code = reg ? reg8Code(reg) : undefined;
