@@ -68,6 +68,24 @@ function isMemRegName(op: AsmOperandNode, reg: string): boolean {
   return op.kind === 'Mem' && op.expr.kind === 'EaName' && op.expr.name.toUpperCase() === reg;
 }
 
+function memIndexed(
+  op: AsmOperandNode,
+  env: CompileEnv,
+): { prefix: number; disp: number } | undefined {
+  if (op.kind !== 'Mem') return undefined;
+  const ea = op.expr;
+  if (ea.kind !== 'EaIndex') return undefined;
+  if (ea.base.kind !== 'EaName') return undefined;
+  const base = ea.base.name.toUpperCase();
+  if (base !== 'IX' && base !== 'IY') return undefined;
+  if (ea.index.kind !== 'IndexImm') return undefined;
+
+  const prefix = base === 'IX' ? 0xdd : 0xfd;
+  const disp = evalImmExpr(ea.index.value, env);
+  if (disp === undefined) return undefined;
+  return { prefix, disp };
+}
+
 function conditionName(op: AsmOperandNode): string | undefined {
   if (op.kind === 'Reg') return op.name.toUpperCase();
   if (op.kind === 'Imm' && op.expr.kind === 'ImmName') return op.expr.name.toUpperCase();
@@ -405,6 +423,15 @@ export function encodeInstruction(
         if (mem.expr.kind === 'EaName' && mem.expr.name.toUpperCase() === 'HL') {
           return Uint8Array.of(0x46 + (d << 3));
         }
+        const idx = memIndexed(mem, env);
+        if (idx) {
+          const disp = idx.disp;
+          if (disp < -128 || disp > 127) {
+            diag(diagnostics, node, `ld ${dst}, (ix/iy+disp) expects disp8`);
+            return undefined;
+          }
+          return Uint8Array.of(idx.prefix, 0x46 + (d << 3), disp & 0xff);
+        }
         if (dst.toUpperCase() === 'A' && mem.expr.kind === 'EaName') {
           const ea = mem.expr.name.toUpperCase();
           if (ea === 'BC') return Uint8Array.of(0x0a); // ld a,(bc)
@@ -420,6 +447,18 @@ export function encodeInstruction(
         const s = reg8Code(src);
         if (s !== undefined) {
           return Uint8Array.of(0x70 + s);
+        }
+      }
+      const idx = src ? memIndexed(mem, env) : undefined;
+      if (idx && src) {
+        const s = reg8Code(src);
+        if (s !== undefined) {
+          const disp = idx.disp;
+          if (disp < -128 || disp > 127) {
+            diag(diagnostics, node, `ld (ix/iy+disp), ${src} expects disp8`);
+            return undefined;
+          }
+          return Uint8Array.of(idx.prefix, 0x70 + s, disp & 0xff);
         }
       }
       if (mem.expr.kind === 'EaName' && src?.toUpperCase() === 'A') {
