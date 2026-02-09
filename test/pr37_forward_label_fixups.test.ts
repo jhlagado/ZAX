@@ -19,6 +19,15 @@ describe('PR37 forward label fixups', () => {
     expect(bin!.bytes).toEqual(Uint8Array.of(0xc3, 0x04, 0x00, 0x00, 0x00, 0xc9));
   });
 
+  it('resolves forward label for call abs16 fixup', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr37_forward_label_call.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    expect(bin!.bytes).toEqual(Uint8Array.of(0xcd, 0x04, 0x00, 0x00, 0x00, 0xc9));
+  });
+
   it('resolves forward label for rel8 branches', async () => {
     const entry = join(__dirname, 'fixtures', 'pr37_forward_label_rel8.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
@@ -26,5 +35,23 @@ describe('PR37 forward label fixups', () => {
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
     expect(bin!.bytes).toEqual(Uint8Array.of(0x18, 0x01, 0x00, 0x00, 0xc9));
+  });
+
+  it('resolves forward label for conditional jr rel8 fixup', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr37_forward_label_jr_cond.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    expect(bin!.bytes).toEqual(Uint8Array.of(0x20, 0x01, 0x00, 0x00, 0xc9));
+  });
+
+  it('resolves forward label for djnz rel8 fixup', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr37_forward_label_djnz.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    expect(bin!.bytes).toEqual(Uint8Array.of(0x10, 0x01, 0x00, 0x00, 0xc9));
   });
 });
