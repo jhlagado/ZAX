@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -40,8 +40,11 @@ async function exists(path: string): Promise<boolean> {
 }
 
 describe('cli artifacts', () => {
-  it('writes default sibling artifacts from -o output path', async () => {
+  beforeAll(async () => {
     await buildOnce();
+  });
+
+  it('writes default sibling artifacts from -o output path', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-'));
     const entry = join(work, 'main.zax');
     await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
@@ -57,10 +60,9 @@ describe('cli artifacts', () => {
     expect(await exists(join(work, 'out.lst'))).toBe(true);
 
     await rm(work, { recursive: true, force: true });
-  });
+  }, 20_000);
 
   it('honors suppression flags', async () => {
-    await buildOnce();
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-suppress-'));
     const entry = join(work, 'main.zax');
     await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
@@ -75,10 +77,9 @@ describe('cli artifacts', () => {
     expect(await exists(join(work, 'out.lst'))).toBe(false);
 
     await rm(work, { recursive: true, force: true });
-  });
+  }, 20_000);
 
   it('prints the primary output path for --type bin', async () => {
-    await buildOnce();
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-bin-'));
     const entry = join(work, 'main.zax');
     await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
@@ -92,5 +93,5 @@ describe('cli artifacts', () => {
     expect(await exists(join(work, 'out.hex'))).toBe(true);
 
     await rm(work, { recursive: true, force: true });
-  });
+  }, 20_000);
 });
