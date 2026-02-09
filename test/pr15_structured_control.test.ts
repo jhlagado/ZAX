@@ -118,6 +118,17 @@ describe('PR15 structured asm control flow', () => {
     expect(bin!.bytes[bin!.bytes.length - 1]).toBe(0xc9);
   });
 
+  it('supports stacked case labels sharing a single clause body', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr28_select_stacked_case_shared_body.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    expect([...bin!.bytes]).toContain(0xc5);
+    expect([...bin!.bytes]).toContain(0xc1);
+    expect(bin!.bytes[bin!.bytes.length - 1]).toBe(0xc9);
+  });
+
   it('diagnoses duplicate case values in select', async () => {
     const entry = join(__dirname, 'fixtures', 'pr15_select_duplicate_case.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
