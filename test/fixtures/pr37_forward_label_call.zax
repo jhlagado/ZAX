@@ -1,0 +1,7 @@
+export func main(): void
+  asm
+    call target
+    nop
+target:
+    nop
+end
