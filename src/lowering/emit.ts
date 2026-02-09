@@ -251,6 +251,20 @@ export function emitProgram(
     fixups.push({ offset: start + 1, baseLower, addend, file: span.file });
   };
 
+  const emitAbs16FixupEd = (
+    opcode2: number,
+    baseLower: string,
+    addend: number,
+    span: SourceSpan,
+  ): void => {
+    const start = codeOffset;
+    codeBytes.set(codeOffset++, 0xed);
+    codeBytes.set(codeOffset++, opcode2);
+    codeBytes.set(codeOffset++, 0x00);
+    codeBytes.set(codeOffset++, 0x00);
+    fixups.push({ offset: start + 2, baseLower, addend, file: span.file });
+  };
+
   const emitRel8Fixup = (
     opcode: number,
     baseLower: string,
@@ -835,14 +849,32 @@ export function emitProgram(
         return true;
       }
       if (r16 === 'DE') {
+        const r = resolveEa(src.expr, inst.span);
+        if (r?.kind === 'abs') {
+          emitAbs16FixupEd(0x5b, r.baseLower, r.addend, inst.span); // ld de, (nn)
+          return true;
+        }
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         emitCodeBytes(Uint8Array.of(0x7e, 0x23, 0x56, 0x5f), inst.span.file);
         return true;
       }
       if (r16 === 'BC') {
+        const r = resolveEa(src.expr, inst.span);
+        if (r?.kind === 'abs') {
+          emitAbs16FixupEd(0x4b, r.baseLower, r.addend, inst.span); // ld bc, (nn)
+          return true;
+        }
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         emitCodeBytes(Uint8Array.of(0x7e, 0x23, 0x46, 0x4f), inst.span.file);
         return true;
+      }
+      if (r16 === 'SP') {
+        const r = resolveEa(src.expr, inst.span);
+        if (r?.kind === 'abs') {
+          emitAbs16FixupEd(0x7b, r.baseLower, r.addend, inst.span); // ld sp, (nn)
+          spTrackingValid = false;
+          return true;
+        }
       }
     }
 
@@ -880,14 +912,31 @@ export function emitProgram(
         return true;
       }
       if (r16 === 'DE') {
+        const r = resolveEa(dst.expr, inst.span);
+        if (r?.kind === 'abs') {
+          emitAbs16FixupEd(0x53, r.baseLower, r.addend, inst.span); // ld (nn), de
+          return true;
+        }
         if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
         emitCodeBytes(Uint8Array.of(0x73, 0x23, 0x72), inst.span.file);
         return true;
       }
       if (r16 === 'BC') {
+        const r = resolveEa(dst.expr, inst.span);
+        if (r?.kind === 'abs') {
+          emitAbs16FixupEd(0x43, r.baseLower, r.addend, inst.span); // ld (nn), bc
+          return true;
+        }
         if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
         emitCodeBytes(Uint8Array.of(0x71, 0x23, 0x70), inst.span.file);
         return true;
+      }
+      if (r16 === 'SP') {
+        const r = resolveEa(dst.expr, inst.span);
+        if (r?.kind === 'abs') {
+          emitAbs16FixupEd(0x73, r.baseLower, r.addend, inst.span); // ld (nn), sp
+          return true;
+        }
       }
     }
 
