@@ -1,0 +1,6 @@
+export func main(): void
+  asm
+    ret z
+    ret c
+    ret m
+end
