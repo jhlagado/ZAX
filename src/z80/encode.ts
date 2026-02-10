@@ -204,13 +204,31 @@ export function encodeInstruction(
     const dst = regName(ops[0]!);
     const src = regName(ops[1]!);
 
-    if (dst === 'A' && src) {
-      const s = reg8Code(src);
-      if (s === undefined) {
-        diag(diagnostics, node, `add A, r expects reg8`);
-        return undefined;
+    if (dst === 'A') {
+      if (src) {
+        const s = reg8Code(src);
+        if (s !== undefined) return Uint8Array.of(0x80 + s);
       }
-      return Uint8Array.of(0x80 + s);
+      if (isMemHL(ops[1]!)) return Uint8Array.of(0x86);
+      const idx = memIndexed(ops[1]!, env);
+      if (idx) {
+        const disp = idx.disp;
+        if (disp < -128 || disp > 127) {
+          diag(diagnostics, node, `add A, (ix/iy+disp) expects disp8`);
+          return undefined;
+        }
+        return Uint8Array.of(idx.prefix, 0x86, disp & 0xff);
+      }
+      const n = immValue(ops[1]!, env);
+      if (n !== undefined) {
+        if (n < 0 || n > 0xff) {
+          diag(diagnostics, node, `add A, n expects imm8`);
+          return undefined;
+        }
+        return Uint8Array.of(0xc6, n & 0xff);
+      }
+      diag(diagnostics, node, `add A, src expects reg8/imm8/(hl)/(ix/iy+disp)`);
+      return undefined;
     }
 
     if (dst === 'HL' && src) {
@@ -764,6 +782,15 @@ export function encodeInstruction(
     }
 
     if (isMemHL(src)) return Uint8Array.of(memOpcode);
+    const idx = memIndexed(src, env);
+    if (idx) {
+      const disp = idx.disp;
+      if (disp < -128 || disp > 127) {
+        diag(diagnostics, node, `${mnemonic} (ix/iy+disp) expects disp8`);
+        return undefined;
+      }
+      return Uint8Array.of(idx.prefix, memOpcode, disp & 0xff);
+    }
 
     const n = immValue(src, env);
     if (n === undefined || n < 0 || n > 0xff) {
