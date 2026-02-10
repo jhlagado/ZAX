@@ -101,7 +101,7 @@ Multi-line constructs (v0.1):
 
 Labels (v0.1):
 
-- A local label is defined by `<ident>:` at the start of an `asm` line. The `:` token separates the label from any instruction that follows on the same line; the newline still terminates that instruction normally.
+- A local label is defined by `<ident>:` at the start of an `asm` line **inside a function `asm` block**. Local labels are **not permitted** inside `op` bodies in v0.1. The `:` token separates the label from any instruction that follows on the same line; the newline still terminates that instruction normally.
 
 ### 1.2 Comments
 
@@ -811,7 +811,7 @@ Calls follow the calling convention in 8.2 (compiler emits the required pushes, 
 
 Parsing and name resolution (v0.1):
 
-- If an `asm` line begins with `<ident>:` it defines a local label. Any remaining tokens on the line are parsed as another `asm` line (mnemonic/`op`/call/etc.).
+- If an `asm` line begins with `<ident>:` it defines a local label **inside a function `asm` block**. Local labels are **not permitted** inside `op` bodies in v0.1; any `<ident>:` definition in an `op` body is a compile error. Any remaining tokens on the line are parsed as another `asm` line (mnemonic/`op`/call/etc.).
 - Otherwise, the first token of an `asm` line is interpreted as:
   1. a structured-control keyword (`if`, `else`, `while`, `repeat`, `until`, `select`, `case`, `end`), else
   2. a Z80 mnemonic, else
@@ -822,7 +822,7 @@ Parsing and name resolution (v0.1):
 
 Operand identifier resolution (v0.1):
 
-- For identifiers used inside operands, resolution proceeds as:
+- For identifiers used inside operands (in function `asm` blocks), resolution proceeds as:
   1. local labels
   2. locals/args (stack slots)
   3. module-scope symbols (including `const` and enum members)
@@ -895,6 +895,10 @@ Stack-depth constraints (v0.1):
 
 `op` defines opcode-like inline macros with compiler-level operand matching. This is used to express accumulator-shaped instruction families and provide ergonomic “opcode-like functions.”
 
+Normative reference:
+
+- The **op system specification** (`docs/zax-op-system-spec.md`) is the normative source for op expansion semantics, overload resolution, autosave/clobber rules, and diagnostics. This section is a compact summary for the core language spec; where the two documents overlap, the op system specification takes precedence.
+
 ### 9.2 Declaration Form
 
 Syntax:
@@ -915,6 +919,7 @@ Rules:
 
 - `op` is module-scope only.
 - `op` bodies are implicit `asm` streams (the `asm` keyword is not used inside `op`).
+- Local label definitions (`<ident>:`) are **not permitted** inside `op` bodies in v0.1.
 - `end` terminates the `op` body.
   - `op` bodies may contain structured control flow that uses `end` internally; the final `end` closes the `op` body.
 - `op` bodies may be empty (no instructions).
@@ -1124,7 +1129,7 @@ select A
 end
 ```
 
-### 10.4 Local Labels (Discouraged, Allowed)
+### 10.4 Local Labels (Discouraged, Allowed in Functions Only)
 
 ZAX discourages labels in favor of structured control flow, but allows **local labels** within an `asm` block for low-level control flow.
 
@@ -1135,7 +1140,8 @@ Label definition syntax (v0.1):
 
 Scope and resolution (v0.1):
 
-- Local labels are scoped to the enclosing `func` or `op` body and are not exported.
+- Local labels are scoped to the enclosing `func` body and are not exported.
+- Local labels are **not permitted** inside `op` bodies in v0.1; any label definition in an `op` body is a compile error.
 - A local label may be referenced before its definition within the same `asm` block (forward reference).
 - Local label names must not collide with reserved names (Section 1.5), ignoring case.
 - When resolving an identifier in an instruction operand, local labels take precedence over locals/args, which take precedence over global symbols.
