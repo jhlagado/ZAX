@@ -18,17 +18,17 @@ Progress snapshot (rough, assembler-first):
 Progress estimate (percentage):
 
 - Strict (gate-based): 0% complete until all 6 completion gates are green (Section 3).
-- Working estimate (risk-weighted): ~72% complete (range 68-76%).
+- Working estimate (risk-weighted): ~73% complete (range 69-77%).
 - Why this is not higher: major closure work remains across parser coverage depth, ISA edge forms, CLI contract hardening, and deterministic acceptance gates.
 
 Working estimate scorecard (risk-weighted, subjective):
 
 - Spec gate: ~67%
-- Parser/AST gate: ~71%
+- Parser/AST gate: ~72%
 - Codegen gate: ~62%
 - ISA gate: ~62%
 - CLI/output gate: ~64%
-- Hardening gate: ~58%
+- Hardening gate: ~59%
 
 What moves the needle fastest:
 
@@ -236,7 +236,7 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- #136: ISA+parser tranche 29/30 (known-head no-cascade safeguard + expanded ED/CB/zero-operand hardening + `(ix+disp)/(iy+disp)` parity + malformed control/top-level keyword recovery + whitespace/case-insensitive top-level and export parsing parity + extern block parsing for multi-func declarations + explicit lowering rejection for unsupported `extern <binName> ... end` semantics).
+- #136: ISA+parser tranche 29/30 (known-head no-cascade safeguard + expanded ED/CB/zero-operand hardening + `(ix+disp)/(iy+disp)` parity + malformed control/top-level keyword recovery + whitespace/case-insensitive top-level and export parsing parity + extern block parsing for multi-func declarations + explicit lowering rejection for unsupported `extern <binName> ... end` semantics + type/union unterminated-block recovery at next top-level declaration).
 
 Next after #136 merges (anchored as soon as opened):
 
