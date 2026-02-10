@@ -301,6 +301,35 @@ function zeroOperandOpcode(head: string): Uint8Array | undefined {
   }
 }
 
+function arityDiagnostic(head: string): string | undefined {
+  switch (head) {
+    case 'add':
+    case 'ld':
+    case 'ex':
+      return `${head} expects two operands`;
+    case 'inc':
+    case 'dec':
+    case 'push':
+    case 'pop':
+      return `${head} expects one operand`;
+    case 'bit':
+    case 'res':
+    case 'set':
+      return `${head} expects two operands, or three with indexed source + reg8 destination`;
+    case 'rl':
+    case 'rr':
+    case 'sla':
+    case 'sra':
+    case 'srl':
+    case 'sll':
+    case 'rlc':
+    case 'rrc':
+      return `${head} expects one operand, or two with indexed source + reg8 destination`;
+    default:
+      return undefined;
+  }
+}
+
 /**
  * Encode a single `asm` instruction node into Z80 machine-code bytes.
  *
@@ -326,6 +355,10 @@ export function encodeInstruction(
       return undefined;
     }
     return Uint8Array.of(opcode);
+  }
+  if (head === 'ret') {
+    diag(diagnostics, node, `ret expects no operands or one condition code`);
+    return undefined;
   }
   const zeroOpcode = zeroOperandOpcode(head);
   if (zeroOpcode) {
@@ -420,6 +453,10 @@ export function encodeInstruction(
       return undefined;
     }
     return Uint8Array.of(opcode, n & 0xff, (n >> 8) & 0xff);
+  }
+  if (head === 'call') {
+    diag(diagnostics, node, `call expects one operand (nn) or two operands (cc, nn)`);
+    return undefined;
   }
 
   if (head === 'rst' && ops.length === 1) {
@@ -572,6 +609,10 @@ export function encodeInstruction(
       return undefined;
     }
     return Uint8Array.of(opcode, n & 0xff, (n >> 8) & 0xff);
+  }
+  if (head === 'jp') {
+    diag(diagnostics, node, `jp expects one operand (nn/(hl)/(ix)/(iy)) or two operands (cc, nn)`);
+    return undefined;
   }
 
   if (head === 'ld' && ops.length === 2) {
@@ -1249,6 +1290,12 @@ export function encodeInstruction(
   if (head === 'rrc') {
     const encoded = encodeCbRotateShift(0x08, 'rrc');
     if (encoded) return encoded;
+  }
+
+  const arityMessage = arityDiagnostic(head);
+  if (arityMessage !== undefined) {
+    diag(diagnostics, node, arityMessage);
+    return undefined;
   }
 
   diag(diagnostics, node, `Unsupported instruction: ${node.head}`);
