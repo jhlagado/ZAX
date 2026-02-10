@@ -2,5 +2,5 @@ export func main(): void
   asm
     if z,
       nop
+    end
   end
-
