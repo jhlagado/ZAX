@@ -897,7 +897,7 @@ An op body may invoke a function using the normal function-call syntax (Section 
 
 - The compiler generates the call sequence (push arguments, `call`, pop arguments)
 - The call clobbers registers per the calling convention (AF, BC, DE, HL are volatile)
-- The autosave mechanism must preserve these registers if they are not destinations
+- The resulting register/flag effects are simply the effects of the call plus any surrounding op instructions
 
 This interaction can lead to significant expansion overhead. Consider:
 
@@ -908,7 +908,7 @@ op process_with_log(dst: reg16, src: imm16)
 end
 ```
 
-The function call `log_debug` clobbers AF, BC, DE, HL. If `dst` is `BC`, then `AF`, `DE`, `HL` must all be preserved around the entire op body (including the function call). The autosave mechanism handles this, but the expanded code may be larger than expected.
+The function call `log_debug` clobbers AF, BC, DE, HL. Because ops are inline expansions, those clobbers are visible unless the op body explicitly saves/restores registers around the call. This can make such ops expensive or surprising.
 
 **Guidance for op authors:** Avoid function calls inside ops when possible. If you must call a function, consider whether the op should be a function instead.
 
@@ -925,7 +925,7 @@ op temp_storage_example(dst: reg16)
 end
 ```
 
-This is permitted, but the net stack delta must still be zero. The autosave mechanism does not interfere with explicit `push`/`pop` pairs in the op body — it wraps around them.
+This is permitted, but the net stack delta must still be zero. Any save/restore is explicitly authored in the op body.
 
 ### 12.4 Calling Ops from Functions vs Calling Functions from Ops
 
