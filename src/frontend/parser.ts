@@ -1062,11 +1062,9 @@ export function parseModuleFile(
   const items: ModuleItemNode[] = [];
 
   function consumeKeywordPrefix(input: string, keyword: string): string | undefined {
-    if (!input.startsWith(keyword)) return undefined;
-    const after = input.slice(keyword.length);
-    if (after.length === 0) return '';
-    if (!/^\s/.test(after)) return undefined;
-    return after.trimStart();
+    const match = new RegExp(`^${keyword}(?:\\s+(.*))?$`, 'i').exec(input);
+    if (!match) return undefined;
+    return (match[1] ?? '').trimStart();
   }
 
   const TOP_LEVEL_KEYWORDS = new Set([
@@ -1089,16 +1087,12 @@ export function parseModuleFile(
   function isTopLevelStart(t: string): boolean {
     const exportTail = consumeKeywordPrefix(t, 'export');
     const w = exportTail !== undefined ? exportTail : t;
-    const keyword = w.split(/\s/, 1)[0] ?? '';
+    const keyword = (w.split(/\s/, 1)[0] ?? '').toLowerCase();
     return TOP_LEVEL_KEYWORDS.has(keyword);
   }
 
   function consumeTopKeyword(input: string, keyword: string): string | undefined {
-    if (!input.startsWith(keyword)) return undefined;
-    const after = input.slice(keyword.length);
-    if (after.length === 0) return '';
-    if (!/^\s/.test(after)) return undefined;
-    return after.trimStart();
+    return consumeKeywordPrefix(input, keyword);
   }
 
   let i = 0;
@@ -1217,11 +1211,12 @@ export function parseModuleFile(
       while (i < lineCount) {
         const { raw: rawField, startOffset: so, endOffset: eo } = getRawLine(i);
         const t = stripComment(rawField).trim();
+        const tLower = t.toLowerCase();
         if (t.length === 0) {
           i++;
           continue;
         }
-        if (t === 'end') {
+        if (tLower === 'end') {
           terminated = true;
           typeEndOffset = eo;
           i++;
@@ -1311,11 +1306,12 @@ export function parseModuleFile(
       while (i < lineCount) {
         const { raw: rawField, startOffset: so, endOffset: eo } = getRawLine(i);
         const t = stripComment(rawField).trim();
+        const tLower = t.toLowerCase();
         if (t.length === 0) {
           i++;
           continue;
         }
-        if (t === 'end') {
+        if (tLower === 'end') {
           terminated = true;
           unionEndOffset = eo;
           i++;
@@ -1382,7 +1378,7 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest === 'var') {
+    if (rest.toLowerCase() === 'var') {
       const blockStart = lineStartOffset;
       i++;
       const decls: VarDeclNode[] = [];
@@ -1516,12 +1512,13 @@ export function parseModuleFile(
       while (i < lineCount) {
         const { raw: raw2, startOffset: so2 } = getRawLine(i);
         const t2 = stripComment(raw2).trim();
+        const t2Lower = t2.toLowerCase();
         if (t2.length === 0) {
           i++;
           continue;
         }
 
-        if (t2 === 'var') {
+        if (t2Lower === 'var') {
           const varStart = so2;
           i++;
           const decls: VarDeclNode[] = [];
@@ -1529,11 +1526,12 @@ export function parseModuleFile(
           while (i < lineCount) {
             const { raw: rawDecl, startOffset: soDecl, endOffset: eoDecl } = getRawLine(i);
             const tDecl = stripComment(rawDecl).trim();
+            const tDeclLower = tDecl.toLowerCase();
             if (tDecl.length === 0) {
               i++;
               continue;
             }
-            if (tDecl === 'asm') {
+            if (tDeclLower === 'asm') {
               asmStartOffset = soDecl;
               locals = {
                 kind: 'VarBlock',
@@ -1582,7 +1580,7 @@ export function parseModuleFile(
           break;
         }
 
-        if (t2 !== 'asm') {
+        if (t2Lower !== 'asm') {
           diag(diagnostics, modulePath, `Expected "asm" inside func (optionally after "var")`, {
             line: i + 1,
             column: 1,
@@ -1610,12 +1608,13 @@ export function parseModuleFile(
         const { raw: rawLine, startOffset: lineOffset, endOffset } = getRawLine(i);
         const withoutComment = stripComment(rawLine);
         const content = withoutComment.trim();
+        const contentLower = content.toLowerCase();
         if (content.length === 0) {
           i++;
           continue;
         }
 
-        if (content === 'end' && asmControlStack.length === 0) {
+        if (contentLower === 'end' && asmControlStack.length === 0) {
           terminated = true;
           const funcEndOffset = endOffset;
           const funcSpan = span(file, funcStartOffset, funcEndOffset);
@@ -1742,11 +1741,12 @@ export function parseModuleFile(
       while (i < lineCount) {
         const { raw: rawLine, startOffset: so, endOffset: eo } = getRawLine(i);
         const content = stripComment(rawLine).trim();
+        const contentLower = content.toLowerCase();
         if (content.length === 0) {
           i++;
           continue;
         }
-        if (content === 'end' && controlStack.length === 0) {
+        if (contentLower === 'end' && controlStack.length === 0) {
           terminated = true;
           opEndOffset = eo;
           i++;
@@ -1822,7 +1822,8 @@ export function parseModuleFile(
       }
 
       const decl = externTail;
-      if (!decl.startsWith('func ')) {
+      const externFuncTail = consumeKeywordPrefix(decl, 'func');
+      if (externFuncTail === undefined) {
         diag(
           diagnostics,
           modulePath,
@@ -1833,7 +1834,7 @@ export function parseModuleFile(
         continue;
       }
 
-      const header = decl.slice('func '.length).trimStart();
+      const header = externFuncTail;
       const openParen = header.indexOf('(');
       const closeParen = header.lastIndexOf(')');
       if (openParen < 0 || closeParen < openParen) {
@@ -1968,7 +1969,7 @@ export function parseModuleFile(
     }
 
     const sectionTail = consumeTopKeyword(rest, 'section');
-    if (rest === 'section' || sectionTail !== undefined) {
+    if (rest.toLowerCase() === 'section' || sectionTail !== undefined) {
       if (hasExportPrefix) {
         diag(diagnostics, modulePath, `export not supported on section directives`, {
           line: lineNo,
@@ -2005,7 +2006,7 @@ export function parseModuleFile(
     }
 
     const alignTail = consumeTopKeyword(rest, 'align');
-    if (rest === 'align' || alignTail !== undefined) {
+    if (rest.toLowerCase() === 'align' || alignTail !== undefined) {
       if (hasExportPrefix) {
         diag(diagnostics, modulePath, `export not supported on align directives`, {
           line: lineNo,
@@ -2120,7 +2121,7 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest === 'data') {
+    if (rest.toLowerCase() === 'data') {
       const blockStart = lineStartOffset;
       i++;
       const decls: DataDeclNode[] = [];
