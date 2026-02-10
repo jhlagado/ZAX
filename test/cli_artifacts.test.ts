@@ -96,6 +96,46 @@ describe('cli artifacts', () => {
     await rm(work, { recursive: true, force: true });
   }, 20_000);
 
+  it('suppresses hex output for --type bin with --nohex', async () => {
+    const work = await mkdtemp(join(tmpdir(), 'zax-cli-nohex-'));
+    const entry = join(work, 'main.zax');
+    await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
+
+    const outBin = join(work, 'out.bin');
+    const res = await runCli([
+      '--nohex',
+      '--nod8m',
+      '--nolist',
+      '--type',
+      'bin',
+      '-o',
+      outBin,
+      entry,
+    ]);
+    expect(res.code).toBe(0);
+    expect(res.stdout.trim()).toBe(outBin);
+
+    expect(await exists(join(work, 'out.bin'))).toBe(true);
+    expect(await exists(join(work, 'out.hex'))).toBe(false);
+    expect(await exists(join(work, 'out.d8dbg.json'))).toBe(false);
+    expect(await exists(join(work, 'out.lst'))).toBe(false);
+
+    await rm(work, { recursive: true, force: true });
+  }, 20_000);
+
+  it('rejects --type hex when --nohex is set', async () => {
+    const work = await mkdtemp(join(tmpdir(), 'zax-cli-nohex-hex-type-'));
+    const entry = join(work, 'main.zax');
+    await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
+
+    const outHex = join(work, 'out.hex');
+    const res = await runCli(['--nohex', '--type', 'hex', '-o', outHex, entry]);
+    expect(res.code).toBe(2);
+    expect(res.stderr).toContain('--type hex requires HEX output to be enabled');
+
+    await rm(work, { recursive: true, force: true });
+  }, 20_000);
+
   it('prints the primary output path for --type bin', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-bin-'));
     const entry = join(work, 'main.zax');
