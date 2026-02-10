@@ -1294,6 +1294,7 @@ export function parseModuleFile(
           i++;
           break;
         }
+        if (isTopLevelStart(t)) break;
 
         const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(t);
         if (!m) {
@@ -1389,6 +1390,7 @@ export function parseModuleFile(
           i++;
           break;
         }
+        if (isTopLevelStart(t)) break;
 
         const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(t);
         if (!m) {
