@@ -1174,26 +1174,31 @@ export function encodeInstruction(
   if (head === 'sub') {
     const encoded = encodeAluAOrImm8OrMemHL(0x90, 0xd6, 0x96, 'sub', true);
     if (encoded) return encoded;
+    if (ops.length === 1 || ops.length === 2) return undefined;
   }
 
   if (head === 'cp') {
     const encoded = encodeAluAOrImm8OrMemHL(0xb8, 0xfe, 0xbe, 'cp', true);
     if (encoded) return encoded;
+    if (ops.length === 1 || ops.length === 2) return undefined;
   }
 
   if (head === 'and') {
     const encoded = encodeAluAOrImm8OrMemHL(0xa0, 0xe6, 0xa6, 'and', true);
     if (encoded) return encoded;
+    if (ops.length === 1 || ops.length === 2) return undefined;
   }
 
   if (head === 'or') {
     const encoded = encodeAluAOrImm8OrMemHL(0xb0, 0xf6, 0xb6, 'or', true);
     if (encoded) return encoded;
+    if (ops.length === 1 || ops.length === 2) return undefined;
   }
 
   if (head === 'xor') {
     const encoded = encodeAluAOrImm8OrMemHL(0xa8, 0xee, 0xae, 'xor', true);
     if (encoded) return encoded;
+    if (ops.length === 1 || ops.length === 2) return undefined;
   }
 
   if (head === 'adc') {
@@ -1215,6 +1220,7 @@ export function encodeInstruction(
     }
     const encoded = encodeAluAOrImm8OrMemHL(0x88, 0xce, 0x8e, 'adc', true);
     if (encoded) return encoded;
+    if (ops.length === 1 || ops.length === 2) return undefined;
   }
 
   if (head === 'sbc') {
@@ -1236,6 +1242,7 @@ export function encodeInstruction(
     }
     const encoded = encodeAluAOrImm8OrMemHL(0x98, 0xde, 0x9e, 'sbc', true);
     if (encoded) return encoded;
+    if (ops.length === 1 || ops.length === 2) return undefined;
   }
 
   const encodeBitLike = (
