@@ -7,7 +7,7 @@ Core policy:
 - Build a fully working assembler first.
 - Defer Debug80 integration until assembler completion gates are met.
 
-**Last updated:** 2026-02-09
+**Last updated:** 2026-02-10
 
 Progress snapshot (rough, assembler-first):
 
@@ -18,7 +18,7 @@ Progress snapshot (rough, assembler-first):
 Progress estimate (percentage):
 
 - Strict (gate-based): 0% complete until all 6 completion gates are green (Section 3).
-- Working estimate (risk-weighted): ~63% complete (range 59-67%).
+- Working estimate (risk-weighted): ~65% complete (range 61-69%).
 - Why this is not higher: major closure work remains across parser coverage depth, ISA edge forms, CLI contract hardening, and deterministic acceptance gates.
 
 Working estimate scorecard (risk-weighted, subjective):
@@ -26,9 +26,9 @@ Working estimate scorecard (risk-weighted, subjective):
 - Spec gate: ~66%
 - Parser/AST gate: ~58%
 - Codegen gate: ~62%
-- ISA gate: ~57%
+- ISA gate: ~60%
 - CLI/output gate: ~64%
-- Hardening gate: ~49%
+- Hardening gate: ~51%
 
 What moves the needle fastest:
 
@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- #136: ISA coverage tranche 29 (known-head no-cascade diagnostic safeguard + regression matrix).
+- #136: ISA coverage tranche 29/30 (known-head no-cascade safeguard + expanded ED/CB/zero-operand diagnostic hardening matrices).
 
 Next after #136 merges (anchored as soon as opened):
 
-1. Next PR: ISA coverage tranche 30 (remaining ED/CB edge-form diagnostics parity + additional negative fixture hardening).
+1. Next PR: Parser/AST closure pass (edge-case rejection diagnostics parity + malformed-form recovery hardening).
 
 Completed (anchored, most recent first):
 
