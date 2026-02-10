@@ -1,8 +1,30 @@
 # ZAX `op` System — Expanded Specification (Draft)
 
-This document expands Section 9 of the ZAX language specification. It is written as a standalone reference for the `op` system: inline macro-instructions with AST-level operand matching. The goal is to give a human reader — whether implementer, language designer, or advanced user — a thorough understanding of how ops work, why they are designed this way, and where the subtle corners live.
+This document expands Section 9 of the ZAX language specification (`docs/zax-spec.md`). It serves as a standalone reference for the `op` system: inline macro-instructions with AST-level operand matching.
 
-Throughout, normative rules are stated directly. Examples are illustrative unless marked otherwise.
+**Audience and purpose.** This document has two audiences:
+
+1. **Implementers** (including AI assistants building the compiler) need precise algorithms, complete edge-case coverage, and unambiguous rules that translate directly to code.
+
+2. **Advanced users** (programmers writing ZAX code) need to understand how ops behave, how to design op families, and how to diagnose problems when expansions fail.
+
+The document addresses both by stating normative rules precisely while also explaining the rationale and providing worked examples.
+
+**Document conventions:**
+
+- Normative rules are stated directly in prose. Where precision is critical, rules are numbered or bulleted.
+- Examples are illustrative unless marked "(normative example)".
+- Cross-references to the main spec use the form "Section N of the main spec" to mean `docs/zax-spec.md` Section N.
+- Implementation notes marked "(impl)" are recommendations for compiler authors; any compliant implementation that produces the same observable behavior is acceptable.
+- Algorithm descriptions use pseudocode for clarity; actual implementation may differ in structure as long as behavior matches.
+
+**Version:** This specification corresponds to ZAX v0.1 as defined in the main spec.
+
+**Related documents:**
+
+- `docs/zax-spec.md` — The main ZAX language specification
+- `docs/zax-cli.md` — Command-line interface specification
+- `docs/roadmap.md` — Implementation status and priorities
 
 ---
 
@@ -10,9 +32,50 @@ Throughout, normative rules are stated directly. Examples are illustrative unles
 
 An `op` in ZAX is an inline macro-instruction that the compiler expands at the AST level during lowering. When you write an `op` invocation inside an `asm` block, the compiler selects the best-matching overload, substitutes the caller's operands into the op body, and emits the resulting instruction sequence in place — as if you had written those instructions directly.
 
-This makes ops fundamentally different from textual macros in traditional assemblers. A textual macro operates on strings: it pastes tokens, re-scans them, and hopes the result parses. An `op` operates on parsed, typed AST nodes. The compiler knows that a parameter declared as `reg16` will only ever bind to `HL`, `DE`, `BC`, or `SP` — not to an arbitrary token that happens to look like a register name in some contexts. This means the compiler can reason about ops statically: it can check that an expansion will produce valid instructions, it can resolve overloads unambiguously, and it can enforce preservation guarantees that would be impossible with text substitution.
+### 1.1 Comparison with Other Macro Systems
+
+Understanding ops requires contrasting them with familiar alternatives:
+
+**Textual macros (traditional assemblers).** TASM, MASM, and similar assemblers provide text-substitution macros. The macro expander operates before parsing: it pastes tokens, re-scans them, and hopes the result parses. This approach has well-known problems. Parameters can accidentally concatenate with surrounding tokens. Internal labels can collide with caller labels (the "hygiene" problem). Error messages point to expanded text, not the original macro invocation. Nested macros interact in surprising ways. There is no notion of operand types, so the same macro body might accidentally work for some operands and fail cryptically for others.
+
+**C preprocessor macros.** The C preprocessor shares most of textual macro problems. The `#define` mechanism operates on tokens before the C parser sees them. Parenthesization discipline can prevent some operator-precedence bugs, but the fundamental fragility remains.
+
+**C++ templates.** Templates operate on parsed, typed AST nodes. This is closer to ZAX ops: the compiler knows the types of template parameters and can perform type checking after substitution. However, C++ templates are primarily a type-parameterization mechanism, not an inline code-generation mechanism. They also carry substantial complexity (SFINAE, template specialization rules, and two-phase name lookup).
+
+**ZAX ops** take the AST-level approach of templates but apply it to assembly-language semantics. The compiler knows that a parameter declared as `reg16` will only ever bind to `HL`, `DE`, `BC`, or `SP` — not to an arbitrary token that happens to look like a register name in some contexts. This means the compiler can reason about ops statically: it can check that an expansion will produce valid instructions and resolve overloads unambiguously — but register/flag effects remain whatever the inline instructions do.
+
+### 1.2 Ops vs Functions
 
 Ops are _not_ functions. They have no stack frame, no calling convention, no return address. An op expansion is purely inline: the instructions appear in the caller's code stream at the point of invocation. There is no `call` or `ret` involved. This is what makes ops zero-overhead — but it also means that ops cannot be recursive (cyclic expansion is a compile error) and cannot declare local variables.
+
+| Aspect                | `op`                               | `func`                        |
+| --------------------- | ---------------------------------- | ----------------------------- |
+| Invocation cost       | Zero (inline expansion)            | `call`/`ret` overhead         |
+| Stack frame           | None                               | Optional (if locals declared) |
+| Recursion             | Forbidden (cyclic expansion error) | Permitted                     |
+| Local variables       | Forbidden                          | Permitted (`var` block)       |
+| Overloading           | By operand matchers                | Not supported in v0.1         |
+| Register/flag effects | Inline code semantics              | Caller-save convention        |
+
+### 1.3 When to Use Ops
+
+Use ops when you want:
+
+- **Instruction-like syntax** for common patterns that the Z80 doesn't directly support
+- **Zero overhead** — no call/ret, no stack frame setup
+- **Overloading** by register type or immediate size
+- **Inline expansion** with explicit, visible instruction effects
+
+Use functions when you need:
+
+- **Recursion** or mutual recursion
+- **Local variables** (stack slots)
+- **Single definition** for code that appears in multiple places (ops inline everywhere, increasing code size)
+- **Indirect calls** (function pointers)
+
+### 1.4 The Design Intent
+
+The design intent is to let you build opcode-like families — things that _feel_ like native Z80 instructions but express patterns the hardware doesn't directly support.
 
 The design intent is to let you build opcode-like families — things that _feel_ like native Z80 instructions but express patterns the hardware doesn't directly support. The classic example is 16-bit addition into a register pair other than `HL`:
 
@@ -40,7 +103,7 @@ op add16(dst: BC, src: reg16)
 end
 ```
 
-At the call site, `add16 DE, BC` reads like a native instruction. The compiler selects the `DE` overload, substitutes `BC` for `src`, and emits the exchange-based sequence. The caller doesn't need to know or care about the implementation — the op's preservation guarantees ensure that registers other than the destination are untouched.
+At the call site, `add16 DE, BC` reads like a native instruction. The compiler selects the `DE` overload, substitutes `BC` for `src`, and emits the exchange-based sequence. Because ops are inline expansions, any register/flag effects are exactly the effects of the instructions written in the op body.
 
 ---
 
@@ -60,7 +123,7 @@ op load_pair(dst: reg16, src: imm16)
 end
 ```
 
-The body is an implicit `asm` stream — you do not write the `asm` keyword inside an op. The instructions in the body follow exactly the same grammar as instructions inside a function's `asm` block: raw Z80 mnemonics, other op invocations, structured control flow (`if`/`while`/`repeat`/`select`), and local labels are all permitted.
+The body is an implicit `asm` stream — you do not write the `asm` keyword inside an op. The instructions in the body follow exactly the same grammar as instructions inside a function's `asm` block: raw Z80 mnemonics, other op invocations, and structured control flow (`if`/`while`/`repeat`/`select`) are permitted. **Local labels are not permitted inside op bodies in v0.1.**
 
 An op body may be empty (containing no instructions between the declaration line and `end`). This is occasionally useful as a no-op placeholder during development or as a deliberately empty specialization.
 
@@ -91,6 +154,10 @@ This form is useful for giving a meaningful name to a short idiom that takes no 
 Ops are module-scope declarations only. You cannot define an op inside a function body, inside another op, or inside any other block. However, op _invocations_ are permitted anywhere an instruction can appear: inside function `asm` blocks and inside other op bodies.
 
 An op may invoke other ops in its body, but the expansion graph must be acyclic. If expanding op `A` would require expanding op `B`, which in turn requires expanding op `A`, the compiler reports a cyclic expansion error. The compiler detects this statically during expansion, not at runtime.
+
+**Forward references.** An op may be invoked before it is declared, consistent with ZAX's whole-program compilation model (Section 3.2 of the main spec). All op declarations are visible throughout the module and any importing modules.
+
+**Import visibility.** Ops follow the same visibility rules as other module-scope declarations. In v0.1, all ops are public; the `export` keyword is accepted for forward compatibility but has no effect.
 
 ### 2.4 No Locals
 
@@ -244,6 +311,54 @@ Expanding `safe_add16 DE, BC` first substitutes `DE` and `BC` into the body, pro
 
 The compiler tracks the expansion stack and reports a cyclic expansion error if it detects that expanding op `X` eventually leads back to expanding op `X` again, regardless of the depth of nesting.
 
+### 4.4 Labels Inside Ops (v0.1 Rule)
+
+Local labels are **forbidden** inside op bodies in v0.1. This avoids introducing label-hygiene and name-mangling machinery in the first implementation. Any `<ident>:` label definition encountered inside an op body is a compile error.
+
+**(impl)** The compiler should reject op bodies containing label definitions during parsing of the op body (or during validation before expansion), with a diagnostic that explicitly states local labels are not permitted inside ops in v0.1.
+
+### 4.5 Expansion Algorithm Summary
+
+For implementers, the complete expansion algorithm is:
+
+```
+function expand_op(call_site, op_name, operands):
+    // 1. Overload resolution (Section 5)
+    candidates = filter_matching_overloads(op_name, operands)
+    if candidates.empty():
+        error("no matching overload", call_site)
+    winner = select_most_specific(candidates)
+    if winner is ambiguous:
+        error("ambiguous overload", call_site, candidates)
+
+    // 2. Cycle detection
+    if op_name in expansion_stack:
+        error("cyclic expansion", expansion_stack)
+    expansion_stack.push(op_name)
+
+    // 3. Bind operands to parameters
+    bindings = zip(winner.parameters, operands)
+
+    // 4. Clone and substitute
+    expanded_body = deep_clone(winner.body)
+    for each instruction in expanded_body:
+        substitute_parameters(instruction, bindings)
+        reject_if_label_definition(instruction)
+
+    // 5. Recursive expansion of nested ops
+    for each instruction in expanded_body:
+        if instruction is op_invocation:
+            replace instruction with expand_op(instruction.site, ...)
+
+    // 6. Stack delta check
+    delta = compute_stack_delta(expanded_body)
+    if delta != 0:
+        error("op expansion has non-zero stack delta", call_site)
+
+    expansion_stack.pop()
+    return expanded_body
+```
+
 ---
 
 ## 5. Overload Resolution and Specificity
@@ -275,6 +390,107 @@ If multiple candidates survive filtering, the compiler ranks them by specificity
 **`mem8` and `mem16` beat `ea`.** A dereference operand `(buffer)` matches both `mem8` (or `mem16`) and `ea`, but the memory matchers are more specific because they constrain the operand to be a dereference, not just an address.
 
 To compare two candidate overloads, the compiler compares them parameter-by-parameter. Overload X is _strictly more specific_ than overload Y if, for every parameter position, X's matcher is at least as specific as Y's, and for at least one position, X's matcher is strictly more specific.
+
+### 5.3.1 Specificity Algorithm
+
+**(impl)** The following algorithm implements specificity comparison:
+
+```
+function compare_specificity(overload_X, overload_Y, operands):
+    // Returns: "X_wins", "Y_wins", "equal", or "incomparable"
+
+    x_better_count = 0
+    y_better_count = 0
+
+    for i in 0..operands.length:
+        x_matcher = overload_X.parameters[i].matcher
+        y_matcher = overload_Y.parameters[i].matcher
+        operand = operands[i]
+
+        cmp = compare_matcher_specificity(x_matcher, y_matcher, operand)
+        if cmp == "X_more_specific":
+            x_better_count += 1
+        else if cmp == "Y_more_specific":
+            y_better_count += 1
+        // if "equal", neither count increments
+
+    if x_better_count > 0 and y_better_count == 0:
+        return "X_wins"
+    else if y_better_count > 0 and x_better_count == 0:
+        return "Y_wins"
+    else if x_better_count == 0 and y_better_count == 0:
+        return "equal"
+    else:
+        return "incomparable"  // leads to ambiguity
+
+function compare_matcher_specificity(matcher_X, matcher_Y, operand):
+    // Specificity ordering (most to least specific):
+    // Fixed register > reg8/reg16 > (none for registers)
+    // imm8 > imm16 (for values fitting in 8 bits)
+    // mem8/mem16 > ea
+
+    if matcher_X == matcher_Y:
+        return "equal"
+
+    // Fixed vs class for registers
+    if is_fixed_register(matcher_X) and is_class_register(matcher_Y):
+        return "X_more_specific"
+    if is_class_register(matcher_X) and is_fixed_register(matcher_Y):
+        return "Y_more_specific"
+
+    // imm8 vs imm16
+    if matcher_X == "imm8" and matcher_Y == "imm16":
+        if operand.value fits in 8 bits:
+            return "X_more_specific"
+        else:
+            return "equal"  // both match equally for large values
+    if matcher_X == "imm16" and matcher_Y == "imm8":
+        if operand.value fits in 8 bits:
+            return "Y_more_specific"
+        else:
+            return "equal"
+
+    // mem8/mem16 vs ea
+    if (matcher_X == "mem8" or matcher_X == "mem16") and matcher_Y == "ea":
+        return "X_more_specific"
+    if matcher_X == "ea" and (matcher_Y == "mem8" or matcher_Y == "mem16"):
+        return "Y_more_specific"
+
+    // mem8 vs mem16: equal specificity (both require dereference)
+    if (matcher_X == "mem8" and matcher_Y == "mem16") or
+       (matcher_X == "mem16" and matcher_Y == "mem8"):
+        return "equal"
+
+    // If we reach here, matchers are incomparable
+    return "equal"
+```
+
+### 5.3.2 Selecting the Winner
+
+After computing specificity comparisons for all candidate pairs:
+
+```
+function select_most_specific(candidates):
+    if candidates.length == 0:
+        error("no matching overload")
+
+    if candidates.length == 1:
+        return candidates[0]
+
+    // Find a candidate that beats all others
+    for each candidate X in candidates:
+        beats_all = true
+        for each candidate Y in candidates where Y != X:
+            cmp = compare_specificity(X, Y, operands)
+            if cmp != "X_wins":
+                beats_all = false
+                break
+        if beats_all:
+            return X
+
+    // No single winner; check for ambiguity
+    error("ambiguous overload", candidates)
+```
 
 ### 5.4 The Ambiguity Error
 
@@ -311,55 +527,49 @@ Overload resolution requires that the call-site operand count matches the parame
 
 ---
 
-## 6. The Autosave and Clobber Policy
+## 6. Register/Flag Effects (v0.1)
 
-### 6.1 The Transparency Guarantee
+Ops are **inline expansions**. They do not have a special preservation guarantee in v0.1. An op body behaves like any other inline instruction sequence: it may read or write registers and flags according to the Z80 instruction semantics used in the body. There is **no compiler-inserted autosave** and no mandatory clobber policy in the op system itself.
 
-Ops are designed to be drop-in replaceable with raw instruction sequences. The caller should be able to use an op without studying its implementation to know which registers it clobbers. To achieve this, ZAX enforces a transparency guarantee: an op expansion must preserve all registers and flags _except_ the explicit destination(s).
+If you want register-effect reporting (e.g., “this op clobbers `HL` and flags”), that is a **separate, passive analysis** of the emitted instructions. Such analysis may be performed by the assembler or tooling and may be used for documentation, linting, or diagnostics, but it is not a normative part of op expansion in v0.1.
 
-This means that if you write:
+### 6.1 Structured Control Flow in Op Bodies
 
-```
-ld b, 10
-add16 DE, HL
-; B still contains 10 here
-```
+Op bodies may contain structured control flow (`if`/`while`/`repeat`/`select`). The same rules apply as in function `asm` blocks (Section 10 of the main spec):
 
-The `add16` op's expansion for `DE` might internally use `HL` (via `ex de, hl; add hl, ...; ex de, hl`), but the compiler ensures that `HL`'s original value is restored, and that `B` (and all other non-destination registers) are unaffected. Flags are also preserved unless the destination is `AF`.
+- Stack depth must match at control-flow joins
+- Condition codes test flags that the programmer establishes
+- The compiler expands structured control flow without introducing programmer-defined labels
 
-### 6.2 How Destinations Are Identified
-
-The compiler uses a naming convention to determine which parameters are destinations:
-
-Any parameter whose name starts with `dst` or `out` (case-sensitive prefix match: `dst`, `dst2`, `dstHi`, `outByte`, etc.) is treated as a destination. The register or memory location bound to that parameter is permitted to be modified by the expansion.
-
-If an op declares no parameters with a `dst` or `out` prefix, the compiler falls back to treating the _first parameter_ as the destination. This default covers the common accumulator-style pattern where the first operand is both source and destination:
+**Stack depth in control flow.** Each control-flow arm must have the same stack depth at joins:
 
 ```
-op inc16(r: reg16)
-  inc r           ; r is the first (and only) param, so it's the destination
+; INVALID: mismatched stack depth
+op bad_stack(r: reg8)
+  or a
+  if Z
+    push bc        ; +2
+  end              ; ERROR: stack depth differs between paths
 end
 ```
 
-### 6.3 Compiler-Inserted Preservation
+The compiler reports this as a stack-depth mismatch error within the op body.
 
-The compiler is responsible for inserting `push`/`pop` pairs (or equivalent sequences) around the op body to preserve non-destination registers that the body would otherwise clobber. The simplest compliant strategy — and the one recommended for v0.1 — is:
+### 6.2 SP Tracking During Op Expansion
 
-Save `AF` (via `push af`) before the op body and restore it after, unless `AF` (or `A`) is the destination. This preserves flags unconditionally, which is the conservative and predictable choice.
+When an op is expanded inside a function that has local variables, the function's SP tracking must remain valid. The key rules:
 
-For other registers clobbered by the body, the compiler analyzes the instructions in the expanded body, determines which registers are written, and wraps the body with appropriate save/restore pairs.
+1. **Op expansion is inline.** The expanded instructions become part of the function's `asm` stream.
+2. **SP deltas accumulate.** Each `push`/`pop` in the op body updates the function's SP tracking.
+3. **Net delta = 0.** After the complete expansion, the SP offset returns to its pre-expansion value.
+4. **Local access remains valid.** Because net delta = 0, local variable offsets computed before the op invocation remain correct after it.
 
-The net stack delta of the entire expansion (including any compiler-inserted pushes and pops) must be zero. This ensures that the caller's stack frame is undisturbed.
+**(impl)** The compiler must:
 
-### 6.4 Practical Implications for Op Authors
-
-Because the compiler handles preservation automatically, op authors can write their bodies focusing on the logic rather than on save/restore bookkeeping. However, there are practical considerations:
-
-The more registers an op body clobbers, the more `push`/`pop` pairs the compiler must insert, and the larger and slower the expanded code becomes. Op authors who care about code size or cycle count should minimize unnecessary register usage in their bodies.
-
-If an op body uses structured control flow, the compiler must ensure that preservation pushes and pops are correctly balanced across all control paths. The stack-depth matching rules from Section 10 of the spec apply within op bodies just as they do in function `asm` blocks.
-
-Op bodies that manipulate `SP` directly (via `ld sp, ...` or similar) interact poorly with the autosave mechanism, because the compiler's inserted `push`/`pop` pairs assume a stable stack. Avoid direct SP manipulation in op bodies; if you must do it, understand that the compiler's SP tracking may become invalid and stack-slot addressing will be rejected.
+- Record SP offset before expanding the op
+- Track SP changes through the expansion
+- Verify SP offset matches after expansion
+- Report error if mismatch
 
 ---
 
@@ -393,7 +603,7 @@ end
 
 Invoking `cmp16 HL, DE` selects the first overload (fixed `HL` in first param, `reg16` matching `DE` in second). The expansion emits `or a; sbc hl, de; add hl, de`. The caller can then test `Z` or `C` flags to determine the comparison result.
 
-Invoking `cmp16 HL, 1000` selects the second overload (`imm16` matching the literal). The expansion loads the immediate into `DE`, performs the subtract-and-restore, and pops `DE`. The compiler's autosave mechanism would also preserve `AF` if the op's destination convention requires it — but note that in this case, the _purpose_ of the op is to set flags, so the author likely intends `lhs` (the first parameter) to be the destination, and flags should be the observable output. This is a case where the naming convention matters: since neither parameter is named `dst*` or `out*`, the first parameter (`lhs`) is treated as the destination, meaning `HL` may be clobbered and flags are not auto-preserved. The op author has taken care to restore `HL` manually and intends the flag side-effects.
+Invoking `cmp16 HL, 1000` selects the second overload (`imm16` matching the literal). The expansion loads the immediate into `DE`, performs the subtract-and-restore, and pops `DE`. The op body restores `HL` manually and leaves flags set by `sbc`, which is the intended observable output.
 
 ### 7.2 A Byte-Fill Op
 
@@ -412,7 +622,7 @@ end
 
 Invoked as `fill8 screenBuffer, $20, 80`, this expands to a loop that writes the value `$20` to 80 consecutive bytes starting at the address `screenBuffer`. The `ea` matcher binds to the effective address of `screenBuffer` (its location in memory), and the two `imm8` matchers bind to the literal values.
 
-Note that this op clobbers `HL`, `B`, and `A` internally, plus flags. The autosave mechanism will preserve all of these except the destination. Since `dst` is the first parameter and matches the `dst*` naming convention, the destination is the `ea` — but an `ea` is an address, not a register. In practice, the compiler preserves the registers that were clobbered (`HL`, `B`, `A`, and flags) except as needed for the destination write. The exact preservation behavior depends on the compiler's clobber analysis.
+Note that this op clobbers `HL`, `B`, and `A` internally, plus flags. Because ops have no automatic preservation in v0.1, these effects are visible to the caller unless the op body explicitly saves/restores registers.
 
 ### 7.3 Overload Resolution in Action
 
@@ -449,25 +659,139 @@ Now consider three call sites:
 
 ## 8. Error Cases and Diagnostics
 
+Good error messages are essential for usability. This section specifies the error categories and provides example diagnostic formats that implementations should follow.
+
 ### 8.1 No Matching Overload
 
 When no overload's matchers accept the call-site operands, the compiler reports an error at the call site. The diagnostic should identify the op name, the operand types provided, and list the available overloads with their matcher signatures so the programmer can see why none matched.
 
+**Example diagnostic:**
+
+```
+error: no matching overload for 'add16'
+  --> src/game.zax:42:5
+   |
+42 |     add16 IX, DE
+   |     ^^^^^^^^^^^^
+   |
+note: call-site operands: (IX, DE)
+note: available overloads:
+  - add16(dst: HL, src: reg16)    ; HL does not match IX
+  - add16(dst: DE, src: reg16)    ; DE does not match IX
+  - add16(dst: BC, src: reg16)    ; BC does not match IX
+help: IX is not supported by op matchers in v0.1
+```
+
 ### 8.2 Ambiguous Overload
 
-When two or more overloads match with equal specificity, the compiler reports an ambiguity error. The diagnostic should identify the competing overloads and suggest adding a more specific overload to resolve the tie (as shown in Section 5.4).
+When two or more overloads match with equal specificity, the compiler reports an ambiguity error. The diagnostic should identify the competing overloads and suggest adding a more specific overload to resolve the tie.
+
+**Example diagnostic:**
+
+```
+error: ambiguous overload for 'problem'
+  --> src/game.zax:50:5
+   |
+50 |     problem HL, BC
+   |     ^^^^^^^^^^^^^^
+   |
+note: call-site operands: (HL, BC)
+note: equally specific candidates:
+  - problem(dst: HL, src: reg16)   ; defined at src/ops.zax:10
+  - problem(dst: reg16, src: BC)   ; defined at src/ops.zax:15
+help: add an overload 'problem(dst: HL, src: BC)' to resolve ambiguity
+```
 
 ### 8.3 Invalid Expansion
 
-When an overload is selected and expanded, but the resulting instruction sequence contains an invalid Z80 instruction, the compiler reports the error at the call site. The diagnostic should indicate that the error arose from an op expansion and identify which instruction in the expansion is invalid. This helps the caller understand that the problem is in the op's body (or in a combination of operands the op wasn't designed to handle), not in their own code.
+When an overload is selected and expanded, but the resulting instruction sequence contains an invalid Z80 instruction, the compiler reports the error at the call site. The diagnostic should indicate that the error arose from an op expansion and identify which instruction in the expansion is invalid.
+
+**Example diagnostic:**
+
+```
+error: invalid Z80 instruction in op expansion
+  --> src/game.zax:60:5
+   |
+60 |     swap_with_mem DE, (buffer)
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+note: expansion produced: ex de, (buffer)
+note: 'ex' does not support this operand combination
+note: op 'swap_with_mem' defined at src/ops.zax:25
+help: this op may not support all reg16 values; consider using fixed-register matchers
+```
 
 ### 8.4 Cyclic Expansion
 
-When expanding an op would lead to infinite recursion (op A invokes op B which invokes op A), the compiler reports a cyclic expansion error. The diagnostic should show the expansion chain that forms the cycle.
+When expanding an op would lead to infinite recursion, the compiler reports a cyclic expansion error. The diagnostic should show the expansion chain that forms the cycle.
+
+**Example diagnostic:**
+
+```
+error: cyclic op expansion detected
+  --> src/game.zax:70:5
+   |
+70 |     op_a HL
+   |     ^^^^^^^
+   |
+note: expansion chain:
+  1. op_a (src/ops.zax:30) invokes op_b
+  2. op_b (src/ops.zax:40) invokes op_c
+  3. op_c (src/ops.zax:50) invokes op_a  <-- cycle
+```
 
 ### 8.5 Stack Delta Violation
 
-If the instructions in an op body (after expansion of any nested ops) have a net stack delta that is not zero, the compiler reports an error. This catches cases where a `push` without a matching `pop` (or vice versa) would corrupt the caller's stack.
+If the instructions in an op body (after expansion of any nested ops) have a net stack delta that is not zero, the compiler reports an error.
+
+**Example diagnostic:**
+
+```
+error: op expansion has non-zero stack delta
+  --> src/game.zax:80:5
+   |
+80 |     leaky_op HL
+   |     ^^^^^^^^^^^
+   |
+note: op body has net stack delta of +2 (push without matching pop)
+note: op 'leaky_op' defined at src/ops.zax:60
+help: ensure all push instructions have matching pop instructions
+```
+
+### 8.6 Other Error Conditions
+
+**Undefined op.** If an op invocation references a name that is not defined as an op:
+
+```
+error: undefined op 'unknwon_op'
+  --> src/game.zax:90:5
+   |
+90 |     unknwon_op HL
+   |     ^^^^^^^^^^
+help: did you mean 'unknown_op'?
+```
+
+**Arity mismatch.** If the number of operands doesn't match any overload:
+
+```
+error: no overload of 'add16' accepts 3 operands
+  --> src/game.zax:95:5
+   |
+95 |     add16 HL, DE, BC
+   |     ^^^^^^^^^^^^^^^^
+note: available arities: 2
+```
+
+**Op defined inside function.** If an op declaration appears inside a function body:
+
+```
+error: op declarations must be at module scope
+  --> src/game.zax:100:3
+    |
+100 |   op inner_op(x: reg8)
+    |   ^^
+help: move this op declaration outside the function
+```
 
 ---
 
@@ -481,13 +805,13 @@ The decision to make ops operate on parsed AST nodes rather than raw text was dr
 
 **Overload resolution.** Text-level macros have no notion of operand types, so they cannot support overloading or specificity-based dispatch. The op system's matcher types enable a principled overload mechanism that is predictable and explainable.
 
-**Compiler integration.** Because the compiler understands the op's parameter types and body structure, it can perform clobber analysis, insert preservation code, check stack deltas, and produce meaningful diagnostics. None of this is possible with text substitution.
+**Compiler integration.** Because the compiler understands the op's parameter types and body structure, it can validate substitutions, check stack deltas, and produce meaningful diagnostics. None of this is possible with text substitution.
 
 ### 9.2 What v0.1 Intentionally Omits
 
 Several features that would be natural extensions of the op system are intentionally omitted from v0.1 to keep the initial implementation tractable:
 
-**Condition-code matchers.** A `cc` matcher type that binds to `Z`, `NZ`, `C`, `NC`, etc. would enable ops that abstract over conditional behavior. This is deferred because it interacts with flag preservation in complex ways.
+**Condition-code matchers.** A `cc` matcher type that binds to `Z`, `NZ`, `C`, `NC`, etc. would enable ops that abstract over conditional behavior. This is deferred because it complicates overload resolution and condition handling.
 
 **IX/IY matchers.** Extending `reg16` (or adding `idx16`) to cover `IX` and `IY` would be useful but requires rethinking displacement handling in the matcher system.
 
@@ -511,4 +835,343 @@ Parameters use matcher types: `reg8`, `reg16`, fixed-register matchers (`A`, `HL
 
 Overload resolution filters candidates by matcher compatibility, then ranks by specificity. Fixed beats class, `imm8` beats `imm16` for small values, `mem8`/`mem16` beat `ea`. No match is an error. Ambiguous match is an error.
 
-Autosave preserves all registers and flags except destinations. Destination parameters are identified by `dst`/`out` name prefix, or the first parameter by default. Net stack delta of an expansion must be zero. Cyclic expansion is a compile error.
+Op expansions are inline; register/flag effects are the effects of the emitted instructions. Net stack delta of an expansion must be zero. Cyclic expansion is a compile error.
+
+---
+
+## 11. Source Mapping for Op Expansions
+
+ZAX produces D8 Debug Map (D8M) files for debugger integration (Appendix B of the main spec). Op expansions require special handling to produce useful debug information.
+
+### 11.1 The Attribution Problem
+
+When an op expands to multiple instructions, the debugger needs to know which source location to show. There are several options:
+
+1. **Attribute to call site.** All expanded instructions point to the op invocation line.
+2. **Attribute to op body.** Each expanded instruction points to its original line in the op declaration.
+3. **Hybrid.** The first instruction points to the call site; subsequent instructions point to the op body.
+
+### 11.2 Recommended Policy
+
+**(impl)** For v0.1, the recommended policy is:
+
+- All instructions in an op expansion are attributed to the **call site** (the line containing the op invocation).
+- The D8M segment for the expansion has `kind: "macro"` to indicate it resulted from op expansion.
+- The `confidence` should be `"high"` since the compiler knows the exact mapping.
+
+This policy means that stepping in the debugger will treat an op invocation as a single step, regardless of how many instructions it expands to. This matches the abstraction level at which the programmer wrote the code.
+
+### 11.3 Advanced Debugging (Future)
+
+Future versions may support stepping _into_ op expansions, showing the op body source during single-stepping. This would require:
+
+- D8M segments that reference both the call site and the op body location
+- Debugger support for "step into macro" vs "step over macro"
+- UI to show macro expansion context
+
+These features are out of scope for v0.1.
+
+### 11.4 Symbol Table
+
+Ops do not appear in the symbol table as callable addresses (since they have no address — they are purely inline). However:
+
+- The op _name_ may appear in diagnostic output
+- Op expansions do not define local labels and therefore do not add label symbols
+- The D8M may include op definitions in a separate metadata section for tooling purposes
+
+---
+
+## 12. Interaction with Functions and the Calling Convention
+
+### 12.1 Ops Inside Function Bodies
+
+Ops are expanded inline within the enclosing function's `asm` block. This means:
+
+- The function's local variables remain accessible during op expansion (as SP-relative slots)
+- The function's stack frame is not modified by the op (net stack delta = 0)
+- The function's SP tracking is updated by any `push`/`pop` in the op body
+
+### 12.2 Function Calls Inside Op Bodies
+
+An op body may invoke a function using the normal function-call syntax (Section 8.3 of the main spec). When this happens:
+
+- The compiler generates the call sequence (push arguments, `call`, pop arguments)
+- The call clobbers registers per the calling convention (AF, BC, DE, HL are volatile)
+- The resulting register/flag effects are simply the effects of the call plus any surrounding op instructions
+
+This interaction can lead to significant expansion overhead. Consider:
+
+```
+op process_with_log(dst: reg16, src: imm16)
+  log_debug "processing"    ; function call inside op
+  ld dst, src
+end
+```
+
+The function call `log_debug` clobbers AF, BC, DE, HL. Because ops are inline expansions, those clobbers are visible unless the op body explicitly saves/restores registers around the call. This can make such ops expensive or surprising.
+
+**Guidance for op authors:** Avoid function calls inside ops when possible. If you must call a function, consider whether the op should be a function instead.
+
+### 12.3 Ops That Establish Stack Frames
+
+Ops cannot declare local variables (`var` blocks are forbidden). However, an op may manually manipulate the stack for temporary storage:
+
+```
+op temp_storage_example(dst: reg16)
+  push bc           ; save working register
+  ; ... use BC for computation ...
+  pop bc            ; restore
+  ; ... store result to dst ...
+end
+```
+
+This is permitted, but the net stack delta must still be zero. Any save/restore is explicitly authored in the op body.
+
+### 12.4 Calling Ops from Functions vs Calling Functions from Ops
+
+| Scenario                | Effect                                               |
+| ----------------------- | ---------------------------------------------------- |
+| Function calls op       | Op expands inline; function's frame unaffected       |
+| Op calls function       | Full call sequence generated; clobbers volatile regs |
+| Op calls op             | Nested inline expansion; no call overhead            |
+| Function calls function | Normal call/ret; stack frame management              |
+
+---
+
+## Appendix A: Implementation Checklist
+
+This checklist is for compiler implementers. It covers the essential components needed for a compliant v0.1 op implementation.
+
+### A.1 Parser
+
+- [ ] Parse `op` declarations at module scope
+- [ ] Parse zero-parameter ops (no parentheses)
+- [ ] Parse parameter lists with matcher types
+- [ ] Reject `op` declarations inside function bodies
+- [ ] Reject `var` blocks inside op bodies
+- [ ] Parse op bodies as implicit `asm` streams
+- [ ] Handle `end` termination (including nested control flow)
+
+### A.2 Name Resolution
+
+- [ ] Register op names in the global namespace
+- [ ] Detect name collisions with functions, types, etc.
+- [ ] Support forward references to ops
+- [ ] Build overload sets (multiple declarations with same name)
+
+### A.3 Overload Resolution
+
+- [ ] Filter candidates by matcher compatibility
+- [ ] Implement specificity ordering:
+  - [ ] Fixed register > class matcher
+  - [ ] `imm8` > `imm16` for small values
+  - [ ] `mem8`/`mem16` > `ea`
+- [ ] Detect and report ambiguity
+- [ ] Detect and report no-match
+
+### A.4 Substitution
+
+- [ ] Clone op body AST for each expansion
+- [ ] Substitute parameter references with bound operands
+- [ ] Handle all matcher types (reg8, reg16, fixed, imm8, imm16, ea, mem8, mem16)
+- [ ] Preserve AST structure (no text-level manipulation)
+
+### A.5 Label Hygiene
+
+- [ ] Reject local label definitions inside op bodies
+
+### A.6 Cycle Detection
+
+- [ ] Track expansion stack during recursive expansion
+- [ ] Detect when an op appears twice in the stack
+- [ ] Report cycle with full chain
+
+### A.7 Register-Effect Analysis (Optional)
+
+- [ ] (Optional tooling) Analyze emitted instructions to report registers/flags written
+- [ ] (Optional tooling) Surface effects in documentation or lint diagnostics
+
+### A.8 Stack Delta Verification
+
+- [ ] Track stack delta through op body
+- [ ] Handle `push`, `pop`, `call`, `ret`, `inc sp`, `dec sp`
+- [ ] Verify net delta = 0 after expansion
+- [ ] Report violation with clear diagnostic
+
+### A.9 Code Emission
+
+- [ ] Emit expanded instructions to code stream
+- [ ] Handle lowering of non-encodable operands (per Section 6.1.1 of main spec)
+- [ ] Generate D8M segments with call-site attribution
+
+### A.10 Diagnostics
+
+- [ ] No matching overload (with available overloads listed)
+- [ ] Ambiguous overload (with competing candidates)
+- [ ] Invalid expansion (with expanded instruction)
+- [ ] Cyclic expansion (with chain)
+- [ ] Stack delta violation
+- [ ] Undefined op
+- [ ] Arity mismatch
+- [ ] Op inside function
+
+---
+
+## Appendix B: Test Cases for Op Implementation
+
+This appendix provides test case outlines for validating an op implementation. Each test should verify both successful compilation and correct code generation.
+
+### B.1 Basic Expansion
+
+```
+; Test: simple op with reg16 parameter
+op simple_inc(dst: reg16)
+  inc dst
+end
+
+func test(): void
+  asm
+    simple_inc HL    ; should expand to: inc hl
+    simple_inc DE    ; should expand to: inc de
+end
+```
+
+### B.2 Fixed-Register Overloads
+
+```
+; Test: fixed-register matcher wins over class matcher
+op add16(dst: HL, src: reg16)
+  add hl, src
+end
+
+op add16(dst: DE, src: reg16)
+  ex de, hl
+  add hl, src
+  ex de, hl
+end
+
+func test(): void
+  asm
+    add16 HL, BC     ; should select first overload
+    add16 DE, BC     ; should select second overload
+end
+```
+
+### B.3 Specificity Ranking
+
+```
+; Test: imm8 beats imm16
+op load_val(dst: reg8, val: imm8)
+  ld dst, val
+end
+
+op load_val(dst: reg8, val: imm16)
+  ; This overload exists but should not be selected for small values
+  ld dst, val
+end
+
+func test(): void
+  asm
+    load_val A, 42   ; should select imm8 overload
+    load_val A, 1000 ; should select imm16 overload
+end
+```
+
+### B.4 Ambiguity Detection
+
+```
+; Test: should report ambiguity error
+op ambig(dst: HL, src: reg16)
+end
+
+op ambig(dst: reg16, src: BC)
+end
+
+func test(): void
+  asm
+    ambig HL, BC     ; ERROR: ambiguous
+end
+```
+
+### B.5 Cycle Detection
+
+```
+; Test: should report cyclic expansion
+op cycle_a(r: reg16)
+  cycle_b r
+end
+
+op cycle_b(r: reg16)
+  cycle_a r        ; ERROR: cycle
+end
+```
+
+### B.6 Stack Delta Violation
+
+```
+; Test: should report stack delta error
+op leaky(r: reg16)
+  push hl          ; +2
+  ; missing pop    ; net delta +2, ERROR
+end
+```
+
+### B.7 Labels Inside Ops (Should Fail)
+
+```
+; Test: op with local labels should be rejected
+op with_label(r: reg8)
+  ld r, 10
+loop:
+  dec r
+  jr nz, loop
+end
+; Expected: error: local labels are not allowed inside op bodies
+```
+
+### B.8 Nested Op Expansion
+
+```
+; Test: ops invoking other ops
+op clear_flags
+  or a
+end
+
+op safe_add(dst: reg16, src: reg16)
+  clear_flags
+  adc dst, src
+end
+
+func test(): void
+  asm
+    safe_add HL, DE  ; should expand clear_flags then adc
+end
+```
+
+---
+
+## Appendix C: Glossary
+
+**AST (Abstract Syntax Tree):** The parsed representation of source code as a tree structure, where each node represents a syntactic construct.
+
+**Candidate:** An overload that matches the call-site operands and could potentially be selected.
+
+**Effective Address (EA):** An expression that evaluates to a memory address.
+
+**Expansion:** The process of replacing an op invocation with the op's body after substitution.
+
+**Fixed Matcher:** A matcher that accepts exactly one register (e.g., `HL`).
+
+**Class Matcher:** A matcher that accepts a class of registers (e.g., `reg16` accepts HL, DE, BC, SP).
+
+**Hygiene:** The property that internal names (like labels) in a macro/op do not collide with names at the call site.
+
+**Matcher:** A compile-time pattern that constrains which operands can bind to an op parameter.
+
+**Overload:** One of potentially multiple declarations of the same op name with different parameter matchers.
+
+**Specificity:** The relative "narrowness" of a matcher; more specific matchers win during overload resolution.
+
+**Stack Delta:** The net change in stack pointer caused by a sequence of instructions.
+
+**Substitution:** The process of replacing parameter names in an op body with the corresponding call-site operands.
