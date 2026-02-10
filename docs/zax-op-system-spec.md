@@ -48,14 +48,14 @@ Understanding ops requires contrasting them with familiar alternatives:
 
 Ops are _not_ functions. They have no stack frame, no calling convention, no return address. An op expansion is purely inline: the instructions appear in the caller's code stream at the point of invocation. There is no `call` or `ret` involved. This is what makes ops zero-overhead — but it also means that ops cannot be recursive (cyclic expansion is a compile error) and cannot declare local variables.
 
-| Aspect | `op` | `func` |
-|--------|------|--------|
-| Invocation cost | Zero (inline expansion) | `call`/`ret` overhead |
-| Stack frame | None | Optional (if locals declared) |
-| Recursion | Forbidden (cyclic expansion error) | Permitted |
-| Local variables | Forbidden | Permitted (`var` block) |
-| Overloading | By operand matchers | Not supported in v0.1 |
-| Register/flag effects | Inline code semantics | Caller-save convention |
+| Aspect                | `op`                               | `func`                        |
+| --------------------- | ---------------------------------- | ----------------------------- |
+| Invocation cost       | Zero (inline expansion)            | `call`/`ret` overhead         |
+| Stack frame           | None                               | Optional (if locals declared) |
+| Recursion             | Forbidden (cyclic expansion error) | Permitted                     |
+| Local variables       | Forbidden                          | Permitted (`var` block)       |
+| Overloading           | By operand matchers                | Not supported in v0.1         |
+| Register/flag effects | Inline code semantics              | Caller-save convention        |
 
 ### 1.3 When to Use Ops
 
@@ -929,12 +929,12 @@ This is permitted, but the net stack delta must still be zero. Any save/restore 
 
 ### 12.4 Calling Ops from Functions vs Calling Functions from Ops
 
-| Scenario | Effect |
-|----------|--------|
-| Function calls op | Op expands inline; function's frame unaffected |
-| Op calls function | Full call sequence generated; clobbers volatile regs |
-| Op calls op | Nested inline expansion; no call overhead |
-| Function calls function | Normal call/ret; stack frame management |
+| Scenario                | Effect                                               |
+| ----------------------- | ---------------------------------------------------- |
+| Function calls op       | Op expands inline; function's frame unaffected       |
+| Op calls function       | Full call sequence generated; clobbers volatile regs |
+| Op calls op             | Nested inline expansion; no call overhead            |
+| Function calls function | Normal call/ret; stack frame management              |
 
 ---
 
@@ -986,34 +986,25 @@ This checklist is for compiler implementers. It covers the essential components 
 - [ ] Detect when an op appears twice in the stack
 - [ ] Report cycle with full chain
 
-### A.7 Clobber Analysis
+### A.7 Register-Effect Analysis (Optional)
 
-- [ ] Identify registers written by each Z80 instruction
-- [ ] Handle structured control flow (union of paths)
-- [ ] Handle nested op invocations (expand first, then analyze)
-- [ ] Handle function calls within ops (volatile set)
+- [ ] (Optional tooling) Analyze emitted instructions to report registers/flags written
+- [ ] (Optional tooling) Surface effects in documentation or lint diagnostics
 
-### A.8 Autosave Insertion
-
-- [ ] Identify destination parameters (`dst`/`out` prefix or first param)
-- [ ] Compute preservation set = clobbered - destinations
-- [ ] Insert `push`/`pop` pairs in correct order
-- [ ] Preserve flags (AF) unless destination
-
-### A.9 Stack Delta Verification
+### A.8 Stack Delta Verification
 
 - [ ] Track stack delta through op body
 - [ ] Handle `push`, `pop`, `call`, `ret`, `inc sp`, `dec sp`
-- [ ] Verify net delta = 0 after autosave insertion
+- [ ] Verify net delta = 0 after expansion
 - [ ] Report violation with clear diagnostic
 
-### A.10 Code Emission
+### A.9 Code Emission
 
 - [ ] Emit expanded instructions to code stream
 - [ ] Handle lowering of non-encodable operands (per Section 6.1.1 of main spec)
 - [ ] Generate D8M segments with call-site attribution
 
-### A.11 Diagnostics
+### A.10 Diagnostics
 
 - [ ] No matching overload (with available overloads listed)
 - [ ] Ambiguous overload (with competing candidates)
@@ -1163,13 +1154,7 @@ end
 
 **AST (Abstract Syntax Tree):** The parsed representation of source code as a tree structure, where each node represents a syntactic construct.
 
-**Autosave:** The compiler's automatic preservation of registers and flags across op expansions.
-
 **Candidate:** An overload that matches the call-site operands and could potentially be selected.
-
-**Clobber:** To modify a register or flag. A register is "clobbered" by an instruction if the instruction writes to it.
-
-**Destination:** A parameter that represents the output of an op; the register or memory location that may be modified.
 
 **Effective Address (EA):** An expression that evaluates to a memory address.
 
