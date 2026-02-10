@@ -1096,6 +1096,7 @@ export function parseModuleFile(
 
     const exportPrefix = text.startsWith('export ') ? 'export ' : '';
     const rest = exportPrefix ? text.slice('export '.length).trimStart() : text;
+    const hasTopKeyword = (kw: string): boolean => new RegExp(`^${kw}\\b`, 'i').test(rest);
 
     // In v0.1, `export` is accepted only on `const`, `func`, and `op` declarations.
     // It has no semantic effect today, but we still reject it on all other constructs
@@ -2160,6 +2161,82 @@ export function parseModuleFile(
         decls,
       };
       items.push(dataBlock);
+      continue;
+    }
+
+    if (hasTopKeyword('import')) {
+      diag(diagnostics, modulePath, `Invalid import statement`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('type')) {
+      diag(diagnostics, modulePath, `Invalid type name`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('union')) {
+      diag(diagnostics, modulePath, `Invalid union name`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('var')) {
+      diag(diagnostics, modulePath, `Invalid var declaration`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('func')) {
+      diag(diagnostics, modulePath, `Invalid func header`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('op')) {
+      diag(diagnostics, modulePath, `Invalid op header`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('extern')) {
+      diag(
+        diagnostics,
+        modulePath,
+        `Unsupported extern declaration in current subset (expected "extern func ...")`,
+        { line: lineNo, column: 1 },
+      );
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('enum')) {
+      diag(diagnostics, modulePath, `Invalid enum declaration`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('section')) {
+      diag(diagnostics, modulePath, `Invalid section directive`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('align')) {
+      diag(diagnostics, modulePath, `Invalid align directive`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('const')) {
+      diag(diagnostics, modulePath, `Invalid const declaration`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('bin')) {
+      diag(diagnostics, modulePath, `Invalid bin declaration`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('hex')) {
+      diag(diagnostics, modulePath, `Invalid hex declaration`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('data')) {
+      diag(diagnostics, modulePath, `Invalid data declaration`, { line: lineNo, column: 1 });
+      i++;
       continue;
     }
 
