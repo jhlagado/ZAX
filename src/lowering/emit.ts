@@ -2108,7 +2108,11 @@ export function emitProgram(
             mnemonic: string,
           ): boolean => {
             if (operand.kind !== 'Imm') {
-              diagAt(diagnostics, asmItem.span, `${mnemonic} expects an immediate target.`);
+              if (mnemonic === 'djnz' || mnemonic.startsWith('jr')) {
+                diagAt(diagnostics, asmItem.span, `${mnemonic} expects disp8`);
+              } else {
+                diagAt(diagnostics, asmItem.span, `${mnemonic} expects an immediate target.`);
+              }
               return false;
             }
             const symbolicTarget = symbolicTargetFromExpr(operand.expr);
@@ -2155,7 +2159,7 @@ export function emitProgram(
                     : undefined;
               const opcode = ccName ? jrConditionOpcodeFromName(ccName) : undefined;
               if (opcode === undefined) {
-                diagAt(diagnostics, asmItem.span, `Unsupported jr condition.`);
+                diagAt(diagnostics, asmItem.span, `jr cc, disp expects NZ/Z/NC/C + disp8`);
                 return;
               }
               if (!emitRel8FromOperand(asmItem.operands[1]!, opcode, `jr ${ccName!.toLowerCase()}`))
@@ -2166,12 +2170,12 @@ export function emitProgram(
           }
           if (head === 'djnz') {
             if (asmItem.operands.length !== 1) {
-              diagAt(diagnostics, asmItem.span, `djnz expects one target operand.`);
+              diagAt(diagnostics, asmItem.span, `djnz expects one operand (disp8)`);
               return;
             }
             const target = asmItem.operands[0]!;
             if (target.kind !== 'Imm') {
-              diagAt(diagnostics, asmItem.span, `djnz expects an immediate target.`);
+              diagAt(diagnostics, asmItem.span, `djnz expects disp8`);
               return;
             }
             if (!emitRel8FromOperand(target, 0x10, 'djnz')) return;
