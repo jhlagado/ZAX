@@ -1,0 +1,14 @@
+export func main(): void
+  asm
+    ld a, (target + 1)
+    ld (target + 2), a
+    ld hl, (target + 3)
+    ld (target + 4), hl
+    ld de, (target + 5)
+    ld (target + 6), de
+    ld ix, (target + 7)
+    ld (target + 8), ix
+  target:
+    nop
+    ret
+  end
