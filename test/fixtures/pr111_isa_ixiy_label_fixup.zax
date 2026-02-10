@@ -1,0 +1,7 @@
+export func main(): void
+  asm
+    ld ix, target
+    ld iy, target
+  target:
+    ret
+  end
