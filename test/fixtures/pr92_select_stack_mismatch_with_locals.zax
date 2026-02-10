@@ -1,0 +1,12 @@
+export func main(): void
+  var
+    x: word
+  asm
+    select A
+      case 0
+        push bc
+      else
+        nop
+    end
+    ld a, (x)
+end
