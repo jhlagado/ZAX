@@ -1,0 +1,7 @@
+export func main(): void
+  asm
+    jp target + 65536
+  target:
+    nop
+    ret
+  end
