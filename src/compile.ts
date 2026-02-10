@@ -256,8 +256,9 @@ export const compile: CompileFn = async (
   options: CompilerOptions,
   deps: PipelineDeps,
 ): Promise<CompileResult> => {
+  const entryPath = normalizePath(entryFile);
   const diagnostics: Diagnostic[] = [];
-  const program = await loadProgram(entryFile, diagnostics, options);
+  const program = await loadProgram(entryPath, diagnostics, options);
   if (!program) return { diagnostics, artifacts: [] };
 
   if (hasErrors(diagnostics)) {
@@ -286,7 +287,7 @@ export const compile: CompileFn = async (
     artifacts.push(deps.formats.writeHex(map, symbols));
   }
   if (emit.emitD8m) {
-    artifacts.push(deps.formats.writeD8m(map, symbols));
+    artifacts.push(deps.formats.writeD8m(map, symbols, { rootDir: dirname(entryPath) }));
   }
   if (emit.emitListing) {
     if (deps.formats.writeListing) {

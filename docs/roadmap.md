@@ -237,8 +237,9 @@ Use only real GitHub PR numbers:
 Open / in review (anchored):
 
 - #118: ISA coverage tranche 13 (indexed byte-register memory forms for IX/IY families + diagnostics hardening).
+- #119: D8M path normalization + symbol file list (project-relative, forward-slash, stable ordering).
 
-Next after #118 merges (anchored as soon as opened):
+Next after #119 merges (anchored as soon as opened):
 
 1. Next PR: ISA coverage tranche 14 (remaining core instruction families + diagnostics parity).
 
