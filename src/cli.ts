@@ -245,7 +245,13 @@ export async function runCli(argv: string[]): Promise<number> {
   }
 }
 
-function normalizePath(path: string): string {
+function stripExtendedWindowsPrefix(path: string): string {
+  if (path.startsWith('\\\\?\\UNC\\')) return `\\\\${path.slice(8)}`;
+  if (path.startsWith('\\\\?\\')) return path.slice(4);
+  return path;
+}
+
+function normalizePathForCompare(path: string): string {
   const resolved = resolve(path);
   const real = (() => {
     try {
@@ -254,11 +260,17 @@ function normalizePath(path: string): string {
       return resolved;
     }
   })();
-  return process.platform === 'win32' ? real.toLowerCase() : real;
+  const stripped = stripExtendedWindowsPrefix(real);
+  const normalized = stripped.replace(/\\/g, '/');
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized;
+}
+
+function samePath(a: string, b: string): boolean {
+  return normalizePathForCompare(a) === normalizePathForCompare(b);
 }
 
 const invokedAs = process.argv[1];
-if (invokedAs && normalizePath(invokedAs) === normalizePath(fileURLToPath(import.meta.url))) {
+if (invokedAs && samePath(invokedAs, fileURLToPath(import.meta.url))) {
   // eslint-disable-next-line no-void
   void runCli(process.argv.slice(2)).then((code) => process.exit(code));
 }

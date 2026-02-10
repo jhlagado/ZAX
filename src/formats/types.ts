@@ -70,7 +70,13 @@ export interface WriteBinOptions {}
 /**
  * Options for D8M writing (reserved for future options).
  */
-export interface WriteD8mOptions {}
+export interface WriteD8mOptions {
+  /**
+   * Base directory used to normalize file paths in D8M symbol entries.
+   * When provided, file paths are made project-relative and use `/` separators.
+   */
+  rootDir?: string;
+}
 
 /**
  * Options for listing writing.
