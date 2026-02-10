@@ -175,6 +175,28 @@ describe('cli artifacts', () => {
     await rm(join(__dirname, 'tmp'), { recursive: true, force: true });
   }, 20_000);
 
+  it('accepts equals-form long options for output/type/include', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr11_include_main.zax');
+    const includes = join(__dirname, 'fixtures', 'includes');
+    const outBin = join(__dirname, 'tmp', 'cli-equals', 'out.bin');
+
+    await rm(join(__dirname, 'tmp'), { recursive: true, force: true });
+
+    const res = await runCli([
+      `--include=${join(__dirname, 'fixtures')}`,
+      `--include=${includes}`,
+      '--type=bin',
+      `--output=${outBin}`,
+      entry,
+    ]);
+    expect(res.code).toBe(0);
+    expect(res.stdout.trim()).toBe(outBin);
+    expect(await exists(outBin)).toBe(true);
+    expect(await exists(join(__dirname, 'tmp', 'cli-equals', 'out.hex'))).toBe(true);
+
+    await rm(join(__dirname, 'tmp'), { recursive: true, force: true });
+  }, 20_000);
+
   it('rejects entry when it is not the last argument', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-entry-last-'));
     const entry = join(work, 'main.zax');

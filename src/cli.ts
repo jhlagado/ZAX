@@ -72,13 +72,26 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
       process.stdout.write(`${String(pkg.version ?? '0.0.0')}\n`);
       return { code: 0 };
     }
-    if (a === '-o' || a === '--output') {
+    if (a === '-o' || a === '--output' || a.startsWith('--output=')) {
+      if (a.startsWith('--output=')) {
+        const v = a.slice('--output='.length);
+        if (!v) fail(`--output expects a value`);
+        outputPath = v;
+        continue;
+      }
       const v = argv[++i];
       if (!v) fail(`${a} expects a value`);
       outputPath = v;
       continue;
     }
-    if (a === '-t' || a === '--type') {
+    if (a === '-t' || a === '--type' || a.startsWith('--type=')) {
+      if (a.startsWith('--type=')) {
+        const v = a.slice('--type='.length);
+        if (!v) fail(`--type expects a value`);
+        if (v !== 'hex' && v !== 'bin') fail(`Unsupported --type "${v}" (expected hex|bin)`);
+        outputType = v;
+        continue;
+      }
       const v = argv[++i];
       if (!v) fail(`${a} expects a value`);
       if (v !== 'hex' && v !== 'bin') fail(`Unsupported --type "${v}" (expected hex|bin)`);
@@ -101,7 +114,13 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
       emitD8m = false;
       continue;
     }
-    if (a === '-I' || a === '--include') {
+    if (a === '-I' || a === '--include' || a.startsWith('--include=')) {
+      if (a.startsWith('--include=')) {
+        const v = a.slice('--include='.length);
+        if (!v) fail(`--include expects a value`);
+        includeDirs.push(v);
+        continue;
+      }
       const v = argv[++i];
       if (!v) fail(`${a} expects a value`);
       includeDirs.push(v);
