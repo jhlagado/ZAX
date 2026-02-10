@@ -1390,7 +1390,7 @@ export function parseModuleFile(
           i++;
           break;
         }
-        if (isTopLevelStart(t)) break;
+        if (isTopLevelStart(t) && consumeKeywordPrefix(t, 'func') === undefined) break;
 
         const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(t);
         if (!m) {
@@ -1988,6 +1988,7 @@ export function parseModuleFile(
           i++;
           break;
         }
+        if (isTopLevelStart(t) && consumeKeywordPrefix(t, 'func') === undefined) break;
 
         const funcTail = consumeKeywordPrefix(t, 'func');
         if (funcTail === undefined) {
@@ -2239,7 +2240,20 @@ export function parseModuleFile(
           i++;
           continue;
         }
-        if (isTopLevelStart(t)) break;
+        if (isTopLevelStart(t)) {
+          const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^=]+?)\s*=\s*(.+)$/.exec(t);
+          if (m && TOP_LEVEL_KEYWORDS.has(m[1]!.toLowerCase())) {
+            diag(
+              diagnostics,
+              modulePath,
+              `Invalid data declaration name "${m[1]!}": collides with a top-level keyword.`,
+              { line: i + 1, column: 1 },
+            );
+            i++;
+            continue;
+          }
+          break;
+        }
 
         const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^=]+?)\s*=\s*(.+)$/.exec(t);
         if (!m) {

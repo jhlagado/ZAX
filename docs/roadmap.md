@@ -18,17 +18,17 @@ Progress snapshot (rough, assembler-first):
 Progress estimate (percentage):
 
 - Strict (gate-based): 0% complete until all 6 completion gates are green (Section 3).
-- Working estimate (risk-weighted): ~76% complete (range 72-80%).
+- Working estimate (risk-weighted): ~77% complete (range 73-81%).
 - Why this is not higher: major closure work remains across parser coverage depth, ISA edge forms, CLI contract hardening, and deterministic acceptance gates.
 
 Working estimate scorecard (risk-weighted, subjective):
 
 - Spec gate: ~70%
-- Parser/AST gate: ~73%
+- Parser/AST gate: ~75%
 - Codegen gate: ~66%
 - ISA gate: ~62%
 - CLI/output gate: ~64%
-- Hardening gate: ~63%
+- Hardening gate: ~64%
 
 What moves the needle fastest:
 
@@ -236,7 +236,7 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- #136: ISA+parser tranche 29/30 (known-head no-cascade safeguard + expanded ED/CB/zero-operand hardening + `(ix+disp)/(iy+disp)` parity + malformed control/top-level keyword recovery + whitespace/case-insensitive top-level and export parsing parity + extern block parsing for multi-func declarations + lowering support for `extern <binName> ... end` relative offsets against `bin` base symbols (including import-crossing fixup coverage) + type/union unterminated-block recovery at next top-level declaration + var/data keyword-collision diagnostics parity for declaration names).
+- #136: ISA+parser tranche 29/30 (known-head no-cascade safeguard + expanded ED/CB/zero-operand hardening + `(ix+disp)/(iy+disp)` parity + malformed control/top-level keyword recovery + whitespace/case-insensitive top-level and export parsing parity + extern block parsing for multi-func declarations + lowering support for `extern <binName> ... end` relative offsets against `bin` base symbols (including import-crossing fixup coverage) + type/union unterminated-block recovery at next top-level declaration + var/data keyword-collision diagnostics parity for declaration names + extern/data block-boundary recovery normalization for malformed top-level transitions).
 
 Next after #136 merges (anchored as soon as opened):
 
