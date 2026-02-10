@@ -236,20 +236,21 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- #105: ISA coverage tranche 1 (ex (sp), ix/iy encoding + diagnostics parity).
+- #106: ISA coverage tranche 2 (daa + ex af,af' + diagnostics parity).
 
-Next after #105 merges (anchored as soon as opened):
+Next after #106 merges (anchored as soon as opened):
 
-1. Next PR: ISA coverage tranche 2 (remaining core instruction families + diagnostics parity).
+1. Next PR: ISA coverage tranche 3 (remaining core instruction families + diagnostics parity).
 
 Completed (anchored, most recent first):
 
-1. #104: Lowering/frame safety tranche 3 (op-expansion/clobber interactions under nested control flow).
-2. #103: Lowering/frame safety tranche 2 (mixed return-path stack-delta diagnostics).
-3. #102: Lowering/frame safety tranche 1 (locals + control-flow stack invariants).
-4. #101: Parser/AST closure tranche 5 (parser edge-case rejection diagnostics and TODO sweep).
-5. #100: Parser/AST closure tranche 4 (malformed-control recovery consistency in parser state machine).
-6. #99: Parser/AST closure tranche 3 (structured-control span coverage expansion).
+1. #105: ISA coverage tranche 1 (ex (sp), ix/iy encoding + diagnostics parity).
+2. #104: Lowering/frame safety tranche 3 (op-expansion/clobber interactions under nested control flow).
+3. #103: Lowering/frame safety tranche 2 (mixed return-path stack-delta diagnostics).
+4. #102: Lowering/frame safety tranche 1 (locals + control-flow stack invariants).
+5. #101: Parser/AST closure tranche 5 (parser edge-case rejection diagnostics and TODO sweep).
+6. #100: Parser/AST closure tranche 4 (malformed-control recovery consistency in parser state machine).
+7. #99: Parser/AST closure tranche 3 (structured-control span coverage expansion).
 7. #98: Parser/AST closure tranche 2 (select malformed-header recovery + negative fixture).
 8. #97: Parser/AST closure tranche 1 (asm diagnostic span tightening + regression tests).
 9. #96: Spec audit tranche 4 (appendix mapping + CI checklist draft).
