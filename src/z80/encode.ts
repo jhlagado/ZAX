@@ -362,6 +362,49 @@ function arityDiagnostic(head: string, operandCount: number): string | undefined
   }
 }
 
+function isKnownInstructionHead(head: string): boolean {
+  const h = head.toLowerCase();
+  switch (h) {
+    case 'ret':
+    case 'add':
+    case 'call':
+    case 'djnz':
+    case 'rst':
+    case 'im':
+    case 'in':
+    case 'out':
+    case 'jp':
+    case 'jr':
+    case 'ld':
+    case 'inc':
+    case 'dec':
+    case 'push':
+    case 'pop':
+    case 'ex':
+    case 'sub':
+    case 'cp':
+    case 'and':
+    case 'or':
+    case 'xor':
+    case 'adc':
+    case 'sbc':
+    case 'bit':
+    case 'res':
+    case 'set':
+    case 'rl':
+    case 'rr':
+    case 'sla':
+    case 'sra':
+    case 'srl':
+    case 'sll':
+    case 'rlc':
+    case 'rrc':
+      return true;
+    default:
+      return zeroOperandOpcode(h) !== undefined;
+  }
+}
+
 /**
  * Encode a single `asm` instruction node into Z80 machine-code bytes.
  *
@@ -375,6 +418,7 @@ export function encodeInstruction(
   env: CompileEnv,
   diagnostics: Diagnostic[],
 ): Uint8Array | undefined {
+  const diagnosticsBefore = diagnostics.length;
   const head = node.head.toLowerCase();
   const ops = node.operands;
 
@@ -1386,9 +1430,18 @@ export function encodeInstruction(
     if (ops.length === 1 || ops.length === 2) return undefined;
   }
 
+  if (isKnownInstructionHead(head) && diagnostics.length > diagnosticsBefore) {
+    return undefined;
+  }
+
   const arityMessage = arityDiagnostic(head, ops.length);
   if (arityMessage !== undefined) {
     diag(diagnostics, node, arityMessage);
+    return undefined;
+  }
+
+  if (isKnownInstructionHead(head)) {
+    diag(diagnostics, node, `${head} has unsupported operand form`);
     return undefined;
   }
 
