@@ -586,7 +586,13 @@ type AsmControlFrame =
   | { kind: 'If'; elseSeen: boolean; openSpan: SourceSpan }
   | { kind: 'While'; openSpan: SourceSpan }
   | { kind: 'Repeat'; openSpan: SourceSpan }
-  | { kind: 'Select'; elseSeen: boolean; armSeen: boolean; openSpan: SourceSpan; recoverOnly?: boolean };
+  | {
+      kind: 'Select';
+      elseSeen: boolean;
+      armSeen: boolean;
+      openSpan: SourceSpan;
+      recoverOnly?: boolean;
+    };
 
 function parseAsmStatement(
   filePath: string,
