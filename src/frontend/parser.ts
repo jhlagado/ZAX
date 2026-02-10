@@ -583,8 +583,8 @@ function parseAsmInstruction(
 }
 
 type AsmControlFrame =
-  | { kind: 'If'; elseSeen: boolean; openSpan: SourceSpan }
-  | { kind: 'While'; openSpan: SourceSpan }
+  | { kind: 'If'; elseSeen: boolean; openSpan: SourceSpan; recoverOnly?: boolean }
+  | { kind: 'While'; openSpan: SourceSpan; recoverOnly?: boolean }
   | { kind: 'Repeat'; openSpan: SourceSpan }
   | {
       kind: 'Select';
@@ -593,6 +593,13 @@ type AsmControlFrame =
       openSpan: SourceSpan;
       recoverOnly?: boolean;
     };
+
+function isRecoverOnlyControlFrame(frame: AsmControlFrame): boolean {
+  return (
+    (frame.kind === 'If' || frame.kind === 'While' || frame.kind === 'Select') &&
+    frame.recoverOnly === true
+  );
+}
 
 function parseAsmStatement(
   filePath: string,
@@ -680,7 +687,7 @@ function parseAsmStatement(
       line: stmtSpan.start.line,
       column: stmtSpan.start.column,
     });
-    controlStack.push({ kind: 'If', elseSeen: false, openSpan: stmtSpan });
+    controlStack.push({ kind: 'If', elseSeen: false, openSpan: stmtSpan, recoverOnly: true });
     return { kind: 'If', span: stmtSpan, cc: missingCc };
   }
   if (lower === 'if') {
@@ -703,7 +710,7 @@ function parseAsmStatement(
       line: stmtSpan.start.line,
       column: stmtSpan.start.column,
     });
-    controlStack.push({ kind: 'While', openSpan: stmtSpan });
+    controlStack.push({ kind: 'While', openSpan: stmtSpan, recoverOnly: true });
     return { kind: 'While', span: stmtSpan, cc: missingCc };
   }
   if (lower === 'while') {
@@ -1577,6 +1584,7 @@ export function parseModuleFile(
 
       if (!terminated) {
         for (const frame of asmControlStack) {
+          if (isRecoverOnlyControlFrame(frame)) continue;
           const span = frame.openSpan;
           const msg =
             frame.kind === 'Repeat'
@@ -1682,6 +1690,7 @@ export function parseModuleFile(
 
       if (!terminated) {
         for (const frame of controlStack) {
+          if (isRecoverOnlyControlFrame(frame)) continue;
           const span = frame.openSpan;
           const msg =
             frame.kind === 'Repeat'

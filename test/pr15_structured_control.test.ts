@@ -315,6 +315,26 @@ describe('PR15 structured asm control flow', () => {
     expect(res.diagnostics.some((d) => d.message.includes('Unterminated func "main"'))).toBe(true);
   });
 
+  it('diagnoses malformed if header at EOF without synthetic unmatched-end noise', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr100_if_invalid_cc_eof.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.artifacts).toEqual([]);
+    expect(res.diagnostics.some((d) => d.message === '"if" expects a condition code')).toBe(true);
+    expect(res.diagnostics.some((d) => d.message === '"if" without matching "end"')).toBe(false);
+    expect(res.diagnostics.some((d) => d.message.includes('Unterminated func "main"'))).toBe(true);
+  });
+
+  it('diagnoses malformed while header at EOF without synthetic unmatched-end noise', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr100_while_invalid_cc_eof.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.artifacts).toEqual([]);
+    expect(res.diagnostics.some((d) => d.message === '"while" expects a condition code')).toBe(
+      true,
+    );
+    expect(res.diagnostics.some((d) => d.message === '"while" without matching "end"')).toBe(false);
+    expect(res.diagnostics.some((d) => d.message.includes('Unterminated func "main"'))).toBe(true);
+  });
+
   it('diagnoses repeat closed by end (until required)', async () => {
     const entry = join(__dirname, 'fixtures', 'pr32_repeat_closed_by_end.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
