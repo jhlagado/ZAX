@@ -236,83 +236,84 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- #105: ISA coverage tranche 1 (ex (sp), ix/iy encoding + diagnostics parity).
+- #106: ISA coverage tranche 2 (daa + ex af,af' + diagnostics parity).
 
-Next after #105 merges (anchored as soon as opened):
+Next after #106 merges (anchored as soon as opened):
 
-1. Next PR: ISA coverage tranche 2 (remaining core instruction families + diagnostics parity).
+1. Next PR: ISA coverage tranche 3 (remaining core instruction families + diagnostics parity).
 
 Completed (anchored, most recent first):
 
-1. #104: Lowering/frame safety tranche 3 (op-expansion/clobber interactions under nested control flow).
-2. #103: Lowering/frame safety tranche 2 (mixed return-path stack-delta diagnostics).
-3. #102: Lowering/frame safety tranche 1 (locals + control-flow stack invariants).
-4. #101: Parser/AST closure tranche 5 (parser edge-case rejection diagnostics and TODO sweep).
-5. #100: Parser/AST closure tranche 4 (malformed-control recovery consistency in parser state machine).
-6. #99: Parser/AST closure tranche 3 (structured-control span coverage expansion).
-7. #98: Parser/AST closure tranche 2 (select malformed-header recovery + negative fixture).
-8. #97: Parser/AST closure tranche 1 (asm diagnostic span tightening + regression tests).
-9. #96: Spec audit tranche 4 (appendix mapping + CI checklist draft).
-10. #95: Spec audit tranche 3 (expanded mappings + parser span evidence).
-11. #94: Spec audit tranche 2 (normative mapping + rejection catalog).
-12. #93: Spec audit pass (v0.1 implementation matrix, tranche 1).
-13. #92: Lowering interaction torture suite (nested control + locals + stack-flow checks).
-14. #91: ISA tranche: encode `adc/sbc HL,rr` (ED forms) + tests.
-15. #90: Listing tranche: ascii gutter and sparse-byte markers.
-16. #89: CLI parity sweep (entry-last enforcement + contract tests).
-17. #88: CLI: v0.1 artifact-writing command (bin/hex/d8m/lst).
-18. #87: Test: determinism for emitted artifacts.
-19. #86: Test: conditional abs16 fixups (`jp cc`, `call cc`) + roadmap sync.
-20. #85: Test: extend rel8 range checks (`jr cc`, `djnz`) + roadmap sync.
-21. #77: Parser: diagnose `case` without a value (fixtures + tests).
-22. #76: Parser: diagnose missing control operands (fixtures + tests).
-23. #75: Docs: clarify shared-case `select` syntax.
-24. #74: Parser: diagnose duplicate `else` in `if` (fixtures + tests).
-25. #73: Parser: diagnose `select` with no arms (fixtures + tests).
-26. #72: Docs: sync roadmap through PR #71.
-27. #71: ISA: ED block I/O instructions (INI/INIR/IND/INDR/OUTI/OTIR/OUTD/OTDR) (fixture + test).
-28. #70: ISA: indexed rotates/shifts (IX/IY + disp8) (fixture + test).
-29. #68: ISA: indexed bit ops (IX/IY + disp8) (fixture + test).
-30. #67: ISA: indexed inc/dec (IX/IY + disp8) (fixture + test).
-31. #66: ISA: indexed IX/IY disp8 addressing for `ld` (fixture + test).
-32. #65: ISA: ED block instructions (LDI/LDIR/LDD/LDDR/CPI/CPIR/CPD/CPDR) (fixture + test).
-33. #64: ISA: ED misc ops (`neg/rrd/rld`, `ld i,a / ld a,i / ld r,a / ld a,r`) (fixture + test).
-34. #63: ISA: `in/out` port operands end-to-end (parser + encoder + fixture + test).
-35. #62: Test: use implicit return in PR14 no-locals fixture.
-36. #61: Docs: sync roadmap completed PR anchors.
-37. #60: Revert: undo PR #59 merge (self-approval policy).
-38. #59: Docs: sync roadmap completed PR anchors (reverted by #60).
-39. #58: ISA: encode `jp (hl)`, `jp (ix)`, `jp (iy)` (fixture + test).
-40. #57: ISA: encode `im 0|1|2`, `rst <imm8>`, `reti`, `retn` (fixture + test).
-41. #56: ISA: encode misc system ops (`halt/di/ei/scf/ccf/cpl/ex*/exx`) (fixture + test).
-42. #55: Parser UX: avoid duplicate diagnostics for illegal `T[]` usage (tests).
-43. #54: Parser: restrict inferred arrays `T[]` to `data` declarations only (tests).
-44. #53: Diagnostics: remove "PR subset" wording from user-facing errors (small cleanup).
-45. #52: Treat `ptr` as a 16-bit scalar in codegen (tests).
-46. #51: Inferred-length arrays in `data` declarations (`T[]`) (parser + tests).
-47. #50: Union declarations + layout + field access (parser/semantics/lowering + tests).
-48. #49: Fast-path abs `ld (ea), imm16` for `word`/`addr` destinations using `ld (nn),hl` (tests).
-49. #48: Lower `ld (ea), imm16` for `word`/`addr` destinations (tests).
-50. #47: ISA: encode `ld a,(bc|de)` and `ld (bc|de),a` (fixture + test).
-51. #46: Roadmap update for #44/#45 (reality check + gates).
-52. #45: ld abs16 ED forms for BC/DE/SP (fixture + test).
-53. #44: ld abs16 special-cases for A/HL (fixture + test).
-54. #43: Lower `ld (ea), imm8` for byte destinations (tests).
-55. #42: Roadmap anchor update for #40/#41.
-56. #41: ISA: `inc`/`dec` reg8 + `(hl)`, and `ld (hl), imm8` (fixture + test).
-57. #40: Implicit return after label (treat labels as re-entry points).
-58. #39: Listing output (`.lst`) artifact + contract test + CLI note.
-59. #38: Document examples as compiled contract (`examples/README.md`).
-60. #37: Fixups and forward references (spec + tests).
-61. #36: Expand char literal escape coverage (tests).
-62. #35: Char literals in `imm` expressions (parser + tests).
-63. #34: Examples compile gate (CI contract test + example updates).
-64. #33: Parser `select` arm ordering hardening.
-65. #32: Harden asm control keyword parsing (prevent cascaded diagnostics).
-66. #31: Roadmap anchors updated to real PR numbers (remove placeholders).
-67. #30: Diagnose `case` outside `select` during parsing (negative fixtures).
-68. #29: Deduplicate `select` join mismatch diagnostics (regression test).
-69. #28: Stacked `select case` labels share one body (spec + tests).
+1. #105: ISA coverage tranche 1 (ex (sp), ix/iy encoding + diagnostics parity).
+2. #104: Lowering/frame safety tranche 3 (op-expansion/clobber interactions under nested control flow).
+3. #103: Lowering/frame safety tranche 2 (mixed return-path stack-delta diagnostics).
+4. #102: Lowering/frame safety tranche 1 (locals + control-flow stack invariants).
+5. #101: Parser/AST closure tranche 5 (parser edge-case rejection diagnostics and TODO sweep).
+6. #100: Parser/AST closure tranche 4 (malformed-control recovery consistency in parser state machine).
+7. #99: Parser/AST closure tranche 3 (structured-control span coverage expansion).
+8. #98: Parser/AST closure tranche 2 (select malformed-header recovery + negative fixture).
+9. #97: Parser/AST closure tranche 1 (asm diagnostic span tightening + regression tests).
+10. #96: Spec audit tranche 4 (appendix mapping + CI checklist draft).
+11. #95: Spec audit tranche 3 (expanded mappings + parser span evidence).
+12. #94: Spec audit tranche 2 (normative mapping + rejection catalog).
+13. #93: Spec audit pass (v0.1 implementation matrix, tranche 1).
+14. #92: Lowering interaction torture suite (nested control + locals + stack-flow checks).
+15. #91: ISA tranche: encode `adc/sbc HL,rr` (ED forms) + tests.
+16. #90: Listing tranche: ascii gutter and sparse-byte markers.
+17. #89: CLI parity sweep (entry-last enforcement + contract tests).
+18. #88: CLI: v0.1 artifact-writing command (bin/hex/d8m/lst).
+19. #87: Test: determinism for emitted artifacts.
+20. #86: Test: conditional abs16 fixups (`jp cc`, `call cc`) + roadmap sync.
+21. #85: Test: extend rel8 range checks (`jr cc`, `djnz`) + roadmap sync.
+22. #77: Parser: diagnose `case` without a value (fixtures + tests).
+23. #76: Parser: diagnose missing control operands (fixtures + tests).
+24. #75: Docs: clarify shared-case `select` syntax.
+25. #74: Parser: diagnose duplicate `else` in `if` (fixtures + tests).
+26. #73: Parser: diagnose `select` with no arms (fixtures + tests).
+27. #72: Docs: sync roadmap through PR #71.
+28. #71: ISA: ED block I/O instructions (INI/INIR/IND/INDR/OUTI/OTIR/OUTD/OTDR) (fixture + test).
+29. #70: ISA: indexed rotates/shifts (IX/IY + disp8) (fixture + test).
+30. #68: ISA: indexed bit ops (IX/IY + disp8) (fixture + test).
+31. #67: ISA: indexed inc/dec (IX/IY + disp8) (fixture + test).
+32. #66: ISA: indexed IX/IY disp8 addressing for `ld` (fixture + test).
+33. #65: ISA: ED block instructions (LDI/LDIR/LDD/LDDR/CPI/CPIR/CPD/CPDR) (fixture + test).
+34. #64: ISA: ED misc ops (`neg/rrd/rld`, `ld i,a / ld a,i / ld r,a / ld a,r`) (fixture + test).
+35. #63: ISA: `in/out` port operands end-to-end (parser + encoder + fixture + test).
+36. #62: Test: use implicit return in PR14 no-locals fixture.
+37. #61: Docs: sync roadmap completed PR anchors.
+38. #60: Revert: undo PR #59 merge (self-approval policy).
+39. #59: Docs: sync roadmap completed PR anchors (reverted by #60).
+40. #58: ISA: encode `jp (hl)`, `jp (ix)`, `jp (iy)` (fixture + test).
+41. #57: ISA: encode `im 0|1|2`, `rst <imm8>`, `reti`, `retn` (fixture + test).
+42. #56: ISA: encode misc system ops (`halt/di/ei/scf/ccf/cpl/ex*/exx`) (fixture + test).
+43. #55: Parser UX: avoid duplicate diagnostics for illegal `T[]` usage (tests).
+44. #54: Parser: restrict inferred arrays `T[]` to `data` declarations only (tests).
+45. #53: Diagnostics: remove "PR subset" wording from user-facing errors (small cleanup).
+46. #52: Treat `ptr` as a 16-bit scalar in codegen (tests).
+47. #51: Inferred-length arrays in `data` declarations (`T[]`) (parser + tests).
+48. #50: Union declarations + layout + field access (parser/semantics/lowering + tests).
+49. #49: Fast-path abs `ld (ea), imm16` for `word`/`addr` destinations using `ld (nn),hl` (tests).
+50. #48: Lower `ld (ea), imm16` for `word`/`addr` destinations (tests).
+51. #47: ISA: encode `ld a,(bc|de)` and `ld (bc|de),a` (fixture + test).
+52. #46: Roadmap update for #44/#45 (reality check + gates).
+53. #45: ld abs16 ED forms for BC/DE/SP (fixture + test).
+54. #44: ld abs16 special-cases for A/HL (fixture + test).
+55. #43: Lower `ld (ea), imm8` for byte destinations (tests).
+56. #42: Roadmap anchor update for #40/#41.
+57. #41: ISA: `inc`/`dec` reg8 + `(hl)`, and `ld (hl), imm8` (fixture + test).
+58. #40: Implicit return after label (treat labels as re-entry points).
+59. #39: Listing output (`.lst`) artifact + contract test + CLI note.
+60. #38: Document examples as compiled contract (`examples/README.md`).
+61. #37: Fixups and forward references (spec + tests).
+62. #36: Expand char literal escape coverage (tests).
+63. #35: Char literals in `imm` expressions (parser + tests).
+64. #34: Examples compile gate (CI contract test + example updates).
+65. #33: Parser `select` arm ordering hardening.
+66. #32: Harden asm control keyword parsing (prevent cascaded diagnostics).
+67. #31: Roadmap anchors updated to real PR numbers (remove placeholders).
+68. #30: Diagnose `case` outside `select` during parsing (negative fixtures).
+69. #29: Deduplicate `select` join mismatch diagnostics (regression test).
+70. #28: Stacked `select case` labels share one body (spec + tests).
 
 Next (assembler-first):
 
