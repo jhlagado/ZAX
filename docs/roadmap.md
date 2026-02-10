@@ -236,9 +236,9 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- #109: ISA coverage tranche 5 (indexed imm8 store + IX/IY immediate load + diagnostics parity).
+- #110: ISA coverage tranche 5 (indexed imm8 store + IX/IY immediate load + diagnostics parity).
 
-Next after #109 merges (anchored as soon as opened):
+Next after #110 merges (anchored as soon as opened):
 
 1. Next PR: ISA coverage tranche 6 (remaining core instruction families + diagnostics parity).
 
