@@ -31,6 +31,7 @@ function usage(): string {
     '  -t, --type <type>     Primary output type: hex|bin (default: hex)',
     '  -n, --nolist          Suppress .lst',
     '      --nobin           Suppress .bin',
+    '      --nohex           Suppress .hex',
     '      --nod8m           Suppress .d8dbg.json',
     '  -I, --include <dir>   Add import search path (repeatable)',
     '  -V, --version         Print version',
@@ -90,6 +91,10 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
     }
     if (a === '--nobin') {
       emitBin = false;
+      continue;
+    }
+    if (a === '--nohex') {
+      emitHex = false;
       continue;
     }
     if (a === '--nod8m') {
