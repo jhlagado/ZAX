@@ -2874,6 +2874,14 @@ export function emitProgram(
       diag(diagnostics, fx.file, `Unresolved symbol "${fx.baseLower}" in 16-bit fixup.`);
       continue;
     }
+    if (addr < 0 || addr > 0xffff) {
+      diag(
+        diagnostics,
+        fx.file,
+        `16-bit fixup address out of range for "${fx.baseLower}" with addend ${fx.addend}: ${addr}.`,
+      );
+      continue;
+    }
     codeBytes.set(fx.offset, addr & 0xff);
     codeBytes.set(fx.offset + 1, (addr >> 8) & 0xff);
   }

@@ -18,17 +18,17 @@ Progress snapshot (rough, assembler-first):
 Progress estimate (percentage):
 
 - Strict (gate-based): 0% complete until all 6 completion gates are green (Section 3).
-- Working estimate (risk-weighted): ~56% complete (range 52-60%).
+- Working estimate (risk-weighted): ~58% complete (range 54-62%).
 - Why this is not higher: major closure work remains across parser coverage depth, ISA edge forms, CLI contract hardening, and deterministic acceptance gates.
 
 Working estimate scorecard (risk-weighted, subjective):
 
 - Spec gate: ~66%
 - Parser/AST gate: ~58%
-- Codegen gate: ~59%
-- ISA gate: ~48%
+- Codegen gate: ~61%
+- ISA gate: ~50%
 - CLI/output gate: ~64%
-- Hardening gate: ~41%
+- Hardening gate: ~43%
 
 What moves the needle fastest:
 
