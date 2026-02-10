@@ -623,7 +623,31 @@ export function encodeInstruction(
     ) {
       return Uint8Array.of(0xe3); // ex (sp),hl
     }
-    diag(diagnostics, node, `ex supports "DE, HL" and "(SP), HL" only`);
+    if (
+      (ops[0]!.kind === 'Mem' &&
+        ops[0]!.expr.kind === 'EaName' &&
+        ops[0]!.expr.name.toUpperCase() === 'SP' &&
+        b === 'IX') ||
+      (ops[1]!.kind === 'Mem' &&
+        ops[1]!.expr.kind === 'EaName' &&
+        ops[1]!.expr.name.toUpperCase() === 'SP' &&
+        a === 'IX')
+    ) {
+      return Uint8Array.of(0xdd, 0xe3); // ex (sp),ix
+    }
+    if (
+      (ops[0]!.kind === 'Mem' &&
+        ops[0]!.expr.kind === 'EaName' &&
+        ops[0]!.expr.name.toUpperCase() === 'SP' &&
+        b === 'IY') ||
+      (ops[1]!.kind === 'Mem' &&
+        ops[1]!.expr.kind === 'EaName' &&
+        ops[1]!.expr.name.toUpperCase() === 'SP' &&
+        a === 'IY')
+    ) {
+      return Uint8Array.of(0xfd, 0xe3); // ex (sp),iy
+    }
+    diag(diagnostics, node, `ex supports "DE, HL", "(SP), HL", "(SP), IX", and "(SP), IY" only`);
     return undefined;
   }
 
