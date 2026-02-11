@@ -1365,7 +1365,7 @@ export function parseModuleFile(
         i++;
         continue;
       }
-      diag(diagnostics, modulePath, `Invalid import statement`, { line: lineNo, column: 1 });
+      diagInvalidHeaderLine('import statement', text, '"<path>.zax" or <moduleId>', lineNo);
       i++;
       continue;
     }
@@ -2432,7 +2432,7 @@ export function parseModuleFile(
       const decl = enumTail;
       const nameMatch = /^([A-Za-z_][A-Za-z0-9_]*)(?:\s+(.*))?$/.exec(decl);
       if (!nameMatch) {
-        diag(diagnostics, modulePath, `Invalid enum declaration`, { line: lineNo, column: 1 });
+        diagInvalidHeaderLine('enum declaration', text, '<name> <member>[, ...]', lineNo);
         i++;
         continue;
       }
@@ -2520,7 +2520,7 @@ export function parseModuleFile(
       const decl = rest === 'section' ? '' : (sectionTail ?? '');
       const m = /^(code|data|var)(?:\s+at\s+(.+))?$/.exec(decl);
       if (!m) {
-        diag(diagnostics, modulePath, `Invalid section directive`, { line: lineNo, column: 1 });
+        diagInvalidHeaderLine('section directive', text, '<code|data|var> [at <imm16>]', lineNo);
         i++;
         continue;
       }
@@ -2556,7 +2556,7 @@ export function parseModuleFile(
 
       const exprText = rest === 'align' ? '' : (alignTail ?? '');
       if (exprText.length === 0) {
-        diag(diagnostics, modulePath, `Invalid align directive`, { line: lineNo, column: 1 });
+        diagInvalidHeaderLine('align directive', text, '<imm16>', lineNo);
         i++;
         continue;
       }
@@ -2577,7 +2577,7 @@ export function parseModuleFile(
       const decl = constTail;
       const eq = decl.indexOf('=');
       if (eq < 0) {
-        diag(diagnostics, modulePath, `Invalid const declaration`, { line: lineNo, column: 1 });
+        diagInvalidHeaderLine('const declaration', text, '<name> = <imm>', lineNo);
         i++;
         continue;
       }
@@ -2867,7 +2867,7 @@ export function parseModuleFile(
     }
 
     if (hasTopKeyword('import')) {
-      diag(diagnostics, modulePath, `Invalid import statement`, { line: lineNo, column: 1 });
+      diagInvalidHeaderLine('import statement', text, '"<path>.zax" or <moduleId>', lineNo);
       i++;
       continue;
     }
@@ -2907,22 +2907,22 @@ export function parseModuleFile(
       continue;
     }
     if (hasTopKeyword('enum')) {
-      diag(diagnostics, modulePath, `Invalid enum declaration`, { line: lineNo, column: 1 });
+      diagInvalidHeaderLine('enum declaration', text, '<name> <member>[, ...]', lineNo);
       i++;
       continue;
     }
     if (hasTopKeyword('section')) {
-      diag(diagnostics, modulePath, `Invalid section directive`, { line: lineNo, column: 1 });
+      diagInvalidHeaderLine('section directive', text, '<code|data|var> [at <imm16>]', lineNo);
       i++;
       continue;
     }
     if (hasTopKeyword('align')) {
-      diag(diagnostics, modulePath, `Invalid align directive`, { line: lineNo, column: 1 });
+      diagInvalidHeaderLine('align directive', text, '<imm16>', lineNo);
       i++;
       continue;
     }
     if (hasTopKeyword('const')) {
-      diag(diagnostics, modulePath, `Invalid const declaration`, { line: lineNo, column: 1 });
+      diagInvalidHeaderLine('const declaration', text, '<name> = <imm>', lineNo);
       i++;
       continue;
     }

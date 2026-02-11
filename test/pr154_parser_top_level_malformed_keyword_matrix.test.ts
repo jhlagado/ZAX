@@ -24,15 +24,21 @@ describe('PR154 parser: top-level malformed keyword matrix', () => {
     expect(messages).toContain(
       'Invalid extern declaration line "extern": expected [<baseName>] or func <name>(...): <retType> at <imm16>',
     );
-    expect(messages).toContain('Invalid import statement');
+    expect(messages).toContain(
+      'Invalid import statement line "import": expected "<path>.zax" or <moduleId>',
+    );
     expect(messages).toContain('Invalid type name');
     expect(messages).toContain('Invalid union name');
     expect(messages).toContain('Invalid var declaration');
     expect(messages).toContain('Invalid data declaration');
-    expect(messages).toContain('Invalid const declaration');
-    expect(messages).toContain('Invalid enum declaration');
-    expect(messages).toContain('Invalid section directive');
-    expect(messages).toContain('Invalid align directive');
+    expect(messages).toContain('Invalid const declaration line "const": expected <name> = <imm>');
+    expect(messages).toContain(
+      'Invalid enum declaration line "enum": expected <name> <member>[, ...]',
+    );
+    expect(messages).toContain(
+      'Invalid section directive line "section\tbad": expected <code|data|var> [at <imm16>]',
+    );
+    expect(messages).toContain('Invalid align directive line "align": expected <imm16>');
     expect(messages).toContain(
       'Invalid bin declaration: expected "bin <name> in <code|data> from \\\"<path>\\\""',
     );
