@@ -14,8 +14,8 @@ describe('PR160 parser: type/union missing-end recovery', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
     const messages = res.diagnostics.map((d) => d.message);
-    expect(messages).toContain('Unterminated type "Point": missing "end"');
-    expect(messages).toContain('Unterminated union "Pair": missing "end"');
+    expect(messages).toContain('Unterminated type "Point": expected "end" before "func"');
+    expect(messages).toContain('Unterminated union "Pair": expected "end" before "const"');
     expect(messages).not.toContain('Invalid record field declaration');
     expect(messages).not.toContain('Invalid union field declaration');
     expect(messages.some((m) => m.startsWith('Unsupported top-level construct:'))).toBe(false);

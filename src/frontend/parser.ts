@@ -1149,11 +1149,15 @@ export function parseModuleFile(
     'align',
   ]);
 
-  function isTopLevelStart(t: string): boolean {
+  function topLevelStartKeyword(t: string): string | undefined {
     const exportTail = consumeKeywordPrefix(t, 'export');
     const w = exportTail !== undefined ? exportTail : t;
     const keyword = (w.split(/\s/, 1)[0] ?? '').toLowerCase();
-    return TOP_LEVEL_KEYWORDS.has(keyword);
+    return TOP_LEVEL_KEYWORDS.has(keyword) ? keyword : undefined;
+  }
+
+  function isTopLevelStart(t: string): boolean {
+    return topLevelStartKeyword(t) !== undefined;
   }
 
   function consumeTopKeyword(input: string, keyword: string): string | undefined {
@@ -1366,6 +1370,8 @@ export function parseModuleFile(
       const fields: RecordFieldNode[] = [];
       const fieldNamesLower = new Set<string>();
       let terminated = false;
+      let interruptedByKeyword: string | undefined;
+      let interruptedByLine: number | undefined;
       let typeEndOffset = file.text.length;
       i++;
 
@@ -1383,7 +1389,12 @@ export function parseModuleFile(
           i++;
           break;
         }
-        if (isTopLevelStart(t)) break;
+        const topKeyword = topLevelStartKeyword(t);
+        if (topKeyword !== undefined) {
+          interruptedByKeyword = topKeyword;
+          interruptedByLine = i + 1;
+          break;
+        }
 
         const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(t);
         if (!m) {
@@ -1436,10 +1447,19 @@ export function parseModuleFile(
       }
 
       if (!terminated) {
-        diag(diagnostics, modulePath, `Unterminated type "${name}": missing "end"`, {
-          line: lineNo,
-          column: 1,
-        });
+        if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Unterminated type "${name}": expected "end" before "${interruptedByKeyword}"`,
+            { line: interruptedByLine, column: 1 },
+          );
+        } else {
+          diag(diagnostics, modulePath, `Unterminated type "${name}": missing "end"`, {
+            line: lineNo,
+            column: 1,
+          });
+        }
       }
 
       if (fields.length === 0) {
@@ -1483,6 +1503,8 @@ export function parseModuleFile(
       const fields: RecordFieldNode[] = [];
       const fieldNamesLower = new Set<string>();
       let terminated = false;
+      let interruptedByKeyword: string | undefined;
+      let interruptedByLine: number | undefined;
       let unionEndOffset = file.text.length;
       i++;
 
@@ -1500,7 +1522,12 @@ export function parseModuleFile(
           i++;
           break;
         }
-        if (isTopLevelStart(t) && consumeKeywordPrefix(t, 'func') === undefined) break;
+        const topKeyword = topLevelStartKeyword(t);
+        if (topKeyword !== undefined && consumeKeywordPrefix(t, 'func') === undefined) {
+          interruptedByKeyword = topKeyword;
+          interruptedByLine = i + 1;
+          break;
+        }
 
         const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(t);
         if (!m) {
@@ -1553,10 +1580,19 @@ export function parseModuleFile(
       }
 
       if (!terminated) {
-        diag(diagnostics, modulePath, `Unterminated union "${name}": missing "end"`, {
-          line: lineNo,
-          column: 1,
-        });
+        if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Unterminated union "${name}": expected "end" before "${interruptedByKeyword}"`,
+            { line: interruptedByLine, column: 1 },
+          );
+        } else {
+          diag(diagnostics, modulePath, `Unterminated union "${name}": missing "end"`, {
+            line: lineNo,
+            column: 1,
+          });
+        }
       }
 
       if (fields.length === 0) {
@@ -2133,6 +2169,8 @@ export function parseModuleFile(
       const funcs: ExternFuncNode[] = [];
       const base = decl.length > 0 ? decl : undefined;
       let terminated = false;
+      let interruptedByKeyword: string | undefined;
+      let interruptedByLine: number | undefined;
       let blockEndOffset = file.text.length;
       i++;
 
@@ -2150,7 +2188,12 @@ export function parseModuleFile(
           i++;
           break;
         }
-        if (isTopLevelStart(t) && consumeKeywordPrefix(t, 'func') === undefined) break;
+        const topKeyword = topLevelStartKeyword(t);
+        if (topKeyword !== undefined && consumeKeywordPrefix(t, 'func') === undefined) {
+          interruptedByKeyword = topKeyword;
+          interruptedByLine = i + 1;
+          break;
+        }
 
         const funcTail = consumeKeywordPrefix(t, 'func');
         if (funcTail === undefined) {
@@ -2169,10 +2212,19 @@ export function parseModuleFile(
 
       if (!terminated) {
         const namePart = base ? ` "${base}"` : '';
-        diag(diagnostics, modulePath, `Unterminated extern${namePart}: missing "end"`, {
-          line: lineNo,
-          column: 1,
-        });
+        if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Unterminated extern${namePart}: expected "end" before "${interruptedByKeyword}"`,
+            { line: interruptedByLine, column: 1 },
+          );
+        } else {
+          diag(diagnostics, modulePath, `Unterminated extern${namePart}: missing "end"`, {
+            line: lineNo,
+            column: 1,
+          });
+        }
       }
       if (funcs.length === 0) {
         diag(diagnostics, modulePath, `extern block must contain at least one func declaration`, {
