@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- none
+1. #184: hardening/acceptance pass (CLI path-parity artifact contract for relative/absolute entry/output invocation forms).
 
 Next PR (anchored as soon as opened):
 
-1. Next PR: hardening/acceptance pass (broaden acceptance gates to additional determinism and negative-contract classes).
+1. Next PR: hardening/acceptance pass (expand negative-contract classes and acceptance-matrix strictness).
 
 Completed (anchored, most recent first):
 
