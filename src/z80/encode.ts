@@ -764,6 +764,10 @@ export function encodeInstruction(
   if (head === 'jp' && ops.length === 2) {
     const cc = conditionName(ops[0]!);
     const opcode = cc ? jpConditionOpcode(cc) : undefined;
+    if (ops[1]!.kind === 'Mem') {
+      diag(diagnostics, node, `jp cc, nn does not support indirect targets`);
+      return undefined;
+    }
     const n = immValue(ops[1]!, env);
     if (opcode === undefined || n === undefined || n < 0 || n > 0xffff) {
       diag(diagnostics, node, `jp cc, nn expects condition + imm16`);
