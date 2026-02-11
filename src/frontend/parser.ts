@@ -2307,10 +2307,16 @@ export function parseModuleFile(
         previewText = t;
         break;
       }
+      const previewKeyword = previewText ? topLevelStartKeyword(previewText) : undefined;
+      const previewLooksLikeExternBodyDecl =
+        previewText !== undefined &&
+        previewKeyword !== undefined &&
+        looksLikeKeywordBodyDeclLine(previewText);
       if (
         previewText === undefined ||
         (previewText.toLowerCase() !== 'end' &&
-          consumeKeywordPrefix(previewText, 'func') === undefined)
+          consumeKeywordPrefix(previewText, 'func') === undefined &&
+          !previewLooksLikeExternBodyDecl)
       ) {
         diagInvalidHeaderLine(
           'extern declaration',
@@ -2347,6 +2353,16 @@ export function parseModuleFile(
         }
         const topKeyword = topLevelStartKeyword(t);
         if (topKeyword !== undefined && consumeKeywordPrefix(t, 'func') === undefined) {
+          if (looksLikeKeywordBodyDeclLine(t)) {
+            diagInvalidBlockLine(
+              'extern func declaration',
+              t,
+              'func <name>(...): <retType> at <imm16>',
+              i + 1,
+            );
+            i++;
+            continue;
+          }
           interruptedByKeyword = topKeyword;
           interruptedByLine = i + 1;
           break;
