@@ -33,19 +33,19 @@ Legend:
 
 ## 3) Types + Data
 
-| Spec area                                     | Status               | Evidence                                                                                    |
-| --------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------- |
-| `4.1` scalar built-ins (`byte/word/addr/ptr`) | Implemented          | `test/semantics_layout.test.ts`, `test/pr52_ptr_scalar_slots.test.ts`                       |
-| `4.2` aliases + size usage                    | Implemented (subset) | `test/pr8_sizeof.test.ts`                                                                   |
-| `4.3` enums                                   | Implemented          | `test/pr4_enum.test.ts`                                                                     |
-| `4.4` consts                                  | Implemented          | `test/pr2_const_data.test.ts`, `test/pr2_div_zero.test.ts`                                  |
-| `5.1` arrays (fixed + inferred for `data`)    | Implemented (subset) | `test/pr51_data_inferred_array_len.test.ts`, `test/pr54_inferred_array_len_invalid.test.ts` |
-| `5.2` records                                 | Implemented (subset) | `test/semantics_layout.test.ts`                                                             |
-| `5.3` unions                                  | Implemented (subset) | `test/pr50_union_field_access.test.ts`                                                      |
-| `6.2` `var` storage                           | Implemented          | `test/pr3_var_layout.test.ts`                                                               |
-| `6.3` `data` storage                          | Implemented          | `test/pr2_const_data.test.ts`                                                               |
-| `6.4` `bin` / `hex` ingestion                 | Implemented          | `test/pr17_bin_hex_ingestion.test.ts`                                                       |
-| `6.5` `extern ... at`                         | Implemented          | `test/pr12_calls.test.ts`                                                                   |
+| Spec area                                     | Status               | Evidence                                                                                                     |
+| --------------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `4.1` scalar built-ins (`byte/word/addr/ptr`) | Implemented          | `test/semantics_layout.test.ts`, `test/pr52_ptr_scalar_slots.test.ts`                                        |
+| `4.2` aliases + size usage                    | Implemented (subset) | `test/pr8_sizeof.test.ts`                                                                                    |
+| `4.3` enums                                   | Implemented          | `test/pr4_enum.test.ts`, `test/pr215_const_data_followups_matrix.test.ts`                                    |
+| `4.4` consts                                  | Implemented          | `test/pr2_const_data.test.ts`, `test/pr2_div_zero.test.ts`, `test/pr215_const_data_followups_matrix.test.ts` |
+| `5.1` arrays (fixed + inferred for `data`)    | Implemented (subset) | `test/pr51_data_inferred_array_len.test.ts`, `test/pr54_inferred_array_len_invalid.test.ts`                  |
+| `5.2` records                                 | Implemented (subset) | `test/semantics_layout.test.ts`                                                                              |
+| `5.3` unions                                  | Implemented (subset) | `test/pr50_union_field_access.test.ts`                                                                       |
+| `6.2` `var` storage                           | Implemented          | `test/pr3_var_layout.test.ts`                                                                                |
+| `6.3` `data` storage                          | Implemented          | `test/pr2_const_data.test.ts`                                                                                |
+| `6.4` `bin` / `hex` ingestion                 | Implemented          | `test/pr17_bin_hex_ingestion.test.ts`                                                                        |
+| `6.5` `extern ... at`                         | Implemented          | `test/pr12_calls.test.ts`                                                                                    |
 
 ## 4) Expressions + Fixups
 
@@ -158,12 +158,12 @@ This tranche extends explicit mapping for additional normative areas and parser 
 
 ### 10.2 Data/layout contracts (`2.2`, `5.x`, `6.x`)
 
-| Normative intent                                                | Status                 | Evidence / Diagnostic                                                                       |
-| --------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------- |
-| Section/address overlaps are diagnosed without noisy cascades   | Implemented            | `test/pr9_sections_align.test.ts`                                                           |
-| String/data length mismatches are rejected                      | Intentionally rejected | diagnostic: `String length mismatch` (`test/pr4_negative.test.ts`)                          |
-| Unsupported data storage types are rejected with stable message | Intentionally rejected | diagnostic: `Unsupported data type ...` (`test/pr4_negative.test.ts`)                       |
-| Inferred array lengths limited to valid declaration context     | Implemented (subset)   | `test/pr51_data_inferred_array_len.test.ts`, `test/pr54_inferred_array_len_invalid.test.ts` |
+| Normative intent                                                | Status                 | Evidence / Diagnostic                                                                                 |
+| --------------------------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| Section/address overlaps are diagnosed without noisy cascades   | Implemented            | `test/pr9_sections_align.test.ts`                                                                     |
+| String/data length mismatches are rejected                      | Intentionally rejected | diagnostics asserted in `test/pr4_negative.test.ts`, `test/pr215_const_data_followups_matrix.test.ts` |
+| Unsupported data storage types are rejected with stable message | Intentionally rejected | diagnostics asserted in `test/pr4_negative.test.ts`, `test/pr215_const_data_followups_matrix.test.ts` |
+| Inferred array lengths limited to valid declaration context     | Implemented (subset)   | `test/pr51_data_inferred_array_len.test.ts`, `test/pr54_inferred_array_len_invalid.test.ts`           |
 
 ### 10.3 ISA/encoding diagnostics (`7.x`, ISA appendices)
 
@@ -196,14 +196,14 @@ The following tests assert line/column-bearing diagnostics to ensure span stabil
 
 This tranche maps Appendix B statements to current implementation evidence and known gaps.
 
-| Appendix area                                    | Status               | Evidence / Note                                                                                                                                               |
-| ------------------------------------------------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `B.1` D8M artifact emitted alongside primary out | Implemented          | `test/cli_artifacts.test.ts` validates `.d8dbg.json` sibling artifact behavior                                                                                |
-| `B.2` path materialization policy                | Implemented (subset) | `test/pr119_d8m_path_normalization.test.ts` validates project-relative, slash-normalized file paths                                                           |
-| `B.3` segments map addresses to source           | Implemented (subset) | `test/pr194_d8m_sparse_segments.test.ts` validates sparse contiguous segment runs + core metadata                                                             |
-| `B.4` symbol mapping in D8M                      | Implemented (subset) | symbol payload expectations are covered in `test/pr2_const_data.test.ts`, `test/pr3_var_layout.test.ts`, `test/pr4_enum.test.ts`, and extern/ingestion suites |
-| `B.5` mapping policy for lowered constructs      | Implemented (subset) | `test/pr200_d8m_appendix_mapping.test.ts` validates grouped `files` entries, local lowered symbols, and constant low16 `address` carry-through                |
-| `B.6` minimal example parity                     | Implemented (subset) | `test/pr200_d8m_appendix_mapping.test.ts` validates canonical D8M envelope + per-file `segments`/`symbols` structure                                          |
+| Appendix area                                    | Status               | Evidence / Note                                                                                                                                                                                                 |
+| ------------------------------------------------ | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `B.1` D8M artifact emitted alongside primary out | Implemented          | `test/cli_artifacts.test.ts` validates `.d8dbg.json` sibling artifact behavior                                                                                                                                  |
+| `B.2` path materialization policy                | Implemented (subset) | `test/pr119_d8m_path_normalization.test.ts` validates project-relative, slash-normalized file paths                                                                                                             |
+| `B.3` segments map addresses to source           | Implemented (subset) | `test/pr194_d8m_sparse_segments.test.ts` validates sparse contiguous segment runs + core metadata                                                                                                               |
+| `B.4` symbol mapping in D8M                      | Implemented (subset) | symbol payload expectations are covered in `test/pr2_const_data.test.ts`, `test/pr3_var_layout.test.ts`, `test/pr4_enum.test.ts`, `test/pr215_const_data_followups_matrix.test.ts`, and extern/ingestion suites |
+| `B.5` mapping policy for lowered constructs      | Implemented (subset) | `test/pr200_d8m_appendix_mapping.test.ts` validates grouped `files` entries, local lowered symbols, and constant low16 `address` carry-through                                                                  |
+| `B.6` minimal example parity                     | Implemented (subset) | `test/pr200_d8m_appendix_mapping.test.ts` validates canonical D8M envelope + per-file `segments`/`symbols` structure                                                                                            |
 
 ## 14) CI Checklist Draft (Spec Audit Gate)
 
