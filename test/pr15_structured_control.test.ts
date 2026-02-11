@@ -217,6 +217,19 @@ describe('PR15 structured asm control flow', () => {
     expect(res.diagnostics.some((d) => d.message.includes('Duplicate case value'))).toBe(true);
   });
 
+  it('warns when reg8 selector has unreachable case values', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr147_select_reg8_unreachable_case_warning.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const warnings = res.diagnostics.filter(
+      (d) => d.severity === 'warning' && d.message.includes('can never match reg8 selector'),
+    );
+    expect(warnings).toHaveLength(1);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    expect(bin!.bytes[bin!.bytes.length - 1]).toBe(0xc9);
+  });
+
   it('diagnoses until without matching repeat', async () => {
     const entry = join(__dirname, 'fixtures', 'pr15_until_without_repeat.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
