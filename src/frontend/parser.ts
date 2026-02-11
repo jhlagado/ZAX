@@ -1770,6 +1770,8 @@ export function parseModuleFile(
       // Optional function-local `var` block, then required `asm`.
       let locals: VarBlockNode | undefined;
       let asmStartOffset: number | undefined;
+      let interruptedBeforeAsmKeyword: string | undefined;
+      let interruptedBeforeAsmLine: number | undefined;
       while (i < lineCount) {
         const { raw: raw2, startOffset: so2 } = getRawLine(i);
         const t2 = stripComment(raw2).trim();
@@ -1777,6 +1779,12 @@ export function parseModuleFile(
         if (t2.length === 0) {
           i++;
           continue;
+        }
+        const t2TopKeyword = topLevelStartKeyword(t2);
+        if (t2TopKeyword !== undefined && t2Lower !== 'var') {
+          interruptedBeforeAsmKeyword = t2TopKeyword;
+          interruptedBeforeAsmLine = i + 1;
+          break;
         }
 
         if (t2Lower === 'var') {
@@ -1802,6 +1810,18 @@ export function parseModuleFile(
                 decls,
               };
               i++; // consume asm
+              break;
+            }
+            const tDeclTopKeyword = topLevelStartKeyword(tDecl);
+            if (tDeclTopKeyword !== undefined) {
+              interruptedBeforeAsmKeyword = tDeclTopKeyword;
+              interruptedBeforeAsmLine = i + 1;
+              locals = {
+                kind: 'VarBlock',
+                span: span(file, varStart, soDecl),
+                scope: 'function',
+                decls,
+              };
               break;
             }
 
@@ -1859,6 +1879,7 @@ export function parseModuleFile(
             decls.push({ kind: 'VarDecl', span: declSpan, name: localName, typeExpr });
             i++;
           }
+          if (interruptedBeforeAsmKeyword !== undefined) break;
           break;
         }
 
@@ -1876,6 +1897,15 @@ export function parseModuleFile(
       }
 
       if (asmStartOffset === undefined) {
+        if (interruptedBeforeAsmKeyword !== undefined && interruptedBeforeAsmLine !== undefined) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Unterminated func "${name}": expected "asm" before "${interruptedBeforeAsmKeyword}"`,
+            { line: interruptedBeforeAsmLine, column: 1 },
+          );
+          continue;
+        }
         diag(diagnostics, modulePath, `Unterminated func "${name}": expected "asm"`, {
           line: lineNo,
           column: 1,
