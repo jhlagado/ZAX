@@ -918,7 +918,6 @@ Rules:
 
 - `op` is module-scope only.
 - `op` bodies are implicit instruction streams.
-  - A leading `asm` line is accepted for compatibility, but has no semantic effect.
 - Local label definitions (`<ident>:`) are **not permitted** inside `op` bodies in v0.1.
 - `end` terminates the `op` body.
   - `op` bodies may contain structured control flow that uses `end` internally; the final `end` closes the `op` body.
