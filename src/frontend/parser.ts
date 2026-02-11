@@ -1219,6 +1219,31 @@ export function parseModuleFile(
     });
   }
 
+  const malformedTopLevelHeaderExpectations: ReadonlyArray<{
+    keyword: string;
+    kind: string;
+    expected: string;
+  }> = [
+    { keyword: 'import', kind: 'import statement', expected: '"<path>.zax" or <moduleId>' },
+    { keyword: 'type', kind: 'type declaration', expected: '<name> [<typeExpr>]' },
+    { keyword: 'union', kind: 'union declaration', expected: '<name>' },
+    { keyword: 'var', kind: 'var declaration', expected: 'var' },
+    { keyword: 'func', kind: 'func header', expected: '<name>(...): <retType>' },
+    { keyword: 'op', kind: 'op header', expected: '<name>(...)' },
+    {
+      keyword: 'extern',
+      kind: 'extern declaration',
+      expected: '[<baseName>] or func <name>(...): <retType> at <imm16>',
+    },
+    { keyword: 'enum', kind: 'enum declaration', expected: '<name> <member>[, ...]' },
+    { keyword: 'section', kind: 'section directive', expected: '<code|data|var> [at <imm16>]' },
+    { keyword: 'align', kind: 'align directive', expected: '<imm16>' },
+    { keyword: 'const', kind: 'const declaration', expected: '<name> = <imm>' },
+    { keyword: 'bin', kind: 'bin declaration', expected: '<name> in <code|data> from "<path>"' },
+    { keyword: 'hex', kind: 'hex declaration', expected: '<name> from "<path>"' },
+    { keyword: 'data', kind: 'data declaration', expected: 'data' },
+  ];
+
   function parseExternFuncFromTail(
     tail: string,
     stmtSpan: SourceSpan,
@@ -2861,79 +2886,16 @@ export function parseModuleFile(
       continue;
     }
 
-    if (hasTopKeyword('import')) {
-      diagInvalidHeaderLine('import statement', text, '"<path>.zax" or <moduleId>', lineNo);
-      i++;
-      continue;
+    let matchedMalformedTopLevelHeader = false;
+    for (const expectation of malformedTopLevelHeaderExpectations) {
+      if (hasTopKeyword(expectation.keyword)) {
+        diagInvalidHeaderLine(expectation.kind, text, expectation.expected, lineNo);
+        i++;
+        matchedMalformedTopLevelHeader = true;
+        break;
+      }
     }
-    if (hasTopKeyword('type')) {
-      diagInvalidHeaderLine('type declaration', text, '<name> [<typeExpr>]', lineNo);
-      i++;
-      continue;
-    }
-    if (hasTopKeyword('union')) {
-      diagInvalidHeaderLine('union declaration', text, '<name>', lineNo);
-      i++;
-      continue;
-    }
-    if (hasTopKeyword('var')) {
-      diagInvalidHeaderLine('var declaration', text, 'var', lineNo);
-      i++;
-      continue;
-    }
-    if (hasTopKeyword('func')) {
-      diagInvalidHeaderLine('func header', text, '<name>(...): <retType>', lineNo);
-      i++;
-      continue;
-    }
-    if (hasTopKeyword('op')) {
-      diagInvalidHeaderLine('op header', text, '<name>(...)', lineNo);
-      i++;
-      continue;
-    }
-    if (hasTopKeyword('extern')) {
-      diagInvalidHeaderLine(
-        'extern declaration',
-        text,
-        '[<baseName>] or func <name>(...): <retType> at <imm16>',
-        lineNo,
-      );
-      i++;
-      continue;
-    }
-    if (hasTopKeyword('enum')) {
-      diagInvalidHeaderLine('enum declaration', text, '<name> <member>[, ...]', lineNo);
-      i++;
-      continue;
-    }
-    if (hasTopKeyword('section')) {
-      diagInvalidHeaderLine('section directive', text, '<code|data|var> [at <imm16>]', lineNo);
-      i++;
-      continue;
-    }
-    if (hasTopKeyword('align')) {
-      diagInvalidHeaderLine('align directive', text, '<imm16>', lineNo);
-      i++;
-      continue;
-    }
-    if (hasTopKeyword('const')) {
-      diagInvalidHeaderLine('const declaration', text, '<name> = <imm>', lineNo);
-      i++;
-      continue;
-    }
-    if (hasTopKeyword('bin')) {
-      diagInvalidHeaderLine('bin declaration', text, '<name> in <code|data> from "<path>"', lineNo);
-      i++;
-      continue;
-    }
-    if (hasTopKeyword('hex')) {
-      diagInvalidHeaderLine('hex declaration', text, '<name> from "<path>"', lineNo);
-      i++;
-      continue;
-    }
-    if (hasTopKeyword('data')) {
-      diagInvalidHeaderLine('data declaration', text, 'data', lineNo);
-      i++;
+    if (matchedMalformedTopLevelHeader) {
       continue;
     }
 
