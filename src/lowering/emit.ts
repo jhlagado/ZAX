@@ -92,13 +92,21 @@ export function emitProgram(
     file: string;
     mnemonic: string;
   }[] = [];
+  const deferredExterns: {
+    name: string;
+    baseLower: string;
+    addend: number;
+    file: string;
+    line: number;
+  }[] = [];
 
   type Callable =
     | { kind: 'func'; node: FuncDeclNode }
-    | { kind: 'extern'; node: ExternFuncNode; address: number };
+    | { kind: 'extern'; node: ExternFuncNode; targetLower: string };
   const callables = new Map<string, Callable>();
   const opsByName = new Map<string, OpDeclNode[]>();
   const declaredOpNames = new Set<string>();
+  const declaredBinNames = new Set<string>();
 
   const reg8 = new Set(['A', 'B', 'C', 'D', 'E', 'H', 'L']);
   const reg16 = new Set(['BC', 'DE', 'HL']);
@@ -877,12 +885,14 @@ export function emitProgram(
       ea.kind === 'EaName' && ea.name.toUpperCase() === 'HL';
     const isEaNameBCorDE = (ea: EaExprNode): boolean =>
       ea.kind === 'EaName' && (ea.name.toUpperCase() === 'BC' || ea.name.toUpperCase() === 'DE');
+    const isIxIyBaseEa = (ea: EaExprNode): boolean =>
+      ea.kind === 'EaName' && (ea.name.toUpperCase() === 'IX' || ea.name.toUpperCase() === 'IY');
     const isIxIyDispMem = (op: AsmOperandNode): boolean =>
       op.kind === 'Mem' &&
-      op.expr.kind === 'EaIndex' &&
-      op.expr.base.kind === 'EaName' &&
-      (op.expr.base.name.toUpperCase() === 'IX' || op.expr.base.name.toUpperCase() === 'IY') &&
-      op.expr.index.kind === 'IndexImm';
+      ((op.expr.kind === 'EaIndex' &&
+        isIxIyBaseEa(op.expr.base) &&
+        op.expr.index.kind === 'IndexImm') ||
+        ((op.expr.kind === 'EaAdd' || op.expr.kind === 'EaSub') && isIxIyBaseEa(op.expr.base)));
 
     // LD r8, (ea)
     if (dst.kind === 'Reg' && src.kind === 'Mem') {
@@ -1285,17 +1295,11 @@ export function emitProgram(
       } else if (item.kind === 'ExternDecl') {
         const ex = item as ExternDeclNode;
         for (const fn of ex.funcs) {
-          const addr = evalImmExpr(fn.at, env, diagnostics);
-          if (addr === undefined) continue;
-          if (addr < 0 || addr > 0xffff) {
-            diag(
-              diagnostics,
-              fn.span.file,
-              `extern func "${fn.name}" address out of range (0..65535).`,
-            );
-            continue;
-          }
-          callables.set(fn.name.toLowerCase(), { kind: 'extern', node: fn, address: addr });
+          callables.set(fn.name.toLowerCase(), {
+            kind: 'extern',
+            node: fn,
+            targetLower: fn.name.toLowerCase(),
+          });
         }
       } else if (item.kind === 'VarBlock' && item.scope === 'module') {
         const vb = item as VarBlockNode;
@@ -1304,6 +1308,7 @@ export function emitProgram(
         }
       } else if (item.kind === 'BinDecl') {
         const bd = item as BinDeclNode;
+        declaredBinNames.add(bd.name.toLowerCase());
         storageTypes.set(bd.name.toLowerCase(), { kind: 'TypeName', span: bd.span, name: 'addr' });
       } else if (item.kind === 'HexDecl') {
         const hd = item as HexDeclNode;
@@ -1418,12 +1423,49 @@ export function emitProgram(
 
       if (item.kind === 'ExternDecl') {
         const ex = item as ExternDeclNode;
+        const baseLower = ex.base?.toLowerCase();
+        if (baseLower !== undefined && !declaredBinNames.has(baseLower)) {
+          diag(
+            diagnostics,
+            ex.span.file,
+            `extern base "${ex.base}" does not reference a declared bin symbol.`,
+          );
+          continue;
+        }
         for (const fn of ex.funcs) {
           if (taken.has(fn.name)) {
             diag(diagnostics, fn.span.file, `Duplicate symbol name "${fn.name}".`);
             continue;
           }
           taken.add(fn.name);
+          if (baseLower !== undefined) {
+            const offset = evalImmExpr(fn.at, env, diagnostics);
+            if (offset === undefined) {
+              diag(
+                diagnostics,
+                fn.span.file,
+                `Failed to evaluate extern func offset for "${fn.name}".`,
+              );
+              continue;
+            }
+            if (offset < 0 || offset > 0xffff) {
+              diag(
+                diagnostics,
+                fn.span.file,
+                `extern func "${fn.name}" offset out of range (0..65535).`,
+              );
+              continue;
+            }
+            deferredExterns.push({
+              name: fn.name,
+              baseLower,
+              addend: offset,
+              file: fn.span.file,
+              line: fn.span.start.line,
+            });
+            continue;
+          }
+
           const addr = evalImmExpr(fn.at, env, diagnostics);
           if (addr === undefined) {
             diag(
@@ -1938,17 +1980,7 @@ export function emitProgram(
             if (!ok) return;
 
             if (callable.kind === 'extern') {
-              emitInstr(
-                'call',
-                [
-                  {
-                    kind: 'Imm',
-                    span: asmItem.span,
-                    expr: { kind: 'ImmLiteral', span: asmItem.span, value: callable.address },
-                  },
-                ],
-                asmItem.span,
-              );
+              emitAbs16Fixup(0xcd, callable.targetLower, 0, asmItem.span);
             } else {
               emitAbs16Fixup(0xcd, callable.node.name.toLowerCase(), 0, asmItem.span);
             }
@@ -2108,7 +2140,11 @@ export function emitProgram(
             mnemonic: string,
           ): boolean => {
             if (operand.kind !== 'Imm') {
-              diagAt(diagnostics, asmItem.span, `${mnemonic} expects an immediate target.`);
+              if (mnemonic === 'djnz' || mnemonic.startsWith('jr')) {
+                diagAt(diagnostics, asmItem.span, `${mnemonic} expects disp8`);
+              } else {
+                diagAt(diagnostics, asmItem.span, `${mnemonic} expects an immediate target.`);
+              }
               return false;
             }
             const symbolicTarget = symbolicTargetFromExpr(operand.expr);
@@ -2155,7 +2191,7 @@ export function emitProgram(
                     : undefined;
               const opcode = ccName ? jrConditionOpcodeFromName(ccName) : undefined;
               if (opcode === undefined) {
-                diagAt(diagnostics, asmItem.span, `Unsupported jr condition.`);
+                diagAt(diagnostics, asmItem.span, `jr cc, disp expects NZ/Z/NC/C + disp8`);
                 return;
               }
               if (!emitRel8FromOperand(asmItem.operands[1]!, opcode, `jr ${ccName!.toLowerCase()}`))
@@ -2166,12 +2202,12 @@ export function emitProgram(
           }
           if (head === 'djnz') {
             if (asmItem.operands.length !== 1) {
-              diagAt(diagnostics, asmItem.span, `djnz expects one target operand.`);
+              diagAt(diagnostics, asmItem.span, `djnz expects one operand (disp8)`);
               return;
             }
             const target = asmItem.operands[0]!;
             if (target.kind !== 'Imm') {
-              diagAt(diagnostics, asmItem.span, `djnz expects an immediate target.`);
+              diagAt(diagnostics, asmItem.span, `djnz expects disp8`);
               return;
             }
             if (!emitRel8FromOperand(target, 0x10, 'djnz')) return;
@@ -2193,7 +2229,7 @@ export function emitProgram(
             if (asmItem.operands.length === 1) {
               const op = conditionOpcode(asmItem.operands[0]!);
               if (op === undefined) {
-                diagAt(diagnostics, asmItem.span, `Unsupported ret condition.`);
+                diagAt(diagnostics, asmItem.span, `ret cc expects a valid condition code`);
                 return;
               }
               diagIfRetStackImbalanced();
@@ -2865,6 +2901,35 @@ export function emitProgram(
   for (const sym of absoluteSymbols) {
     if (sym.kind === 'constant') continue;
     addrByNameLower.set(sym.name.toLowerCase(), sym.address);
+  }
+  for (const ex of deferredExterns) {
+    const base = addrByNameLower.get(ex.baseLower);
+    if (base === undefined) {
+      diag(
+        diagnostics,
+        ex.file,
+        `Failed to resolve extern base symbol "${ex.baseLower}" for "${ex.name}".`,
+      );
+      continue;
+    }
+    const addr = base + ex.addend;
+    if (addr < 0 || addr > 0xffff) {
+      diag(
+        diagnostics,
+        ex.file,
+        `extern func "${ex.name}" resolved address out of range (0..65535).`,
+      );
+      continue;
+    }
+    addrByNameLower.set(ex.name.toLowerCase(), addr);
+    symbols.push({
+      kind: 'label',
+      name: ex.name,
+      address: addr,
+      file: ex.file,
+      line: ex.line,
+      scope: 'global',
+    });
   }
 
   for (const fx of fixups) {

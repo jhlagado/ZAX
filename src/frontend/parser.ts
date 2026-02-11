@@ -37,6 +37,27 @@ import { makeSourceFile, span } from './source.js';
 import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
 
+const RESERVED_TOP_LEVEL_KEYWORDS = new Set([
+  'func',
+  'const',
+  'enum',
+  'data',
+  'import',
+  'type',
+  'union',
+  'var',
+  'extern',
+  'bin',
+  'hex',
+  'op',
+  'section',
+  'align',
+]);
+
+function isReservedTopLevelDeclName(name: string): boolean {
+  return RESERVED_TOP_LEVEL_KEYWORDS.has(name.toLowerCase());
+}
+
 function diag(
   diagnostics: Diagnostic[],
   file: string,
@@ -610,12 +631,20 @@ function parseAsmStatement(
 ): AsmItemNode | undefined {
   const trimmed = text.trim();
   const lower = trimmed.toLowerCase();
+  const hasKeyword = (kw: string): boolean => new RegExp(`^${kw}\\b`, 'i').test(trimmed);
 
   const missingCc = '__missing__';
 
   if (lower === 'repeat') {
     controlStack.push({ kind: 'Repeat', openSpan: stmtSpan });
     return { kind: 'Repeat', span: stmtSpan };
+  }
+  if (hasKeyword('repeat')) {
+    diag(diagnostics, filePath, `"repeat" does not take operands`, {
+      line: stmtSpan.start.line,
+      column: stmtSpan.start.column,
+    });
+    return undefined;
   }
 
   if (lower === 'else') {
@@ -649,6 +678,13 @@ function parseAsmStatement(
     top.elseSeen = true;
     return { kind: 'Else', span: stmtSpan };
   }
+  if (hasKeyword('else')) {
+    diag(diagnostics, filePath, `"else" does not take operands`, {
+      line: stmtSpan.start.line,
+      column: stmtSpan.start.column,
+    });
+    return undefined;
+  }
 
   if (lower === 'end') {
     const top = controlStack.pop();
@@ -675,20 +711,19 @@ function parseAsmStatement(
     }
     return { kind: 'End', span: stmtSpan };
   }
+  if (hasKeyword('end')) {
+    diag(diagnostics, filePath, `"end" does not take operands`, {
+      line: stmtSpan.start.line,
+      column: stmtSpan.start.column,
+    });
+    return undefined;
+  }
 
   const ifMatch = /^if\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
   if (ifMatch) {
     const cc = ifMatch[1]!;
     controlStack.push({ kind: 'If', elseSeen: false, openSpan: stmtSpan });
     return { kind: 'If', span: stmtSpan, cc };
-  }
-  if (lower.startsWith('if ')) {
-    diag(diagnostics, filePath, `"if" expects a condition code`, {
-      line: stmtSpan.start.line,
-      column: stmtSpan.start.column,
-    });
-    controlStack.push({ kind: 'If', elseSeen: false, openSpan: stmtSpan, recoverOnly: true });
-    return { kind: 'If', span: stmtSpan, cc: missingCc };
   }
   if (lower === 'if') {
     diag(diagnostics, filePath, `"if" expects a condition code`, {
@@ -698,6 +733,14 @@ function parseAsmStatement(
     controlStack.push({ kind: 'If', elseSeen: false, openSpan: stmtSpan });
     return { kind: 'If', span: stmtSpan, cc: missingCc };
   }
+  if (hasKeyword('if')) {
+    diag(diagnostics, filePath, `"if" expects a condition code`, {
+      line: stmtSpan.start.line,
+      column: stmtSpan.start.column,
+    });
+    controlStack.push({ kind: 'If', elseSeen: false, openSpan: stmtSpan, recoverOnly: true });
+    return { kind: 'If', span: stmtSpan, cc: missingCc };
+  }
 
   const whileMatch = /^while\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
   if (whileMatch) {
@@ -705,20 +748,20 @@ function parseAsmStatement(
     controlStack.push({ kind: 'While', openSpan: stmtSpan });
     return { kind: 'While', span: stmtSpan, cc };
   }
-  if (lower.startsWith('while ')) {
-    diag(diagnostics, filePath, `"while" expects a condition code`, {
-      line: stmtSpan.start.line,
-      column: stmtSpan.start.column,
-    });
-    controlStack.push({ kind: 'While', openSpan: stmtSpan, recoverOnly: true });
-    return { kind: 'While', span: stmtSpan, cc: missingCc };
-  }
   if (lower === 'while') {
     diag(diagnostics, filePath, `"while" expects a condition code`, {
       line: stmtSpan.start.line,
       column: stmtSpan.start.column,
     });
     controlStack.push({ kind: 'While', openSpan: stmtSpan });
+    return { kind: 'While', span: stmtSpan, cc: missingCc };
+  }
+  if (hasKeyword('while')) {
+    diag(diagnostics, filePath, `"while" expects a condition code`, {
+      line: stmtSpan.start.line,
+      column: stmtSpan.start.column,
+    });
+    controlStack.push({ kind: 'While', openSpan: stmtSpan, recoverOnly: true });
     return { kind: 'While', span: stmtSpan, cc: missingCc };
   }
 
@@ -752,7 +795,7 @@ function parseAsmStatement(
     controlStack.pop();
     return { kind: 'Until', span: stmtSpan, cc };
   }
-  if (lower.startsWith('until ')) {
+  if (hasKeyword('until')) {
     const top = controlStack[controlStack.length - 1];
     if (top?.kind !== 'Repeat') {
       diag(diagnostics, filePath, `"until" without matching "repeat"`, {
@@ -805,6 +848,24 @@ function parseAsmStatement(
     }
     controlStack.push({ kind: 'Select', elseSeen: false, armSeen: false, openSpan: stmtSpan });
     return { kind: 'Select', span: stmtSpan, selector };
+  }
+  if (hasKeyword('select')) {
+    diag(diagnostics, filePath, `Invalid select selector`, {
+      line: stmtSpan.start.line,
+      column: stmtSpan.start.column,
+    });
+    controlStack.push({
+      kind: 'Select',
+      elseSeen: false,
+      armSeen: false,
+      openSpan: stmtSpan,
+      recoverOnly: true,
+    });
+    return {
+      kind: 'Select',
+      span: stmtSpan,
+      selector: { kind: 'Imm', span: stmtSpan, expr: immLiteral(filePath, stmtSpan, 0) },
+    };
   }
 
   const caseMatch = /^case\s+(.+)$/i.exec(trimmed);
@@ -859,6 +920,29 @@ function parseAsmStatement(
     });
     return undefined;
   }
+  if (hasKeyword('case')) {
+    const top = controlStack[controlStack.length - 1];
+    if (top?.kind !== 'Select') {
+      diag(diagnostics, filePath, `"case" without matching "select"`, {
+        line: stmtSpan.start.line,
+        column: stmtSpan.start.column,
+      });
+      return undefined;
+    }
+    if (top.elseSeen) {
+      diag(diagnostics, filePath, `"case" after "else" in select`, {
+        line: stmtSpan.start.line,
+        column: stmtSpan.start.column,
+      });
+      return undefined;
+    }
+    top.armSeen = true;
+    diag(diagnostics, filePath, `Invalid case value`, {
+      line: stmtSpan.start.line,
+      column: stmtSpan.start.column,
+    });
+    return undefined;
+  }
 
   return parseAsmInstruction(filePath, trimmed, stmtSpan, diagnostics);
 }
@@ -874,6 +958,7 @@ function parseParamsFromText(
 
   const parts = trimmed.split(',').map((p) => p.trim());
   const out: ParamNode[] = [];
+  const seen = new Set<string>();
   for (const part of parts) {
     const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(part);
     if (!m) {
@@ -885,6 +970,27 @@ function parseParamsFromText(
     }
 
     const name = m[1]!;
+    if (isReservedTopLevelDeclName(name)) {
+      diag(
+        diagnostics,
+        filePath,
+        `Invalid parameter name "${name}": collides with a top-level keyword.`,
+        {
+          line: paramsSpan.start.line,
+          column: paramsSpan.start.column,
+        },
+      );
+      return undefined;
+    }
+    const lower = name.toLowerCase();
+    if (seen.has(lower)) {
+      diag(diagnostics, filePath, `Duplicate parameter name "${name}".`, {
+        line: paramsSpan.start.line,
+        column: paramsSpan.start.column,
+      });
+      return undefined;
+    }
+    seen.add(lower);
     const typeText = m[2]!.trim();
     const typeExpr = parseTypeExprFromText(typeText, paramsSpan, {
       allowInferredArrayLength: false,
@@ -950,6 +1056,7 @@ function parseOpParamsFromText(
 
   const parts = trimmed.split(',').map((p) => p.trim());
   const out: OpParamNode[] = [];
+  const seen = new Set<string>();
   for (const part of parts) {
     const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(part);
     if (!m) {
@@ -961,6 +1068,27 @@ function parseOpParamsFromText(
     }
 
     const name = m[1]!;
+    if (isReservedTopLevelDeclName(name)) {
+      diag(
+        diagnostics,
+        filePath,
+        `Invalid op parameter name "${name}": collides with a top-level keyword.`,
+        {
+          line: paramsSpan.start.line,
+          column: paramsSpan.start.column,
+        },
+      );
+      return undefined;
+    }
+    const lower = name.toLowerCase();
+    if (seen.has(lower)) {
+      diag(diagnostics, filePath, `Duplicate op parameter name "${name}".`, {
+        line: paramsSpan.start.line,
+        column: paramsSpan.start.column,
+      });
+      return undefined;
+    }
+    seen.add(lower);
     const matcherText = m[2]!.trim();
     out.push({
       kind: 'OpParam',
@@ -998,6 +1126,12 @@ export function parseModuleFile(
 
   const items: ModuleItemNode[] = [];
 
+  function consumeKeywordPrefix(input: string, keyword: string): string | undefined {
+    const match = new RegExp(`^${keyword}(?:\\s+(.*))?$`, 'i').exec(input);
+    if (!match) return undefined;
+    return (match[1] ?? '').trimStart();
+  }
+
   const TOP_LEVEL_KEYWORDS = new Set([
     'func',
     'const',
@@ -1015,10 +1149,132 @@ export function parseModuleFile(
     'align',
   ]);
 
+  function topLevelStartKeyword(t: string): string | undefined {
+    const exportTail = consumeKeywordPrefix(t, 'export');
+    const w = exportTail !== undefined ? exportTail : t;
+    const keyword = (w.split(/\s/, 1)[0] ?? '').toLowerCase();
+    return TOP_LEVEL_KEYWORDS.has(keyword) ? keyword : undefined;
+  }
+
   function isTopLevelStart(t: string): boolean {
-    const w = t.startsWith('export ') ? t.slice('export '.length).trimStart() : t;
-    const keyword = w.split(/\s/, 1)[0] ?? '';
-    return TOP_LEVEL_KEYWORDS.has(keyword);
+    return topLevelStartKeyword(t) !== undefined;
+  }
+
+  function consumeTopKeyword(input: string, keyword: string): string | undefined {
+    return consumeKeywordPrefix(input, keyword);
+  }
+
+  function isReservedTopLevelName(name: string): boolean {
+    return isReservedTopLevelDeclName(name);
+  }
+
+  function looksLikeKeywordBodyDeclLine(lineText: string): boolean {
+    const t = lineText.trim();
+    const colon = t.indexOf(':');
+    if (colon <= 0) return false;
+    const beforeColon = t.slice(0, colon);
+    if (beforeColon.includes('(') || beforeColon.includes(')')) return false;
+    return /^[A-Za-z_][A-Za-z0-9_]*\s+[A-Za-z_][A-Za-z0-9_]*\s*$/.test(beforeColon.trim());
+  }
+
+  function quoteDiagLineText(text: string): string {
+    const trimmed = text.trim();
+    const preview = trimmed.length > 96 ? `${trimmed.slice(0, 93)}...` : trimmed;
+    return preview.replace(/"/g, '\\"');
+  }
+
+  function diagInvalidBlockLine(
+    kind: string,
+    lineText: string,
+    expected: string,
+    line: number,
+  ): void {
+    const q = quoteDiagLineText(lineText);
+    diag(diagnostics, modulePath, `Invalid ${kind} line "${q}": expected ${expected}`, {
+      line,
+      column: 1,
+    });
+  }
+
+  function parseExternFuncFromTail(
+    tail: string,
+    stmtSpan: SourceSpan,
+    lineNo: number,
+  ): ExternFuncNode | undefined {
+    const header = tail;
+    const openParen = header.indexOf('(');
+    const closeParen = header.lastIndexOf(')');
+    if (openParen < 0 || closeParen < openParen) {
+      diag(diagnostics, modulePath, `Invalid extern func declaration`, {
+        line: lineNo,
+        column: 1,
+      });
+      return undefined;
+    }
+
+    const name = header.slice(0, openParen).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+      diag(diagnostics, modulePath, `Invalid extern func name`, { line: lineNo, column: 1 });
+      return undefined;
+    }
+    if (isReservedTopLevelName(name)) {
+      diag(
+        diagnostics,
+        modulePath,
+        `Invalid extern func name "${name}": collides with a top-level keyword.`,
+        { line: lineNo, column: 1 },
+      );
+      return undefined;
+    }
+
+    const afterClose = header.slice(closeParen + 1).trimStart();
+    const m = /^:\s*(.+?)\s+at\s+(.+)$/.exec(afterClose);
+    if (!m) {
+      diag(
+        diagnostics,
+        modulePath,
+        `Invalid extern func declaration: expected ": <retType> at <imm16>"`,
+        { line: lineNo, column: 1 },
+      );
+      return undefined;
+    }
+
+    const paramsText = header.slice(openParen + 1, closeParen);
+    const params = parseParamsFromText(modulePath, paramsText, stmtSpan, diagnostics);
+    if (!params) return undefined;
+
+    const retTypeText = m[1]!.trim();
+    const returnType = parseTypeExprFromText(retTypeText, stmtSpan, {
+      allowInferredArrayLength: false,
+    });
+    if (!returnType) {
+      if (
+        diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, retTypeText, {
+          line: lineNo,
+          column: 1,
+        })
+      ) {
+        return undefined;
+      }
+      diag(diagnostics, modulePath, `Unsupported extern func return type`, {
+        line: lineNo,
+        column: 1,
+      });
+      return undefined;
+    }
+
+    const atText = m[2]!.trim();
+    const at = parseImmExprFromText(modulePath, atText, stmtSpan, diagnostics);
+    if (!at) return undefined;
+
+    return {
+      kind: 'ExternFunc',
+      span: stmtSpan,
+      name,
+      params,
+      returnType,
+      at,
+    };
   }
 
   let i = 0;
@@ -1031,15 +1287,25 @@ export function parseModuleFile(
       continue;
     }
 
-    const exportPrefix = text.startsWith('export ') ? 'export ' : '';
-    const rest = exportPrefix ? text.slice('export '.length).trimStart() : text;
+    const exportTail = consumeKeywordPrefix(text, 'export');
+    const hasExportPrefix = exportTail !== undefined;
+    const rest = hasExportPrefix ? exportTail : text;
+
+    if (hasExportPrefix && rest.length === 0) {
+      diag(diagnostics, modulePath, `Invalid export statement`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    const hasTopKeyword = (kw: string): boolean => new RegExp(`^${kw}\\b`, 'i').test(rest);
 
     // In v0.1, `export` is accepted only on `const`, `func`, and `op` declarations.
     // It has no semantic effect today, but we still reject it on all other constructs
     // to keep the surface area explicit and future-proof.
-    if (exportPrefix.length > 0) {
+    if (hasExportPrefix) {
       const allowed =
-        rest.startsWith('const ') || rest.startsWith('func ') || rest.startsWith('op ');
+        consumeKeywordPrefix(rest, 'const') !== undefined ||
+        consumeKeywordPrefix(rest, 'func') !== undefined ||
+        consumeKeywordPrefix(rest, 'op') !== undefined;
       if (!allowed) {
         diag(diagnostics, modulePath, `export is only permitted on const/func/op declarations`, {
           line: lineNo,
@@ -1048,8 +1314,9 @@ export function parseModuleFile(
       }
     }
 
-    if (rest.startsWith('import ')) {
-      const spec = rest.slice('import '.length).trim();
+    const importTail = consumeTopKeyword(rest, 'import');
+    if (importTail !== undefined) {
+      const spec = importTail.trim();
       const stmtSpan = span(file, lineStartOffset, lineEndOffset);
       if (spec.startsWith('"') && spec.endsWith('"') && spec.length >= 2) {
         const importNode: ImportNode = {
@@ -1078,13 +1345,24 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest.startsWith('type ')) {
-      const afterType = rest.slice('type '.length).trim();
+    const typeTail = consumeTopKeyword(rest, 'type');
+    if (typeTail !== undefined) {
+      const afterType = typeTail.trim();
       const parts = afterType.split(/\s+/, 2);
       const name = parts[0] ?? '';
       const tail = afterType.slice(name.length).trimStart();
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
         diag(diagnostics, modulePath, `Invalid type name`, { line: lineNo, column: 1 });
+        i++;
+        continue;
+      }
+      if (isReservedTopLevelName(name)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid type name "${name}": collides with a top-level keyword.`,
+          { line: lineNo, column: 1 },
+        );
         i++;
         continue;
       }
@@ -1118,35 +1396,67 @@ export function parseModuleFile(
       // end
       const typeStart = lineStartOffset;
       const fields: RecordFieldNode[] = [];
+      const fieldNamesLower = new Set<string>();
       let terminated = false;
+      let interruptedByKeyword: string | undefined;
+      let interruptedByLine: number | undefined;
       let typeEndOffset = file.text.length;
       i++;
 
       while (i < lineCount) {
         const { raw: rawField, startOffset: so, endOffset: eo } = getRawLine(i);
         const t = stripComment(rawField).trim();
+        const tLower = t.toLowerCase();
         if (t.length === 0) {
           i++;
           continue;
         }
-        if (t === 'end') {
+        if (tLower === 'end') {
           terminated = true;
           typeEndOffset = eo;
           i++;
           break;
         }
+        const topKeyword = topLevelStartKeyword(t);
+        if (topKeyword !== undefined) {
+          if (looksLikeKeywordBodyDeclLine(t)) {
+            diagInvalidBlockLine('record field declaration', t, '<name>: <type>', i + 1);
+            i++;
+            continue;
+          }
+          interruptedByKeyword = topKeyword;
+          interruptedByLine = i + 1;
+          break;
+        }
 
         const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(t);
         if (!m) {
-          diag(diagnostics, modulePath, `Invalid record field declaration`, {
+          diagInvalidBlockLine('record field declaration', t, '<name>: <type>', i + 1);
+          i++;
+          continue;
+        }
+
+        const fieldName = m[1]!;
+        if (isReservedTopLevelName(fieldName)) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Invalid record field name "${fieldName}": collides with a top-level keyword.`,
+            { line: i + 1, column: 1 },
+          );
+          i++;
+          continue;
+        }
+        const fieldNameLower = fieldName.toLowerCase();
+        if (fieldNamesLower.has(fieldNameLower)) {
+          diag(diagnostics, modulePath, `Duplicate record field name "${fieldName}".`, {
             line: i + 1,
             column: 1,
           });
           i++;
           continue;
         }
-
-        const fieldName = m[1]!;
+        fieldNamesLower.add(fieldNameLower);
         const typeText = m[2]!.trim();
         const fieldSpan = span(file, so, eo);
         const typeExpr = parseTypeExprFromText(typeText, fieldSpan, {
@@ -1177,10 +1487,19 @@ export function parseModuleFile(
       }
 
       if (!terminated) {
-        diag(diagnostics, modulePath, `Unterminated type "${name}": missing "end"`, {
-          line: lineNo,
-          column: 1,
-        });
+        if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Unterminated type "${name}": expected "end" before "${interruptedByKeyword}"`,
+            { line: interruptedByLine, column: 1 },
+          );
+        } else {
+          diag(diagnostics, modulePath, `Unterminated type "${name}": missing "end"`, {
+            line: lineNo,
+            column: 1,
+          });
+        }
       }
 
       if (fields.length === 0) {
@@ -1201,45 +1520,88 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest.startsWith('union ')) {
-      const name = rest.slice('union '.length).trim();
+    const unionTail = consumeTopKeyword(rest, 'union');
+    if (unionTail !== undefined) {
+      const name = unionTail.trim();
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
         diag(diagnostics, modulePath, `Invalid union name`, { line: lineNo, column: 1 });
+        i++;
+        continue;
+      }
+      if (isReservedTopLevelName(name)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid union name "${name}": collides with a top-level keyword.`,
+          { line: lineNo, column: 1 },
+        );
         i++;
         continue;
       }
 
       const unionStart = lineStartOffset;
       const fields: RecordFieldNode[] = [];
+      const fieldNamesLower = new Set<string>();
       let terminated = false;
+      let interruptedByKeyword: string | undefined;
+      let interruptedByLine: number | undefined;
       let unionEndOffset = file.text.length;
       i++;
 
       while (i < lineCount) {
         const { raw: rawField, startOffset: so, endOffset: eo } = getRawLine(i);
         const t = stripComment(rawField).trim();
+        const tLower = t.toLowerCase();
         if (t.length === 0) {
           i++;
           continue;
         }
-        if (t === 'end') {
+        if (tLower === 'end') {
           terminated = true;
           unionEndOffset = eo;
           i++;
           break;
         }
+        const topKeyword = topLevelStartKeyword(t);
+        if (topKeyword !== undefined && consumeKeywordPrefix(t, 'func') === undefined) {
+          if (looksLikeKeywordBodyDeclLine(t)) {
+            diagInvalidBlockLine('union field declaration', t, '<name>: <type>', i + 1);
+            i++;
+            continue;
+          }
+          interruptedByKeyword = topKeyword;
+          interruptedByLine = i + 1;
+          break;
+        }
 
         const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(t);
         if (!m) {
-          diag(diagnostics, modulePath, `Invalid union field declaration`, {
+          diagInvalidBlockLine('union field declaration', t, '<name>: <type>', i + 1);
+          i++;
+          continue;
+        }
+
+        const fieldName = m[1]!;
+        if (isReservedTopLevelName(fieldName)) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Invalid union field name "${fieldName}": collides with a top-level keyword.`,
+            { line: i + 1, column: 1 },
+          );
+          i++;
+          continue;
+        }
+        const fieldNameLower = fieldName.toLowerCase();
+        if (fieldNamesLower.has(fieldNameLower)) {
+          diag(diagnostics, modulePath, `Duplicate union field name "${fieldName}".`, {
             line: i + 1,
             column: 1,
           });
           i++;
           continue;
         }
-
-        const fieldName = m[1]!;
+        fieldNamesLower.add(fieldNameLower);
         const typeText = m[2]!.trim();
         const fieldSpan = span(file, so, eo);
         const typeExpr = parseTypeExprFromText(typeText, fieldSpan, {
@@ -1270,10 +1632,19 @@ export function parseModuleFile(
       }
 
       if (!terminated) {
-        diag(diagnostics, modulePath, `Unterminated union "${name}": missing "end"`, {
-          line: lineNo,
-          column: 1,
-        });
+        if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Unterminated union "${name}": expected "end" before "${interruptedByKeyword}"`,
+            { line: interruptedByLine, column: 1 },
+          );
+        } else {
+          diag(diagnostics, modulePath, `Unterminated union "${name}": missing "end"`, {
+            line: lineNo,
+            column: 1,
+          });
+        }
       }
 
       if (fields.length === 0) {
@@ -1289,10 +1660,11 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest === 'var') {
+    if (rest.toLowerCase() === 'var') {
       const blockStart = lineStartOffset;
       i++;
       const decls: VarDeclNode[] = [];
+      const declNamesLower = new Set<string>();
 
       while (i < lineCount) {
         const { raw: rawDecl, startOffset: so, endOffset: eo } = getRawLine(i);
@@ -1310,18 +1682,45 @@ export function parseModuleFile(
               `Invalid var declaration name "${m[1]!}": collides with a top-level keyword.`,
               { line: i + 1, column: 1 },
             );
+            i++;
+            continue;
+          }
+          if (looksLikeKeywordBodyDeclLine(t)) {
+            diagInvalidBlockLine('var declaration', t, '<name>: <type>', i + 1);
+            i++;
+            continue;
           }
           break;
         }
 
         const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(t);
         if (!m) {
-          diag(diagnostics, modulePath, `Invalid var declaration`, { line: i + 1, column: 1 });
+          diagInvalidBlockLine('var declaration', t, '<name>: <type>', i + 1);
           i++;
           continue;
         }
 
         const name = m[1]!;
+        if (TOP_LEVEL_KEYWORDS.has(name.toLowerCase())) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Invalid var declaration name "${name}": collides with a top-level keyword.`,
+            { line: i + 1, column: 1 },
+          );
+          i++;
+          continue;
+        }
+        const nameLower = name.toLowerCase();
+        if (declNamesLower.has(nameLower)) {
+          diag(diagnostics, modulePath, `Duplicate var declaration name "${name}".`, {
+            line: i + 1,
+            column: 1,
+          });
+          i++;
+          continue;
+        }
+        declNamesLower.add(nameLower);
         const typeText = m[2]!.trim();
         const declSpan = span(file, so, eo);
         const typeExpr = parseTypeExprFromText(typeText, declSpan, {
@@ -1358,9 +1757,10 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest.startsWith('func ')) {
-      const exported = exportPrefix.length > 0;
-      const header = rest.slice('func '.length).trimStart();
+    const funcTail = consumeTopKeyword(rest, 'func');
+    if (funcTail !== undefined) {
+      const exported = hasExportPrefix;
+      const header = funcTail;
       const openParen = header.indexOf('(');
       const closeParen = header.lastIndexOf(')');
       if (openParen < 0 || closeParen < openParen) {
@@ -1372,6 +1772,16 @@ export function parseModuleFile(
       const name = header.slice(0, openParen).trim();
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
         diag(diagnostics, modulePath, `Invalid func name`, { line: lineNo, column: 1 });
+        i++;
+        continue;
+      }
+      if (isReservedTopLevelName(name)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid func name "${name}": collides with a top-level keyword.`,
+          { line: lineNo, column: 1 },
+        );
         i++;
         continue;
       }
@@ -1419,27 +1829,38 @@ export function parseModuleFile(
       // Optional function-local `var` block, then required `asm`.
       let locals: VarBlockNode | undefined;
       let asmStartOffset: number | undefined;
+      let interruptedBeforeAsmKeyword: string | undefined;
+      let interruptedBeforeAsmLine: number | undefined;
       while (i < lineCount) {
         const { raw: raw2, startOffset: so2 } = getRawLine(i);
         const t2 = stripComment(raw2).trim();
+        const t2Lower = t2.toLowerCase();
         if (t2.length === 0) {
           i++;
           continue;
         }
+        const t2TopKeyword = topLevelStartKeyword(t2);
+        if (t2TopKeyword !== undefined && t2Lower !== 'var') {
+          interruptedBeforeAsmKeyword = t2TopKeyword;
+          interruptedBeforeAsmLine = i + 1;
+          break;
+        }
 
-        if (t2 === 'var') {
+        if (t2Lower === 'var') {
           const varStart = so2;
           i++;
           const decls: VarDeclNode[] = [];
+          const declNamesLower = new Set<string>();
 
           while (i < lineCount) {
             const { raw: rawDecl, startOffset: soDecl, endOffset: eoDecl } = getRawLine(i);
             const tDecl = stripComment(rawDecl).trim();
+            const tDeclLower = tDecl.toLowerCase();
             if (tDecl.length === 0) {
               i++;
               continue;
             }
-            if (tDecl === 'asm') {
+            if (tDeclLower === 'asm') {
               asmStartOffset = soDecl;
               locals = {
                 kind: 'VarBlock',
@@ -1450,15 +1871,52 @@ export function parseModuleFile(
               i++; // consume asm
               break;
             }
+            const tDeclTopKeyword = topLevelStartKeyword(tDecl);
+            if (tDeclTopKeyword !== undefined) {
+              if (looksLikeKeywordBodyDeclLine(tDecl)) {
+                diagInvalidBlockLine('var declaration', tDecl, '<name>: <type>', i + 1);
+                i++;
+                continue;
+              }
+              interruptedBeforeAsmKeyword = tDeclTopKeyword;
+              interruptedBeforeAsmLine = i + 1;
+              locals = {
+                kind: 'VarBlock',
+                span: span(file, varStart, soDecl),
+                scope: 'function',
+                decls,
+              };
+              break;
+            }
 
             const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(tDecl);
             if (!m) {
-              diag(diagnostics, modulePath, `Invalid var declaration`, { line: i + 1, column: 1 });
+              diagInvalidBlockLine('var declaration', tDecl, '<name>: <type>', i + 1);
               i++;
               continue;
             }
 
             const localName = m[1]!;
+            if (TOP_LEVEL_KEYWORDS.has(localName.toLowerCase())) {
+              diag(
+                diagnostics,
+                modulePath,
+                `Invalid var declaration name "${localName}": collides with a top-level keyword.`,
+                { line: i + 1, column: 1 },
+              );
+              i++;
+              continue;
+            }
+            const localNameLower = localName.toLowerCase();
+            if (declNamesLower.has(localNameLower)) {
+              diag(diagnostics, modulePath, `Duplicate var declaration name "${localName}".`, {
+                line: i + 1,
+                column: 1,
+              });
+              i++;
+              continue;
+            }
+            declNamesLower.add(localNameLower);
             const typeText = m[2]!.trim();
             const declSpan = span(file, soDecl, eoDecl);
             const typeExpr = parseTypeExprFromText(typeText, declSpan, {
@@ -1485,10 +1943,11 @@ export function parseModuleFile(
             decls.push({ kind: 'VarDecl', span: declSpan, name: localName, typeExpr });
             i++;
           }
+          if (interruptedBeforeAsmKeyword !== undefined) break;
           break;
         }
 
-        if (t2 !== 'asm') {
+        if (t2Lower !== 'asm') {
           diag(diagnostics, modulePath, `Expected "asm" inside func (optionally after "var")`, {
             line: i + 1,
             column: 1,
@@ -1502,6 +1961,15 @@ export function parseModuleFile(
       }
 
       if (asmStartOffset === undefined) {
+        if (interruptedBeforeAsmKeyword !== undefined && interruptedBeforeAsmLine !== undefined) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Unterminated func "${name}": expected "asm" before "${interruptedBeforeAsmKeyword}"`,
+            { line: interruptedBeforeAsmLine, column: 1 },
+          );
+          continue;
+        }
         diag(diagnostics, modulePath, `Unterminated func "${name}": expected "asm"`, {
           line: lineNo,
           column: 1,
@@ -1512,16 +1980,19 @@ export function parseModuleFile(
       const asmItems: AsmItemNode[] = [];
       const asmControlStack: AsmControlFrame[] = [];
       let terminated = false;
+      let interruptedByKeyword: string | undefined;
+      let interruptedByLine: number | undefined;
       while (i < lineCount) {
         const { raw: rawLine, startOffset: lineOffset, endOffset } = getRawLine(i);
         const withoutComment = stripComment(rawLine);
         const content = withoutComment.trim();
+        const contentLower = content.toLowerCase();
         if (content.length === 0) {
           i++;
           continue;
         }
 
-        if (content === 'end' && asmControlStack.length === 0) {
+        if (contentLower === 'end' && asmControlStack.length === 0) {
           terminated = true;
           const funcEndOffset = endOffset;
           const funcSpan = span(file, funcStartOffset, funcEndOffset);
@@ -1541,6 +2012,14 @@ export function parseModuleFile(
           items.push(funcNode);
           i++;
           break;
+        }
+        if (asmControlStack.length === 0) {
+          const topKeyword = topLevelStartKeyword(content);
+          if (topKeyword !== undefined) {
+            interruptedByKeyword = topKeyword;
+            interruptedByLine = i + 1;
+            break;
+          }
         }
 
         const fullSpan = span(file, lineOffset, endOffset);
@@ -1583,6 +2062,15 @@ export function parseModuleFile(
       }
 
       if (!terminated) {
+        if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Unterminated func "${name}": expected "end" before "${interruptedByKeyword}"`,
+            { line: interruptedByLine, column: 1 },
+          );
+          continue;
+        }
         for (const frame of asmControlStack) {
           if (isRecoverOnlyControlFrame(frame)) continue;
           const span = frame.openSpan;
@@ -1602,9 +2090,10 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest.startsWith('op ')) {
-      const exported = exportPrefix.length > 0;
-      const header = rest.slice('op '.length).trimStart();
+    const opTail = consumeTopKeyword(rest, 'op');
+    if (opTail !== undefined) {
+      const exported = hasExportPrefix;
+      const header = opTail;
       const openParen = header.indexOf('(');
       const closeParen = header.lastIndexOf(')');
       if (openParen < 0 || closeParen < openParen) {
@@ -1616,6 +2105,16 @@ export function parseModuleFile(
       const name = header.slice(0, openParen).trim();
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
         diag(diagnostics, modulePath, `Invalid op name`, { line: lineNo, column: 1 });
+        i++;
+        continue;
+      }
+      if (isReservedTopLevelName(name)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid op name "${name}": collides with a top-level keyword.`,
+          { line: lineNo, column: 1 },
+        );
         i++;
         continue;
       }
@@ -1643,19 +2142,30 @@ export function parseModuleFile(
       const bodyItems: AsmItemNode[] = [];
       const controlStack: AsmControlFrame[] = [];
       let terminated = false;
+      let interruptedByKeyword: string | undefined;
+      let interruptedByLine: number | undefined;
       let opEndOffset = file.text.length;
       while (i < lineCount) {
         const { raw: rawLine, startOffset: so, endOffset: eo } = getRawLine(i);
         const content = stripComment(rawLine).trim();
+        const contentLower = content.toLowerCase();
         if (content.length === 0) {
           i++;
           continue;
         }
-        if (content === 'end' && controlStack.length === 0) {
+        if (contentLower === 'end' && controlStack.length === 0) {
           terminated = true;
           opEndOffset = eo;
           i++;
           break;
+        }
+        if (controlStack.length === 0) {
+          const topKeyword = topLevelStartKeyword(content);
+          if (topKeyword !== undefined) {
+            interruptedByKeyword = topKeyword;
+            interruptedByLine = i + 1;
+            break;
+          }
         }
 
         const fullSpan = span(file, so, eo);
@@ -1689,6 +2199,15 @@ export function parseModuleFile(
       }
 
       if (!terminated) {
+        if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Unterminated op "${name}": expected "end" before "${interruptedByKeyword}"`,
+            { line: interruptedByLine, column: 1 },
+          );
+          continue;
+        }
         for (const frame of controlStack) {
           if (isRecoverOnlyControlFrame(frame)) continue;
           const span = frame.openSpan;
@@ -1715,8 +2234,9 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest.startsWith('extern ')) {
-      if (exportPrefix.length > 0) {
+    const externTail = consumeTopKeyword(rest, 'extern');
+    if (externTail !== undefined) {
+      if (hasExportPrefix) {
         diag(diagnostics, modulePath, `export not supported on extern declarations`, {
           line: lineNo,
           column: 1,
@@ -1725,107 +2245,140 @@ export function parseModuleFile(
         continue;
       }
 
-      const decl = rest.slice('extern '.length).trimStart();
-      if (!decl.startsWith('func ')) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Unsupported extern declaration in current subset (expected "extern func ...")`,
-          { line: lineNo, column: 1 },
-        );
-        i++;
-        continue;
-      }
-
-      const header = decl.slice('func '.length).trimStart();
-      const openParen = header.indexOf('(');
-      const closeParen = header.lastIndexOf(')');
-      if (openParen < 0 || closeParen < openParen) {
-        diag(diagnostics, modulePath, `Invalid extern func declaration`, {
-          line: lineNo,
-          column: 1,
-        });
-        i++;
-        continue;
-      }
-
-      const name = header.slice(0, openParen).trim();
-      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        diag(diagnostics, modulePath, `Invalid extern func name`, { line: lineNo, column: 1 });
-        i++;
-        continue;
-      }
-
-      const afterClose = header.slice(closeParen + 1).trimStart();
-      const m = /^:\s*(.+?)\s+at\s+(.+)$/.exec(afterClose);
-      if (!m) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid extern func declaration: expected ": <retType> at <imm16>"`,
-          { line: lineNo, column: 1 },
-        );
-        i++;
-        continue;
-      }
-
+      const decl = externTail.trim();
       const stmtSpan = span(file, lineStartOffset, lineEndOffset);
-      const paramsText = header.slice(openParen + 1, closeParen);
-      const params = parseParamsFromText(modulePath, paramsText, stmtSpan, diagnostics);
-      if (!params) {
+      const externFuncTail = consumeKeywordPrefix(decl, 'func');
+      if (externFuncTail !== undefined) {
+        const externFunc = parseExternFuncFromTail(externFuncTail, stmtSpan, lineNo);
+        if (externFunc) {
+          const externDecl: ExternDeclNode = {
+            kind: 'ExternDecl',
+            span: stmtSpan,
+            funcs: [externFunc],
+          };
+          items.push(externDecl);
+        }
         i++;
         continue;
       }
 
-      const retTypeText = m[1]!.trim();
-      const returnType = parseTypeExprFromText(retTypeText, stmtSpan, {
-        allowInferredArrayLength: false,
-      });
-      if (!returnType) {
-        if (
-          diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, retTypeText, {
-            line: lineNo,
-            column: 1,
-          })
-        ) {
+      if (decl.length > 0 && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(decl)) {
+        diag(diagnostics, modulePath, `Invalid extern declaration`, { line: lineNo, column: 1 });
+        i++;
+        continue;
+      }
+
+      // Block form:
+      // extern [baseName]
+      //   func ...
+      // end
+      //
+      // To avoid swallowing unrelated malformed top-level declarations, require that
+      // the first non-empty line after `extern` looks like `func ...` or `end`.
+      let preview = i + 1;
+      let previewText: string | undefined;
+      while (preview < lineCount) {
+        const { raw: rawPreview } = getRawLine(preview);
+        const t = stripComment(rawPreview).trim();
+        if (t.length === 0) {
+          preview++;
+          continue;
+        }
+        previewText = t;
+        break;
+      }
+      if (
+        previewText === undefined ||
+        (previewText.toLowerCase() !== 'end' &&
+          consumeKeywordPrefix(previewText, 'func') === undefined)
+      ) {
+        diag(diagnostics, modulePath, `Invalid extern declaration`, { line: lineNo, column: 1 });
+        i++;
+        continue;
+      }
+
+      const blockStart = lineStartOffset;
+      const funcs: ExternFuncNode[] = [];
+      const base = decl.length > 0 ? decl : undefined;
+      let terminated = false;
+      let interruptedByKeyword: string | undefined;
+      let interruptedByLine: number | undefined;
+      let blockEndOffset = file.text.length;
+      i++;
+
+      while (i < lineCount) {
+        const { raw: rawDecl, startOffset: so, endOffset: eo } = getRawLine(i);
+        const t = stripComment(rawDecl).trim();
+        const tLower = t.toLowerCase();
+        if (t.length === 0) {
           i++;
           continue;
         }
-        diag(diagnostics, modulePath, `Unsupported extern func return type`, {
+        if (tLower === 'end') {
+          terminated = true;
+          blockEndOffset = eo;
+          i++;
+          break;
+        }
+        const topKeyword = topLevelStartKeyword(t);
+        if (topKeyword !== undefined && consumeKeywordPrefix(t, 'func') === undefined) {
+          interruptedByKeyword = topKeyword;
+          interruptedByLine = i + 1;
+          break;
+        }
+
+        const funcTail = consumeKeywordPrefix(t, 'func');
+        if (funcTail === undefined) {
+          diagInvalidBlockLine(
+            'extern func declaration',
+            t,
+            'func <name>(...): <retType> at <imm16>',
+            i + 1,
+          );
+          i++;
+          continue;
+        }
+
+        const fn = parseExternFuncFromTail(funcTail, span(file, so, eo), i + 1);
+        if (fn) funcs.push(fn);
+        i++;
+      }
+
+      if (!terminated) {
+        const namePart = base ? ` "${base}"` : '';
+        if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Unterminated extern${namePart}: expected "end" before "${interruptedByKeyword}"`,
+            { line: interruptedByLine, column: 1 },
+          );
+        } else {
+          diag(diagnostics, modulePath, `Unterminated extern${namePart}: missing "end"`, {
+            line: lineNo,
+            column: 1,
+          });
+        }
+      }
+      if (funcs.length === 0) {
+        diag(diagnostics, modulePath, `extern block must contain at least one func declaration`, {
           line: lineNo,
           column: 1,
         });
-        i++;
-        continue;
       }
 
-      const atText = m[2]!.trim();
-      const at = parseImmExprFromText(modulePath, atText, stmtSpan, diagnostics);
-      if (!at) {
-        i++;
-        continue;
-      }
-
-      const externFunc: ExternFuncNode = {
-        kind: 'ExternFunc',
-        span: stmtSpan,
-        name,
-        params,
-        returnType,
-        at,
-      };
-      const externDecl: ExternDeclNode = {
+      items.push({
         kind: 'ExternDecl',
-        span: stmtSpan,
-        funcs: [externFunc],
-      };
-      items.push(externDecl);
-      i++;
+        span: span(file, blockStart, terminated ? blockEndOffset : file.text.length),
+        ...(base ? { base } : {}),
+        funcs,
+      });
       continue;
     }
 
-    if (rest.startsWith('enum ')) {
-      const decl = rest.slice('enum '.length).trimStart();
+    const enumTail = consumeTopKeyword(rest, 'enum');
+    if (enumTail !== undefined) {
+      const decl = enumTail;
       const nameMatch = /^([A-Za-z_][A-Za-z0-9_]*)(?:\s+(.*))?$/.exec(decl);
       if (!nameMatch) {
         diag(diagnostics, modulePath, `Invalid enum declaration`, { line: lineNo, column: 1 });
@@ -1834,6 +2387,16 @@ export function parseModuleFile(
       }
 
       const name = nameMatch[1]!;
+      if (isReservedTopLevelName(name)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid enum name "${name}": collides with a top-level keyword.`,
+          { line: lineNo, column: 1 },
+        );
+        i++;
+        continue;
+      }
       const membersText = (nameMatch[2] ?? '').trim();
       if (membersText.length === 0) {
         diag(diagnostics, modulePath, `Enum "${name}" must declare at least one member`, {
@@ -1855,11 +2418,33 @@ export function parseModuleFile(
       }
 
       const members: string[] = [];
+      const membersLower = new Set<string>();
       for (const m of rawParts) {
         if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(m)) {
-          diag(diagnostics, modulePath, `Invalid enum member name`, { line: lineNo, column: 1 });
+          diag(diagnostics, modulePath, `Invalid enum member name "${m}".`, {
+            line: lineNo,
+            column: 1,
+          });
           continue;
         }
+        if (isReservedTopLevelName(m)) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Invalid enum member name "${m}": collides with a top-level keyword.`,
+            { line: lineNo, column: 1 },
+          );
+          continue;
+        }
+        const memberLower = m.toLowerCase();
+        if (membersLower.has(memberLower)) {
+          diag(diagnostics, modulePath, `Duplicate enum member name "${m}".`, {
+            line: lineNo,
+            column: 1,
+          });
+          continue;
+        }
+        membersLower.add(memberLower);
         members.push(m);
       }
 
@@ -1870,8 +2455,9 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest === 'section' || rest.startsWith('section ')) {
-      if (exportPrefix.length > 0) {
+    const sectionTail = consumeTopKeyword(rest, 'section');
+    if (rest.toLowerCase() === 'section' || sectionTail !== undefined) {
+      if (hasExportPrefix) {
         diag(diagnostics, modulePath, `export not supported on section directives`, {
           line: lineNo,
           column: 1,
@@ -1880,7 +2466,7 @@ export function parseModuleFile(
         continue;
       }
 
-      const decl = rest === 'section' ? '' : rest.slice('section '.length).trimStart();
+      const decl = rest === 'section' ? '' : (sectionTail ?? '');
       const m = /^(code|data|var)(?:\s+at\s+(.+))?$/.exec(decl);
       if (!m) {
         diag(diagnostics, modulePath, `Invalid section directive`, { line: lineNo, column: 1 });
@@ -1906,8 +2492,9 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest === 'align' || rest.startsWith('align ')) {
-      if (exportPrefix.length > 0) {
+    const alignTail = consumeTopKeyword(rest, 'align');
+    if (rest.toLowerCase() === 'align' || alignTail !== undefined) {
+      if (hasExportPrefix) {
         diag(diagnostics, modulePath, `export not supported on align directives`, {
           line: lineNo,
           column: 1,
@@ -1916,7 +2503,7 @@ export function parseModuleFile(
         continue;
       }
 
-      const exprText = rest === 'align' ? '' : rest.slice('align '.length).trimStart();
+      const exprText = rest === 'align' ? '' : (alignTail ?? '');
       if (exprText.length === 0) {
         diag(diagnostics, modulePath, `Invalid align directive`, { line: lineNo, column: 1 });
         i++;
@@ -1934,8 +2521,9 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest.startsWith('const ')) {
-      const decl = rest.slice('const '.length).trimStart();
+    const constTail = consumeTopKeyword(rest, 'const');
+    if (constTail !== undefined) {
+      const decl = constTail;
       const eq = decl.indexOf('=');
       if (eq < 0) {
         diag(diagnostics, modulePath, `Invalid const declaration`, { line: lineNo, column: 1 });
@@ -1947,6 +2535,24 @@ export function parseModuleFile(
       const rhs = decl.slice(eq + 1).trim();
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
         diag(diagnostics, modulePath, `Invalid const name`, { line: lineNo, column: 1 });
+        i++;
+        continue;
+      }
+      if (isReservedTopLevelName(name)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid const name "${name}": collides with a top-level keyword.`,
+          { line: lineNo, column: 1 },
+        );
+        i++;
+        continue;
+      }
+      if (rhs.length === 0) {
+        diag(diagnostics, modulePath, `Invalid const declaration: missing initializer`, {
+          line: lineNo,
+          column: 1,
+        });
         i++;
         continue;
       }
@@ -1962,7 +2568,7 @@ export function parseModuleFile(
         kind: 'ConstDecl',
         span: exprSpan,
         name,
-        exported: exportPrefix.length > 0,
+        exported: hasExportPrefix,
         value: expr,
       };
       items.push(constNode);
@@ -1970,9 +2576,28 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest.startsWith('bin ')) {
-      const varTarget = /^bin\s+[A-Za-z_][A-Za-z0-9_]*\s+in\s+var\s+from\s+"[^"]+"$/i.test(rest);
-      if (varTarget) {
+    const binTail = consumeTopKeyword(rest, 'bin');
+    if (binTail !== undefined) {
+      const m = /^(\S+)\s+in\s+(\S+)\s+from\s+(.+)$/.exec(binTail.trim());
+      if (!m) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid bin declaration: expected "bin <name> in <code|data> from \\\"<path>\\\""`,
+          { line: lineNo, column: 1 },
+        );
+        i++;
+        continue;
+      }
+      const name = m[1]!;
+      const sectionText = m[2]!.toLowerCase();
+      const pathText = m[3]!.trim();
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+        diag(diagnostics, modulePath, `Invalid bin name`, { line: lineNo, column: 1 });
+        i++;
+        continue;
+      }
+      if (sectionText === 'var') {
         diag(diagnostics, modulePath, `bin declarations cannot target section "var"`, {
           line: lineNo,
           column: 1,
@@ -1980,48 +2605,100 @@ export function parseModuleFile(
         i++;
         continue;
       }
-      const m = /^bin\s+([A-Za-z_][A-Za-z0-9_]*)\s+in\s+(code|data)\s+from\s+"([^"]+)"$/i.exec(
-        rest,
-      );
-      if (!m) {
-        diag(diagnostics, modulePath, `Invalid bin declaration`, { line: lineNo, column: 1 });
+      if (sectionText !== 'code' && sectionText !== 'data') {
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid bin section "${m[2]!}": expected "code" or "data".`,
+          { line: lineNo, column: 1 },
+        );
+        i++;
+        continue;
+      }
+      if (isReservedTopLevelName(name)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid bin name "${name}": collides with a top-level keyword.`,
+          { line: lineNo, column: 1 },
+        );
+        i++;
+        continue;
+      }
+      if (!(pathText.startsWith('"') && pathText.endsWith('"') && pathText.length >= 2)) {
+        diag(diagnostics, modulePath, `Invalid bin declaration: expected quoted source path`, {
+          line: lineNo,
+          column: 1,
+        });
         i++;
         continue;
       }
       const node: BinDeclNode = {
         kind: 'BinDecl',
         span: span(file, lineStartOffset, lineEndOffset),
-        name: m[1]!,
-        section: m[2]!.toLowerCase() as BinDeclNode['section'],
-        fromPath: m[3]!,
+        name,
+        section: sectionText as BinDeclNode['section'],
+        fromPath: pathText.slice(1, -1),
       };
       items.push(node);
       i++;
       continue;
     }
 
-    if (rest.startsWith('hex ')) {
-      const m = /^hex\s+([A-Za-z_][A-Za-z0-9_]*)\s+from\s+"([^"]+)"$/i.exec(rest);
+    const hexTail = consumeTopKeyword(rest, 'hex');
+    if (hexTail !== undefined) {
+      const m = /^(\S+)\s+from\s+(.+)$/.exec(hexTail.trim());
       if (!m) {
-        diag(diagnostics, modulePath, `Invalid hex declaration`, { line: lineNo, column: 1 });
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid hex declaration: expected "hex <name> from \\\"<path>\\\""`,
+          { line: lineNo, column: 1 },
+        );
+        i++;
+        continue;
+      }
+      const name = m[1]!;
+      const pathText = m[2]!.trim();
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+        diag(diagnostics, modulePath, `Invalid hex name`, { line: lineNo, column: 1 });
+        i++;
+        continue;
+      }
+      if (isReservedTopLevelName(name)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid hex name "${name}": collides with a top-level keyword.`,
+          { line: lineNo, column: 1 },
+        );
+        i++;
+        continue;
+      }
+      if (!(pathText.startsWith('"') && pathText.endsWith('"') && pathText.length >= 2)) {
+        diag(diagnostics, modulePath, `Invalid hex declaration: expected quoted source path`, {
+          line: lineNo,
+          column: 1,
+        });
         i++;
         continue;
       }
       const node: HexDeclNode = {
         kind: 'HexDecl',
         span: span(file, lineStartOffset, lineEndOffset),
-        name: m[1]!,
-        fromPath: m[2]!,
+        name,
+        fromPath: pathText.slice(1, -1),
       };
       items.push(node);
       i++;
       continue;
     }
 
-    if (rest === 'data') {
+    if (rest.toLowerCase() === 'data') {
       const blockStart = lineStartOffset;
       i++;
       const decls: DataDeclNode[] = [];
+      const declNamesLower = new Set<string>();
 
       while (i < lineCount) {
         const { raw: rawDecl, startOffset: so, endOffset: eo } = getRawLine(i);
@@ -2030,16 +2707,54 @@ export function parseModuleFile(
           i++;
           continue;
         }
-        if (isTopLevelStart(t)) break;
+        if (isTopLevelStart(t)) {
+          const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^=]+?)\s*=\s*(.+)$/.exec(t);
+          if (m && TOP_LEVEL_KEYWORDS.has(m[1]!.toLowerCase())) {
+            diag(
+              diagnostics,
+              modulePath,
+              `Invalid data declaration name "${m[1]!}": collides with a top-level keyword.`,
+              { line: i + 1, column: 1 },
+            );
+            i++;
+            continue;
+          }
+          if (looksLikeKeywordBodyDeclLine(t)) {
+            diagInvalidBlockLine('data declaration', t, '<name>: <type> = <initializer>', i + 1);
+            i++;
+            continue;
+          }
+          break;
+        }
 
         const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^=]+?)\s*=\s*(.+)$/.exec(t);
         if (!m) {
-          diag(diagnostics, modulePath, `Invalid data declaration`, { line: i + 1, column: 1 });
+          diagInvalidBlockLine('data declaration', t, '<name>: <type> = <initializer>', i + 1);
           i++;
           continue;
         }
 
         const name = m[1]!;
+        if (TOP_LEVEL_KEYWORDS.has(name.toLowerCase())) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Invalid data declaration name "${name}": collides with a top-level keyword.`,
+            { line: i + 1, column: 1 },
+          );
+          i++;
+          continue;
+        }
+        const nameLower = name.toLowerCase();
+        if (declNamesLower.has(nameLower)) {
+          diag(diagnostics, modulePath, `Duplicate data declaration name "${name}".`, {
+            line: i + 1,
+            column: 1,
+          });
+          i++;
+          continue;
+        }
+        declNamesLower.add(nameLower);
         const typeText = m[2]!.trim();
         const initText = m[3]!.trim();
 
@@ -2097,6 +2812,77 @@ export function parseModuleFile(
         decls,
       };
       items.push(dataBlock);
+      continue;
+    }
+
+    if (hasTopKeyword('import')) {
+      diag(diagnostics, modulePath, `Invalid import statement`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('type')) {
+      diag(diagnostics, modulePath, `Invalid type name`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('union')) {
+      diag(diagnostics, modulePath, `Invalid union name`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('var')) {
+      diag(diagnostics, modulePath, `Invalid var declaration`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('func')) {
+      diag(diagnostics, modulePath, `Invalid func header`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('op')) {
+      diag(diagnostics, modulePath, `Invalid op header`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('extern')) {
+      diag(diagnostics, modulePath, `Invalid extern declaration`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('enum')) {
+      diag(diagnostics, modulePath, `Invalid enum declaration`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('section')) {
+      diag(diagnostics, modulePath, `Invalid section directive`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('align')) {
+      diag(diagnostics, modulePath, `Invalid align directive`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('const')) {
+      diag(diagnostics, modulePath, `Invalid const declaration`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('bin')) {
+      diag(diagnostics, modulePath, `Invalid bin declaration`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('hex')) {
+      diag(diagnostics, modulePath, `Invalid hex declaration`, { line: lineNo, column: 1 });
+      i++;
+      continue;
+    }
+    if (hasTopKeyword('data')) {
+      diag(diagnostics, modulePath, `Invalid data declaration`, { line: lineNo, column: 1 });
+      i++;
       continue;
     }
 
