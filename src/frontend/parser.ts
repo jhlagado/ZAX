@@ -45,6 +45,7 @@ const RESERVED_TOP_LEVEL_KEYWORDS = new Set([
   'import',
   'type',
   'union',
+  'globals',
   'var',
   'extern',
   'bin',
@@ -1164,6 +1165,7 @@ export function parseModuleFile(
     'import',
     'type',
     'union',
+    'globals',
     'var',
     'extern',
     'bin',
@@ -1298,6 +1300,7 @@ export function parseModuleFile(
     { keyword: 'import', kind: 'import statement', expected: '"<path>.zax" or <moduleId>' },
     { keyword: 'type', kind: 'type declaration', expected: '<name> [<typeExpr>]' },
     { keyword: 'union', kind: 'union declaration', expected: '<name>' },
+    { keyword: 'globals', kind: 'globals declaration', expected: 'globals' },
     { keyword: 'var', kind: 'var declaration', expected: 'var' },
     { keyword: 'func', kind: 'func header', expected: '<name>(...): <retType>' },
     { keyword: 'op', kind: 'op header', expected: '<name>(...)' },
@@ -1829,7 +1832,10 @@ export function parseModuleFile(
       continue;
     }
 
-    if (rest.toLowerCase() === 'var') {
+    if (rest.toLowerCase() === 'var' || rest.toLowerCase() === 'globals') {
+      const isGlobalsBlock = rest.toLowerCase() === 'globals';
+      const blockDeclKind = isGlobalsBlock ? 'globals declaration' : 'var declaration';
+      const blockHeaderExpected = isGlobalsBlock ? 'globals' : 'var';
       const blockStart = lineStartOffset;
       i++;
       const decls: VarDeclNode[] = [];
@@ -1848,14 +1854,14 @@ export function parseModuleFile(
             diag(
               diagnostics,
               modulePath,
-              `Invalid var declaration name "${m[1]!}": collides with a top-level keyword.`,
+              `Invalid ${isGlobalsBlock ? 'globals' : 'var'} declaration name "${m[1]!}": collides with a top-level keyword.`,
               { line: i + 1, column: 1 },
             );
             i++;
             continue;
           }
           if (looksLikeKeywordBodyDeclLine(t)) {
-            diagInvalidBlockLine('var declaration', t, '<name>: <type>', i + 1);
+            diagInvalidBlockLine(blockDeclKind, t, '<name>: <type>', i + 1);
             i++;
             continue;
           }
@@ -1864,7 +1870,11 @@ export function parseModuleFile(
 
         const m = /^([^:]+)\s*:\s*(.+)$/.exec(t);
         if (!m) {
-          diagInvalidBlockLine('var declaration', t, '<name>: <type>', i + 1);
+          if (isGlobalsBlock && /^globals\b/i.test(t)) {
+            diagInvalidBlockLine(blockDeclKind, t, blockHeaderExpected, i + 1);
+          } else {
+            diagInvalidBlockLine(blockDeclKind, t, '<name>: <type>', i + 1);
+          }
           i++;
           continue;
         }
@@ -1874,7 +1884,7 @@ export function parseModuleFile(
           diag(
             diagnostics,
             modulePath,
-            `Invalid var declaration name ${formatIdentifierToken(name)}: expected <identifier>.`,
+            `Invalid ${isGlobalsBlock ? 'globals' : 'var'} declaration name ${formatIdentifierToken(name)}: expected <identifier>.`,
             { line: i + 1, column: 1 },
           );
           i++;
@@ -1884,7 +1894,7 @@ export function parseModuleFile(
           diag(
             diagnostics,
             modulePath,
-            `Invalid var declaration name "${name}": collides with a top-level keyword.`,
+            `Invalid ${isGlobalsBlock ? 'globals' : 'var'} declaration name "${name}": collides with a top-level keyword.`,
             { line: i + 1, column: 1 },
           );
           i++;
@@ -1892,10 +1902,41 @@ export function parseModuleFile(
         }
         const nameLower = name.toLowerCase();
         if (declNamesLower.has(nameLower)) {
-          diag(diagnostics, modulePath, `Duplicate var declaration name "${name}".`, {
-            line: i + 1,
-            column: 1,
-          });
+          diag(
+            diagnostics,
+            modulePath,
+            `Duplicate ${isGlobalsBlock ? 'globals' : 'var'} declaration name "${name}".`,
+            {
+              line: i + 1,
+              column: 1,
+            },
+          );
+          i++;
+          continue;
+        }
+        if (isGlobalsBlock && nameLower === 'globals') {
+          diag(
+            diagnostics,
+            modulePath,
+            `Invalid globals declaration name "${name}": collides with a top-level keyword.`,
+            {
+              line: i + 1,
+              column: 1,
+            },
+          );
+          i++;
+          continue;
+        }
+        if (!isGlobalsBlock && nameLower === 'var') {
+          diag(
+            diagnostics,
+            modulePath,
+            `Invalid var declaration name "${name}": collides with a top-level keyword.`,
+            {
+              line: i + 1,
+              column: 1,
+            },
+          );
           i++;
           continue;
         }
@@ -1915,7 +1956,7 @@ export function parseModuleFile(
             i++;
             continue;
           }
-          diagInvalidBlockLine('var declaration', t, '<name>: <type>', i + 1);
+          diagInvalidBlockLine(blockDeclKind, t, '<name>: <type>', i + 1);
           i++;
           continue;
         }
