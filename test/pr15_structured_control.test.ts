@@ -297,7 +297,7 @@ describe('PR15 structured asm control flow', () => {
     const ldAHCount = bytes.filter((byte) => byte === 0x7c).length; // ld a, h
 
     expect(cpImmCount).toBe(2); // one compare per case value for reg8 selector
-    expect(ldALCount).toBe(2);
+    expect(ldALCount).toBe(1); // load selector byte once, then compare chain
     expect(ldAHCount).toBe(0); // no high-byte compares for reg8 selector dispatch
     expect(bin!.bytes[bin!.bytes.length - 1]).toBe(0xc9);
   });
@@ -316,6 +316,31 @@ describe('PR15 structured asm control flow', () => {
     const bytes = [...bin!.bytes];
     const cpImmCount = bytes.filter((byte) => byte === 0xfe).length; // cp imm8
     expect(cpImmCount).toBe(1); // only the reachable case contributes to compare chain
+    expect(bin!.bytes[bin!.bytes.length - 1]).toBe(0xc9);
+  });
+
+  it('fast-paths reg8 dispatch when all case values are unreachable', async () => {
+    const entry = join(
+      __dirname,
+      'fixtures',
+      'pr150_select_reg8_all_unreachable_else_fastpath.zax',
+    );
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const warnings = res.diagnostics.filter(
+      (d) => d.severity === 'warning' && d.message.includes('can never match reg8 selector'),
+    );
+    expect(warnings).toHaveLength(2);
+
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    const bytes = [...bin!.bytes];
+    const cpImmCount = bytes.filter((byte) => byte === 0xfe).length; // cp imm8
+    const pushHlCount = bytes.filter((byte) => byte === 0xe5).length;
+    const popHlCount = bytes.filter((byte) => byte === 0xe1).length;
+    expect(cpImmCount).toBe(0); // unreachable cases omitted from dispatch compares
+    expect(pushHlCount).toBe(0); // runtime selector dispatch short-circuits to else
+    expect(popHlCount).toBe(0);
     expect(bin!.bytes[bin!.bytes.length - 1]).toBe(0xc9);
   });
 

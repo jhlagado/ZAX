@@ -1788,7 +1788,6 @@ export function emitProgram(
           mismatchLabel: string,
           span: SourceSpan,
         ): void => {
-          emitCodeBytes(Uint8Array.of(0x7d), span.file); // ld a, l
           emitCodeBytes(Uint8Array.of(0xfe, value & 0xff), span.file); // cp imm8
           emitJumpCondTo(0xc2, mismatchLabel, span); // jp nz, mismatch
         };
@@ -2739,12 +2738,17 @@ export function emitProgram(
               if (selectorConst !== undefined) {
                 const matched = caseArms.find((arm) => arm.value === selectorConst);
                 emitJumpTo(matched?.bodyLabel ?? elseLabel ?? endLabel, asmItems[j]!.span);
+              } else if (caseArms.length === 0) {
+                emitJumpTo(elseLabel ?? endLabel, asmItems[j]!.span);
               } else {
                 if (!emitInstr('push', [{ kind: 'Reg', span: it.span, name: 'HL' }], it.span)) {
                   return asmItems.length;
                 }
                 if (!loadSelectorIntoHL(it.selector, it.span)) {
                   return asmItems.length;
+                }
+                if (selectorIsReg8) {
+                  emitCodeBytes(Uint8Array.of(0x7d), it.span.file); // ld a, l
                 }
                 for (const arm of caseArms) {
                   const miss = newHiddenLabel('__zax_select_next');

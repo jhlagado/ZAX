@@ -1090,6 +1090,7 @@ Lowering (informative):
 
 - The compiler may lower `select` either as a sequence of compares/branches or as a jump table, depending on target and case density. Behavior must be equivalent.
   - For `reg8` selectors, lowering naturally uses 8-bit compares (e.g., `ld a, <reg8>` then `cp imm8`) because the selector’s high byte is always zero.
+    - The current compiler implementation loads the selector byte once and reuses it across the compare chain.
   - For `reg16` selectors, lowering may require multi-instruction comparison sequences.
   - Runtime compare-chain lowering evaluates the selector once, then compares case values against that stable selector value.
   - The compiler may test `case` values in any order.
