@@ -1168,6 +1168,15 @@ export function parseModuleFile(
     return isReservedTopLevelDeclName(name);
   }
 
+  function looksLikeKeywordBodyDeclLine(lineText: string): boolean {
+    const t = lineText.trim();
+    const colon = t.indexOf(':');
+    if (colon <= 0) return false;
+    const beforeColon = t.slice(0, colon);
+    if (beforeColon.includes('(') || beforeColon.includes(')')) return false;
+    return /^[A-Za-z_][A-Za-z0-9_]*\s+[A-Za-z_][A-Za-z0-9_]*\s*$/.test(beforeColon.trim());
+  }
+
   function quoteDiagLineText(text: string): string {
     const trimmed = text.trim();
     const preview = trimmed.length > 96 ? `${trimmed.slice(0, 93)}...` : trimmed;
@@ -1410,6 +1419,11 @@ export function parseModuleFile(
         }
         const topKeyword = topLevelStartKeyword(t);
         if (topKeyword !== undefined) {
+          if (looksLikeKeywordBodyDeclLine(t)) {
+            diagInvalidBlockLine('record field declaration', t, '<name>: <type>', i + 1);
+            i++;
+            continue;
+          }
           interruptedByKeyword = topKeyword;
           interruptedByLine = i + 1;
           break;
@@ -1423,6 +1437,16 @@ export function parseModuleFile(
         }
 
         const fieldName = m[1]!;
+        if (isReservedTopLevelName(fieldName)) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Invalid record field name "${fieldName}": collides with a top-level keyword.`,
+            { line: i + 1, column: 1 },
+          );
+          i++;
+          continue;
+        }
         const fieldNameLower = fieldName.toLowerCase();
         if (fieldNamesLower.has(fieldNameLower)) {
           diag(diagnostics, modulePath, `Duplicate record field name "${fieldName}".`, {
@@ -1540,6 +1564,11 @@ export function parseModuleFile(
         }
         const topKeyword = topLevelStartKeyword(t);
         if (topKeyword !== undefined && consumeKeywordPrefix(t, 'func') === undefined) {
+          if (looksLikeKeywordBodyDeclLine(t)) {
+            diagInvalidBlockLine('union field declaration', t, '<name>: <type>', i + 1);
+            i++;
+            continue;
+          }
           interruptedByKeyword = topKeyword;
           interruptedByLine = i + 1;
           break;
@@ -1553,6 +1582,16 @@ export function parseModuleFile(
         }
 
         const fieldName = m[1]!;
+        if (isReservedTopLevelName(fieldName)) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Invalid union field name "${fieldName}": collides with a top-level keyword.`,
+            { line: i + 1, column: 1 },
+          );
+          i++;
+          continue;
+        }
         const fieldNameLower = fieldName.toLowerCase();
         if (fieldNamesLower.has(fieldNameLower)) {
           diag(diagnostics, modulePath, `Duplicate union field name "${fieldName}".`, {
@@ -1643,6 +1682,13 @@ export function parseModuleFile(
               `Invalid var declaration name "${m[1]!}": collides with a top-level keyword.`,
               { line: i + 1, column: 1 },
             );
+            i++;
+            continue;
+          }
+          if (looksLikeKeywordBodyDeclLine(t)) {
+            diagInvalidBlockLine('var declaration', t, '<name>: <type>', i + 1);
+            i++;
+            continue;
           }
           break;
         }
@@ -1827,6 +1873,11 @@ export function parseModuleFile(
             }
             const tDeclTopKeyword = topLevelStartKeyword(tDecl);
             if (tDeclTopKeyword !== undefined) {
+              if (looksLikeKeywordBodyDeclLine(tDecl)) {
+                diagInvalidBlockLine('var declaration', tDecl, '<name>: <type>', i + 1);
+                i++;
+                continue;
+              }
               interruptedBeforeAsmKeyword = tDeclTopKeyword;
               interruptedBeforeAsmLine = i + 1;
               locals = {
@@ -2665,6 +2716,11 @@ export function parseModuleFile(
               `Invalid data declaration name "${m[1]!}": collides with a top-level keyword.`,
               { line: i + 1, column: 1 },
             );
+            i++;
+            continue;
+          }
+          if (looksLikeKeywordBodyDeclLine(t)) {
+            diagInvalidBlockLine('data declaration', t, '<name>: <type> = <initializer>', i + 1);
             i++;
             continue;
           }
