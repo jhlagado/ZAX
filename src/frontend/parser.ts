@@ -962,7 +962,7 @@ function parseParamsFromText(
   for (const part of parts) {
     const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(part);
     if (!m) {
-      diag(diagnostics, filePath, `Invalid parameter declaration`, {
+      diag(diagnostics, filePath, `Invalid parameter declaration: expected <name>: <type>`, {
         line: paramsSpan.start.line,
         column: paramsSpan.start.column,
       });
@@ -1003,7 +1003,7 @@ function parseParamsFromText(
         })
       )
         return undefined;
-      diag(diagnostics, filePath, `Unsupported type in parameter declaration`, {
+      diag(diagnostics, filePath, `Invalid parameter type "${typeText}": expected <type>`, {
         line: paramsSpan.start.line,
         column: paramsSpan.start.column,
       });
@@ -1060,7 +1060,7 @@ function parseOpParamsFromText(
   for (const part of parts) {
     const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(part);
     if (!m) {
-      diag(diagnostics, filePath, `Invalid op parameter declaration`, {
+      diag(diagnostics, filePath, `Invalid op parameter declaration: expected <name>: <matcher>`, {
         line: paramsSpan.start.line,
         column: paramsSpan.start.column,
       });
@@ -1306,10 +1306,15 @@ export function parseModuleFile(
       ) {
         return undefined;
       }
-      diag(diagnostics, modulePath, `Unsupported extern func return type`, {
-        line: lineNo,
-        column: 1,
-      });
+      diag(
+        diagnostics,
+        modulePath,
+        `Invalid extern func return type "${retTypeText}": expected <type>`,
+        {
+          line: lineNo,
+          column: 1,
+        },
+      );
       return undefined;
     }
 
@@ -1869,7 +1874,15 @@ export function parseModuleFile(
           i++;
           continue;
         }
-        diag(diagnostics, modulePath, `Unsupported return type`, { line: lineNo, column: 1 });
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid func return type "${retTypeText}": expected <type>`,
+          {
+            line: lineNo,
+            column: 1,
+          },
+        );
         i++;
         continue;
       }
