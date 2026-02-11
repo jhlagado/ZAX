@@ -2631,11 +2631,11 @@ export function parseModuleFile(
     if (binTail !== undefined) {
       const m = /^(\S+)\s+in\s+(\S+)\s+from\s+(.+)$/.exec(binTail.trim());
       if (!m) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid bin declaration: expected "bin <name> in <code|data> from \\\"<path>\\\""`,
-          { line: lineNo, column: 1 },
+        diagInvalidHeaderLine(
+          'bin declaration',
+          text,
+          '<name> in <code|data> from "<path>"',
+          lineNo,
         );
         i++;
         continue;
@@ -2700,12 +2700,7 @@ export function parseModuleFile(
     if (hexTail !== undefined) {
       const m = /^(\S+)\s+from\s+(.+)$/.exec(hexTail.trim());
       if (!m) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid hex declaration: expected "hex <name> from \\\"<path>\\\""`,
-          { line: lineNo, column: 1 },
-        );
+        diagInvalidHeaderLine('hex declaration', text, '<name> from "<path>"', lineNo);
         i++;
         continue;
       }
@@ -2927,12 +2922,12 @@ export function parseModuleFile(
       continue;
     }
     if (hasTopKeyword('bin')) {
-      diag(diagnostics, modulePath, `Invalid bin declaration`, { line: lineNo, column: 1 });
+      diagInvalidHeaderLine('bin declaration', text, '<name> in <code|data> from "<path>"', lineNo);
       i++;
       continue;
     }
     if (hasTopKeyword('hex')) {
-      diag(diagnostics, modulePath, `Invalid hex declaration`, { line: lineNo, column: 1 });
+      diagInvalidHeaderLine('hex declaration', text, '<name> from "<path>"', lineNo);
       i++;
       continue;
     }

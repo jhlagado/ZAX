@@ -42,11 +42,9 @@ describe('PR154 parser: top-level malformed keyword matrix', () => {
     );
     expect(messages).toContain('Invalid align directive line "align": expected <imm16>');
     expect(messages).toContain(
-      'Invalid bin declaration: expected "bin <name> in <code|data> from \\\"<path>\\\""',
+      'Invalid bin declaration line "bin": expected <name> in <code|data> from "<path>"',
     );
-    expect(messages).toContain(
-      'Invalid hex declaration: expected "hex <name> from \\\"<path>\\\""',
-    );
+    expect(messages).toContain('Invalid hex declaration line "hex": expected <name> from "<path>"');
     expect(messages.some((m) => m.startsWith('Unsupported top-level construct:'))).toBe(false);
   });
 });
