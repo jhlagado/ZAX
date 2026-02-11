@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- none.
+- #157: ISA coverage continuation (`(ix)/(iy)` zero-displacement shorthand parity across DD/FD families + lowering passthrough hardening + matrix coverage).
 
 Next PR (anchored as soon as opened):
 
-1. Next PR: ISA coverage continuation (indexed zero-disp shorthand `(ix)/(iy)` parity across DD/FD families + legality matrix expansion).
+1. Next PR: ISA coverage continuation (ED/CB/DD/FD legality matrix expansion + deterministic malformed-form diagnostics parity).
 
 Completed (anchored, most recent first):
 
