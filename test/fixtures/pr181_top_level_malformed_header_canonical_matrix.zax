@@ -1,6 +1,7 @@
 import
 type
 union
+globals extra
 var extra
 func
 op
