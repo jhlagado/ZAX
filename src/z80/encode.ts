@@ -644,6 +644,10 @@ export function encodeInstruction(
     const dst8 = dst ? reg8Code(dst) : undefined;
 
     if (dst8 === undefined) {
+      if (indexedReg8(ops[0]!)) {
+        diag(diagnostics, node, `in destination must use legacy reg8 B/C/D/E/H/L/A`);
+        return undefined;
+      }
       diag(diagnostics, node, `in expects a reg8 destination`);
       return undefined;
     }
@@ -679,6 +683,7 @@ export function encodeInstruction(
     const port = ops[0]!;
     const src = regName(ops[1]!);
     const src8 = src ? reg8Code(src) : undefined;
+    const srcIndexed = indexedReg8(ops[1]!);
 
     if (port.kind === 'PortC') {
       if (ops[1]!.kind === 'Imm') {
@@ -691,6 +696,10 @@ export function encodeInstruction(
         return undefined;
       }
       if (src8 === undefined) {
+        if (srcIndexed) {
+          diag(diagnostics, node, `out source must use legacy reg8 B/C/D/E/H/L/A`);
+          return undefined;
+        }
         diag(diagnostics, node, `out expects a reg8 source`);
         return undefined;
       }
@@ -700,6 +709,10 @@ export function encodeInstruction(
     if (port.kind === 'PortImm8') {
       // out (n),a => D3 n
       if (src8 === undefined) {
+        if (srcIndexed) {
+          diag(diagnostics, node, `out source must use legacy reg8 B/C/D/E/H/L/A`);
+          return undefined;
+        }
         diag(diagnostics, node, `out expects a reg8 source`);
         return undefined;
       }
