@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- none
+1. #178: parser/AST closure pass (tighten function-local `var` interruption recovery diagnostics ordering and top-level resume matrix coverage).
 
 Next PR (anchored as soon as opened):
 
-1. Next PR: parser/AST closure pass (tighten declaration/control malformed recovery matrix and deterministic diagnostics ordering contracts).
+1. Next PR: lowering/frame/op safety pass (expand SP/control/cleanup invariant coverage across deeper interaction paths).
 
 Completed (anchored, most recent first):
 
