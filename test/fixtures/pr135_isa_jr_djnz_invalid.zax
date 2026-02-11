@@ -2,6 +2,7 @@ export func main(): void
     jr 128
     jr -129
     jr po, 1
+    jr nz
     djnz 128
     djnz a
 end

@@ -17,12 +17,15 @@ describe('PR148: known-head no-fallback diagnostics matrix', () => {
     expect(messages).toContain('ret expects no operands or one condition code');
     expect(messages).toContain('add expects two operands');
     expect(messages).toContain('call expects one operand (nn) or two operands (cc, nn)');
+    expect(messages).toContain('call cc, nn expects two operands (cc, nn)');
     expect(messages).toContain('djnz expects disp8');
     expect(messages).toContain('rst expects an imm8 multiple of 8 (0..56)');
     expect(messages).toContain('im expects 0, 1, or 2');
     expect(messages).toContain('in a,(n) expects an imm8 port number');
     expect(messages).toContain('out (n),a immediate port form requires source A');
+    expect(messages).toContain('jp cc, nn expects two operands (cc, nn)');
     expect(messages).toContain('jp indirect form supports (hl), (ix), or (iy) only');
+    expect(messages).toContain('jr cc, disp expects two operands (cc, disp8)');
     expect(messages).toContain('jr cc expects valid condition code NZ/Z/NC/C');
     expect(messages).toContain('ld expects two operands');
     expect(messages).toContain('inc expects one operand');
