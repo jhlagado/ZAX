@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     bit 0, b
     bit 1, c
     bit 2, d

@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     rst 0
     rst 8
     rst 16

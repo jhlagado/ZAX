@@ -41,7 +41,7 @@ describe('PR12 calls (extern + func)', () => {
     expect(res.diagnostics).toHaveLength(1);
     expect(res.diagnostics[0]?.message).toContain('expects 1');
     expect(res.diagnostics[0]?.file).toBe(entry);
-    expect(res.diagnostics[0]?.line).toBe(6);
+    expect(res.diagnostics[0]?.line).toBe(5);
     expect(res.diagnostics[0]?.column).toBe(5);
   });
 

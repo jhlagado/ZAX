@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     im 3
     in b, (1)
     in a, (256)

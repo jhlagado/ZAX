@@ -3,6 +3,5 @@ op smash()
 end
 
 export func main(): void
-  asm
     smash
 end

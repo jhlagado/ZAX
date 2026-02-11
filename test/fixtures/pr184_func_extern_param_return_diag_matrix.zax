@@ -1,15 +1,12 @@
 func badParamDecl(a): void
-  asm
     ret
   end
 
 func badParamType(a: [byte]): void
-  asm
     ret
   end
 
 func badReturn(a: byte): [word]
-  asm
     ret
   end
 
@@ -22,6 +19,5 @@ extern func extBadParamType(a: [byte]): byte at $0102
 extern func extBadReturn(a: byte): [word] at $0104
 
 func main(): void
-  asm
     ret
   end

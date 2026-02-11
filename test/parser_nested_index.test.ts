@@ -8,7 +8,6 @@ describe('parser nested EA index expressions', () => {
   it('parses arr[table[0]] without spurious imm diagnostics', () => {
     const source = `
 export func main(): void
-  asm
     ld hl, arr[table[0]]
 end
 `;
@@ -32,7 +31,6 @@ end
   it('reports malformed nested index syntax as operand error', () => {
     const source = `
 export func main(): void
-  asm
     ld hl, arr[table[0]
 end
 `;

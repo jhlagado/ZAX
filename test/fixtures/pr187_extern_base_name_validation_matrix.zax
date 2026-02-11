@@ -9,6 +9,5 @@ extern assets
 end
 
 func main(): void
-  asm
     ret
   end

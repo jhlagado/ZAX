@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     ret a, b
     add a
     call a, b, c

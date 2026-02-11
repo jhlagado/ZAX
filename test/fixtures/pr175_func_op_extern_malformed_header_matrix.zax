@@ -17,6 +17,5 @@ extern func x(a: byte) at $1234
 extern func const(a: byte): void at $1234
 
 func main(): void
-  asm
     ret
   end

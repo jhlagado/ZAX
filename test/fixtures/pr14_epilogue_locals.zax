@@ -1,5 +1,5 @@
 export func main(): void
   var
     x: byte
-  asm
+  end
 end

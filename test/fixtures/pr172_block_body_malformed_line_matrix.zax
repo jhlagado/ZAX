@@ -17,7 +17,7 @@ end
 func main(): void
   var
     tmp byte
-  asm
+  end
     ret
   end
 

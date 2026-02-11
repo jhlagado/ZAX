@@ -6,7 +6,6 @@ globals
   y: word
 
 export func main(): void
-  asm
     ld (x), $2A
   end
 

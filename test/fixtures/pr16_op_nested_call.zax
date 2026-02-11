@@ -8,6 +8,5 @@ op initbc()
 end
 
 export func main(): void
-  asm
     initbc
 end

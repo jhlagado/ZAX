@@ -1,7 +1,7 @@
 export func main(): void
   var
     x: word
-  asm
+  end
     select A
       case 0
         push bc

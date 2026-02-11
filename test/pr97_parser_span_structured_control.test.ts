@@ -15,7 +15,7 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
     expect(res.diagnostics[0]?.message).toBe('"if" expects a condition code');
-    expect(res.diagnostics[0]?.line).toBe(3);
+    expect(res.diagnostics[0]?.line).toBe(2);
     expect(res.diagnostics[0]?.column).toBe(5);
   });
 
@@ -25,7 +25,7 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
     expect(res.diagnostics[0]?.message).toBe('"while" expects a condition code');
-    expect(res.diagnostics[0]?.line).toBe(3);
+    expect(res.diagnostics[0]?.line).toBe(2);
     expect(res.diagnostics[0]?.column).toBe(5);
   });
 
@@ -37,7 +37,7 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     expect(res.diagnostics[0]?.message).toBe(
       '"select" must contain at least one arm ("case" or "else")',
     );
-    expect(res.diagnostics[0]?.line).toBe(4);
+    expect(res.diagnostics[0]?.line).toBe(3);
     expect(res.diagnostics[0]?.column).toBe(5);
   });
 
@@ -47,7 +47,7 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
     expect(res.diagnostics[0]?.message).toBe('"until" expects a condition code');
-    expect(res.diagnostics[0]?.line).toBe(5);
+    expect(res.diagnostics[0]?.line).toBe(4);
     expect(res.diagnostics[0]?.column).toBe(5);
   });
 
@@ -57,7 +57,7 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
     expect(res.diagnostics[0]?.message).toBe('"until" expects a condition code');
-    expect(res.diagnostics[0]?.line).toBe(5);
+    expect(res.diagnostics[0]?.line).toBe(4);
     expect(res.diagnostics[0]?.column).toBe(5);
   });
 
@@ -67,7 +67,7 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
     expect(res.diagnostics[0]?.message).toBe('"case" without matching "select"');
-    expect(res.diagnostics[0]?.line).toBe(3);
+    expect(res.diagnostics[0]?.line).toBe(2);
     expect(res.diagnostics[0]?.column).toBe(5);
   });
 
@@ -77,7 +77,7 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
     expect(res.diagnostics[0]?.message).toBe('"else" without matching "if" or "select"');
-    expect(res.diagnostics[0]?.line).toBe(3);
+    expect(res.diagnostics[0]?.line).toBe(2);
     expect(res.diagnostics[0]?.column).toBe(5);
   });
 
@@ -87,7 +87,7 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
     expect(res.diagnostics[0]?.message).toBe('"select" expects a selector');
-    expect(res.diagnostics[0]?.line).toBe(3);
+    expect(res.diagnostics[0]?.line).toBe(2);
     expect(res.diagnostics[0]?.column).toBe(5);
   });
 
@@ -97,7 +97,7 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
     expect(res.diagnostics[0]?.message).toBe('"case" expects a value');
-    expect(res.diagnostics[0]?.line).toBe(4);
+    expect(res.diagnostics[0]?.line).toBe(3);
     expect(res.diagnostics[0]?.column).toBe(7);
   });
 
@@ -107,7 +107,7 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
     expect(res.diagnostics[0]?.message).toBe('Invalid case value');
-    expect(res.diagnostics[0]?.line).toBe(4);
+    expect(res.diagnostics[0]?.line).toBe(3);
     expect(res.diagnostics[0]?.column).toBe(7);
   });
 
@@ -117,7 +117,7 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
     expect(res.diagnostics[0]?.message).toBe('Invalid case value');
-    expect(res.diagnostics[0]?.line).toBe(4);
+    expect(res.diagnostics[0]?.line).toBe(3);
     expect(res.diagnostics[0]?.column).toBe(7);
   });
 });

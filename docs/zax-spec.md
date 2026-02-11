@@ -7,7 +7,7 @@ ZAX aims to make assembly code easier to read and refactor by providing:
 - file structure (`import`, declarations)
 - simple layout types (arrays/records/unions) used for addressing
 - functions with stack arguments and optional locals
-- structured control flow inside `asm` (`if`/`while`/`repeat`/`select`)
+- structured control flow inside function/op instruction streams (`if`/`while`/`repeat`/`select`)
 - `op`: inline “macro-instructions” with operand matching
 
 Anything not defined here is undefined behavior or a compile error in v0.1.
@@ -26,7 +26,7 @@ ZAX is not a “high-level language”. It is still assembly: you choose registe
 
 ### 0.2 A First ZAX File (Non-normative)
 
-````
+```
 const MsgLen = 5
 
 data
@@ -37,29 +37,28 @@ extern func bios_putc(ch: byte): void at $F003
 export func main(): void
   var
     p: addr
-  asm
-    ld hl, msg
+  end
+  ld hl, msg
+  ld (p), hl
+  ld b, MsgLen
+  repeat
+    ld hl, (p)
+    ld a, (hl)
+    inc hl
     ld (p), hl
-
-    ld b, MsgLen
-    repeat
-      ld hl, (p)
-      ld a, (hl)
-      inc hl
-      ld (p), hl
-      push bc
-      bios_putc A
-      pop bc
-      dec b
-	    until Z
-	end
-	```
+    push bc
+    bios_putc A
+    pop bc
+    dec b
+	  until Z
+end
+```
 
 Key ideas this demonstrates:
 
 - `data` emits bytes; `var` reserves addresses (emits no bytes).
 - `rec.field` and `arr[i]` are addresses (effective addresses); parentheses dereference.
-- Structured control flow exists only inside `asm`.
+- Structured control flow exists only inside function/op instruction streams.
 
 ### 0.3 Design Philosophy
 
@@ -89,7 +88,7 @@ Entry-point selection is outside v0.1 scope. A typical convention is `export fun
 ### 1.1 Whitespace and Newlines
 
 - In non-`asm` regions, **newlines terminate** declarations and directives.
-- In `asm` streams (function `asm` blocks and `op` bodies), newlines terminate instructions/keywords.
+- In instruction streams (function bodies and `op` bodies), newlines terminate instructions/keywords.
 - Spaces/tabs separate tokens.
 
 Multi-line constructs (v0.1):
@@ -101,7 +100,7 @@ Multi-line constructs (v0.1):
 
 Labels (v0.1):
 
-- A local label is defined by `<ident>:` at the start of an `asm` line **inside a function `asm` block**. Local labels are **not permitted** inside `op` bodies in v0.1. The `:` token separates the label from any instruction that follows on the same line; the newline still terminates that instruction normally.
+- A local label is defined by `<ident>:` at the start of an instruction line **inside a function body**. Local labels are **not permitted** inside `op` bodies in v0.1. The `:` token separates the label from any instruction that follows on the same line; the newline still terminates that instruction normally.
 
 ### 1.2 Comments
 
@@ -131,7 +130,7 @@ Escapes in string/char literals:
 
 ZAX treats the following as **reserved** (case-insensitive):
 
-- Z80 mnemonics and assembler keywords used inside `asm` (e.g., `ld`, `add`, `ret`, `jp`, ...).
+- Z80 mnemonics and assembler keywords used inside instruction streams (e.g., `ld`, `add`, `ret`, `jp`, ...).
 - Register names: `A F AF B C D E H L HL DE BC SP IX IY I R`.
 - Condition codes used by structured control flow: `Z NZ C NC PO PE M P`.
 - Structured-control keywords: `if`, `else`, `while`, `repeat`, `until`, `select`, `case`, `end`.
@@ -747,17 +746,16 @@ Notes (v0.1):
 
 Syntax:
 
+```zax
+export func add(a: word, b: word): word
+  var
+    temp: word
+  end
+  ld hl, (a)
+  ld de, (b)
+  add hl, de
+end
 ```
-
-    export func add(a: word, b: word): word
-      var
-        temp: word
-      asm
-        ld hl, (a)
-        ld de, (b)
-        add hl, de
-    end
-    ```
 
 Rules:
 
@@ -765,15 +763,16 @@ Rules:
 - Function bodies emit instructions into `code`.
 - Inside a function body:
   - at most one optional `var` block (locals, one per line)
-  - exactly one required `asm` block
+  - instruction stream starts after the optional `var` block (or immediately if no `var` block)
   - `end` terminates the function body
-- `asm` blocks may contain Z80 mnemonics, `op` invocations, and structured control flow (Section 10).
+- Function instruction streams may contain Z80 mnemonics, `op` invocations, and structured control flow (Section 10).
 
 Function-body block termination (v0.1):
 
-- Inside a function body, a `var` block (if present) continues until the `asm` keyword.
-- `asm` bodies may be empty (no instructions).
-- If control reaches the end of the `asm` block (falls off the end), the compiler behaves as if a `ret` instruction were present at that point (i.e., it returns via the normal return/trampoline mechanism described in 8.4).
+- Inside a function body, a `var` block (if present) is terminated by `end`.
+- The `asm` marker keyword is not used in v0.1 function or op bodies.
+- Function instruction streams may be empty (no instructions).
+- If control reaches the end of the function instruction stream (falls off the end), the compiler behaves as if a `ret` instruction were present at that point (i.e., it returns via the normal return/trampoline mechanism described in 8.4).
 
 ### 8.2 Calling Convention
 
@@ -790,9 +789,9 @@ Notes (v0.1):
 - Arguments are stack slots, regardless of declared type. For `byte` parameters, the low byte carries the value and the high byte is ignored (recommended: push a zero-extended value).
 - `void` functions return no value.
 
-### 8.3 Calling Functions From `asm`
+### 8.3 Calling Functions From Instruction Streams
 
-Inside an `asm` block, a line starting with a function name invokes that function.
+Inside a function/op instruction stream, a line starting with a function name invokes that function.
 
 Syntax:
 
@@ -811,8 +810,8 @@ Calls follow the calling convention in 8.2 (compiler emits the required pushes, 
 
 Parsing and name resolution (v0.1):
 
-- If an `asm` line begins with `<ident>:` it defines a local label **inside a function `asm` block**. Local labels are **not permitted** inside `op` bodies in v0.1; any `<ident>:` definition in an `op` body is a compile error. Any remaining tokens on the line are parsed as another `asm` line (mnemonic/`op`/call/etc.).
-- Otherwise, the first token of an `asm` line is interpreted as:
+- If an instruction line begins with `<ident>:` it defines a local label **inside a function body**. Local labels are **not permitted** inside `op` bodies in v0.1; any `<ident>:` definition in an `op` body is a compile error. Any remaining tokens on the line are parsed as another instruction line (mnemonic/`op`/call/etc.).
+- Otherwise, the first token of an instruction line is interpreted as:
   1. a structured-control keyword (`if`, `else`, `while`, `repeat`, `until`, `select`, `case`, `end`), else
   2. a Z80 mnemonic, else
   3. an `op` invocation, else
@@ -822,7 +821,7 @@ Parsing and name resolution (v0.1):
 
 Operand identifier resolution (v0.1):
 
-- For identifiers used inside operands (in function `asm` blocks), resolution proceeds as:
+- For identifiers used inside operands (in function bodies), resolution proceeds as:
   1. local labels
   2. locals/args (stack slots)
   3. module-scope symbols (including `const` and enum members)
@@ -918,7 +917,7 @@ end
 Rules:
 
 - `op` is module-scope only.
-- `op` bodies are implicit `asm` streams (the `asm` keyword is not used inside `op`).
+- `op` bodies are implicit instruction streams.
 - Local label definitions (`<ident>:`) are **not permitted** inside `op` bodies in v0.1.
 - `end` terminates the `op` body.
   - `op` bodies may contain structured control flow that uses `end` internally; the final `end` closes the `op` body.
@@ -1264,3 +1263,4 @@ Recommended (non-normative) policy for a ZAX compiler:
   }
 }
 ```
+````

@@ -2,7 +2,7 @@ export func main(arg0: word): void
   var
     x: byte
     y: word
-  asm
+  end
     ld a, (x)
     ld a, (y)
     ld a, (arg0)

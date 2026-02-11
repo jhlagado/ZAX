@@ -45,7 +45,6 @@ describe('PR113 ISA: indexed set/res with destination register', () => {
     const entry = join(__dirname, 'fixtures', 'tmp-pr113-indexed-setres-invalid.zax');
     const source = [
       'export func main(): void',
-      '  asm',
       '    set 1, (hl), a',
       '    res 2, (ix[0]), ix',
       'end',

@@ -6,7 +6,6 @@ globals
 const K = 1
 
 func main(): void
-  asm
     ld a, K
     ret
   end

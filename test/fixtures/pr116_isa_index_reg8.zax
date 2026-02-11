@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     ld ixh, $12
     ld ixl, $34
     ld iyh, $56

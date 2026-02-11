@@ -27,6 +27,6 @@ func main(): void
     op z(a: byte): byte
     extern: byte
     ok: byte
-  asm
+  end
     ret
   end

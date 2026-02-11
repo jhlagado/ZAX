@@ -10,6 +10,5 @@ hex 9dump from "dump.hex"
 hex dump from dump.hex
 
 func main(): void
-  asm
     ret
   end

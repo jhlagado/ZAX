@@ -15,6 +15,5 @@ hex
 data extra
 
 func main(): void
-  asm
     ret
   end

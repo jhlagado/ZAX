@@ -11,7 +11,6 @@ op cond_nop(cc: Z)
 end
 
 func main(): void
-  asm
     cond_nop Z
     ret
 end

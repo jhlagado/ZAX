@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     ex (sp), ix
     ex iy, (sp)
     ret
