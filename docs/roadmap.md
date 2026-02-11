@@ -236,7 +236,7 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- None currently.
+- #153: Lowering invariants tranche 4 (explicit untracked-SP diagnostics at joins/back-edges, stack-slot-scoped return/fallthrough checks, and regression matrix coverage).
 
 Next PR (anchored as soon as opened):
 
