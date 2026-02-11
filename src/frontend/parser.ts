@@ -1782,8 +1782,10 @@ export function parseModuleFile(
               line: i + 1,
               column: 1,
             })
-          )
-            break;
+          ) {
+            i++;
+            continue;
+          }
           diag(diagnostics, modulePath, `Unsupported type in var declaration`, {
             line: i + 1,
             column: 1,
