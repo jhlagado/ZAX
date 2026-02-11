@@ -7,6 +7,5 @@ func also_broken(): void
 section code
 
 func ok(): void
-  asm
-    ret
-  end
+  ret
+end

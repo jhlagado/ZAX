@@ -2105,18 +2105,6 @@ export function parseModuleFile(
               varTerminated = true;
               break;
             }
-            if (tDeclLower === 'asm') {
-              asmStartOffset = soDecl;
-              locals = {
-                kind: 'VarBlock',
-                span: span(file, varStart, soDecl),
-                scope: 'function',
-                decls,
-              };
-              i++; // consume asm
-              varTerminated = true;
-              break;
-            }
             const tDeclTopKeyword = topLevelStartKeyword(tDecl);
             if (tDeclTopKeyword !== undefined) {
               if (looksLikeKeywordBodyDeclLine(tDecl)) {

@@ -1,7 +1,7 @@
 export func main(): void
   var
     slot: byte
-  asm
+  end
     while NZ
       push bc
     end
