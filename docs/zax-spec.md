@@ -1224,10 +1224,16 @@ ZAX can generally produce **high confidence** mappings because it controls code 
 Symbols describe named addresses and constants:
 
 - `name`
-- `address`
+- `address` (for address-bearing symbols)
+- `value` (for `kind: constant`)
 - `kind`: `label`, `constant`, `data`, `unknown`
 - `scope`: `global` or `local`
 - `size` (optional; bytes)
+
+Constant symbol note (v0.1):
+
+- For `kind: constant`, D8M should carry the full integer in `value`.
+- For compatibility with older tooling, writers may also include `address` set to `value & 0xFFFF`.
 
 ### B.5 Suggested ZAX mapping policy
 
@@ -1237,7 +1243,8 @@ Recommended (non-normative) policy for a ZAX compiler:
   - Lowering may produce multiple segments tied to the same source location.
 - Emit `data` segments for `data` initializers and `bin` includes.
 - Record local labels as `symbols` of `scope: local`.
-- Record `const` and enum members as `symbols` of `kind: constant` by storing the low 16 bits of the constant value in the symbol’s `address` field.
+- Record `const` and enum members as `symbols` of `kind: constant` with `value` as the full integer.
+- For compatibility with older tooling, also emit `address = value & 0xFFFF` on constant symbols.
 
 ### B.6 Minimal example (illustrative)
 
