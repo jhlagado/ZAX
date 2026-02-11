@@ -1083,6 +1083,7 @@ Notes:
 
 - `select <ea>` dispatches on the address value of `<ea>`. To dispatch on the stored value, use `select (ea)`.
 - If you want to dispatch on a byte-sized value in memory, prefer loading into a `reg8` and using `select <reg8>` rather than `select (ea)` (which reads a 16-bit word).
+- The current compiler implementation emits a warning when a `reg8` selector has a `case` value outside `0..255`, because that arm can never match.
 
 Lowering (informative):
 
