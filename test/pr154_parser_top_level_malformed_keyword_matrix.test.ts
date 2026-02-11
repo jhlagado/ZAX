@@ -19,18 +19,28 @@ describe('PR154 parser: top-level malformed keyword matrix', () => {
     expect(res.artifacts).toEqual([]);
 
     const messages = res.diagnostics.map((d) => d.message);
-    expect(messages).toContain('Invalid func header');
-    expect(messages).toContain('Invalid op header');
-    expect(messages).toContain('Invalid extern declaration');
-    expect(messages).toContain('Invalid import statement');
-    expect(messages).toContain('Invalid type name');
-    expect(messages).toContain('Invalid union name');
-    expect(messages).toContain('Invalid var declaration');
-    expect(messages).toContain('Invalid data declaration');
-    expect(messages).toContain('Invalid const declaration');
-    expect(messages).toContain('Invalid enum declaration');
-    expect(messages).toContain('Invalid section directive');
-    expect(messages).toContain('Invalid align directive');
+    expect(messages).toContain('Invalid func header line "func": expected <name>(...): <retType>');
+    expect(messages).toContain('Invalid op header line "op": expected <name>(...)');
+    expect(messages).toContain(
+      'Invalid extern declaration line "extern": expected [<baseName>] or func <name>(...): <retType> at <imm16>',
+    );
+    expect(messages).toContain(
+      'Invalid import statement line "import": expected "<path>.zax" or <moduleId>',
+    );
+    expect(messages).toContain(
+      'Invalid type declaration line "type": expected <name> [<typeExpr>]',
+    );
+    expect(messages).toContain('Invalid union declaration line "union": expected <name>');
+    expect(messages).toContain('Invalid var declaration line "var\tx: byte": expected var');
+    expect(messages).toContain('Invalid data declaration line "data\tx: byte = 1": expected data');
+    expect(messages).toContain('Invalid const declaration line "const": expected <name> = <imm>');
+    expect(messages).toContain(
+      'Invalid enum declaration line "enum": expected <name> <member>[, ...]',
+    );
+    expect(messages).toContain(
+      'Invalid section directive line "section\tbad": expected <code|data|var> [at <imm16>]',
+    );
+    expect(messages).toContain('Invalid align directive line "align": expected <imm16>');
     expect(messages).toContain(
       'Invalid bin declaration: expected "bin <name> in <code|data> from \\\"<path>\\\""',
     );
