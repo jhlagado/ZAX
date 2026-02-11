@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- none
+- #172: parser/AST closure continuation (remaining malformed declaration/control recovery matrix expansion and deterministic diagnostic ordering hardening).
 
 Next PR (anchored as soon as opened):
 
-1. Next PR: parser/AST closure continuation (remaining malformed declaration/control recovery matrix expansion and deterministic diagnostic ordering hardening).
+1. Next PR: lowering/codegen stabilization continuation (SP/frame invariants across nested control + op expansion + multi-return interactions).
 
 Completed (anchored, most recent first):
 
