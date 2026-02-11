@@ -1,0 +1,12 @@
+func broken(): void
+const K = 1
+
+func also_broken(): void
+  var
+    tmp: byte
+section code
+
+func ok(): void
+  asm
+    ret
+  end
