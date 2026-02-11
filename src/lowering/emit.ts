@@ -2156,6 +2156,24 @@ export function emitProgram(
                 return substituteOperand(operand);
               };
 
+              const substituteConditionWithOpLabels = (
+                condition: string,
+                span: SourceSpan,
+              ): string => {
+                const bound = bindings.get(condition.toLowerCase());
+                if (!bound) return condition;
+                const token = normalizeFixedToken(bound);
+                if (!token || inverseConditionName(token) === undefined) {
+                  diagAt(
+                    diagnostics,
+                    span,
+                    `op "${opDecl.name}" condition parameter "${condition}" must bind to a condition token (NZ/Z/NC/C/PO/PE/P/M).`,
+                  );
+                  return condition;
+                }
+                return token;
+              };
+
               const expandedItems: AsmItemNode[] = opDecl.body.items.map((bodyItem) => {
                 if (bodyItem.kind === 'AsmInstruction') {
                   return {
@@ -2184,6 +2202,16 @@ export function emitProgram(
                     kind: 'Case',
                     span: bodyItem.span,
                     value: substituteImmWithOpLabels(bodyItem.value),
+                  };
+                }
+                if (
+                  bodyItem.kind === 'If' ||
+                  bodyItem.kind === 'While' ||
+                  bodyItem.kind === 'Until'
+                ) {
+                  return {
+                    ...bodyItem,
+                    cc: substituteConditionWithOpLabels(bodyItem.cc, bodyItem.span),
                   };
                 }
                 return { ...bodyItem };

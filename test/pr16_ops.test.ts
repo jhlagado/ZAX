@@ -92,4 +92,14 @@ describe('PR16 op declarations and expansion', () => {
     expect(bin!.bytes.includes(0x00)).toBe(true);
     expect(bin!.bytes[bin!.bytes.length - 1]).toBe(0xc9);
   });
+
+  it('supports fixed-token condition parameters in op-body control flow', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr188_op_condition_param_control.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    expect(bin!.bytes[bin!.bytes.length - 1]).toBe(0xc9);
+  });
 });
