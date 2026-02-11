@@ -419,14 +419,14 @@ Per `docs/roadmap.md`, six completion gates must pass for integration-ready stat
 
 | Gate               | Current Status | Completion |
 | ------------------ | -------------- | ---------- |
-| 1. Spec gate       | Partial        | ~63%       |
-| 2. Parser/AST gate | Partial        | ~58%       |
-| 3. Codegen gate    | Partial        | ~50%       |
-| 4. ISA gate        | Partial        | ~35%       |
-| 5. CLI/output gate | Partial        | ~64%       |
-| 6. Hardening gate  | Partial        | ~35%       |
+| 1. Spec gate       | Partial        | ~74%       |
+| 2. Parser/AST gate | Partial        | ~67%       |
+| 3. Codegen gate    | Partial        | ~60%       |
+| 4. ISA gate        | Partial        | ~53%       |
+| 5. CLI/output gate | Partial        | ~67%       |
+| 6. Hardening gate  | Partial        | ~66%       |
 
-**Overall:** ~52% (risk-weighted estimate)
+**Overall:** ~57% (risk-weighted estimate)
 
 ---
 
