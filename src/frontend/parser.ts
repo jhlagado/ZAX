@@ -1170,11 +1170,21 @@ export function parseModuleFile(
 
   function looksLikeKeywordBodyDeclLine(lineText: string): boolean {
     const t = lineText.trim();
-    const colon = t.indexOf(':');
+    let depth = 0;
+    let colon = -1;
+    for (let index = 0; index < t.length; index++) {
+      const ch = t[index];
+      if (ch === '(') depth++;
+      else if (ch === ')' && depth > 0) depth--;
+      else if (ch === ':' && depth === 0) {
+        colon = index;
+        break;
+      }
+    }
     if (colon <= 0) return false;
-    const beforeColon = t.slice(0, colon);
-    if (beforeColon.includes('(') || beforeColon.includes(')')) return false;
-    return /^[A-Za-z_][A-Za-z0-9_]*\s+[A-Za-z_][A-Za-z0-9_]*\s*$/.test(beforeColon.trim());
+    const beforeColon = t.slice(0, colon).trim();
+    if (/^func\s+[A-Za-z_][A-Za-z0-9_]*\s*\([^)]*\)\s*$/i.test(beforeColon)) return false;
+    return /^[A-Za-z_][A-Za-z0-9_]*\s+[A-Za-z_][A-Za-z0-9_]*(\s*\([^)]*\))?\s*$/.test(beforeColon);
   }
 
   function quoteDiagLineText(text: string): string {
