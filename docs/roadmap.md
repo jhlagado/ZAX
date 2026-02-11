@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- none
+1. #177: lowering/codegen stabilization continuation (positive epilogue-rewrite matrix for locals + `ret cc` across multi-path control and stack-neutral op expansions).
 
 Next PR (anchored as soon as opened):
 
-1. Next PR: lowering/codegen stabilization continuation (positive epilogue-rewrite matrix for locals + `ret cc` across multi-path control and stack-neutral op expansions).
+1. Next PR: parser/AST closure pass (tighten declaration/control malformed recovery matrix and deterministic diagnostics ordering contracts).
 
 Completed (anchored, most recent first):
 

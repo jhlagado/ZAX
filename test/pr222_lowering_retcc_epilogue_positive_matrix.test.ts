@@ -47,4 +47,34 @@ describe('PR222 lowering: positive epilogue rewriting matrix for locals + ret cc
     expect(bytes).toContain(0xca);
     expect(bytes).toContain(0xc2);
   });
+
+  it('rewrites ret cc with two local slots to one shared two-pop epilogue', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr222_two_slot_locals_retcc.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    expect(bin!.bytes).toEqual(
+      Uint8Array.of(0xc5, 0xc5, 0xca, 0x09, 0x00, 0x00, 0xc3, 0x09, 0x00, 0xc1, 0xc1, 0xc9),
+    );
+  });
+
+  it('keeps a single terminal epilogue ret for stack-neutral op expansions in if/else with two local slots', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr222_two_slot_neutral_op_if_retcc.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+
+    const bytes = [...bin!.bytes];
+    expect(bytes.filter((b) => b === 0xc9)).toHaveLength(1);
+    expect(bytes.filter((b) => b === 0xc1)).toHaveLength(2);
+    expect(bytes[bytes.length - 3]).toBe(0xc1);
+    expect(bytes[bytes.length - 2]).toBe(0xc1);
+    expect(bytes[bytes.length - 1]).toBe(0xc9);
+    expect(bytes).toContain(0xca);
+    expect(bytes).toContain(0xc2);
+  });
 });
