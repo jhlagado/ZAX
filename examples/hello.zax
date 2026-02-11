@@ -26,5 +26,4 @@ export func main(): void
   ld a, b
   or c
   jp nz, loop
-
 end

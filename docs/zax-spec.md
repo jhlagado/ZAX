@@ -26,7 +26,7 @@ ZAX is not a “high-level language”. It is still assembly: you choose registe
 
 ### 0.2 A First ZAX File (Non-normative)
 
-````
+```
 const MsgLen = 5
 
 data
@@ -40,7 +40,6 @@ export func main(): void
   end
   ld hl, msg
   ld (p), hl
-
   ld b, MsgLen
   repeat
     ld hl, (p)
@@ -53,7 +52,7 @@ export func main(): void
     dec b
 	  until Z
 end
-	```
+```
 
 Key ideas this demonstrates:
 
@@ -747,17 +746,16 @@ Notes (v0.1):
 
 Syntax:
 
+```zax
+export func add(a: word, b: word): word
+  var
+    temp: word
+  end
+  ld hl, (a)
+  ld de, (b)
+  add hl, de
+end
 ```
-
-    export func add(a: word, b: word): word
-      var
-        temp: word
-      end
-      ld hl, (a)
-      ld de, (b)
-      add hl, de
-    end
-    ```
 
 Rules:
 
@@ -1266,3 +1264,4 @@ Recommended (non-normative) policy for a ZAX compiler:
   }
 }
 ```
+````
