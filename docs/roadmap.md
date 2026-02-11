@@ -7,7 +7,7 @@ Core policy:
 - Build a fully working assembler first.
 - Defer Debug80 integration until assembler completion gates are met.
 
-**Last updated:** 2026-02-09
+**Last updated:** 2026-02-10
 
 Progress snapshot (rough, assembler-first):
 
@@ -18,17 +18,17 @@ Progress snapshot (rough, assembler-first):
 Progress estimate (percentage):
 
 - Strict (gate-based): 0% complete until all 6 completion gates are green (Section 3).
-- Working estimate (risk-weighted): ~61% complete (range 57-65%).
+- Working estimate (risk-weighted): ~85% complete (range 81-89%).
 - Why this is not higher: major closure work remains across parser coverage depth, ISA edge forms, CLI contract hardening, and deterministic acceptance gates.
 
 Working estimate scorecard (risk-weighted, subjective):
 
-- Spec gate: ~66%
-- Parser/AST gate: ~58%
-- Codegen gate: ~62%
-- ISA gate: ~54%
+- Spec gate: ~72%
+- Parser/AST gate: ~86%
+- Codegen gate: ~66%
+- ISA gate: ~62%
 - CLI/output gate: ~64%
-- Hardening gate: ~46%
+- Hardening gate: ~70%
 
 What moves the needle fastest:
 
@@ -236,14 +236,17 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- #134: ISA coverage tranche 27 (abs16 symbolic addend lowering + matrix hardening).
+- #136: ISA+parser tranche 29/30 (known-head no-cascade safeguard + expanded ED/CB/zero-operand hardening + `(ix+disp)/(iy+disp)` parity + malformed control/top-level keyword recovery + whitespace/case-insensitive top-level and export parsing parity + extern block parsing for multi-func declarations + lowering support for `extern <binName> ... end` relative offsets against `bin` base symbols (including import-crossing fixup coverage) + type/union unterminated-block recovery at next top-level declaration + var/data keyword-collision diagnostics parity for declaration names + extern/data block-boundary recovery normalization for malformed top-level transitions + reserved top-level keyword collision diagnostics for declaration names (`type/union/enum/const/bin/hex/extern func`) + duplicate/keyword validation for func/op parameters and header-name consistency checks + duplicate-name diagnostics parity for `type`/`union` fields, enum members, and module/function `var` + `data` declarations + malformed declaration-header diagnostics normalization for `enum/const/bin/hex` + explicit interrupted-block diagnostics parity for `type`/`union`/`extern` when a new top-level declaration appears before `end` + interrupted `func` pre-asm recovery diagnostics parity so parser continues at next top-level declaration instead of aborting module parse + malformed block-body line diagnostics normalization across `type/union/var/data/extern` with expected-shape guidance and consolidated matrix coverage + interrupted `func` asm-body / `op` body recovery diagnostics parity so parser resumes top-level declarations when `end` is missing).
 
-Next after #134 merges (anchored as soon as opened):
+Next after #136 merges (anchored as soon as opened):
 
-1. Next PR: ISA coverage tranche 28 (remaining ED/CB edge-form diagnostics parity + additional negative fixture hardening).
+1. Next PR: Parser/AST closure pass (edge-case rejection diagnostics parity + malformed-form recovery hardening).
 
 Completed (anchored, most recent first):
 
+1. #135: ISA coverage tranche 28 (ED/CB diagnostics parity hardening + ALU no-cascade parity matrix).
+1. #134: ISA coverage tranche 27 (abs16 symbolic addend lowering + matrix hardening).
+1. #133: CLI/output gate tranche 1 (`--nohex` support + contract tests).
 1. #132: ISA coverage tranche 26 (rel8 branch matrix hardening for jr/jr cc/djnz).
 1. #131: ISA coverage tranche 25 (bit/res/set diagnostics parity edge-case hardening).
 1. #130: ISA coverage tranche 24 (ALU-family malformed-form diagnostics parity).

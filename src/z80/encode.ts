@@ -1,6 +1,11 @@
 import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
-import type { AsmInstructionNode, AsmOperandNode, EaExprNode } from '../frontend/ast.js';
+import type {
+  AsmInstructionNode,
+  AsmOperandNode,
+  EaExprNode,
+  ImmExprNode,
+} from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import { evalImmExpr } from '../semantics/env.js';
 
@@ -96,16 +101,30 @@ function memIndexed(
 ): { prefix: number; disp: number } | undefined {
   if (op.kind !== 'Mem') return undefined;
   const ea = op.expr;
-  if (ea.kind !== 'EaIndex') return undefined;
-  if (ea.base.kind !== 'EaName') return undefined;
-  const base = ea.base.name.toUpperCase();
-  if (base !== 'IX' && base !== 'IY') return undefined;
-  if (ea.index.kind !== 'IndexImm') return undefined;
+  const encodeBaseDisp = (
+    baseExpr: EaExprNode,
+    dispExpr: ImmExprNode,
+    negate = false,
+  ): { prefix: number; disp: number } | undefined => {
+    if (baseExpr.kind !== 'EaName') return undefined;
+    const base = baseExpr.name.toUpperCase();
+    if (base !== 'IX' && base !== 'IY') return undefined;
+    const rawDisp = evalImmExpr(dispExpr, env);
+    if (rawDisp === undefined) return undefined;
+    const prefix = base === 'IX' ? 0xdd : 0xfd;
+    return { prefix, disp: negate ? -rawDisp : rawDisp };
+  };
 
-  const prefix = base === 'IX' ? 0xdd : 0xfd;
-  const disp = evalImmExpr(ea.index.value, env);
-  if (disp === undefined) return undefined;
-  return { prefix, disp };
+  if (ea.kind === 'EaIndex' && ea.index.kind === 'IndexImm') {
+    return encodeBaseDisp(ea.base, ea.index.value);
+  }
+  if (ea.kind === 'EaAdd') {
+    return encodeBaseDisp(ea.base, ea.offset);
+  }
+  if (ea.kind === 'EaSub') {
+    return encodeBaseDisp(ea.base, ea.offset, true);
+  }
+  return undefined;
 }
 
 function memAbs16(op: AsmOperandNode, env: CompileEnv): number | undefined {
@@ -362,6 +381,49 @@ function arityDiagnostic(head: string, operandCount: number): string | undefined
   }
 }
 
+function isKnownInstructionHead(head: string): boolean {
+  const h = head.toLowerCase();
+  switch (h) {
+    case 'ret':
+    case 'add':
+    case 'call':
+    case 'djnz':
+    case 'rst':
+    case 'im':
+    case 'in':
+    case 'out':
+    case 'jp':
+    case 'jr':
+    case 'ld':
+    case 'inc':
+    case 'dec':
+    case 'push':
+    case 'pop':
+    case 'ex':
+    case 'sub':
+    case 'cp':
+    case 'and':
+    case 'or':
+    case 'xor':
+    case 'adc':
+    case 'sbc':
+    case 'bit':
+    case 'res':
+    case 'set':
+    case 'rl':
+    case 'rr':
+    case 'sla':
+    case 'sra':
+    case 'srl':
+    case 'sll':
+    case 'rlc':
+    case 'rrc':
+      return true;
+    default:
+      return zeroOperandOpcode(h) !== undefined;
+  }
+}
+
 /**
  * Encode a single `asm` instruction node into Z80 machine-code bytes.
  *
@@ -375,6 +437,7 @@ export function encodeInstruction(
   env: CompileEnv,
   diagnostics: Diagnostic[],
 ): Uint8Array | undefined {
+  const diagnosticsBefore = diagnostics.length;
   const head = node.head.toLowerCase();
   const ops = node.operands;
 
@@ -1386,9 +1449,18 @@ export function encodeInstruction(
     if (ops.length === 1 || ops.length === 2) return undefined;
   }
 
+  if (isKnownInstructionHead(head) && diagnostics.length > diagnosticsBefore) {
+    return undefined;
+  }
+
   const arityMessage = arityDiagnostic(head, ops.length);
   if (arityMessage !== undefined) {
     diag(diagnostics, node, arityMessage);
+    return undefined;
+  }
+
+  if (isKnownInstructionHead(head)) {
+    diag(diagnostics, node, `${head} has unsupported operand form`);
     return undefined;
   }
 

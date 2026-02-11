@@ -12,8 +12,6 @@ describe('PR3 var symbol collisions', () => {
   it('diagnoses duplicate module-scope var names', async () => {
     const entry = join(__dirname, 'fixtures', 'pr3_var_duplicates.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics.map((d) => d.message)).toContain(
-      'Duplicate symbol name "p" for var declaration.',
-    );
+    expect(res.diagnostics.map((d) => d.message)).toContain('Duplicate var declaration name "p".');
   });
 });
