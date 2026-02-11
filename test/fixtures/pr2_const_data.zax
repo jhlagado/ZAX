@@ -4,7 +4,6 @@ data
   msg: byte[5] = "HELLO"
 
 export func main(): void
-  asm
     ld a, MsgLen
 end
 

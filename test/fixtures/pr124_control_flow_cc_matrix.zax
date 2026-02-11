@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     jp $1234
     call $2345
     jp nz, $1000

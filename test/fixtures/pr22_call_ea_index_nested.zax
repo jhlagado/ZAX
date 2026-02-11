@@ -9,6 +9,5 @@ data
   table: byte[2] = [ 1, 2 ]
 
 export func main(): void
-  asm
     takeAddr arr[table[0]]
 end

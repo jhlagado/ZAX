@@ -1,7 +1,6 @@
 type Point
   x: byte
 func main(): void
-  asm
     ret
 end
 

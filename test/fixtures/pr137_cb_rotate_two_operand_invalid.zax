@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     rl a, b
     rr c, d
     sla e, h

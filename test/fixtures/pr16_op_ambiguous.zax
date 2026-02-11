@@ -7,6 +7,5 @@ op pick(x: A)
 end
 
 export func main(): void
-  asm
     pick A
 end

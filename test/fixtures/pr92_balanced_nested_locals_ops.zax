@@ -4,7 +4,6 @@ op preservebc()
 end
 
 func helper(x: byte): void
-  asm
     preservebc
 end
 

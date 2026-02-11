@@ -5,7 +5,6 @@ extern legacy
 end
 
 func main(): void
-  asm
     legacy_putc 7
     ret
 end

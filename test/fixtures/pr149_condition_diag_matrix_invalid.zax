@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     ret q
     ret nz, c
     jp q, 1

@@ -2,7 +2,6 @@
 const LibConst = 42
 
 func lib(): void
-  asm
     lib_start:
     nop
 end

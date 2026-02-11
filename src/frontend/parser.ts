@@ -2105,6 +2105,23 @@ export function parseModuleFile(
               varTerminated = true;
               break;
             }
+            if (tDeclLower === 'asm') {
+              diag(
+                diagnostics,
+                modulePath,
+                `Function-local var block must end with "end" before function body`,
+                { line: i + 1, column: 1 },
+              );
+              locals = {
+                kind: 'VarBlock',
+                span: span(file, varStart, soDecl),
+                scope: 'function',
+                decls,
+              };
+              i++; // consume asm so body parsing can continue
+              varTerminated = true;
+              break;
+            }
             const tDeclTopKeyword = topLevelStartKeyword(tDecl);
             if (tDeclTopKeyword !== undefined) {
               if (looksLikeKeywordBodyDeclLine(tDecl)) {
@@ -2197,10 +2214,6 @@ export function parseModuleFile(
           continue;
         }
 
-        if (t2Lower === 'asm') {
-          i++;
-          continue;
-        }
         if (t2Lower === 'end') {
           asmStartOffset = so2;
           break;
@@ -2237,6 +2250,16 @@ export function parseModuleFile(
         const content = withoutComment.trim();
         const contentLower = content.toLowerCase();
         if (content.length === 0) {
+          i++;
+          continue;
+        }
+        if (contentLower === 'asm' && asmControlStack.length === 0 && asmItems.length === 0) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Unexpected "asm" in function body (function bodies are implicit)`,
+            { line: i + 1, column: 1 },
+          );
           i++;
           continue;
         }
@@ -2408,6 +2431,10 @@ export function parseModuleFile(
           continue;
         }
         if (bodyItems.length === 0 && controlStack.length === 0 && contentLower === 'asm') {
+          diag(diagnostics, modulePath, `Unexpected "asm" in op body (op bodies are implicit)`, {
+            line: i + 1,
+            column: 1,
+          });
           i++;
           continue;
         }

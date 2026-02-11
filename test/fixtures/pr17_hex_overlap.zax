@@ -1,5 +1,4 @@
 export func main(): void
-  asm
 end
 
 hex bad from "pr17_overlap.hex"

@@ -1,10 +1,8 @@
 ; PR12 fixture: call to a later-defined func (forward reference)
 export func main(): void
-  asm
     helper
 end
 
 func helper(): void
-  asm
 end
 

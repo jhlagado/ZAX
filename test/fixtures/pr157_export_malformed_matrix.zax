@@ -5,6 +5,5 @@ export	align 1
 export	extern func ext(): void at 0
 
 func main(): void
-  asm
     nop
   end

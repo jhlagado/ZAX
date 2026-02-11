@@ -123,7 +123,7 @@ op load_pair(dst: reg16, src: imm16)
 end
 ```
 
-The body is an implicit `asm` stream. A leading `asm` line is accepted for compatibility but has no semantic effect. The instructions in the body follow exactly the same grammar as instructions inside a function instruction stream (with or without an explicit `asm` keyword): raw Z80 mnemonics, other op invocations, and structured control flow (`if`/`while`/`repeat`/`select`) are permitted. **Local labels are not permitted inside op bodies in v0.1.**
+The body is an implicit instruction stream. The `asm` marker keyword is not used in op bodies. The instructions in the body follow exactly the same grammar as instructions inside function instruction streams: raw Z80 mnemonics, other op invocations, and structured control flow (`if`/`while`/`repeat`/`select`) are permitted. **Local labels are not permitted inside op bodies in v0.1.**
 
 An op body may be empty (containing no instructions between the declaration line and `end`). This is occasionally useful as a no-op placeholder during development or as a deliberately empty specialization.
 

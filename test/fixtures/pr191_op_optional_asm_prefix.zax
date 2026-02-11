@@ -1,5 +1,4 @@
 op load_bc(dst: reg8, imm: imm8)
-  asm
     ld dst, imm
 end
 
