@@ -2084,6 +2084,7 @@ export function parseModuleFile(
           i++;
           const decls: VarDeclNode[] = [];
           const declNamesLower = new Set<string>();
+          let varTerminated = false;
 
           while (i < lineCount) {
             const { raw: rawDecl, startOffset: soDecl, endOffset: eoDecl } = getRawLine(i);
@@ -2092,6 +2093,17 @@ export function parseModuleFile(
             if (tDecl.length === 0) {
               i++;
               continue;
+            }
+            if (tDeclLower === 'end') {
+              locals = {
+                kind: 'VarBlock',
+                span: span(file, varStart, eoDecl),
+                scope: 'function',
+                decls,
+              };
+              i++; // consume var-terminating end
+              varTerminated = true;
+              break;
             }
             if (tDeclLower === 'asm') {
               asmStartOffset = soDecl;
@@ -2102,6 +2114,7 @@ export function parseModuleFile(
                 decls,
               };
               i++; // consume asm
+              varTerminated = true;
               break;
             }
             const tDeclTopKeyword = topLevelStartKeyword(tDecl);
@@ -2184,12 +2197,24 @@ export function parseModuleFile(
             i++;
           }
           if (interruptedBeforeBodyKeyword !== undefined) break;
-          break;
+          if (!varTerminated) {
+            diag(
+              diagnostics,
+              modulePath,
+              `Unterminated func "${name}": expected "end" to terminate var block`,
+              { line: lineNo, column: 1 },
+            );
+            break;
+          }
+          continue;
         }
 
         if (t2Lower === 'asm') {
-          asmStartOffset = so2;
           i++;
+          continue;
+        }
+        if (t2Lower === 'end') {
+          asmStartOffset = so2;
           break;
         }
         asmStartOffset = so2;

@@ -37,22 +37,22 @@ extern func bios_putc(ch: byte): void at $F003
 export func main(): void
   var
     p: addr
-  asm
-    ld hl, msg
-    ld (p), hl
+  end
+  ld hl, msg
+  ld (p), hl
 
-    ld b, MsgLen
-    repeat
-      ld hl, (p)
-      ld a, (hl)
-      inc hl
-      ld (p), hl
-      push bc
-      bios_putc A
-      pop bc
-      dec b
-	    until Z
-	end
+  ld b, MsgLen
+  repeat
+    ld hl, (p)
+    ld a, (hl)
+    inc hl
+    ld (p), hl
+    push bc
+    bios_putc A
+    pop bc
+    dec b
+	  until Z
+end
 	```
 
 Key ideas this demonstrates:
@@ -752,10 +752,10 @@ Syntax:
     export func add(a: word, b: word): word
       var
         temp: word
-      asm
-        ld hl, (a)
-        ld de, (b)
-        add hl, de
+      end
+      ld hl, (a)
+      ld de, (b)
+      add hl, de
     end
     ```
 
@@ -765,14 +765,14 @@ Rules:
 - Function bodies emit instructions into `code`.
 - Inside a function body:
   - at most one optional `var` block (locals, one per line)
-  - instruction stream may be introduced by optional `asm`
+  - instruction stream starts after the optional `var` block (or immediately if no `var` block)
   - `end` terminates the function body
 - Function instruction streams may contain Z80 mnemonics, `op` invocations, and structured control flow (Section 10).
 
 Function-body block termination (v0.1):
 
-- Inside a function body, a `var` block (if present) continues until the `asm` keyword.
-- `asm` is optional. If omitted, the first non-empty non-comment body line starts the function instruction stream.
+- Inside a function body, a `var` block (if present) is terminated by `end`.
+- For compatibility, an explicit `asm` line is accepted before the function instruction stream but has no semantic effect.
 - Function instruction streams may be empty (no instructions).
 - If control reaches the end of the function instruction stream (falls off the end), the compiler behaves as if a `ret` instruction were present at that point (i.e., it returns via the normal return/trampoline mechanism described in 8.4).
 
