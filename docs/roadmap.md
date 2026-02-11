@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- none
+- #173: lowering/codegen stabilization continuation (`ret cc` diagnostics hardening under unknown/untracked stack states, with matrix coverage).
 
 Next PR (anchored as soon as opened):
 
-1. Next PR: lowering/codegen stabilization continuation (SP/frame invariants across nested control + op expansion + multi-return interactions).
+1. Next PR: lowering/codegen stabilization continuation (SP/frame invariants across nested control + op expansion + multi-return interactions beyond `ret cc` stack-state guards).
 
 Completed (anchored, most recent first):
 
