@@ -2,6 +2,5 @@
 import "pr10_cycle_b.zax"
 
 export func main(): void
-  asm
 end
 

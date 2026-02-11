@@ -1,7 +1,7 @@
 export func main(): void
   var
     y: word
-  asm
+  end
     ld (y), $1234
   end
 

@@ -61,11 +61,9 @@ op add16(dst: HL, src: reg16)
 end
 
 op add16(dst: DE, src: reg16)
-  push hl
   ex de, hl
   add hl, src
   ex de, hl
-  pop hl
 end
 
 op add16(dst: BC, src: reg16)

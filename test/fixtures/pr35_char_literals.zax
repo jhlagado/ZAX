@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     ld a, 'A'
     ld b, '\n'
   end

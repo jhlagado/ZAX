@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     ld a, (ix[5])
     ld (ix[5]), a
     ld c, (iy[-2])

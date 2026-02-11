@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     ld a, (bc)
     ld a, (de)
     ld (bc), a

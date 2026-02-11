@@ -5,7 +5,6 @@ export	op setb(v: reg8)
 end
 
 export	func main(): void
-  asm
     setb b
     ld a, C
   end

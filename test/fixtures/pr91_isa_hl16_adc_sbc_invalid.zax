@@ -1,4 +1,3 @@
 export func main(): void
-  asm
     adc hl, af
 end

@@ -1,7 +1,7 @@
 export func main(): void
   var
     p: ptr
-  asm
+  end
     ; Store an imm16 into a ptr-typed slot (treated as addr/word for codegen).
     ld (p), $1234
 end

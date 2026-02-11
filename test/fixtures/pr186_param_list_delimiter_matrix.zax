@@ -1,10 +1,8 @@
 func badFuncTrailing(a: byte,): void
-  asm
     ret
   end
 
 func badFuncEmpty(a: byte,, b: byte): void
-  asm
     ret
   end
 
@@ -20,6 +18,5 @@ extern func badExternTrailing(a: byte,): byte at $1200
 extern func badExternEmpty(a: byte,, b: byte): byte at $1202
 
 func main(): void
-  asm
     ret
   end

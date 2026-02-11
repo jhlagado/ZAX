@@ -7,6 +7,5 @@ op pick(x: reg8)
 end
 
 export func main(): void
-  asm
     pick missingName
 end

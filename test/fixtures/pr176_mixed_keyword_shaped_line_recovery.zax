@@ -11,6 +11,6 @@ func main(): void
   var
     extern y: byte
     ok: byte
-  asm
+  end
     ret
   end

@@ -47,7 +47,7 @@ describe('cli artifacts', () => {
   it('writes default sibling artifacts from -o output path', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main(): void\n    nop\nend\n', 'utf8');
 
     const outHex = join(work, 'out.hex');
     const res = await runCli(['-o', outHex, entry]);
@@ -65,7 +65,7 @@ describe('cli artifacts', () => {
   it('uses entry stem as default primary output path when -o is omitted', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-default-out-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main(): void\n    nop\nend\n', 'utf8');
 
     const res = await runCli([entry]);
     expect(res.code).toBe(0);
@@ -82,7 +82,7 @@ describe('cli artifacts', () => {
   it('honors suppression flags', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-suppress-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main(): void\n    nop\nend\n', 'utf8');
 
     const outHex = join(work, 'out.hex');
     const res = await runCli(['--nobin', '--nod8m', '--nolist', '-o', outHex, entry]);
@@ -99,7 +99,7 @@ describe('cli artifacts', () => {
   it('suppresses hex output for --type bin with --nohex', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-nohex-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main(): void\n    nop\nend\n', 'utf8');
 
     const outBin = join(work, 'out.bin');
     const res = await runCli([
@@ -126,7 +126,7 @@ describe('cli artifacts', () => {
   it('rejects --type hex when --nohex is set', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-nohex-hex-type-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main(): void\n    nop\nend\n', 'utf8');
 
     const outHex = join(work, 'out.hex');
     const res = await runCli(['--nohex', '--type', 'hex', '-o', outHex, entry]);
@@ -139,7 +139,7 @@ describe('cli artifacts', () => {
   it('prints the primary output path for --type bin', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-bin-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main(): void\n    nop\nend\n', 'utf8');
 
     const outBin = join(work, 'out.bin');
     const res = await runCli(['--type', 'bin', '-o', outBin, entry]);
@@ -200,7 +200,7 @@ describe('cli artifacts', () => {
   it('rejects entry when it is not the last argument', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-entry-last-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main(): void\n    nop\nend\n', 'utf8');
 
     const res = await runCli([entry, '--nolist']);
     expect(res.code).toBe(2);
@@ -212,7 +212,7 @@ describe('cli artifacts', () => {
   it('returns usage error for unknown options', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-unknown-opt-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  asm\n    nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main(): void\n    nop\nend\n', 'utf8');
 
     const res = await runCli(['--badflag', entry]);
     expect(res.code).toBe(2);

@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     adc hl, bc
     adc hl, de
     adc hl, hl

@@ -2,7 +2,6 @@
 import "lib.zax"
 
 export func main(): void
-  asm
     ld a, IncConst
 end
 

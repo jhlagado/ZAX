@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     nop a
     halt b
     di c

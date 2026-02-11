@@ -6,7 +6,6 @@ op load_at_plus_one(base: ea)
 end
 
 func main(): void
-  asm
     load_at_plus_one arr[0]
     ret
 end

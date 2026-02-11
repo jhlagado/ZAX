@@ -4,7 +4,6 @@ extern
 end
 
 func main(): void
-  asm
     puts 7
     puts2 8
     ret

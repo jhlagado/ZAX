@@ -1,7 +1,7 @@
 export func main(): void
   var
     x: byte
-  asm
+  end
     ld sp, hl
     ld a, (x)
 end

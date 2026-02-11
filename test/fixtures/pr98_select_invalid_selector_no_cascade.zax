@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     select (ix+)
     end
   end

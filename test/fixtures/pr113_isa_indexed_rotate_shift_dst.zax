@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     rlc (ix[1]), b
     rrc (iy[-1]), c
     rl (ix[2]), d

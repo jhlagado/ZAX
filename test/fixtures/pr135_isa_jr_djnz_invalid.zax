@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     jr 128
     jr -129
     jr po, 1

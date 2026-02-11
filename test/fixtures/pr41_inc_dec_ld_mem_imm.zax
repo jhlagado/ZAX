@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     ld hl, $1000
     ld (hl), $2A
     inc a

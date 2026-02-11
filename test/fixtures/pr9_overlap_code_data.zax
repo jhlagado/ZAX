@@ -1,7 +1,6 @@
 section data at 0
 
 export func main(): void
-  asm
 end
 
 data

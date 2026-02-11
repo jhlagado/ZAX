@@ -1,5 +1,4 @@
 export func main(): void
-  asm
 end
 
 bin legacy in data from "pr17_blob.bin"

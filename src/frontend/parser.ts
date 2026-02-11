@@ -2058,11 +2058,12 @@ export function parseModuleFile(
       }
       i++;
 
-      // Optional function-local `var` block, then required `asm`.
+      // Optional function-local `var` block; function instruction body is parsed
+      // as an asm stream, with optional explicit `asm` keyword.
       let locals: VarBlockNode | undefined;
       let asmStartOffset: number | undefined;
-      let interruptedBeforeAsmKeyword: string | undefined;
-      let interruptedBeforeAsmLine: number | undefined;
+      let interruptedBeforeBodyKeyword: string | undefined;
+      let interruptedBeforeBodyLine: number | undefined;
       while (i < lineCount) {
         const { raw: raw2, startOffset: so2 } = getRawLine(i);
         const t2 = stripComment(raw2).trim();
@@ -2072,9 +2073,9 @@ export function parseModuleFile(
           continue;
         }
         const t2TopKeyword = topLevelStartKeyword(t2);
-        if (t2TopKeyword !== undefined && t2Lower !== 'var') {
-          interruptedBeforeAsmKeyword = t2TopKeyword;
-          interruptedBeforeAsmLine = i + 1;
+        if (t2TopKeyword !== undefined && t2Lower !== 'var' && t2Lower !== 'asm') {
+          interruptedBeforeBodyKeyword = t2TopKeyword;
+          interruptedBeforeBodyLine = i + 1;
           break;
         }
 
@@ -2083,6 +2084,7 @@ export function parseModuleFile(
           i++;
           const decls: VarDeclNode[] = [];
           const declNamesLower = new Set<string>();
+          let varTerminated = false;
 
           while (i < lineCount) {
             const { raw: rawDecl, startOffset: soDecl, endOffset: eoDecl } = getRawLine(i);
@@ -2092,15 +2094,32 @@ export function parseModuleFile(
               i++;
               continue;
             }
+            if (tDeclLower === 'end') {
+              locals = {
+                kind: 'VarBlock',
+                span: span(file, varStart, eoDecl),
+                scope: 'function',
+                decls,
+              };
+              i++; // consume var-terminating end
+              varTerminated = true;
+              break;
+            }
             if (tDeclLower === 'asm') {
-              asmStartOffset = soDecl;
+              diag(
+                diagnostics,
+                modulePath,
+                `Function-local var block must end with "end" before function body`,
+                { line: i + 1, column: 1 },
+              );
               locals = {
                 kind: 'VarBlock',
                 span: span(file, varStart, soDecl),
                 scope: 'function',
                 decls,
               };
-              i++; // consume asm
+              i++; // consume asm so body parsing can continue
+              varTerminated = true;
               break;
             }
             const tDeclTopKeyword = topLevelStartKeyword(tDecl);
@@ -2110,8 +2129,8 @@ export function parseModuleFile(
                 i++;
                 continue;
               }
-              interruptedBeforeAsmKeyword = tDeclTopKeyword;
-              interruptedBeforeAsmLine = i + 1;
+              interruptedBeforeBodyKeyword = tDeclTopKeyword;
+              interruptedBeforeBodyLine = i + 1;
               locals = {
                 kind: 'VarBlock',
                 span: span(file, varStart, soDecl),
@@ -2182,34 +2201,38 @@ export function parseModuleFile(
             decls.push({ kind: 'VarDecl', span: declSpan, name: localName, typeExpr });
             i++;
           }
-          if (interruptedBeforeAsmKeyword !== undefined) break;
-          break;
-        }
-
-        if (t2Lower !== 'asm') {
-          diag(diagnostics, modulePath, `Expected "asm" inside func (optionally after "var")`, {
-            line: i + 1,
-            column: 1,
-          });
-          i++;
+          if (interruptedBeforeBodyKeyword !== undefined) break;
+          if (!varTerminated) {
+            diag(
+              diagnostics,
+              modulePath,
+              `Unterminated func "${name}": expected "end" to terminate var block`,
+              { line: lineNo, column: 1 },
+            );
+            break;
+          }
           continue;
         }
+
+        if (t2Lower === 'end') {
+          asmStartOffset = so2;
+          break;
+        }
         asmStartOffset = so2;
-        i++;
         break;
       }
 
       if (asmStartOffset === undefined) {
-        if (interruptedBeforeAsmKeyword !== undefined && interruptedBeforeAsmLine !== undefined) {
+        if (interruptedBeforeBodyKeyword !== undefined && interruptedBeforeBodyLine !== undefined) {
           diag(
             diagnostics,
             modulePath,
-            `Unterminated func "${name}": expected "asm" before "${interruptedBeforeAsmKeyword}"`,
-            { line: interruptedBeforeAsmLine, column: 1 },
+            `Unterminated func "${name}": expected function body before "${interruptedBeforeBodyKeyword}"`,
+            { line: interruptedBeforeBodyLine, column: 1 },
           );
           continue;
         }
-        diag(diagnostics, modulePath, `Unterminated func "${name}": expected "asm"`, {
+        diag(diagnostics, modulePath, `Unterminated func "${name}": expected function body`, {
           line: lineNo,
           column: 1,
         });
@@ -2227,6 +2250,16 @@ export function parseModuleFile(
         const content = withoutComment.trim();
         const contentLower = content.toLowerCase();
         if (content.length === 0) {
+          i++;
+          continue;
+        }
+        if (contentLower === 'asm' && asmControlStack.length === 0 && asmItems.length === 0) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Unexpected "asm" in function body (function bodies are implicit)`,
+            { line: i + 1, column: 1 },
+          );
           i++;
           continue;
         }
@@ -2394,6 +2427,14 @@ export function parseModuleFile(
         const content = stripComment(rawLine).trim();
         const contentLower = content.toLowerCase();
         if (content.length === 0) {
+          i++;
+          continue;
+        }
+        if (bodyItems.length === 0 && controlStack.length === 0 && contentLower === 'asm') {
+          diag(diagnostics, modulePath, `Unexpected "asm" in op body (op bodies are implicit)`, {
+            line: i + 1,
+            column: 1,
+          });
           i++;
           continue;
         }

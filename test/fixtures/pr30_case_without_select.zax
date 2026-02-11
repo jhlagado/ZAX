@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     case 1
       nop
   end

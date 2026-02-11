@@ -6,7 +6,6 @@ end
 const SzPoint = sizeof(Point)
 
 export func main(): void
-  asm
     ld a, SzPoint
 end
 

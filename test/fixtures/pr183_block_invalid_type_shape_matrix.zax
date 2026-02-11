@@ -17,6 +17,5 @@ data
   bad: [byte] = 2
 
 func main(): void
-  asm
     ret
   end

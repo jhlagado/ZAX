@@ -1,6 +1,6 @@
 export func main(): void
   var
     x: word
-  asm
+  end
     nop
 end

@@ -9,6 +9,6 @@ data
 func main(): void
   var
     func: byte
-  asm
+  end
     ret
 end

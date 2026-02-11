@@ -22,6 +22,6 @@ func main(): void
   var
     9local: byte
     stillOk: byte
-  asm
+  end
     ret
   end

@@ -8,7 +8,6 @@ op select_nop(v: imm16)
 end
 
 func main(): void
-  asm
     select_nop 1
     ret
 end

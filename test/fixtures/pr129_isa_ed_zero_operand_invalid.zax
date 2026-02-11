@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     reti a
     retn 1
     ldi b

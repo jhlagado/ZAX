@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     jr nz, target
     nop
 target:

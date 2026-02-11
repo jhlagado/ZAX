@@ -1,5 +1,4 @@
 export func main(): void
-  asm
 end
 
 bin firmware in code from "pr17_blob.bin"

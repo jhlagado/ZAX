@@ -2,7 +2,6 @@ data
   xs: byte[] = [1, 2, 3]
 
 export func main(): void
-  asm
     nop
 end
 

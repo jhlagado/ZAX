@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     djnz far
     ; 130 nops -> far is >127 bytes away from end-of-djnz.
     nop

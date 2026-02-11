@@ -6,7 +6,6 @@ globals
   w1: word
 
 export func main(): void
-  asm
     ld ix, (w0)
     ld (w0), ix
     ld iy, (w1)

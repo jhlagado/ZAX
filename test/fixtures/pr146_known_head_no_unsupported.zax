@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     ld ixh, (bc)
     ex a, b
     jp (bc)

@@ -1,5 +1,4 @@
 export func main(): void
-  asm
   loop:
     djnz loop
 end

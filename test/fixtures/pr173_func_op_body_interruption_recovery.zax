@@ -1,5 +1,4 @@
 func broken(): void
-  asm
     nop
 const K = 1
 
@@ -8,6 +7,5 @@ op macro(a: reg8)
 enum E A
 
 func ok(): void
-  asm
     ret
   end

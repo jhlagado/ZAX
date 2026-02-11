@@ -1,4 +1,3 @@
 export func main(): void
-  asm
     jp missing_label
   end

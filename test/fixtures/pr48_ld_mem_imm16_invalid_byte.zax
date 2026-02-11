@@ -4,7 +4,6 @@ globals
   x: byte
 
 export func main(): void
-  asm
     ld (x), $1234
   end
 

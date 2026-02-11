@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     add a, b
     add a, 1
     add a, (hl)

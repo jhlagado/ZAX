@@ -3,6 +3,5 @@ op leak()
 end
 
 export func main(): void
-  asm
     leak
 end

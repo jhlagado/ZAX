@@ -3,6 +3,5 @@ op loadi(dst: reg8, val: imm8)
 end
 
 export func main(): void
-  asm
     loadi B, 7
 end

@@ -1,5 +1,4 @@
 export func main(): void
-  asm
     sll a
     sll (hl)
     sll (ix[3])

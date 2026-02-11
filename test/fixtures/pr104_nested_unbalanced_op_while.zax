@@ -5,7 +5,7 @@ end
 export func main(): void
   var
     x: byte
-  asm
+  end
     while NZ
       leak
     end
