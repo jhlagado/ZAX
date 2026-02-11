@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- none.
+- #154: Lowering invariants continuation (unknown-stack-state diagnostics at joins/back-edges/returns/fallthrough and op-expansion boundary checks + deeper regression matrix coverage).
 
 Next PR (anchored as soon as opened):
 
-1. Next PR: Lowering invariants continuation (unknown-stack-state diagnostics at joins/back-edges/returns/fallthrough and op-expansion boundary checks + deeper regression matrix coverage).
+1. Next PR: Lowering invariants continuation (multi-return and nested control-path stack-invariant matrices across op expansion boundaries).
 
 Completed (anchored, most recent first):
 
