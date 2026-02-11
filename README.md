@@ -136,6 +136,55 @@ The compiler enforces stack-depth matching at all join points. If one arm of an 
 
 ---
 
+## Functions With Real Arguments and Locals
+
+In a traditional assembler, a "function" is a label you `call` and a `ret` you hope eventually executes. Arguments are wherever you left them — in registers, on the stack, at some agreed-upon memory address. Locals are registers you promised not to step on, or RAM you allocated by hand. The calling convention exists only in comments and in the programmer's head.
+
+ZAX functions have formal typed parameters, optional local variables, and a compiler-managed stack frame:
+
+```
+func add_words(a: word, b: word): word
+  var
+    result: word
+  asm
+    ld hl, (a)
+    ld de, (b)
+    add hl, de
+    ld (result), hl
+end
+```
+
+Arguments are passed on the stack (pushed right-to-left by the caller, cleaned up after return). Each argument and each local occupies a 16-bit slot. The compiler computes SP-relative offsets for every slot, so `(a)` and `(result)` in the `asm` block are not magic — they are SP-relative memory accesses that the compiler lowers into real instruction sequences. Return values come back in `HL` (16-bit) or `L` (8-bit), following Z80 convention.
+
+Calling a function from `asm` looks like calling an instruction:
+
+```
+func main(): void
+  asm
+    add_words $0010, $0020   ; compiler pushes args, emits call, cleans stack
+    ; HL now contains the result
+end
+```
+
+The compiler emits the full calling sequence: push the arguments, `call` the function, pop the arguments. You can pass registers, immediates, effective addresses, or dereferenced memory as arguments — the compiler handles the marshalling.
+
+Crucially, the `asm` block inside a function is still real assembly. You have full access to every Z80 instruction. The function declaration gives you a frame and named slots; what you do inside is up to you. If control falls off the end of the `asm` block, the compiler inserts an implicit `ret` (including any epilogue needed to clean up locals). If you write `ret` yourself, the compiler rewrites it to jump through the epilogue so the stack is always correct.
+
+This is the middle ground ZAX occupies: you get the organizational benefit of C-style function signatures — typed parameters, scoped locals, a defined return convention — without surrendering control of the register file or the instruction stream. The function boundary is real (it affects the stack and the calling convention), but inside that boundary you are writing assembly, not a high-level language.
+
+External entry points work the same way. If your ROM has a BIOS call at a fixed address, you declare it as an `extern func` and call it with the same syntax:
+
+```
+extern func bios_putc(ch: byte): void at $F003
+
+; later, in asm:
+bios_putc A    ; pushes A (zero-extended), calls $F003, cleans up
+```
+
+The compiler generates the correct calling sequence to the absolute address. You don't hand-roll the push/call/pop dance for every BIOS entry point in your project.
+
+---
+
 ## Data Layouts That Stay Out of Your Way
 
 ZAX has records (packed structs), unions (overlays), arrays, and enums. These are **layout descriptions**, not runtime abstractions. They compute addresses — nothing else.
