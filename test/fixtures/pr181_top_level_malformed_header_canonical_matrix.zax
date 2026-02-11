@@ -1,7 +1,8 @@
 import
 type
 union
-var extra
+globals extra
+globals extra
 func
 op
 extern (

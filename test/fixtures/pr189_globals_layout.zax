@@ -1,8 +1,8 @@
 globals
-  xs: byte[]
+  g0: word
+  g1: byte[2]
 
 export func main(): void
   asm
     nop
 end
-

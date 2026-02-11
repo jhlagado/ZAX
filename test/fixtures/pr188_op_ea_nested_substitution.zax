@@ -1,0 +1,12 @@
+data
+  arr: byte[2] = [1, 2]
+
+op load_at_plus_one(base: ea)
+  ld A, (base + 1)
+end
+
+func main(): void
+  asm
+    load_at_plus_one arr[0]
+    ret
+end

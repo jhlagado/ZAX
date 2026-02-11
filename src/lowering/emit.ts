@@ -2119,6 +2119,42 @@ export function emitProgram(
               };
 
               const substituteOperandWithOpLabels = (operand: AsmOperandNode): AsmOperandNode => {
+                const substituteEaWithOpLabels = (ea: EaExprNode): EaExprNode => {
+                  if (ea.kind === 'EaName') {
+                    const bound = bindings.get(ea.name.toLowerCase());
+                    if (bound?.kind === 'Ea') return cloneEaExpr(bound.expr);
+                    if (bound?.kind === 'Reg') {
+                      return { kind: 'EaName', span: ea.span, name: bound.name };
+                    }
+                    if (bound?.kind === 'Imm' && bound.expr.kind === 'ImmName') {
+                      return { kind: 'EaName', span: ea.span, name: bound.expr.name };
+                    }
+                    const mapped = localLabelMap.get(ea.name.toLowerCase());
+                    if (mapped) return { kind: 'EaName', span: ea.span, name: mapped };
+                    return { ...ea };
+                  }
+                  if (ea.kind === 'EaField') {
+                    return { ...ea, base: substituteEaWithOpLabels(ea.base) };
+                  }
+                  if (ea.kind === 'EaIndex') {
+                    const index =
+                      ea.index.kind === 'IndexEa'
+                        ? { ...ea.index, expr: substituteEaWithOpLabels(ea.index.expr) }
+                        : ea.index.kind === 'IndexImm'
+                          ? { ...ea.index, value: substituteImmWithOpLabels(ea.index.value) }
+                          : { ...ea.index };
+                    return { ...ea, base: substituteEaWithOpLabels(ea.base), index };
+                  }
+                  if (ea.kind === 'EaAdd' || ea.kind === 'EaSub') {
+                    return {
+                      ...ea,
+                      base: substituteEaWithOpLabels(ea.base),
+                      offset: substituteImmWithOpLabels(ea.offset),
+                    };
+                  }
+                  return cloneEaExpr(ea);
+                };
+
                 if (operand.kind === 'Imm') {
                   if (operand.expr.kind === 'ImmName') {
                     const bound = bindings.get(operand.expr.name.toLowerCase());
@@ -2126,32 +2162,11 @@ export function emitProgram(
                   }
                   return { ...operand, expr: substituteImmWithOpLabels(operand.expr) };
                 }
-                if (
-                  (operand.kind === 'Ea' || operand.kind === 'Mem') &&
-                  operand.expr.kind === 'EaName'
-                ) {
-                  const bound = bindings.get(operand.expr.name.toLowerCase());
-                  if (bound?.kind === 'Ea') return cloneOperand(bound);
-                  if (bound?.kind === 'Reg') {
-                    return {
-                      ...operand,
-                      expr: { kind: 'EaName', span: operand.expr.span, name: bound.name },
-                    };
-                  }
-                  if (bound?.kind === 'Imm' && bound.expr.kind === 'ImmName') {
-                    return {
-                      ...operand,
-                      expr: { kind: 'EaName', span: operand.expr.span, name: bound.expr.name },
-                    };
-                  }
-                  const mapped = localLabelMap.get(operand.expr.name.toLowerCase());
-                  if (mapped) {
-                    return {
-                      ...operand,
-                      expr: { kind: 'EaName', span: operand.expr.span, name: mapped },
-                    };
-                  }
-                  return cloneOperand(operand);
+                if (operand.kind === 'Ea' || operand.kind === 'Mem') {
+                  return {
+                    ...operand,
+                    expr: substituteEaWithOpLabels(operand.expr),
+                  };
                 }
                 return substituteOperand(operand);
               };

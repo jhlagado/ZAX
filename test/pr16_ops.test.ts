@@ -102,4 +102,15 @@ describe('PR16 op declarations and expansion', () => {
     expect(bin).toBeDefined();
     expect(bin!.bytes[bin!.bytes.length - 1]).toBe(0xc9);
   });
+
+  it('substitutes nested ea expressions inside op bodies', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr188_op_ea_nested_substitution.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    expect(bin!.bytes.includes(0x3a)).toBe(true);
+    expect(bin!.bytes.includes(0xc9)).toBe(true);
+  });
 });
