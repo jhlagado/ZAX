@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- none.
+- #158: ISA diagnostics parity continuation (explicit malformed-form diagnostics for `add` to eliminate known-head generic fallback and pin matrix behavior).
 
 Next PR (anchored as soon as opened):
 
-1. Next PR: ISA diagnostics parity continuation (eliminate remaining generic `has unsupported operand form` known-head fallback for `add` malformed forms + matrix lock-in).
+1. Next PR: ISA diagnostics parity continuation (ED/CB/DD/FD legality matrix expansion + deterministic malformed-form diagnostics parity).
 
 Completed (anchored, most recent first):
 
