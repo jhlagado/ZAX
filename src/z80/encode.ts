@@ -564,6 +564,11 @@ export function encodeInstruction(
       diag(diagnostics, node, `call does not support indirect targets; use imm16`);
       return undefined;
     }
+    const cc = conditionName(ops[0]!);
+    if (cc && callConditionOpcode(cc) !== undefined) {
+      diag(diagnostics, node, `call cc, nn expects two operands (cc, nn)`);
+      return undefined;
+    }
     const n = immValue(ops[0]!, env);
     if (n === undefined || n < 0 || n > 0xffff) {
       diag(diagnostics, node, `call expects imm16`);
@@ -762,6 +767,11 @@ export function encodeInstruction(
       return undefined;
     }
 
+    const cc = conditionName(ops[0]!);
+    if (cc && jpConditionOpcode(cc) !== undefined) {
+      diag(diagnostics, node, `jp cc, nn expects two operands (cc, nn)`);
+      return undefined;
+    }
     const n = immValue(ops[0]!, env);
     if (n === undefined || n < 0 || n > 0xffff) {
       diag(diagnostics, node, `jp expects imm16`);
@@ -795,6 +805,11 @@ export function encodeInstruction(
   if (head === 'jr' && ops.length === 1) {
     if (ops[0]!.kind === 'Mem') {
       diag(diagnostics, node, `jr does not support indirect targets; expects disp8`);
+      return undefined;
+    }
+    const cc = conditionName(ops[0]!);
+    if (cc && jrConditionOpcode(cc) !== undefined) {
+      diag(diagnostics, node, `jr cc, disp expects two operands (cc, disp8)`);
       return undefined;
     }
     const n = immValue(ops[0]!, env);

@@ -2446,6 +2446,17 @@ export function emitProgram(
                 );
                 return;
               }
+              const single = asmItem.operands[0]!;
+              const ccSingle =
+                single.kind === 'Imm' && single.expr.kind === 'ImmName'
+                  ? single.expr.name
+                  : single.kind === 'Reg'
+                    ? single.name
+                    : undefined;
+              if (ccSingle && jrConditionOpcodeFromName(ccSingle) !== undefined) {
+                diagAt(diagnostics, asmItem.span, `jr cc, disp expects two operands (cc, disp8)`);
+                return;
+              }
               if (!emitRel8FromOperand(asmItem.operands[0]!, 0x18, 'jr')) return;
               flow.reachable = false;
               syncToFlow();
@@ -2529,6 +2540,13 @@ export function emitProgram(
           if (head === 'jp' && asmItem.operands.length === 1) {
             const target = asmItem.operands[0]!;
             if (target.kind === 'Imm') {
+              if (
+                target.expr.kind === 'ImmName' &&
+                conditionOpcodeFromName(target.expr.name) !== undefined
+              ) {
+                diagAt(diagnostics, asmItem.span, `jp cc, nn expects two operands (cc, nn)`);
+                return;
+              }
               const symbolicTarget = symbolicTargetFromExpr(target.expr);
               if (symbolicTarget) {
                 emitAbs16Fixup(0xc3, symbolicTarget.baseLower, symbolicTarget.addend, asmItem.span);
@@ -2565,6 +2583,13 @@ export function emitProgram(
           if (head === 'call' && asmItem.operands.length === 1) {
             const target = asmItem.operands[0]!;
             if (target.kind === 'Imm') {
+              if (
+                target.expr.kind === 'ImmName' &&
+                callConditionOpcodeFromName(target.expr.name) !== undefined
+              ) {
+                diagAt(diagnostics, asmItem.span, `call cc, nn expects two operands (cc, nn)`);
+                return;
+              }
               const symbolicTarget = symbolicTargetFromExpr(target.expr);
               if (symbolicTarget) {
                 emitAbs16Fixup(0xcd, symbolicTarget.baseLower, symbolicTarget.addend, asmItem.span);
