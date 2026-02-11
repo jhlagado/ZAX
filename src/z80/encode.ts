@@ -95,6 +95,18 @@ function isMemRegName(op: AsmOperandNode, reg: string): boolean {
   return op.kind === 'Mem' && op.expr.kind === 'EaName' && op.expr.name.toUpperCase() === reg;
 }
 
+function isReg16TransferName(name: string | undefined): boolean {
+  return (
+    name === 'BC' ||
+    name === 'DE' ||
+    name === 'HL' ||
+    name === 'SP' ||
+    name === 'AF' ||
+    name === 'IX' ||
+    name === 'IY'
+  );
+}
+
 function memIndexed(
   op: AsmOperandNode,
   env: CompileEnv,
@@ -1014,6 +1026,46 @@ export function encodeInstruction(
       if (src === 'IX') return Uint8Array.of(0xdd, 0xf9);
       if (src === 'IY') return Uint8Array.of(0xfd, 0xf9);
     }
+
+    if (ops[0]!.kind === 'Mem' && ops[1]!.kind === 'Mem') {
+      diag(diagnostics, node, `ld does not support memory-to-memory transfers`);
+      return undefined;
+    }
+
+    if (
+      dst !== undefined &&
+      dst !== 'A' &&
+      (isMemRegName(ops[1]!, 'BC') || isMemRegName(ops[1]!, 'DE'))
+    ) {
+      diag(diagnostics, node, `ld r8, (bc/de) supports destination A only`);
+      return undefined;
+    }
+
+    if (
+      src !== undefined &&
+      src !== 'A' &&
+      (isMemRegName(ops[0]!, 'BC') || isMemRegName(ops[0]!, 'DE'))
+    ) {
+      diag(diagnostics, node, `ld (bc/de), r8 supports source A only`);
+      return undefined;
+    }
+
+    if (dst === 'AF' || src === 'AF') {
+      diag(diagnostics, node, `ld does not support AF in this form`);
+      return undefined;
+    }
+
+    if (isReg16TransferName(dst) && isReg16TransferName(src)) {
+      if (dst === 'SP') {
+        diag(diagnostics, node, `ld SP, rr supports HL/IX/IY only`);
+        return undefined;
+      }
+      diag(diagnostics, node, `ld rr, rr supports SP <- HL/IX/IY only`);
+      return undefined;
+    }
+
+    diag(diagnostics, node, `ld expects a supported register/memory/immediate transfer form`);
+    return undefined;
   }
 
   if (head === 'inc' && ops.length === 1) {
