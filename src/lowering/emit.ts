@@ -896,6 +896,46 @@ export function emitProgram(
     if (inst.head.toLowerCase() !== 'ld' || inst.operands.length !== 2) return false;
     const dst = inst.operands[0]!;
     const src = inst.operands[1]!;
+    const isRegisterToken = (name: string): boolean => {
+      const token = name.toUpperCase();
+      return (
+        token === 'A' ||
+        token === 'B' ||
+        token === 'C' ||
+        token === 'D' ||
+        token === 'E' ||
+        token === 'H' ||
+        token === 'L' ||
+        token === 'AF' ||
+        token === 'BC' ||
+        token === 'DE' ||
+        token === 'HL' ||
+        token === 'SP' ||
+        token === 'IX' ||
+        token === 'IY' ||
+        token === 'IXH' ||
+        token === 'IXL' ||
+        token === 'IYH' ||
+        token === 'IYL'
+      );
+    };
+    const isBoundEaName = (name: string): boolean => {
+      const lower = name.toLowerCase();
+      return stackSlotOffsets.has(lower) || storageTypes.has(lower) || env.consts.has(lower);
+    };
+    const hasRegisterLikeEaBase = (ea: EaExprNode): boolean => {
+      switch (ea.kind) {
+        case 'EaName':
+          return isRegisterToken(ea.name) && !isBoundEaName(ea.name);
+        case 'EaField':
+          return hasRegisterLikeEaBase(ea.base);
+        case 'EaIndex':
+          return hasRegisterLikeEaBase(ea.base);
+        case 'EaAdd':
+        case 'EaSub':
+          return hasRegisterLikeEaBase(ea.base);
+      }
+    };
     const isEaNameHL = (ea: EaExprNode): boolean =>
       ea.kind === 'EaName' && ea.name.toUpperCase() === 'HL';
     const isEaNameBCorDE = (ea: EaExprNode): boolean =>
@@ -912,6 +952,7 @@ export function emitProgram(
 
     // LD r8, (ea)
     if (dst.kind === 'Reg' && src.kind === 'Mem') {
+      if (hasRegisterLikeEaBase(src.expr)) return false;
       if (isIxIyDispMem(src) && reg8Code.has(dst.name.toUpperCase())) return false; // let encoder handle (ix/iy+disp)
       if (isEaNameHL(src.expr)) return false; // let the encoder handle (hl)
       if (dst.name.toUpperCase() === 'A' && isEaNameBCorDE(src.expr)) return false; // ld a,(bc|de)
@@ -995,6 +1036,7 @@ export function emitProgram(
 
     // LD (ea), r8/r16
     if (dst.kind === 'Mem' && src.kind === 'Reg') {
+      if (hasRegisterLikeEaBase(dst.expr)) return false;
       if (isIxIyDispMem(dst) && reg8Code.has(src.name.toUpperCase())) return false; // let encoder handle (ix/iy+disp)
       if (isEaNameHL(dst.expr)) return false; // let the encoder handle (hl)
       if (src.name.toUpperCase() === 'A' && isEaNameBCorDE(dst.expr)) return false; // ld (bc|de),a
@@ -1081,6 +1123,7 @@ export function emitProgram(
 
     // LD (ea), imm (imm8 for byte, imm16 for word/addr)
     if (dst.kind === 'Mem' && src.kind === 'Imm') {
+      if (hasRegisterLikeEaBase(dst.expr)) return false;
       if (isIxIyDispMem(dst)) return false; // let the encoder handle (ix/iy+disp), imm8
       if (isEaNameHL(dst.expr)) return false; // let the encoder handle (hl)
       const resolved = resolveEa(dst.expr, inst.span);
