@@ -2,13 +2,13 @@
 
 **Version:** v0.1 (Draft)
 **Date:** 2026-02-11
-**Test Suite:** 317 passing tests across 153 test files
+**Test Suite:** 344 passing tests across 176 test files
 
 ---
 
 ## Executive Summary
 
-**Overall Completion: ~52% toward integration-ready**
+**Overall Completion: ~58% toward integration-ready**
 
 The ZAX assembler has a functional end-to-end pipeline. Real Z80 programs can be written today using most language features. The core language constructs are well-tested and reliable, while some advanced features remain narrow in coverage or intentionally deferred to future versions.
 
@@ -18,12 +18,12 @@ The ZAX assembler has a functional end-to-end pipeline. Real Z80 programs can be
 
 Current working gate baseline (from roadmap):
 
-- Spec gate: ~70%
-- Parser/AST gate: ~64%
+- Spec gate: ~74%
+- Parser/AST gate: ~68%
 - Codegen gate: ~60%
-- ISA gate: ~45%
+- ISA gate: ~53%
 - CLI/output gate: ~67%
-- Hardening gate: ~58%
+- Hardening gate: ~67%
 
 Execution plan (large, gate-oriented tranches):
 
@@ -419,14 +419,14 @@ Per `docs/roadmap.md`, six completion gates must pass for integration-ready stat
 
 | Gate               | Current Status | Completion |
 | ------------------ | -------------- | ---------- |
-| 1. Spec gate       | Partial        | ~63%       |
-| 2. Parser/AST gate | Partial        | ~58%       |
-| 3. Codegen gate    | Partial        | ~50%       |
-| 4. ISA gate        | Partial        | ~35%       |
-| 5. CLI/output gate | Partial        | ~64%       |
-| 6. Hardening gate  | Partial        | ~35%       |
+| 1. Spec gate       | Partial        | ~74%       |
+| 2. Parser/AST gate | Partial        | ~68%       |
+| 3. Codegen gate    | Partial        | ~60%       |
+| 4. ISA gate        | Partial        | ~53%       |
+| 5. CLI/output gate | Partial        | ~67%       |
+| 6. Hardening gate  | Partial        | ~67%       |
 
-**Overall:** ~52% (risk-weighted estimate)
+**Overall:** ~58% (risk-weighted estimate)
 
 ---
 
