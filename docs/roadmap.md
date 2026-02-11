@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- none
+- #174: lowering/codegen stabilization continuation (`ret cc` stack-state invariants across structured-control joins/back-edges, with exact diagnostic matrix contracts).
 
 Next PR (anchored as soon as opened):
 
-1. Next PR: lowering/codegen stabilization continuation (`ret cc` stack-state invariants across structured-control joins/back-edges, with exact diagnostic matrix contracts).
+1. Next PR: lowering/codegen stabilization continuation (SP/frame invariants across nested control + op expansion + multi-return interactions beyond current `ret cc` matrix coverage).
 
 Completed (anchored, most recent first):
 
