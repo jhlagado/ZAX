@@ -9,44 +9,60 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 describe('PR218 lowering: ret cc diagnostics under unknown/untracked stack states', () => {
-  it('diagnoses ret cc and fallthrough guards when stack tracking is invalidated by join mismatch and op-level SP mutation', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr218_lowering_retcc_unknown_untracked_matrix.zax');
+  it('diagnoses exact unknown-stack ret cc contract for join mismatch paths', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr218_lowering_unknown_retcc_stack_state.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
 
-    const messages = res.diagnostics.map((d) => d.message);
-    expect(messages.some((m) => m.includes('Stack depth mismatch at if join'))).toBe(true);
-    expect(
-      messages.some((m) =>
-        m.includes('ret reached with unknown stack depth; cannot verify function stack balance.'),
-      ),
-    ).toBe(true);
-    expect(
-      messages.some((m) =>
-        m.includes(
+    const actual = res.diagnostics.map((d) => ({
+      message: d.message,
+      line: d.line,
+      column: d.column,
+    }));
+    expect(actual).toEqual([
+      { message: 'Stack depth mismatch at if join (-2 vs 0).', line: 9, column: 3 },
+      {
+        message: 'ret reached with unknown stack depth; cannot verify function stack balance.',
+        line: 10,
+        column: 3,
+      },
+      {
+        message:
           'Function "unknown_retcc_from_if" has unknown stack depth at fallthrough; cannot verify stack balance.',
-        ),
-      ),
-    ).toBe(true);
+        line: 1,
+        column: 1,
+      },
+    ]);
+  });
 
-    expect(
-      messages.some((m) =>
-        m.includes('expansion performs untracked SP mutation; cannot verify net stack delta'),
-      ),
-    ).toBe(true);
-    expect(
-      messages.some((m) =>
-        m.includes(
-          'ret reached after untracked SP mutation; cannot verify function stack balance.',
-        ),
-      ),
-    ).toBe(true);
-    expect(
-      messages.some((m) =>
-        m.includes(
+  it('diagnoses exact untracked-SP ret cc contract for op-expansion mutation paths', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr218_lowering_untracked_retcc_stack_state.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.artifacts).toEqual([]);
+
+    const actual = res.diagnostics.map((d) => ({
+      message: d.message,
+      line: d.line,
+      column: d.column,
+    }));
+    expect(actual).toEqual([
+      {
+        message:
+          'op "clobber_sp" expansion performs untracked SP mutation; cannot verify net stack delta.',
+        line: 9,
+        column: 3,
+      },
+      {
+        message: 'ret reached after untracked SP mutation; cannot verify function stack balance.',
+        line: 10,
+        column: 3,
+      },
+      {
+        message:
           'Function "untracked_retcc_from_op" has untracked SP mutation at fallthrough; cannot verify stack balance.',
-        ),
-      ),
-    ).toBe(true);
+        line: 5,
+        column: 1,
+      },
+    ]);
   });
 });
