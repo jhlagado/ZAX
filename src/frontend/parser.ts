@@ -1364,6 +1364,7 @@ export function parseModuleFile(
       // end
       const typeStart = lineStartOffset;
       const fields: RecordFieldNode[] = [];
+      const fieldNamesLower = new Set<string>();
       let terminated = false;
       let typeEndOffset = file.text.length;
       i++;
@@ -1395,6 +1396,16 @@ export function parseModuleFile(
         }
 
         const fieldName = m[1]!;
+        const fieldNameLower = fieldName.toLowerCase();
+        if (fieldNamesLower.has(fieldNameLower)) {
+          diag(diagnostics, modulePath, `Duplicate record field name "${fieldName}".`, {
+            line: i + 1,
+            column: 1,
+          });
+          i++;
+          continue;
+        }
+        fieldNamesLower.add(fieldNameLower);
         const typeText = m[2]!.trim();
         const fieldSpan = span(file, so, eo);
         const typeExpr = parseTypeExprFromText(typeText, fieldSpan, {
@@ -1470,6 +1481,7 @@ export function parseModuleFile(
 
       const unionStart = lineStartOffset;
       const fields: RecordFieldNode[] = [];
+      const fieldNamesLower = new Set<string>();
       let terminated = false;
       let unionEndOffset = file.text.length;
       i++;
@@ -1501,6 +1513,16 @@ export function parseModuleFile(
         }
 
         const fieldName = m[1]!;
+        const fieldNameLower = fieldName.toLowerCase();
+        if (fieldNamesLower.has(fieldNameLower)) {
+          diag(diagnostics, modulePath, `Duplicate union field name "${fieldName}".`, {
+            line: i + 1,
+            column: 1,
+          });
+          i++;
+          continue;
+        }
+        fieldNamesLower.add(fieldNameLower);
         const typeText = m[2]!.trim();
         const fieldSpan = span(file, so, eo);
         const typeExpr = parseTypeExprFromText(typeText, fieldSpan, {
@@ -1554,6 +1576,7 @@ export function parseModuleFile(
       const blockStart = lineStartOffset;
       i++;
       const decls: VarDeclNode[] = [];
+      const declNamesLower = new Set<string>();
 
       while (i < lineCount) {
         const { raw: rawDecl, startOffset: so, endOffset: eo } = getRawLine(i);
@@ -1593,6 +1616,16 @@ export function parseModuleFile(
           i++;
           continue;
         }
+        const nameLower = name.toLowerCase();
+        if (declNamesLower.has(nameLower)) {
+          diag(diagnostics, modulePath, `Duplicate var declaration name "${name}".`, {
+            line: i + 1,
+            column: 1,
+          });
+          i++;
+          continue;
+        }
+        declNamesLower.add(nameLower);
         const typeText = m[2]!.trim();
         const declSpan = span(file, so, eo);
         const typeExpr = parseTypeExprFromText(typeText, declSpan, {
@@ -1714,6 +1747,7 @@ export function parseModuleFile(
           const varStart = so2;
           i++;
           const decls: VarDeclNode[] = [];
+          const declNamesLower = new Set<string>();
 
           while (i < lineCount) {
             const { raw: rawDecl, startOffset: soDecl, endOffset: eoDecl } = getRawLine(i);
@@ -1753,6 +1787,16 @@ export function parseModuleFile(
               i++;
               continue;
             }
+            const localNameLower = localName.toLowerCase();
+            if (declNamesLower.has(localNameLower)) {
+              diag(diagnostics, modulePath, `Duplicate var declaration name "${localName}".`, {
+                line: i + 1,
+                column: 1,
+              });
+              i++;
+              continue;
+            }
+            declNamesLower.add(localNameLower);
             const typeText = m[2]!.trim();
             const declSpan = span(file, soDecl, eoDecl);
             const typeExpr = parseTypeExprFromText(typeText, declSpan, {
@@ -2188,11 +2232,30 @@ export function parseModuleFile(
       }
 
       const members: string[] = [];
+      const membersLower = new Set<string>();
       for (const m of rawParts) {
         if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(m)) {
           diag(diagnostics, modulePath, `Invalid enum member name`, { line: lineNo, column: 1 });
           continue;
         }
+        if (isReservedTopLevelName(m)) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Invalid enum member name "${m}": collides with a top-level keyword.`,
+            { line: lineNo, column: 1 },
+          );
+          continue;
+        }
+        const memberLower = m.toLowerCase();
+        if (membersLower.has(memberLower)) {
+          diag(diagnostics, modulePath, `Duplicate enum member name "${m}".`, {
+            line: lineNo,
+            column: 1,
+          });
+          continue;
+        }
+        membersLower.add(memberLower);
         members.push(m);
       }
 
@@ -2390,6 +2453,7 @@ export function parseModuleFile(
       const blockStart = lineStartOffset;
       i++;
       const decls: DataDeclNode[] = [];
+      const declNamesLower = new Set<string>();
 
       while (i < lineCount) {
         const { raw: rawDecl, startOffset: so, endOffset: eo } = getRawLine(i);
@@ -2431,6 +2495,16 @@ export function parseModuleFile(
           i++;
           continue;
         }
+        const nameLower = name.toLowerCase();
+        if (declNamesLower.has(nameLower)) {
+          diag(diagnostics, modulePath, `Duplicate data declaration name "${name}".`, {
+            line: i + 1,
+            column: 1,
+          });
+          i++;
+          continue;
+        }
+        declNamesLower.add(nameLower);
         const typeText = m[2]!.trim();
         const initText = m[3]!.trim();
 
