@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- none.
+- #162: ISA diagnostics parity continuation (ED `in/out` indexed-byte-register legality diagnostics parity + matrix hardening).
 
 Next PR (anchored as soon as opened):
 
-1. Next PR: ISA diagnostics parity continuation (ED `in/out` indexed-byte-register legality diagnostics parity + matrix hardening).
+1. Next PR: ISA diagnostics parity continuation (ED/CB/DD/FD legality matrix expansion + deterministic malformed-form diagnostics parity).
 
 Completed (anchored, most recent first):
 
