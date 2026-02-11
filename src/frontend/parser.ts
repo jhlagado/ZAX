@@ -1219,6 +1219,12 @@ export function parseModuleFile(
     });
   }
 
+  function formatIdentifierToken(rawText: string): string {
+    const trimmed = rawText.trim();
+    if (trimmed.length === 0) return '<empty>';
+    return `"${trimmed.replace(/"/g, '\\"')}"`;
+  }
+
   const malformedTopLevelHeaderExpectations: ReadonlyArray<{
     keyword: string;
     kind: string;
@@ -1264,7 +1270,12 @@ export function parseModuleFile(
 
     const name = header.slice(0, openParen).trim();
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-      diag(diagnostics, modulePath, `Invalid extern func name`, { line: lineNo, column: 1 });
+      diag(
+        diagnostics,
+        modulePath,
+        `Invalid extern func name ${formatIdentifierToken(name)}: expected <identifier>.`,
+        { line: lineNo, column: 1 },
+      );
       return undefined;
     }
     if (isReservedTopLevelName(name)) {
@@ -1825,7 +1836,12 @@ export function parseModuleFile(
 
       const name = header.slice(0, openParen).trim();
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        diag(diagnostics, modulePath, `Invalid func name`, { line: lineNo, column: 1 });
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid func name ${formatIdentifierToken(name)}: expected <identifier>.`,
+          { line: lineNo, column: 1 },
+        );
         i++;
         continue;
       }
@@ -2163,7 +2179,12 @@ export function parseModuleFile(
 
       const name = header.slice(0, openParen).trim();
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        diag(diagnostics, modulePath, `Invalid op name`, { line: lineNo, column: 1 });
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid op name ${formatIdentifierToken(name)}: expected <identifier>.`,
+          { line: lineNo, column: 1 },
+        );
         i++;
         continue;
       }
@@ -2619,7 +2640,12 @@ export function parseModuleFile(
       const name = decl.slice(0, eq).trim();
       const rhs = decl.slice(eq + 1).trim();
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        diag(diagnostics, modulePath, `Invalid const name`, { line: lineNo, column: 1 });
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid const name ${formatIdentifierToken(name)}: expected <identifier>.`,
+          { line: lineNo, column: 1 },
+        );
         i++;
         continue;
       }
@@ -2678,7 +2704,12 @@ export function parseModuleFile(
       const sectionText = m[2]!.toLowerCase();
       const pathText = m[3]!.trim();
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        diag(diagnostics, modulePath, `Invalid bin name`, { line: lineNo, column: 1 });
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid bin name ${formatIdentifierToken(name)}: expected <identifier>.`,
+          { line: lineNo, column: 1 },
+        );
         i++;
         continue;
       }
@@ -2741,7 +2772,12 @@ export function parseModuleFile(
       const name = m[1]!;
       const pathText = m[2]!.trim();
       if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        diag(diagnostics, modulePath, `Invalid hex name`, { line: lineNo, column: 1 });
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid hex name ${formatIdentifierToken(name)}: expected <identifier>.`,
+          { line: lineNo, column: 1 },
+        );
         i++;
         continue;
       }
