@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- none.
+- #166: ISA diagnostics parity continuation (conditional `jp`/`call` condition-vs-imm diagnostics parity + matrix hardening).
 
 Next PR (anchored as soon as opened):
 
-1. Next PR: ISA diagnostics parity continuation (conditional `jp`/`call` condition-vs-imm diagnostics parity + matrix hardening).
+1. Next PR: ISA diagnostics parity continuation (remaining conditional control-flow malformed-form diagnostics and legality matrix expansion).
 
 Completed (anchored, most recent first):
 
