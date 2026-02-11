@@ -236,11 +236,11 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-- none
+1. #179: lowering/frame/op safety pass (expand SP/control/cleanup invariant coverage across deeper caller/callee interaction paths).
 
 Next PR (anchored as soon as opened):
 
-1. Next PR: lowering/frame/op safety pass (expand SP/control/cleanup invariant coverage across deeper interaction paths, including caller/callee boundary matrix coverage).
+1. Next PR: ISA coverage/parity pass (close remaining malformed-form diagnostics parity gaps and missing DD/FD/ED/CB legality matrix rows).
 
 Completed (anchored, most recent first):
 
