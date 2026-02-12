@@ -571,6 +571,10 @@ function canonicalRegisterToken(token: string): string {
   return token.toUpperCase();
 }
 
+function canonicalConditionToken(token: string): string {
+  return token.toLowerCase();
+}
+
 function parseAsmInstruction(
   filePath: string,
   text: string,
@@ -812,7 +816,7 @@ function parseAsmStatement(
 
   const ifMatch = /^if\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
   if (ifMatch) {
-    const cc = ifMatch[1]!;
+    const cc = canonicalConditionToken(ifMatch[1]!);
     controlStack.push({ kind: 'If', elseSeen: false, openSpan: stmtSpan });
     return { kind: 'If', span: stmtSpan, cc };
   }
@@ -835,7 +839,7 @@ function parseAsmStatement(
 
   const whileMatch = /^while\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
   if (whileMatch) {
-    const cc = whileMatch[1]!;
+    const cc = canonicalConditionToken(whileMatch[1]!);
     controlStack.push({ kind: 'While', openSpan: stmtSpan });
     return { kind: 'While', span: stmtSpan, cc };
   }
@@ -874,7 +878,7 @@ function parseAsmStatement(
   }
   const untilMatch = /^until\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
   if (untilMatch) {
-    const cc = untilMatch[1]!;
+    const cc = canonicalConditionToken(untilMatch[1]!);
     const top = controlStack[controlStack.length - 1];
     if (top?.kind !== 'Repeat') {
       diag(diagnostics, filePath, `"until" without matching "repeat"`, {
