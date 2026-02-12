@@ -15,7 +15,7 @@ async function expectNoArtifacts(base: string): Promise<void> {
 describe('cli failure contract matrix', () => {
   beforeAll(async () => {
     await ensureCliBuilt();
-  }, 90_000);
+  }, 180_000);
 
   it('returns code 1 for missing entry file and writes no artifacts', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-missing-entry-'));
