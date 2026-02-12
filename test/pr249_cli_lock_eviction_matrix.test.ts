@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { __cliBuildLockInternals } from './helpers/cli.js';
 
 describe('PR249 CLI build-lock eviction matrix', () => {
-  const { parseLockMeta, shouldEvictLock } = __cliBuildLockInternals;
+  const { computeWaitDeadline, hasLockAcquireTimedOut, parseLockMeta, shouldEvictLock } =
+    __cliBuildLockInternals;
   const nowMs = 1_000_000;
   const staleMs = 300_000;
 
@@ -87,5 +88,16 @@ describe('PR249 CLI build-lock eviction matrix', () => {
         isOwnerAlive: () => true,
       }),
     ).toBe(false);
+  });
+
+  it('caps each wait window to the overall acquire deadline', () => {
+    expect(computeWaitDeadline(10_000, 60_000, 90_000)).toBe(60_000);
+    expect(computeWaitDeadline(10_000, 80_000, 30_000)).toBe(40_000);
+  });
+
+  it('times out lock acquire only at or after the deadline', () => {
+    expect(hasLockAcquireTimedOut(59_999, 60_000)).toBe(false);
+    expect(hasLockAcquireTimedOut(60_000, 60_000)).toBe(true);
+    expect(hasLockAcquireTimedOut(60_001, 60_000)).toBe(true);
   });
 });
