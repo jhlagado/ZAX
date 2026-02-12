@@ -18,17 +18,17 @@ Progress snapshot (rough, assembler-first):
 Progress estimate (percentage):
 
 - Strict (gate-based): 0% complete until all 6 completion gates are green (Section 3).
-- Working estimate (risk-weighted): ~88% complete (range 83-91%).
+- Working estimate (risk-weighted): ~89% complete (range 84-92%).
 - Why this is not higher: closure work remains substantial across parser/AST depth, deeper lowering invariants, ISA breadth, CLI contract hardening, and acceptance gates.
 
 Working estimate scorecard (risk-weighted, subjective):
 
 - Spec gate: ~74%
-- Parser/AST gate: ~68%
+- Parser/AST gate: ~69%
 - Codegen gate: ~66%
 - ISA gate: ~53%
 - CLI/output gate: ~74%
-- Hardening gate: ~78%
+- Hardening gate: ~79%
 
 What moves the needle fastest:
 
@@ -236,7 +236,7 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-1. #196: hardening/acceptance pass (D8M contract hardening: deterministic symbol ordering + per-file segment ownership mapping and fallback behavior).
+1. #197: hardening/acceptance pass (import-resolution diagnostics now carry import-site line/column spans for unresolved and unreadable import candidates).
 
 Next PR (anchored as soon as opened):
 
@@ -244,6 +244,7 @@ Next PR (anchored as soon as opened):
 
 Completed (anchored, most recent first):
 
+1. #196: hardening/acceptance pass (D8M contract hardening: deterministic symbol ordering + per-file segment ownership mapping and fallback behavior).
 1. #195: ISA coverage tranche (explicit register-target diagnostics parity for malformed `call`/`jp`/`jr`/`djnz` flows, plus matrix coverage).
 1. #194: lowering/frame/op safety pass (call-like boundary diagnostics for positive tracked stack deltas with stack slots, plus regression matrix coverage).
 1. #193: parser/AST closure pass (malformed declaration-header diagnostic ordering + line/column span matrix expansion, plus stale subset-note cleanup).
