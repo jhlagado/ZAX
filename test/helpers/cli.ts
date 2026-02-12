@@ -13,7 +13,7 @@ const buildTmpDir = resolve(repoRoot, '.tmp');
 const buildLockPath = resolve(buildTmpDir, 'cli-build.lock');
 const lockWaitSliceMs = 250;
 const lockWaitMaxMs = 90_000;
-const lockStaleMs = 5 * 60_000;
+const lockStaleMs = 60_000;
 
 let buildPromise: Promise<void> | undefined;
 
@@ -47,7 +47,10 @@ function parseLockTimestamp(raw: string): number | undefined {
 async function clearStaleLockIfNeeded(): Promise<void> {
   const lockText = await readFile(buildLockPath, 'utf8').catch(() => '');
   const createdAt = parseLockTimestamp(lockText);
-  if (createdAt === undefined) return;
+  if (createdAt === undefined) {
+    await rm(buildLockPath, { force: true });
+    return;
+  }
   if (Date.now() - createdAt < lockStaleMs) return;
   await rm(buildLockPath, { force: true });
 }
@@ -72,14 +75,14 @@ async function buildCliWithLock(): Promise<void> {
     } catch (err) {
       const e = err as NodeJS.ErrnoException;
       if (e.code && e.code !== 'EEXIST') throw err;
-      let waitedMs = 0;
-      while (waitedMs < lockWaitMaxMs) {
+      const deadline = Date.now() + lockWaitMaxMs;
+      while (Date.now() < deadline) {
         if (!(await pathExists(buildLockPath))) break;
         await clearStaleLockIfNeeded();
         if (!(await pathExists(buildLockPath))) break;
         await sleep(lockWaitSliceMs);
-        waitedMs += lockWaitSliceMs;
       }
+      await clearStaleLockIfNeeded();
     }
   }
 }
