@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -78,6 +78,47 @@ describe('cli failure contract matrix', () => {
     expect(res.stderr).toContain('[ZAX400]');
     expect(res.stderr).toContain('Import cycle detected');
     expect(res.stderr).toContain(`${b}:1:1`);
+    expect(res.stderr).not.toContain('zax [options] <entry.zax>');
+    await expectNoArtifacts(base);
+
+    await rm(work, { recursive: true, force: true });
+  });
+
+  it('returns code 1 for module-id collisions and reports colliding module span', async () => {
+    const work = await mkdtemp(join(tmpdir(), 'zax-cli-module-id-collision-'));
+    const entry = join(work, 'main.zax');
+    const aDir = join(work, 'a');
+    const bDir = join(work, 'b');
+    const aModule = join(aDir, 'lib.zax');
+    const bModule = join(bDir, 'lib.zax');
+    const outHex = join(work, 'out.hex');
+    const base = join(work, 'out');
+
+    await writeFile(
+      entry,
+      [
+        'import "a/lib.zax"',
+        'import "b/lib.zax"',
+        '',
+        'func main(): void',
+        '  ret',
+        'end',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    await mkdir(aDir, { recursive: true });
+    await mkdir(bDir, { recursive: true });
+    await writeFile(aModule, 'func a_lib(): void\n  ret\nend\n', 'utf8');
+    await writeFile(bModule, 'func b_lib(): void\n  ret\nend\n', 'utf8');
+
+    const res = await runCli(['-o', outHex, entry]);
+
+    expect(res.code).toBe(1);
+    expect(res.stdout).toBe('');
+    expect(res.stderr).toContain('[ZAX400]');
+    expect(res.stderr).toContain('Module ID collision');
+    expect(res.stderr).toContain(`${bModule}:1:1`);
     expect(res.stderr).not.toContain('zax [options] <entry.zax>');
     await expectNoArtifacts(base);
 
