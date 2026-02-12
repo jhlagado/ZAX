@@ -36,7 +36,14 @@ function parseLockMeta(raw: string): LockMeta | undefined {
   const trimmed = raw.trim();
   if (!trimmed) return undefined;
   try {
-    const parsed = JSON.parse(trimmed) as { pid?: unknown; createdAt?: unknown };
+    const parsedUnknown = JSON.parse(trimmed) as unknown;
+    if (typeof parsedUnknown === 'number' && Number.isFinite(parsedUnknown)) {
+      return { createdAt: parsedUnknown };
+    }
+    if (parsedUnknown === null || typeof parsedUnknown !== 'object') {
+      return undefined;
+    }
+    const parsed = parsedUnknown as { pid?: unknown; createdAt?: unknown };
     const pid =
       typeof parsed.pid === 'number' && Number.isFinite(parsed.pid) ? parsed.pid : undefined;
     const createdAt =
@@ -67,20 +74,31 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
+function shouldEvictLock(
+  lockMeta: LockMeta | undefined,
+  options: { nowMs: number; staleMs: number; isOwnerAlive: (pid: number) => boolean },
+): boolean {
+  if (lockMeta === undefined) return false;
+
+  const ownerAlive = lockMeta.pid !== undefined ? options.isOwnerAlive(lockMeta.pid) : undefined;
+  if (ownerAlive === false) return true;
+
+  if (lockMeta.createdAt === undefined) return false;
+  if (options.nowMs - lockMeta.createdAt < options.staleMs) return false;
+  if (ownerAlive === true) return false;
+
+  return true;
+}
+
 async function clearStaleLockIfNeeded(): Promise<void> {
   const lockText = await readFile(buildLockPath, 'utf8').catch(() => '');
   const lockMeta = parseLockMeta(lockText);
-  if (lockMeta === undefined) return;
-
-  const ownerAlive = lockMeta.pid !== undefined ? isProcessAlive(lockMeta.pid) : undefined;
-  if (ownerAlive === false) {
-    await rm(buildLockPath, { force: true });
-    return;
-  }
-
-  if (lockMeta.createdAt === undefined) return;
-  if (Date.now() - lockMeta.createdAt < lockStaleMs) return;
-  if (ownerAlive === true) return;
+  const evict = shouldEvictLock(lockMeta, {
+    nowMs: Date.now(),
+    staleMs: lockStaleMs,
+    isOwnerAlive: isProcessAlive,
+  });
+  if (!evict) return;
 
   await rm(buildLockPath, { force: true });
 }
@@ -181,3 +199,8 @@ export function normalizePathForCompare(path: string): string {
     process.platform === 'darwin' ? normalized.replace(/^\/private\//, '/') : normalized;
   return process.platform === 'win32' ? normalizedDarwin.toLowerCase() : normalizedDarwin;
 }
+
+export const __cliBuildLockInternals = {
+  parseLockMeta,
+  shouldEvictLock,
+};
