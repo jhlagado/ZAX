@@ -2,8 +2,8 @@
 
 **Version:** v0.1 (Draft)
 **Date:** 2026-02-12
-**Test Suite:** 406 tests across 200 test files
-**Anchored PRs:** 104 merged
+**Test Suite:** 407 tests across 200 test files
+**Anchored PRs:** 105 merged
 **Test Fixtures:** 334 .zax files
 
 ---
@@ -12,7 +12,7 @@
 
 | Metric                   | Value                                     |
 | ------------------------ | ----------------------------------------- |
-| **Working Estimate**     | ~91% complete (range 86-94%)              |
+| **Working Estimate**     | ~92% complete (range 87-95%)              |
 | **Strict Gate-Based**    | 0/6 gates fully green                     |
 | **Production Readiness** | **Conditional Yes** — usable with caveats |
 
@@ -29,7 +29,7 @@ The ZAX assembler has a functional end-to-end pipeline. Real Z80 programs can be
 | 3. Codegen    | ~66%    | 100%   | SP tracking solid, edge cases hardening                                 |
 | 4. ISA        | ~53%    | 100%   | Core instructions complete, rare forms expanding                        |
 | 5. CLI/output | ~74%    | 100%   | D8M contract hardening expanded with per-file ownership checks          |
-| 6. Hardening  | ~82%    | 100%   | Examples compile, negative coverage strong and broadening               |
+| 6. Hardening  | ~83%    | 100%   | Examples compile, negative coverage strong and broadening               |
 
 **Note:** Strict gate-based completion remains 0% until all six gates are fully green. The working estimate reflects risk-weighted progress toward that goal.
 
