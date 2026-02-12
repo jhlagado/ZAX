@@ -196,11 +196,13 @@ async function loadProgram(
     const k = id.toLowerCase();
     const prev = idSeen.get(k);
     if (prev && prev !== p) {
+      const moduleSpan = modules.get(p)?.span.start;
       diagnostics.push({
         id: DiagnosticIds.SemanticsError,
         severity: 'error',
         message: `Module ID collision: "${id}" maps to both "${prev}" and "${p}".`,
-        file: entryPath,
+        file: p,
+        ...(moduleSpan !== undefined ? { line: moduleSpan.line, column: moduleSpan.column } : {}),
       });
     } else {
       idSeen.set(k, p);

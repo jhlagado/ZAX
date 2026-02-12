@@ -2,7 +2,7 @@
 
 **Version:** v0.1 (Draft)
 **Date:** 2026-02-12
-**Test Suite:** 404 tests across 199 test files
+**Test Suite:** 405 tests across 200 test files
 **Anchored PRs:** 93 merged
 **Test Fixtures:** 324 .zax files
 
@@ -12,7 +12,7 @@
 
 | Metric                   | Value                                     |
 | ------------------------ | ----------------------------------------- |
-| **Working Estimate**     | ~89% complete (range 84-92%)              |
+| **Working Estimate**     | ~90% complete (range 85-93%)              |
 | **Strict Gate-Based**    | 0/6 gates fully green                     |
 | **Production Readiness** | **Conditional Yes** — usable with caveats |
 
@@ -22,14 +22,14 @@ The ZAX assembler has a functional end-to-end pipeline. Real Z80 programs can be
 
 ## Gate Status
 
-| Gate          | Current | Target | Notes                                                             |
-| ------------- | ------- | ------ | ----------------------------------------------------------------- |
-| 1. Spec       | ~74%    | 100%   | Most v0.1 features implemented or explicitly rejected             |
-| 2. Parser/AST | ~70%    | 100%   | Grammar stable, recovery paths expanding with import span pinning |
-| 3. Codegen    | ~66%    | 100%   | SP tracking solid, edge cases hardening                           |
-| 4. ISA        | ~53%    | 100%   | Core instructions complete, rare forms expanding                  |
-| 5. CLI/output | ~74%    | 100%   | D8M contract hardening expanded with per-file ownership checks    |
-| 6. Hardening  | ~80%    | 100%   | Examples compile, negative coverage strong and broadening         |
+| Gate          | Current | Target | Notes                                                                   |
+| ------------- | ------- | ------ | ----------------------------------------------------------------------- |
+| 1. Spec       | ~74%    | 100%   | Most v0.1 features implemented or explicitly rejected                   |
+| 2. Parser/AST | ~71%    | 100%   | Grammar stable, recovery paths expanding with import/cycle span pinning |
+| 3. Codegen    | ~66%    | 100%   | SP tracking solid, edge cases hardening                                 |
+| 4. ISA        | ~53%    | 100%   | Core instructions complete, rare forms expanding                        |
+| 5. CLI/output | ~74%    | 100%   | D8M contract hardening expanded with per-file ownership checks          |
+| 6. Hardening  | ~81%    | 100%   | Examples compile, negative coverage strong and broadening               |
 
 **Note:** Strict gate-based completion remains 0% until all six gates are fully green. The working estimate reflects risk-weighted progress toward that goal.
 
