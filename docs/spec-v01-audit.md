@@ -26,10 +26,10 @@ Legend:
 
 ## 2) Imports + Names
 
-| Spec area                               | Status               | Evidence                                                       |
-| --------------------------------------- | -------------------- | -------------------------------------------------------------- |
-| `3.1` import syntax/resolution          | Implemented          | `test/pr10_imports.test.ts`, `test/pr11_include_dirs.test.ts`  |
-| `3.2` collisions/visibility diagnostics | Implemented (subset) | `test/pr3_var_duplicates.test.ts`, `test/pr4_negative.test.ts` |
+| Spec area                               | Status               | Evidence                                                                                                           |
+| --------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `3.1` import syntax/resolution          | Implemented          | `test/pr10_imports.test.ts`, `test/pr11_include_dirs.test.ts`                                                      |
+| `3.2` collisions/visibility diagnostics | Implemented (subset) | `test/pr3_var_duplicates.test.ts`, `test/pr4_negative.test.ts`, `test/pr243_module_id_collision_diag_span.test.ts` |
 
 ## 3) Types + Data
 
@@ -211,6 +211,7 @@ The following tests assert line/column-bearing diagnostics to ensure span stabil
 | `test/pr227_parser_toplevel_malformed_spans.test.ts`           | Top-level malformed-header/export diagnostics include deterministic ordering and line/column spans across keyword families                                                                     |
 | `test/pr238_parser_malformed_decl_header_spans_matrix.test.ts` | Malformed declaration-header diagnostics preserve deterministic ordering and line/column spans across `func`/`op`/`extern`/`enum`/`type`/`union`/`globals`/`data`/`bin`/`hex` keyword families |
 | `test/pr242_import_resolution_diag_spans.test.ts`              | Import-resolution diagnostics include deterministic line/column spans for both `ImportNotFound` and hard import-candidate read failures                                                        |
+| `test/pr243_module_id_collision_diag_span.test.ts`             | Module-ID collision diagnostics are pinned to the colliding module file with deterministic line/column span                                                                                    |
 
 ## 12) Remaining Open Items
 

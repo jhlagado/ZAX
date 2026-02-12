@@ -11,24 +11,24 @@ Core policy:
 
 Progress snapshot (rough, assembler-first):
 
-- Completed PR anchors listed below: 102
+- Completed PR anchors listed below: 103
 - Assembler completion gates fully green: 0/6
 - Integration readiness with Debug80: not yet (gates not satisfied)
 
 Progress estimate (percentage):
 
 - Strict (gate-based): 0% complete until all 6 completion gates are green (Section 3).
-- Working estimate (risk-weighted): ~89% complete (range 84-92%).
+- Working estimate (risk-weighted): ~90% complete (range 85-93%).
 - Why this is not higher: closure work remains substantial across parser/AST depth, deeper lowering invariants, ISA breadth, CLI contract hardening, and acceptance gates.
 
 Working estimate scorecard (risk-weighted, subjective):
 
 - Spec gate: ~74%
-- Parser/AST gate: ~70%
+- Parser/AST gate: ~71%
 - Codegen gate: ~66%
 - ISA gate: ~53%
 - CLI/output gate: ~74%
-- Hardening gate: ~80%
+- Hardening gate: ~81%
 
 What moves the needle fastest:
 
@@ -236,7 +236,7 @@ Use only real GitHub PR numbers:
 
 Open / in review (anchored):
 
-1. #198: hardening/acceptance pass (import-cycle diagnostics now report stable import-site file/line/column at the edge that closes the cycle).
+1. #199: hardening/acceptance pass (module-ID collision diagnostics now pin to the colliding module file/span with cross-platform same-basename fixture coverage).
 
 Next PR (anchored as soon as opened):
 
@@ -244,6 +244,7 @@ Next PR (anchored as soon as opened):
 
 Completed (anchored, most recent first):
 
+1. #198: hardening/acceptance pass (import-cycle diagnostics now report stable import-site file/line/column at the edge that closes the cycle).
 1. #197: hardening/acceptance pass (import-resolution diagnostics now carry import-site line/column spans for unresolved and unreadable import candidates).
 1. #196: hardening/acceptance pass (D8M contract hardening: deterministic symbol ordering + per-file segment ownership mapping and fallback behavior).
 1. #195: ISA coverage tranche (explicit register-target diagnostics parity for malformed `call`/`jp`/`jr`/`djnz` flows, plus matrix coverage).

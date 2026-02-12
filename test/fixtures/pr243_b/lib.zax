@@ -1,0 +1,3 @@
+func lib_b(): void
+  ret
+end
