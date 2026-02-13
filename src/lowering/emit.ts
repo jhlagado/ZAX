@@ -2235,11 +2235,7 @@ export function emitProgram(
 
             for (const reg of preservedRegs) {
               if (
-                !emitInstr(
-                  'push',
-                  [{ kind: 'Reg', span: asmItem.span, name: reg }],
-                  asmItem.span,
-                )
+                !emitInstr('push', [{ kind: 'Reg', span: asmItem.span, name: reg }], asmItem.span)
               ) {
                 return;
               }

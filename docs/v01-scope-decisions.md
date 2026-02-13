@@ -332,6 +332,7 @@ LD A, (IX+2)                   ; offset for health field
 - Both operators are compile-time constants only.
 
 **`offsetof` rules (v0.2):**
+
 - Records: `offsetof(RecordType, field_path)` is allowed.
 - Nested records/arrays: field paths with constant array indices are allowed (`offsetof(Scene, sprites[3].x)`).
 - Unions: direct union member offsets are always `0`.
@@ -552,18 +553,19 @@ Function calls have defined register conventions.
 
 **Full-call stage clobber model (v0.2 draft):**
 
-| Stage | Typical internal sequence | Boundary-visible clobbers | Contract |
-| ----- | ------------------------- | ------------------------- | -------- |
-| 1. Argument evaluation | Helper ops / simple loads | — | Internal scratch must be restored before stage exit |
-| 2. Argument marshalling | Right-to-left `PUSH` of evaluated args | — | Transient SP movement allowed; net effect carried as argument block |
-| 3. Call transfer | `CALL target` | — | Control transfer only; no register contract change by itself |
-| 4. Callee prologue | Save required regs/flags, reserve locals | — | Any internal save/slot setup is hidden from caller boundary |
-| 5. Callee body | User instructions + hidden lowering | — (until return channel write) | Hidden lowering preserves non-output state at boundary |
-| 6. Return channel write | Place result in `HL` (`L` for byte) | `HL` (non-void only) | `HL` is the only standard non-void output channel |
-| 7. Callee epilogue | Restore saved regs/flags, release locals, `RET` | `HL` (non-void only) | Leaves call boundary in preserved state except output |
-| 8. Caller arg cleanup | Drop argument block from stack | `HL` (non-void only) | Net call-boundary SP delta is zero |
+| Stage                   | Typical internal sequence                       | Boundary-visible clobbers      | Contract                                                            |
+| ----------------------- | ----------------------------------------------- | ------------------------------ | ------------------------------------------------------------------- |
+| 1. Argument evaluation  | Helper ops / simple loads                       | —                              | Internal scratch must be restored before stage exit                 |
+| 2. Argument marshalling | Right-to-left `PUSH` of evaluated args          | —                              | Transient SP movement allowed; net effect carried as argument block |
+| 3. Call transfer        | `CALL target`                                   | —                              | Control transfer only; no register contract change by itself        |
+| 4. Callee prologue      | Save required regs/flags, reserve locals        | —                              | Any internal save/slot setup is hidden from caller boundary         |
+| 5. Callee body          | User instructions + hidden lowering             | — (until return channel write) | Hidden lowering preserves non-output state at boundary              |
+| 6. Return channel write | Place result in `HL` (`L` for byte)             | `HL` (non-void only)           | `HL` is the only standard non-void output channel                   |
+| 7. Callee epilogue      | Restore saved regs/flags, release locals, `RET` | `HL` (non-void only)           | Leaves call boundary in preserved state except output               |
+| 8. Caller arg cleanup   | Drop argument block from stack                  | `HL` (non-void only)           | Net call-boundary SP delta is zero                                  |
 
 **Net boundary rule for typed calls (this draft):**
+
 - `void` call: no external register/flag clobbers.
 - Non-void call: only `HL` is externally changed (return channel).
 - All other register/flag changes are internal and must be restored before boundary exit.
@@ -576,6 +578,7 @@ Function calls have defined register conventions.
 **Goal:** A typed call behaves like one high-level operation with a stable boundary contract, even if internal lowering uses many pushes/pops and scratch registers.
 
 **Scope (v0.2):**
+
 - Applies to typed internal `func` calls.
 - `extern` calls are explicitly ABI-scoped and may have separate clobber declarations.
 - Variadics remain out of scope in v0.2.
@@ -583,6 +586,7 @@ Function calls have defined register conventions.
 **Compatibility note:** This is an intentional ABI-contract change for typed calls in v0.2 (from clobber-permitted to preservation-safe boundary semantics).
 
 **Boundary invariants:**
+
 - Net SP delta at the full call boundary is zero.
 - `void` calls preserve all registers/flags.
 - Non-void calls expose only `HL` as output channel.
@@ -601,12 +605,14 @@ Function calls have defined register conventions.
 | Caller cleanup | Remove argument block; preserve boundary contract |
 
 **Open design decisions (must be fixed before implementation):**
+
 - Internal-call envelope ownership: exact split of preservation duties between caller wrapper and callee generated prologue/epilogue.
 - Cleanup primitive choice: canonical argument cleanup sequence(s) with minimal side effects.
 - Flags policy: preserve flags across typed calls by default vs. explicit opt-out modes.
 - Tail-call interaction: whether tail-call lowering is permitted under strict preservation guarantees.
 
 **Validation matrix (required):**
+
 - 0-arg, 1-arg, multi-arg calls with mixed arg categories (`reg`, `imm`, `ea`, `(ea)`).
 - Calls returning `void`, `byte`, and `word`.
 - Nested calls inside structured control (`if/while/repeat/select`).

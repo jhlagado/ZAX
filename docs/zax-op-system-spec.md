@@ -930,12 +930,12 @@ This is permitted, but the net stack delta must still be zero. Any save/restore 
 
 ### 12.4 Calling Ops from Functions vs Calling Functions from Ops
 
-| Scenario                | Effect                                               |
-| ----------------------- | ---------------------------------------------------- |
-| Function calls op       | Op expands inline; function's frame unaffected       |
+| Scenario                | Effect                                                                                                            |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Function calls op       | Op expands inline; function's frame unaffected                                                                    |
 | Op calls function       | Full call sequence generated; call-boundary effects follow active ABI (`v0.1` clobber / `v0.2` preservation-safe) |
-| Op calls op             | Nested inline expansion; no call overhead            |
-| Function calls function | Normal call/ret; stack frame management              |
+| Op calls op             | Nested inline expansion; no call overhead                                                                         |
+| Function calls function | Normal call/ret; stack frame management                                                                           |
 
 ---
 
