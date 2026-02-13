@@ -100,9 +100,11 @@ Multi-line constructs (v0.1):
   - `end` terminates `func`, `op`, `type` record bodies, `extern <binName>` blocks, `if`/`while` blocks, and `select` blocks.
   - `until <cc>` terminates a `repeat` block.
 
-Labels (v0.1):
+Labels (v0.2):
 
-- A local label is defined by `<ident>:` at the start of an instruction line **inside a function body**. Local labels are **not permitted** inside `op` bodies in v0.1. The `:` token separates the label from any instruction that follows on the same line; the newline still terminates that instruction normally.
+- A local label is defined by `<ident>:` at the start of an instruction line inside a function or `op` body.
+- Labels in `op` bodies are hygienically rewritten per expansion site to avoid collisions.
+- The `:` token separates the label from any instruction that follows on the same line; the newline still terminates that instruction normally.
 
 ### 1.2 Comments
 
@@ -945,7 +947,7 @@ Rules:
 - `op` is module-scope only.
 - `op` bodies are implicit instruction streams.
 - Legacy explicit `asm` body markers are rejected with diagnostics (`Unexpected "asm" in op body ...`).
-- Local label definitions (`<ident>:`) are **not permitted** inside `op` bodies in v0.1.
+- Local label definitions (`<ident>:`) are permitted inside `op` bodies and must be hygienically rewritten per expansion site.
 - `end` terminates the `op` body.
   - `op` bodies may contain structured control flow that uses `end` internally; the final `end` closes the `op` body.
 - `op` bodies may be empty (no instructions).
@@ -1152,28 +1154,28 @@ end
 ; select/case (no fallthrough)
 ld a, (mode)
 select A
-  case Read
+  case Mode.Read
     ld a, 'R'
-  case Write
+  case Mode.Write
     ld a, 'W'
   else
     ld a, '?'
 end
 ```
 
-### 10.4 Local Labels (Discouraged, Allowed in Functions Only)
+### 10.4 Local Labels (Discouraged, Allowed in Functions and Ops)
 
-ZAX discourages labels in favor of structured control flow, but allows **local labels** within a function instruction stream for low-level control flow.
+ZAX discourages labels in favor of structured control flow, but allows **local labels** within function and `op` instruction streams for low-level control flow.
 
 Label definition syntax (v0.1):
 
 - `<ident>:` at the start of an instruction line defines a local label at the current code location.
   - A label definition may be followed by an instruction on the same line (e.g., `loop: djnz loop`) or may stand alone.
 
-Scope and resolution (v0.1):
+Scope and resolution (v0.2):
 
-- Local labels are scoped to the enclosing `func` body and are not exported.
-- Local labels are **not permitted** inside `op` bodies in v0.1; any label definition in an `op` body is a compile error.
+- Local labels are scoped to the enclosing `func` or `op` body and are not exported.
+- Labels in `op` bodies are hygienically rewritten per expansion site so separate expansion instances cannot collide.
 - A local label may be referenced before its definition within the same function instruction stream (forward reference).
 - Local label names must not collide with reserved names (Section 1.5), ignoring case.
 - When resolving an identifier in an instruction operand, local labels take precedence over locals/args, which take precedence over global symbols.
