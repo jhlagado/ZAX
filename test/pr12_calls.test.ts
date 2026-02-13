@@ -120,12 +120,12 @@ describe('PR12 calls (extern + func)', () => {
     const code = Uint8Array.of(
       0x06,
       0x02, // ld b, 2
-      0x21,
+      0x68, // ld l, b
+      0x26,
+      0x00, // ld h, 0
+      0x11,
       0x40,
-      0x00, // ld hl, $0040
-      0x58, // ld e, b
-      0x16,
-      0x00, // ld d, 0
+      0x00, // ld de, $0040
       0x19, // add hl, de
       0xe5, // push hl
       0xcd,
@@ -157,12 +157,12 @@ describe('PR12 calls (extern + func)', () => {
       0x40,
       0x00, // ld hl, $0040
       0x7e, // ld a, (hl)
-      0x21,
+      0x6f, // ld l, a
+      0x26,
+      0x00, // ld h, 0
+      0x11,
       0x41,
-      0x00, // ld hl, $0041
-      0x5f, // ld e, a
-      0x16,
-      0x00, // ld d, 0
+      0x00, // ld de, $0041
       0x19, // add hl, de
       0xe5, // push hl
       0xcd,
