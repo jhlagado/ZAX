@@ -1,0 +1,14 @@
+section code at $0000
+section var at $1000
+
+globals
+  idxb: byte
+  idxw: word
+  arr: byte[8]
+
+export func main(): void
+  ld a, arr[idxb]
+  ld arr[idxb], a
+  ld a, arr[idxw]
+  ld arr[idxw], a
+end
