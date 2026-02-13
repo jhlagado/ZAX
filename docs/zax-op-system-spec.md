@@ -341,7 +341,7 @@ function expand_op(call_site, op_name, operands):
     expanded_body = deep_clone(winner.body)
     for each instruction in expanded_body:
         substitute_parameters(instruction, bindings)
-        reject_if_label_definition(instruction)
+        rewrite_local_labels_hygienically(instruction, call_site)
 
     // 5. Recursive expansion of nested ops
     for each instruction in expanded_body:
@@ -825,7 +825,7 @@ For quick reference, the normative rules governing ops in v0.2 are:
 
 Ops are module-scope declarations. They may not be nested inside functions or other ops. Op invocations are permitted inside function/op instruction streams. Bodies are implicit instruction streams terminated by `end`. Bodies may be empty. Bodies may contain structured control flow, raw Z80 instructions, and other op invocations. Bodies may not contain `var` blocks.
 
-Parameters use matcher types: `reg8`, `reg16`, fixed-register matchers (`A`, `HL`, `DE`, `BC`, `SP`), `imm8`, `imm16`, `ea`, `mem8`, `mem16`. `IX`/`IY` are not matchable. Condition codes are not matchable. Substitution operates on AST nodes, not text.
+Parameters use matcher types: `reg8`, `reg16`, fixed-register matchers (`A`, `HL`, `DE`, `BC`, `SP`), `imm8`, `imm16`, `ea`, `mem8`, `mem16`, `idx16`, and `cc`. Substitution operates on AST nodes, not text.
 
 Overload resolution filters candidates by matcher compatibility, then ranks by specificity. Fixed beats class, `imm8` beats `imm16` for small values, `mem8`/`mem16` beat `ea`. No match is an error. Ambiguous match is an error.
 
@@ -870,7 +870,7 @@ These features are out of scope for v0.2.
 Ops do not appear in the symbol table as callable addresses (since they have no address — they are purely inline). However:
 
 - The op _name_ may appear in diagnostic output
-- Op expansions do not define local labels and therefore do not add label symbols
+- Op-local labels are hygienically rewritten and may appear in lowered/internal symbol forms
 - The D8M may include op definitions in a separate metadata section for tooling purposes
 
 ---
@@ -967,12 +967,12 @@ This checklist is for compiler implementers. It covers the essential components 
 
 - [ ] Clone op body AST for each expansion
 - [ ] Substitute parameter references with bound operands
-- [ ] Handle all matcher types (reg8, reg16, fixed, imm8, imm16, ea, mem8, mem16)
+- [ ] Handle all matcher types (reg8, reg16, fixed, imm8, imm16, ea, mem8, mem16, idx16, cc)
 - [ ] Preserve AST structure (no text-level manipulation)
 
 ### A.5 Label Hygiene
 
-- [ ] Reject local label definitions inside op bodies
+- [ ] Rewrite local labels inside op bodies using expansion-site hygiene
 
 ### A.6 Cycle Detection
 
@@ -1106,17 +1106,17 @@ op leaky(r: reg16)
 end
 ```
 
-### B.7 Labels Inside Ops (Should Fail)
+### B.7 Labels Inside Ops (Hygiene Rewrite)
 
 ```
-; Test: op with local labels should be rejected
+; Test: op with local labels should compile via hygiene rewrite
 op with_label(r: reg8)
   ld r, 10
 loop:
   dec r
   jr nz, loop
 end
-; Expected: error: local labels are not allowed inside op bodies
+; Expected: no collision; each expansion instance gets unique internal label names
 ```
 
 ### B.8 Nested Op Expansion
