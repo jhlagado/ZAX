@@ -1,10 +1,10 @@
 enum Mode Read, Write, Append
 
 const Big = 70000
-const Next = Write + 1
+const Next = Mode.Write + 1
 
 data
-  modes: byte[3] = [Read, Write, Append]
+  modes: byte[3] = [Mode.Read, Mode.Write, Mode.Append]
 
 export func main(): void
   ld a, Next

@@ -1,7 +1,7 @@
 ; control_flow_and_labels.zax
 ;
 ; Example showing:
-; - enum syntax and unqualified members
+; - enum syntax and qualified members
 ; - if/else/end structured control flow
 ; - local labels and relative branches (djnz)
 ; - extern func call with a byte argument
@@ -28,11 +28,11 @@ loop:
   select B
     case 3
       push bc
-      print_mode Read
+      print_mode Mode.Read
       pop bc
     else
       push bc
-      print_mode Write
+      print_mode Mode.Write
       pop bc
   end
   djnz loop

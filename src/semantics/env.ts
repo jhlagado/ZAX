@@ -165,14 +165,6 @@ export function buildEnv(program: ProgramNode, diagnostics: Diagnostic[]): Compi
     return { consts, enums, types };
   }
 
-  const declaredConstsLower = new Set<string>();
-  for (const mf of program.files) {
-    for (const item of mf.items) {
-      if (item.kind !== 'ConstDecl') continue;
-      declaredConstsLower.add(item.name.toLowerCase());
-    }
-  }
-
   const globalLower = new Map<string, { kind: string; name: string; file: string }>();
   const claim = (kind: string, name: string, file: string): boolean => {
     const k = name.toLowerCase();
@@ -216,16 +208,9 @@ export function buildEnv(program: ProgramNode, diagnostics: Diagnostic[]): Compi
 
       for (let idx = 0; idx < e.members.length; idx++) {
         const name = e.members[idx]!;
-        if (types.has(name)) {
-          diag(diagnostics, e.span.file, `Enum member name "${name}" collides with a type name.`);
-          continue;
-        }
-        if (declaredConstsLower.has(name.toLowerCase())) {
-          diag(diagnostics, e.span.file, `Enum member name "${name}" collides with a const name.`);
-          continue;
-        }
-        if (!claim('enum member', name, e.span.file)) continue;
-        enums.set(name, idx);
+        const qualifiedName = `${e.name}.${name}`;
+        if (!claim('enum member', qualifiedName, e.span.file)) continue;
+        enums.set(qualifiedName, idx);
       }
     }
   }
@@ -237,14 +222,6 @@ export function buildEnv(program: ProgramNode, diagnostics: Diagnostic[]): Compi
       if (item.kind !== 'ConstDecl') continue;
       if (types.has(item.name)) {
         diag(diagnostics, item.span.file, `Const name "${item.name}" collides with a type name.`);
-        continue;
-      }
-      if (enums.has(item.name)) {
-        diag(
-          diagnostics,
-          item.span.file,
-          `Const name "${item.name}" collides with an enum member.`,
-        );
         continue;
       }
       if (!claim('const', item.name, item.span.file)) continue;
