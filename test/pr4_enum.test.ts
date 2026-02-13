@@ -19,7 +19,7 @@ describe('PR4 enum parsing', () => {
     const d8m = res.artifacts.find((a): a is D8mArtifact => a.kind === 'd8m');
     expect(bin).toBeDefined();
     expect(d8m).toBeDefined();
-    /* ld a, 1 (Write is member index 1, 0-based); ret */
+    /* ld a, 1 (Mode.Write is member index 1, 0-based); ret */
     expect(bin!.bytes).toEqual(Uint8Array.of(0x3e, 0x01, 0xc9));
 
     const symbols = d8m!.json['symbols'] as unknown as Array<{
@@ -31,10 +31,19 @@ describe('PR4 enum parsing', () => {
     }>;
     expect(symbols).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: 'Read', kind: 'constant', value: 0 }),
-        expect.objectContaining({ name: 'Write', kind: 'constant', value: 1 }),
-        expect.objectContaining({ name: 'Append', kind: 'constant', value: 2 }),
+        expect.objectContaining({ name: 'Mode.Read', kind: 'constant', value: 0 }),
+        expect.objectContaining({ name: 'Mode.Write', kind: 'constant', value: 1 }),
+        expect.objectContaining({ name: 'Mode.Append', kind: 'constant', value: 2 }),
       ]),
+    );
+  });
+
+  it('rejects unqualified enum member references', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr259_enum_unqualified_member.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.artifacts).toEqual([]);
+    expect(res.diagnostics.some((d) => d.message.includes('Failed to evaluate const "Bad".'))).toBe(
+      true,
     );
   });
 });

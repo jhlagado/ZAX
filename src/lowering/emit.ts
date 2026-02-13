@@ -1647,7 +1647,8 @@ export function emitProgram(
       if (item.kind === 'EnumDecl') {
         const e = item as EnumDeclNode;
         for (let idx = 0; idx < e.members.length; idx++) {
-          const name = e.members[idx]!;
+          const member = e.members[idx]!;
+          const name = `${e.name}.${member}`;
           if (env.enums.get(name) !== idx) continue;
           if (taken.has(name)) {
             diag(diagnostics, e.span.file, `Duplicate symbol name "${name}".`);

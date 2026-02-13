@@ -443,8 +443,15 @@ function parseImmExprFromText(
           path,
         };
       }
+      const parts = [t.text];
       idx++;
-      return immName(filePath, exprSpan, t.text);
+      while (tokens[idx]?.kind === 'dot') {
+        const next = tokens[idx + 1];
+        if (!next || next.kind !== 'ident') return undefined;
+        parts.push(next.text);
+        idx += 2;
+      }
+      return immName(filePath, exprSpan, parts.join('.'));
     }
     if (t.kind === 'op' && (t.text === '+' || t.text === '-' || t.text === '~')) {
       idx++;
@@ -635,6 +642,12 @@ function parseAsmOperand(
     const inner = t.slice(1, -1).trim();
     const ea = parseEaExprFromText(filePath, inner, operandSpan, diagnostics);
     if (ea) return { kind: 'Mem', span: operandSpan, expr: ea };
+  }
+  if (t.includes('.') && !t.includes('[')) {
+    const enumExpr = parseImmExprFromText(filePath, t, operandSpan, diagnostics, false);
+    if (enumExpr?.kind === 'ImmName' && enumExpr.name.includes('.')) {
+      return { kind: 'Imm', span: operandSpan, expr: enumExpr };
+    }
   }
   if (t.includes('.') || t.includes('[')) {
     const ea = parseEaExprFromText(filePath, t, operandSpan, diagnostics);
