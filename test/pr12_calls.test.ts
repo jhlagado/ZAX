@@ -49,15 +49,7 @@ describe('PR12 calls (extern + func)', () => {
 
     // main: preservation wrapper + call helper (at $0014), ret; helper: ret
     expect(bin!.bytes).toEqual(
-      Uint8Array.of(
-        ...callVoidPrefix,
-        0xcd,
-        0x14,
-        0x00,
-        ...callVoidSuffix,
-        0xc9,
-        0xc9,
-      ),
+      Uint8Array.of(...callVoidPrefix, 0xcd, 0x14, 0x00, ...callVoidSuffix, 0xc9, 0xc9),
     );
   });
 
