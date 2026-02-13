@@ -389,11 +389,13 @@ Index forms (v0.1):
 
 - constant immediate
 - 8-bit register (`A B C D E H L`)
-- `(HL)` (byte read from memory at `HL`)
+- 16-bit register (`HL DE BC`)
+- `(HL)` (byte read from memory at `HL`) for indirect index
+- `(IX±d)` / `(IY±d)` (byte read from indexed address) for indirect index
 
 Notes (v0.1):
 
-- The index grammar is intentionally small. Parenthesized expressions are not permitted inside `[]`; `(HL)` is a special-case index form.
+- Parentheses inside `[]` are permitted only for Z80 indirect index patterns.
 - `arr[i]` is an effective address (an `ea`), not a dereference. Use parentheses to read/write memory: `ld a, (arr[i])`.
 
 ### 5.2 Records (Power-of-2 Sized)

@@ -443,7 +443,30 @@ function parseEaIndexFromText(
   diagnostics: Diagnostic[],
 ): EaIndexNode | undefined {
   const t = indexText.trim();
-  if (t.toUpperCase() === 'HL') return { kind: 'IndexMemHL', span: indexSpan };
+  if (t.startsWith('(') && t.endsWith(')')) {
+    const inner = t.slice(1, -1).trim();
+    if (/^HL$/i.test(inner)) return { kind: 'IndexMemHL', span: indexSpan };
+    const ixiy = /^(IX|IY)(?:\s*([+-])\s*(.+))?$/i.exec(inner);
+    if (ixiy) {
+      const base = ixiy[1]!.toUpperCase() as 'IX' | 'IY';
+      const dispText = ixiy[2] ? `${ixiy[2]}${ixiy[3]?.trim() ?? ''}` : '';
+      const disp =
+        dispText.length > 0
+          ? parseImmExprFromText(filePath, dispText, indexSpan, diagnostics, false)
+          : undefined;
+      if (dispText.length > 0 && !disp) {
+        diag(diagnostics, filePath, `Invalid index expression: ${t}`, {
+          line: indexSpan.start.line,
+          column: indexSpan.start.column,
+        });
+        return undefined;
+      }
+      return { kind: 'IndexMemIxIy', span: indexSpan, base, ...(disp ? { disp } : {}) };
+    }
+  }
+  if (/^(HL|DE|BC)$/i.test(t)) {
+    return { kind: 'IndexReg16', span: indexSpan, reg: canonicalRegisterToken(t) };
+  }
   if (/^(A|B|C|D|E|H|L)$/i.test(t)) {
     return { kind: 'IndexReg8', span: indexSpan, reg: canonicalRegisterToken(t) };
   }

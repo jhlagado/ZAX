@@ -536,7 +536,9 @@ export function emitProgram(
               ? { ...ea.index, expr: cloneEaExpr(ea.index.expr) }
               : ea.index.kind === 'IndexImm'
                 ? { ...ea.index, value: cloneImmExpr(ea.index.value) }
-                : { ...ea.index },
+                : ea.index.kind === 'IndexMemIxIy' && ea.index.disp
+                  ? { ...ea.index, disp: cloneImmExpr(ea.index.disp) }
+                  : { ...ea.index },
         };
       case 'EaAdd':
       case 'EaSub':
@@ -719,6 +721,29 @@ export function emitProgram(
       if (ea.index.kind === 'IndexMemHL') {
         emitCodeBytes(Uint8Array.of(0x7e), span.file); // ld a, (hl)
       }
+      if (ea.index.kind === 'IndexMemIxIy') {
+        const memExpr: EaExprNode =
+          ea.index.disp === undefined
+            ? { kind: 'EaName', span, name: ea.index.base }
+            : {
+                kind: 'EaAdd',
+                span,
+                base: { kind: 'EaName', span, name: ea.index.base },
+                offset: ea.index.disp,
+              };
+        if (
+          !emitInstr(
+            'ld',
+            [
+              { kind: 'Reg', span, name: 'A' },
+              { kind: 'Mem', span, expr: memExpr },
+            ],
+            span,
+          )
+        ) {
+          return false;
+        }
+      }
 
       if (ea.index.kind === 'IndexReg8') {
         const r8 = ea.index.reg.toUpperCase();
@@ -750,7 +775,7 @@ export function emitProgram(
         ) {
           return false;
         }
-      } else if (ea.index.kind === 'IndexMemHL') {
+      } else if (ea.index.kind === 'IndexMemHL' || ea.index.kind === 'IndexMemIxIy') {
         if (
           !emitInstr(
             'ld',
@@ -773,6 +798,64 @@ export function emitProgram(
             span,
           )
         ) {
+          return false;
+        }
+      } else if (ea.index.kind === 'IndexReg16') {
+        const r16 = ea.index.reg.toUpperCase();
+        if (r16 === 'HL') {
+          // HL already holds index.
+        } else if (r16 === 'DE') {
+          if (
+            !emitInstr(
+              'ld',
+              [
+                { kind: 'Reg', span, name: 'H' },
+                { kind: 'Reg', span, name: 'D' },
+              ],
+              span,
+            )
+          ) {
+            return false;
+          }
+          if (
+            !emitInstr(
+              'ld',
+              [
+                { kind: 'Reg', span, name: 'L' },
+                { kind: 'Reg', span, name: 'E' },
+              ],
+              span,
+            )
+          ) {
+            return false;
+          }
+        } else if (r16 === 'BC') {
+          if (
+            !emitInstr(
+              'ld',
+              [
+                { kind: 'Reg', span, name: 'H' },
+                { kind: 'Reg', span, name: 'B' },
+              ],
+              span,
+            )
+          ) {
+            return false;
+          }
+          if (
+            !emitInstr(
+              'ld',
+              [
+                { kind: 'Reg', span, name: 'L' },
+                { kind: 'Reg', span, name: 'C' },
+              ],
+              span,
+            )
+          ) {
+            return false;
+          }
+        } else {
+          diagAt(diagnostics, span, `Invalid reg16 index "${ea.index.reg}".`);
           return false;
         }
       } else {
@@ -2284,7 +2367,9 @@ export function emitProgram(
                         ? { ...ea.index, expr: substituteEaWithOpLabels(ea.index.expr) }
                         : ea.index.kind === 'IndexImm'
                           ? { ...ea.index, value: substituteImmWithOpLabels(ea.index.value) }
-                          : { ...ea.index };
+                          : ea.index.kind === 'IndexMemIxIy' && ea.index.disp
+                            ? { ...ea.index, disp: substituteImmWithOpLabels(ea.index.disp) }
+                            : { ...ea.index };
                     return { ...ea, base: substituteEaWithOpLabels(ea.base), index };
                   }
                   if (ea.kind === 'EaAdd' || ea.kind === 'EaSub') {

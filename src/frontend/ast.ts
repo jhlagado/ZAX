@@ -386,7 +386,16 @@ export type EaExprNode =
 export type EaIndexNode =
   | { kind: 'IndexImm'; span: SourceSpan; value: ImmExprNode }
   | { kind: 'IndexReg8'; span: SourceSpan; /** Canonical upper-case reg8 token. */ reg: string }
+  | { kind: 'IndexReg16'; span: SourceSpan; /** Canonical upper-case reg16 token. */ reg: string }
   | { kind: 'IndexMemHL'; span: SourceSpan }
+  | {
+      kind: 'IndexMemIxIy';
+      span: SourceSpan;
+      /** Canonical upper-case base register token. */
+      base: 'IX' | 'IY';
+      /** Optional displacement imm expression (signed). */
+      disp?: ImmExprNode;
+    }
   | { kind: 'IndexEa'; span: SourceSpan; expr: EaExprNode };
 
 /**

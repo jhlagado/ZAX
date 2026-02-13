@@ -10,6 +10,5 @@ data
 
 export func main(): void
     ld hl, $0040
-    takeAddr arr[HL]
+    takeAddr arr[(HL)]
 end
-
