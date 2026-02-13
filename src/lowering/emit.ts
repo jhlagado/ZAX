@@ -776,7 +776,6 @@ export function emitProgram(
           if (expr.index.kind !== 'IndexImm') return undefined;
           const idx = evalImmExpr(expr.index.value, env, diagnostics);
           if (idx === undefined) {
-            diagAt(diagnostics, span, `Failed to evaluate array index.`);
             return undefined;
           }
           const elemSize = sizeOfTypeExpr(base.typeExpr.element, env, diagnostics);
@@ -804,8 +803,8 @@ export function emitProgram(
   const pushEaAddress = (ea: EaExprNode, span: SourceSpan): boolean => {
     const r = resolveEa(ea, span);
     if (!r) {
-      // Fallback: support `arr[reg8]` and `arr[HL]` (index byte read from memory at HL)
-      // for element sizes 1 or 2, by computing the address into HL at runtime.
+      // Fallback: support runtime indexing by register/memory/scalar variable
+      // by computing the address into HL.
       if (ea.kind !== 'EaIndex') return false;
       const base = resolveEa(ea.base, span);
       if (!base || base.kind !== 'abs' || !base.typeExpr || base.typeExpr.kind !== 'ArrayType') {
@@ -855,7 +854,41 @@ export function emitProgram(
         }
       }
 
-      if (ea.index.kind === 'IndexReg8') {
+      if (ea.index.kind === 'IndexImm') {
+        const v = evalImmExpr(ea.index.value, env, diagnostics);
+        if (v !== undefined) {
+          if (!loadImm16ToHL(v & 0xffff, span)) return false;
+        } else if (ea.index.value.kind === 'ImmName') {
+          const scalar = resolveScalarBinding(ea.index.value.name);
+          if (scalar === 'byte' || scalar === 'word' || scalar === 'addr') {
+            const want = scalar === 'byte' ? 'byte' : 'word';
+            if (
+              !pushMemValue(
+                { kind: 'EaName', span, name: ea.index.value.name } as EaExprNode,
+                want,
+                span,
+              )
+            ) {
+              return false;
+            }
+            if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
+          } else {
+            diagAt(
+              diagnostics,
+              span,
+              `Non-constant array index expression is unsupported; use a byte/word typed scalar or register index.`,
+            );
+            return false;
+          }
+        } else {
+          diagAt(
+            diagnostics,
+            span,
+            `Non-constant array index expression is unsupported; use a byte/word typed scalar or register index.`,
+          );
+          return false;
+        }
+      } else if (ea.index.kind === 'IndexReg8') {
         const r8 = ea.index.reg.toUpperCase();
         if (!reg8.has(r8)) {
           diagAt(diagnostics, span, `Invalid reg8 index "${ea.index.reg}".`);
