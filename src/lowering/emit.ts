@@ -491,12 +491,10 @@ export function emitProgram(
         );
       case 'MatcherIdx16':
         return isIxIyIndexedMem(operand);
-      case 'MatcherCc':
-        return (
-          operand.kind === 'Imm' &&
-          operand.expr.kind === 'ImmName' &&
-          ['nz', 'z', 'nc', 'c', 'po', 'pe', 'p', 'm'].includes(operand.expr.name.toLowerCase())
-        );
+      case 'MatcherCc': {
+        const token = normalizeFixedToken(operand);
+        return token !== undefined && conditionOpcodeFromName(token) !== undefined;
+      }
       case 'MatcherImm8': {
         if (operand.kind !== 'Imm') return false;
         const v = evalImmNoDiag(operand.expr);
