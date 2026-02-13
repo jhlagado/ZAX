@@ -443,8 +443,15 @@ function parseImmExprFromText(
           path,
         };
       }
+      const parts = [t.text];
       idx++;
-      return immName(filePath, exprSpan, t.text);
+      while (tokens[idx]?.kind === 'dot') {
+        const next = tokens[idx + 1];
+        if (!next || next.kind !== 'ident') return undefined;
+        parts.push(next.text);
+        idx += 2;
+      }
+      return immName(filePath, exprSpan, parts.join('.'));
     }
     if (t.kind === 'op' && (t.text === '+' || t.text === '-' || t.text === '~')) {
       idx++;

@@ -75,7 +75,7 @@ describe('PR200 D8M appendix mapping closure', () => {
       value: 70000,
       address: 70000 & 0xffff,
     });
-    expect(byName.get('Run')).toMatchObject({
+    expect(byName.get('Mode.Run')).toMatchObject({
       kind: 'constant',
       value: 1,
       address: 1,

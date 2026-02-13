@@ -29,9 +29,9 @@ describe('PR215: const/data follow-up closure matrix', () => {
     }>;
     const byName = new Map(symbols.map((s) => [s.name, s]));
 
-    expect(byName.get('Read')).toMatchObject({ kind: 'constant', value: 0 });
-    expect(byName.get('Write')).toMatchObject({ kind: 'constant', value: 1 });
-    expect(byName.get('Append')).toMatchObject({ kind: 'constant', value: 2 });
+    expect(byName.get('Mode.Read')).toMatchObject({ kind: 'constant', value: 0 });
+    expect(byName.get('Mode.Write')).toMatchObject({ kind: 'constant', value: 1 });
+    expect(byName.get('Mode.Append')).toMatchObject({ kind: 'constant', value: 2 });
     expect(byName.get('Next')).toMatchObject({ kind: 'constant', value: 2, address: 2 });
     expect(byName.get('Big')).toMatchObject({
       kind: 'constant',
