@@ -1,4 +1,4 @@
-; PR22 fixture: nested indexed EA with one runtime atom remains supported
+; PR22 fixture: direct call-site nested indexed EA is rejected by the call-site atom budget
 section code at $0000
 section data at $0040
 
