@@ -29,6 +29,8 @@ This directory is intentionally small. Each document has a single purpose.
   - Execution plan and milestone tracking.
 - `v02-implementation-checklist.md`
   - Issue-linked v0.2 execution checklist for low-conflict parallel work.
+- `v02-architecture-brief.md`
+  - Compact design brief for authority model, runtime-atom mental model, and rollout ownership/gates.
 - `zax-ai-team-prompt.md`
   - Internal contributor guidance for AI-assisted implementation workflow.
 
