@@ -2720,8 +2720,6 @@ export function emitProgram(
               );
               return;
             }
-            const entryFlow = snapshotFlow();
-
             const bindings = new Map<string, AsmOperandNode>();
             for (let idx = 0; idx < opDecl.params.length; idx++) {
               bindings.set(opDecl.params[idx]!.name.toLowerCase(), asmItem.operands[idx]!);
@@ -2975,33 +2973,6 @@ export function emitProgram(
               }
             } finally {
               opExpansionStack.pop();
-            }
-            const exitFlow = snapshotFlow();
-            if (entryFlow.reachable && exitFlow.reachable) {
-              if (entryFlow.spValid && exitFlow.spValid && entryFlow.spDelta !== exitFlow.spDelta) {
-                const delta = exitFlow.spDelta - entryFlow.spDelta;
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `op "${opDecl.name}" has non-zero net stack delta (${delta} byte(s)).`,
-                );
-              } else if (
-                entryFlow.spValid &&
-                !exitFlow.spValid &&
-                exitFlow.spInvalidDueToMutation
-              ) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `op "${opDecl.name}" expansion performs untracked SP mutation; cannot verify net stack delta.`,
-                );
-              } else if (entryFlow.spValid && !exitFlow.spValid && hasStackSlots) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `op "${opDecl.name}" expansion leaves stack depth untrackable; cannot verify net stack delta.`,
-                );
-              }
             }
             syncToFlow();
             return;

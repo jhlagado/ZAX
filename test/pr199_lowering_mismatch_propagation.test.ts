@@ -8,7 +8,7 @@ import { defaultFormatWriters } from '../src/formats/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-describe('PR199 lowering mismatch propagation across joins/back-edges/op boundaries', () => {
+describe('PR199 lowering mismatch propagation across joins/back-edges with inline op expansion', () => {
   it('invalidates stack tracking after mismatch diagnostics so downstream returns are guarded', async () => {
     const entry = join(__dirname, 'fixtures', 'pr199_lowering_mismatch_propagation.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
@@ -23,9 +23,7 @@ describe('PR199 lowering mismatch propagation across joins/back-edges/op boundar
 
     expect(
       messages.some((m) =>
-        m.includes(
-          'op "maybe_leak" expansion leaves stack depth untrackable; cannot verify net stack delta.',
-        ),
+        m.includes('ret reached with unknown stack depth; cannot verify function stack balance.'),
       ),
     ).toBe(true);
 

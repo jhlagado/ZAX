@@ -47,12 +47,6 @@ describe('PR218 lowering: ret cc diagnostics under unknown/untracked stack state
     }));
     expect(actual).toEqual([
       {
-        message:
-          'op "clobber_sp" expansion performs untracked SP mutation; cannot verify net stack delta.',
-        line: 9,
-        column: 3,
-      },
-      {
         message: 'ret reached after untracked SP mutation; cannot verify function stack balance.',
         line: 10,
         column: 3,
