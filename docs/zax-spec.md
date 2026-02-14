@@ -10,7 +10,7 @@ ZAX aims to make assembly code easier to read and refactor by providing:
 - structured control flow inside function/op instruction streams (`if`/`while`/`repeat`/`select`)
 - `op`: inline “macro-instructions” with operand matching
 
-Normative precedence for v0.2: `docs/v01-scope-decisions.md` is the governing design source. If this document and the scope-decisions document disagree, the scope-decisions document takes precedence until this spec is updated.
+Normative status for v0.2: this document is the sole normative language source. `docs/v01-scope-decisions.md` is a non-normative transition record and does not override this specification.
 
 Anything not defined here is undefined behavior or a compile error in v0.2.
 
@@ -924,7 +924,9 @@ Stack-depth constraints (v0.1):
 
 Normative reference:
 
-- The **op system specification** (`docs/zax-op-system-spec.md`) provides expanded implementation detail for op behavior. This document remains the primary language authority; op-system text should align with this spec and `docs/v01-scope-decisions.md`.
+- The **op system specification** (`docs/zax-op-system-spec.md`) provides expanded implementation detail for op behavior.
+- This document remains the primary language authority.
+- `docs/zax-op-system-spec.md` must not introduce normative behavior that is absent or contradictory here.
 
 ### 9.2 Declaration Form
 
@@ -1305,4 +1307,31 @@ Recommended (non-normative) policy for a ZAX compiler:
   }
 }
 ```
+
+## Appendix C: v0.1 -> v0.2 Migration (Consolidation Skeleton)
+
+This appendix is a migration scaffold. Normative behavior remains in Sections 1-10. Items listed here track the required v0.1 -> v0.2 change set that must be fully represented by normative text in this specification.
+
+### C.1 Breaking Changes Checklist
+
+- [ ] Composite storage semantics are power-of-2 for arrays/records/unions; padding is storage-visible for layout, `sizeof`, and indexing.
+- [ ] Runtime index scaling is shift-only (`ADD HL,HL` chains); no multiply-based lowering for indexed composite access.
+- [ ] `arr[HL]` is a 16-bit direct index; indirect byte-at-HL indexing uses `arr[(HL)]`.
+- [ ] Typed scalar variables use value semantics; legacy scalar paren-dereference examples are removed from normative guidance.
+- [ ] Enum members require qualification (`EnumType.Member`); unqualified members are compile errors.
+- [ ] `sizeof` semantics are storage-size semantics (including composite padding), replacing v0.1 packed-oriented behavior.
+- [ ] `offsetof` rules are fully specified (records, nested constant-index paths, and union-member path behavior).
+- [ ] Typed internal call boundaries are preservation-safe: `void` exposes no boundary-visible clobbers; non-void exposes only `HL`.
+
+### C.2 Migration Guidance Skeleton
+
+- [ ] Add a normative migration subsection that maps each breaking change to required source updates.
+- [ ] Add before/after examples for the highest-impact syntax and semantic changes (`arr[HL]`, `sizeof`, scalar value semantics, call-boundary expectations).
+- [ ] Add diagnostics guidance for common v0.1 -> v0.2 upgrade failures.
+
+### C.3 Transition-Record Retirement Criteria
+
+- [ ] Every C.1 item is covered by normative language in this file.
+- [ ] `docs/v01-scope-decisions.md` is explicitly marked archival-only.
+- [ ] `docs/README.md` continues to identify this file as the sole canonical source.
 ````
