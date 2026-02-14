@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 describe('PR198 lowering invariants for unknown stack-tracking states', () => {
-  it('diagnoses unknown stack states at joins/back-edges/ret/fallthrough/op-expansion boundaries', async () => {
+  it('diagnoses unknown stack states at joins/back-edges/ret/fallthrough after op expansion via function-stream contracts', async () => {
     const entry = join(__dirname, 'fixtures', 'pr198_lowering_unknown_stack_states.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
@@ -51,7 +51,7 @@ describe('PR198 lowering invariants for unknown stack-tracking states', () => {
     expect(
       messages.some((m) =>
         m.includes(
-          'op "branch_unknown" expansion leaves stack depth untrackable; cannot verify net stack delta.',
+          'Function "unknown_op_delta" has unknown stack depth at fallthrough; cannot verify stack balance.',
         ),
       ),
     ).toBe(true);
