@@ -55,6 +55,16 @@ export function evalImmExpr(
   env: CompileEnv,
   diagnostics?: Diagnostic[],
 ): number | undefined {
+  const unqualifiedEnumCandidates = (name: string): string[] => {
+    if (name.includes('.')) return [];
+    const suffix = `.${name}`;
+    const matches: string[] = [];
+    for (const key of env.enums.keys()) {
+      if (key.endsWith(suffix)) matches.push(key);
+    }
+    return matches;
+  };
+
   switch (expr.kind) {
     case 'ImmLiteral':
       return expr.value;
@@ -63,6 +73,21 @@ export function evalImmExpr(
       if (fromConst !== undefined) return fromConst;
       const fromEnum = env.enums.get(expr.name);
       if (fromEnum !== undefined) return fromEnum;
+      const enumMatches = unqualifiedEnumCandidates(expr.name);
+      if (enumMatches.length > 0 && diagnostics) {
+        const message =
+          enumMatches.length === 1
+            ? `Unqualified enum member "${expr.name}" is not allowed; use "${enumMatches[0]}".`
+            : `Unqualified enum member "${expr.name}" is ambiguous; use one of: ${enumMatches.join(', ')}.`;
+        diagnostics.push({
+          id: DiagnosticIds.SemanticsError,
+          severity: 'error',
+          message,
+          file: expr.span.file,
+          line: expr.span.start.line,
+          column: expr.span.start.column,
+        });
+      }
       return undefined;
     }
     case 'ImmSizeof': {

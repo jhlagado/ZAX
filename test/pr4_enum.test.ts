@@ -42,8 +42,26 @@ describe('PR4 enum parsing', () => {
     const entry = join(__dirname, 'fixtures', 'pr259_enum_unqualified_member.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
+    expect(
+      res.diagnostics.some((d) =>
+        d.message.includes('Unqualified enum member "Write" is not allowed; use "Mode.Write".'),
+      ),
+    ).toBe(true);
     expect(res.diagnostics.some((d) => d.message.includes('Failed to evaluate const "Bad".'))).toBe(
       true,
     );
+  });
+
+  it('diagnoses ambiguous unqualified enum member references', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr265_enum_unqualified_ambiguous.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.artifacts).toEqual([]);
+    expect(
+      res.diagnostics.some((d) =>
+        d.message.includes(
+          'Unqualified enum member "On" is ambiguous; use one of: ModeA.On, ModeB.On.',
+        ),
+      ),
+    ).toBe(true);
   });
 });
