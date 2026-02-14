@@ -2,7 +2,7 @@
 
 This roadmap replaces optimistic status tracking with a risk-first plan.
 
-Normative behavior is defined by `docs/zax-spec.md` and `docs/v01-scope-decisions.md`. This roadmap is execution planning, not a language authority.
+Normative behavior is defined by `docs/zax-spec.md`. `docs/v01-scope-decisions.md` is transition rationale only. This roadmap is execution planning, not a language authority.
 
 Core policy:
 
@@ -95,7 +95,8 @@ Treat ZAX as "integration-ready" only when every gate below is green:
 
 1. Spec gate
 
-- All active features in `docs/zax-spec.md` + `docs/v01-scope-decisions.md` are implemented, or intentionally rejected with stable diagnostics.
+- All active features in `docs/zax-spec.md` are implemented, or intentionally rejected with stable diagnostics.
+- Migration items tracked in `docs/zax-spec.md` Appendix C are either folded into normative sections or explicitly deferred.
 
 1. Parser/AST gate
 

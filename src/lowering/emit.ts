@@ -770,7 +770,6 @@ export function emitProgram(
             return undefined;
           }
           if (expr.index.kind === 'IndexEa') {
-            diagAt(diagnostics, span, `Nested indexed addresses are not supported yet.`);
             return undefined;
           }
           if (expr.index.kind !== 'IndexImm') return undefined;
@@ -806,12 +805,12 @@ export function emitProgram(
       // Fallback: support runtime indexing by register/memory/scalar variable
       // by computing the address into HL.
       if (ea.kind !== 'EaIndex') return false;
-      const base = resolveEa(ea.base, span);
-      if (!base || base.kind !== 'abs' || !base.typeExpr || base.typeExpr.kind !== 'ArrayType') {
+      const baseType = resolveEaTypeExpr(ea.base);
+      if (!baseType || baseType.kind !== 'ArrayType') {
         diagAt(diagnostics, span, `Unsupported ea argument: cannot lower indexed address.`);
         return false;
       }
-      const elemSize = sizeOfTypeExpr(base.typeExpr.element, env, diagnostics);
+      const elemSize = sizeOfTypeExpr(baseType.element, env, diagnostics);
       if (elemSize === undefined) return false;
       if (elemSize <= 0 || (elemSize & (elemSize - 1)) !== 0) {
         diagAt(
@@ -822,9 +821,6 @@ export function emitProgram(
         return false;
       }
       const shiftCount = elemSize <= 1 ? 0 : Math.log2(elemSize);
-      if (ea.index.kind === 'IndexEa') {
-        return false;
-      }
 
       // If the index is sourced from (HL), read it before clobbering HL.
       if (ea.index.kind === 'IndexMemHL') {
@@ -885,6 +881,21 @@ export function emitProgram(
             diagnostics,
             span,
             `Non-constant array index expression is unsupported; use a byte/word typed scalar or register index.`,
+          );
+          return false;
+        }
+      } else if (ea.index.kind === 'IndexEa') {
+        const typeExpr = resolveEaTypeExpr(ea.index.expr);
+        const scalar = typeExpr ? resolveScalarKind(typeExpr) : undefined;
+        if (scalar === 'byte' || scalar === 'word' || scalar === 'addr') {
+          const want = scalar === 'byte' ? 'byte' : 'word';
+          if (!pushMemValue(ea.index.expr, want, span)) return false;
+          if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
+        } else {
+          diagAt(
+            diagnostics,
+            span,
+            `Nested index expression must resolve to scalar byte/word/addr value.`,
           );
           return false;
         }
@@ -1021,7 +1032,36 @@ export function emitProgram(
         }
       }
 
-      emitAbs16Fixup(0x11, base.baseLower, base.addend, span); // ld de, base
+      if (!emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
+
+      const baseResolved = resolveEa(ea.base, span);
+      if (baseResolved?.kind === 'abs') {
+        emitAbs16Fixup(0x21, baseResolved.baseLower, baseResolved.addend, span); // ld hl, nn
+      } else if (baseResolved?.kind === 'stack') {
+        if (!spTrackingValid) {
+          diagAt(diagnostics, span, `Cannot resolve stack slot after untracked SP mutation.`);
+          return false;
+        }
+        const disp = (baseResolved.offsetFromStartSp - spDeltaTracked) & 0xffff;
+        if (!loadImm16ToHL(disp, span)) return false;
+        if (
+          !emitInstr(
+            'add',
+            [
+              { kind: 'Reg', span, name: 'HL' },
+              { kind: 'Reg', span, name: 'SP' },
+            ],
+            span,
+          )
+        ) {
+          return false;
+        }
+      } else {
+        if (!pushEaAddress(ea.base, span)) return false;
+        if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
+      }
+
+      if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
       if (
         !emitInstr(
           'add',
@@ -1064,8 +1104,7 @@ export function emitProgram(
 
   const pushMemValue = (ea: EaExprNode, want: 'byte' | 'word', span: SourceSpan): boolean => {
     const r = resolveEa(ea, span);
-    if (!r) return false;
-    if (r.kind === 'abs') {
+    if (r?.kind === 'abs') {
       if (want === 'word') {
         emitAbs16Fixup(0x2a, r.baseLower, r.addend, span); // ld hl, (nn)
         return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
@@ -1287,7 +1326,28 @@ export function emitProgram(
       }
       const s8 = reg8Code.get(src.name.toUpperCase());
       if (s8 !== undefined) {
-        if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
+        const preserveA = src.name.toUpperCase() === 'A';
+        if (
+          preserveA &&
+          !emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)
+        ) {
+          return false;
+        }
+        if (!materializeEaAddressToHL(dst.expr, inst.span)) {
+          if (
+            preserveA &&
+            !emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)
+          ) {
+            return false;
+          }
+          return false;
+        }
+        if (
+          preserveA &&
+          !emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)
+        ) {
+          return false;
+        }
         emitCodeBytes(Uint8Array.of(0x70 + s8), inst.span.file);
         return true;
       }
