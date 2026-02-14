@@ -56,6 +56,7 @@ Use one of the following tags on every scoped issue/PR:
 - v0.2 direct call-site `ea`/`(ea)` arguments: runtime-atom-free.
 - User model: one moving part per expression; stage multi-dynamic work over lines.
 - Implementation note: the lowering path rejects `ea` expressions over budget with explicit diagnostics (for example, `grid[row][col]` / `arr[i + j]` when both names are runtime scalar indices).
+- Implementation note: direct call-site `ea`/`(ea)` argument forms now reject any runtime-atom use and include staged-lowering guidance in diagnostics.
 
 ### 1.3 Preservation and Lowering Model
 

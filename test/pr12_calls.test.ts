@@ -148,162 +148,60 @@ describe('PR12 calls (extern + func)', () => {
     expect(bin!.bytes).toEqual(expected);
   });
 
-  it('supports ea indexing with reg8', async () => {
+  it('allows runtime-atom-free direct call-site ea/(ea) constant index forms', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr265_call_ea_index_const.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+  });
+
+  it('rejects direct call-site ea args with reg8 runtime index', async () => {
     const entry = join(__dirname, 'fixtures', 'pr13_call_ea_index_reg8.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics).toEqual([]);
-
-    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
-    expect(bin).toBeDefined();
-
-    const code = Uint8Array.of(
-      0x06,
-      0x02, // ld b, 2
-      ...callVoidPrefix,
-      0x68, // ld l, b
-      0x26,
-      0x00, // ld h, 0
-      0xe5, // push hl (scaled index)
-      0x21,
-      0x80,
-      0x00, // ld hl, $0080
-      0xd1, // pop de
-      0x19, // add hl, de
-      0xe5, // push hl
-      0xcd,
-      0x34,
-      0x12, // call $1234
-      0xc1, // pop bc
-      ...callVoidSuffix,
-      0xc9, // ret
+    expect(res.artifacts).toEqual([]);
+    expect(res.diagnostics).toHaveLength(1);
+    expect(res.diagnostics[0]?.message).toContain(
+      'Direct call-site ea argument for "takeAddr" must be runtime-atom-free in v0.2',
     );
-    const gap = new Uint8Array(0x80 - code.length);
-    const data = Uint8Array.of(0x01, 0x02, 0x03, 0x04);
-    const expected = new Uint8Array(code.length + gap.length + data.length);
-    expected.set(code, 0);
-    expected.set(gap, code.length);
-    expected.set(data, code.length + gap.length);
-
-    expect(bin!.bytes).toEqual(expected);
+    expect(res.diagnostics[0]?.line).toBe(12);
+    expect(res.diagnostics[0]?.column).toBe(5);
   });
 
-  it('supports ea indexing with HL as 16-bit index register', async () => {
+  it('rejects direct call-site ea args with reg16 runtime index', async () => {
     const entry = join(__dirname, 'fixtures', 'pr261_call_ea_index_reg16hl.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics).toEqual([]);
-
-    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
-    expect(bin).toBeDefined();
-
-    const code = Uint8Array.of(
-      0x21,
-      0x02,
-      0x00, // ld hl, 2
-      ...callVoidPrefix,
-      0xe5, // push hl (scaled index)
-      0x21,
-      0x80,
-      0x00, // ld hl, $0080
-      0xd1, // pop de
-      0x19, // add hl, de
-      0xe5, // push hl
-      0xcd,
-      0x34,
-      0x12, // call $1234
-      0xc1, // pop bc
-      ...callVoidSuffix,
-      0xc9, // ret
+    expect(res.artifacts).toEqual([]);
+    expect(res.diagnostics).toHaveLength(1);
+    expect(res.diagnostics[0]?.message).toContain(
+      'Direct call-site ea argument for "takeAddr" must be runtime-atom-free in v0.2',
     );
-    const gap = new Uint8Array(0x80 - code.length);
-    const data = Uint8Array.of(0x01, 0x02, 0x03, 0x04);
-    const expected = new Uint8Array(code.length + gap.length + data.length);
-    expected.set(code, 0);
-    expected.set(gap, code.length);
-    expected.set(data, code.length + gap.length);
-
-    expect(bin!.bytes).toEqual(expected);
+    expect(res.diagnostics[0]?.line).toBe(12);
+    expect(res.diagnostics[0]?.column).toBe(5);
   });
 
-  it('supports ea indexing with (HL) (byte read from memory at HL)', async () => {
+  it('rejects direct call-site ea args with (HL) runtime index source', async () => {
     const entry = join(__dirname, 'fixtures', 'pr13_call_ea_index_memhl.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics).toEqual([]);
-
-    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
-    expect(bin).toBeDefined();
-
-    const code = Uint8Array.of(
-      0x21,
-      0x80,
-      0x00, // ld hl, $0080
-      ...callVoidPrefix,
-      0x7e, // ld a, (hl)
-      0x6f, // ld l, a
-      0x26,
-      0x00, // ld h, 0
-      0xe5, // push hl (scaled index)
-      0x21,
-      0x81,
-      0x00, // ld hl, $0081
-      0xd1, // pop de
-      0x19, // add hl, de
-      0xe5, // push hl
-      0xcd,
-      0x34,
-      0x12, // call $1234
-      0xc1, // pop bc
-      ...callVoidSuffix,
-      0xc9, // ret
+    expect(res.artifacts).toEqual([]);
+    expect(res.diagnostics).toHaveLength(1);
+    expect(res.diagnostics[0]?.message).toContain(
+      'Direct call-site ea argument for "takeAddr" must be runtime-atom-free in v0.2',
     );
-    const gap = new Uint8Array(0x80 - code.length);
-    const data = Uint8Array.of(0x02, 0x01, 0x02, 0x03, 0x04);
-    const expected = new Uint8Array(code.length + gap.length + data.length);
-    expected.set(code, 0);
-    expected.set(gap, code.length);
-    expected.set(data, code.length + gap.length);
-
-    expect(bin!.bytes).toEqual(expected);
+    expect(res.diagnostics[0]?.line).toBe(13);
+    expect(res.diagnostics[0]?.column).toBe(5);
   });
 
-  it('supports nested indexed addresses during lowering', async () => {
+  it('rejects direct call-site nested indexed ea args', async () => {
     const entry = join(__dirname, 'fixtures', 'pr22_call_ea_index_nested.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics).toEqual([]);
-
-    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
-    expect(bin).toBeDefined();
-
-    const code = Uint8Array.of(
-      ...callVoidPrefix,
-      0x3a,
-      0x44,
-      0x00, // ld a, ($0044) table[0]
-      0x26,
-      0x00, // ld h, 0
-      0x6f, // ld l, a
-      0xe5, // push hl (scaled index)
-      0xe1, // pop hl
-      0xe5, // push hl (preserve scaled index)
-      0x21,
-      0x40,
-      0x00, // ld hl, $0040 (arr base)
-      0xd1, // pop de
-      0x19, // add hl, de
-      0xe5, // push hl (effective address)
-      0xcd,
-      0x34,
-      0x12, // call $1234
-      0xc1, // pop bc
-      ...callVoidSuffix,
-      0xc9, // ret
+    expect(res.artifacts).toEqual([]);
+    expect(res.diagnostics).toHaveLength(1);
+    expect(res.diagnostics[0]?.message).toContain(
+      'Direct call-site ea argument for "takeAddr" must be runtime-atom-free in v0.2',
     );
-    const gap = new Uint8Array(0x40 - code.length);
-    const data = Uint8Array.of(10, 20, 30, 40, 1, 2);
-    const expected = new Uint8Array(code.length + gap.length + data.length);
-    expected.set(code, 0);
-    expected.set(gap, code.length);
-    expected.set(data, code.length + gap.length);
-
-    expect(bin!.bytes).toEqual(expected);
+    expect(res.diagnostics[0]?.line).toBe(12);
+    expect(res.diagnostics[0]?.column).toBe(5);
   });
 });
