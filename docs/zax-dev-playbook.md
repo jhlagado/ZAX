@@ -532,9 +532,9 @@ Normative language behavior is defined in `docs/zax-spec.md`.
 | Area                    | Change                                                       | Issue                                              | Status      | PR                                               |
 | ----------------------- | ------------------------------------------------------------ | -------------------------------------------------- | ----------- | ------------------------------------------------ |
 | docs                    | Runtime-atom model and single-expression budget              | —                                                  | In progress | [#219](https://github.com/jhlagado/ZAX/pull/219) |
-| semantics/lowering      | Enforce runtime-atom quota for source-level `ea` expressions | [#221](https://github.com/jhlagado/ZAX/issues/221) | Planned     | —                                                |
-| semantics/lowering      | Enforce runtime-atom-free direct `ea`/`(ea)` call-site args  | [#222](https://github.com/jhlagado/ZAX/issues/222) | Planned     | —                                                |
-| lowering/spec-alignment | Resolve op stack-policy mismatch (docs vs implementation)    | [#223](https://github.com/jhlagado/ZAX/issues/223) | Planned     | —                                                |
+| semantics/lowering      | Enforce runtime-atom quota for source-level `ea` expressions | [#221](https://github.com/jhlagado/ZAX/issues/221) | Done        | [#236](https://github.com/jhlagado/ZAX/pull/236) |
+| semantics/lowering      | Enforce runtime-atom-free direct `ea`/`(ea)` call-site args  | [#222](https://github.com/jhlagado/ZAX/issues/222) | Done        | [#237](https://github.com/jhlagado/ZAX/pull/237) |
+| lowering/spec-alignment | Resolve op stack-policy mismatch (docs vs implementation)    | [#223](https://github.com/jhlagado/ZAX/issues/223) | In progress | —                                                |
 
 ## Rollout Schedule (Spec-First, Implementation Catch-Up)
 

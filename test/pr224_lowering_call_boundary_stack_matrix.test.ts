@@ -18,11 +18,17 @@ describe('PR224 lowering: call-boundary stack invariant matrix', () => {
 
     expect(
       messages.some((m) =>
+        m.includes('call reached with unknown stack depth; cannot verify callee stack contract.'),
+      ),
+    ).toBe(true);
+    expect(
+      messages.some((m) =>
         m.includes(
-          'op "maybe_leak" expansion leaves stack depth untrackable; cannot verify net stack delta.',
+          'call reached after untracked SP mutation; cannot verify callee stack contract.',
         ),
       ),
     ).toBe(true);
+
     expect(
       messages.some((m) =>
         m.includes('ret reached with unknown stack depth; cannot verify function stack balance.'),
