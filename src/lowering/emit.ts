@@ -750,7 +750,7 @@ export function emitProgram(
           case 'IndexMemIxIy':
             return baseAtoms + 1 + (ea.index.disp ? countRuntimeAtomsInImmExpr(ea.index.disp) : 0);
           case 'IndexEa':
-            return baseAtoms + countRuntimeAtomsInEaExpr(ea.index.expr);
+            return baseAtoms + Math.max(1, countRuntimeAtomsInEaExpr(ea.index.expr));
         }
       }
     }
@@ -764,6 +764,53 @@ export function emitProgram(
       diagnostics,
       operand.span,
       `${context} exceeds runtime-atom budget (max 1; found ${atoms}).`,
+    );
+    return false;
+  };
+
+  const countRuntimeAtomsForDirectCallSiteEa = (ea: EaExprNode): number => {
+    switch (ea.kind) {
+      case 'EaName': {
+        const lower = ea.name.toLowerCase();
+        const isBoundStorageName =
+          stackSlotOffsets.has(lower) || stackSlotTypes.has(lower) || storageTypes.has(lower);
+        if (isBoundStorageName) return 0;
+        return runtimeAtomRegisterNames.has(ea.name.toUpperCase()) ? 1 : 0;
+      }
+      case 'EaField':
+        return countRuntimeAtomsForDirectCallSiteEa(ea.base);
+      case 'EaAdd':
+      case 'EaSub':
+        return (
+          countRuntimeAtomsForDirectCallSiteEa(ea.base) + countRuntimeAtomsInImmExpr(ea.offset)
+        );
+      case 'EaIndex': {
+        const baseAtoms = countRuntimeAtomsForDirectCallSiteEa(ea.base);
+        switch (ea.index.kind) {
+          case 'IndexImm':
+            return baseAtoms + countRuntimeAtomsInImmExpr(ea.index.value);
+          case 'IndexReg8':
+          case 'IndexReg16':
+          case 'IndexMemHL':
+            return baseAtoms + 1;
+          case 'IndexMemIxIy':
+            return baseAtoms + 1 + (ea.index.disp ? countRuntimeAtomsInImmExpr(ea.index.disp) : 0);
+          case 'IndexEa':
+            return baseAtoms + Math.max(1, countRuntimeAtomsForDirectCallSiteEa(ea.index.expr));
+        }
+      }
+    }
+  };
+
+  const enforceDirectCallSiteEaBudget = (operand: AsmOperandNode, calleeName: string): boolean => {
+    if (operand.kind !== 'Ea' && operand.kind !== 'Mem') return true;
+    const atoms = countRuntimeAtomsForDirectCallSiteEa(operand.expr);
+    if (atoms === 0) return true;
+    const form = operand.kind === 'Mem' ? '(ea)' : 'ea';
+    diagAt(
+      diagnostics,
+      operand.span,
+      `Direct call-site ${form} argument for "${calleeName}" must be runtime-atom-free in v0.2 (found ${atoms}). Stage dynamic addressing in prior instructions and pass a register or precomputed slot value.`,
     );
     return false;
   };
@@ -2408,6 +2455,7 @@ export function emitProgram(
           if (callable) {
             const args = asmItem.operands;
             const params = callable.kind === 'func' ? callable.node.params : callable.node.params;
+            const calleeName = callable.node.name;
             const returnType =
               callable.kind === 'func' ? callable.node.returnType : callable.node.returnType;
             const returnsVoid =
@@ -2422,6 +2470,9 @@ export function emitProgram(
                 `Call to "${asmItem.head}" has ${args.length} argument(s) but expects ${params.length}.`,
               );
               return;
+            }
+            for (const arg of args) {
+              if (!enforceDirectCallSiteEaBudget(arg, calleeName)) return;
             }
 
             const pushArgValueFromName = (name: string, want: 'byte' | 'word'): boolean => {
