@@ -189,6 +189,34 @@ LD arr[idx], A
 - Rejected (`2` atoms): `arr[i][j]`
 - Rejected (`2` atoms): `arr[i + j]`
 
+**User mental model (informative):**
+
+- One moving part per expression.
+- A moving part is one runtime-varying index/address source.
+- Constants can be nested freely.
+
+**Common confusion quick-check (v0.2):**
+
+| Form | Atoms | Allowed |
+| --- | --- | --- |
+| `arr[CONST1 + CONST2 * 4][idx]` | 1 | Yes |
+| `arr[idx][0]` | 1 | Yes |
+| `arr[idx].name` | 1 | Yes |
+| `arr[idx_a + idx_b]` | 2 | No |
+| `grid[row][col]` | 2 | No |
+
+**Staged pattern (preferred):**
+
+```zax
+; Rejected:
+LD A, grid[row][col]
+
+; Preferred:
+LD HL, grid[row]
+; ... explicit second-step addressing ...
+; ... final load/store ...
+```
+
 **Rationale:** This keeps hidden lowering bounded and predictable for an assembler-first model while still allowing expressive constant-depth address paths.
 
 ---
@@ -606,6 +634,17 @@ Function calls have defined register conventions.
 - Runtime-atom budget for call-site `ea`/`(ea)` arguments is `0` in v0.2 (only runtime-atom-free forms above are accepted directly).
 - Dynamic or nested indexed arguments are deferred until their lowering can be guaranteed preservation-safe with low surprise.
 - Multi-step style is preferred: compute first, then pass a simple register/slot/address argument.
+
+**User-facing staged call pattern:**
+
+```zax
+; Rejected in v0.2:
+process_byte (arr[idx])
+
+; Preferred:
+LD A, arr[idx]
+process_byte A
+```
 
 **Full-call stage clobber model (v0.2 draft):**
 

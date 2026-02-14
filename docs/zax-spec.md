@@ -426,6 +426,36 @@ Examples (v0.2):
 - Rejected (`2` atoms): `arr[i][j]`
 - Rejected (`2` atoms): `arr[i + j]`
 
+Rule of thumb (informative):
+
+- One moving part per expression.
+- A moving part is one runtime-varying source (a runtime atom).
+- Constants may be nested freely.
+
+Common confusion matrix (v0.2):
+
+| Form | Runtime atoms | Allowed? | Why |
+| --- | --- | --- | --- |
+| `arr[CONST1 + CONST2 * 4]` | 0 | Yes | Constant-only index expression |
+| `arr[CONST1 + CONST2 * 4][i]` | 1 | Yes | One dynamic source (`i`) |
+| `arr[i][0]` | 1 | Yes | One dynamic source plus constant segment |
+| `arr[i].name` | 1 | Yes | One dynamic source plus constant field path |
+| `arr[i + 1]` | 1 | Yes | One dynamic source plus constant arithmetic |
+| `arr[i + j]` | 2 | No | Two dynamic sources in one expression |
+| `grid[row][col]` | 2 | No | Two dynamic sources in one expression |
+
+Staged style (informative):
+
+```zax
+; Rejected (2 runtime atoms in one expression):
+LD A, grid[row][col]
+
+; Preferred staged style:
+LD HL, grid[row]    ; 1 runtime atom
+; ... explicit second-step addressing on following line(s) ...
+; ... then final load/store ...
+```
+
 ### 5.2 Records (Power-of-2 Sized)
 
 Record types are layout descriptions:
@@ -862,6 +892,17 @@ Call-site complexity budget (v0.2):
 - Runtime-indexed argument forms are compile errors at call sites in v0.2.
   - Examples: `fn arr[idx]`, `fn (arr[idx])`, `fn grid[row][col]`
 - To pass a runtime-indexed value or address, compute it first and pass a simple register argument.
+
+Staged call-site style (informative):
+
+```zax
+; Rejected:
+process_byte (arr[idx])
+
+; Preferred:
+LD A, arr[idx]
+process_byte A
+```
 
 Calls follow the calling convention in 8.2 (compiler emits the required pushes, call, and any temporary saves/restores).
 

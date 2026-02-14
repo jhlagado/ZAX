@@ -208,6 +208,8 @@ end
 
 The main spec's runtime-atom expression budget applies to `ea` matching. In v0.2, matcher acceptance does not bypass that budget: if a call-site `ea` contains too many runtime atoms, the invocation is rejected before or during semantic validation.
 
+User-facing rule of thumb (informative): one moving part per expression. If an op call-site needs multiple runtime-varying address components, stage the address over multiple lines first, then pass a simpler operand.
+
 **`mem8`** and **`mem16`** match dereference operands: call-site operands written as `(ea)` with an implied width of 8 or 16 bits respectively. These matchers are necessary because in raw Z80 mnemonics, the width of a memory dereference is implied by the instruction form (the destination or source register determines whether you're reading a byte or a word). But in an op parameter list, you may need to explicitly declare whether a memory operand carries a byte-width or word-width dereference.
 
 When a `mem8` or `mem16` parameter is substituted into the op body, the full dereference operand — including the parentheses — is substituted. This is a critical distinction from `ea`:
