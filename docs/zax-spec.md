@@ -1026,7 +1026,7 @@ Specificity (v0.1):
 Ops are inline expansions. They do not have a hidden preservation boundary of their own.
 
 - Register/flag effects of an `op` are the effects of the expanded instruction sequence.
-- Net stack delta of an `op` expansion must be zero.
+- Stack effects inside an `op` are developer-managed and evaluated by normal enclosing function-stream rules.
 - Preservation-safe behavior is guaranteed at typed function-call boundaries (Section 8.2), not at arbitrary inline `op` boundaries.
 
 Destination parameters (v0.2):
@@ -2442,7 +2442,7 @@ This is permitted. Any save/restore discipline is explicitly authored in the op 
 
 ---
 
-## Appendix A: Implementation Checklist
+### Appendix E.A: Implementation Checklist
 
 This checklist is for compiler implementers. It covers the essential components needed for a compliant v0.2 op implementation.
 
@@ -2521,7 +2521,7 @@ This checklist is for compiler implementers. It covers the essential components 
 
 ---
 
-## Appendix B: Test Cases for Op Implementation
+### Appendix E.B: Test Cases for Op Implementation
 
 This appendix provides test case outlines for validating an op implementation. Each test should verify both successful compilation and correct code generation.
 
@@ -2650,7 +2650,7 @@ end
 
 ---
 
-## Appendix C: Glossary
+### Appendix E.C: Glossary
 
 **AST (Abstract Syntax Tree):** The parsed representation of source code as a tree structure, where each node represents a syntactic construct.
 
