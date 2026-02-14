@@ -19,14 +19,14 @@ export func main(): void
     p: addr
   end
   ld hl, msg
-  ld (p), hl
+  ld p, hl
 
   ld b, MsgLen
   repeat
-    ld hl, (p)
+    ld hl, p
     ld a, (hl)
     inc hl
-    ld (p), hl
+    ld p, hl
     push bc
     bios_putc A
     pop bc
@@ -77,9 +77,9 @@ op add16(dst: BC, src: reg16)
 end
 ```
 
-At a call site, `add16 DE, BC` reads like a native instruction. The compiler sees that the first operand is `DE`, selects the second overload (because the fixed matcher `DE` is more specific than the class matcher `reg16`), substitutes `BC` for `src`, and emits the resulting instruction sequence. Non-destination registers are preserved automatically.
+At a call site, `add16 DE, BC` reads like a native instruction. The compiler sees that the first operand is `DE`, selects the second overload (because the fixed matcher `DE` is more specific than the class matcher `reg16`), substitutes `BC` for `src`, and emits the resulting instruction sequence inline.
 
-This is not text substitution. The compiler operates on parsed AST nodes. It knows that `src` is a `reg16`, that the expansion must preserve all registers except the destination, and that the net stack delta must be zero. If an expansion produces an invalid instruction, the error points to the call site with a clear diagnostic — not to a mangled token stream three macro levels deep.
+This is not text substitution. The compiler operates on parsed AST nodes and matcher types. Register/flag/stack discipline inside an `op` body is developer-managed, so authors should keep expansions explicit and stack-balanced. If an expansion produces an invalid instruction, the error points to the call site with a clear diagnostic — not to a mangled token stream three macro levels deep.
 
 Op parameters use a system of **matcher types** that constrain what each operand position accepts:
 
@@ -119,9 +119,9 @@ until Z
 ; Multi-way dispatch on a value
 ld a, (mode)
 select A
-  case Read
+  case Mode.Read
     call do_read
-  case Write
+  case Mode.Write
     call do_write
   else
     call do_error
@@ -145,14 +145,14 @@ func add_words(a: word, b: word): word
   var
     result: word
   end
-  ld hl, (a)
-  ld de, (b)
+  ld hl, a
+  ld de, b
   add hl, de
-  ld (result), hl
+  ld result, hl
 end
 ```
 
-Arguments are passed on the stack (pushed right-to-left by the caller, cleaned up after return). Each argument and each local occupies a 16-bit slot. The compiler computes SP-relative offsets for every slot, so `(a)` and `(result)` are not magic — they are SP-relative memory accesses that the compiler lowers into real instruction sequences. Return values come back in `HL` (16-bit) or `L` (8-bit), following Z80 convention.
+Arguments are passed on the stack (pushed right-to-left by the caller, cleaned up after return). Each argument and each local occupies a 16-bit slot. The compiler computes SP-relative offsets for every slot, so names like `a` and `result` map to real SP-relative accesses in lowered code. Return values come back in `HL` (16-bit) or `L` (8-bit), following Z80 convention.
 
 Calling a function inside an instruction stream looks like calling an instruction:
 
@@ -178,13 +178,13 @@ extern func bios_putc(ch: byte): void at $F003
 bios_putc A    ; pushes A (zero-extended), calls $F003, cleans up
 ```
 
-The compiler generates the correct calling sequence to the absolute address. You don't hand-roll the push/call/pop dance for every BIOS entry point in your project.
+The compiler generates the correct calling sequence to the absolute address. You don't hand-roll the push/call/pop dance for every BIOS entry point in your project. At typed call boundaries (`func`/`extern func`), `void` calls preserve boundary-visible registers/flags, while non-`void` calls expose `HL` as the return channel.
 
 ---
 
 ## Data Layouts That Stay Out of Your Way
 
-ZAX has records (packed structs), unions (overlays), arrays, and enums. These are **layout descriptions**, not runtime abstractions. They compute addresses — nothing else.
+ZAX has records (power-of-two-sized layouts), unions (overlays), arrays, and enums. These are **layout descriptions**, not runtime abstractions. They compute addresses — nothing else.
 
 ```
 type Sprite
@@ -237,9 +237,9 @@ All module-scope names share a single global namespace. Name collisions across m
 
 ## Project Status
 
-ZAX is under active development. The compiler exists as a Node.js CLI tool and handles a meaningful subset of the v0.1 language specification. The end-to-end pipeline (lex → parse → lower → encode → emit) is functional and produces `.bin`, `.hex`, `.d8dbg.json` (Debug80-compatible debug maps), and `.lst` output.
+ZAX is under active development. The compiler exists as a Node.js CLI tool and handles a meaningful subset of the active v0.2 draft specification. The end-to-end pipeline (lex → parse → lower → encode → emit) is functional and produces `.bin`, `.hex`, `.d8dbg.json` (Debug80-compatible debug maps), and `.lst` output.
 
-What works today: single and multi-module compilation, functions with locals and calling conventions, structured control flow, the op system, records/unions/arrays, `const`/`enum`/`data`/`var`/`bin`/`hex`/`extern` declarations, forward references and fixups, and a growing slice of the Z80 instruction set.
+What works today: single and multi-module compilation, functions with locals and calling conventions, structured control flow, the op system, records/unions/arrays, `const`/`enum`/`data`/`globals`/`bin`/`hex`/`extern` declarations, forward references and fixups, and a growing slice of the Z80 instruction set.
 
 What remains: broader ISA coverage, CLI hardening, full listing output, cross-platform acceptance testing, and Debug80 integration. See `docs/zax-dev-playbook.md` for the concrete milestone plan.
 
