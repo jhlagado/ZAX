@@ -51,6 +51,18 @@ export const DiagnosticIds = {
   /** Generic emission/lowering error (layout/packing/symbol collisions, etc.). */
   EmitError: 'ZAX300',
 
+  /** Op invocation arity mismatch against available overload set. */
+  OpArityMismatch: 'ZAX310',
+
+  /** No overload match for an op invocation with the provided operands. */
+  OpNoMatchingOverload: 'ZAX311',
+
+  /** Ambiguous overload resolution for an op invocation. */
+  OpAmbiguousOverload: 'ZAX312',
+
+  /** Cyclic op expansion detected in inline expansion graph. */
+  OpExpansionCycle: 'ZAX313',
+
   /** Generic semantic evaluation error (env building, imm evaluation, etc.). */
   SemanticsError: 'ZAX400',
 
