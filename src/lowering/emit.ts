@@ -2576,8 +2576,55 @@ export function emitProgram(
           callSiteSpan: SourceSpan;
         };
         const opExpansionStack: OpExpansionFrame[] = [];
+        const currentOpExpansionFrame = (): OpExpansionFrame | undefined =>
+          opExpansionStack.length > 0 ? opExpansionStack[opExpansionStack.length - 1] : undefined;
+        const rootOpExpansionFrame = (): OpExpansionFrame | undefined =>
+          opExpansionStack.length > 0 ? opExpansionStack[0] : undefined;
         const currentMacroCallSiteSpan = (): SourceSpan | undefined =>
-          opExpansionStack.length > 0 ? opExpansionStack[0]?.callSiteSpan : undefined;
+          rootOpExpansionFrame()?.callSiteSpan;
+        const formatInstructionForOpExpansionDiag = (inst: AsmInstructionNode): string => {
+          const ops = inst.operands.map(formatAsmOperandForOpDiag).join(', ');
+          return ops.length > 0 ? `${inst.head} ${ops}` : inst.head;
+        };
+        const appendInvalidOpExpansionDiagnostic = (
+          inst: AsmInstructionNode,
+          diagnosticsStart: number,
+        ): void => {
+          const frame = currentOpExpansionFrame();
+          if (!frame) return;
+          const rootFrame = rootOpExpansionFrame();
+          const newDiagnostics = diagnostics.slice(diagnosticsStart);
+          const hasConcreteInstructionFailure = newDiagnostics.some(
+            (d) =>
+              d.severity === 'error' &&
+              (d.id === DiagnosticIds.EncodeError || d.id === DiagnosticIds.EmitError),
+          );
+          if (!hasConcreteInstructionFailure) return;
+          if (
+            newDiagnostics.some(
+              (d) =>
+                d.id === DiagnosticIds.OpInvalidExpansion ||
+                d.id === DiagnosticIds.OpArityMismatch ||
+                d.id === DiagnosticIds.OpNoMatchingOverload ||
+                d.id === DiagnosticIds.OpAmbiguousOverload ||
+                d.id === DiagnosticIds.OpExpansionCycle,
+            )
+          ) {
+            return;
+          }
+          const expansionChain = opExpansionStack
+            .map((entry) => `${entry.name} (${entry.declSpan.file}:${entry.declSpan.start.line})`)
+            .join(' -> ');
+          diagAtWithId(
+            diagnostics,
+            rootFrame?.callSiteSpan ?? frame.callSiteSpan,
+            DiagnosticIds.OpInvalidExpansion,
+            `Invalid op expansion in "${frame.name}" at call site.\n` +
+              `expanded instruction: ${formatInstructionForOpExpansionDiag(inst)}\n` +
+              `op definition: ${frame.declSpan.file}:${frame.declSpan.start.line}\n` +
+              `expansion chain: ${expansionChain}`,
+          );
+        };
         const sourceTagForSpan = (span: SourceSpan): SourceSegmentTag => {
           const macroCallSite = currentMacroCallSiteSpan();
           const taggedSpan = macroCallSite ?? span;
@@ -2794,6 +2841,7 @@ export function emitProgram(
 
         const emitAsmInstruction = (asmItem: AsmInstructionNode): void => {
           const prevTag = currentCodeSegmentTag;
+          const diagnosticsStart = diagnostics.length;
           currentCodeSegmentTag = sourceTagForSpan(asmItem.span);
           try {
             for (const operand of asmItem.operands) {
@@ -3799,6 +3847,7 @@ export function emitProgram(
             }
             syncToFlow();
           } finally {
+            appendInvalidOpExpansionDiagnostic(asmItem, diagnosticsStart);
             currentCodeSegmentTag = prevTag;
           }
         };
