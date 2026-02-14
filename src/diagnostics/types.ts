@@ -63,6 +63,9 @@ export const DiagnosticIds = {
   /** Cyclic op expansion detected in inline expansion graph. */
   OpExpansionCycle: 'ZAX313',
 
+  /** Op expansion produced an invalid concrete instruction after substitution. */
+  OpInvalidExpansion: 'ZAX314',
+
   /** Generic semantic evaluation error (env building, imm evaluation, etc.). */
   SemanticsError: 'ZAX400',
 

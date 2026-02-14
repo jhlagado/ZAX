@@ -60,4 +60,49 @@ describe('PR268: op diagnostics matrix', () => {
     expect(messages.some((m) => m.includes('expansion chain: first'))).toBe(true);
     expect(messages.some((m) => m.includes('-> second'))).toBe(true);
   });
+
+  it('reports invalid op expansion diagnostics with expanded instruction context', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr270_op_invalid_expansion_diagnostics.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    const ids = res.diagnostics.map((d) => d.id);
+    const messages = res.diagnostics.map((d) => d.message);
+
+    expect(ids).toContain(DiagnosticIds.OpInvalidExpansion);
+    expect(messages.some((m) => m.includes('Invalid op expansion in "clobber_a_with"'))).toBe(true);
+    expect(messages.some((m) => m.includes('expanded instruction: ld A, SP'))).toBe(true);
+    expect(messages.some((m) => m.includes('op definition:'))).toBe(true);
+    expect(messages.some((m) => m.includes('expansion chain: clobber_a_with'))).toBe(true);
+  });
+
+  it('reports nested invalid expansion diagnostics with full expansion chain', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr270_op_invalid_expansion_nested_chain.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    const ids = res.diagnostics.map((d) => d.id);
+    const messages = res.diagnostics.map((d) => d.message);
+
+    expect(ids).toContain(DiagnosticIds.OpInvalidExpansion);
+    expect(messages.some((m) => m.includes('Invalid op expansion in "bad_inner"'))).toBe(true);
+    expect(messages.some((m) => m.includes('expansion chain: mid'))).toBe(true);
+    expect(messages.some((m) => m.includes('-> bad_inner'))).toBe(true);
+  });
+
+  it('reports one invalid-expansion diagnostic per failing expanded instruction', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr270_op_invalid_expansion_multi_failure.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    const invalids = res.diagnostics.filter((d) => d.id === DiagnosticIds.OpInvalidExpansion);
+    const messages = invalids.map((d) => d.message);
+
+    expect(invalids).toHaveLength(2);
+    expect(messages.some((m) => m.includes('expanded instruction: ld A, SP'))).toBe(true);
+    expect(messages.some((m) => m.includes('expanded instruction: ld C, SP'))).toBe(true);
+  });
+
+  it('does not emit invalid-expansion diagnostics for non-op instruction failures', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr270_nonop_invalid_instruction_baseline.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    const ids = res.diagnostics.map((d) => d.id);
+
+    expect(ids).not.toContain(DiagnosticIds.OpInvalidExpansion);
+    expect(ids).toContain(DiagnosticIds.EncodeError);
+  });
 });
