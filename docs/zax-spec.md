@@ -921,7 +921,7 @@ Stack-depth constraints (v0.1):
 - At any structured-control-flow join (end of `if`/`else`, loop back-edges, and loop exits), stack depth must match across all paths.
   - Paths that terminate (e.g., `ret`, or an unconditional `jp`/`jr` that exits the construct) do not participate in join stack-depth matching.
 - The end of a `select ... end` is also a join point: stack depth must match across all `case`/`else` arms that reach `end`.
-- The net stack delta of an `op` expansion must be 0.
+- `op` expansion is inline; stack effects are enforced only by these same enclosing function-stream rules.
 
 ---
 

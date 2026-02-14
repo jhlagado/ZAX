@@ -10,10 +10,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 describe('PR23 lowering safety checks', () => {
-  it('diagnoses op expansions with non-zero net stack delta', async () => {
+  it('diagnoses non-zero stack delta at function fallthrough after unbalanced op expansion', async () => {
     const entry = join(__dirname, 'fixtures', 'pr23_op_unbalanced_stack.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics.some((d) => d.message.includes('non-zero net stack delta'))).toBe(true);
+    expect(
+      res.diagnostics.some((d) =>
+        d.message.includes('Function "main" has non-zero stack delta at fallthrough (-2).'),
+      ),
+    ).toBe(true);
   });
 
   it('diagnoses ret with non-zero tracked stack delta', async () => {
@@ -32,16 +36,10 @@ describe('PR23 lowering safety checks', () => {
     ).toBe(true);
   });
 
-  it('diagnoses op expansions that mutate SP in untracked ways', async () => {
+  it('allows untracked SP mutation in op expansion when enclosing function-stream checks stay valid', async () => {
     const entry = join(__dirname, 'fixtures', 'pr23_op_untracked_sp_mutation.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(
-      res.diagnostics.some((d) =>
-        d.message.includes(
-          'expansion performs untracked SP mutation; cannot verify net stack delta',
-        ),
-      ),
-    ).toBe(true);
+    expect(res.diagnostics).toEqual([]);
   });
 
   it('emits an implicit ret for fallthrough functions without locals', async () => {

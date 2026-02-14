@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 describe('PR221 lowering: op-expansion and ret cc interaction invariants', () => {
-  it('diagnoses exact unknown-stack ret cc + fallthrough contract after untrackable op expansion', async () => {
+  it('diagnoses exact unknown-stack ret cc + fallthrough contract after inline op expansion', async () => {
     const entry = join(__dirname, 'fixtures', 'pr221_lowering_op_unknown_retcc_fallthrough.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
@@ -20,12 +20,6 @@ describe('PR221 lowering: op-expansion and ret cc interaction invariants', () =>
       column: d.column,
     }));
     expect(actual).toEqual([
-      {
-        message:
-          'op "branch_unknown" expansion leaves stack depth untrackable; cannot verify net stack delta.',
-        line: 11,
-        column: 3,
-      },
       {
         message: 'ret reached with unknown stack depth; cannot verify function stack balance.',
         line: 12,
@@ -51,12 +45,6 @@ describe('PR221 lowering: op-expansion and ret cc interaction invariants', () =>
       column: d.column,
     }));
     expect(actual).toEqual([
-      {
-        message:
-          'op "branch_unknown" expansion leaves stack depth untrackable; cannot verify net stack delta.',
-        line: 14,
-        column: 5,
-      },
       {
         message: 'Cannot verify stack depth at if/else join due to unknown stack state.',
         line: 17,
@@ -88,12 +76,6 @@ describe('PR221 lowering: op-expansion and ret cc interaction invariants', () =>
     }));
     expect(actual).toEqual([
       {
-        message:
-          'op "branch_unknown" expansion leaves stack depth untrackable; cannot verify net stack delta.',
-        line: 13,
-        column: 5,
-      },
-      {
         message: 'Cannot verify stack depth at while back-edge due to unknown stack state.',
         line: 14,
         column: 3,
@@ -123,12 +105,6 @@ describe('PR221 lowering: op-expansion and ret cc interaction invariants', () =>
       column: d.column,
     }));
     expect(actual).toEqual([
-      {
-        message:
-          'op "branch_unknown" expansion leaves stack depth untrackable; cannot verify net stack delta.',
-        line: 11,
-        column: 3,
-      },
       {
         message: 'ret reached with unknown stack depth; cannot verify function stack balance.',
         line: 12,
