@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic, DiagnosticId } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
 import type { EmittedByteMap, SymbolEntry } from '../formats/types.js';
 import type {
@@ -40,6 +40,22 @@ function diag(diagnostics: Diagnostic[], file: string, message: string): void {
 function diagAt(diagnostics: Diagnostic[], span: SourceSpan, message: string): void {
   diagnostics.push({
     id: DiagnosticIds.EmitError,
+    severity: 'error',
+    message,
+    file: span.file,
+    line: span.start.line,
+    column: span.start.column,
+  });
+}
+
+function diagAtWithId(
+  diagnostics: Diagnostic[],
+  span: SourceSpan,
+  id: DiagnosticId,
+  message: string,
+): void {
+  diagnostics.push({
+    id,
     severity: 'error',
     message,
     file: span.file,
@@ -820,6 +836,69 @@ export function emitProgram(
 
   const formatOpDefinitionForDiag = (opDecl: OpDeclNode): string =>
     `${formatOpSignature(opDecl)} (${opDecl.span.file}:${opDecl.span.start.line})`;
+
+  const matcherMismatchReason = (matcher: OpMatcherNode, operand: AsmOperandNode): string => {
+    const got = formatAsmOperandForOpDiag(operand);
+    switch (matcher.kind) {
+      case 'MatcherReg8':
+        return `expects reg8, got ${got}`;
+      case 'MatcherReg16':
+        return `expects reg16, got ${got}`;
+      case 'MatcherIdx16':
+        return `expects IX/IY indexed memory operand, got ${got}`;
+      case 'MatcherCc':
+        return `expects condition token NZ/Z/NC/C/PO/PE/P/M, got ${got}`;
+      case 'MatcherImm8': {
+        const expr = enumImmExprFromOperand(operand);
+        if (!expr) return `expects imm8, got ${got}`;
+        const value = evalImmNoDiag(expr);
+        if (value === undefined) return `expects imm8, got ${got}`;
+        if (!fitsImm8(value)) return `expects imm8 (-128..255), got ${got}`;
+        return `expects imm8, got ${got}`;
+      }
+      case 'MatcherImm16': {
+        const expr = enumImmExprFromOperand(operand);
+        if (!expr) return `expects imm16, got ${got}`;
+        const value = evalImmNoDiag(expr);
+        if (value === undefined) return `expects imm16, got ${got}`;
+        if (!fitsImm16(value)) return `expects imm16 (-32768..65535), got ${got}`;
+        return `expects imm16, got ${got}`;
+      }
+      case 'MatcherEa':
+        return `expects ea or (ea), got ${got}`;
+      case 'MatcherMem8': {
+        if (operand.kind !== 'Mem') return `expects mem8 dereference, got ${got}`;
+        const width = inferMemWidth(operand);
+        if (width !== undefined && width !== 1)
+          return `expects mem8 dereference, got mem${width * 8}`;
+        return `expects mem8 dereference, got ${got}`;
+      }
+      case 'MatcherMem16': {
+        if (operand.kind !== 'Mem') return `expects mem16 dereference, got ${got}`;
+        const width = inferMemWidth(operand);
+        if (width !== undefined && width !== 2)
+          return `expects mem16 dereference, got mem${width * 8}`;
+        return `expects mem16 dereference, got ${got}`;
+      }
+      case 'MatcherFixed':
+        return `expects ${matcher.token}, got ${got}`;
+      default:
+        return `operand mismatch: expected ${formatOpMatcher(matcher)}, got ${got}`;
+    }
+  };
+
+  const firstOpOverloadMismatchReason = (
+    opDecl: OpDeclNode,
+    operands: AsmOperandNode[],
+  ): string | undefined => {
+    for (let i = 0; i < opDecl.params.length && i < operands.length; i++) {
+      const param = opDecl.params[i]!;
+      const operand = operands[i]!;
+      if (matcherMatchesOperand(param.matcher, operand)) continue;
+      return `${param.name}: ${matcherMismatchReason(param.matcher, operand)}`;
+    }
+    return undefined;
+  };
 
   const cloneImmExpr = (expr: ImmExprNode): ImmExprNode => {
     const cloneOffsetofPath = (path: any): any => ({
@@ -2948,9 +3027,10 @@ export function emitProgram(
               const available = opCandidates
                 .map((candidate) => `  - ${formatOpSignature(candidate)}`)
                 .join('\n');
-              diagAt(
+              diagAtWithId(
                 diagnostics,
                 asmItem.span,
+                DiagnosticIds.OpArityMismatch,
                 `No op overload of "${asmItem.head}" accepts ${asmItem.operands.length} operand(s).\n` +
                   `available overloads:\n${available}`,
               );
@@ -2969,11 +3049,15 @@ export function emitProgram(
             if (matches.length === 0) {
               const operandSummary = asmItem.operands.map(formatAsmOperandForOpDiag).join(', ');
               const available = arityMatches
-                .map((candidate) => `  - ${formatOpDefinitionForDiag(candidate)}`)
+                .map((candidate) => {
+                  const reason = firstOpOverloadMismatchReason(candidate, asmItem.operands);
+                  return `  - ${formatOpDefinitionForDiag(candidate)}${reason ? ` ; ${reason}` : ''}`;
+                })
                 .join('\n');
-              diagAt(
+              diagAtWithId(
                 diagnostics,
                 asmItem.span,
+                DiagnosticIds.OpNoMatchingOverload,
                 `No matching op overload for "${asmItem.head}" with provided operands.\n` +
                   `call-site operands: (${operandSummary})\n` +
                   `available overloads:\n${available}`,
@@ -2986,9 +3070,10 @@ export function emitProgram(
               const equallySpecific = matches
                 .map((candidate) => `  - ${formatOpDefinitionForDiag(candidate)}`)
                 .join('\n');
-              diagAt(
+              diagAtWithId(
                 diagnostics,
                 asmItem.span,
+                DiagnosticIds.OpAmbiguousOverload,
                 `Ambiguous op overload for "${asmItem.head}" (${matches.length} matches).\n` +
                   `call-site operands: (${operandSummary})\n` +
                   `equally specific candidates:\n${equallySpecific}`,
@@ -3008,9 +3093,10 @@ export function emitProgram(
                   ),
                 `${opDecl.name} (${opDecl.span.file}:${opDecl.span.start.line})`,
               ].join(' -> ');
-              diagAt(
+              diagAtWithId(
                 diagnostics,
                 asmItem.span,
+                DiagnosticIds.OpExpansionCycle,
                 `Cyclic op expansion detected for "${opDecl.name}".\n` +
                   `expansion chain: ${cycleChain}`,
               );
