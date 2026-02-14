@@ -25,6 +25,8 @@ This directory is intentionally small. Each document has a single purpose.
 
 - `roadmap.md`
   - Execution plan and milestone tracking.
+- `v02-implementation-checklist.md`
+  - Issue-linked v0.2 execution checklist for low-conflict parallel work.
 - `zax-ai-team-prompt.md`
   - Internal contributor guidance for AI-assisted implementation workflow.
 
