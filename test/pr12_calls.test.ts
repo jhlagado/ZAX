@@ -163,9 +163,11 @@ describe('PR12 calls (extern + func)', () => {
       0x68, // ld l, b
       0x26,
       0x00, // ld h, 0
-      0x11,
+      0xe5, // push hl (scaled index)
+      0x21,
       0x80,
-      0x00, // ld de, $0080
+      0x00, // ld hl, $0080
+      0xd1, // pop de
       0x19, // add hl, de
       0xe5, // push hl
       0xcd,
@@ -198,9 +200,11 @@ describe('PR12 calls (extern + func)', () => {
       0x02,
       0x00, // ld hl, 2
       ...callVoidPrefix,
-      0x11,
+      0xe5, // push hl (scaled index)
+      0x21,
       0x80,
-      0x00, // ld de, $0080
+      0x00, // ld hl, $0080
+      0xd1, // pop de
       0x19, // add hl, de
       0xe5, // push hl
       0xcd,
@@ -237,9 +241,11 @@ describe('PR12 calls (extern + func)', () => {
       0x6f, // ld l, a
       0x26,
       0x00, // ld h, 0
-      0x11,
+      0xe5, // push hl (scaled index)
+      0x21,
       0x81,
-      0x00, // ld de, $0081
+      0x00, // ld hl, $0081
+      0xd1, // pop de
       0x19, // add hl, de
       0xe5, // push hl
       0xcd,
@@ -259,14 +265,45 @@ describe('PR12 calls (extern + func)', () => {
     expect(bin!.bytes).toEqual(expected);
   });
 
-  it('diagnoses nested indexed addresses as unsupported during lowering', async () => {
+  it('supports nested indexed addresses during lowering', async () => {
     const entry = join(__dirname, 'fixtures', 'pr22_call_ea_index_nested.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.artifacts).toEqual([]);
-    expect(
-      res.diagnostics.some((d) =>
-        d.message.includes('Nested indexed addresses are not supported yet'),
-      ),
-    ).toBe(true);
+    expect(res.diagnostics).toEqual([]);
+
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+
+    const code = Uint8Array.of(
+      ...callVoidPrefix,
+      0x3a,
+      0x44,
+      0x00, // ld a, ($0044) table[0]
+      0x26,
+      0x00, // ld h, 0
+      0x6f, // ld l, a
+      0xe5, // push hl (scaled index)
+      0xe1, // pop hl
+      0xe5, // push hl (preserve scaled index)
+      0x21,
+      0x40,
+      0x00, // ld hl, $0040 (arr base)
+      0xd1, // pop de
+      0x19, // add hl, de
+      0xe5, // push hl (effective address)
+      0xcd,
+      0x34,
+      0x12, // call $1234
+      0xc1, // pop bc
+      ...callVoidSuffix,
+      0xc9, // ret
+    );
+    const gap = new Uint8Array(0x40 - code.length);
+    const data = Uint8Array.of(10, 20, 30, 40, 1, 2);
+    const expected = new Uint8Array(code.length + gap.length + data.length);
+    expected.set(code, 0);
+    expected.set(gap, code.length);
+    expected.set(data, code.length + gap.length);
+
+    expect(bin!.bytes).toEqual(expected);
   });
 });

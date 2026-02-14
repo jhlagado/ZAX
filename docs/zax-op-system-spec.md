@@ -19,7 +19,7 @@ The document addresses both by stating normative rules precisely while also expl
 - Algorithm descriptions use pseudocode for clarity; actual implementation may differ in structure as long as behavior matches.
 
 **Version:** This specification corresponds to ZAX v0.2 on `main`.
-Normative precedence: `docs/v01-scope-decisions.md` and `docs/zax-spec.md` govern behavior; this document expands op-specific details.
+Normative precedence: `docs/zax-spec.md` governs language behavior; this document expands op-specific details and must not introduce conflicting normative rules.
 
 **Related documents:**
 

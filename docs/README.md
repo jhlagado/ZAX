@@ -5,9 +5,12 @@ This directory is intentionally small. Each document has a single purpose.
 ## Canonical
 
 - `zax-spec.md`
-  - Primary normative language specification for active development.
+  - Sole normative language specification for active development.
+
+## Transition Records (Non-normative)
+
 - `v01-scope-decisions.md`
-  - Scope and migration decisions that drive v0.2 work; use this to understand intentional breaking changes and delivery order.
+  - v0.2 transition decision record used to capture migration rationale and sequencing while language rules are folded into `zax-spec.md`.
 
 ## Supporting Specs
 
@@ -29,3 +32,4 @@ This directory is intentionally small. Each document has a single purpose.
 
 - Remove stale status snapshots and one-off audit docs once their information is folded into canonical specs or tests.
 - If a document cannot state a unique purpose in one sentence, consolidate it.
+- Canonical language behavior MUST be defined in `zax-spec.md`; supporting and transition docs must not override it.

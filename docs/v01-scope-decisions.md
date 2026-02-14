@@ -1,6 +1,21 @@
-# ZAX v0.1 Scope Decisions
+# ZAX v0.2 Scope Decisions (from v0.1 Baseline)
 
 This document lists features requiring decisions about their future in ZAX.
+
+This draft captures v0.2 decisions, including intentional breaking changes from v0.1 where required for a consistent higher-level model.
+
+> Transition status: this document is a non-normative v0.2 decision record. Canonical normative language behavior is defined in `docs/zax-spec.md`.
+
+## v0.1 -> v0.2 Breaking-Change Snapshot
+
+The following behavior changes are intentional and accepted for v0.2:
+
+- **Storage semantics changed to power-of-2 for composites.** Arrays/records/unions use rounded storage sizes; padding is storage-visible in layout, `sizeof`, and indexing.
+- **`arr[HL]` meaning changed.** It is now a 16-bit direct index; indirect byte-at-HL is written as `arr[(HL)]`.
+- **`sizeof` meaning changed.** Existing v0.1 `sizeof` behavior (packed-size oriented) is replaced by v0.2 storage-size semantics.
+- **Typed scalar variable semantics changed to values.** Legacy scalar paren-dereference forms from v0.1-era examples are not the v0.2 model.
+- **Typed internal call boundaries changed to preservation-safe contracts.** `void` calls expose no boundary-visible clobbers; non-void calls expose only `HL` as return channel.
+- **Enum member access changed to qualified-only.** Unqualified enum member names are compile errors in v0.2.
 
 ---
 
@@ -148,7 +163,7 @@ LD arr[idx], A
 
 **Decision:** ✅ **v0.2 delivery** — Allow `arr[HL]`, `arr[DE]`, `arr[BC]` for 16-bit index values (0-65535).
 
-**Rationale:** Arrays >256 elements cannot be runtime-indexed in v0.1. For element size 1-2, 16-bit indexing is simple (`ADD HL,DE`). Larger elements depend on 1.1 (multiply routine).
+**Rationale:** Arrays >256 elements cannot be runtime-indexed in v0.1. In v0.2, 16-bit indexing composes with §1.1 storage rules: scale by `ADD HL,HL` chains (when needed), then add base.
 
 ---
 
@@ -331,6 +346,8 @@ LD A, (IX+2)                   ; offset for health field
 - `offsetof(Type, field)` returns the byte offset of `field` from the start of `Type`, using **storage sizes** of preceding fields.
 - Both operators are compile-time constants only.
 
+**Compatibility note:** `sizeof` exists in v0.1 but changes meaning in v0.2 (packed-oriented to storage-size semantics).
+
 **`offsetof` rules (v0.2):**
 
 - Records: `offsetof(RecordType, field_path)` is allowed.
@@ -425,6 +442,8 @@ This section defines a unified addressing model for ZAX, with **value semantics*
 | `rec.field`        | value of field (scalar) | Field access yields value      |
 
 **Compatibility note:** This is an intentional v0.2 breaking semantic change from v0.1-era examples/tests that relied on scalar paren-dereference forms.
+
+**Migration note:** Treat legacy scalar paren-dereference examples as outdated for v0.2 semantics.
 
 **Example:**
 
@@ -816,7 +835,52 @@ end
 - Prefer `EX (SP),HL` for stack/HL exchange patterns (notably "restore HL while leaving computed result on top of stack").
 - Use `PUSH`/`POP` save/restore when exchange instructions cannot express the required transformation safely.
 
-**Pending:** Add worked examples for each helper and two or three composed pipelines (`arr[idx]` load, struct-field load, argument marshalling sequence).
+#### 7.3.10 Worked Pipelines (Draft)
+
+These examples show helper composition plus raw machine primitives at the same boundary contract used by language lowering.
+
+**Example A: Runtime indexed byte load to `A` with `HL` preservation**
+
+```zax
+; Goal: LD A, arr[index]
+; Input: index in B
+; Output: A
+
+PUSH HL
+push_reg8_zx B
+index_base_scale arr, 0
+POP HL
+LD A, (HL)
+POP HL
+```
+
+**Example B: Store register byte into compile-time `ea`**
+
+```zax
+; Goal: store C to counter + 1
+; Output: none
+
+push_reg8_zx C
+store8_ea_from_tos counter + 1
+```
+
+**Example C: Argument marshalling and cleanup (two word args)**
+
+```zax
+; func sum_words(left_value: word, right_value: word): word
+; Assume arguments are pre-staged in registers:
+; left_value in BC, right_value in DE.
+; Right-to-left argument order: right_value first, then left_value.
+
+PUSH DE
+PUSH BC
+CALL sum_words
+INC SP
+INC SP
+INC SP
+INC SP
+; Return channel: HL
+```
 
 **Validation required (before promotion beyond draft):**
 

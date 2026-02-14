@@ -1,0 +1,12 @@
+section code at $0000
+section var at $1000
+
+globals
+  row: byte
+  col: byte
+  grid: byte[4][8]
+
+export func main(): void
+  ld a, grid[row][col]
+  ld grid[row][col], a
+end
