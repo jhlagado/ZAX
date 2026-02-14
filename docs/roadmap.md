@@ -2,7 +2,7 @@
 
 This roadmap replaces optimistic status tracking with a risk-first plan.
 
-Normative behavior is defined by `docs/zax-spec.md`. `docs/v01-scope-decisions.md` is transition rationale only. This roadmap is execution planning, not a language authority.
+Normative behavior is defined by `docs/zax-spec.md`. `docs/v02-transition-decisions.md` is transition rationale only. This roadmap is execution planning, not a language authority.
 
 Core policy:
 

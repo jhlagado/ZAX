@@ -35,7 +35,7 @@ body:
       description: Spec sections and doc paths that define this behavior.
       placeholder: |
         - docs/zax-spec.md §...
-        - docs/v01-scope-decisions.md §... (transition context only)
+        - docs/v02-transition-decisions.md §... (transition context only)
     validations:
       required: true
 
