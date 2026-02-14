@@ -7,8 +7,79 @@ on:
     branches: [main]
 
 jobs:
+  changes:
+    name: detect-changes
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+      run_full: ${{ steps.classify.outputs.run_full }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            docs:
+              - 'docs/**'
+              - '**/*.md'
+              - '.github/ISSUE_TEMPLATE/**'
+            full:
+              - 'src/**'
+              - 'test/**'
+              - 'examples/**'
+              - 'scripts/**'
+              - '.github/workflows/**'
+              - 'package.json'
+              - 'yarn.lock'
+              - 'tsconfig*.json'
+              - 'vitest.config.*'
+
+      - name: Classify change set
+        id: classify
+        shell: bash
+        run: |
+          if [[ "${{ steps.filter.outputs.docs }}" == "true" && "${{ steps.filter.outputs.full }}" != "true" ]]; then
+            echo "docs_only=true" >> "$GITHUB_OUTPUT"
+            echo "run_full=false" >> "$GITHUB_OUTPUT"
+            echo "Change set classified as docs-only."
+          else
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            echo "run_full=true" >> "$GITHUB_OUTPUT"
+            echo "Change set classified as full CI."
+          fi
+
+  docs:
+    name: docs (fast)
+    needs: changes
+    if: needs.changes.outputs.docs_only == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: yarn
+
+      - name: Enable Yarn
+        run: |
+          corepack enable
+          corepack prepare yarn@1.22.21 --activate
+
+      - name: Install
+        run: yarn install --frozen-lockfile
+
+      - name: Docs format check
+        run: yarn prettier -c "docs/**/*.md" "docs/*.md" ".github/ISSUE_TEMPLATE/*.yml"
+
   test:
     name: test (${{ matrix.os }})
+    needs: changes
+    if: needs.changes.outputs.run_full == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
     strategy:
