@@ -24,6 +24,7 @@ Anything not defined here is undefined behavior or a compile error in v0.2.
 - If supporting text conflicts with this document, this document wins.
 
 ---
+
 ## 0. Overview (Non-normative)
 
 This section is explanatory and does not define behavior.
