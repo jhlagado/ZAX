@@ -1,0 +1,24 @@
+section code at $0000
+section var at $1000
+
+globals
+  idx: byte
+  idxw: word
+  grid: byte[4][8]
+  mat: word[8][8]
+  arr: byte[32]
+
+export func main(): void
+  ld a, 1
+  ld grid[idx][0], a
+  ld grid[0][idx], a
+  ld arr[idx + 1], a
+
+  ld a, grid[idx][0]
+  ld hl, $1234
+  ld mat[idx][0], hl
+  ld hl, mat[0][idx]
+
+  ld a, arr[idxw + 2]
+  ret
+end
