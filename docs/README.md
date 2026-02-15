@@ -34,6 +34,8 @@ This directory is intentionally small. Each document has a single purpose.
   - Post-v0.2 planning scaffold for v0.3 sequencing.
 - `github-backlog-workflow.md`
   - GitHub-only backlog operating model (Jira-style issue workflow using milestones + labels + acceptance gates).
+- `v02-codegen-golden-corpus.md`
+  - Tiered `.asm` golden-corpus workflow for v0.2 codegen verification.
 
 ## Consolidation Policy
 
