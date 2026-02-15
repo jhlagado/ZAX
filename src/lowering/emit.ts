@@ -2386,11 +2386,17 @@ export function emitProgram(
           return true;
         }
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
+        if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
+          return false;
+        }
         emitRawCodeBytes(
           Uint8Array.of(0x7e, 0x23, 0x66, 0x6f),
           inst.span.file,
           'ld a, (hl) ; inc hl ; ld h, (hl) ; ld l, a',
         );
+        if (!emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
+          return false;
+        }
         return true;
       }
       if (r16 === 'DE') {
