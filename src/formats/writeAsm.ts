@@ -15,6 +15,15 @@ function toHexWord(n: number): string {
   return (n & 0xffff).toString(16).toUpperCase().padStart(4, '0');
 }
 
+function compareAscii(a: string, b: string): number {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
+}
+
+function compareAsciiFold(a: string, b: string): number {
+  return compareAscii(a.toLowerCase(), b.toLowerCase());
+}
+
 function compareTrace(a: EmittedAsmTraceEntry, b: EmittedAsmTraceEntry): number {
   if (a.offset !== b.offset) return a.offset - b.offset;
 
@@ -26,9 +35,9 @@ function compareTrace(a: EmittedAsmTraceEntry, b: EmittedAsmTraceEntry): number 
   const r = rank(a) - rank(b);
   if (r !== 0) return r;
 
-  if (a.kind === 'label' && b.kind === 'label') return a.name.localeCompare(b.name);
-  if (a.kind === 'instruction' && b.kind === 'instruction') return a.text.localeCompare(b.text);
-  if (a.kind === 'comment' && b.kind === 'comment') return a.text.localeCompare(b.text);
+  if (a.kind === 'label' && b.kind === 'label') return compareAscii(a.name, b.name);
+  if (a.kind === 'instruction' && b.kind === 'instruction') return compareAscii(a.text, b.text);
+  if (a.kind === 'comment' && b.kind === 'comment') return compareAscii(a.text, b.text);
   return 0;
 }
 
@@ -37,7 +46,7 @@ function stableSymbols(symbols: SymbolEntry[]): SymbolEntry[] {
     const aAddr = a.kind === 'constant' ? 0x10000 : a.address & 0xffff;
     const bAddr = b.kind === 'constant' ? 0x10000 : b.address & 0xffff;
     if (aAddr !== bAddr) return aAddr - bAddr;
-    return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    return compareAsciiFold(a.name, b.name);
   });
 }
 
