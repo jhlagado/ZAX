@@ -23,6 +23,10 @@ The canonical queue is:
   - `workflow:ready`, `workflow:active`, `workflow:blocked`
   - existing scope labels (`v0.2`, `closeout-gate`, etc.)
 
+Bootstrap note:
+
+- If any of these labels are missing, create them before using this workflow.
+
 ## Status Model
 
 Use labels as workflow states:
