@@ -2768,7 +2768,7 @@ export function emitProgram(
           diag(
             diagnostics,
             binDecl.span.file,
-            `bin declarations cannot target section "var" in current subset.`,
+            `bin declarations cannot target section "var" in v0.2.`,
           );
           continue;
         }

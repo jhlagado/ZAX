@@ -24,6 +24,14 @@ This directory is intentionally small. Each document has a single purpose.
 
 - `zax-dev-playbook.md`
   - Consolidated implementation and process guide (roadmap, checklist, pipeline notes, contributor workflow, and normative-priority execution model).
+- `v02-status-snapshot-2026-02-15.md`
+  - v0.2 status snapshot and completion-state summary.
+- `v02-done-checklist.md`
+  - v0.2 release-closeout checklist with evidence links.
+- `v02-completion-note-2026-02-15.md`
+  - v0.2 completion declaration and closure summary.
+- `v03-planning-track.md`
+  - Post-v0.2 planning scaffold for v0.3 sequencing.
 
 ## Consolidation Policy
 

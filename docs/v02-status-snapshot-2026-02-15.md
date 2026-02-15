@@ -69,45 +69,44 @@ Status key:
 
 ## 6. Remaining Work to Finish v0.2
 
-### 6.1 In-scope closeout tasks
+Status: **No blocking v0.2 closeout tasks remain.**
+
+### 6.1 Completed closeout tasks
 
 1. **Status/doc reconciliation**
 
-- Refresh `docs/zax-dev-playbook.md` status narrative and next-PR sections to reflect actual current state.
-- Keep this snapshot in sync with that playbook update.
+- Refreshed `docs/zax-dev-playbook.md` status narrative and queue rows.
+- Kept this snapshot aligned with playbook/checklist ownership.
 
 2. **Completion evidence publication**
 
-- Create one closeout tracker artifact (issue or doc section) with:
-  - final acceptance checklist
-  - links to representative passing CI runs
-  - links to key completion PRs (`#236`..`#255`)
+- Published `docs/v02-done-checklist.md` with evidence links for conformance, CI, diagnostics, and docs.
 
 3. **Final wording polish**
 
-- Perform one pass for CLI/help/docs consistency around:
+- Completed wording consistency pass for:
   - `--op-stack-policy`
   - `--type-padding-warn`
   - `--raw-typed-call-warn`
 
 4. **Behavioral edge verification**
 
-- Confirm negative immediate handling matches spec semantics (two’s-complement truncation in imm8/imm16 contexts).
-- Re-verify that example snippets in guides align to accepted parser syntax (enum forms, `select/case` shape, zero-arg `op()`).
+- Verified negative immediate semantics via merged v0.2 test tranche.
+- Verified guide syntax alignment via docs cleanup + examples acceptance suite.
 
 5. **Diagnostics stability pass**
 
-- Ensure diagnostic IDs remain stable for common v0.2 migration errors (enum qualification, `arr[(HL)]` vs `arr[HL]`, runtime-atom budget, call-boundary warnings).
-- Confirm no “subset/PR” wording remains in user-facing diagnostics.
+- Confirmed stable diagnostics coverage for migration-critical cases.
+- Removed remaining legacy "current subset" user-facing wording in lowering.
 
 6. **Acceptance and determinism evidence**
 
-- Capture at least one multi-run determinism check (same inputs produce identical artifacts).
-- Ensure `examples/*.zax` compile cleanly on macOS/Linux/Windows as part of evidence bundle.
+- Determinism evidence captured in dedicated test suites.
+- `examples/*.zax` acceptance evidence captured in CI matrix.
 
 7. **Issue-tracker hygiene**
 
-- Convert any legacy catch‑all issues into v0.2 change‑task‑shaped items with acceptance criteria/tests, or close them as obsolete.
+- Legacy catch-all tracker items were closed or folded into explicit artifacts.
 
 ### 6.2 Explicitly out of scope for v0.2
 
@@ -120,30 +119,33 @@ Not required for declaring v0.2 complete:
 
 ## 7. Proposed Timeline
 
-### Phase A: closeout prep (0.5-1 day)
+### Phase A: closeout prep (complete)
 
 - update playbook/snapshot status sections
 - define final checklist artifact shape
 
-### Phase B: closeout execution (0.5-1.5 days)
+### Phase B: closeout execution (complete)
 
 - publish evidence bundle and links
 - run targeted consistency/polish pass if needed
 
-### Phase C: completion declaration (same day as Phase B end)
+### Phase C: completion declaration (complete)
 
 - publish v0.2 completion note
 - freeze v0.2 scope and open v0.3 planning track
 
-Estimated remaining effort to formally close v0.2: **1 to 2.5 days**.
+Estimated remaining effort to formally close v0.2: **0 days (closed)**.
 
-## 8. Decisions Needed
+## 8. Next Stage
 
-1. Should next PRs be restricted to closeout-only (no feature additions)?
-2. Should v0.3 planning start immediately after closeout declaration, or after a short stabilization window?
+v0.2 is closed.
+
+- Completion declaration: `docs/v02-completion-note-2026-02-15.md`
+- Next planning track: `docs/v03-planning-track.md`
 
 ## 9. Change Log
 
 - February 15, 2026: initial snapshot created.
 - February 15, 2026: revised with current zero-open PR/issue status, explicit closeout checklist, and updated timeline.
 - February 15, 2026: linked dedicated closeout checklist file and corrected section numbering.
+- February 15, 2026: closeout tasks marked complete and snapshot transitioned to post-closeout state.

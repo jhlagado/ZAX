@@ -68,9 +68,9 @@ Use one of the following tags on every scoped issue/PR:
 
 ### 1.4 Rollout Waves
 
-- Wave 1: runtime-atom enforcement for source-level `ea` expressions (#221).
-- Wave 2: runtime-atom-free direct call-site `ea`/`(ea)` enforcement (#222).
-- Wave 3: op stack-policy alignment across docs/implementation/tests (#223).
+- Wave 1: runtime-atom enforcement for source-level `ea` expressions (#221) — landed.
+- Wave 2: runtime-atom-free direct call-site `ea`/`(ea)` enforcement (#222) — landed.
+- Wave 3: op stack-policy alignment across docs/implementation/tests (#223) — landed.
 
 ## 2. Roadmap (Consolidated)
 
@@ -83,7 +83,7 @@ Core policy:
 - Build a fully working assembler first.
 - Defer Debug80 integration until assembler completion gates are met.
 
-**Last updated:** 2026-02-14
+**Last updated:** 2026-02-15
 
 Progress snapshot (rough, assembler-first):
 
@@ -531,13 +531,13 @@ Normative language behavior is defined in `docs/zax-spec.md`.
 
 ## Active Queue
 
-| Area                    | Change                                                       | Issue                                              | Status      | PR                                               |
-| ----------------------- | ------------------------------------------------------------ | -------------------------------------------------- | ----------- | ------------------------------------------------ |
-| docs                    | Runtime-atom model and single-expression budget              | —                                                  | In progress | [#219](https://github.com/jhlagado/ZAX/pull/219) |
-| semantics/lowering      | Enforce runtime-atom quota for source-level `ea` expressions | [#221](https://github.com/jhlagado/ZAX/issues/221) | Done        | [#236](https://github.com/jhlagado/ZAX/pull/236) |
-| semantics/lowering      | Enforce runtime-atom-free direct `ea`/`(ea)` call-site args  | [#222](https://github.com/jhlagado/ZAX/issues/222) | Done        | [#237](https://github.com/jhlagado/ZAX/pull/237) |
-| lowering/spec-alignment | Resolve op stack-policy mismatch (docs vs implementation)    | [#223](https://github.com/jhlagado/ZAX/issues/223) | Done        | [#238](https://github.com/jhlagado/ZAX/pull/238) |
-| semantics/lowering      | Accept negative immediates with width truncation             | [#235](https://github.com/jhlagado/ZAX/issues/235) | In progress | —                                                |
+| Area                    | Change                                                       | Issue                                              | Status | PR                                               |
+| ----------------------- | ------------------------------------------------------------ | -------------------------------------------------- | ------ | ------------------------------------------------ |
+| docs                    | Runtime-atom model and single-expression budget              | —                                                  | Done   | [#219](https://github.com/jhlagado/ZAX/pull/219) |
+| semantics/lowering      | Enforce runtime-atom quota for source-level `ea` expressions | [#221](https://github.com/jhlagado/ZAX/issues/221) | Done   | [#236](https://github.com/jhlagado/ZAX/pull/236) |
+| semantics/lowering      | Enforce runtime-atom-free direct `ea`/`(ea)` call-site args  | [#222](https://github.com/jhlagado/ZAX/issues/222) | Done   | [#237](https://github.com/jhlagado/ZAX/pull/237) |
+| lowering/spec-alignment | Resolve op stack-policy mismatch (docs vs implementation)    | [#223](https://github.com/jhlagado/ZAX/issues/223) | Done   | [#238](https://github.com/jhlagado/ZAX/pull/238) |
+| semantics/lowering      | Accept negative immediates with width truncation             | [#235](https://github.com/jhlagado/ZAX/issues/235) | Done   | [#239](https://github.com/jhlagado/ZAX/pull/239) |
 
 ## Rollout Schedule (Spec-First, Implementation Catch-Up)
 
@@ -552,7 +552,7 @@ This section makes implementation lag explicit so contributors can plan work aga
 ## Team Signal
 
 - `docs/zax-spec.md` remains canonical for target behavior.
-- Until Waves 1-3 land, some implementation paths are intentionally behind the spec and are tracked by the issues above.
+- Waves 1-3 are landed on `main`; policy/implementation/test alignment work is complete for this tranche.
 - New feature work touching addressing/calls/ops should cross-check this schedule before adding behavior.
 
 ## Status Legend
