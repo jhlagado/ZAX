@@ -6,6 +6,7 @@ Normative language behavior is defined by `docs/zax-spec.md`.
 This file records completion evidence and signoff state.
 
 Status key:
+
 - `[x]` complete
 - `[ ]` pending
 
@@ -17,6 +18,7 @@ Status key:
 - `[ ]` Appendix-C-to-implementation evidence links recorded in this file.
 
 Evidence links:
+
 - PR tranche: `#236`..`#255`
 - Add links to specific verification comments/runs here.
 
@@ -28,6 +30,7 @@ Evidence links:
 - `[ ]` `examples/*.zax` acceptance evidence captured across CI matrix.
 
 Evidence links:
+
 - Add CI run links here.
 - Add exact test command/result references here.
 
@@ -41,6 +44,7 @@ Evidence links:
 - `[ ]` `docs/zax-dev-playbook.md` stale "in progress" sections reconciled.
 
 Evidence links:
+
 - Add docs PR/commit links here.
 
 ## 4. Diagnostics Stability
@@ -53,6 +57,7 @@ Evidence links:
 - `[ ]` No legacy "subset/PR" wording remains in user-facing diagnostics.
 
 Evidence links:
+
 - Add test files and grep/audit links here.
 
 ## 5. Scope Freeze and Declaration
@@ -69,4 +74,3 @@ These are intentionally deferred and do not block v0.2 completion:
 - Debug80 integration
 - explicit `^` dereference / `@` address-of operators
 - typed-pointer and typed-register-field extensions
-
