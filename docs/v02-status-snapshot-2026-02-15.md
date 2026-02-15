@@ -42,6 +42,7 @@ Assessment: v0.2 implementation appears functionally complete for current confor
 ## 5. v0.2 Completion Checklist (Closeout Gate)
 
 Canonical checklist artifact: `docs/v02-done-checklist.md`
+Checklist state is authoritative in `docs/v02-done-checklist.md`; snapshot checkboxes are contextual only.
 
 Status key:
 

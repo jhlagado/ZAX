@@ -19,8 +19,9 @@ Status key:
 
 Evidence links:
 
-- PR tranche: `#236`..`#255`
-- Add links to specific verification comments/runs here.
+- Migration/conformance tranche: [#236](https://github.com/jhlagado/ZAX/pull/236) .. [#255](https://github.com/jhlagado/ZAX/pull/255)
+- Runtime-atom and addressing semantics: [#248](https://github.com/jhlagado/ZAX/pull/248)
+- Typed/raw call warning mode: [#255](https://github.com/jhlagado/ZAX/pull/255)
 
 ## 2. CI and Test Evidence
 
@@ -31,8 +32,12 @@ Evidence links:
 
 Evidence links:
 
-- Add CI run links here.
-- Add exact test command/result references here.
+- Representative green CI run (latest merged tranche): [Actions run 22019661156](https://github.com/jhlagado/ZAX/actions/runs/22019661156)
+- Matrix test anchors:
+  - `test/pr264_runtime_atom_budget_matrix.test.ts`
+  - `test/pr272_runtime_affine_index_offset.test.ts`
+  - `test/pr271_op_stack_policy_alignment.test.ts`
+  - `test/pr278_raw_call_typed_target_warning.test.ts`
 
 ## 3. CLI and Docs Consistency
 
@@ -45,7 +50,10 @@ Evidence links:
 
 Evidence links:
 
-- Add docs PR/commit links here.
+- CLI stack policy mode: [#246](https://github.com/jhlagado/ZAX/pull/246)
+- CLI stack policy flag contract: [#247](https://github.com/jhlagado/ZAX/pull/247)
+- Type padding warning mode: [#250](https://github.com/jhlagado/ZAX/pull/250)
+- Raw typed call warning mode: [#255](https://github.com/jhlagado/ZAX/pull/255)
 
 ## 4. Diagnostics Stability
 
