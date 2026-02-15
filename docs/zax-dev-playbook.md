@@ -872,6 +872,7 @@ When using multiple agents in parallel:
 - **PR #0 (contracts) must merge before any agent begins implementation.** This is the synchronization point.
 - Agents work on separate branches (`codex/<agent>-<topic>`). No two agents modify the same file.
 - Integration happens on `main`: agent merges to `main`, other agents rebase before opening their next PR.
+- After merge, branch hygiene is required: delete merged local branches and delete merged remote PR branches unless retention is explicitly needed.
 - If an agent needs to change a shared interface (AST, diagnostics, pipeline), it opens a **contract-change PR** first, which must be reviewed and merged before dependent work continues.
 - When interfaces are stable, agents may work in parallel on independent vertical slices (e.g., Agent A on `op` expansion while Agent B on `select` lowering).
 
