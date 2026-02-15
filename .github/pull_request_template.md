@@ -1,6 +1,6 @@
 # Summary
 
-- 
+-
 
 # Scope
 
@@ -25,13 +25,12 @@
 
 - Commands run:
   - ``
-- Result summary:
-  - 
+- Result summary: _(add summary)_
 
 # Merge Risk Notes
 
-- 
+-
 
 # Out of Scope
 
-- 
+-
