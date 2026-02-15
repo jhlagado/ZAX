@@ -11,7 +11,7 @@ push IY                                            ; 0005: FD E5
 push HL                                            ; 0007: E5
 ld HL, $0001                                       ; 0008: 21 01 00
 push HL                                            ; 000B: E5
-db $CD, lo(ping), hi(ping)                         ; 000C: CD 00 00
+call ping                                          ; 000C: CD 00 00
 pop BC                                             ; 000F: C1
 pop HL                                             ; 0010: E1
 pop IY                                             ; 0011: FD E1
@@ -24,13 +24,13 @@ push BC                                            ; 0019: C5
 push DE                                            ; 001A: D5
 push IX                                            ; 001B: DD E5
 push IY                                            ; 001D: FD E5
-db $3A, lo(idx), hi(idx)                           ; 001F: 3A 00 00
+ld A, (idx)                                        ; 001F: 3A 00 00
 ld H, $0000                                        ; 0022: 26 00
 ld L, A                                            ; 0024: 6F
 push HL                                            ; 0025: E5
 pop HL                                             ; 0026: E1
 push HL                                            ; 0027: E5
-db $21, lo(arr), hi(arr)                           ; 0028: 21 00 00
+ld HL, arr                                         ; 0028: 21 00 00
 pop DE                                             ; 002B: D1
 add HL, DE                                         ; 002C: 19
 push HL                                            ; 002D: E5
@@ -39,7 +39,7 @@ ld a, (hl)                                         ; 002F: 7E
 ld H, $0000                                        ; 0030: 26 00
 ld L, A                                            ; 0032: 6F
 push HL                                            ; 0033: E5
-db $CD, lo(getb), hi(getb)                         ; 0034: CD 00 00
+call getb                                          ; 0034: CD 00 00
 pop BC                                             ; 0037: C1
 pop IY                                             ; 0038: FD E1
 pop IX                                             ; 003A: DD E1
@@ -54,14 +54,14 @@ push IX                                            ; 0043: DD E5
 push IY                                            ; 0045: FD E5
 ld HL, $0009                                       ; 0047: 21 09 00
 push HL                                            ; 004A: E5
-db $CD, lo(getw), hi(getw)                         ; 004B: CD 00 00
+call getw                                          ; 004B: CD 00 00
 pop BC                                             ; 004E: C1
 pop IY                                             ; 004F: FD E1
 pop IX                                             ; 0051: DD E1
 pop DE                                             ; 0053: D1
 pop BC                                             ; 0054: C1
 pop AF                                             ; 0055: F1
-db $22, lo(out), hi(out)                           ; 0056: 22 00 00
+ld (out), HL                                       ; 0056: 22 00 00
 ret                                                ; 0059: C9
 ; func main end
 

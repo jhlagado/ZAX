@@ -432,6 +432,134 @@ export function emitProgram(
     return `${lowerHead} ${operands.map(formatAsmOperandForTrace).join(', ')}`;
   };
 
+  const formatFixupSymbolExpr = (baseLower: string, addend: number): string => {
+    if (addend === 0) return baseLower;
+    if (addend > 0) return `${baseLower} + ${addend}`;
+    return `${baseLower} - ${Math.abs(addend)}`;
+  };
+
+  const jpCondFromOpcode = (opcode: number): string | undefined => {
+    switch (opcode & 0xff) {
+      case 0xc2:
+        return 'NZ';
+      case 0xca:
+        return 'Z';
+      case 0xd2:
+        return 'NC';
+      case 0xda:
+        return 'C';
+      case 0xe2:
+        return 'PO';
+      case 0xea:
+        return 'PE';
+      case 0xf2:
+        return 'P';
+      case 0xfa:
+        return 'M';
+      default:
+        return undefined;
+    }
+  };
+
+  const callCondFromOpcode = (opcode: number): string | undefined => {
+    switch (opcode & 0xff) {
+      case 0xc4:
+        return 'NZ';
+      case 0xcc:
+        return 'Z';
+      case 0xd4:
+        return 'NC';
+      case 0xdc:
+        return 'C';
+      case 0xe4:
+        return 'PO';
+      case 0xec:
+        return 'PE';
+      case 0xf4:
+        return 'P';
+      case 0xfc:
+        return 'M';
+      default:
+        return undefined;
+    }
+  };
+
+  const formatAbs16FixupAsm = (opcode: number, baseLower: string, addend: number): string => {
+    const sym = formatFixupSymbolExpr(baseLower, addend);
+    switch (opcode & 0xff) {
+      case 0x01:
+        return `ld BC, ${sym}`;
+      case 0x11:
+        return `ld DE, ${sym}`;
+      case 0x21:
+        return `ld HL, ${sym}`;
+      case 0x31:
+        return `ld SP, ${sym}`;
+      case 0x2a:
+        return `ld HL, (${sym})`;
+      case 0x3a:
+        return `ld A, (${sym})`;
+      case 0x22:
+        return `ld (${sym}), HL`;
+      case 0x32:
+        return `ld (${sym}), A`;
+      case 0xc3:
+        return `jp ${sym}`;
+      case 0xcd:
+        return `call ${sym}`;
+      default: {
+        const jpCc = jpCondFromOpcode(opcode);
+        if (jpCc) return `jp ${jpCc}, ${sym}`;
+        const callCc = callCondFromOpcode(opcode);
+        if (callCc) return `call ${callCc}, ${sym}`;
+        return `db ${toHexByte(opcode)}, lo(${baseLower}), hi(${baseLower})`;
+      }
+    }
+  };
+
+  const formatAbs16FixupEdAsm = (opcode2: number, baseLower: string, addend: number): string => {
+    const sym = formatFixupSymbolExpr(baseLower, addend);
+    switch (opcode2 & 0xff) {
+      case 0x4b:
+        return `ld BC, (${sym})`;
+      case 0x5b:
+        return `ld DE, (${sym})`;
+      case 0x7b:
+        return `ld SP, (${sym})`;
+      case 0x43:
+        return `ld (${sym}), BC`;
+      case 0x53:
+        return `ld (${sym}), DE`;
+      case 0x73:
+        return `ld (${sym}), SP`;
+      default:
+        return `db $ED, ${toHexByte(opcode2)}, lo(${baseLower}), hi(${baseLower})`;
+    }
+  };
+
+  const formatAbs16FixupPrefixedAsm = (
+    prefix: number,
+    opcode2: number,
+    baseLower: string,
+    addend: number,
+  ): string => {
+    const sym = formatFixupSymbolExpr(baseLower, addend);
+    const reg16 = prefix === 0xdd ? 'IX' : prefix === 0xfd ? 'IY' : undefined;
+    if (!reg16) {
+      return `db ${toHexByte(prefix)}, ${toHexByte(opcode2)}, lo(${baseLower}), hi(${baseLower})`;
+    }
+    switch (opcode2 & 0xff) {
+      case 0x21:
+        return `ld ${reg16}, ${sym}`;
+      case 0x2a:
+        return `ld ${reg16}, (${sym})`;
+      case 0x22:
+        return `ld (${sym}), ${reg16}`;
+      default:
+        return `db ${toHexByte(prefix)}, ${toHexByte(opcode2)}, lo(${baseLower}), hi(${baseLower})`;
+    }
+  };
+
   const traceInstruction = (offset: number, bytesOut: Uint8Array, text: string): void => {
     if (bytesOut.length === 0) return;
     codeAsmTrace.push({
@@ -645,7 +773,7 @@ export function emitProgram(
     traceInstruction(
       start,
       Uint8Array.of(opcode, 0x00, 0x00),
-      asmText ?? `db ${toHexByte(opcode)}, lo(${baseLower}), hi(${baseLower})`,
+      asmText ?? formatAbs16FixupAsm(opcode, baseLower, addend),
     );
   };
 
@@ -666,7 +794,7 @@ export function emitProgram(
     traceInstruction(
       start,
       Uint8Array.of(0xed, opcode2, 0x00, 0x00),
-      asmText ?? `db $ED, ${toHexByte(opcode2)}, lo(${baseLower}), hi(${baseLower})`,
+      asmText ?? formatAbs16FixupEdAsm(opcode2, baseLower, addend),
     );
   };
 
@@ -688,8 +816,7 @@ export function emitProgram(
     traceInstruction(
       start,
       Uint8Array.of(prefix, opcode2, 0x00, 0x00),
-      asmText ??
-        `db ${toHexByte(prefix)}, ${toHexByte(opcode2)}, lo(${baseLower}), hi(${baseLower})`,
+      asmText ?? formatAbs16FixupPrefixedAsm(prefix, opcode2, baseLower, addend),
     );
   };
 
