@@ -2393,11 +2393,45 @@ export function emitProgram(
         if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
           return false;
         }
-        emitRawCodeBytes(
-          Uint8Array.of(0x7e, 0x23, 0x66, 0x6f),
-          inst.span.file,
-          'ld a, (hl) ; inc hl ; ld h, (hl) ; ld l, a',
-        );
+        if (
+          !emitInstr(
+            'ld',
+            [
+              { kind: 'Reg', span: inst.span, name: 'A' },
+              { kind: 'Mem', span: inst.span, expr: { kind: 'EaName', span: inst.span, name: 'HL' } },
+            ],
+            inst.span,
+          )
+        ) {
+          return false;
+        }
+        if (!emitInstr('inc', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span)) {
+          return false;
+        }
+        if (
+          !emitInstr(
+            'ld',
+            [
+              { kind: 'Reg', span: inst.span, name: 'H' },
+              { kind: 'Mem', span: inst.span, expr: { kind: 'EaName', span: inst.span, name: 'HL' } },
+            ],
+            inst.span,
+          )
+        ) {
+          return false;
+        }
+        if (
+          !emitInstr(
+            'ld',
+            [
+              { kind: 'Reg', span: inst.span, name: 'L' },
+              { kind: 'Reg', span: inst.span, name: 'A' },
+            ],
+            inst.span,
+          )
+        ) {
+          return false;
+        }
         if (!emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
           return false;
         }
