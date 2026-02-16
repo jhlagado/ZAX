@@ -55,7 +55,6 @@ globals
 
 func echo(value_word: word): word
   LD HL, value_word
-  RET
 end
 
 export func main(): void
@@ -67,7 +66,6 @@ export func main(): void
   LD tmp, HL
   LD HL, tmp
   LD (out), HL
-  RET
 end
 ```
 
@@ -149,7 +147,6 @@ Note:
 func add1(input_value: word): word
   LD HL, input_value
   INC HL
-  RET
 end
 
 export func main(): void
@@ -162,8 +159,6 @@ export func main(): void
 
   add1 temp_word
   LD temp_word, HL
-
-  RET
 end
 ```
 
@@ -244,6 +239,7 @@ This model keeps ZAX predictable as a virtual assembler:
 
 For framed functions, internal `RET` statements should lower to a jump to one synthetic epilogue label.
 That keeps unwind behavior centralized and avoids duplicated restore sequences.
+The final trailing `RET` in source is redundant and may be omitted when fallthrough reaches the same synthetic epilogue path.
 
 Design-target shape:
 
@@ -297,7 +293,6 @@ func fib(target_count: word): word
   end
 
   LD HL, prev_value
-  RET
 end
 ```
 
