@@ -52,8 +52,8 @@ section var at $1000
 globals
   out: word
 
-func echo(v: word): word
-  ld hl, v
+func echo(value_word: word): word
+  ld hl, value_word
   ret
 end
 
@@ -72,7 +72,7 @@ end
 
 ### A.2 Lowering Intent
 
-- `echo(v: word)` returns `v` in `HL`
+- `echo(value_word: word)` returns `value_word` in `HL`
 - `main` allocates one local word (`tmp`) via IX-frame offsets
 - `main` pushes arg, calls `echo`, cleans arg slots, round-trips value through `tmp`, then stores to global `out`
 - callee preserves `AF/BC/DE` conservatively
@@ -145,22 +145,22 @@ Note:
 ### B.1 Source (`.zax`)
 
 ```zax
-func add1(x: word): word
-  ld hl, x
+func add1(input_value: word): word
+  ld hl, input_value
   inc hl
   ret
 end
 
 export func main(): void
   var
-    t: word
+    temp_word: word
   end
 
   ld hl, $0100
-  ld t, hl
+  ld temp_word, hl
 
-  add1 t
-  ld t, hl
+  add1 temp_word
+  ld temp_word, hl
 
   ret
 end
@@ -168,8 +168,8 @@ end
 
 ### B.2 Lowering Intent
 
-- `main` allocates local `t` in frame (`IX-2..IX-1`)
-- `t` load/store use fixed IX displacements
+- `main` allocates local `temp_word` in frame (`IX-2..IX-1`)
+- `temp_word` load/store use fixed IX displacements
 - nested call keeps frame stable and cleans one pushed arg word
 
 ### B.3 Illustrative Lowered `.asm`
@@ -267,39 +267,42 @@ This is especially important once functions have locals and multiple control-flo
 ### C.1 Source (`.zax`)
 
 ```zax
-func fib(n: word): word
+func fib(target_count: word): word
   var
-    a: word
-    b: word
-    i: word
-    t: word
+    prev_value: word
+    curr_value: word
+    index_value: word
+    next_value: word
   end
 
-  ld a, $0000
-  ld b, $0001
-  ld i, $0000
+  ld hl, $0000
+  ld prev_value, hl
+  ld hl, $0001
+  ld curr_value, hl
+  ld hl, $0000
+  ld index_value, hl
 
   while NZ
-    ld hl, i
-    cp hl, n
+    ld hl, index_value
+    cp hl, target_count
     if Z
-      ld hl, a
+      ld hl, prev_value
       ret
     end
 
-    ld hl, a
-    add hl, b
-    ld t, hl
-    ld hl, b
-    ld a, hl
-    ld hl, t
-    ld b, hl
-    ld hl, i
+    ld hl, prev_value
+    add hl, curr_value
+    ld next_value, hl
+    ld hl, curr_value
+    ld prev_value, hl
+    ld hl, next_value
+    ld curr_value, hl
+    ld hl, index_value
     inc hl
-    ld i, hl
+    ld index_value, hl
   end
 
-  ld hl, a
+  ld hl, prev_value
   ret
 end
 ```
@@ -329,22 +332,22 @@ DEC SP
 PUSH AF
 PUSH BC
 PUSH DE
-; local init (a,b,i,t)
+; local init (prev_value,curr_value,index_value,next_value)
 ; ...
 
 __zax_while_head_0:
-; compare i vs n
+; compare index_value vs target_count
 ; ...
 JP Z, __zax_if_true_0
 JP __zax_if_end_0
 
 __zax_if_true_0:
-LD L, (IX-$02)                 ; a low
-LD H, (IX-$01)                 ; a high
+LD L, (IX-$02)                 ; prev_value low
+LD H, (IX-$01)                 ; prev_value high
 JP __zax_epilogue_fib
 
 __zax_if_end_0:
-; t = a + b, rotate (a,b), i++
+; next_value = prev_value + curr_value, rotate values, index_value++
 ; ...
 JP __zax_while_head_0
 
