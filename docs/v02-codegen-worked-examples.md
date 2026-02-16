@@ -41,7 +41,7 @@ pop ix
 ret
 ```
 
-## 3. Worked Example A: Simple Word Echo
+## 3. Worked Example A: Echo Call With Local Storage
 
 ### A.1 Source (`.zax`)
 
@@ -58,7 +58,13 @@ func echo(v: word): word
 end
 
 export func main(): void
+  var
+    tmp: word
+  end
+
   echo $1234
+  ld tmp, hl
+  ld hl, tmp
   ld (out), hl
   ret
 end
@@ -67,43 +73,66 @@ end
 ### A.2 Lowering Intent
 
 - `echo(v: word)` returns `v` in `HL`
-- `main` pushes arg, calls `echo`, cleans arg slots, stores returned `HL`
+- `main` allocates one local word (`tmp`) via IX-frame offsets
+- `main` pushes arg, calls `echo`, cleans arg slots, round-trips value through `tmp`, then stores to global `out`
 - callee preserves `AF/BC/DE` conservatively
 
 ### A.3 Illustrative Lowered `.asm`
 
 ```asm
 ; ZAX lowered .asm trace
-; range: $0000..$0020 (end exclusive)
+; range: $0000..$0044 (end exclusive)
 
 ; func echo begin
 echo:
-push ix                        ; 0000: DD E5
-ld ix, $0000                   ; 0002: DD 21 00 00
-add ix, sp                     ; 0006: DD 39
-push af                        ; 0008: F5
-push bc                        ; 0009: C5
-push de                        ; 000A: D5
-ld l, (ix+$04)                 ; 000B: DD 6E 04
-ld h, (ix+$05)                 ; 000E: DD 66 05
-pop de                         ; 0011: D1
-pop bc                         ; 0012: C1
-pop af                         ; 0013: F1
-ld sp, ix                      ; 0014: F9
-pop ix                         ; 0015: DD E1
-ret                            ; 0017: C9
+PUSH IX                        ; 0000: DD E5
+LD IX, $0000                   ; 0002: DD 21 00 00
+ADD IX, SP                     ; 0006: DD 39
+PUSH AF                        ; 0008: F5
+PUSH BC                        ; 0009: C5
+PUSH DE                        ; 000A: D5
+LD L, (IX+$04)                 ; 000B: DD 6E 04
+LD H, (IX+$05)                 ; 000E: DD 66 05
+POP DE                         ; 0011: D1
+POP BC                         ; 0012: C1
+POP AF                         ; 0013: F1
+LD SP, IX                      ; 0014: F9
+POP IX                         ; 0015: DD E1
+RET                            ; 0017: C9
 ; func echo end
 
 ; func main begin
 main:
-ld hl, $1234                   ; 0018: 21 34 12
-push hl                        ; 001B: E5
-call echo                      ; 001C: CD 00 00
-inc sp                         ; 001F: 33
-inc sp                         ; 0020: 33
-ld (out), hl                   ; 0021: 22 00 10
-ret                            ; 0024: C9
+PUSH IX                        ; 0018: DD E5
+LD IX, $0000                   ; 001A: DD 21 00 00
+ADD IX, SP                     ; 001E: DD 39
+INC SP                         ; 0020: 33
+INC SP                         ; 0021: 33
+PUSH AF                        ; 0022: F5
+PUSH BC                        ; 0023: C5
+PUSH DE                        ; 0024: D5
+LD HL, $1234                   ; 0025: 21 34 12
+PUSH HL                        ; 0028: E5
+CALL echo                      ; 0029: CD 00 00
+INC SP                         ; 002C: 33
+INC SP                         ; 002D: 33
+LD (IX-$02), L                 ; 002E: DD 75 FE
+LD (IX-$01), H                 ; 0031: DD 74 FF
+LD L, (IX-$02)                 ; 0034: DD 6E FE
+LD H, (IX-$01)                 ; 0037: DD 66 FF
+LD (out), HL                   ; 003A: 22 00 10
+POP DE                         ; 003D: D1
+POP BC                         ; 003E: C1
+POP AF                         ; 003F: F1
+LD SP, IX                      ; 0040: F9
+POP IX                         ; 0041: DD E1
+RET                            ; 0043: C9
 ; func main end
+
+; symbols:
+; label echo = $0000
+; label main = $0018
+; var out = $1000
 ```
 
 Note:
