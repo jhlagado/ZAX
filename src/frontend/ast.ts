@@ -339,7 +339,7 @@ export type AsmControlNode =
 export type AsmOperandNode =
   | { kind: 'Reg'; span: SourceSpan; /** Canonical upper-case register token. */ name: string }
   | { kind: 'Imm'; span: SourceSpan; expr: ImmExprNode }
-  | { kind: 'Ea'; span: SourceSpan; expr: EaExprNode }
+  | { kind: 'Ea'; span: SourceSpan; expr: EaExprNode; explicitAddressOf?: boolean }
   | { kind: 'Mem'; span: SourceSpan; expr: EaExprNode }
   | { kind: 'PortC'; span: SourceSpan }
   | { kind: 'PortImm8'; span: SourceSpan; expr: ImmExprNode };

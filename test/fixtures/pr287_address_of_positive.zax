@@ -1,0 +1,14 @@
+section code at $0000
+section var at $1000
+
+globals
+  b: byte
+
+func accept(v: word): void
+  ret
+end
+
+export func main(): void
+  accept @b
+  ret
+end

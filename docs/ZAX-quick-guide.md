@@ -186,6 +186,9 @@ arr[(HL)]
 - `rec.field` and `arr[idx]` are place expressions:
   - value/store contexts use implicit scalar read/write lowering (`LD A, rec.field`, `LD rec.field, A`)
   - `ea`-typed contexts pass addresses (for example `touch rec.field` when `touch(addr: ea)`)
+- `@place` is explicit address-of for place expressions:
+  - examples: `@rec.field`, `@arr[idx]`, `@symbol`
+  - use `@place` when you want address intent to be explicit in source
 
 ### 3.3 Runtime Atom Rule
 
