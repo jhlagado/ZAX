@@ -471,7 +471,7 @@ Completed (anchored, most recent first):
 1. #57: ISA: encode `im 0|1|2`, `rst <imm8>`, `reti`, `retn` (fixture + test).
 1. #56: ISA: encode misc system ops (`halt/di/ei/scf/ccf/cpl/ex*/exx`) (fixture + test).
 1. #55: Parser UX: avoid duplicate diagnostics for illegal `T[]` usage (tests).
-1. #54: Parser: restrict inferred arrays `T[]` to `data` declarations only (tests).
+1. #54: Parser: restrict inferred arrays `T[]` to `data` declarations only (tests). Superseded by reopened v0.2 policy allowing `T[]` in function parameter position; keep only as historical tracker context.
 1. #53: Diagnostics: remove "PR subset" wording from user-facing errors (small cleanup).
 1. #52: Treat `ptr` as a 16-bit scalar in codegen (tests).
 1. #51: Inferred-length arrays in `data` declarations (`T[]`) (parser + tests).

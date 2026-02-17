@@ -691,7 +691,6 @@ hex bios from "rom/bios.hex"
   - For disjoint HEX ranges, this remains the minimum written address across all ranges.
 - HEX output is written to absolute addresses in the final address space and does not advance any section’s location counter.
 - If a HEX-written byte overlaps any other emission, it is a compile error (regardless of whether the bytes are equal). This is an instance of the general overlap rule in Section 2.2.
-- The compiler’s output is an address→byte map. When producing a flat binary image, the compiler emits bytes from the lowest written address to the highest written address. Unwritten addresses within this range are filled with the **gap fill byte**, `$00`. `var` contributes no bytes.
 - The compiler’s output is an address→byte map. When producing a flat binary image, the compiler emits bytes from the lowest written address to the highest written address. Unwritten addresses within this range are filled with the **gap fill byte**, `$00`. `var` may contribute bytes from `globals` storage declarations.
   - When producing Intel HEX output, the compiler emits only written bytes/records; gap fill bytes are not emitted.
 
