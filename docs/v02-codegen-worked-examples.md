@@ -381,3 +381,55 @@ Language-surface direction:
 Backend note:
 
 - storage classes may still lower differently (initialized image vs zeroed storage), but user-facing declaration semantics stay uniform.
+
+### 11.1 Composite Aliasing Policy (Design Target)
+
+Goal: support shape-aware aliasing without requiring explicit pointer operators in v0.2.
+
+Rules:
+
+- Function locals/args remain scalar-slot storage in the current ABI.
+- A local composite declaration without initializer is a compile error (would imply stack composite allocation, not currently supported).
+- Composite locals may be declared only as typed aliases with a reference initializer.
+- In globals, both forms are allowed:
+  - value initializer: defines storage contents
+  - reference initializer: defines an alias to existing composite storage
+
+Global example:
+
+```zax
+type Person
+  name_word: word
+end
+
+globals
+  persons: Person[] = { ... }      ; value initializer (storage)
+  admins: Person[] = persons       ; reference initializer (alias)
+```
+
+Local alias example (allowed):
+
+```zax
+func use_admins(): void
+  var
+    admin_list: Person[] = admins  ; reference initializer only
+  end
+
+  LD HL, admin_list[2].name_word
+end
+```
+
+Local composite allocation example (rejected for now):
+
+```zax
+func bad_local_composite(): void
+  var
+    scratch_people: Person[4]      ; error: local composite storage not supported in current ABI
+  end
+end
+```
+
+Type-shape rule:
+
+- Alias type must be compatible with referenced composite shape.
+- `[]` in alias declarations is treated as shape-inferred from the initializer target in this design-target policy.
