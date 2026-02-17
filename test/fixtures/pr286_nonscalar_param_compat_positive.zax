@@ -1,0 +1,28 @@
+section code at $0000
+section var at $1000
+
+globals
+  bytes10: byte[10]
+
+func take_any(values: byte[]): void
+  ret
+end
+
+func take_ten(values: byte[10]): void
+  ret
+end
+
+func relay_alias(): void
+  var
+    alias = bytes10
+  end
+  take_any alias
+  ret
+end
+
+export func main(): void
+  take_any bytes10
+  take_ten bytes10
+  relay_alias
+  ret
+end

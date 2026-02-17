@@ -1,0 +1,23 @@
+section code at $0000
+section var at $1000
+
+globals
+  bytes10: byte[10]
+  words10: word[10]
+
+data
+  unknown_len: byte[] = [1, 2, 3]
+
+func take_ten(values: byte[10]): void
+  ret
+end
+
+func take_any(values: byte[]): void
+  ret
+end
+
+export func main(): void
+  take_ten unknown_len
+  take_any words10
+  ret
+end
