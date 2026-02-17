@@ -25,6 +25,7 @@ import type {
   ImmExprNode,
   OpDeclNode,
   OpMatcherNode,
+  ParamNode,
   ProgramNode,
   RecordFieldNode,
   SectionDirectiveNode,
@@ -1459,6 +1460,71 @@ export function emitProgram(
       }
     }
     return undefined;
+  };
+
+  const unwrapTypeAlias = (
+    te: TypeExprNode,
+    seen = new Set<string>(),
+  ): TypeExprNode | undefined => {
+    if (te.kind !== 'TypeName') return te;
+    const scalar = resolveScalarKind(te);
+    if (scalar)
+      return { kind: 'TypeName', span: te.span, name: scalar === 'addr' ? 'addr' : scalar };
+    const lower = te.name.toLowerCase();
+    if (seen.has(lower)) return undefined;
+    seen.add(lower);
+    const decl = env.types.get(te.name);
+    if (!decl || decl.kind !== 'TypeDecl') return te;
+    return unwrapTypeAlias(decl.typeExpr, seen);
+  };
+
+  const resolveArrayType = (
+    te: TypeExprNode,
+  ): { element: TypeExprNode; length?: number } | undefined => {
+    const resolved = unwrapTypeAlias(te);
+    if (!resolved || resolved.kind !== 'ArrayType') return undefined;
+    return resolved.length === undefined
+      ? { element: resolved.element }
+      : { element: resolved.element, length: resolved.length };
+  };
+
+  const typeDisplay = (te: TypeExprNode): string => {
+    const render = (x: TypeExprNode): string => {
+      if (x.kind === 'TypeName') return x.name;
+      if (x.kind === 'ArrayType') {
+        const inner = render(x.element);
+        return `${inner}[${x.length === undefined ? '' : x.length}]`;
+      }
+      if (x.kind === 'RecordType') {
+        return `record{${x.fields.map((f) => `${f.name}:${render(f.typeExpr)}`).join(',')}}`;
+      }
+      return 'type';
+    };
+    return render(te);
+  };
+
+  const sameTypeShape = (left: TypeExprNode, right: TypeExprNode): boolean => {
+    const l = unwrapTypeAlias(left);
+    const r = unwrapTypeAlias(right);
+    if (!l || !r) return false;
+    if (l.kind !== r.kind) return false;
+    switch (l.kind) {
+      case 'TypeName':
+        return r.kind === 'TypeName' && l.name.toLowerCase() === r.name.toLowerCase();
+      case 'ArrayType':
+        if (r.kind !== 'ArrayType') return false;
+        if (l.length !== r.length) return false;
+        return sameTypeShape(l.element, r.element);
+      case 'RecordType':
+        if (r.kind !== 'RecordType') return false;
+        if (l.fields.length !== r.fields.length) return false;
+        for (let i = 0; i < l.fields.length; i++) {
+          const lf = l.fields[i]!;
+          const rf = r.fields[i]!;
+          if (lf.name !== rf.name || !sameTypeShape(lf.typeExpr, rf.typeExpr)) return false;
+        }
+        return true;
+    }
   };
 
   const resolveEaBaseName = (ea: EaExprNode): string | undefined => {
@@ -3339,13 +3405,6 @@ export function emitProgram(
         const hasStackSlots = frameSize > 0 || argc > 0;
         for (let paramIndex = 0; paramIndex < argc; paramIndex++) {
           const p = item.params[paramIndex]!;
-          if (!resolveScalarKind(p.typeExpr)) {
-            diagAt(
-              diagnostics,
-              p.span,
-              `Parameter "${p.name}" must be byte, word, or addr in the current ABI.`,
-            );
-          }
           const base = frameSize + 2 + 2 * paramIndex;
           stackSlotOffsets.set(p.name.toLowerCase(), base);
           stackSlotTypes.set(p.name.toLowerCase(), p.typeExpr);
@@ -3801,6 +3860,65 @@ export function emitProgram(
                 if (!enforceDirectCallSiteEaBudget(arg, calleeName)) return;
               }
 
+              const typeForName = (name: string): TypeExprNode | undefined => {
+                const lower = name.toLowerCase();
+                return stackSlotTypes.get(lower) ?? storageTypes.get(lower);
+              };
+              const typeForArg = (arg: AsmOperandNode): TypeExprNode | undefined => {
+                if (arg.kind === 'Ea') return resolveEaTypeExpr(arg.expr);
+                if (arg.kind === 'Imm' && arg.expr.kind === 'ImmName')
+                  return typeForName(arg.expr.name);
+                return undefined;
+              };
+              const pushArgAddressFromName = (name: string): boolean =>
+                pushEaAddress({ kind: 'EaName', span: asmItem.span, name } as any, asmItem.span);
+              const pushArgAddressFromOperand = (arg: AsmOperandNode): boolean => {
+                if (arg.kind === 'Ea') return pushEaAddress(arg.expr, asmItem.span);
+                if (arg.kind === 'Imm' && arg.expr.kind === 'ImmName') {
+                  return pushArgAddressFromName(arg.expr.name);
+                }
+                return false;
+              };
+              const checkNonScalarParamCompatibility = (
+                param: ParamNode,
+                argType: TypeExprNode,
+              ): string | undefined => {
+                const paramArray = resolveArrayType(param.typeExpr);
+                const argArray = resolveArrayType(argType);
+                if (paramArray) {
+                  if (!argArray) {
+                    return `Incompatible non-scalar argument for parameter "${param.name}": expected ${typeDisplay(
+                      param.typeExpr,
+                    )}, got ${typeDisplay(argType)}.`;
+                  }
+                  if (!sameTypeShape(paramArray.element, argArray.element)) {
+                    return `Incompatible non-scalar argument for parameter "${param.name}": expected element type ${typeDisplay(
+                      paramArray.element,
+                    )}, got ${typeDisplay(argArray.element)}.`;
+                  }
+                  if (paramArray.length !== undefined) {
+                    if (argArray.length === undefined) {
+                      return `Incompatible non-scalar argument for parameter "${param.name}": expected ${typeDisplay(
+                        param.typeExpr,
+                      )}, got ${typeDisplay(argType)} (exact length proof required).`;
+                    }
+                    if (argArray.length !== paramArray.length) {
+                      return `Incompatible non-scalar argument for parameter "${param.name}": expected ${typeDisplay(
+                        param.typeExpr,
+                      )}, got ${typeDisplay(argType)}.`;
+                    }
+                  }
+                  return undefined;
+                }
+
+                if (!sameTypeShape(param.typeExpr, argType)) {
+                  return `Incompatible non-scalar argument for parameter "${param.name}": expected ${typeDisplay(
+                    param.typeExpr,
+                  )}, got ${typeDisplay(argType)}.`;
+                }
+                return undefined;
+              };
+
               const pushArgValueFromName = (name: string, want: 'byte' | 'word'): boolean => {
                 const scalar = resolveScalarBinding(name);
                 if (scalar) {
@@ -3854,13 +3972,33 @@ export function emitProgram(
                 const param = params[ai]!;
                 const scalarKind = resolveScalarKind(param.typeExpr);
                 if (!scalarKind) {
-                  diagAt(
-                    diagnostics,
-                    asmItem.span,
-                    `Unsupported parameter type for "${param.name}".`,
-                  );
-                  ok = false;
-                  break;
+                  const argType = typeForArg(arg);
+                  if (!argType) {
+                    diagAt(
+                      diagnostics,
+                      asmItem.span,
+                      `Incompatible non-scalar argument for parameter "${param.name}": expected address-style operand bound to non-scalar storage.`,
+                    );
+                    ok = false;
+                    break;
+                  }
+                  const compat = checkNonScalarParamCompatibility(param, argType);
+                  if (compat) {
+                    diagAt(diagnostics, asmItem.span, compat);
+                    ok = false;
+                    break;
+                  }
+                  if (!pushArgAddressFromOperand(arg)) {
+                    diagAt(
+                      diagnostics,
+                      asmItem.span,
+                      `Unsupported non-scalar argument form for "${param.name}" in call to "${asmItem.head}".`,
+                    );
+                    ok = false;
+                    break;
+                  }
+                  pushedArgWords++;
+                  continue;
                 }
                 const isByte = scalarKind === 'byte';
 
