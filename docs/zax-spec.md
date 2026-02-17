@@ -650,8 +650,14 @@ Type vs initializer (v0.1):
   - Example: `banner: byte[] = "HELLO"` is equivalent to `banner: byte[5] = "HELLO"`.
   - Example: `table: word[] = { 1, 2, 3 }` is equivalent to `table: word[3] = { 1, 2, 3 }`.
 - A bare scalar type without `[]` or `[n]` is not an array; `table: word = { 1, 2, 3 }` is a compile error.
-- Record initializers must supply field values in field order; for arrays of records, initializers are flattened in element order.
-- Named-field aggregate syntax is not part of v0.2 (`{ lo: 0, hi: 0 }` is unsupported in this version).
+- Record initializers support two forms:
+  - positional aggregate: `pair: Pair = { 1, 2 }` (field-order mapping)
+  - named-field aggregate: `pair: Pair = { lo: 1, hi: 2 }`
+- Named-field aggregate rules:
+  - unknown field names are compile errors
+  - duplicate field names are compile errors
+  - missing required fields are compile errors
+  - mixing positional and named entries in one aggregate is a compile error
 
 Nested record initializer example (v0.1):
 

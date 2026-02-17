@@ -4,8 +4,7 @@ type Point
 end
 
 data
-  p: Point = [0]
+  p: Point[1] = [0]
 
 export func main(): void
 end
-

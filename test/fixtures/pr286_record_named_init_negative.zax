@@ -1,0 +1,13 @@
+type Pair
+  lo: byte
+  hi: byte
+end
+
+data
+  bad_unknown: Pair = { lo: 1, xx: 2 }
+  bad_duplicate: Pair = { lo: 1, lo: 2, hi: 3 }
+  bad_missing: Pair = { lo: 1 }
+  bad_shape: byte[2] = { lo: 1, hi: 2 }
+
+export func main(): void
+end

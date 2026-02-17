@@ -5448,21 +5448,133 @@ export function emitProgram(
             return pow;
           };
 
-          const elementType =
-            type.kind === 'ArrayType'
-              ? type.element.kind === 'TypeName'
-                ? type.element.name
-                : undefined
-              : type.kind === 'TypeName'
-                ? type.name
-                : undefined;
+          const recordType = resolveAggregateType(type);
+          if (recordType?.kind === 'record') {
+            if (init.kind === 'InitString') {
+              diag(
+                diagnostics,
+                decl.span.file,
+                `Record initializer for "${decl.name}" must use aggregate form.`,
+              );
+              continue;
+            }
+
+            const valuesByField = new Map<string, ImmExprNode>();
+            let recordInitFailed = false;
+            if (init.kind === 'InitRecordNamed') {
+              for (const fieldInit of init.fields) {
+                const field = recordType.fields.find((f) => f.name === fieldInit.name);
+                if (!field) {
+                  diag(
+                    diagnostics,
+                    decl.span.file,
+                    `Unknown record field "${fieldInit.name}" in initializer for "${decl.name}".`,
+                  );
+                  recordInitFailed = true;
+                  continue;
+                }
+                if (valuesByField.has(field.name)) {
+                  diag(
+                    diagnostics,
+                    decl.span.file,
+                    `Duplicate record field "${field.name}" in initializer for "${decl.name}".`,
+                  );
+                  recordInitFailed = true;
+                  continue;
+                }
+                valuesByField.set(field.name, fieldInit.value);
+              }
+              for (const field of recordType.fields) {
+                if (valuesByField.has(field.name)) continue;
+                diag(
+                  diagnostics,
+                  decl.span.file,
+                  `Missing record field "${field.name}" in initializer for "${decl.name}".`,
+                );
+                recordInitFailed = true;
+              }
+            } else {
+              if (init.elements.length !== recordType.fields.length) {
+                diag(
+                  diagnostics,
+                  decl.span.file,
+                  `Record initializer field count mismatch for "${decl.name}".`,
+                );
+                continue;
+              }
+              for (let index = 0; index < recordType.fields.length; index++) {
+                const field = recordType.fields[index]!;
+                const element = init.elements[index]!;
+                valuesByField.set(field.name, element);
+              }
+            }
+            if (recordInitFailed) continue;
+
+            const encodedFields: Array<{ width: 1 | 2; value: number }> = [];
+            for (const field of recordType.fields) {
+              const fieldValueExpr = valuesByField.get(field.name);
+              if (!fieldValueExpr) continue;
+              const scalar = resolveScalarKind(field.typeExpr);
+              if (!scalar) {
+                diag(
+                  diagnostics,
+                  decl.span.file,
+                  `Unsupported record field type "${field.name}" in initializer for "${decl.name}" (expected byte/word/addr/ptr).`,
+                );
+                recordInitFailed = true;
+                continue;
+              }
+              const value = evalImmExpr(fieldValueExpr, env, diagnostics);
+              if (value === undefined) {
+                diag(
+                  diagnostics,
+                  decl.span.file,
+                  `Failed to evaluate data initializer for "${decl.name}".`,
+                );
+                recordInitFailed = true;
+                continue;
+              }
+              encodedFields.push({
+                width: scalar === 'byte' ? 1 : 2,
+                value,
+              });
+            }
+            if (recordInitFailed) continue;
+
+            let emitted = 0;
+            for (const encoded of encodedFields) {
+              if (encoded.width === 1) {
+                emitByte(encoded.value);
+                emitted += 1;
+              } else {
+                emitWord(encoded.value);
+                emitted += 2;
+              }
+            }
+            const storageBytes = sizeOfTypeExpr(type, env, diagnostics);
+            if (storageBytes === undefined) continue;
+            for (let pad = emitted; pad < storageBytes; pad++) emitByte(0);
+            continue;
+          }
+
+          if (init.kind === 'InitRecordNamed') {
+            diag(
+              diagnostics,
+              decl.span.file,
+              `Named-field aggregate initializer requires a record type for "${decl.name}".`,
+            );
+            continue;
+          }
+
+          const elementScalar =
+            type.kind === 'ArrayType' ? resolveScalarKind(type.element) : resolveScalarKind(type);
           const elementSize =
-            elementType === 'word' || elementType === 'addr' || elementType === 'ptr'
+            elementScalar === 'word' || elementScalar === 'addr'
               ? 2
-              : elementType === 'byte'
+              : elementScalar === 'byte'
                 ? 1
                 : undefined;
-          if (!elementType || !elementSize) {
+          if (!elementSize) {
             diag(
               diagnostics,
               decl.span.file,
