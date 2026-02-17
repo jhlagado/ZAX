@@ -808,7 +808,8 @@ Value semantics note (v0.2):
 - `rec.field` and `arr[idx]` are place expressions (addressable locations).
 - In scalar value/store instruction contexts (for example `LD A, rec.field`, `LD rec.field, A`), the compiler inserts required load/store lowering.
 - In explicit address contexts (for example `ea`-typed matchers/parameters), the same place expression is used as an address value.
-- Explicit address-of syntax (for example `@rec.field`) is deferred to v0.3; v0.2 uses context to disambiguate.
+- Explicit address-of syntax is supported as `@place` (for example `@rec.field`, `@arr[idx]`, `@symbol`).
+  Use `@place` to force address intent in source even when the surrounding context could otherwise infer value semantics.
 
 Precedence (v0.1):
 

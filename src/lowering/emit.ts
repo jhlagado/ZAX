@@ -2427,6 +2427,7 @@ export function emitProgram(
         }
       }
       if (op.kind === 'Ea') {
+        if (op.explicitAddressOf) return op;
         const scalar = resolveScalarTypeForEa(op.expr);
         if (scalar) return { kind: 'Mem', span: op.span, expr: op.expr };
       }
@@ -4088,7 +4089,9 @@ export function emitProgram(
                       pushedArgWords++;
                       continue;
                     }
-                    ok = pushArgValueFromEa(arg.expr, 'byte');
+                    ok = arg.explicitAddressOf
+                      ? pushEaAddress(arg.expr, asmItem.span)
+                      : pushArgValueFromEa(arg.expr, 'byte');
                     if (!ok) break;
                     pushedArgWords++;
                     continue;
@@ -4153,7 +4156,9 @@ export function emitProgram(
                       pushedArgWords++;
                       continue;
                     }
-                    ok = pushArgValueFromEa(arg.expr, 'word');
+                    ok = arg.explicitAddressOf
+                      ? pushEaAddress(arg.expr, asmItem.span)
+                      : pushArgValueFromEa(arg.expr, 'word');
                     if (!ok) break;
                     pushedArgWords++;
                     continue;

@@ -644,6 +644,24 @@ function parseAsmOperand(
   const t = operandText.trim();
   if (t.length === 0) return undefined;
 
+  if (t.startsWith('@')) {
+    const placeText = t.slice(1).trim();
+    if (placeText.length === 0) {
+      diag(diagnostics, filePath, `Invalid address-of target "${t}": expected @<place>.`, {
+        line: operandSpan.start.line,
+        column: operandSpan.start.column,
+      });
+      return undefined;
+    }
+    const ea = parseEaExprFromText(filePath, placeText, operandSpan, diagnostics);
+    if (ea) return { kind: 'Ea', span: operandSpan, expr: ea, explicitAddressOf: true };
+    diag(diagnostics, filePath, `Invalid address-of target "${t}": expected @<place>.`, {
+      line: operandSpan.start.line,
+      column: operandSpan.start.column,
+    });
+    return undefined;
+  }
+
   if (/^(A|B|C|D|E|H|L|IXH|IXL|IYH|IYL|HL|DE|BC|SP|IX|IY|AF|AF'|I|R)$/i.test(t)) {
     return { kind: 'Reg', span: operandSpan, name: canonicalRegisterToken(t) };
   }
