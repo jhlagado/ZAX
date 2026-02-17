@@ -258,6 +258,28 @@ Acceptance test identification (implemented in [#275](https://github.com/jhlagad
 - Positive test target: `test/pr285_alias_init_parser_semantics_matrix.test.ts` (`accepts globals/local value-init and inferred alias-init forms`)
 - Negative test target: `test/pr285_alias_init_parser_semantics_matrix.test.ts` (`rejects non-scalar local storage declarations without alias form`)
 
+### 10.6 Issue #276 Progress Evidence (Non-Scalar Call Compatibility)
+
+Primary issue: [#276](https://github.com/jhlagado/ZAX/issues/276)
+
+Spec/example anchors exercised by implementation/tests:
+
+- `docs/zax-spec.md` Section 8.2 (non-scalar argument contract)
+- `docs/v02-codegen-worked-examples.md` Section 11.3 (`[]` vs `[N]` compatibility)
+
+Implemented compatibility checks:
+
+- `T[N] -> T[]` accepted
+- exact `T[N] -> T[N]` accepted
+- `T[] -> T[N]` rejected without exact-length proof
+- element-type mismatch rejected
+
+Acceptance tests:
+
+- `test/pr286_nonscalar_param_compat_matrix.test.ts`
+  - positive fixture: `test/fixtures/pr286_nonscalar_param_compat_positive.zax`
+  - negative fixture: `test/fixtures/pr286_nonscalar_param_compat_negative.zax`
+
 ### 10.4 Updated timeline (reopened v0.2)
 
 Phase A: normative closure (doc-first)

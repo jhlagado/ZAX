@@ -1215,16 +1215,9 @@ function parseParamsFromText(
     seen.add(lower);
     const typeText = m[2]!.trim();
     const typeExpr = parseTypeExprFromText(typeText, paramsSpan, {
-      allowInferredArrayLength: false,
+      allowInferredArrayLength: true,
     });
     if (!typeExpr) {
-      if (
-        diagIfInferredArrayLengthNotAllowed(diagnostics, filePath, typeText, {
-          line: paramsSpan.start.line,
-          column: paramsSpan.start.column,
-        })
-      )
-        return undefined;
       diag(diagnostics, filePath, `Invalid parameter type "${typeText}": expected <type>`, {
         line: paramsSpan.start.line,
         column: paramsSpan.start.column,
