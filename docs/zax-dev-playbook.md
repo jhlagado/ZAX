@@ -471,7 +471,7 @@ Completed (anchored, most recent first):
 1. #57: ISA: encode `im 0|1|2`, `rst <imm8>`, `reti`, `retn` (fixture + test).
 1. #56: ISA: encode misc system ops (`halt/di/ei/scf/ccf/cpl/ex*/exx`) (fixture + test).
 1. #55: Parser UX: avoid duplicate diagnostics for illegal `T[]` usage (tests).
-1. #54: Parser: restrict inferred arrays `T[]` to `data` declarations only (tests).
+1. #54: Parser: restrict inferred arrays `T[]` to `data` declarations only (tests). Superseded by reopened v0.2 policy allowing `T[]` in function parameter position; keep only as historical tracker context.
 1. #53: Diagnostics: remove "PR subset" wording from user-facing errors (small cleanup).
 1. #52: Treat `ptr` as a 16-bit scalar in codegen (tests).
 1. #51: Inferred-length arrays in `data` declarations (`T[]`) (parser + tests).
@@ -846,7 +846,7 @@ Required PR sequence (adjust scope as needed, but preserve the vertical-slice pr
 | 1   | **Minimal end-to-end**: lex + parse + encode + emit a single `func` with inline `asm` (raw Z80 mnemonics only, no locals, no imports). Produce `.bin`, `.hex`, and minimal `.d8dbg.json`. | §1, §2.1, §2.2, §8.1, §8.2, App B               |
 | 2   | **Constants and data**: `const`, `enum`, `data` declarations, `imm` expressions, section packing.                                                                                         | §4.3, §4.4, §6.3, §7.1                          |
 | 3   | **Module-scope `var`, types, records, arrays, unions**: layout, `sizeof`, `ea` expressions, field access, array indexing, lowering of non-encodable operands.                             | §4.1, §4.2, §5 (incl. §5.3), §6.2, §6.1.1, §7.2 |
-| 4   | **Function locals and calling convention**: `var` block in `func`, SP-relative addressing, stack frame/trampoline mechanism, `func` calls from `asm`.                                     | §8.1–§8.5                                       |
+| 4   | **Function locals and calling convention**: `var` block in `func`, IX-anchored frame addressing, stack frame/epilogue mechanism, `func` calls from `asm`.                                 | §8.1–§8.5                                       |
 | 5   | **Structured control flow**: `if`/`else`/`while`/`repeat`/`until`, `select`/`case`, stack-depth matching at joins.                                                                        | §10                                             |
 | 6   | **Imports and multi-module**: `import`, name resolution, collision detection, packing order, forward references.                                                                          | §3                                              |
 | 7   | **`op` declarations**: matcher types, overload resolution, autosave, expansion, cyclic-expansion detection.                                                                               | §9                                              |

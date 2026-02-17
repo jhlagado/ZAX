@@ -312,21 +312,18 @@ type Ptr16 ptr
 
 ```
 
-Type expressions (v0.1):
+Type expressions (v0.2):
 
 - Scalar types: `byte`, `word`, `addr`, `ptr`
 - Arrays: `T[n]` (fixed length) or `T[]` (inferred length; see below). Nested arrays allowed.
 - Records: a record body starting on the next line and terminated by `end`
 
-Inferred-length arrays (v0.1):
+Inferred-length arrays (`T[]`) in v0.2:
 
-- `T[]` (with no length) is permitted only in `data` declarations that have an initializer. The compiler infers the element count from the initializer.
-- `T[]` is not permitted in any other type position in v0.1 (all other uses require a known size), including:
-  - `var` declarations
-  - function-local `var` blocks
-  - record fields
-  - type aliases
-  - function parameter and return types
+- `T[]` in `data` declarations with initializer is allowed; element count is inferred from initializer.
+- `T[]` in function parameter position is allowed as an array-view contract (element shape known; length unspecified by signature).
+- `T[]` does not imply local stack allocation of unknown-size arrays.
+- `T[]` is not permitted in return types, type aliases, record fields, or local storage declarations in this scope.
 
 Arrays and nesting (v0.1):
 
@@ -501,11 +498,11 @@ end
 
 ## 6. Storage Declarations: `globals`, `data`, `bin`, `hex`, `extern`
 
-ZAX separates **uninitialized storage** (`globals`) from **initialized bytes** (`data`) because these play different roles in an 8-bit system:
+ZAX separates **module variable storage** (`globals`) from **data block declarations** (`data`) because they serve different authoring roles:
 
-- `globals` reserves addresses (typically RAM). It does not emit bytes into the output image.
-- `data` emits bytes (typically ROM constants and tables).
-- Keeping them distinct makes the output deterministic and keeps it obvious which declarations consume bytes in the final image.
+- `globals` defines module variable symbols in the `var` section (scalars and composites).
+- `data` defines initialized table/blob declarations in the `data` section.
+- Both can contribute bytes to final emitted artifacts depending on declaration form.
 
 ### 6.1 Address vs Dereference
 
@@ -556,7 +553,7 @@ Non-guarantees (v0.1):
 
 - Arithmetic/logical instruction forms that are not directly encodable on Z80 (e.g., `add hl, (ea)`) are not guaranteed to be accepted, even though they may be expressible via a multi-instruction sequence.
 
-### 6.2 `globals` (Uninitialized Storage)
+### 6.2 `globals` (Module Storage)
 
 Syntax:
 
@@ -565,14 +562,44 @@ Syntax:
 globals
 total: word
 mode: byte
+boot_count: word = 1
+active_mode = mode
 
 ```
 
-- Declares storage in `var` (uninitialized; emits no bytes).
-- One declaration per line; no initializers.
-- This is **module-scope** uninitialized storage (addresses in the `var` section). It is distinct from a function-local `var` block, which declares stack locals (Section 8.1).
+- Declares module-scope storage in `var`.
+- Declaration forms:
+  - storage declaration: `name: Type`
+  - typed value initializer: `name: Type = valueExpr`
+  - alias initializer (inferred): `name = rhs`
+- Typed alias form is invalid: `name: Type = rhs` is a compile error.
+- This is **module-scope** storage (addresses in the `var` section). It is distinct from a function-local `var` block, which declares frame-local names (Section 8.1).
 - A `globals` block continues until the next module-scope declaration, directive, or end of file.
 - Legacy module-scope `var` blocks are rejected in v0.1 with a migration diagnostic (`Top-level "var" block has been renamed to "globals".`).
+
+Initialization semantics (v0.2):
+
+- `name: Type` allocates storage and zero-initializes it.
+- `name: Type = valueExpr` allocates storage and initializes from `valueExpr`.
+- `name = rhs` allocates no storage; it aliases an existing symbol/address path.
+- In image output terms, `globals` storage declarations contribute bytes in `var` (zero-filled unless value-initialized).
+
+Alias compatibility (v0.2):
+
+- Alias declarations use inferred type from `rhs`.
+- For arrays, `T[N]` where `T[]` is expected is allowed.
+- `T[]` to `T[N]` requires proof that length is exactly `N`; otherwise compile error.
+- Element-type mismatch is a compile error.
+
+Initializer classification and diagnostics (normative):
+
+- `valueExpr` is an initializer expression compatible with the declared type.
+  - scalar declarations use compile-time immediate expressions (`imm`) valid for declared width.
+  - composite declarations may use aggregate initializer forms defined for that type shape.
+- `rhs` is an address/reference source (symbol or address path expression).
+- `name: Type = valueExpr` is value initialization.
+- `name = rhs` is alias initialization with inferred type.
+- `name: Type = rhs` is always rejected (typed alias form is not allowed in this scope).
 
 ### 6.3 `data` (Initialized Storage)
 
@@ -664,7 +691,7 @@ hex bios from "rom/bios.hex"
   - For disjoint HEX ranges, this remains the minimum written address across all ranges.
 - HEX output is written to absolute addresses in the final address space and does not advance any section’s location counter.
 - If a HEX-written byte overlaps any other emission, it is a compile error (regardless of whether the bytes are equal). This is an instance of the general overlap rule in Section 2.2.
-- The compiler’s output is an address→byte map. When producing a flat binary image, the compiler emits bytes from the lowest written address to the highest written address. Unwritten addresses within this range are filled with the **gap fill byte**, `$00`. `var` contributes no bytes.
+- The compiler’s output is an address→byte map. When producing a flat binary image, the compiler emits bytes from the lowest written address to the highest written address. Unwritten addresses within this range are filled with the **gap fill byte**, `$00`. `var` may contribute bytes from `globals` storage declarations.
   - When producing Intel HEX output, the compiler emits only written bytes/records; gap fill bytes are not emitted.
 
 ### 6.5 `extern` (Binding Names to Addresses)
@@ -751,7 +778,7 @@ Integer semantics (v0.1):
 `ea` denotes an address, not a value. Allowed:
 
 - storage symbols: `globals` names, `data` names, `bin` base names
-- function-scope symbols: argument names and local `var` names (as SP-relative stack slots)
+- function-scope symbols: argument names and local `var` names (as frame slots)
 - field access: `rec.field`
 - indexing: `arr[i]` and nested `arr[r][c]` (index forms as defined above)
 - address arithmetic: `ea + imm`, `ea - imm`
@@ -795,10 +822,22 @@ Rules:
 - Module-scope only; no inner functions.
 - Function bodies emit instructions into `code`.
 - Inside a function body:
-  - at most one optional `var` block (locals, one per line)
+  - at most one optional `var` block
   - instruction stream starts after the optional `var` block (or immediately if no `var` block)
   - `end` terminates the function body
 - Function instruction streams may contain Z80 mnemonics, `op` invocations, and structured control flow (Section 10).
+
+Function-local `var` declaration forms (v0.2):
+
+- scalar storage declaration: `name: Type`
+- scalar value initializer: `name: Type = valueExpr`
+- alias initializer: `name = rhs`
+
+Function-local `var` invalid forms and rules:
+
+- typed alias is invalid: `name: Type = rhs`
+- non-scalar local storage declaration without alias init is invalid in this scope
+- non-scalar locals are allowed only via alias form (`name = rhs`) and allocate no frame slot
 
 Function-body block termination (v0.1):
 
@@ -818,14 +857,27 @@ Function-body block termination (v0.1):
   - 8-bit return in `L`
 - Register/flag volatility (typed call boundary, v0.2):
   - typed `func`/`extern func` call sites are preservation-safe at the language boundary.
-  - `void` calls preserve all registers and flags.
-  - non-`void` calls preserve all registers and flags except `HL` (return channel; `L` carries byte returns).
+  - `HL` is boundary-volatile for all typed calls (including `void`).
+  - non-`void` calls use `HL` as return channel (`L` for byte returns).
+  - all non-`HL` registers/flags are boundary-preserved by typed-call glue.
   - this boundary guarantee is compiler-generated call glue; explicit raw Z80 `call` mnemonics remain raw assembly semantics.
 
-Notes (v0.1):
+Notes (v0.2):
 
 - Arguments are stack slots, regardless of declared type. For `byte` parameters, the low byte carries the value and the high byte is ignored (recommended: push a zero-extended value).
 - `void` functions return no value.
+
+Non-scalar argument contract (v0.2):
+
+- Non-scalar parameters are passed in one 16-bit argument slot as address-like references.
+- Parameter type controls callee semantics:
+  - `T[]` means element-shape contract only (length unspecified by signature).
+  - `T[N]` means exact-length contract.
+- Compatibility:
+  - passing `T[N]` to `T[]` is allowed.
+  - passing `T[]` to `T[N]` is rejected unless compiler can prove length is exactly `N`.
+  - element-type mismatch is rejected.
+- This is a type/semantic rule; stack width remains one 16-bit slot for non-scalar args.
 
 ### 8.3 Calling Functions From Instruction Streams
 
@@ -836,7 +888,7 @@ Syntax:
 - `name` (call with zero arguments)
 - `name <arg0>, <arg1>, ...` (call with arguments)
 
-Argument values (v0.1):
+Argument values (v0.2):
 
 - `reg16`: passed as a 16-bit value.
 - `reg8`: passed as a zero-extended 16-bit value.
@@ -845,6 +897,26 @@ Argument values (v0.1):
 - `(ea)` dereference: reads from memory and passes the loaded value (word or byte depending on the parameter type; `byte` is zero-extended).
 
 Calls follow the calling convention in 8.2 (compiler emits the required pushes, call, and any temporary saves/restores).
+
+Example:
+
+```zax
+globals
+  sample_bytes: byte[10] = { 1,2,3,4,5,6,7,8,9,10 }
+
+func sum_fixed_10(values: byte[10]): word
+  ; fixed-length contract
+end
+
+func sum_any(values: byte[]): word
+  ; flexible array-view contract
+end
+
+export func main(): void
+  sum_fixed_10 sample_bytes   ; valid
+  sum_any sample_bytes        ; valid ([10] -> [])
+end
+```
 
 Parsing and name resolution (v0.2):
 
@@ -861,26 +933,30 @@ Operand identifier resolution (v0.1):
 
 - For identifiers used inside operands (in function bodies), resolution proceeds as:
   1. local labels
-  2. locals/args (stack slots)
+  2. locals/args (frame-bound names)
   3. module-scope symbols (including `const` and enum members)
      otherwise a compile error (unknown symbol).
 
-### 8.4 Stack Frames and Locals (SP-relative, no base pointer)
+### 8.4 Stack Frames and Locals (IX-anchored frame model)
 
-- ZAX does not use `IX`/`IY` as a frame pointer.
-- Locals and arguments are addressed as `SP + constant offset` computed into `HL`.
-- The compiler knows local/arg counts from the signature and `var` block.
-- In the current ABI, each local and each argument occupies one 16-bit slot.
-- Supported local/parameter types in this ABI: `byte`, `word`, `addr` (or aliases that resolve to those scalar types).
+- Framed functions use `IX` as frame anchor.
+- Canonical frame setup:
+  - `PUSH IX`
+  - `LD IX, 0`
+  - `ADD IX, SP`
+- Arguments and locals are addressed by fixed offsets from `IX`.
+- Slot model in current ABI:
+  - each argument is one 16-bit slot
+  - local scalar storage declarations allocate one 16-bit slot each
+- Local storage allocation in this scope remains scalar-slot based (`byte`, `word`, `addr`, `ptr`, or aliases resolving to those scalar types).
+- Non-scalar locals are permitted only as alias declarations (`name = rhs`) and do not allocate frame slots.
 
-Frame model (v0.1 current):
+Frame shape:
 
-- Prologue reserves locals as words (`frameSize = localCount * 2`).
-- No trampoline metadata is pushed.
-- At the start of the user-authored instruction stream:
-  - local slot `i` is at `SP + 2*i`
-  - return address is at `SP + frameSize`
-  - argument `i` (0-based) is at `SP + frameSize + 2 + 2*i`
+- `IX+0..1`: saved prior `IX`
+- `IX+2..3`: return address
+- `IX+4..`: arguments (0-based word slots)
+- `IX-1..`: local scalar slots
 
 Return and cleanup model:
 
@@ -889,6 +965,11 @@ Return and cleanup model:
 - `ret` and `ret <cc>` in user-authored instruction streams are rewritten to jumps to that synthetic epilogue.
 - The synthetic epilogue pops local slots (if any) and performs the final `ret` to caller.
 - If there are no locals and no conditional returns, plain `ret` is emitted directly with no synthetic epilogue.
+- Canonical epilogue shape for framed functions:
+  - restore preserved registers (policy-defined set)
+  - `LD SP, IX`
+  - `POP IX`
+  - `RET`
 
 `retn`/`reti`:
 
@@ -896,7 +977,7 @@ Return and cleanup model:
 - They are not rewritten by this mechanism; only `ret`/`ret <cc>` participate in epilogue rewriting.
 - In functions with locals (`frameSize > 0`), `retn`/`reti` are rejected with a compile error because they bypass local-frame cleanup.
 
-The compiler tracks stack depth across the function instruction stream to keep SP-relative locals/args resolvable.
+The compiler tracks stack depth across the function instruction stream for call-boundary and control-join safety checks.
 
 ### 8.5 SP Mutation Rules in Instruction Streams
 
@@ -911,8 +992,7 @@ Other SP assignment instructions (v0.1):
 - Instructions that assign to `SP` (e.g., `ld sp, hl`, `ld sp, ix`, `ld sp, iy`, `ld sp, imm16`) are permitted but the compiler does not track their effects.
 - When using untracked SP assignment:
   - The programmer is responsible for ensuring SP is correct at structured-control-flow joins and at function exit.
-  - Local/arg slot references assume the compiler's tracked SP offset; untracked SP assignment can make stack-slot addressing invalid.
-  - Current compiler behavior: once such an assignment is seen, stack-slot addressing is rejected with a compile error.
+  - Frame-slot addressing uses `IX` offsets; untracked SP assignment still risks breaking call-boundary and epilogue correctness.
   - Current compiler behavior: when stack slots are present (locals and/or params), call-like boundaries (`call`, `rst`) reached with positive tracked stack delta, or after untracked/unknown stack state, are diagnosed.
 
 Note (v0.1):
@@ -1219,8 +1299,9 @@ This section defines required source migration behavior for programs moving from
 5. `sizeof` and `offsetof` use storage-size rules.
    - Recompute constants that depended on v0.1 packed-size assumptions.
 6. Typed internal calls are preservation-safe at the language boundary.
-   - `void` typed calls preserve all registers/flags.
-   - Non-`void` typed calls preserve all registers/flags except `HL` (return channel).
+   - `HL` is boundary-volatile for all typed calls (including `void`).
+   - Non-`void` typed calls use `HL` as return channel (`L` for byte).
+   - Other registers/flags are boundary-preserved by typed-call glue.
    - Do not apply these guarantees to raw Z80 `call` mnemonics.
 
 ### 11.2 Before/After Migration Examples
@@ -1272,7 +1353,7 @@ extern func putc(ch: byte): void at $F003
 extern func next_char(): byte at $F010
 
 ; v0.2 typed-call boundary:
-; - putc preserves all regs/flags
+; - putc may leave HL undefined (HL is boundary-volatile)
 ; - next_char preserves all regs/flags except HL (L carries byte return)
 putc A
 next_char
@@ -1417,7 +1498,7 @@ This appendix tracks migration-coverage status against the normative language ru
 - [x] Enum members require qualification (`EnumType.Member`); unqualified members are compile errors. (Sections 4.3, 11.1, 11.3)
 - [x] `sizeof` semantics are storage-size semantics (including composite padding), replacing v0.1 packed-oriented behavior. (Sections 4.1, 4.4, 11.1, 11.2)
 - [x] `offsetof` rules are fully specified (records, nested constant-index paths, and union-member path behavior). (Sections 4.4, 5.2, 5.3)
-- [x] Typed internal call boundaries are preservation-safe: `void` exposes no boundary-visible clobbers; non-void exposes only `HL`. (Sections 8.2, 11.1, 11.2)
+- [x] Typed internal call boundaries are preservation-safe with `HL` boundary-volatile for all typed calls; non-void returns publish via `HL`/`L`. (Sections 8.2, 11.1, 11.2)
 
 ### C.2 Migration Guidance Coverage
 
@@ -1746,7 +1827,7 @@ end
 
 ### 3.3 Address and Dereference Matchers
 
-**`ea`** matches an effective-address expression as defined in Section 7.2 of the spec: storage symbols (`globals`/`data`/`bin` names), function-local names (as SP-relative slots), field access (`rec.field`), array indexing (`arr[i]`), and address arithmetic (`ea + imm`, `ea - imm`). When substituted, the parameter carries the address expression _without_ implicit parentheses — it names a location, not its contents.
+**`ea`** matches an effective-address expression as defined in Section 7.2 of the spec: storage symbols (`globals`/`data`/`bin` names), function-local names (as frame slots), field access (`rec.field`), array indexing (`arr[i]`), and address arithmetic (`ea + imm`, `ea - imm`). When substituted, the parameter carries the address expression _without_ implicit parentheses — it names a location, not its contents.
 
 The main spec's runtime-atom expression budget applies to `ea` matching. In v0.2, matcher acceptance does not bypass that budget: if a call-site `ea` contains too many runtime atoms, the invocation is rejected before or during semantic validation.
 
@@ -2398,7 +2479,7 @@ Ops do not appear in the symbol table as callable addresses (since they have no 
 
 Ops are expanded inline within the enclosing function instruction stream. This means:
 
-- The function's local variables remain accessible during op expansion (as SP-relative slots)
+- The function's local variables remain accessible during op expansion (as frame slots)
 - The op may modify stack depth; correctness is judged at enclosing function joins/call boundaries
 - The function's SP tracking is updated by any `push`/`pop` in the op body
 
@@ -2407,7 +2488,7 @@ Ops are expanded inline within the enclosing function instruction stream. This m
 An op body may invoke a function using the normal function-call syntax (Section 8.3 of the main spec). When this happens:
 
 - The compiler generates the call sequence (push arguments, `call`, pop arguments)
-- The typed-call boundary is preservation-safe in v0.2 (`void`: preserve all; non-void: only `HL` output may change).
+- The typed-call boundary is preservation-safe in v0.2 (`HL` boundary-volatile for all typed calls; non-void uses `HL`/`L` return channel).
 - Any additional clobbers are from surrounding op instructions (ops still have no automatic preservation)
 
 This interaction can lead to significant expansion overhead. Consider:
