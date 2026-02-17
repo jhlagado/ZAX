@@ -119,7 +119,7 @@ Not required for declaring v0.2 complete:
 - explicit `^` dereference / `@` address-of operators
 - typed-pointer and typed-register-field extensions
 
-## 7. Proposed Timeline
+## 7. Historical Timeline (February 15 closeout snapshot)
 
 ### Phase A: closeout prep (complete)
 
@@ -137,8 +137,11 @@ Not required for declaring v0.2 complete:
 - freeze v0.2 scope and open v0.3 planning track
 
 Estimated remaining effort to formally close v0.2: **0 days (closed)**.
+Historical note: this estimate reflects the February 15 snapshot state only and is superseded by Section 10 reopened gates.
 
-## 8. Next Stage
+## 8. Historical Next Stage (February 15 closeout snapshot)
+
+Historical closeout state at February 15 snapshot:
 
 v0.2 is closed.
 
