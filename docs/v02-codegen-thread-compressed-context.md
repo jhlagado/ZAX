@@ -83,6 +83,15 @@ Conceptual stack order near entry:
 - Explicit `volatile BC,DE` syntax was considered but not preferred.
 - If explicit mode ever added, it should be optional/verified against inferred behavior.
 
+## Composite Aliasing Direction
+
+- Current ABI model keeps function locals/args as scalar stack slots.
+- Composite local declarations are allowed only as reference aliases with initializer (no local composite stack allocation yet).
+- Globals support:
+  - value initializer (owns storage contents)
+  - reference initializer (alias to existing composite storage)
+- This enables `arr_alias[index]` / `rec_alias.field` usage without introducing explicit pointer operators in v0.2.
+
 ## IY Ideas
 
 - Candidate use: global/context/environment pointer (long-lived base).
