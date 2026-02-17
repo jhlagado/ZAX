@@ -593,7 +593,9 @@ Alias compatibility (v0.2):
 
 Initializer classification and diagnostics (normative):
 
-- `valueExpr` is an immediate compile-time expression (`imm`) valid for the declared type width.
+- `valueExpr` is an initializer expression compatible with the declared type.
+  - scalar declarations use compile-time immediate expressions (`imm`) valid for declared width.
+  - composite declarations may use aggregate initializer forms defined for that type shape.
 - `rhs` is an address/reference source (symbol or address path expression).
 - `name: Type = valueExpr` is value initialization.
 - `name = rhs` is alias initialization with inferred type.

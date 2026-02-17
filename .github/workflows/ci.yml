@@ -36,18 +36,7 @@ jobs:
         id: classify
         shell: bash
         run: |
-          # Optional manual override for PRs: apply label "ci:docs-only" to force docs-only CI.
-          pr_labels="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
-          has_docs_only_label="false"
-          if [[ "${{ github.event_name }}" == "pull_request" ]] && [[ " $pr_labels " == *" ci:docs-only "* ]]; then
-            has_docs_only_label="true"
-          fi
-
-          if [[ "$has_docs_only_label" == "true" ]]; then
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
-            echo "run_full=false" >> "$GITHUB_OUTPUT"
-            echo "Change set classified as docs-only via PR label override (ci:docs-only)."
-          elif [[ "${{ steps.filter.outputs.docs }}" == "true" && "${{ steps.filter.outputs.other }}" != "true" ]]; then
+          if [[ "${{ steps.filter.outputs.docs }}" == "true" && "${{ steps.filter.outputs.other }}" != "true" ]]; then
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
             echo "run_full=false" >> "$GITHUB_OUTPUT"
             echo "Change set classified as docs-only."
