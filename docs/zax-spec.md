@@ -595,7 +595,7 @@ Initializer classification and diagnostics (normative):
 
 - `valueExpr` is an initializer expression compatible with the declared type.
   - scalar declarations use compile-time immediate expressions (`imm`) valid for declared width.
-  - composite declarations may use aggregate initializer forms defined for that type shape.
+  - for `globals` composite declarations in v0.2, zero-init form (`= 0`) is supported; aggregate record initializer syntax is deferred.
 - `rhs` is an address/reference source (symbol or address path expression).
 - `name: Type = valueExpr` is value initialization.
 - `name = rhs` is alias initialization with inferred type.
@@ -615,7 +615,7 @@ type Pair
 end
 
 globals
-  p: Pair = { 0, 0 }               ; valid positional record value-init (lo, hi)
+  p: Pair = 0                      ; valid composite zero-init form in v0.2
 ```
 
 ### 6.3 `data` (Initialized Storage)

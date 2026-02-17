@@ -473,7 +473,7 @@ type Pair
 end
 
 globals
-  p: Pair = { 0, 0 }    ; positional record initializer (field order: lo, hi)
+  p: Pair = 0           ; current compiler-supported composite zero-init form
 
 op touch(addr: ea)
   LD A, (addr)

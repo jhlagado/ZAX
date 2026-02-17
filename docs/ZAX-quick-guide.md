@@ -152,7 +152,7 @@ globals
   current_count = boot_count
 ```
 
-Composite value-init uses positional aggregate values in field order:
+Composite globals can be zero-initialized using scalar zero:
 
 ```zax
 type Pair
@@ -161,10 +161,10 @@ type Pair
 end
 
 globals
-  p: Pair = { 0, 0 }
+  p: Pair = 0
 ```
 
-Named-field aggregate syntax (for example `{ lo: 0, hi: 0 }`) is deferred beyond v0.2.
+Aggregate record initializer syntax for `globals` (positional or named-field) is deferred beyond v0.2.
 
 ## Chapter 3 - Addressing and Indexing
 
