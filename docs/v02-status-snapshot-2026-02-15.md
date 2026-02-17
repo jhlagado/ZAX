@@ -336,6 +336,26 @@ Policy evidence:
 - required CI path: default `test` matrix includes `test/pr287_opcode_verification_workflow.test.ts`
 - optional/non-blocking external cross-check remains in `#266` only
 
+### 10.9 Issue #277 Closure Evidence (Docs-Only CI Short-Circuit Hardening)
+
+Primary issue: [#277](https://github.com/jhlagado/ZAX/issues/277)
+
+Implementation anchors:
+
+- workflow: `.github/workflows/ci.yml` (`detect-changes` job now classifies file sets via script)
+- classifier: `scripts/ci/change-classifier.js`
+- verification tests: `test/pr288_ci_docs_only_classifier.test.ts`
+
+Documented rule anchor:
+
+- `docs/github-backlog-workflow.md` section "CI Change Classification Rule"
+
+Acceptance coverage:
+
+- docs-only sets (`docs/**`, `*.md`, `.github/ISSUE_TEMPLATE/**`) classify to `docs_only=true`, `run_full=false`
+- non-doc and mixed sets classify to `docs_only=false`, `run_full=true`
+- workflow edits are non-doc changes and continue to run full CI
+
 ### 10.4 Updated timeline (reopened v0.2)
 
 Phase A: normative closure (doc-first)

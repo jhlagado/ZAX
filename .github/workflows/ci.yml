@@ -18,33 +18,30 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            docs:
-              - 'docs/**'
-              - '**/*.md'
-              - '.github/ISSUE_TEMPLATE/**'
-            other:
-              - '**'
-              - '!docs/**'
-              - '!**/*.md'
-              - '!.github/ISSUE_TEMPLATE/**'
+      - name: Collect changed files
+        id: changed_files
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base_sha="${{ github.event.pull_request.base.sha }}"
+            head_sha="${{ github.event.pull_request.head.sha }}"
+            git diff --name-only "$base_sha" "$head_sha" > changed_files.txt
+          else
+            before_sha="${{ github.event.before }}"
+            head_sha="${{ github.sha }}"
+            if [[ "$before_sha" == "0000000000000000000000000000000000000000" ]]; then
+              git ls-files > changed_files.txt
+            else
+              git diff --name-only "$before_sha" "$head_sha" > changed_files.txt
+            fi
+          fi
+          echo "changed_count=$(wc -l < changed_files.txt | tr -d ' ')" >> "$GITHUB_OUTPUT"
 
       - name: Classify change set
         id: classify
         shell: bash
         run: |
-          if [[ "${{ steps.filter.outputs.docs }}" == "true" && "${{ steps.filter.outputs.other }}" != "true" ]]; then
-            echo "docs_only=true" >> "$GITHUB_OUTPUT"
-            echo "run_full=false" >> "$GITHUB_OUTPUT"
-            echo "Change set classified as docs-only."
-          else
-            echo "docs_only=false" >> "$GITHUB_OUTPUT"
-            echo "run_full=true" >> "$GITHUB_OUTPUT"
-            echo "Change set classified as full CI."
-          fi
+          node ./scripts/ci/change-classifier.js < changed_files.txt
 
   docs:
     name: docs (fast)
