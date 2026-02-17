@@ -188,7 +188,14 @@ export interface DataDeclNode extends BaseNode {
  */
 export type DataInitializerNode =
   | { kind: 'InitArray'; span: SourceSpan; elements: ImmExprNode[] }
-  | { kind: 'InitString'; span: SourceSpan; value: string };
+  | { kind: 'InitString'; span: SourceSpan; value: string }
+  | { kind: 'InitRecordNamed'; span: SourceSpan; fields: DataRecordFieldInitNode[] };
+
+export interface DataRecordFieldInitNode extends BaseNode {
+  kind: 'DataRecordFieldInit';
+  name: string;
+  value: ImmExprNode;
+}
 
 /**
  * `bin` declaration: include raw bytes from an external file into a section.
