@@ -33,7 +33,8 @@ It combines:
 - compile-time expressions (`const`, `sizeof`, `offsetof`)
 - inline macro-instructions (`op`)
 
-ZAX does not add a runtime system, hidden allocation, or hidden stack frames.
+ZAX does not add a runtime system, hidden allocation, or hidden scheduler model.
+Function lowering may still emit compiler-owned prologue/epilogue frame code where required by the typed function contract.
 
 ### 1.2 Why Use It
 
@@ -131,6 +132,24 @@ Runtime scaling uses shifts, not multiplication.
 ```zax
 const SpriteSize = sizeof(Sprite)
 const FlagOffset = offsetof(Sprite, flags)
+```
+
+### 2.5 `globals` and Alias Forms
+
+`globals` supports three declaration forms:
+
+- storage declaration: `name: Type`
+- typed value initializer: `name: Type = valueExpr`
+- alias initializer (inferred): `name = rhs`
+
+Typed alias form is invalid:
+
+- `name: Type = rhs` is rejected.
+
+```zax
+globals
+  boot_count: word = 1
+  current_count = boot_count
 ```
 
 ## Chapter 3 - Addressing and Indexing
@@ -263,13 +282,14 @@ end
 
 ### 6.2 v0.2 Typed Call Boundary Contract
 
-- `void` typed calls: no boundary-visible clobbers
-- non-`void` typed calls: `HL` is visible return channel (`L` for byte returns)
+- `HL` is boundary-volatile for all typed calls (including `void`)
+- non-`void` typed calls use `HL` as return channel (`L` for byte returns)
+- non-`HL` registers/flags are boundary-preserved by typed-call glue
 
 Lowering consequence:
 
-- `void` call wrappers preserve/restore `HL`
-- non-`void` call wrappers intentionally leave `HL` as the published return channel
+- call wrappers do not preserve incoming `HL`
+- non-void call wrappers publish result via `HL`/`L`
 
 ### 6.3 Practical Rule
 
@@ -279,6 +299,43 @@ Keep call-site arguments simple; stage dynamic address/value work first.
 - Direct address arguments (`ea`/`(ea)` as address-style call-site forms) remain runtime-atom-free in v0.2.
 - Stack-verification diagnostics distinguish typed call boundaries from raw `call` instructions.
 - `--raw-typed-call-warn` is available as an advisory lint when raw `call`/`call cc,nn` targets a typed callable symbol.
+
+### 6.4 Non-Scalar Argument Contracts (`[]` vs `[N]`)
+
+- non-scalar args are passed as 16-bit address-like references
+- `T[]` parameter: element-shape contract, length unspecified
+- `T[N]` parameter: exact-length contract
+
+Compatibility:
+
+- `T[N] -> T[]` allowed
+- `T[] -> T[N]` rejected unless exact-length proof exists
+- element-type mismatch rejected
+
+```zax
+globals
+  sample_bytes: byte[10] = { 1,2,3,4,5,6,7,8,9,10 }
+
+func sum_fixed_10(values: byte[10]): word
+end
+
+func sum_any(values: byte[]): word
+end
+
+export func main(): void
+  sum_fixed_10 sample_bytes
+  sum_any sample_bytes
+end
+```
+
+### 6.5 Frame Model Summary (IX-Anchored)
+
+Framed functions use:
+
+- prologue: `PUSH IX`, `LD IX,0`, `ADD IX,SP`
+- args at positive offsets (`IX+4..`)
+- scalar locals at negative offsets (`IX-1..`)
+- epilogue: `LD SP,IX`, `POP IX`, `RET`
 
 ## Chapter 7 - The `op` System
 
