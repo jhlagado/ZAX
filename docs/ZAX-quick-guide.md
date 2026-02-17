@@ -166,6 +166,13 @@ globals
 
 Aggregate record initializer syntax for `globals` (positional or named-field) is deferred beyond v0.2.
 
+For `data` record declarations, both aggregate forms are supported:
+
+- positional: `pair: Pair = { 1, 2 }`
+- named-field: `pair: Pair = { lo: 1, hi: 2 }`
+
+Named-field aggregates must cover every field exactly once (no unknown, duplicate, or missing fields).
+
 ## Chapter 3 - Addressing and Indexing
 
 ### 3.1 Core Forms
