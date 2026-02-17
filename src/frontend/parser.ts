@@ -10,6 +10,7 @@ import type {
   ConstDeclNode,
   DataBlockNode,
   DataDeclNode,
+  DataRecordFieldInitNode,
   EnumDeclNode,
   EaExprNode,
   EaIndexNode,
@@ -776,6 +777,60 @@ function appendParsedAsmStatement(out: AsmItemNode[], parsed: ParsedAsmStatement
     return;
   }
   out.push(parsed);
+}
+
+function splitTopLevelComma(text: string): string[] {
+  const parts: string[] = [];
+  let start = 0;
+  let parenDepth = 0;
+  let bracketDepth = 0;
+  let braceDepth = 0;
+  let inChar = false;
+  let escaped = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!;
+    if (inChar) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === "'") inChar = false;
+      continue;
+    }
+    if (ch === "'") {
+      inChar = true;
+      continue;
+    }
+    if (ch === '(') {
+      parenDepth++;
+      continue;
+    }
+    if (ch === ')') {
+      if (parenDepth > 0) parenDepth--;
+      continue;
+    }
+    if (ch === '[') {
+      bracketDepth++;
+      continue;
+    }
+    if (ch === ']') {
+      if (bracketDepth > 0) bracketDepth--;
+      continue;
+    }
+    if (ch === '{') {
+      braceDepth++;
+      continue;
+    }
+    if (ch === '}') {
+      if (braceDepth > 0) braceDepth--;
+      continue;
+    }
+    if (ch === ',' && parenDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts;
 }
 
 function parseCaseValuesFromText(
@@ -3430,9 +3485,68 @@ export function parseModuleFile(
         let initializer: DataDeclNode['initializer'] | undefined;
         if (initText.startsWith('"') && initText.endsWith('"') && initText.length >= 2) {
           initializer = { kind: 'InitString', span: lineSpan, value: initText.slice(1, -1) };
+        } else if (initText.startsWith('{') && initText.endsWith('}')) {
+          const inner = initText.slice(1, -1).trim();
+          const parts = inner.length === 0 ? [] : splitTopLevelComma(inner).map((p) => p.trim());
+          const namedFields: DataRecordFieldInitNode[] = [];
+          const positionalElements: ImmExprNode[] = [];
+          let sawNamed = false;
+          let sawPositional = false;
+          let parseFailed = false;
+
+          for (const part of parts) {
+            if (part.length === 0) {
+              parseFailed = true;
+              break;
+            }
+            const namedMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(part);
+            if (namedMatch) {
+              sawNamed = true;
+              const value = parseImmExprFromText(
+                modulePath,
+                namedMatch[2]!.trim(),
+                lineSpan,
+                diagnostics,
+              );
+              if (!value) {
+                parseFailed = true;
+                continue;
+              }
+              namedFields.push({
+                kind: 'DataRecordFieldInit',
+                span: lineSpan,
+                name: namedMatch[1]!,
+                value,
+              });
+              continue;
+            }
+            sawPositional = true;
+            const e = parseImmExprFromText(modulePath, part, lineSpan, diagnostics);
+            if (!e) {
+              parseFailed = true;
+              continue;
+            }
+            positionalElements.push(e);
+          }
+
+          if (sawNamed && sawPositional) {
+            diag(
+              diagnostics,
+              modulePath,
+              `Mixed positional and named aggregate initializer entries are not allowed for "${name}".`,
+              { line: i + 1, column: 1 },
+            );
+            parseFailed = true;
+          }
+
+          if (!parseFailed) {
+            initializer = sawNamed
+              ? { kind: 'InitRecordNamed', span: lineSpan, fields: namedFields }
+              : { kind: 'InitArray', span: lineSpan, elements: positionalElements };
+          }
         } else if (initText.startsWith('[') && initText.endsWith(']')) {
           const inner = initText.slice(1, -1).trim();
-          const parts = inner.length === 0 ? [] : inner.split(',').map((p) => p.trim());
+          const parts = inner.length === 0 ? [] : splitTopLevelComma(inner).map((p) => p.trim());
           const elements: ImmExprNode[] = [];
           for (const part of parts) {
             const e = parseImmExprFromText(modulePath, part, lineSpan, diagnostics);

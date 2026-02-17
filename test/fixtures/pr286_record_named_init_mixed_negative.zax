@@ -1,0 +1,10 @@
+type Pair
+  lo: byte
+  hi: byte
+end
+
+data
+  bad_mixed: Pair = { lo: 1, 2 }
+
+export func main(): void
+end
