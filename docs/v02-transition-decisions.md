@@ -693,7 +693,7 @@ process_byte A
 | Phase | Required behavior |
 | ----- | ----------------- |
 | Evaluate args | Use preservation-safe helpers; stage complex forms before marshalling |
-| Marshal args | Push right-to-left; no boundary-visible clobbers |
+| Marshal args | Push right-to-left; this phase publishes no final boundary outputs (typed-call boundary contract is evaluated at call return) |
 | Transfer | Emit `CALL` target |
 | Callee setup | Reserve locals / save internals as needed |
 | Callee body | Hidden lowering may use scratch, but must restore non-outputs |
