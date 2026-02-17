@@ -491,7 +491,7 @@ Context rule:
 - `rec.field` and `arr[idx]` are place expressions.
 - In value/store instruction contexts, scalar places are read/written as values.
 - When a matcher/parameter requires `ea`, place expressions are passed as addresses.
-- Explicit address-of operator syntax (for example `@p.lo`) is deferred to v0.3.
+- Explicit address-of is available via `@place` (for example `@p.lo`) when address intent should be explicit.
 
 ### 11.3 Non-Scalar Function Arguments: `[]` vs `[N]` (Design Target)
 
