@@ -518,6 +518,14 @@ Lowering note:
 - Call lowering still pushes one 16-bit argument slot for non-scalar args.
 - The non-scalar "by-reference" meaning is semantic/type-level, not a different stack width.
 
+Implementation evidence:
+
+- `test/pr286_nonscalar_param_compat_matrix.test.ts` covers:
+  - `T[N] -> T[]` acceptance
+  - exact `T[N] -> T[N]` acceptance
+  - `T[] -> T[N]` rejection without exact-length proof
+  - element-type mismatch rejection (`byte[]` vs `word[]`)
+
 ## 12. Codegen Acceptance Matrix (Must-Complete for v0.2)
 
 Each row requires:
