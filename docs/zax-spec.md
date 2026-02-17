@@ -608,6 +608,14 @@ globals
   table: byte[4] = { 1, 2, 3, 4 } ; valid value-init
   table_ref = table                ; valid alias-init
   bad_table: byte[4] = table       ; invalid typed alias form
+
+type Pair
+  lo: byte
+  hi: byte
+end
+
+globals
+  p: Pair = { 0, 0 }               ; valid positional record value-init (lo, hi)
 ```
 
 ### 6.3 `data` (Initialized Storage)
@@ -641,6 +649,7 @@ Type vs initializer (v0.1):
   - Example: `table: word[] = { 1, 2, 3 }` is equivalent to `table: word[3] = { 1, 2, 3 }`.
 - A bare scalar type without `[]` or `[n]` is not an array; `table: word = { 1, 2, 3 }` is a compile error.
 - Record initializers must supply field values in field order; for arrays of records, initializers are flattened in element order.
+- Named-field aggregate syntax is not part of v0.2 (`{ lo: 0, hi: 0 }` is unsupported in this version).
 
 Nested record initializer example (v0.1):
 
@@ -796,7 +805,10 @@ Conceptually, an `ea` is a base address plus a sequence of **address-path** segm
 
 Value semantics note (v0.2):
 
-- When a scalar-typed variable, field, or element appears in `LD` or call-argument position, the compiler inserts the implicit dereference. In other contexts, `ea` still denotes an address value.
+- `rec.field` and `arr[idx]` are place expressions (addressable locations).
+- In scalar value/store instruction contexts (for example `LD A, rec.field`, `LD rec.field, A`), the compiler inserts required load/store lowering.
+- In explicit address contexts (for example `ea`-typed matchers/parameters), the same place expression is used as an address value.
+- Explicit address-of syntax (for example `@rec.field`) is deferred to v0.3; v0.2 uses context to disambiguate.
 
 Precedence (v0.1):
 

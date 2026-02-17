@@ -152,6 +152,20 @@ globals
   current_count = boot_count
 ```
 
+Composite value-init uses positional aggregate values in field order:
+
+```zax
+type Pair
+  lo: byte
+  hi: byte
+end
+
+globals
+  p: Pair = { 0, 0 }
+```
+
+Named-field aggregate syntax (for example `{ lo: 0, hi: 0 }`) is deferred beyond v0.2.
+
 ## Chapter 3 - Addressing and Indexing
 
 ### 3.1 Core Forms
@@ -169,6 +183,9 @@ arr[(HL)]
 - `arr[HL]` means direct 16-bit index from `HL`
 - `arr[(HL)]` means index comes from byte at memory address `(HL)`
 - `arr[(3+5)]` is valid but warns as redundant grouping (same as `arr[3+5]`)
+- `rec.field` and `arr[idx]` are place expressions:
+  - value/store contexts use implicit scalar read/write lowering (`LD A, rec.field`, `LD rec.field, A`)
+  - `ea`-typed contexts pass addresses (for example `touch rec.field` when `touch(addr: ea)`)
 
 ### 3.3 Runtime Atom Rule
 
