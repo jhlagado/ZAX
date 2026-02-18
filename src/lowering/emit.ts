@@ -4143,7 +4143,9 @@ export function emitProgram(
               const calleeName = callable.node.name;
               const returnType =
                 callable.kind === 'func' ? callable.node.returnType : callable.node.returnType;
-              const preservedRegs: string[] = callable.kind === 'extern' ? ['AF', 'BC', 'DE'] : [];
+              // Extern typed calls are not preservation-safe by default (spec §8.2).
+              // Do not inject implicit saves; caller must preserve explicitly if needed.
+              const preservedRegs: string[] = [];
               if (args.length !== params.length) {
                 diagAt(
                   diagnostics,
