@@ -55,7 +55,7 @@ describe('PR283: hidden-lowering risk matrix focused coverage', () => {
     const asm = frameAccess.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
     expect(asm).toBeDefined();
     expect(asm!.text).toContain('; func main begin');
-    expect(asm!.text).toContain('__zax_epilogue_');
+    expect(asm!.text).not.toContain('__zax_epilogue_');
     expect(asm!.text).toContain('gword');
     expect(asm!.text).toContain('push IX');
     expect(asm!.text).toContain('ld IX, $0000');

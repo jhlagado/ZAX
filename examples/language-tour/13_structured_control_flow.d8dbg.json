@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 351,
+          "end": 345,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -178,20 +178,13 @@
         {
           "start": 341,
           "end": 344,
-          "lstLine": 36,
-          "kind": "code",
-          "confidence": "high"
-        },
-        {
-          "start": 344,
-          "end": 347,
           "lstLine": 37,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 347,
-          "end": 351,
+          "start": 344,
+          "end": 345,
           "lstLine": 36,
           "kind": "code",
           "confidence": "high"
@@ -290,13 +283,6 @@
           "scope": "local"
         },
         {
-          "name": "__zax_epilogue_0",
-          "kind": "label",
-          "address": 337,
-          "line": 4,
-          "scope": "local"
-        },
-        {
           "name": "main",
           "kind": "label",
           "address": 341,
@@ -304,16 +290,9 @@
           "scope": "global"
         },
         {
-          "name": "__zax_epilogue_13",
-          "kind": "label",
-          "address": 347,
-          "line": 36,
-          "scope": "local"
-        },
-        {
           "name": "mode_value",
           "kind": "var",
-          "address": 352,
+          "address": 346,
           "line": 2,
           "scope": "global",
           "size": 1
@@ -324,7 +303,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 351
+      "end": 345
     }
   ],
   "fileList": ["13_structured_control_flow.zax"],
@@ -434,14 +413,6 @@
       "scope": "local"
     },
     {
-      "name": "__zax_epilogue_0",
-      "kind": "label",
-      "address": 337,
-      "file": "13_structured_control_flow.zax",
-      "line": 4,
-      "scope": "local"
-    },
-    {
       "name": "main",
       "kind": "label",
       "address": 341,
@@ -450,17 +421,9 @@
       "scope": "global"
     },
     {
-      "name": "__zax_epilogue_13",
-      "kind": "label",
-      "address": 347,
-      "file": "13_structured_control_flow.zax",
-      "line": 36,
-      "scope": "local"
-    },
-    {
       "name": "mode_value",
       "kind": "var",
-      "address": 352,
+      "address": 346,
       "file": "13_structured_control_flow.zax",
       "line": 2,
       "scope": "global",
