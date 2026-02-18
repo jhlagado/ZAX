@@ -165,7 +165,9 @@
       "end": 388
     }
   ],
-  "fileList": ["10_arrays_and_indexing.zax"],
+  "fileList": [
+    "10_arrays_and_indexing.zax"
+  ],
   "symbols": [
     {
       "name": "first_byte",
