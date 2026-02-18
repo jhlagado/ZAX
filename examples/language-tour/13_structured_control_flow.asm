@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$0159 (end exclusive)
+; range: $0100..$015F (end exclusive)
 
 ; func run_once begin
 run_once:
@@ -53,6 +53,7 @@ pop HL                         ; 014A: E1
 jp __zax_select_else_10        ; 014B: C3 00 00
 __zax_select_end_7:
 ld (mode_value), A             ; 014E: 32 00 00
+__zax_epilogue_0:
 pop DE                         ; 0151: D1
 pop BC                         ; 0152: C1
 pop AF                         ; 0153: F1
@@ -60,8 +61,15 @@ ret                            ; 0154: C9
 ; func main begin
 ; func run_once end
 main:
-call run_once                  ; 0155: CD 00 00
-ret                            ; 0158: C9
+push AF                        ; 0155: F5
+push BC                        ; 0156: C5
+push DE                        ; 0157: D5
+call run_once                  ; 0158: CD 00 00
+__zax_epilogue_13:
+pop DE                         ; 015B: D1
+pop BC                         ; 015C: C1
+pop AF                         ; 015D: F1
+ret                            ; 015E: C9
 ; func main end
 
 ; symbols:
@@ -78,5 +86,7 @@ ret                            ; 0158: C9
 ; label __zax_select_next_11 = $0141
 ; label __zax_select_next_12 = $014A
 ; label __zax_select_end_7 = $014E
+; label __zax_epilogue_0 = $0151
 ; label main = $0155
-; var mode_value = $015A
+; label __zax_epilogue_13 = $015B
+; var mode_value = $0160
