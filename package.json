@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
