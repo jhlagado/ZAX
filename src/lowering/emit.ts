@@ -871,28 +871,6 @@ export function emitProgram(
         return undefined;
     }
   };
-  const conditionNameFromOpcode = (opcode: number): string | undefined => {
-    switch (opcode) {
-      case 0xc2:
-        return 'NZ';
-      case 0xca:
-        return 'Z';
-      case 0xd2:
-        return 'NC';
-      case 0xda:
-        return 'C';
-      case 0xe2:
-        return 'PO';
-      case 0xea:
-        return 'PE';
-      case 0xf2:
-        return 'P';
-      case 0xfa:
-        return 'M';
-      default:
-        return undefined;
-    }
-  };
   const callConditionOpcodeFromName = (nameRaw: string): number | undefined => {
     switch (nameRaw.toUpperCase()) {
       case 'NZ':
@@ -2321,7 +2299,6 @@ export function emitProgram(
       if (baseResolved?.kind === 'abs') {
         emitAbs16Fixup(0x21, baseResolved.baseLower, baseResolved.addend, span); // ld hl, nn
       } else if (baseResolved?.kind === 'stack') {
-        if (!emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
         if (
           !emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span) ||
           !emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)
@@ -2342,7 +2319,6 @@ export function emitProgram(
             return false;
           }
         }
-        if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
       } else {
         if (!pushEaAddress(ea.base, span)) return false;
         if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
@@ -2366,7 +2342,6 @@ export function emitProgram(
     if (r.kind === 'abs') {
       emitAbs16Fixup(0x21, r.baseLower, r.addend, span); // ld hl, nn
     } else {
-      if (!emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
       if (
         !emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span) ||
         !emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)
@@ -2387,7 +2362,6 @@ export function emitProgram(
           return false;
         }
       }
-      if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
       return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
     }
     return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
@@ -2433,9 +2407,8 @@ export function emitProgram(
     )
       return false;
     if (r.ixDisp === 0) return true;
-    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
     if (!loadImm16ToDE(r.ixDisp & 0xffff, span)) return false;
-    const ok = emitInstr(
+    return emitInstr(
       'add',
       [
         { kind: 'Reg', span, name: 'HL' },
@@ -2443,8 +2416,6 @@ export function emitProgram(
       ],
       span,
     );
-    if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
-    return ok;
   };
 
   const lowerLdWithEa = (inst: AsmInstructionNode): boolean => {
@@ -2566,8 +2537,6 @@ export function emitProgram(
         if (srcResolved?.kind === 'stack') {
           const lo = srcResolved.ixDisp;
           const hi = srcResolved.ixDisp + 1;
-          if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
-            return false;
           if (
             !emitInstr(
               'ex',
@@ -2595,18 +2564,14 @@ export function emitProgram(
             )
           )
             return false;
-          if (
-            !emitInstr(
-              'ex',
-              [
-                { kind: 'Reg', span: inst.span, name: 'DE' },
-                { kind: 'Reg', span: inst.span, name: 'HL' },
-              ],
-              inst.span,
-            )
-          )
-            return false;
-          return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span);
+          return emitInstr(
+            'ex',
+            [
+              { kind: 'Reg', span: inst.span, name: 'DE' },
+              { kind: 'Reg', span: inst.span, name: 'HL' },
+            ],
+            inst.span,
+          );
         }
         const r = resolveEa(src.expr, inst.span);
         if (r?.kind === 'abs') {
@@ -2704,8 +2669,6 @@ export function emitProgram(
         if (srcResolved?.kind === 'stack') {
           const lo = srcResolved.ixDisp;
           const hi = srcResolved.ixDisp + 1;
-          if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
-            return false;
           if (
             !emitInstr(
               'ld',
@@ -2714,15 +2677,11 @@ export function emitProgram(
             )
           )
             return false;
-          if (
-            !emitInstr(
-              'ld',
-              [{ kind: 'Reg', span: inst.span, name: 'B' }, ixDispMem(hi)],
-              inst.span,
-            )
-          )
-            return false;
-          return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span);
+          return emitInstr(
+            'ld',
+            [{ kind: 'Reg', span: inst.span, name: 'B' }, ixDispMem(hi)],
+            inst.span,
+          );
         }
         const r = resolveEa(src.expr, inst.span);
         if (r?.kind === 'abs') {
@@ -2825,8 +2784,6 @@ export function emitProgram(
         if (dstResolved?.kind === 'stack') {
           const lo = dstResolved.ixDisp;
           const hi = dstResolved.ixDisp + 1;
-          if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
-            return false;
           if (
             !emitInstr(
               'ex',
@@ -2854,18 +2811,14 @@ export function emitProgram(
             )
           )
             return false;
-          if (
-            !emitInstr(
-              'ex',
-              [
-                { kind: 'Reg', span: inst.span, name: 'DE' },
-                { kind: 'Reg', span: inst.span, name: 'HL' },
-              ],
-              inst.span,
-            )
-          )
-            return false;
-          return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span);
+          return emitInstr(
+            'ex',
+            [
+              { kind: 'Reg', span: inst.span, name: 'DE' },
+              { kind: 'Reg', span: inst.span, name: 'HL' },
+            ],
+            inst.span,
+          );
         }
         const r = resolveEa(dst.expr, inst.span);
         if (r?.kind === 'abs') {
@@ -3653,9 +3606,8 @@ export function emitProgram(
           epilogueLabel = `__zax_epilogue_${generatedLabelCounter++}`;
         }
         // Synthetic per-function cleanup label used for rewritten returns.
-        const shouldPreserveTypedBoundary = true;
-        const emitSyntheticEpilogue =
-          shouldPreserveTypedBoundary || hasStackSlots || localScalarInitializers.length > 0;
+        let emitSyntheticEpilogue = false;
+        const shouldPreserveTypedBoundary = item.name.toLowerCase() !== 'main';
 
         // Function entry label.
         traceComment(codeOffset, `func ${item.name} begin`);
@@ -3904,8 +3856,7 @@ export function emitProgram(
           emitAbs16Fixup(0xc3, label.toLowerCase(), 0, span, `jp ${label}`);
         };
         const emitJumpCondTo = (op: number, label: string, span: SourceSpan): void => {
-          const ccName = conditionNameFromOpcode(op) ?? 'cc';
-          emitAbs16Fixup(op, label.toLowerCase(), 0, span, `jp ${ccName.toLowerCase()}, ${label}`);
+          emitAbs16Fixup(op, label.toLowerCase(), 0, span, `jp cc, ${label}`);
         };
         const emitJumpIfFalse = (cc: string, label: string, span: SourceSpan): boolean => {
           if (cc === '__missing__') return false;
@@ -4143,7 +4094,7 @@ export function emitProgram(
               const calleeName = callable.node.name;
               const returnType =
                 callable.kind === 'func' ? callable.node.returnType : callable.node.returnType;
-              const preservedRegs: string[] = callable.kind === 'extern' ? ['AF', 'BC', 'DE'] : [];
+              const preservedRegs: string[] = [];
               if (args.length !== params.length) {
                 diagAt(
                   diagnostics,
@@ -5008,6 +4959,38 @@ export function emitProgram(
                 if (emitSyntheticEpilogue) {
                   emitJumpTo(epilogueLabel, asmItem.span);
                 } else {
+                  if (shouldPreserveTypedBoundary) {
+                    emitInstr(
+                      'pop',
+                      [{ kind: 'Reg', span: asmItem.span, name: 'DE' }],
+                      asmItem.span,
+                    );
+                    emitInstr(
+                      'pop',
+                      [{ kind: 'Reg', span: asmItem.span, name: 'BC' }],
+                      asmItem.span,
+                    );
+                    emitInstr(
+                      'pop',
+                      [{ kind: 'Reg', span: asmItem.span, name: 'AF' }],
+                      asmItem.span,
+                    );
+                  }
+                  if (hasStackSlots) {
+                    emitInstr(
+                      'ld',
+                      [
+                        { kind: 'Reg', span: asmItem.span, name: 'SP' },
+                        { kind: 'Reg', span: asmItem.span, name: 'IX' },
+                      ],
+                      asmItem.span,
+                    );
+                    emitInstr(
+                      'pop',
+                      [{ kind: 'Reg', span: asmItem.span, name: 'IX' }],
+                      asmItem.span,
+                    );
+                  }
                   emitInstr('ret', [], asmItem.span);
                 }
                 flow.reachable = false;
@@ -5021,11 +5004,8 @@ export function emitProgram(
                   return;
                 }
                 diagIfRetStackImbalanced();
-                if (emitSyntheticEpilogue) {
-                  emitJumpCondTo(op, epilogueLabel, asmItem.span);
-                } else {
-                  emitJumpCondTo(op, epilogueLabel, asmItem.span);
-                }
+                emitSyntheticEpilogue = true;
+                emitJumpCondTo(op, epilogueLabel, asmItem.span);
                 syncToFlow();
                 return;
               }
@@ -5036,7 +5016,7 @@ export function emitProgram(
                 diagAt(
                   diagnostics,
                   asmItem.span,
-                  `${head} is not supported in functions that require cleanup; use ret/ret cc so cleanup epilogue can run.`,
+                  `${head} is not supported in functions with locals; use ret/ret cc so cleanup epilogue can run.`,
                 );
               }
               emitInstr(head, [], asmItem.span);
@@ -5636,6 +5616,22 @@ export function emitProgram(
         }
         if (!emitSyntheticEpilogue && flow.reachable) {
           withCodeSourceTag(sourceTagForSpan(item.span), () => {
+            if (shouldPreserveTypedBoundary) {
+              emitInstr('pop', [{ kind: 'Reg', span: item.span, name: 'DE' }], item.span);
+              emitInstr('pop', [{ kind: 'Reg', span: item.span, name: 'BC' }], item.span);
+              emitInstr('pop', [{ kind: 'Reg', span: item.span, name: 'AF' }], item.span);
+            }
+            if (hasStackSlots) {
+              emitInstr(
+                'ld',
+                [
+                  { kind: 'Reg', span: item.span, name: 'SP' },
+                  { kind: 'Reg', span: item.span, name: 'IX' },
+                ],
+                item.span,
+              );
+              emitInstr('pop', [{ kind: 'Reg', span: item.span, name: 'IX' }], item.span);
+            }
             emitInstr('ret', [], item.span);
           });
           flow.reachable = false;
@@ -5646,7 +5642,10 @@ export function emitProgram(
           withCodeSourceTag(sourceTagForSpan(item.span), () => {
             // When control can fall through to the end of the function body, route it through the
             // synthetic epilogue. If flow is unreachable here (e.g. a terminal `ret`), avoid emitting
-            // a dead jump before the epilogue label. If flow is reachable, fall through directly.
+            // a dead jump before the epilogue label.
+            if (flow.reachable) {
+              emitAbs16Fixup(0xc3, epilogueLabel.toLowerCase(), 0, item.span);
+            }
             pending.push({
               kind: 'label',
               name: epilogueLabel,
