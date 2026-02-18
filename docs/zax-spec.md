@@ -1439,6 +1439,16 @@ extern func next_char(): byte at $F010
 ; - next_char preserves all regs/flags except HL (L carries byte return)
 putc A
 next_char
+
+; Extern typed-call boundary (no implicit preservation):
+; - extern functions are boundary-volatile for all registers/flags unless
+;   an explicit ABI/preservation contract is provided out of band.
+; - The compiler must not inject automatic saves around extern calls.
+; - Callers that require preservation must push/pop explicitly.
+extern func device_putc(ch: byte): void at $F100
+PUSH BC          ; caller-chosen preservation
+device_putc A
+POP BC
 ```
 
 ### 11.3 Diagnostic Guidance
