@@ -794,21 +794,18 @@ Scalar initializers are lowered in declaration order at function entry. For zero
 
 ### 6.3 The v0.2 Typed Call Boundary
 
-When the compiler generates a call to a typed internal `func`, it enforces a preservation contract at that boundary:
+Surface forms: `func name(...): <type> [flags]` and `extern func name(...): <type> [flags]`.
 
-| Register / flags              | Behavior at typed internal call boundary                    |
-| ----------------------------- | ----------------------------------------------------------- |
-| `HL`                          | **boundary-volatile** for all typed calls including `void`  |
-| `L`                           | carries 8-bit return value for `byte`-returning calls       |
-| `HL`                          | carries 16-bit return value for `word`/`addr`/`ptr` returns |
-| all other registers and flags | **callee-preserved** — restored by compiler-generated epilogue |
+Internal `func` preservation (compiler-generated prologue/epilogue):
+- `void`: preserves AF, BC, DE, HL
+- `byte`/`word`: preserves AF, BC, DE (HL is return channel/volatile)
+- `long`: preserves AF, BC (HL:DE is return channel)
+- `verylong`: preserves AF (HL:DE:BC is return channel)
+- `flags` modifier: AF becomes volatile in addition to the return channel.
 
-This guarantee applies **only** to typed internal `func` calls. It does not apply to:
+Extern `func`: no preservation guarantee unless an explicit ABI/clobber is declared; treat all registers/flags as volatile.
 
-- **Raw `call` / `call cc, nn` mnemonics** — these are raw assembly. The compiler enforces no preservation contract.
-- **`extern func` calls** — the routine at that address is outside the compiler's control. Assume all registers and flags may be clobbered unless you know otherwise from the external ABI documentation.
-
-The `--raw-typed-call-warn` option causes the compiler to warn when a raw `call` instruction targets a symbol that is a typed ZAX function, since that bypasses the typed boundary contract.
+This guarantee applies **only** to typed internal `func` calls. Raw `call`/`call cc, nn` mnemonics are raw assembly; the compiler enforces no preservation contract. The `--raw-typed-call-warn` option warns when a raw call targets a typed ZAX function, bypassing the boundary.
 
 ### 6.4 Calling Functions
 
@@ -2347,4 +2344,3 @@ Working in ZAX means keeping the lowering predictable. A few habits help:
 - **Use qualified enum names everywhere.** `Mode.Run` everywhere, never bare `Run`. Unqualified references are compile errors in v0.2 — this is enforced, not advisory.
 - **Check the `.asm` or `.lst` output when something looks wrong.** The lowered trace shows exactly what the compiler emitted. The IX byte-lane shuttle (`ex de, hl` / `ld e, (ix+d)` / ...) is particularly visible here.
 - **Treat `docs/zax-spec.md` as the final authority.** This guide is instructional; the spec is normative.
-
