@@ -897,6 +897,12 @@ Function-body block termination (v0.1):
 - Arguments are passed on the stack, each argument occupying 16 bits.
 - Caller pushes arguments right-to-left (last argument pushed first).
 - Caller cleans up the arguments after return.
+- Return type surface forms:
+  - `func name(...): <returnType>`
+  - `func name(...): <returnType> flags`
+  - `extern func name(...): <returnType>`
+  - `extern func name(...): <returnType> flags`
+  - `op` does **not** accept return types or `flags`.
 - Return values and preservation (v0.2):
 
 | Return type | Return channel        | Callee preserves |
@@ -910,7 +916,7 @@ Function-body block termination (v0.1):
 *`verylong` is speculative/future; not yet implemented.
 
 Return type modifier (`flags`):
-- Syntax: `func name(...): <returnType> flags`
+- Syntax: `...): <returnType> flags` (allowed on `func` and `extern func`; not on `op`)
 - Meaning: callee publishes condition flags; AF becomes volatile in addition to the return channel.
 - Preservation with `flags`:
   - void+flags: preserves BC, DE, HL; AF volatile.
