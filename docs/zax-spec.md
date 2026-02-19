@@ -901,11 +901,11 @@ Function-body block termination (v0.1):
 
 | Return type | Return channel        | Callee preserves |
 |-------------|-----------------------|------------------|
-| `void`      | none                  | AF, BC, DE        |
-| `byte`      | `L` (H undefined)     | AF, BC, DE        |
-| `word`      | `HL`                  | AF, BC, DE        |
-| `long`      | `HL:DE` (little-end.) | AF, BC            |
-| `verylong`* | `HL:DE:BC`            | AF                |
+| `void`      | none                  | AF, BC, DE, HL     |
+| `byte`      | `L` (H undefined)     | AF, BC, DE         |
+| `word`      | `HL`                  | AF, BC, DE         |
+| `long`      | `HL:DE` (little-end.) | AF, BC             |
+| `verylong`* | `HL:DE:BC`            | AF                 |
 
 *`verylong` is speculative/future; not yet implemented.
 
@@ -920,7 +920,7 @@ Return type modifier (`flags`):
   - verylong+flags: preserves none of AF/BC/DE/HL (return HL:DE:BC).
 - Register/flag volatility (typed call boundary, v0.2):
   - typed **internal** `func` calls are preservation-safe at the language boundary.
-  - `HL` is boundary-volatile for all typed calls (including `void`). Callees never preserve `HL`.
+  - For `void`, the callee preserves HL (in addition to AF, BC, DE). For non-void, HL is the return channel and is volatile.
   - preservation set is the table above minus the return channel and any `flags` modifier effects.
   - return type drives which registers are **not** preserved by the callee.
   - `extern func` calls are **not** preservation-safe unless explicitly declared (ABI/clobber annotations planned).
