@@ -3684,6 +3684,7 @@ export function emitProgram(
           })();
         const isVoidReturn = retKind === 'void';
         const isVoidSpecial = isVoidReturn;
+        // One saved-HL slot only for void/void+flags.
         const savedHlBytes = isVoidReturn ? 2 : 0;
         const preserveSet = (() => {
           const kind = retKind;
@@ -3858,52 +3859,22 @@ export function emitProgram(
             confidence: 'high',
           };
           try {
-            if (isVoidSpecial) {
-              // Reserve slot by duplicating saved HL on stack.
-              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
-              const initValue =
-                init.expr !== undefined ? evalImmExpr(init.expr, env, diagnostics) : 0;
-              if (init.expr !== undefined && initValue === undefined) {
-                diagAt(
-                  diagnostics,
-                  init.span,
-                  `Failed to evaluate local initializer for "${init.name}".`,
-                );
-                continue;
-              }
-              const narrowed =
-                init.scalarKind === 'byte' ? initValue! & 0xff : initValue! & 0xffff;
-              if (!loadImm16ToHL(narrowed, init.span)) continue;
-              emitInstr(
-                'ex',
-                [
-                  {
-                    kind: 'Mem',
-                    span: init.span,
-                    expr: { kind: 'EaName', span: init.span, name: 'SP' },
-                  },
-                  { kind: 'Reg', span: init.span, name: 'HL' },
-                ],
-                init.span,
-              );
-            } else {
-              if (!init.expr) {
-                emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'BC' }], init.span);
-                continue;
-              }
-              const initValue = evalImmExpr(init.expr, env, diagnostics);
-              if (initValue === undefined) {
-                diagAt(
-                  diagnostics,
-                  init.span,
-                  `Failed to evaluate local initializer for "${init.name}".`,
-                );
-                continue;
-              }
-              const narrowed = init.scalarKind === 'byte' ? initValue & 0xff : initValue & 0xffff;
-              if (!loadImm16ToHL(narrowed, init.span)) continue;
-              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
+            if (!init.expr) {
+              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'BC' }], init.span);
+              continue;
             }
+            const initValue = evalImmExpr(init.expr, env, diagnostics);
+            if (initValue === undefined) {
+              diagAt(
+                diagnostics,
+                init.span,
+                `Failed to evaluate local initializer for "${init.name}".`,
+              );
+              continue;
+            }
+            const narrowed = init.scalarKind === 'byte' ? initValue & 0xff : initValue & 0xffff;
+            if (!loadImm16ToHL(narrowed, init.span)) continue;
+            emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
           } finally {
             currentCodeSegmentTag = prevTag;
           }

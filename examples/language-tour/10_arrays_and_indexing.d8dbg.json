@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 357,
+          "end": 380,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -65,45 +65,38 @@
         },
         {
           "start": 318,
-          "end": 323,
+          "end": 322,
           "lstLine": 15,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 323,
-          "end": 326,
+          "start": 322,
+          "end": 325,
           "lstLine": 13,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 326,
-          "end": 329,
+          "start": 325,
+          "end": 328,
           "lstLine": 18,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 329,
-          "end": 342,
+          "start": 328,
+          "end": 341,
           "lstLine": 19,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 342,
-          "end": 357,
+          "start": 341,
+          "end": 356,
           "lstLine": 13,
           "kind": "code",
           "confidence": "high"
-        },
-        {
-          "start": 358,
-          "end": 382,
-          "lstLine": 0,
-          "kind": "unknown",
-          "confidence": "low"
         }
       ],
       "symbols": [
@@ -145,21 +138,21 @@
         {
           "name": "__zax_epilogue_2",
           "kind": "label",
-          "address": 342,
+          "address": 341,
           "line": 13,
           "scope": "local"
         },
         {
           "name": "bytes10",
           "kind": "data",
-          "address": 358,
+          "address": 356,
           "line": 2,
           "scope": "global"
         },
         {
           "name": "words4",
           "kind": "data",
-          "address": 374,
+          "address": 372,
           "line": 3,
           "scope": "global"
         }
@@ -169,11 +162,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 357
-    },
-    {
-      "start": 358,
-      "end": 382
+      "end": 380
     }
   ],
   "fileList": [
@@ -223,7 +212,7 @@
     {
       "name": "__zax_epilogue_2",
       "kind": "label",
-      "address": 342,
+      "address": 341,
       "file": "10_arrays_and_indexing.zax",
       "line": 13,
       "scope": "local"
@@ -231,7 +220,7 @@
     {
       "name": "bytes10",
       "kind": "data",
-      "address": 358,
+      "address": 356,
       "file": "10_arrays_and_indexing.zax",
       "line": 2,
       "scope": "global"
@@ -239,7 +228,7 @@
     {
       "name": "words4",
       "kind": "data",
-      "address": 374,
+      "address": 372,
       "file": "10_arrays_and_indexing.zax",
       "line": 3,
       "scope": "global"
