@@ -901,7 +901,7 @@ Function-body block termination (v0.1):
 
 | Return type | Return channel        | Callee preserves |
 |-------------|-----------------------|------------------|
-| `void`      | none                  | AF, BC, DE, HL    |
+| `void`      | none                  | AF, BC, DE        |
 | `byte`      | `L` (H undefined)     | AF, BC, DE        |
 | `word`      | `HL`                  | AF, BC, DE        |
 | `long`      | `HL:DE` (little-end.) | AF, BC            |
@@ -920,8 +920,8 @@ Return type modifier (`flags`):
   - verylong+flags: preserves none of AF/BC/DE/HL (return HL:DE:BC).
 - Register/flag volatility (typed call boundary, v0.2):
   - typed **internal** `func` calls are preservation-safe at the language boundary.
-  - `HL` is boundary-volatile for all typed calls (including `void`).
-  - non-`void` calls use the return-channel table below (width drives volatility and preservation).
+  - `HL` is boundary-volatile for all typed calls (including `void`). Callees never preserve `HL`.
+  - preservation set is the table above minus the return channel and any `flags` modifier effects.
   - return type drives which registers are **not** preserved by the callee.
   - `extern func` calls are **not** preservation-safe unless explicitly declared (ABI/clobber annotations planned).
   - this boundary guarantee is compiler-generated for internal `func` bodies; explicit raw Z80 `call` mnemonics remain raw assembly semantics.
