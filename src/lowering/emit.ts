@@ -3578,11 +3578,23 @@ export function emitProgram(
         const localDecls = item.locals?.decls ?? [];
         const preserveSet = (() => {
           let kind: 'byte' | 'word' | 'addr' | 'long' | 'verylong' | 'void' | undefined;
-          if (
-            item.returnType.kind === 'TypeName' &&
-            item.returnType.name.toLowerCase() === 'void'
-          ) {
-            kind = 'void';
+          if (item.returnType.kind === 'TypeName') {
+            const rtName = item.returnType.name.toLowerCase();
+            if (rtName === 'void') {
+              kind = 'void';
+            } else if (rtName === 'long') {
+              kind = 'long';
+            } else if (rtName === 'verylong') {
+              kind = 'verylong';
+            } else {
+              kind = resolveScalarKind(item.returnType) as
+                | 'byte'
+                | 'word'
+                | 'addr'
+                | 'long'
+                | 'verylong'
+                | undefined;
+            }
           } else {
             kind = resolveScalarKind(item.returnType) as
               | 'byte'

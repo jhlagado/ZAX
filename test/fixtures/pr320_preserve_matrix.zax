@@ -21,3 +21,11 @@ end
 func ret_word_flags(): word flags
   ret
 end
+
+func ret_long(): long
+  ret
+end
+
+func ret_long_flags(): long flags
+  ret
+end
