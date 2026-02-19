@@ -3735,7 +3735,7 @@ export function emitProgram(
               );
               continue;
             }
-            const baseOffset = isVoidSpecial ? savedHlBytes : preserveBytes;
+            const baseOffset = isVoidSpecial ? savedHlBytes + preserveBytes : preserveBytes;
             const localIxDisp = -(baseOffset + 2 * (localSlotCount + 1));
             stackSlotOffsets.set(declLower, localIxDisp);
             stackSlotTypes.set(declLower, decl.typeExpr);
@@ -3860,6 +3860,8 @@ export function emitProgram(
           };
           try {
             if (isVoidSpecial) {
+              // Allocate local slot above saved-HL.
+              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'BC' }], init.span); // dummy
               const initValue =
                 init.expr !== undefined ? evalImmExpr(init.expr, env, diagnostics) : 0;
               if (init.expr !== undefined && initValue === undefined) {

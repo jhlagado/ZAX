@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$015B (end exclusive)
+; range: $0100..$015C (end exclusive)
 
 ; func inc_one begin
 inc_one:
@@ -35,34 +35,35 @@ push IX                        ; 012F: DD E5
 ld IX, $0000                   ; 0131: DD 21 00 00
 add IX, SP                     ; 0135: DD 39
 push HL                        ; 0137: E5
-ld HL, $0000                   ; 0138: 21 00 00
-ex (SP), HL                    ; 013B: E3
-push DE                        ; 013C: D5
-push BC                        ; 013D: C5
-push AF                        ; 013E: F5
-ld HL, $0005                   ; 013F: 21 05 00
-push HL                        ; 0142: E5
-call inc_one                   ; 0143: CD 00 00
-inc SP                         ; 0146: 33
+push BC                        ; 0138: C5
+ld HL, $0000                   ; 0139: 21 00 00
+ex (SP), HL                    ; 013C: E3
+push DE                        ; 013D: D5
+push BC                        ; 013E: C5
+push AF                        ; 013F: F5
+ld HL, $0005                   ; 0140: 21 05 00
+push HL                        ; 0143: E5
+call inc_one                   ; 0144: CD 00 00
 inc SP                         ; 0147: 33
-push DE                        ; 0148: D5
-ex DE, HL                      ; 0149: EB
-ld (IX - $0004), E             ; 014A: DD 73 FC
-ld (IX - $0003), D             ; 014D: DD 72 FD
-ex DE, HL                      ; 0150: EB
-pop DE                         ; 0151: D1
+inc SP                         ; 0148: 33
+push DE                        ; 0149: D5
+ex DE, HL                      ; 014A: EB
+ld (IX - $000A), E             ; 014B: DD 73 F6
+ld (IX - $0009), D             ; 014E: DD 72 F7
+ex DE, HL                      ; 0151: EB
+pop DE                         ; 0152: D1
 __zax_epilogue_1:
-pop AF                         ; 0152: F1
-pop BC                         ; 0153: C1
-pop DE                         ; 0154: D1
-pop HL                         ; 0155: E1
-ld SP, IX                      ; 0156: DD F9
-pop IX                         ; 0158: DD E1
-ret                            ; 015A: C9
+pop AF                         ; 0153: F1
+pop BC                         ; 0154: C1
+pop DE                         ; 0155: D1
+pop HL                         ; 0156: E1
+ld SP, IX                      ; 0157: DD F9
+pop IX                         ; 0159: DD E1
+ret                            ; 015B: C9
 ; func main end
 
 ; symbols:
 ; label inc_one = $0100
 ; label __zax_epilogue_0 = $0127
 ; label main = $012F
-; label __zax_epilogue_1 = $0152
+; label __zax_epilogue_1 = $0153
