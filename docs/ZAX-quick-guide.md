@@ -1,4 +1,4 @@
-# ZAX Quick Guide — Chapters 1–4
+# ZAX Quick Guide
 
 A practical quick-start guide to ZAX v0.2.
 
