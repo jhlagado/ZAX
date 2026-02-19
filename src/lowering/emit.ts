@@ -3860,8 +3860,8 @@ export function emitProgram(
           };
           try {
             if (isVoidSpecial) {
-              // Allocate local slot above saved-HL.
-              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'BC' }], init.span); // dummy
+              // Allocate local slot above saved-HL using a neutral push (AF).
+              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'AF' }], init.span); // dummy
               const initValue =
                 init.expr !== undefined ? evalImmExpr(init.expr, env, diagnostics) : 0;
               if (init.expr !== undefined && initValue === undefined) {

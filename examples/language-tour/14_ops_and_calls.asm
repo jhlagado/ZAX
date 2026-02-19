@@ -28,7 +28,7 @@ push IX                        ; 011F: DD E5
 ld IX, $0000                   ; 0121: DD 21 00 00
 add IX, SP                     ; 0125: DD 39
 push HL                        ; 0127: E5
-push BC                        ; 0128: C5
+push AF                        ; 0128: F5
 ld HL, $0000                   ; 0129: 21 00 00
 ex (SP), HL                    ; 012C: E3
 push DE                        ; 012D: D5

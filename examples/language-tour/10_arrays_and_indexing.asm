@@ -53,7 +53,7 @@ push IX                        ; 0135: DD E5
 ld IX, $0000                   ; 0137: DD 21 00 00
 add IX, SP                     ; 013B: DD 39
 push HL                        ; 013D: E5
-push BC                        ; 013E: C5
+push AF                        ; 013E: F5
 ld HL, $0002                   ; 013F: 21 02 00
 ex (SP), HL                    ; 0142: E3
 push DE                        ; 0143: D5
