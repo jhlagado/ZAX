@@ -166,9 +166,7 @@
       "end": 350
     }
   ],
-  "fileList": [
-    "11_records_and_fields.zax"
-  ],
+  "fileList": ["11_records_and_fields.zax"],
   "symbols": [
     {
       "name": "write_pair",

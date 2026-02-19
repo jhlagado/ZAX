@@ -1,4 +1,3 @@
-
 ## ZAX Specification v0.2 — Detailed Read-Through
 
 ### Overall Character
@@ -11,9 +10,9 @@ This is a well-structured, authoritative language spec with clear normative hier
 
 **Sections 0–1: Philosophy and Lexical Rules**
 
-The design philosophy is cleanly articulated: *high-level structure, low-level semantics*. The key distinction — "you still choose registers, you manage flags" — is central to the whole project. ZAX is emphatically not trying to be C.
+The design philosophy is cleanly articulated: _high-level structure, low-level semantics_. The key distinction — "you still choose registers, you manage flags" — is central to the whole project. ZAX is emphatically not trying to be C.
 
-Lexical rules are mostly conventional, with one notable choice: Z80 mnemonics and register names are case-insensitive, but *user-defined* symbols are case-sensitive, though two names differing only by case are still a collision. This is a practical safety valve — it prevents e.g. `foo` and `FOO` coexisting, while still allowing ZAX source to intermix `LD` and `ld` freely.
+Lexical rules are mostly conventional, with one notable choice: Z80 mnemonics and register names are case-insensitive, but _user-defined_ symbols are case-sensitive, though two names differing only by case are still a collision. This is a practical safety valve — it prevents e.g. `foo` and `FOO` coexisting, while still allowing ZAX source to intermix `LD` and `ld` freely.
 
 The `__zax_` prefix reservation for compiler internals is a sensible convention.
 
@@ -87,6 +86,7 @@ The clobber/stack policy is appropriately honest: ops are inline, they have no p
 The flag-based control flow (`if Z`, `while NZ`, `repeat ... until C`) is a natural fit for Z80 — it works exactly how a Z80 programmer thinks. The spec correctly notes that `if`/`while`/`repeat` don't themselves set flags; the programmer establishes flags beforehand with normal instructions.
 
 The `select`/`case` system is more interesting. Key points:
+
 - No fallthrough (unlike C `switch`)
 - Stacked `case` lines share a body (multi-value dispatch without fallthrough)
 - Dispatch may clobber `A` and flags, but preserves all other registers
@@ -103,7 +103,7 @@ The label system (allowed but discouraged) with its hygiene rewrite for `op`-int
 
 **Single global namespace with case-sensitive collision detection.** Simple and avoids import-qualifier complexity, at the cost of requiring unique names across all modules.
 
-**No preprocessor — AST-level everything.** The `op` system explicitly rejects text-level macro approaches. This is a principled stance that makes ZAX a *compiler* rather than an assembler wrapper.
+**No preprocessor — AST-level everything.** The `op` system explicitly rejects text-level macro approaches. This is a principled stance that makes ZAX a _compiler_ rather than an assembler wrapper.
 
 **Typed call boundaries for internal functions only.** The spec doesn't overclaim — `extern func` calls get no preservation guarantee, which is correct and honest.
 
@@ -117,9 +117,9 @@ The label system (allowed but discouraged) with its hygiene rewrite for `op`-int
 
 2. **`@place` address-of syntax.** Introduced in Section 7.2 as `@rec.field`, `@arr[idx]`, `@symbol`. This is a clean addition but the spec doesn't call out parser implications — in particular, `@` needs to be lexed as a unary prefix operator distinct from everything else. Is this handled in the grammar companion (the EBNF)?
 
-3. **`globals` composite zero-init form (`= 0`) in v0.2.** Section 6.2 says aggregate record initializer syntax for `globals` is *deferred* — only `= 0` is supported for composite globals. This seems like it could be a gap if you want to put pre-initialized composite data in the var section. Is that intentional (initialize in code, not declaratively)?
+3. **`globals` composite zero-init form (`= 0`) in v0.2.** Section 6.2 says aggregate record initializer syntax for `globals` is _deferred_ — only `= 0` is supported for composite globals. This seems like it could be a gap if you want to put pre-initialized composite data in the var section. Is that intentional (initialize in code, not declaratively)?
 
-4. **`select` lowering note** says the compiler *may* use either compare-chain or jump table depending on density. But the spec doesn't define a threshold or policy for this decision — deliberately left as a quality-of-implementation choice?
+4. **`select` lowering note** says the compiler _may_ use either compare-chain or jump table depending on density. But the spec doesn't define a threshold or policy for this decision — deliberately left as a quality-of-implementation choice?
 
 5. **The `ptr` type** is noted as untyped in v0.1 with a comment that future versions may add `ptr<T>`. Given v0.2 is the current version, is there any movement on this, or is it still deferred?
 
@@ -127,7 +127,7 @@ Appendix F
 
 **F.1 (ABI stability)** now explicitly names v1.0 as the freeze target and lists every individual item that must be frozen before that declaration can be made — including symbol naming, which wasn't previously called out. The v0.x instability is framed as a deliberate policy with a clear rationale.
 
-**F.2 (Composite size rationale)** is entirely new. It explains *why* power-of-2 is load-bearing (no hardware multiply → shift chains only), spells out the space and ABI churn costs honestly, and mentions the possible future `packed` opt-out without committing to it.
+**F.2 (Composite size rationale)** is entirely new. It explains _why_ power-of-2 is load-bearing (no hardware multiply → shift chains only), spells out the space and ABI churn costs honestly, and mentions the possible future `packed` opt-out without committing to it.
 
 **F.3 (Namespace scaling)** is new. It defends the single namespace as a deliberate and appropriate choice for current ZAX scale, acknowledges its limits, and sketches the `ModuleId.symbolName` qualified-access plan that `export` is already forward-compatible with.
 

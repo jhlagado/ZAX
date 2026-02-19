@@ -99,25 +99,25 @@ The entry module must be the last argument.
 
 Common outputs:
 
-| File              | Contents                                            |
-| ----------------- | --------------------------------------------------- |
-| `.bin`            | flat binary image                                   |
-| `.hex`            | Intel HEX output                                    |
-| `.lst`            | deterministic byte dump with symbol table           |
-| `.d8dbg.json`     | D8 Debug Map for Debug80 and compatible tools       |
-| `.asm`            | lowered trace — exactly what the compiler emitted   |
+| File          | Contents                                          |
+| ------------- | ------------------------------------------------- |
+| `.bin`        | flat binary image                                 |
+| `.hex`        | Intel HEX output                                  |
+| `.lst`        | deterministic byte dump with symbol table         |
+| `.d8dbg.json` | D8 Debug Map for Debug80 and compatible tools     |
+| `.asm`        | lowered trace — exactly what the compiler emitted |
 
 By default, ZAX derives all artifact paths from the primary output path. Use `-o <file>` to set the primary output; `-t hex` or `-t bin` to choose the primary type (default: `hex`). Suppress individual outputs with `--nolist`, `--nobin`, `--nohex`, `--nod8m`, `--noasm`.
 
 Useful diagnostic options:
 
-| Option                  | Effect                                                                  |
-| ----------------------- | ----------------------------------------------------------------------- |
-| `--case-style <m>`      | Case-style lint: `off`, `upper`, `lower`, or `consistent`              |
-| `--op-stack-policy <m>` | Op stack-discipline diagnostics: `off`, `warn`, or `error`             |
-| `--type-padding-warn`   | Warn when composite type storage is padded to next power-of-2 size      |
-| `--raw-typed-call-warn` | Warn when raw `call` / `call cc,nn` targets a typed callable symbol     |
-| `-I <dir>`              | Add import search path (repeatable)                                     |
+| Option                  | Effect                                                              |
+| ----------------------- | ------------------------------------------------------------------- |
+| `--case-style <m>`      | Case-style lint: `off`, `upper`, `lower`, or `consistent`           |
+| `--op-stack-policy <m>` | Op stack-discipline diagnostics: `off`, `warn`, or `error`          |
+| `--type-padding-warn`   | Warn when composite type storage is padded to next power-of-2 size  |
+| `--raw-typed-call-warn` | Warn when raw `call` / `call cc,nn` targets a typed callable symbol |
+| `-I <dir>`              | Add import search path (repeatable)                                 |
 
 The full CLI contract is in `docs/zax-spec.md` Appendix D.
 
@@ -127,12 +127,12 @@ The full CLI contract is in `docs/zax-spec.md` Appendix D.
 
 ### 2.1 Scalar Types
 
-| Type   | Size (bytes) | Notes                                                        |
-| ------ | ------------ | ------------------------------------------------------------ |
-| `byte` | 1            | 8-bit unsigned                                               |
-| `word` | 2            | 16-bit unsigned                                              |
-| `addr` | 2            | 16-bit address; semantic signal for "holds a memory address" |
-| `ptr`  | 2            | 16-bit pointer; untyped in v0.2 (no `ptr<T>`)               |
+| Type   | Size (bytes) | Notes                                                          |
+| ------ | ------------ | -------------------------------------------------------------- |
+| `byte` | 1            | 8-bit unsigned                                                 |
+| `word` | 2            | 16-bit unsigned                                                |
+| `addr` | 2            | 16-bit address; semantic signal for "holds a memory address"   |
+| `ptr`  | 2            | 16-bit pointer; untyped in v0.2 (no `ptr<T>`)                  |
 | `void` | —            | Return type only; not valid as a storage, field, or param type |
 
 There are no signed storage types in v0.2.
@@ -286,14 +286,14 @@ ld hl, sprite.x         ; HL = value stored at sprite.x (value semantics)
 
 Inside `arr[...]`, only the following forms are valid:
 
-| Index form          | Meaning                                                      |
-| ------------------- | ------------------------------------------------------------ |
-| `5` or `CONST`      | compile-time constant or `const`/enum value                  |
-| `A` `B` `C` `D` `E` `H` `L` | 8-bit register (used directly as index)         |
-| `HL` `DE` `BC`      | 16-bit register (direct index)                               |
-| `(HL)`              | byte loaded from memory at `HL` (indirect index)             |
-| `(IX+d)` / `(IX-d)` | byte loaded from IX-relative address; `d` must be in `-128..127` |
-| `(IY+d)` / `(IY-d)` | byte loaded from IY-relative address; `d` must be in `-128..127` |
+| Index form                  | Meaning                                                          |
+| --------------------------- | ---------------------------------------------------------------- |
+| `5` or `CONST`              | compile-time constant or `const`/enum value                      |
+| `A` `B` `C` `D` `E` `H` `L` | 8-bit register (used directly as index)                          |
+| `HL` `DE` `BC`              | 16-bit register (direct index)                                   |
+| `(HL)`                      | byte loaded from memory at `HL` (indirect index)                 |
+| `(IX+d)` / `(IX-d)`         | byte loaded from IX-relative address; `d` must be in `-128..127` |
+| `(IY+d)` / `(IY-d)`         | byte loaded from IY-relative address; `d` must be in `-128..127` |
 
 Anything else inside `[...]` is a compile error. In particular: expressions involving arithmetic (`i + j`, `i * 2`, `i << 1`), arbitrary function calls, or other non-register forms are not valid index expressions. If you need a computed index, compute it into a register first.
 
@@ -402,13 +402,13 @@ Constants are compile-time `imm` expressions. Their values must be fully resolva
 
 ### 4.2 Literal Forms
 
-| Form         | Example        |
-| ------------ | -------------- |
-| Decimal      | `255`          |
-| Hexadecimal  | `$FF`          |
-| Binary       | `%11111111`    |
-| Binary (alt) | `0b11111111`   |
-| Character    | `'A'`          |
+| Form         | Example      |
+| ------------ | ------------ |
+| Decimal      | `255`        |
+| Hexadecimal  | `$FF`        |
+| Binary       | `%11111111`  |
+| Binary (alt) | `0b11111111` |
+| Character    | `'A'`        |
 
 String literals (`"TEXT"`) are only valid in `data` initializers. Character literals are `imm8` values (single ASCII byte).
 
@@ -416,15 +416,15 @@ String literals (`"TEXT"`) are only valid in `data` initializers. Character lite
 
 `imm` expressions support the following operators, highest to lowest precedence:
 
-| Precedence | Operators          | Associativity |
-| ---------- | ------------------ | ------------- |
-| 1 (highest)| unary `+` `-` `~`  | right         |
-| 2          | `*` `/` `%`        | left          |
-| 3          | `+` `-`            | left          |
-| 4          | `<<` `>>`          | left          |
-| 5          | `&`                | left          |
-| 6          | `^`                | left          |
-| 7 (lowest) | `\|`               | left          |
+| Precedence  | Operators         | Associativity |
+| ----------- | ----------------- | ------------- |
+| 1 (highest) | unary `+` `-` `~` | right         |
+| 2           | `*` `/` `%`       | left          |
+| 3           | `+` `-`           | left          |
+| 4           | `<<` `>>`         | left          |
+| 5           | `&`               | left          |
+| 6           | `^`               | left          |
+| 7 (lowest)  | `\|`              | left          |
 
 Parentheses are available for explicit grouping.
 
@@ -490,16 +490,16 @@ Two important rules govern everything:
 
 ### 5.2 Condition Codes
 
-| Code | Flag tested                                     |
-| ---- | ----------------------------------------------- |
-| `Z`  | zero flag set                                   |
-| `NZ` | zero flag not set                               |
-| `C`  | carry flag set                                  |
-| `NC` | carry flag not set                              |
-| `PE` | parity/overflow flag set (parity even)          |
-| `PO` | parity/overflow flag not set (parity odd)       |
-| `M`  | sign flag set (minus)                           |
-| `P`  | sign flag not set (plus)                        |
+| Code | Flag tested                               |
+| ---- | ----------------------------------------- |
+| `Z`  | zero flag set                             |
+| `NZ` | zero flag not set                         |
+| `C`  | carry flag set                            |
+| `NC` | carry flag not set                        |
+| `PE` | parity/overflow flag set (parity even)    |
+| `PO` | parity/overflow flag not set (parity odd) |
+| `M`  | sign flag set (minus)                     |
+| `P`  | sign flag not set (plus)                  |
 
 These are the same condition codes used in Z80 branch instructions (`jp cc`, `jr cc`, `ret cc`). ZAX structured constructs simply use them as keywords.
 
@@ -648,13 +648,13 @@ end
 
 #### Selector Forms
 
-| Selector      | Dispatched on                                           |
-| ------------- | ------------------------------------------------------- |
-| `reg8`        | 8-bit register value (zero-extended to 16 bits)         |
-| `reg16`       | 16-bit register value                                   |
-| `imm`         | compile-time constant (may be folded at compile time)   |
-| `ea`          | address value of the expression (not a memory read)     |
-| `(ea)`        | 16-bit word loaded from memory at `ea`                  |
+| Selector | Dispatched on                                         |
+| -------- | ----------------------------------------------------- |
+| `reg8`   | 8-bit register value (zero-extended to 16 bits)       |
+| `reg16`  | 16-bit register value                                 |
+| `imm`    | compile-time constant (may be folded at compile time) |
+| `ea`     | address value of the expression (not a memory read)   |
+| `(ea)`   | 16-bit word loaded from memory at `ea`                |
 
 If you want to dispatch on a byte value stored in memory, load it into a register first. `select (ea)` reads a 16-bit word — if the high byte of that word is non-zero, no 8-bit `case` value will match.
 
@@ -794,18 +794,21 @@ Scalar initializers are lowered in declaration order at function entry. For zero
 
 ### 6.3 The v0.2 Typed Call Boundary
 
-Surface forms: `func name(...): <type> [flags]` and `extern func name(...): <type> [flags]`.
+When the compiler generates a call to a typed internal `func`, it enforces a preservation contract at that boundary:
 
-Internal `func` preservation (compiler-generated prologue/epilogue):
-- `void`: preserves AF, BC, DE, HL
-- `byte`/`word`: preserves AF, BC, DE (HL is return channel/volatile)
-- `long`: preserves AF, BC (HL:DE is return channel)
-- `verylong`: preserves AF (HL:DE:BC is return channel)
-- `flags` modifier: AF becomes volatile in addition to the return channel.
+| Register / flags              | Behavior at typed internal call boundary                       |
+| ----------------------------- | -------------------------------------------------------------- |
+| `HL`                          | **boundary-volatile** for all typed calls including `void`     |
+| `L`                           | carries 8-bit return value for `byte`-returning calls          |
+| `HL`                          | carries 16-bit return value for `word`/`addr`/`ptr` returns    |
+| all other registers and flags | **callee-preserved** — restored by compiler-generated epilogue |
 
-Extern `func`: no preservation guarantee unless an explicit ABI/clobber is declared; treat all registers/flags as volatile.
+This guarantee applies **only** to typed internal `func` calls. It does not apply to:
 
-This guarantee applies **only** to typed internal `func` calls. Raw `call`/`call cc, nn` mnemonics are raw assembly; the compiler enforces no preservation contract. The `--raw-typed-call-warn` option warns when a raw call targets a typed ZAX function, bypassing the boundary.
+- **Raw `call` / `call cc, nn` mnemonics** — these are raw assembly. The compiler enforces no preservation contract.
+- **`extern func` calls** — the routine at that address is outside the compiler's control. Assume all registers and flags may be clobbered unless you know otherwise from the external ABI documentation.
+
+The `--raw-typed-call-warn` option causes the compiler to warn when a raw `call` instruction targets a symbol that is a typed ZAX function, since that bypasses the typed boundary contract.
 
 ### 6.4 Calling Functions
 
@@ -822,13 +825,13 @@ bios_putc 'A'
 
 Argument forms accepted at call sites:
 
-| Form     | What is pushed onto the stack                                    |
-| -------- | ---------------------------------------------------------------- |
-| `reg16`  | 16-bit register value                                            |
-| `reg8`   | 8-bit register, zero-extended to 16 bits                         |
-| `imm`    | compile-time immediate, as 16-bit value                          |
-| `ea`     | 16-bit address value of the expression                           |
-| `(ea)`   | value loaded from memory (word or byte per parameter type; `byte` is zero-extended) |
+| Form    | What is pushed onto the stack                                                       |
+| ------- | ----------------------------------------------------------------------------------- |
+| `reg16` | 16-bit register value                                                               |
+| `reg8`  | 8-bit register, zero-extended to 16 bits                                            |
+| `imm`   | compile-time immediate, as 16-bit value                                             |
+| `ea`    | 16-bit address value of the expression                                              |
+| `(ea)`  | value loaded from memory (word or byte per parameter type; `byte` is zero-extended) |
 
 Arguments are pushed right-to-left (last argument first). The compiler emits the required pushes, the `call`, and cleans up the arguments after return.
 
@@ -858,9 +861,9 @@ An identifier that matches none of these is a compile error.
 
 Non-scalar parameters (`T[N]` or `T[]`) are passed as a 16-bit address in one stack slot. The type annotation controls what the callee is permitted to assume about the referenced data:
 
-| Parameter type | Contract                                              |
-| -------------- | ----------------------------------------------------- |
-| `T[N]`         | exact-length: exactly `N` elements of type `T`        |
+| Parameter type | Contract                                               |
+| -------------- | ------------------------------------------------------ |
+| `T[N]`         | exact-length: exactly `N` elements of type `T`         |
 | `T[]`          | element-shape: element type is `T`, length unspecified |
 
 Compatibility at call sites:
@@ -1087,34 +1090,34 @@ Invocation: write the op name alone on a line. The compiler recognises it as an 
 
 #### Register Matchers
 
-| Matcher | Accepts                                      | Notes                                |
-| ------- | -------------------------------------------- | ------------------------------------ |
-| `reg8`  | `A` `B` `C` `D` `E` `H` `L`                | all 8-bit registers                  |
-| `reg16` | `HL` `DE` `BC` `SP`                         | does **not** include `IX` or `IY`   |
-| `A`     | only `A`                                    | fixed: more specific than `reg8`     |
-| `HL`    | only `HL`                                   | fixed: more specific than `reg16`    |
-| `DE`    | only `DE`                                   | fixed                                |
-| `BC`    | only `BC`                                   | fixed                                |
-| `SP`    | only `SP`                                   | fixed                                |
+| Matcher | Accepts                     | Notes                             |
+| ------- | --------------------------- | --------------------------------- |
+| `reg8`  | `A` `B` `C` `D` `E` `H` `L` | all 8-bit registers               |
+| `reg16` | `HL` `DE` `BC` `SP`         | does **not** include `IX` or `IY` |
+| `A`     | only `A`                    | fixed: more specific than `reg8`  |
+| `HL`    | only `HL`                   | fixed: more specific than `reg16` |
+| `DE`    | only `DE`                   | fixed                             |
+| `BC`    | only `BC`                   | fixed                             |
+| `SP`    | only `SP`                   | fixed                             |
 
 `reg16` includes `SP` — if your op body is only valid for `HL`, `DE`, and `BC` but not `SP`, use fixed matchers rather than `reg16`.
 
 #### Immediate Matchers
 
-| Matcher | Accepts                                                         |
-| ------- | --------------------------------------------------------------- |
+| Matcher | Accepts                                                            |
+| ------- | ------------------------------------------------------------------ |
 | `imm8`  | compile-time `imm` expression whose evaluated value fits in 8 bits |
-| `imm16` | compile-time `imm` expression (any value fitting in 16 bits)    |
+| `imm16` | compile-time `imm` expression (any value fitting in 16 bits)       |
 
 `imm8` is more specific than `imm16` for values that fit in 8 bits — overload resolution selects the `imm8` overload when possible.
 
 #### Address and Dereference Matchers
 
-| Matcher | Accepts                                    | Substitution                              |
-| ------- | ------------------------------------------ | ----------------------------------------- |
-| `ea`    | effective address expression, no parens    | substitutes the address expression        |
-| `mem8`  | `(ea)` dereference, byte-width context     | substitutes full `(ea)` including parens  |
-| `mem16` | `(ea)` dereference, word-width context     | substitutes full `(ea)` including parens  |
+| Matcher | Accepts                                 | Substitution                             |
+| ------- | --------------------------------------- | ---------------------------------------- |
+| `ea`    | effective address expression, no parens | substitutes the address expression       |
+| `mem8`  | `(ea)` dereference, byte-width context  | substitutes full `(ea)` including parens |
+| `mem16` | `(ea)` dereference, word-width context  | substitutes full `(ea)` including parens |
 
 `mem8` and `mem16` are more specific than `ea` in overload resolution.
 
@@ -1136,8 +1139,8 @@ end
 
 #### Indexed Register Matchers (`idx16`)
 
-| Matcher | Accepts                                                                    |
-| ------- | -------------------------------------------------------------------------- |
+| Matcher | Accepts                                                                   |
+| ------- | ------------------------------------------------------------------------- |
 | `idx16` | `(IX+d)` `(IX-d)` `(IY+d)` `(IY-d)` — displacement must be in `-128..127` |
 | `IX`    | fixed: only `(IX+d)` or `(IX-d)`                                          |
 | `IY`    | fixed: only `(IY+d)` or `(IY-d)`                                          |
@@ -1161,14 +1164,14 @@ Note: bare `IX` and bare `IY` without displacement and without parentheses are n
 
 #### Condition Code Matcher (`cc`)
 
-| Matcher | Accepts                                                                  |
-| ------- | ------------------------------------------------------------------------ |
-| `cc`    | any condition code: `Z` `NZ` `C` `NC` `PO` `PE` `M` `P`               |
-| `Z`     | fixed: only `Z` — more specific than `cc`                               |
-| `NZ`    | fixed: only `NZ`                                                         |
-| `C`     | fixed: only `C`                                                          |
-| `NC`    | fixed: only `NC`                                                         |
-| *(etc.)*| any individual condition code as a fixed matcher                         |
+| Matcher  | Accepts                                                 |
+| -------- | ------------------------------------------------------- |
+| `cc`     | any condition code: `Z` `NZ` `C` `NC` `PO` `PE` `M` `P` |
+| `Z`      | fixed: only `Z` — more specific than `cc`               |
+| `NZ`     | fixed: only `NZ`                                        |
+| `C`      | fixed: only `C`                                         |
+| `NC`     | fixed: only `NC`                                        |
+| _(etc.)_ | any individual condition code as a fixed matcher        |
 
 The matched condition code token is substituted into the op body. The resulting instruction must be valid for that condition code. If your body uses `jr cond, target` and the matched code is `M` or `P` (which `jr` does not accept), it is a compile error at that call site:
 
@@ -1194,13 +1197,13 @@ end
 
 When a call site matches multiple overloads, the compiler selects the most specific one. Specificity rules:
 
-| Comparison                                          | Winner              |
-| --------------------------------------------------- | ------------------- |
-| Fixed register (e.g. `HL`) vs class (e.g. `reg16`) | fixed wins          |
-| `imm8` vs `imm16` for values fitting in 8 bits      | `imm8` wins         |
-| `mem8` / `mem16` vs `ea`                            | `mem*` wins         |
-| Fixed `IX` / `IY` vs `idx16`                        | fixed wins          |
-| Fixed condition code vs `cc`                        | fixed wins          |
+| Comparison                                         | Winner      |
+| -------------------------------------------------- | ----------- |
+| Fixed register (e.g. `HL`) vs class (e.g. `reg16`) | fixed wins  |
+| `imm8` vs `imm16` for values fitting in 8 bits     | `imm8` wins |
+| `mem8` / `mem16` vs `ea`                           | `mem*` wins |
+| Fixed `IX` / `IY` vs `idx16`                       | fixed wins  |
+| Fixed condition code vs `cc`                       | fixed wins  |
 
 If no overload matches: compile error, listing the available overloads and why each failed.
 
@@ -1223,14 +1226,14 @@ end
 
 Substitution replaces parameter names in the op body with the AST operands from the call site:
 
-| Matcher              | Substitutes                                                              |
-| -------------------- | ------------------------------------------------------------------------ |
-| `reg8` / `reg16`     | the matched register token                                               |
-| `imm8` / `imm16`     | the immediate expression value                                           |
-| `ea`                 | the address expression (no parentheses added)                            |
-| `mem8` / `mem16`     | the full dereference expression including parentheses                    |
+| Matcher               | Substitutes                                                             |
+| --------------------- | ----------------------------------------------------------------------- |
+| `reg8` / `reg16`      | the matched register token                                              |
+| `imm8` / `imm16`      | the immediate expression value                                          |
+| `ea`                  | the address expression (no parentheses added)                           |
+| `mem8` / `mem16`      | the full dereference expression including parentheses                   |
 | `idx16` / `IX` / `IY` | the full indexed operand including parens, register, sign, displacement |
-| `cc`                 | the matched condition code token                                         |
+| `cc`                  | the matched condition code token                                        |
 
 The expanded body must produce valid Z80 instructions. If a substituted operand produces an invalid instruction form at the expansion site, it is a compile error at that call site — the error identifies the expanded instruction and the incompatible operand.
 
@@ -1829,10 +1832,10 @@ An identifier that matches none of these is a compile error.
 
 ZAX uses three section kinds:
 
-| Section | Contains                                        | Default start address            |
-| ------- | ----------------------------------------------- | -------------------------------- |
-| `code`  | function bodies, `op` emission                  | `$8000`                          |
-| `data`  | initialized storage (`data` declarations, `bin`) | immediately after `code`, aligned to 2 |
+| Section | Contains                                             | Default start address                  |
+| ------- | ---------------------------------------------------- | -------------------------------------- |
+| `code`  | function bodies, `op` emission                       | `$8000`                                |
+| `data`  | initialized storage (`data` declarations, `bin`)     | immediately after `code`, aligned to 2 |
 | `var`   | uninitialized / zero-initialized storage (`globals`) | immediately after `data`, aligned to 2 |
 
 Each section has an independent location counter. There is no external linker — ZAX resolves everything itself.
@@ -1857,12 +1860,12 @@ Rules:
 
 Each declaration kind emits to a fixed section regardless of which section is currently selected:
 
-| Declaration | Always emits to |
-| ----------- | --------------- |
-| `func`      | `code`          |
-| `data`      | `data`          |
-| `globals`   | `var`           |
-| `bin`       | the section named in its `in <kind>` clause |
+| Declaration | Always emits to                                                             |
+| ----------- | --------------------------------------------------------------------------- |
+| `func`      | `code`                                                                      |
+| `data`      | `data`                                                                      |
+| `globals`   | `var`                                                                       |
+| `bin`       | the section named in its `in <kind>` clause                                 |
 | `hex`       | absolute addresses in the final image (does not affect any section counter) |
 
 The currently selected section only affects which counter `align` advances and which counter `section <kind> at <addr>` sets. You cannot redirect a `func` into `data` by selecting the `data` section first.
@@ -1952,6 +1955,7 @@ The compiler produces an **address→byte map**. When writing a flat `.bin` outp
 - Any unwritten address within that range is filled with `$00` (the gap fill byte).
 
 When writing Intel HEX output:
+
 - Only written bytes appear in output records. Gap addresses are not zero-filled into intermediate records.
 
 The `.lst` file is a deterministic byte dump with an ASCII gutter and symbol table. Sparse unwritten bytes appear as `..` in the hex column. Empty spans are collapsed into `; ... gap $XXXX..$YYYY` markers. For debugger-grade source mapping, use the `.d8dbg.json` (D8M) output.
@@ -2316,12 +2320,12 @@ end
 
 ZAX rewards a four-level layering model:
 
-| Level    | Tool             | Role                                                         |
-| -------- | ---------------- | ------------------------------------------------------------ |
+| Level    | Tool             | Role                                                                                                                    |
+| -------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Micro    | `op`             | Inline sequences that repeat across a function or module — polling loops, save/restore idioms, register-pair arithmetic |
-| Callable | `func`           | Boundary-safe units with typed parameters, typed return, callee preservation — the public API surface of a module |
-| Domain   | `enum`           | Symbolic names for states, commands, modes — wherever an integer would otherwise be magic |
-| Layout   | `type` / `union` | Binary structures that map to hardware registers, protocol packets, sprite tables, file headers |
+| Callable | `func`           | Boundary-safe units with typed parameters, typed return, callee preservation — the public API surface of a module       |
+| Domain   | `enum`           | Symbolic names for states, commands, modes — wherever an integer would otherwise be magic                               |
+| Layout   | `type` / `union` | Binary structures that map to hardware registers, protocol packets, sprite tables, file headers                         |
 
 When deciding which tool to use:
 

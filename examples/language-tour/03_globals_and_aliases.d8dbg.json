@@ -145,9 +145,7 @@
       "end": 329
     }
   ],
-  "fileList": [
-    "03_globals_and_aliases.zax"
-  ],
+  "fileList": ["03_globals_and_aliases.zax"],
   "symbols": [
     {
       "name": "read_counter",
