@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 330,
+          "end": 354,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -51,35 +51,35 @@
         },
         {
           "start": 300,
-          "end": 309,
+          "end": 315,
           "lstLine": 9,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 309,
-          "end": 313,
+          "start": 315,
+          "end": 327,
           "lstLine": 13,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 313,
-          "end": 322,
+          "start": 327,
+          "end": 336,
           "lstLine": 18,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 322,
-          "end": 325,
+          "start": 336,
+          "end": 339,
           "lstLine": 19,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 325,
-          "end": 330,
+          "start": 339,
+          "end": 354,
           "lstLine": 13,
           "kind": "code",
           "confidence": "high"
@@ -117,21 +117,21 @@
         {
           "name": "main",
           "kind": "label",
-          "address": 309,
+          "address": 315,
           "line": 13,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_2",
           "kind": "label",
-          "address": 325,
+          "address": 339,
           "line": 13,
           "scope": "local"
         },
         {
           "name": "counter",
           "kind": "var",
-          "address": 330,
+          "address": 354,
           "line": 2,
           "scope": "global",
           "size": 2
@@ -142,7 +142,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 330
+      "end": 354
     }
   ],
   "fileList": [
@@ -184,7 +184,7 @@
     {
       "name": "main",
       "kind": "label",
-      "address": 309,
+      "address": 315,
       "file": "03_globals_and_aliases.zax",
       "line": 13,
       "scope": "global"
@@ -192,7 +192,7 @@
     {
       "name": "__zax_epilogue_2",
       "kind": "label",
-      "address": 325,
+      "address": 339,
       "file": "03_globals_and_aliases.zax",
       "line": 13,
       "scope": "local"
@@ -200,7 +200,7 @@
     {
       "name": "counter",
       "kind": "var",
-      "address": 330,
+      "address": 354,
       "file": "03_globals_and_aliases.zax",
       "line": 2,
       "scope": "global",
@@ -210,6 +210,6 @@
   "generator": {
     "tool": "zax",
     "entrySymbol": "main",
-    "entryAddress": 309
+    "entryAddress": 315
   }
 }

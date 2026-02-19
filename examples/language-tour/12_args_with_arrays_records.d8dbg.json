@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 363,
+          "end": 381,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -58,35 +58,35 @@
         },
         {
           "start": 336,
-          "end": 340,
+          "end": 348,
           "lstLine": 13,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 340,
-          "end": 349,
+          "start": 348,
+          "end": 357,
           "lstLine": 14,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 349,
-          "end": 358,
+          "start": 357,
+          "end": 366,
           "lstLine": 15,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 358,
-          "end": 363,
+          "start": 366,
+          "end": 381,
           "lstLine": 13,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 364,
-          "end": 388,
+          "start": 382,
+          "end": 406,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -131,21 +131,21 @@
         {
           "name": "__zax_epilogue_2",
           "kind": "label",
-          "address": 358,
+          "address": 366,
           "line": 13,
           "scope": "local"
         },
         {
           "name": "sample_bytes",
           "kind": "data",
-          "address": 364,
+          "address": 382,
           "line": 2,
           "scope": "global"
         },
         {
           "name": "sample_words",
           "kind": "data",
-          "address": 380,
+          "address": 398,
           "line": 3,
           "scope": "global"
         }
@@ -155,11 +155,11 @@
   "segments": [
     {
       "start": 256,
-      "end": 363
+      "end": 381
     },
     {
-      "start": 364,
-      "end": 388
+      "start": 382,
+      "end": 406
     }
   ],
   "fileList": [
@@ -209,7 +209,7 @@
     {
       "name": "__zax_epilogue_2",
       "kind": "label",
-      "address": 358,
+      "address": 366,
       "file": "12_args_with_arrays_records.zax",
       "line": 13,
       "scope": "local"
@@ -217,7 +217,7 @@
     {
       "name": "sample_bytes",
       "kind": "data",
-      "address": 364,
+      "address": 382,
       "file": "12_args_with_arrays_records.zax",
       "line": 2,
       "scope": "global"
@@ -225,7 +225,7 @@
     {
       "name": "sample_words",
       "kind": "data",
-      "address": 380,
+      "address": 398,
       "file": "12_args_with_arrays_records.zax",
       "line": 3,
       "scope": "global"
