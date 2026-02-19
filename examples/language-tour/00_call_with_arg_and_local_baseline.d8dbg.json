@@ -165,7 +165,9 @@
       "end": 347
     }
   ],
-  "fileList": ["00_call_with_arg_and_local_baseline.zax"],
+  "fileList": [
+    "00_call_with_arg_and_local_baseline.zax"
+  ],
   "symbols": [
     {
       "name": "inc_one",

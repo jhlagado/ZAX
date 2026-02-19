@@ -2365,32 +2365,29 @@ export function emitProgram(
     }
     if (r.kind === 'abs') {
       emitAbs16Fixup(0x21, r.baseLower, r.addend, span); // ld hl, nn
-    } else {
-      if (!emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
-      if (
-        !emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span) ||
-        !emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)
-      )
-        return false;
-      if (r.ixDisp !== 0) {
-        if (!loadImm16ToDE(r.ixDisp & 0xffff, span)) return false;
-        if (
-          !emitInstr(
-            'add',
-            [
-              { kind: 'Reg', span, name: 'HL' },
-              { kind: 'Reg', span, name: 'DE' },
-            ],
-            span,
-          )
-        ) {
-          return false;
-        }
-      }
-      if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
       return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
     }
-    return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
+    // stack slot: use DE shuttle, keep IX intact
+    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false; // save DE
+    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span)) return false; // IX->stack
+    if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false; // HL=IX
+    if (r.ixDisp !== 0) {
+      if (!loadImm16ToDE(r.ixDisp & 0xffff, span)) return false; // DE=disp
+      if (
+        !emitInstr(
+          'add',
+          [
+            { kind: 'Reg', span, name: 'HL' },
+            { kind: 'Reg', span, name: 'DE' },
+          ],
+          span,
+        )
+      )
+        return false;
+    }
+    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
+    // restore DE
+    return emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span); // restore DE
   };
 
   const pushMemValue = (ea: EaExprNode, want: 'byte' | 'word', span: SourceSpan): boolean => {
@@ -2404,10 +2401,25 @@ export function emitProgram(
       return pushZeroExtendedReg8('A', span);
     }
 
+    if (r?.kind === 'stack') {
+      const disp = r.ixDisp & 0xff;
+      if (want === 'word') {
+        emitRawCodeBytes(Uint8Array.of(0xdd, 0x5e, disp), span.file, 'ld e, (ix+disp)');
+        emitRawCodeBytes(
+          Uint8Array.of(0xdd, 0x56, (disp + 1) & 0xff),
+          span.file,
+          'ld d, (ix+disp+1)',
+        );
+        emitRawCodeBytes(Uint8Array.of(0xeb), span.file, 'ex de, hl');
+        return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
+      }
+      emitRawCodeBytes(Uint8Array.of(0xdd, 0x5e, disp), span.file, 'ld e, (ix+disp)');
+      return pushZeroExtendedReg8('E', span);
+    }
+
     if (!pushEaAddress(ea, span)) return false;
     if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
     if (want === 'word') {
-      // ld hl, (stack-ea via HL): ld a,(hl); inc hl; ld h,(hl); ld l,a
       emitRawCodeBytes(Uint8Array.of(0x7e), span.file, 'ld a, (hl)');
       if (!emitInstr('inc', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
       emitRawCodeBytes(Uint8Array.of(0x66, 0x6f), span.file, 'ld h, (hl) ; ld l, a');
@@ -2427,24 +2439,28 @@ export function emitProgram(
       emitAbs16Fixup(0x21, r.baseLower, r.addend, span); // ld hl, nn
       return true;
     }
-    if (
-      !emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span) ||
-      !emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)
-    )
-      return false;
-    if (r.ixDisp === 0) return true;
-    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
-    if (!loadImm16ToDE(r.ixDisp & 0xffff, span)) return false;
-    const ok = emitInstr(
-      'add',
-      [
-        { kind: 'Reg', span, name: 'HL' },
-        { kind: 'Reg', span, name: 'DE' },
-      ],
-      span,
-    );
-    if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
-    return ok;
+    // Stack slot: use DE shuttle, avoid mutating IX or using HL address math.
+    const disp = r.ixDisp & 0xffff;
+    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false; // save DE
+    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span)) return false; // IX -> stack
+    if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false; // HL = IX
+    if (disp !== 0) {
+      if (!loadImm16ToDE(disp, span)) return false;
+      if (
+        !emitInstr(
+          'add',
+          [
+            { kind: 'Reg', span, name: 'HL' },
+            { kind: 'Reg', span, name: 'DE' },
+          ],
+          span,
+        )
+      ) {
+        return false;
+      }
+    }
+    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span)) return false; // address -> stack
+    return emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span); // restore DE
   };
 
   const lowerLdWithEa = (inst: AsmInstructionNode): boolean => {
@@ -2986,6 +3002,69 @@ export function emitProgram(
     if (dst.kind === 'Mem' && src.kind === 'Mem') {
       const scalar =
         resolveScalarTypeForEa(dst.expr) ?? resolveScalarTypeForEa(src.expr) ?? undefined;
+      const dstResolved = resolveEa(dst.expr, inst.span);
+      const srcResolved = resolveEa(src.expr, inst.span);
+      // Stack-to-stack fast path using IX+d with DE shuttle; avoids HL address materialization.
+      if (
+        scalar !== undefined &&
+        dstResolved?.kind === 'stack' &&
+        srcResolved?.kind === 'stack' &&
+        dstResolved.ixDisp >= -0x80 &&
+        dstResolved.ixDisp <= 0x7f &&
+        srcResolved.ixDisp >= -0x80 &&
+        srcResolved.ixDisp <= 0x7f
+      ) {
+        const dstLoDisp = dstResolved.ixDisp;
+        const dstHiDisp = dstResolved.ixDisp + 1;
+        const srcLoDisp = srcResolved.ixDisp;
+        const srcHiDisp = srcResolved.ixDisp + 1;
+        const fmtIxDisp = (disp: number): string => {
+          const abs = Math.abs(disp).toString(16).padStart(4, '0').toUpperCase();
+          return disp >= 0 ? `(IX + $${abs})` : `(IX - $${abs})`;
+        };
+        const dstLo = dstLoDisp & 0xff;
+        const dstHi = dstHiDisp & 0xff;
+        const srcLo = srcLoDisp & 0xff;
+        const srcHi = srcHiDisp & 0xff;
+
+        if (scalar === 'byte') {
+          emitRawCodeBytes(
+            Uint8Array.of(0xdd, 0x5e, srcLo),
+            inst.span.file,
+            `ld e, ${fmtIxDisp(srcLoDisp)}`,
+          );
+          emitRawCodeBytes(
+            Uint8Array.of(0xdd, 0x73, dstLo),
+            inst.span.file,
+            `ld ${fmtIxDisp(dstLoDisp)}, e`,
+          );
+          return true;
+        }
+
+        // word/addr use DE shuttle: load from src then store to dst.
+        emitRawCodeBytes(
+          Uint8Array.of(0xdd, 0x5e, srcLo),
+          inst.span.file,
+          `ld e, ${fmtIxDisp(srcLoDisp)}`,
+        );
+        emitRawCodeBytes(
+          Uint8Array.of(0xdd, 0x56, srcHi),
+          inst.span.file,
+          `ld d, ${fmtIxDisp(srcHiDisp)}`,
+        );
+        emitRawCodeBytes(
+          Uint8Array.of(0xdd, 0x73, dstLo),
+          inst.span.file,
+          `ld ${fmtIxDisp(dstLoDisp)}, e`,
+        );
+        emitRawCodeBytes(
+          Uint8Array.of(0xdd, 0x72, dstHi),
+          inst.span.file,
+          `ld ${fmtIxDisp(dstHiDisp)}, d`,
+        );
+        return true;
+      }
+
       if (!scalar) return false;
       if (scalar === 'byte') {
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
@@ -5665,6 +5744,14 @@ export function emitProgram(
           );
         }
         syncToFlow();
+        // For framed functions with a synthetic epilogue, we reset the tracked delta here because
+        // the epilogue unconditionally restores SP/IX. This avoids false imbalance reports from
+        // conservative tracking inside the body.
+        if (emitSyntheticEpilogue) {
+          flow.spDelta = 0;
+          flow.spValid = true;
+          flow.spInvalidDueToMutation = false;
+        }
         if (flow.reachable && flow.spValid && flow.spDelta !== 0) {
           diagAt(
             diagnostics,
