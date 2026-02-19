@@ -3859,22 +3859,50 @@ export function emitProgram(
             confidence: 'high',
           };
           try {
-            if (!init.expr) {
-              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'BC' }], init.span);
-              continue;
-            }
-            const initValue = evalImmExpr(init.expr, env, diagnostics);
-            if (initValue === undefined) {
-              diagAt(
-                diagnostics,
+            if (isVoidSpecial) {
+              const initValue =
+                init.expr !== undefined ? evalImmExpr(init.expr, env, diagnostics) : 0;
+              if (init.expr !== undefined && initValue === undefined) {
+                diagAt(
+                  diagnostics,
+                  init.span,
+                  `Failed to evaluate local initializer for "${init.name}".`,
+                );
+                continue;
+              }
+              const narrowed =
+                init.scalarKind === 'byte' ? initValue! & 0xff : initValue! & 0xffff;
+              if (!loadImm16ToHL(narrowed, init.span)) continue;
+              emitInstr(
+                'ex',
+                [
+                  {
+                    kind: 'Mem',
+                    span: init.span,
+                    expr: { kind: 'EaName', span: init.span, name: 'SP' },
+                  },
+                  { kind: 'Reg', span: init.span, name: 'HL' },
+                ],
                 init.span,
-                `Failed to evaluate local initializer for "${init.name}".`,
               );
-              continue;
+            } else {
+              if (!init.expr) {
+                emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'BC' }], init.span);
+                continue;
+              }
+              const initValue = evalImmExpr(init.expr, env, diagnostics);
+              if (initValue === undefined) {
+                diagAt(
+                  diagnostics,
+                  init.span,
+                  `Failed to evaluate local initializer for "${init.name}".`,
+                );
+                continue;
+              }
+              const narrowed = init.scalarKind === 'byte' ? initValue & 0xff : initValue & 0xffff;
+              if (!loadImm16ToHL(narrowed, init.span)) continue;
+              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
             }
-            const narrowed = init.scalarKind === 'byte' ? initValue & 0xff : initValue & 0xffff;
-            if (!loadImm16ToHL(narrowed, init.span)) continue;
-            emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
           } finally {
             currentCodeSegmentTag = prevTag;
           }
@@ -5806,28 +5834,16 @@ export function emitProgram(
               scope: 'local',
             });
             traceLabel(codeOffset, epilogueLabel);
-            const popOrder = (() => {
-              if (isVoidSpecial) {
-                return ['AF', 'BC', 'DE'].filter((r) => preserveSet.includes(r)).reverse();
-              }
-              return preserveSet.slice().reverse();
-            })();
+            const popOrder = isVoidSpecial
+              ? ['AF', 'BC', 'DE']
+              : preserveSet.slice().reverse();
             for (const reg of popOrder) {
-              emitInstr('pop', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
+              if (preserveSet.includes(reg)) {
+                emitInstr('pop', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
+              }
             }
             if (isVoidSpecial) {
-              // Restore saved HL from IX-2, then drop frame.
-              emitRawCodeBytes(
-                Uint8Array.of(0xdd, 0x5e, 0xfe),
-                item.span.file,
-                'ld e, (ix-$0002)',
-              );
-              emitRawCodeBytes(
-                Uint8Array.of(0xdd, 0x56, 0xff),
-                item.span.file,
-                'ld d, (ix-$0001)',
-              );
-              emitRawCodeBytes(Uint8Array.of(0xeb), item.span.file, 'ex de, hl');
+              emitInstr('pop', [{ kind: 'Reg', span: item.span, name: 'HL' }], item.span);
             }
             if (hasStackSlots) {
               emitInstr(

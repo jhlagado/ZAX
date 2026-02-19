@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 414,
+          "end": 408,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -156,7 +156,7 @@
         },
         {
           "start": 399,
-          "end": 414,
+          "end": 408,
           "lstLine": 19,
           "kind": "code",
           "confidence": "high"
@@ -211,7 +211,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 414
+      "end": 408
     }
   ],
   "fileList": [

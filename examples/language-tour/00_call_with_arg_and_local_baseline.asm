@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$0161 (end exclusive)
+; range: $0100..$015B (end exclusive)
 
 ; func inc_one begin
 inc_one:
@@ -36,7 +36,7 @@ ld IX, $0000                   ; 0131: DD 21 00 00
 add IX, SP                     ; 0135: DD 39
 push HL                        ; 0137: E5
 ld HL, $0000                   ; 0138: 21 00 00
-push HL                        ; 013B: E5
+ex (SP), HL                    ; 013B: E3
 push DE                        ; 013C: D5
 push BC                        ; 013D: C5
 push AF                        ; 013E: F5
@@ -52,15 +52,13 @@ ld (IX - $0003), D             ; 014D: DD 72 FD
 ex DE, HL                      ; 0150: EB
 pop DE                         ; 0151: D1
 __zax_epilogue_1:
-pop DE                         ; 0152: D1
+pop AF                         ; 0152: F1
 pop BC                         ; 0153: C1
-pop AF                         ; 0154: F1
-ld e, (ix-$0002)               ; 0155: DD 5E FE
-ld d, (ix-$0001)               ; 0158: DD 56 FF
-ex de, hl                      ; 015B: EB
-ld SP, IX                      ; 015C: DD F9
-pop IX                         ; 015E: DD E1
-ret                            ; 0160: C9
+pop DE                         ; 0154: D1
+pop HL                         ; 0155: E1
+ld SP, IX                      ; 0156: DD F9
+pop IX                         ; 0158: DD E1
+ret                            ; 015A: C9
 ; func main end
 
 ; symbols:

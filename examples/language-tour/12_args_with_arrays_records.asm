@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$0196 (end exclusive)
+; range: $0100..$0190 (end exclusive)
 
 ; func read_byte_at begin
 read_byte_at:
@@ -83,15 +83,13 @@ call read_word_at              ; 0169: CD 00 00
 inc SP                         ; 016C: 33
 inc SP                         ; 016D: 33
 __zax_epilogue_2:
-pop DE                         ; 016E: D1
+pop AF                         ; 016E: F1
 pop BC                         ; 016F: C1
-pop AF                         ; 0170: F1
-ld e, (ix-$0002)               ; 0171: DD 5E FE
-ld d, (ix-$0001)               ; 0174: DD 56 FF
-ex de, hl                      ; 0177: EB
-ld SP, IX                      ; 0178: DD F9
-pop IX                         ; 017A: DD E1
-ret                            ; 017C: C9
+pop DE                         ; 0170: D1
+pop HL                         ; 0171: E1
+ld SP, IX                      ; 0172: DD F9
+pop IX                         ; 0174: DD E1
+ret                            ; 0176: C9
 ; func main end
 
 ; symbols:
@@ -101,5 +99,5 @@ ret                            ; 017C: C9
 ; label __zax_epilogue_1 = $0148
 ; label main = $0150
 ; label __zax_epilogue_2 = $016E
-; data sample_bytes = $017E
-; data sample_words = $018E
+; data sample_bytes = $0178
+; data sample_words = $0188

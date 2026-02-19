@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$0178 (end exclusive)
+; range: $0100..$016C (end exclusive)
 
 ; func write_pair begin
 write_pair:
@@ -31,68 +31,64 @@ ld a, (hl)                     ; 0125: 7E
 ld HL, pair_buf + 1            ; 0126: 21 00 00
 ld (hl), a                     ; 0129: 77
 __zax_epilogue_0:
-pop DE                         ; 012A: D1
+pop AF                         ; 012A: F1
 pop BC                         ; 012B: C1
-pop AF                         ; 012C: F1
-ld e, (ix-$0002)               ; 012D: DD 5E FE
-ld d, (ix-$0001)               ; 0130: DD 56 FF
-ex de, hl                      ; 0133: EB
-ld SP, IX                      ; 0134: DD F9
-pop IX                         ; 0136: DD E1
-ret                            ; 0138: C9
+pop DE                         ; 012C: D1
+pop HL                         ; 012D: E1
+ld SP, IX                      ; 012E: DD F9
+pop IX                         ; 0130: DD E1
+ret                            ; 0132: C9
 ; func read_pair_word begin
 ; func write_pair end
 read_pair_word:
-push AF                        ; 0139: F5
-push BC                        ; 013A: C5
-push DE                        ; 013B: D5
-ld HL, pair_buf                ; 013C: 21 00 00
-ld L, (hl)                     ; 013F: 6E
-ld HL, pair_buf + 1            ; 0140: 21 00 00
-ld H, (hl)                     ; 0143: 66
+push AF                        ; 0133: F5
+push BC                        ; 0134: C5
+push DE                        ; 0135: D5
+ld HL, pair_buf                ; 0136: 21 00 00
+ld L, (hl)                     ; 0139: 6E
+ld HL, pair_buf + 1            ; 013A: 21 00 00
+ld H, (hl)                     ; 013D: 66
 __zax_epilogue_1:
-pop DE                         ; 0144: D1
-pop BC                         ; 0145: C1
-pop AF                         ; 0146: F1
-ret                            ; 0147: C9
+pop DE                         ; 013E: D1
+pop BC                         ; 013F: C1
+pop AF                         ; 0140: F1
+ret                            ; 0141: C9
 ; func main begin
 ; func read_pair_word end
 main:
-push IX                        ; 0148: DD E5
-ld IX, $0000                   ; 014A: DD 21 00 00
-add IX, SP                     ; 014E: DD 39
-push HL                        ; 0150: E5
-push DE                        ; 0151: D5
-push BC                        ; 0152: C5
-push AF                        ; 0153: F5
-ld HL, $0002                   ; 0154: 21 02 00
-push HL                        ; 0157: E5
-ld HL, $0001                   ; 0158: 21 01 00
-push HL                        ; 015B: E5
-call write_pair                ; 015C: CD 00 00
-inc SP                         ; 015F: 33
-inc SP                         ; 0160: 33
-inc SP                         ; 0161: 33
-inc SP                         ; 0162: 33
-ld A, (pair_buf)               ; 0163: 3A 00 00
-call read_pair_word            ; 0166: CD 00 00
+push IX                        ; 0142: DD E5
+ld IX, $0000                   ; 0144: DD 21 00 00
+add IX, SP                     ; 0148: DD 39
+push HL                        ; 014A: E5
+push DE                        ; 014B: D5
+push BC                        ; 014C: C5
+push AF                        ; 014D: F5
+ld HL, $0002                   ; 014E: 21 02 00
+push HL                        ; 0151: E5
+ld HL, $0001                   ; 0152: 21 01 00
+push HL                        ; 0155: E5
+call write_pair                ; 0156: CD 00 00
+inc SP                         ; 0159: 33
+inc SP                         ; 015A: 33
+inc SP                         ; 015B: 33
+inc SP                         ; 015C: 33
+ld A, (pair_buf)               ; 015D: 3A 00 00
+call read_pair_word            ; 0160: CD 00 00
 __zax_epilogue_2:
-pop DE                         ; 0169: D1
-pop BC                         ; 016A: C1
-pop AF                         ; 016B: F1
-ld e, (ix-$0002)               ; 016C: DD 5E FE
-ld d, (ix-$0001)               ; 016F: DD 56 FF
-ex de, hl                      ; 0172: EB
-ld SP, IX                      ; 0173: DD F9
-pop IX                         ; 0175: DD E1
-ret                            ; 0177: C9
+pop AF                         ; 0163: F1
+pop BC                         ; 0164: C1
+pop DE                         ; 0165: D1
+pop HL                         ; 0166: E1
+ld SP, IX                      ; 0167: DD F9
+pop IX                         ; 0169: DD E1
+ret                            ; 016B: C9
 ; func main end
 
 ; symbols:
 ; label write_pair = $0100
 ; label __zax_epilogue_0 = $012A
-; label read_pair_word = $0139
-; label __zax_epilogue_1 = $0144
-; label main = $0148
-; label __zax_epilogue_2 = $0169
-; var pair_buf = $0178
+; label read_pair_word = $0133
+; label __zax_epilogue_1 = $013E
+; label main = $0142
+; label __zax_epilogue_2 = $0163
+; var pair_buf = $016C
