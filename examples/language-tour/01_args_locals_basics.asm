@@ -72,7 +72,7 @@ push IX                        ; 015D: DD E5
 ld IX, $0000                   ; 015F: DD 21 00 00
 add IX, SP                     ; 0163: DD 39
 push HL                        ; 0165: E5
-push BC                        ; 0166: C5
+push AF                        ; 0166: F5
 ld HL, $0000                   ; 0167: 21 00 00
 ex (SP), HL                    ; 016A: E3
 push DE                        ; 016B: D5
