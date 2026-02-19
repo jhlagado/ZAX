@@ -58,7 +58,9 @@ describe('PR9 sections + align', () => {
     expect(d8m).toBeDefined();
 
     // Code starts at 16, so the BIN range begins at 16; bytes are prologue+epilogue around nop.
-    expect(bin!.bytes).toEqual(Uint8Array.of(0xf5, 0xc5, 0xd5, 0xe5, 0x00, 0xe1, 0xd1, 0xc1, 0xf1, 0xc9));
+    expect(bin!.bytes).toEqual(
+      Uint8Array.of(0xf5, 0xc5, 0xd5, 0xe5, 0x00, 0xe1, 0xd1, 0xc1, 0xf1, 0xc9),
+    );
 
     const segments = d8m!.json['segments'] as unknown as Array<{ start: number; end: number }>;
     expect(segments).toEqual([{ start: 16, end: 26 }]);

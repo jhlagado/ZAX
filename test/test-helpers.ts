@@ -23,10 +23,7 @@ export function stripStdEnvelope(bytes: Uint8Array): Uint8Array {
   const expectedPops = popSeq.slice(popSeq.length - prefixLen);
   const hasRet = bytes[bytes.length - 1] === 0xc9;
   const popStart = bytes.length - (hasRet ? 1 : 0) - expectedPops.length;
-  const ends =
-    popStart >= 0 &&
-    expectedPops.every((b, i) => bytes[popStart + i] === b) &&
-    hasRet;
+  const ends = popStart >= 0 && expectedPops.every((b, i) => bytes[popStart + i] === b) && hasRet;
 
   if (prefixLen > 0 && ends && bytes.length >= prefixLen + expectedPops.length + (hasRet ? 1 : 0)) {
     return bytes.slice(prefixLen, popStart);

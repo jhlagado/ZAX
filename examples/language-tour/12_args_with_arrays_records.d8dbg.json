@@ -162,9 +162,7 @@
       "end": 404
     }
   ],
-  "fileList": [
-    "12_args_with_arrays_records.zax"
-  ],
+  "fileList": ["12_args_with_arrays_records.zax"],
   "symbols": [
     {
       "name": "read_byte_at",
