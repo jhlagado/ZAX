@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$0154 (end exclusive)
+; range: $0100..$014E (end exclusive)
 
 ; func add_to_sample begin
 add_to_sample:
@@ -29,7 +29,7 @@ ld IX, $0000                   ; 0121: DD 21 00 00
 add IX, SP                     ; 0125: DD 39
 push HL                        ; 0127: E5
 ld HL, $0000                   ; 0128: 21 00 00
-push HL                        ; 012B: E5
+ex (SP), HL                    ; 012B: E3
 push DE                        ; 012C: D5
 push BC                        ; 012D: C5
 push AF                        ; 012E: F5
@@ -46,15 +46,13 @@ ld (IX - $0003), D             ; 0140: DD 72 FD
 ex DE, HL                      ; 0143: EB
 pop DE                         ; 0144: D1
 __zax_epilogue_1:
-pop DE                         ; 0145: D1
+pop AF                         ; 0145: F1
 pop BC                         ; 0146: C1
-pop AF                         ; 0147: F1
-ld e, (ix-$0002)               ; 0148: DD 5E FE
-ld d, (ix-$0001)               ; 014B: DD 56 FF
-ex de, hl                      ; 014E: EB
-ld SP, IX                      ; 014F: DD F9
-pop IX                         ; 0151: DD E1
-ret                            ; 0153: C9
+pop DE                         ; 0147: D1
+pop HL                         ; 0148: E1
+ld SP, IX                      ; 0149: DD F9
+pop IX                         ; 014B: DD E1
+ret                            ; 014D: C9
 ; func main end
 
 ; symbols:
@@ -62,5 +60,5 @@ ret                            ; 0153: C9
 ; label __zax_epilogue_0 = $0117
 ; label main = $011F
 ; label __zax_epilogue_1 = $0145
-; var sample_byte = $0154
-; var sample_word = $0155
+; var sample_byte = $014E
+; var sample_word = $014F

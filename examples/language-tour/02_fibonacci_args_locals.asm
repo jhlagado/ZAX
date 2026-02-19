@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$01D5 (end exclusive)
+; range: $0100..$01CF (end exclusive)
 
 ; func fib begin
 fib:
@@ -123,15 +123,13 @@ call fib                       ; 01C1: CD 00 00
 inc SP                         ; 01C4: 33
 inc SP                         ; 01C5: 33
 __zax_epilogue_5:
-pop DE                         ; 01C6: D1
+pop AF                         ; 01C6: F1
 pop BC                         ; 01C7: C1
-pop AF                         ; 01C8: F1
-ld e, (ix-$0002)               ; 01C9: DD 5E FE
-ld d, (ix-$0001)               ; 01CC: DD 56 FF
-ex de, hl                      ; 01CF: EB
-ld SP, IX                      ; 01D0: DD F9
-pop IX                         ; 01D2: DD E1
-ret                            ; 01D4: C9
+pop DE                         ; 01C8: D1
+pop HL                         ; 01C9: E1
+ld SP, IX                      ; 01CA: DD F9
+pop IX                         ; 01CC: DD E1
+ret                            ; 01CE: C9
 ; func main end
 
 ; symbols:

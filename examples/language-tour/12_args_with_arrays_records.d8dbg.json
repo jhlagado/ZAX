@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 381,
+          "end": 375,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -79,14 +79,14 @@
         },
         {
           "start": 366,
-          "end": 381,
+          "end": 375,
           "lstLine": 13,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 382,
-          "end": 406,
+          "start": 376,
+          "end": 400,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -138,14 +138,14 @@
         {
           "name": "sample_bytes",
           "kind": "data",
-          "address": 382,
+          "address": 376,
           "line": 2,
           "scope": "global"
         },
         {
           "name": "sample_words",
           "kind": "data",
-          "address": 398,
+          "address": 392,
           "line": 3,
           "scope": "global"
         }
@@ -155,11 +155,11 @@
   "segments": [
     {
       "start": 256,
-      "end": 381
+      "end": 375
     },
     {
-      "start": 382,
-      "end": 406
+      "start": 376,
+      "end": 400
     }
   ],
   "fileList": [
@@ -217,7 +217,7 @@
     {
       "name": "sample_bytes",
       "kind": "data",
-      "address": 382,
+      "address": 376,
       "file": "12_args_with_arrays_records.zax",
       "line": 2,
       "scope": "global"
@@ -225,7 +225,7 @@
     {
       "name": "sample_words",
       "kind": "data",
-      "address": 398,
+      "address": 392,
       "file": "12_args_with_arrays_records.zax",
       "line": 3,
       "scope": "global"

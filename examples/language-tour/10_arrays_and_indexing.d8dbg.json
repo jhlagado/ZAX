@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 380,
+          "end": 374,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -93,7 +93,7 @@
         },
         {
           "start": 341,
-          "end": 356,
+          "end": 350,
           "lstLine": 13,
           "kind": "code",
           "confidence": "high"
@@ -145,14 +145,14 @@
         {
           "name": "bytes10",
           "kind": "data",
-          "address": 356,
+          "address": 350,
           "line": 2,
           "scope": "global"
         },
         {
           "name": "words4",
           "kind": "data",
-          "address": 372,
+          "address": 366,
           "line": 3,
           "scope": "global"
         }
@@ -162,7 +162,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 380
+      "end": 374
     }
   ],
   "fileList": [
@@ -220,7 +220,7 @@
     {
       "name": "bytes10",
       "kind": "data",
-      "address": 356,
+      "address": 350,
       "file": "10_arrays_and_indexing.zax",
       "line": 2,
       "scope": "global"
@@ -228,7 +228,7 @@
     {
       "name": "words4",
       "kind": "data",
-      "address": 372,
+      "address": 366,
       "file": "10_arrays_and_indexing.zax",
       "line": 3,
       "scope": "global"

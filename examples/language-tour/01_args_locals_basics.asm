@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$019E (end exclusive)
+; range: $0100..$0198 (end exclusive)
 
 ; func add_words begin
 add_words:
@@ -73,7 +73,7 @@ ld IX, $0000                   ; 015F: DD 21 00 00
 add IX, SP                     ; 0163: DD 39
 push HL                        ; 0165: E5
 ld HL, $0000                   ; 0166: 21 00 00
-push HL                        ; 0169: E5
+ex (SP), HL                    ; 0169: E3
 push DE                        ; 016A: D5
 push BC                        ; 016B: C5
 push AF                        ; 016C: F5
@@ -98,15 +98,13 @@ call bump_byte                 ; 018A: CD 00 00
 inc SP                         ; 018D: 33
 inc SP                         ; 018E: 33
 __zax_epilogue_2:
-pop DE                         ; 018F: D1
+pop AF                         ; 018F: F1
 pop BC                         ; 0190: C1
-pop AF                         ; 0191: F1
-ld e, (ix-$0002)               ; 0192: DD 5E FE
-ld d, (ix-$0001)               ; 0195: DD 56 FF
-ex de, hl                      ; 0198: EB
-ld SP, IX                      ; 0199: DD F9
-pop IX                         ; 019B: DD E1
-ret                            ; 019D: C9
+pop DE                         ; 0191: D1
+pop HL                         ; 0192: E1
+ld SP, IX                      ; 0193: DD F9
+pop IX                         ; 0195: DD E1
+ret                            ; 0197: C9
 ; func main end
 
 ; symbols:

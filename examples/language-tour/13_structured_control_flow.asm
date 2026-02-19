@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$0187 (end exclusive)
+; range: $0100..$017B (end exclusive)
 
 ; func run_once begin
 run_once:
@@ -58,36 +58,32 @@ jp __zax_select_else_10        ; 0154: C3 00 00
 __zax_select_end_7:
 ld (mode_value), A             ; 0157: 32 00 00
 __zax_epilogue_0:
-pop DE                         ; 015A: D1
+pop AF                         ; 015A: F1
 pop BC                         ; 015B: C1
-pop AF                         ; 015C: F1
-ld e, (ix-$0002)               ; 015D: DD 5E FE
-ld d, (ix-$0001)               ; 0160: DD 56 FF
-ex de, hl                      ; 0163: EB
-ld SP, IX                      ; 0164: DD F9
-pop IX                         ; 0166: DD E1
-ret                            ; 0168: C9
+pop DE                         ; 015C: D1
+pop HL                         ; 015D: E1
+ld SP, IX                      ; 015E: DD F9
+pop IX                         ; 0160: DD E1
+ret                            ; 0162: C9
 ; func main begin
 ; func run_once end
 main:
-push IX                        ; 0169: DD E5
-ld IX, $0000                   ; 016B: DD 21 00 00
-add IX, SP                     ; 016F: DD 39
-push HL                        ; 0171: E5
-push DE                        ; 0172: D5
-push BC                        ; 0173: C5
-push AF                        ; 0174: F5
-call run_once                  ; 0175: CD 00 00
+push IX                        ; 0163: DD E5
+ld IX, $0000                   ; 0165: DD 21 00 00
+add IX, SP                     ; 0169: DD 39
+push HL                        ; 016B: E5
+push DE                        ; 016C: D5
+push BC                        ; 016D: C5
+push AF                        ; 016E: F5
+call run_once                  ; 016F: CD 00 00
 __zax_epilogue_13:
-pop DE                         ; 0178: D1
-pop BC                         ; 0179: C1
-pop AF                         ; 017A: F1
-ld e, (ix-$0002)               ; 017B: DD 5E FE
-ld d, (ix-$0001)               ; 017E: DD 56 FF
-ex de, hl                      ; 0181: EB
-ld SP, IX                      ; 0182: DD F9
-pop IX                         ; 0184: DD E1
-ret                            ; 0186: C9
+pop AF                         ; 0172: F1
+pop BC                         ; 0173: C1
+pop DE                         ; 0174: D1
+pop HL                         ; 0175: E1
+ld SP, IX                      ; 0176: DD F9
+pop IX                         ; 0178: DD E1
+ret                            ; 017A: C9
 ; func main end
 
 ; symbols:
@@ -105,6 +101,6 @@ ret                            ; 0186: C9
 ; label __zax_select_next_12 = $0153
 ; label __zax_select_end_7 = $0157
 ; label __zax_epilogue_0 = $015A
-; label main = $0169
-; label __zax_epilogue_13 = $0178
-; var mode_value = $0188
+; label main = $0163
+; label __zax_epilogue_13 = $0172
+; var mode_value = $017C
