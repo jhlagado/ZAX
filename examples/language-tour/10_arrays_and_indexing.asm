@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$0184 (end exclusive)
+; range: $0100..$0186 (end exclusive)
 
 ; func first_byte begin
 first_byte:
@@ -65,29 +65,31 @@ push HL                        ; 0148: E5
 push AF                        ; 0149: F5
 push BC                        ; 014A: C5
 push DE                        ; 014B: D5
-call first_byte                ; 014C: CD 00 00
-push DE                        ; 014F: D5
-push IX                        ; 0150: DD E5
-pop HL                         ; 0152: E1
-ld DE, $FFFE                   ; 0153: 11 FE FF
-add HL, DE                     ; 0156: 19
-pop DE                         ; 0157: D1
-push HL                        ; 0158: E5
-pop HL                         ; 0159: E1
-ld a, (hl)                     ; 015A: 7E
-inc HL                         ; 015B: 23
-ld h, (hl) ; ld l, a           ; 015C: 66 6F
-push HL                        ; 015E: E5
-call read_word_at              ; 015F: CD 00 00
-inc SP                         ; 0162: 33
+push HL                        ; 014C: E5
+call first_byte                ; 014D: CD 00 00
+push DE                        ; 0150: D5
+push IX                        ; 0151: DD E5
+pop HL                         ; 0153: E1
+ld DE, $FFF6                   ; 0154: 11 F6 FF
+add HL, DE                     ; 0157: 19
+pop DE                         ; 0158: D1
+push HL                        ; 0159: E5
+pop HL                         ; 015A: E1
+ld a, (hl)                     ; 015B: 7E
+inc HL                         ; 015C: 23
+ld h, (hl) ; ld l, a           ; 015D: 66 6F
+push HL                        ; 015F: E5
+call read_word_at              ; 0160: CD 00 00
 inc SP                         ; 0163: 33
+inc SP                         ; 0164: 33
 __zax_epilogue_2:
-pop DE                         ; 0164: D1
-pop BC                         ; 0165: C1
-pop AF                         ; 0166: F1
-ld SP, IX                      ; 0167: DD F9
-pop IX                         ; 0169: DD E1
-ret                            ; 016B: C9
+pop HL                         ; 0165: E1
+pop DE                         ; 0166: D1
+pop BC                         ; 0167: C1
+pop AF                         ; 0168: F1
+ld SP, IX                      ; 0169: DD F9
+pop IX                         ; 016B: DD E1
+ret                            ; 016D: C9
 ; func main end
 
 ; symbols:
@@ -96,6 +98,6 @@ ret                            ; 016B: C9
 ; label read_word_at = $010A
 ; label __zax_epilogue_1 = $0135
 ; label main = $013D
-; label __zax_epilogue_2 = $0164
-; data bytes10 = $016C
-; data words4 = $017C
+; label __zax_epilogue_2 = $0165
+; data bytes10 = $016E
+; data words4 = $017E

@@ -1776,7 +1776,7 @@ export function parseModuleFile(
     }
 
     const afterClose = header.slice(closeParen + 1).trimStart();
-    const m = /^:\s*(.+?)\s+at\s+(.+)$/.exec(afterClose);
+    const m = /^:\s*(.+?)(\s+flags)?\s+at\s+(.+)$/.exec(afterClose);
     if (!m) {
       diagInvalidHeaderLine(
         'extern func declaration',
@@ -1791,7 +1791,9 @@ export function parseModuleFile(
     const params = parseParamsFromText(modulePath, paramsText, stmtSpan, diagnostics);
     if (!params) return undefined;
 
-    const retTypeText = m[1]!.trim();
+    const rawRetType = m[1]!.trim();
+    const returnFlags = !!m[2];
+    const retTypeText = rawRetType;
     const returnType = parseTypeExprFromText(retTypeText, stmtSpan, {
       allowInferredArrayLength: false,
     });
@@ -1816,7 +1818,7 @@ export function parseModuleFile(
       return undefined;
     }
 
-    const atText = m[2]!.trim();
+    const atText = m[3]!.trim();
     const at = parseImmExprFromText(modulePath, atText, stmtSpan, diagnostics);
     if (!at) return undefined;
 
@@ -1826,6 +1828,7 @@ export function parseModuleFile(
       name,
       params,
       returnType,
+      ...(returnFlags ? { returnFlags: true } : {}),
       at,
     };
   }
@@ -2431,7 +2434,10 @@ export function parseModuleFile(
         continue;
       }
 
-      const retTypeText = retMatch[1]!.trim();
+      const rawRetType = retMatch[1]!.trim();
+      const flagsMatch = /^(.*?)(\s+flags)?$/i.exec(rawRetType);
+      const retTypeText = flagsMatch?.[1]?.trim() ?? rawRetType;
+      const returnFlags = !!flagsMatch?.[2];
       const returnType = parseTypeExprFromText(retTypeText, headerSpan, {
         allowInferredArrayLength: false,
       });
@@ -2637,6 +2643,7 @@ export function parseModuleFile(
             exported,
             params,
             returnType,
+            ...(returnFlags ? { returnFlags: true } : {}),
             ...(locals ? { locals } : {}),
             asm,
           };

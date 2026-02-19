@@ -20,7 +20,9 @@ describe('PR4 enum parsing', () => {
     expect(bin).toBeDefined();
     expect(d8m).toBeDefined();
     /* prologue preserve + ld a, 1 (Mode.Write index 1) + epilogue */
-    expect(bin!.bytes).toEqual(Uint8Array.of(0xf5, 0xc5, 0xd5, 0x3e, 0x01, 0xd1, 0xc1, 0xf1, 0xc9));
+    expect(bin!.bytes).toEqual(
+      Uint8Array.of(0xf5, 0xc5, 0xd5, 0xe5, 0x3e, 0x01, 0xe1, 0xd1, 0xc1, 0xf1, 0xc9),
+    );
 
     const symbols = d8m!.json['symbols'] as unknown as Array<{
       name: string;

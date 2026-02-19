@@ -19,7 +19,23 @@ describe('PR48: lower ld (ea), imm16 for word/addr destinations', () => {
     expect(bin).toBeDefined();
     expect(bin!.bytes).toEqual(
       // prologue preserve + ld hl,$1234; ld ($1000),hl; epilogue
-      Uint8Array.of(0xf5, 0xc5, 0xd5, 0x21, 0x34, 0x12, 0x22, 0x00, 0x10, 0xd1, 0xc1, 0xf1, 0xc9),
+      Uint8Array.of(
+        0xf5,
+        0xc5,
+        0xd5,
+        0xe5,
+        0x21,
+        0x34,
+        0x12,
+        0x22,
+        0x00,
+        0x10,
+        0xe1,
+        0xd1,
+        0xc1,
+        0xf1,
+        0xc9,
+      ),
     );
   });
 
@@ -44,12 +60,13 @@ describe('PR48: lower ld (ea), imm16 for word/addr destinations', () => {
         0xf5,
         0xc5,
         0xd5,
+        0xe5,
         0xdd,
         0xe5,
         0xe1,
         0xd5,
         0x11,
-        0xfe,
+        0xf6,
         0xff, // allocate 2 bytes
         0x19, // add hl,de
         0xd1,
@@ -58,6 +75,7 @@ describe('PR48: lower ld (ea), imm16 for word/addr destinations', () => {
         0x23,
         0x36,
         0x12,
+        0xe1,
         0xd1,
         0xc1,
         0xf1,
