@@ -1,0 +1,15 @@
+section code at $0100
+
+func bad_retn(a: word): void
+  var
+    b: word = 0
+  end
+  retn
+end
+
+func bad_reti(a: word): void
+  var
+    b: word = 0
+  end
+  reti
+end

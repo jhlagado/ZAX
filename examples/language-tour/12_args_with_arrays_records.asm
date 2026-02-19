@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$0194 (end exclusive)
+; range: $0100..$0184 (end exclusive)
 
 ; func read_byte_at begin
 read_byte_at:
@@ -9,106 +9,90 @@ add IX, SP                     ; 0106: DD 39
 push AF                        ; 0108: F5
 push BC                        ; 0109: C5
 push DE                        ; 010A: D5
-push DE                        ; 010B: D5
-push IX                        ; 010C: DD E5
-pop HL                         ; 010E: E1
-ld DE, $0004                   ; 010F: 11 04 00
-add HL, DE                     ; 0112: 19
-pop DE                         ; 0113: D1
+ld e, (ix+disp)                ; 010B: DD 5E 04
+ld d, (ix+disp+1)              ; 010E: DD 56 05
+ex de, hl                      ; 0111: EB
+push HL                        ; 0112: E5
+pop HL                         ; 0113: E1
 push HL                        ; 0114: E5
-pop HL                         ; 0115: E1
-ld a, (hl)                     ; 0116: 7E
-inc HL                         ; 0117: 23
-ld h, (hl) ; ld l, a           ; 0118: 66 6F
+ld HL, sample_bytes            ; 0115: 21 00 00
+pop DE                         ; 0118: D1
+add HL, DE                     ; 0119: 19
 push HL                        ; 011A: E5
 pop HL                         ; 011B: E1
-push HL                        ; 011C: E5
-ld HL, sample_bytes            ; 011D: 21 00 00
-pop DE                         ; 0120: D1
-add HL, DE                     ; 0121: 19
-push HL                        ; 0122: E5
-pop HL                         ; 0123: E1
-ld A, (hl)                     ; 0124: 7E
+ld A, (hl)                     ; 011C: 7E
 __zax_epilogue_0:
-pop DE                         ; 0125: D1
-pop BC                         ; 0126: C1
-pop AF                         ; 0127: F1
-ld SP, IX                      ; 0128: DD F9
-pop IX                         ; 012A: DD E1
-ret                            ; 012C: C9
+pop DE                         ; 011D: D1
+pop BC                         ; 011E: C1
+pop AF                         ; 011F: F1
+ld SP, IX                      ; 0120: DD F9
+pop IX                         ; 0122: DD E1
+ret                            ; 0124: C9
 ; func read_byte_at end
 ; func read_word_at begin
 read_word_at:
-push IX                        ; 012D: DD E5
-ld IX, $0000                   ; 012F: DD 21 00 00
-add IX, SP                     ; 0133: DD 39
-push AF                        ; 0135: F5
-push BC                        ; 0136: C5
-push DE                        ; 0137: D5
-push DE                        ; 0138: D5
-push IX                        ; 0139: DD E5
-pop HL                         ; 013B: E1
-ld DE, $0004                   ; 013C: 11 04 00
+push IX                        ; 0125: DD E5
+ld IX, $0000                   ; 0127: DD 21 00 00
+add IX, SP                     ; 012B: DD 39
+push AF                        ; 012D: F5
+push BC                        ; 012E: C5
+push DE                        ; 012F: D5
+ld e, (ix+disp)                ; 0130: DD 5E 04
+ld d, (ix+disp+1)              ; 0133: DD 56 05
+ex de, hl                      ; 0136: EB
+push HL                        ; 0137: E5
+pop HL                         ; 0138: E1
+add HL, HL                     ; 0139: 29
+push HL                        ; 013A: E5
+ld HL, sample_words            ; 013B: 21 00 00
+pop DE                         ; 013E: D1
 add HL, DE                     ; 013F: 19
-pop DE                         ; 0140: D1
-push HL                        ; 0141: E5
-pop HL                         ; 0142: E1
-ld a, (hl)                     ; 0143: 7E
+push HL                        ; 0140: E5
+pop HL                         ; 0141: E1
+push AF                        ; 0142: F5
+ld A, (HL)                     ; 0143: 7E
 inc HL                         ; 0144: 23
-ld h, (hl) ; ld l, a           ; 0145: 66 6F
-push HL                        ; 0147: E5
-pop HL                         ; 0148: E1
-add HL, HL                     ; 0149: 29
-push HL                        ; 014A: E5
-ld HL, sample_words            ; 014B: 21 00 00
-pop DE                         ; 014E: D1
-add HL, DE                     ; 014F: 19
-push HL                        ; 0150: E5
-pop HL                         ; 0151: E1
-push AF                        ; 0152: F5
-ld A, (HL)                     ; 0153: 7E
-inc HL                         ; 0154: 23
-ld H, (HL)                     ; 0155: 66
-ld L, A                        ; 0156: 6F
-pop AF                         ; 0157: F1
+ld H, (HL)                     ; 0145: 66
+ld L, A                        ; 0146: 6F
+pop AF                         ; 0147: F1
 __zax_epilogue_1:
-pop DE                         ; 0158: D1
-pop BC                         ; 0159: C1
-pop AF                         ; 015A: F1
-ld SP, IX                      ; 015B: DD F9
-pop IX                         ; 015D: DD E1
-ret                            ; 015F: C9
+pop DE                         ; 0148: D1
+pop BC                         ; 0149: C1
+pop AF                         ; 014A: F1
+ld SP, IX                      ; 014B: DD F9
+pop IX                         ; 014D: DD E1
+ret                            ; 014F: C9
 ; func main begin
 ; func read_word_at end
 main:
-push AF                        ; 0160: F5
-push BC                        ; 0161: C5
-push DE                        ; 0162: D5
-push HL                        ; 0163: E5
-ld HL, $0003                   ; 0164: 21 03 00
-push HL                        ; 0167: E5
-call read_byte_at              ; 0168: CD 00 00
-inc SP                         ; 016B: 33
-inc SP                         ; 016C: 33
-ld HL, $0001                   ; 016D: 21 01 00
-push HL                        ; 0170: E5
-call read_word_at              ; 0171: CD 00 00
-inc SP                         ; 0174: 33
-inc SP                         ; 0175: 33
+push AF                        ; 0150: F5
+push BC                        ; 0151: C5
+push DE                        ; 0152: D5
+push HL                        ; 0153: E5
+ld HL, $0003                   ; 0154: 21 03 00
+push HL                        ; 0157: E5
+call read_byte_at              ; 0158: CD 00 00
+inc SP                         ; 015B: 33
+inc SP                         ; 015C: 33
+ld HL, $0001                   ; 015D: 21 01 00
+push HL                        ; 0160: E5
+call read_word_at              ; 0161: CD 00 00
+inc SP                         ; 0164: 33
+inc SP                         ; 0165: 33
 __zax_epilogue_2:
-pop HL                         ; 0176: E1
-pop DE                         ; 0177: D1
-pop BC                         ; 0178: C1
-pop AF                         ; 0179: F1
-ret                            ; 017A: C9
+pop HL                         ; 0166: E1
+pop DE                         ; 0167: D1
+pop BC                         ; 0168: C1
+pop AF                         ; 0169: F1
+ret                            ; 016A: C9
 ; func main end
 
 ; symbols:
 ; label read_byte_at = $0100
-; label __zax_epilogue_0 = $0125
-; label read_word_at = $012D
-; label __zax_epilogue_1 = $0158
-; label main = $0160
-; label __zax_epilogue_2 = $0176
-; data sample_bytes = $017C
-; data sample_words = $018C
+; label __zax_epilogue_0 = $011D
+; label read_word_at = $0125
+; label __zax_epilogue_1 = $0148
+; label main = $0150
+; label __zax_epilogue_2 = $0166
+; data sample_bytes = $016C
+; data sample_words = $017C

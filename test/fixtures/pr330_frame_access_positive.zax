@@ -1,0 +1,7 @@
+func store_only(a: word): void
+  var
+    dst: word = 0
+  end
+  ld dst, a
+  ret
+end

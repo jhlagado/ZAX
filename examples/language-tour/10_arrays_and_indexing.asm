@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$0186 (end exclusive)
+; range: $0100..$0176 (end exclusive)
 
 ; func first_byte begin
 first_byte:
@@ -21,83 +21,67 @@ add IX, SP                     ; 0110: DD 39
 push AF                        ; 0112: F5
 push BC                        ; 0113: C5
 push DE                        ; 0114: D5
-push DE                        ; 0115: D5
-push IX                        ; 0116: DD E5
-pop HL                         ; 0118: E1
-ld DE, $0004                   ; 0119: 11 04 00
-add HL, DE                     ; 011C: 19
-pop DE                         ; 011D: D1
-push HL                        ; 011E: E5
-pop HL                         ; 011F: E1
-ld a, (hl)                     ; 0120: 7E
-inc HL                         ; 0121: 23
-ld h, (hl) ; ld l, a           ; 0122: 66 6F
-push HL                        ; 0124: E5
-pop HL                         ; 0125: E1
-add HL, HL                     ; 0126: 29
-push HL                        ; 0127: E5
-ld HL, words4                  ; 0128: 21 00 00
-pop DE                         ; 012B: D1
-add HL, DE                     ; 012C: 19
-push HL                        ; 012D: E5
-pop HL                         ; 012E: E1
-push AF                        ; 012F: F5
-ld A, (HL)                     ; 0130: 7E
-inc HL                         ; 0131: 23
-ld H, (HL)                     ; 0132: 66
-ld L, A                        ; 0133: 6F
-pop AF                         ; 0134: F1
+ld e, (ix+disp)                ; 0115: DD 5E 04
+ld d, (ix+disp+1)              ; 0118: DD 56 05
+ex de, hl                      ; 011B: EB
+push HL                        ; 011C: E5
+pop HL                         ; 011D: E1
+add HL, HL                     ; 011E: 29
+push HL                        ; 011F: E5
+ld HL, words4                  ; 0120: 21 00 00
+pop DE                         ; 0123: D1
+add HL, DE                     ; 0124: 19
+push HL                        ; 0125: E5
+pop HL                         ; 0126: E1
+push AF                        ; 0127: F5
+ld A, (HL)                     ; 0128: 7E
+inc HL                         ; 0129: 23
+ld H, (HL)                     ; 012A: 66
+ld L, A                        ; 012B: 6F
+pop AF                         ; 012C: F1
 __zax_epilogue_1:
-pop DE                         ; 0135: D1
-pop BC                         ; 0136: C1
-pop AF                         ; 0137: F1
-ld SP, IX                      ; 0138: DD F9
-pop IX                         ; 013A: DD E1
-ret                            ; 013C: C9
+pop DE                         ; 012D: D1
+pop BC                         ; 012E: C1
+pop AF                         ; 012F: F1
+ld SP, IX                      ; 0130: DD F9
+pop IX                         ; 0132: DD E1
+ret                            ; 0134: C9
 ; func main begin
 ; func read_word_at end
 main:
-push IX                        ; 013D: DD E5
-ld IX, $0000                   ; 013F: DD 21 00 00
-add IX, SP                     ; 0143: DD 39
-ld HL, $0002                   ; 0145: 21 02 00
-push HL                        ; 0148: E5
-push AF                        ; 0149: F5
-push BC                        ; 014A: C5
-push DE                        ; 014B: D5
-push HL                        ; 014C: E5
-call first_byte                ; 014D: CD 00 00
-push DE                        ; 0150: D5
-push IX                        ; 0151: DD E5
-pop HL                         ; 0153: E1
-ld DE, $FFF6                   ; 0154: 11 F6 FF
-add HL, DE                     ; 0157: 19
-pop DE                         ; 0158: D1
-push HL                        ; 0159: E5
-pop HL                         ; 015A: E1
-ld a, (hl)                     ; 015B: 7E
-inc HL                         ; 015C: 23
-ld h, (hl) ; ld l, a           ; 015D: 66 6F
-push HL                        ; 015F: E5
-call read_word_at              ; 0160: CD 00 00
-inc SP                         ; 0163: 33
-inc SP                         ; 0164: 33
+push IX                        ; 0135: DD E5
+ld IX, $0000                   ; 0137: DD 21 00 00
+add IX, SP                     ; 013B: DD 39
+ld HL, $0002                   ; 013D: 21 02 00
+push HL                        ; 0140: E5
+push AF                        ; 0141: F5
+push BC                        ; 0142: C5
+push DE                        ; 0143: D5
+push HL                        ; 0144: E5
+call first_byte                ; 0145: CD 00 00
+ld e, (ix+disp)                ; 0148: DD 5E F6
+ld d, (ix+disp+1)              ; 014B: DD 56 F7
+ex de, hl                      ; 014E: EB
+push HL                        ; 014F: E5
+call read_word_at              ; 0150: CD 00 00
+inc SP                         ; 0153: 33
+inc SP                         ; 0154: 33
 __zax_epilogue_2:
-pop HL                         ; 0165: E1
-pop DE                         ; 0166: D1
-pop BC                         ; 0167: C1
-pop AF                         ; 0168: F1
-ld SP, IX                      ; 0169: DD F9
-pop IX                         ; 016B: DD E1
-ret                            ; 016D: C9
+pop HL                         ; 0155: E1
+pop DE                         ; 0156: D1
+pop BC                         ; 0157: C1
+pop AF                         ; 0158: F1
+ld SP, IX                      ; 0159: DD F9
+pop IX                         ; 015B: DD E1
+ret                            ; 015D: C9
 ; func main end
 
 ; symbols:
 ; label first_byte = $0100
 ; label __zax_epilogue_0 = $0106
 ; label read_word_at = $010A
-; label __zax_epilogue_1 = $0135
-; label main = $013D
-; label __zax_epilogue_2 = $0165
-; data bytes10 = $016E
-; data words4 = $017E
+; label __zax_epilogue_1 = $012D
+; label main = $0135
+; label __zax_epilogue_2 = $0155
+; data bytes10 = $015E
+; data words4 = $016E

@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 390,
+          "end": 374,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -44,20 +44,34 @@
         },
         {
           "start": 277,
-          "end": 309,
+          "end": 301,
           "lstLine": 10,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 301,
+          "end": 309,
+          "lstLine": 9,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 309,
           "end": 317,
-          "lstLine": 9,
+          "lstLine": 13,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 317,
+          "end": 321,
+          "lstLine": 15,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 321,
           "end": 325,
           "lstLine": 13,
           "kind": "code",
@@ -65,35 +79,21 @@
         },
         {
           "start": 325,
-          "end": 329,
-          "lstLine": 15,
-          "kind": "code",
-          "confidence": "high"
-        },
-        {
-          "start": 329,
-          "end": 333,
-          "lstLine": 13,
-          "kind": "code",
-          "confidence": "high"
-        },
-        {
-          "start": 333,
-          "end": 336,
+          "end": 328,
           "lstLine": 18,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 336,
-          "end": 357,
+          "start": 328,
+          "end": 341,
           "lstLine": 19,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 357,
-          "end": 366,
+          "start": 341,
+          "end": 350,
           "lstLine": 13,
           "kind": "code",
           "confidence": "high"
@@ -124,35 +124,35 @@
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
-          "address": 309,
+          "address": 301,
           "line": 9,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
-          "address": 317,
+          "address": 309,
           "line": 13,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_2",
           "kind": "label",
-          "address": 357,
+          "address": 341,
           "line": 13,
           "scope": "local"
         },
         {
           "name": "bytes10",
           "kind": "data",
-          "address": 366,
+          "address": 350,
           "line": 2,
           "scope": "global"
         },
         {
           "name": "words4",
           "kind": "data",
-          "address": 382,
+          "address": 366,
           "line": 3,
           "scope": "global"
         }
@@ -162,10 +162,12 @@
   "segments": [
     {
       "start": 256,
-      "end": 390
+      "end": 374
     }
   ],
-  "fileList": ["10_arrays_and_indexing.zax"],
+  "fileList": [
+    "10_arrays_and_indexing.zax"
+  ],
   "symbols": [
     {
       "name": "first_byte",
@@ -194,7 +196,7 @@
     {
       "name": "__zax_epilogue_1",
       "kind": "label",
-      "address": 309,
+      "address": 301,
       "file": "10_arrays_and_indexing.zax",
       "line": 9,
       "scope": "local"
@@ -202,7 +204,7 @@
     {
       "name": "main",
       "kind": "label",
-      "address": 317,
+      "address": 309,
       "file": "10_arrays_and_indexing.zax",
       "line": 13,
       "scope": "global"
@@ -210,7 +212,7 @@
     {
       "name": "__zax_epilogue_2",
       "kind": "label",
-      "address": 357,
+      "address": 341,
       "file": "10_arrays_and_indexing.zax",
       "line": 13,
       "scope": "local"
@@ -218,7 +220,7 @@
     {
       "name": "bytes10",
       "kind": "data",
-      "address": 366,
+      "address": 350,
       "file": "10_arrays_and_indexing.zax",
       "line": 2,
       "scope": "global"
@@ -226,7 +228,7 @@
     {
       "name": "words4",
       "kind": "data",
-      "address": 382,
+      "address": 366,
       "file": "10_arrays_and_indexing.zax",
       "line": 3,
       "scope": "global"
@@ -235,6 +237,6 @@
   "generator": {
     "tool": "zax",
     "entrySymbol": "main",
-    "entryAddress": 317
+    "entryAddress": 309
   }
 }
