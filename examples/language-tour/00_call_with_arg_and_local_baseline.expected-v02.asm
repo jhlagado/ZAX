@@ -34,12 +34,12 @@ main:
 push IX                        ; 012F: DD E5
 ld IX, $0000                   ; 0131: DD 21 00 00
 add IX, SP                     ; 0135: DD 39
-ld HL, $0000                   ; 0137: 21 00 00
-push HL                        ; 013A: E5
-push AF                        ; 013B: F5
-push BC                        ; 013C: C5
+push HL
+ld HL, $0000                   ; 0108: 21 00 00
+ex (SP),HL                     
 push DE                        ; 013D: D5
-push HL                        ; 013E: E5
+push BC                        ; 013C: C5
+push AF                        ; 013B: F5
 ld HL, $0005                   ; 013F: 21 05 00
 push HL                        ; 0142: E5
 call inc_one                   ; 0143: CD 00 00
@@ -52,10 +52,10 @@ ld (IX - $0009), D             ; 014D: DD 72 F7
 ex DE, HL                      ; 0150: EB
 pop DE                         ; 0151: D1
 __zax_epilogue_1:
-pop HL                         ; 0152: E1
-pop DE                         ; 0153: D1
-pop BC                         ; 0154: C1
 pop AF                         ; 0155: F1
+pop BC                         ; 0154: C1
+pop DE                         ; 0153: D1
+pop HL                         ; 0152: E1
 ld SP, IX                      ; 0156: DD F9
 pop IX                         ; 0158: DD E1
 ret                            ; 015A: C9

@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$01C3 (end exclusive)
+; range: $0100..$01D5 (end exclusive)
 
 ; func fib begin
 fib:
@@ -110,21 +110,28 @@ ret                            ; 01B0: C9
 ; func fib end
 ; func main begin
 main:
-push AF                        ; 01B1: F5
-push BC                        ; 01B2: C5
-push DE                        ; 01B3: D5
-push HL                        ; 01B4: E5
-ld HL, $000A                   ; 01B5: 21 0A 00
-push HL                        ; 01B8: E5
-call fib                       ; 01B9: CD 00 00
-inc SP                         ; 01BC: 33
-inc SP                         ; 01BD: 33
+push IX                        ; 01B1: DD E5
+ld IX, $0000                   ; 01B3: DD 21 00 00
+add IX, SP                     ; 01B7: DD 39
+push HL                        ; 01B9: E5
+push DE                        ; 01BA: D5
+push BC                        ; 01BB: C5
+push AF                        ; 01BC: F5
+ld HL, $000A                   ; 01BD: 21 0A 00
+push HL                        ; 01C0: E5
+call fib                       ; 01C1: CD 00 00
+inc SP                         ; 01C4: 33
+inc SP                         ; 01C5: 33
 __zax_epilogue_5:
-pop HL                         ; 01BE: E1
-pop DE                         ; 01BF: D1
-pop BC                         ; 01C0: C1
-pop AF                         ; 01C1: F1
-ret                            ; 01C2: C9
+pop DE                         ; 01C6: D1
+pop BC                         ; 01C7: C1
+pop AF                         ; 01C8: F1
+ld e, (ix-$0002)               ; 01C9: DD 5E FE
+ld d, (ix-$0001)               ; 01CC: DD 56 FF
+ex de, hl                      ; 01CF: EB
+ld SP, IX                      ; 01D0: DD F9
+pop IX                         ; 01D2: DD E1
+ret                            ; 01D4: C9
 ; func main end
 
 ; symbols:
@@ -134,4 +141,4 @@ ret                            ; 01C2: C9
 ; label __zax_while_end_2 = $019F
 ; label __zax_epilogue_0 = $01A9
 ; label main = $01B1
-; label __zax_epilogue_5 = $01BE
+; label __zax_epilogue_5 = $01C6
