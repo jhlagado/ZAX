@@ -3576,6 +3576,49 @@ export function emitProgram(
         spTrackingInvalidatedByMutation = false;
 
         const localDecls = item.locals?.decls ?? [];
+        const preserveSet = (() => {
+          let kind: 'byte' | 'word' | 'addr' | 'long' | 'verylong' | 'void' | undefined;
+          if (
+            item.returnType.kind === 'TypeName' &&
+            item.returnType.name.toLowerCase() === 'void'
+          ) {
+            kind = 'void';
+          } else {
+            kind = resolveScalarKind(item.returnType) as
+              | 'byte'
+              | 'word'
+              | 'addr'
+              | 'long'
+              | 'verylong'
+              | undefined;
+          }
+          const isFlags = item.returnFlags === true;
+          let base: string[] = [];
+          switch (kind) {
+            case 'void':
+              base = ['AF', 'BC', 'DE', 'HL'];
+              break;
+            case 'long':
+              base = ['AF', 'BC'];
+              break;
+            case 'verylong':
+              base = ['AF'];
+              break;
+            case 'byte':
+            case 'word':
+            case 'addr':
+            case undefined:
+            default:
+              base = ['AF', 'BC', 'DE'];
+              break;
+          }
+          if (isFlags) {
+            base = base.filter((r) => r !== 'AF');
+          }
+          return base;
+        })();
+        const preserveBytes = preserveSet.length * 2;
+        const shouldPreserveTypedBoundary = preserveSet.length > 0;
         let localSlotCount = 0;
         const localScalarInitializers: Array<{
           name: string;
@@ -3596,7 +3639,7 @@ export function emitProgram(
               );
               continue;
             }
-            const localIxDisp = -2 * (localSlotCount + 1);
+            const localIxDisp = -(preserveBytes + 2 * (localSlotCount + 1));
             stackSlotOffsets.set(declLower, localIxDisp);
             stackSlotTypes.set(declLower, decl.typeExpr);
             localSlotCount++;
@@ -3652,10 +3695,8 @@ export function emitProgram(
         while (taken.has(epilogueLabel)) {
           epilogueLabel = `__zax_epilogue_${generatedLabelCounter++}`;
         }
-        // Synthetic per-function cleanup label used for rewritten returns.
-        const shouldPreserveTypedBoundary = true;
         const emitSyntheticEpilogue =
-          shouldPreserveTypedBoundary || hasStackSlots || localScalarInitializers.length > 0;
+          preserveSet.length > 0 || hasStackSlots || localScalarInitializers.length > 0;
 
         // Function entry label.
         traceComment(codeOffset, `func ${item.name} begin`);
@@ -3754,9 +3795,9 @@ export function emitProgram(
             confidence: 'high',
           };
           try {
-            emitInstr('push', [{ kind: 'Reg', span: item.span, name: 'AF' }], item.span);
-            emitInstr('push', [{ kind: 'Reg', span: item.span, name: 'BC' }], item.span);
-            emitInstr('push', [{ kind: 'Reg', span: item.span, name: 'DE' }], item.span);
+            for (const reg of preserveSet) {
+              emitInstr('push', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
+            }
           } finally {
             currentCodeSegmentTag = prevTag;
           }
@@ -5660,9 +5701,13 @@ export function emitProgram(
             });
             traceLabel(codeOffset, epilogueLabel);
             if (shouldPreserveTypedBoundary) {
-              emitInstr('pop', [{ kind: 'Reg', span: item.span, name: 'DE' }], item.span);
-              emitInstr('pop', [{ kind: 'Reg', span: item.span, name: 'BC' }], item.span);
-              emitInstr('pop', [{ kind: 'Reg', span: item.span, name: 'AF' }], item.span);
+              for (let ri = preserveSet.length - 1; ri >= 0; ri--) {
+                emitInstr(
+                  'pop',
+                  [{ kind: 'Reg', span: item.span, name: preserveSet[ri]! }],
+                  item.span,
+                );
+              }
             }
             if (hasStackSlots) {
               emitInstr(

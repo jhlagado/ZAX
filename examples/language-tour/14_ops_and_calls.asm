@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$014C (end exclusive)
+; range: $0100..$014E (end exclusive)
 
 ; func add_to_sample begin
 add_to_sample:
@@ -32,31 +32,33 @@ push HL                        ; 012A: E5
 push AF                        ; 012B: F5
 push BC                        ; 012C: C5
 push DE                        ; 012D: D5
-ld A, (sample_byte)            ; 012E: 3A 00 00
-ld HL, $0017                   ; 0131: 21 17 00
-push HL                        ; 0134: E5
-call add_to_sample             ; 0135: CD 00 00
-inc SP                         ; 0138: 33
+push HL                        ; 012E: E5
+ld A, (sample_byte)            ; 012F: 3A 00 00
+ld HL, $0017                   ; 0132: 21 17 00
+push HL                        ; 0135: E5
+call add_to_sample             ; 0136: CD 00 00
 inc SP                         ; 0139: 33
-push DE                        ; 013A: D5
-ex DE, HL                      ; 013B: EB
-ld (IX - $0002), E             ; 013C: DD 73 FE
-ld (IX - $0001), D             ; 013F: DD 72 FF
-ex DE, HL                      ; 0142: EB
-pop DE                         ; 0143: D1
-__zax_epilogue_1:
+inc SP                         ; 013A: 33
+push DE                        ; 013B: D5
+ex DE, HL                      ; 013C: EB
+ld (IX - $000A), E             ; 013D: DD 73 F6
+ld (IX - $0009), D             ; 0140: DD 72 F7
+ex DE, HL                      ; 0143: EB
 pop DE                         ; 0144: D1
-pop BC                         ; 0145: C1
-pop AF                         ; 0146: F1
-ld SP, IX                      ; 0147: DD F9
-pop IX                         ; 0149: DD E1
-ret                            ; 014B: C9
+__zax_epilogue_1:
+pop HL                         ; 0145: E1
+pop DE                         ; 0146: D1
+pop BC                         ; 0147: C1
+pop AF                         ; 0148: F1
+ld SP, IX                      ; 0149: DD F9
+pop IX                         ; 014B: DD E1
+ret                            ; 014D: C9
 ; func main end
 
 ; symbols:
 ; label add_to_sample = $0100
 ; label __zax_epilogue_0 = $0117
 ; label main = $011F
-; label __zax_epilogue_1 = $0144
-; var sample_byte = $014C
-; var sample_word = $014D
+; label __zax_epilogue_1 = $0145
+; var sample_byte = $014E
+; var sample_word = $014F

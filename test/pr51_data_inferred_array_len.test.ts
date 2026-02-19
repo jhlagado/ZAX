@@ -17,9 +17,24 @@ describe('PR51: inferred-length arrays in data declarations', () => {
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
-    // code: prologue preserve AF/BC/DE; nop; epilogue; data: 1,2,3 (+1 padding byte).
+    // code: prologue preserve AF/BC/DE/HL; nop; epilogue; data: 1,2,3 (+1 padding byte).
     expect(bin!.bytes).toEqual(
-      Uint8Array.of(0xf5, 0xc5, 0xd5, 0x00, 0xd1, 0xc1, 0xf1, 0xc9, 0x01, 0x02, 0x03, 0x00),
+      Uint8Array.of(
+        0xf5,
+        0xc5,
+        0xd5,
+        0xe5,
+        0x00,
+        0xe1,
+        0xd1,
+        0xc1,
+        0xf1,
+        0xc9,
+        0x01,
+        0x02,
+        0x03,
+        0x00,
+      ),
     );
   });
 });

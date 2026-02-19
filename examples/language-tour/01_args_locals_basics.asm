@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$0195 (end exclusive)
+; range: $0100..$0197 (end exclusive)
 
 ; func add_words begin
 add_words:
@@ -47,14 +47,14 @@ ld H, $0000                    ; 013D: 26 00
 inc L                          ; 013F: 2C
 push DE                        ; 0140: D5
 ex DE, HL                      ; 0141: EB
-ld (IX - $0002), E             ; 0142: DD 73 FE
-ld (IX - $0001), D             ; 0145: DD 72 FF
+ld (IX - $0008), E             ; 0142: DD 73 F8
+ld (IX - $0007), D             ; 0145: DD 72 F9
 ex DE, HL                      ; 0148: EB
 pop DE                         ; 0149: D1
 push DE                        ; 014A: D5
 ex DE, HL                      ; 014B: EB
-ld E, (IX - $0002)             ; 014C: DD 5E FE
-ld D, (IX - $0001)             ; 014F: DD 56 FF
+ld E, (IX - $0008)             ; 014C: DD 5E F8
+ld D, (IX - $0007)             ; 014F: DD 56 F9
 ex DE, HL                      ; 0152: EB
 pop DE                         ; 0153: D1
 __zax_epilogue_1:
@@ -75,33 +75,35 @@ push HL                        ; 0167: E5
 push AF                        ; 0168: F5
 push BC                        ; 0169: C5
 push DE                        ; 016A: D5
-ld HL, $0014                   ; 016B: 21 14 00
-push HL                        ; 016E: E5
-ld HL, $000A                   ; 016F: 21 0A 00
-push HL                        ; 0172: E5
-call add_words                 ; 0173: CD 00 00
-inc SP                         ; 0176: 33
+push HL                        ; 016B: E5
+ld HL, $0014                   ; 016C: 21 14 00
+push HL                        ; 016F: E5
+ld HL, $000A                   ; 0170: 21 0A 00
+push HL                        ; 0173: E5
+call add_words                 ; 0174: CD 00 00
 inc SP                         ; 0177: 33
 inc SP                         ; 0178: 33
 inc SP                         ; 0179: 33
-push DE                        ; 017A: D5
-ex DE, HL                      ; 017B: EB
-ld (IX - $0002), E             ; 017C: DD 73 FE
-ld (IX - $0001), D             ; 017F: DD 72 FF
-ex DE, HL                      ; 0182: EB
-pop DE                         ; 0183: D1
-ld HL, $0007                   ; 0184: 21 07 00
-push HL                        ; 0187: E5
-call bump_byte                 ; 0188: CD 00 00
-inc SP                         ; 018B: 33
+inc SP                         ; 017A: 33
+push DE                        ; 017B: D5
+ex DE, HL                      ; 017C: EB
+ld (IX - $000A), E             ; 017D: DD 73 F6
+ld (IX - $0009), D             ; 0180: DD 72 F7
+ex DE, HL                      ; 0183: EB
+pop DE                         ; 0184: D1
+ld HL, $0007                   ; 0185: 21 07 00
+push HL                        ; 0188: E5
+call bump_byte                 ; 0189: CD 00 00
 inc SP                         ; 018C: 33
+inc SP                         ; 018D: 33
 __zax_epilogue_2:
-pop DE                         ; 018D: D1
-pop BC                         ; 018E: C1
-pop AF                         ; 018F: F1
-ld SP, IX                      ; 0190: DD F9
-pop IX                         ; 0192: DD E1
-ret                            ; 0194: C9
+pop HL                         ; 018E: E1
+pop DE                         ; 018F: D1
+pop BC                         ; 0190: C1
+pop AF                         ; 0191: F1
+ld SP, IX                      ; 0192: DD F9
+pop IX                         ; 0194: DD E1
+ret                            ; 0196: C9
 ; func main end
 
 ; symbols:
@@ -110,4 +112,4 @@ ret                            ; 0194: C9
 ; label bump_byte = $0124
 ; label __zax_epilogue_1 = $0154
 ; label main = $015C
-; label __zax_epilogue_2 = $018D
+; label __zax_epilogue_2 = $018E

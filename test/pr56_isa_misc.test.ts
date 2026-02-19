@@ -22,7 +22,8 @@ describe('PR56: ISA misc single-byte ops', () => {
       Uint8Array.of(
         0xf5,
         0xc5,
-        0xd5, // prologue
+        0xd5,
+        0xe5, // prologue
         0xf3,
         0xfb,
         0x37,
@@ -32,6 +33,7 @@ describe('PR56: ISA misc single-byte ops', () => {
         0xe3,
         0xd9,
         0x76, // body
+        0xe1,
         0xd1,
         0xc1,
         0xf1,
