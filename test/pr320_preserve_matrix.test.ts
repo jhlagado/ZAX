@@ -21,7 +21,7 @@ function prologuePushes(text: string, label: string): string[] {
 }
 
 describe('PR320 preserve matrix', () => {
-  it('matches preservation table for void/byte/word with and without flags (HL volatile except void)', async () => {
+  it('matches preservation table for void/byte/word/long with and without flags (HL volatile except void)', async () => {
     const res = await compile(
       fixture,
       { emitBin: false, emitHex: false, emitD8m: false, emitListing: false, emitAsm: true },
@@ -40,6 +40,9 @@ describe('PR320 preserve matrix', () => {
 
     expect(prologuePushes(text, 'ret_word')).toEqual(['AF', 'BC', 'DE']);
     expect(prologuePushes(text, 'ret_word_flags')).toEqual(['BC', 'DE']);
+
+    expect(prologuePushes(text, 'ret_long')).toEqual(['AF', 'BC']);
+    expect(prologuePushes(text, 'ret_long_flags')).toEqual(['BC']);
 
     expect(text.toUpperCase()).not.toContain('PUSH IX'); // sanity check unchanged
   });
