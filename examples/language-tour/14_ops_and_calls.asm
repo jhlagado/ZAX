@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$0155 (end exclusive)
+; range: $0100..$0154 (end exclusive)
 
 ; func add_to_sample begin
 add_to_sample:
@@ -28,40 +28,39 @@ push IX                        ; 011F: DD E5
 ld IX, $0000                   ; 0121: DD 21 00 00
 add IX, SP                     ; 0125: DD 39
 push HL                        ; 0127: E5
-push HL                        ; 0128: E5
-ld HL, $0000                   ; 0129: 21 00 00
-ex (SP), HL                    ; 012C: E3
-push DE                        ; 012D: D5
-push BC                        ; 012E: C5
-push AF                        ; 012F: F5
-ld A, (sample_byte)            ; 0130: 3A 00 00
-ld HL, $0017                   ; 0133: 21 17 00
-push HL                        ; 0136: E5
-call add_to_sample             ; 0137: CD 00 00
+ld HL, $0000                   ; 0128: 21 00 00
+push HL                        ; 012B: E5
+push DE                        ; 012C: D5
+push BC                        ; 012D: C5
+push AF                        ; 012E: F5
+ld A, (sample_byte)            ; 012F: 3A 00 00
+ld HL, $0017                   ; 0132: 21 17 00
+push HL                        ; 0135: E5
+call add_to_sample             ; 0136: CD 00 00
+inc SP                         ; 0139: 33
 inc SP                         ; 013A: 33
-inc SP                         ; 013B: 33
-push DE                        ; 013C: D5
-ex DE, HL                      ; 013D: EB
-ld (IX - $0004), E             ; 013E: DD 73 FC
-ld (IX - $0003), D             ; 0141: DD 72 FD
-ex DE, HL                      ; 0144: EB
-pop DE                         ; 0145: D1
+push DE                        ; 013B: D5
+ex DE, HL                      ; 013C: EB
+ld (IX - $0004), E             ; 013D: DD 73 FC
+ld (IX - $0003), D             ; 0140: DD 72 FD
+ex DE, HL                      ; 0143: EB
+pop DE                         ; 0144: D1
 __zax_epilogue_1:
-pop DE                         ; 0146: D1
-pop BC                         ; 0147: C1
-pop AF                         ; 0148: F1
-ld e, (ix-$0002)               ; 0149: DD 5E FE
-ld d, (ix-$0001)               ; 014C: DD 56 FF
-ex de, hl                      ; 014F: EB
-ld SP, IX                      ; 0150: DD F9
-pop IX                         ; 0152: DD E1
-ret                            ; 0154: C9
+pop DE                         ; 0145: D1
+pop BC                         ; 0146: C1
+pop AF                         ; 0147: F1
+ld e, (ix-$0002)               ; 0148: DD 5E FE
+ld d, (ix-$0001)               ; 014B: DD 56 FF
+ex de, hl                      ; 014E: EB
+ld SP, IX                      ; 014F: DD F9
+pop IX                         ; 0151: DD E1
+ret                            ; 0153: C9
 ; func main end
 
 ; symbols:
 ; label add_to_sample = $0100
 ; label __zax_epilogue_0 = $0117
 ; label main = $011F
-; label __zax_epilogue_1 = $0146
-; var sample_byte = $0156
-; var sample_word = $0157
+; label __zax_epilogue_1 = $0145
+; var sample_byte = $0154
+; var sample_word = $0155
