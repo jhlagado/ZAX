@@ -229,7 +229,10 @@ This is the case the programmer should aim for in hot loops. If both the base po
 
 ### 4.6 Local/Arg Base + Local/Arg Offset
 
-Both values live in the IX frame. This is the worst case: two IX-relative loads before any computation.
+Both values live in the IX frame. This is the worst case: two IX-relative loads before any computation. In v0.2 this should be treated as a **discouraged** form and may be rejected by a future runtime-atom budget:
+- If allowed, the compiler must preserve DE (or BC) if used as scratch: push/pop adds ~21 T-states on top of the ~82 T-state baseline, pushing it over 100 T-states per access.
+- Recommended alternative: load one operand (base or index) into a register outside the hot loop, turning the pattern into Section 4.2/4.3/4.5.
+- Consider making “local + local” lowerings opt-in (warning) or rejected when inside the runtime-atom budget for array expressions.
 
 ### 4.7 Recommended vs. discouraged patterns (summary)
 
@@ -329,7 +332,7 @@ The table above leads to a few rules of thumb that ZAX programmers should intern
 - Avoid IX-relative loads inside the loop when a hoisted pointer will do.
 
 **Not recommended in hot loops**
-- Local+local base/index (double IX loads per access; likely to exceed runtime-atom budget; hoist one side into a register instead).
+- Local+local base/index (double IX loads per access; also triggers extra push/pop for scratch preservation if allowed).
 - Nested `(HL)` indirection for indices inside the loop.
 - Odd element sizes that need long multiply chains.
 
@@ -350,8 +353,6 @@ The compiler's lowering strategy for effective-address expressions should follow
 **Fifth: widen 8-bit offsets cheaply.** For unsigned 8-bit indices (the normal case for array indexing), zero-extension is `ld d, 0; ld e, r` — two instructions, 11 T-states. For the `(HL)` index form allowed by the spec (where the index is a byte read from memory at HL), the compiler must emit the load and widening as part of the sequence.
 
 **Sixth: preserve registers per the lowering contract.** If the lowering sequence uses DE or BC as scratch, and the programmer's code has a live value in that pair, the compiler must save and restore it. This adds push/pop overhead but is required by the preservation guarantee in Section 6.1.1 of the spec.
-
-**Runtime-atom budget note:** Local+local base/index should count as high cost and may be rejected or warned unless the programmer hoists one operand into a register outside the loop.
 
 ---
 
