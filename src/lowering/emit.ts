@@ -5305,8 +5305,16 @@ export function emitProgram(
             }
 
             if (head === 'ld' && asmItem.operands.length === 2) {
-              const dstOp = asmItem.operands[0]!;
-              const srcOp = asmItem.operands[1]!;
+              const rawDst = asmItem.operands[0]!;
+              const rawSrc = asmItem.operands[1]!;
+              const dstOp =
+                rawDst.kind === 'Ea'
+                  ? ({ kind: 'Mem', span: rawDst.span, expr: rawDst.expr } as AsmOperandNode)
+                  : rawDst;
+              const srcOp =
+                rawSrc.kind === 'Ea'
+                  ? ({ kind: 'Mem', span: rawSrc.span, expr: rawSrc.expr } as AsmOperandNode)
+                  : rawSrc;
               const dst = dstOp.kind === 'Reg' ? dstOp.name.toUpperCase() : undefined;
               const opcode =
                 dst === 'BC'
