@@ -31,7 +31,7 @@ Lowering convention (v0.2):
 
 ## 2. The Lowering Problem
 
-When the programmer writes `ld a, (arr[i])` or `ld hl, (sprites[C].x)`, the compiler must produce an instruction sequence that computes the effective address and performs the memory access. The effective address is always `base + offset`, where:
+When the programmer writes `ld a, arr[i]` or `ld hl, sprites[C].x`, the compiler must produce an instruction sequence that computes the effective address and performs the memory access. The effective address is always `base + offset`, where:
 
 The **base** is the starting address of the storage (an array, a record, a variable). It might be a compile-time constant (a global symbol), a value in a register, or a value stored in a local/arg slot.
 
