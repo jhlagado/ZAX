@@ -231,6 +231,20 @@ This is the case the programmer should aim for in hot loops. If both the base po
 
 Both values live in the IX frame. This is the worst case: two IX-relative loads before any computation.
 
+### 4.7 Recommended vs. discouraged patterns (summary)
+
+**Recommended (fast, predictable)**
+- Constant base + register index; base in DE, scaled offset in HL; power-of-two element sizes so scaling is `add hl, hl` chains.
+- Constant base + constant index (fully folded).
+- Register base + register offset already in a 16-bit pair; just `add hl, de` then access.
+- Hoisted base pointer in a register across loop iterations; bump with `inc hl` or `add hl, de`.
+
+**Discouraged (slow / complex)**
+- Local/arg base plus local/arg index: double IX loads per access.
+- Multi-stage indirection (`arr[(HL)]`) inside hot loops.
+- Element sizes that require long multiply sequences (non–power-of-two, especially odd sizes) in hot loops.
+- Relying on `(IX+d)` to fetch every byte of an index or base each iteration.
+
 ```
 ; localPtr[localIndex] — both are locals
 ; Load base into HL
@@ -300,13 +314,24 @@ Each row assumes byte-sized elements (no scaling) and a final `ld a, (hl)` as th
 
 The table above leads to a few rules of thumb that ZAX programmers should internalize:
 
-**Keep loop-hot values in registers.** The difference between register-to-register address computation (18 T-states) and local-to-local (82+ T-states) is a factor of 4.5x. In a tight loop iterating over an array, loading the base pointer into HL once before the loop and keeping the index counter in a register (B for `djnz`, or DE/BC for 16-bit counts) eliminates per-iteration IX overhead.
+**Keep loop-hot values in registers.** The difference between register-to-register address computation (18 T-states) and local-to-local (82+ T-states) is a factor of 4.5x. In a tight loop iterating over an array, loading the base pointer into DE/HL once before the loop and keeping the index counter in a register (B for `djnz`, or DE/BC for 16-bit counts) eliminates per-iteration IX overhead.
 
-**Prefer pointer iteration over indexed access inside loops.** Instead of recomputing `arr[i]` each iteration (which requires a fresh base load and an add), load the base address into HL once and `inc hl` after each element. For byte-element arrays, this turns each iteration's address computation from 39+ T-states into a single 6 T-state `inc hl`. For word elements, `inc hl; inc hl` is 12 T-states — still far cheaper than recomputing.
+**Prefer pointer iteration over indexed access inside loops.** Instead of recomputing `arr[i]` each iteration, load the base address into HL once and `inc hl` (or `add hl, de` for word stride) after each element. For byte arrays this collapses address computation to a single 6 T-state `inc hl`; for word arrays, two `inc hl` are still far cheaper than recomputing via IX.
 
 **Use globals for hot scalar state.** If a value is accessed frequently from multiple functions and doesn't need to be reentrant, a module-scope `var` is cheaper to access than a function-local. The difference is 13 T-states (absolute byte load) versus 19 T-states (IX-relative byte load) per access, and 16 versus 38 T-states for word loads. This adds up in inner loops.
 
 **Let the compiler handle cold paths.** For code that runs once (initialization, configuration, error handling), the IX overhead doesn't matter. Write clean, structured code using locals and let the compiler emit the straightforward lowering. Save the register-management effort for the paths where cycles actually matter.
+
+**Loop hot-path checklist (do this)**
+- Base in DE, offset/scale in HL; add at the end.
+- Hoist base/stride before the loop; bump pointer per-iteration (`inc hl` / `add hl, de`).
+- Keep index in B/DE/BC; prefer power-of-two element sizes.
+- Avoid IX-relative loads inside the loop when a hoisted pointer will do.
+
+**Not recommended in hot loops**
+- Local+local base/index (double IX loads per access).
+- Nested `(HL)` indirection for indices inside the loop.
+- Odd element sizes that need long multiply chains.
 
 ---
 
