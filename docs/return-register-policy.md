@@ -47,7 +47,9 @@ Problem: locals initialized via HL would clobber the incoming HL before it’s s
 
 Solution (swap pattern):
 - Prologue:
-  1) `push ix`; `ld ix,0`; `add ix,sp`
+  1) `push ix`
+     `ld ix,0`
+     `add ix,sp`
   2) `push hl`              ; save incoming HL
   3) For each local init: `ld hl, <init>` then `ex (sp),hl` (init lands on stack; saved HL restored to HL)
   4) Push preserves in order: `push de`, `push bc`, `push af`
