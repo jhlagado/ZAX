@@ -16,7 +16,10 @@ Status: non-normative companion to `docs/zax-spec.md` §8.2. Intended for develo
   - `HL,DE,BC`
   - Any of the above with `AF` appended (publishes flags)
 - Zero-syntax: `func name(...)` (no colon) is equivalent to `: none` — preserves AF/BC/DE/HL.
-- Aliases (compat): `byte`/`word` ≡ `HL` (byte returns in `L`), `long` ≡ `HL,DE`, `verylong` ≡ `HL,DE,BC`.
+- Aliases (compat):
+  - `byte` / `word` ≡ `HL` (byte returns in `L`)
+  - `long` ≡ `HL,DE`
+  - `verylong` ≡ `HL,DE,BC`
 - `extern func` uses the same form; `op` has no return declaration.
 
 ## 3. Preservation Matrix (derived)
@@ -56,11 +59,17 @@ Solution (swap pattern):
   1) `push ix`
   2) `ld ix,0`
   3) `add ix,sp`
-  2) `push hl`              ; save incoming HL
-  3) For each local init: `ld hl, <init>` then `ex (sp),hl` (init lands on stack; saved HL restored to HL)
-  4) Push preserves in order: `push de`, `push bc`, `push af`
-- Epilogue:
-  - `pop af`; `pop bc`; `pop de`; `pop hl` (discard saved-HL slot); `ld sp, ix`; `pop ix`; `ret`
+  4) `push hl`              ; save incoming HL
+  5) For each local init: `ld hl, <init>` then `ex (sp),hl` (init lands on stack; saved HL restored to HL)
+  6) Push preserves in order (each on its own line): `push de`, `push bc`, `push af`
+- Epilogue (each on its own line):
+  - `pop af`
+  - `pop bc`
+  - `pop de`
+  - `pop hl` (discard saved-HL slot)
+  - `ld sp, ix`
+  - `pop ix`
+  - `ret`
 - Only used when the declared return set does **not** include HL.
 
 ### 4.3 Non-HL return registers (e.g., `DE` while HL is preserved)
