@@ -134,5 +134,5 @@ Planned simplification (v0.3):
 - Array/record lowering: ensure temp preserves and destination-only mutation with new preservation rules.
 
 ## 9. Open Questions (for follow-up)
-- Should `byte` remain as HL/L or become `A`? (Currently HL/L.)
-- Should extern declarations optionally carry an ABI/preserve annotation to override caller-responsible default?
+- `byte` alias is slated for removal; width/encoding is left to the programmer via explicit register returns.
+- Extern declarations may use the same return-register notation to publish return channels; preservation remains caller-responsible unless an explicit ABI is provided by the extern implementation.
