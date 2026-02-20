@@ -40,36 +40,57 @@ Extern typed calls: same return registers, but preservation is caller-responsibl
 ## 4. Prologue/Epilogue Strategies
 ### 4.1 Non-void (HL volatile)
 - Locals-before-preserves ordering is fine: use HL for initializers, then push preserves (AF/BC/DE as needed).
-- Example (HL return):
-  - locals init via `ld hl, imm` then `push hl`
-  - push preserves on separate lines: `push af` then `push bc` then `push de` as required
-  - Epilogue (one per line):
-    - `pop de`
-    - `pop bc`
-    - `pop af`
-    - `ld sp, ix`
-    - `pop ix`
-    - `ret`
+Example (HL return):
+
+```asm
+; locals init
+ld hl, imm16
+push hl
+; preserves
+push af
+push bc
+push de
+; epilogue
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+```
 
 ### 4.2 Void / HL-preserved cases (none, HL not in returns)
 Problem: locals initialized via HL would clobber the incoming HL before it’s saved.
 
 Solution (swap pattern):
-- Prologue:
-  1) `push ix`
-  2) `ld ix,0`
-  3) `add ix,sp`
-  4) `push hl`              ; save incoming HL
-  5) For each local init: `ld hl, <init>` then `ex (sp),hl` (init lands on stack; saved HL restored to HL)
-  6) Push preserves in order (each on its own line): `push de`, `push bc`, `push af`
-- Epilogue (each on its own line):
-  - `pop af`
-  - `pop bc`
-  - `pop de`
-  - `pop hl` (discard saved-HL slot)
-  - `ld sp, ix`
-  - `pop ix`
-  - `ret`
+
+Prologue:
+
+```asm
+push ix
+ld ix,0
+add ix,sp
+push hl                 ; save incoming HL
+; for each local init:
+ld hl, <init>
+ex (sp), hl             ; init on stack, saved HL restored
+; preserves
+push de
+push bc
+push af
+```
+
+Epilogue:
+
+```asm
+pop af
+pop bc
+pop de
+pop hl                  ; discard saved-HL slot
+ld sp, ix
+pop ix
+ret
+```
 - Only used when the declared return set does **not** include HL.
 
 ### 4.3 Non-HL return registers (e.g., `DE` while HL is preserved)
