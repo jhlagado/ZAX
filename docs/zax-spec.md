@@ -447,9 +447,10 @@ Example: arrays of records use `ea` paths (informative):
 
 ```
 
-; `sprites[C].x` is an `ea` (address), not a value.
-ld hl, (sprites[C].x) ; load word at sprites[C].x
-ld (sprites[C].x), hl ; store word to sprites[C].x
+; `sprites[C].x` is an `ea` (address) but in value contexts the compiler
+; performs the load/store implicitly:
+ld hl, sprites[C].x   ; load word at sprites[C].x
+ld sprites[C].x, hl   ; store word to sprites[C].x
 
 ```
 
