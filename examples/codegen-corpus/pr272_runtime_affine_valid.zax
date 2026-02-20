@@ -14,5 +14,4 @@ export func main(): void
   ld a, arr[(idx * 2) + 3]
   ld a, (arr + idx + 4)
   ld a, (arr + (idxw << 1) + 6)
-  ret
 end

@@ -3,5 +3,4 @@ export func main(): void
     x: byte
   end
   ret z
-  ret
 end
