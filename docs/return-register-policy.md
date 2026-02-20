@@ -40,7 +40,13 @@ Extern typed calls: same return registers, but preservation is caller-responsibl
 - Example (HL return):
   - locals init via `ld hl, imm` then `push hl`
   - push preserves on separate lines: `push af` then `push bc` then `push de` as required
-  - Epilogue (one per line): `pop de`, `pop bc`, `pop af`, `ld sp, ix`, `pop ix`, `ret`.
+  - Epilogue (one per line):
+    - `pop de`
+    - `pop bc`
+    - `pop af`
+    - `ld sp, ix`
+    - `pop ix`
+    - `ret`
 
 ### 4.2 Void / HL-preserved cases (none, HL not in returns)
 Problem: locals initialized via HL would clobber the incoming HL before it’s saved.
