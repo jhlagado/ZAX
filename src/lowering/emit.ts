@@ -2494,8 +2494,7 @@ export function emitProgram(
       }
       if (op.kind === 'Ea') {
         if (op.explicitAddressOf) return op;
-        const scalar = resolveScalarTypeForEa(op.expr);
-        if (scalar) return { kind: 'Mem', span: op.span, expr: op.expr };
+        return { kind: 'Mem', span: op.span, expr: op.expr };
       }
       return op;
     };
