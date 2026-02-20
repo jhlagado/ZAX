@@ -38,9 +38,9 @@ Extern typed calls: same return registers, but preservation is caller-responsibl
 ### 4.1 Non-void (HL volatile)
 - Locals-before-preserves ordering is fine: use HL for initializers, then push preserves (AF/BC/DE as needed).
 - Example (HL return):
-  - locals init via `ld hl, imm` / `push hl`
-  - `push af`, `push bc`, `push de` as required
-  - Epilogue: pop in reverse, `ld sp, ix`, `pop ix`, `ret`.
+  - locals init via `ld hl, imm` then `push hl`
+  - push preserves on separate lines: `push af` then `push bc` then `push de` as required
+  - Epilogue (one per line): `pop de`, `pop bc`, `pop af`, `ld sp, ix`, `pop ix`, `ret`.
 
 ### 4.2 Void / HL-preserved cases (none, HL not in returns)
 Problem: locals initialized via HL would clobber the incoming HL before it’s saved.
@@ -48,8 +48,8 @@ Problem: locals initialized via HL would clobber the incoming HL before it’s s
 Solution (swap pattern):
 - Prologue:
   1) `push ix`
-     `ld ix,0`
-     `add ix,sp`
+  2) `ld ix,0`
+  3) `add ix,sp`
   2) `push hl`              ; save incoming HL
   3) For each local init: `ld hl, <init>` then `ex (sp),hl` (init lands on stack; saved HL restored to HL)
   4) Push preserves in order: `push de`, `push bc`, `push af`
