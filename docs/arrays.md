@@ -1,11 +1,11 @@
 # ZAX Array Indexing and Address Lowering — Design Document
 
-Status: design exploration for the lowering appendix.
-Date: 2026-02-20.
+Status: design exploration for the lowering appendix. Updated with v0.2 calling/ea semantics and guidance on keeping array addressing simple and fast.
+Date: 2026-02-21.
 
 This document works through the concrete lowering strategies for effective-address computation in ZAX, given the decision to use IX as a permanent frame pointer. It covers every combination of base and offset provenance (register, local/arg variable, global symbol), for both 8-bit and 16-bit offsets, with approximate T-state costs and practical guidance for the compiler and the programmer.
 
-The focus is array indexing (`arr[i]`) and field access on pointer-based records, but the same machinery applies to any `ea + offset` computation.
+The focus is array indexing (`arr[i]`) and field access on pointer-based records, but the same machinery applies to any `ea + offset` computation. Examples use modern ZAX value syntax: `arr[i]` / `rec.field` produce values; `@arr[i]` / `@rec.field` produce effective addresses. Lowered Z80 examples still show `(addr)` forms to make the emitted code explicit.
 
 ---
 
@@ -21,7 +21,11 @@ Loading a 16-bit value from a local requires two IX-relative byte loads plus reg
 
 The reason this trade-off is acceptable is that the alternative — using HL as a frame pointer, or computing SP-relative addresses on the fly — imposes a different cost that's harder to see in cycle counts: register pressure. On a machine with seven general-purpose 8-bit registers and three usable 16-bit pairs, tying up HL for frame access means every array operation, every pointer chase, and every 16-bit arithmetic operation has to work around the frame pointer. The result is a cascade of push/pop pairs, exchange instructions, and temporary spills that inflate code size and destroy readability. IX sits outside the main register file's traffic patterns. It costs more per access but it costs nothing in terms of register availability.
 
-The practical consequence for lowering: the compiler should assume IX is always occupied and never available as a general-purpose register. HL, DE, and BC are the working registers for address computation. IY is reserved for future use or available to the programmer via raw instructions but not used by the compiler's lowering sequences.
+Lowering convention (v0.2):
+- IX is always the frame pointer; never treat it as a scratch register.
+- Prefer **base in DE, offset in HL**. This makes scaling by powers of two cheap (`add hl, hl` chains) while keeping the base stable for the final `add hl, de`.
+- BC is the third working pair; use it sparingly so loops can keep counters live.
+- IY is not used by the compiler; it remains available to the programmer.
 
 ---
 
@@ -33,7 +37,7 @@ The **base** is the starting address of the storage (an array, a record, a varia
 
 The **offset** is the byte distance from the base to the desired element or field. For field access, offsets are always compile-time constants. For array indexing, the offset is `index * element_size`, where the index might be a constant, a register, or a variable.
 
-The challenge is that Z80 has no general base+index addressing mode. The only indirect forms are `(HL)`, `(BC)`, `(DE)` (byte loads only for BC/DE), `(IX+d)` with constant displacement, and absolute `(nn)`. Everything else must be synthesized from register loads and additions.
+The challenge is that Z80 has no general base+index addressing mode. The only indirect forms are `(HL)`, `(BC)`, `(DE)` (byte loads only for BC/DE), `(IX+d)` with constant displacement, and absolute `(nn)`. Everything else must be synthesized from register loads and additions. Therefore we intentionally keep allowed runtime complexity modest: prefer constant offsets and register bases; reject or warn on oversized `(IX+d)` needs; and encourage users to hoist address computation out of loops.
 
 ---
 
@@ -73,7 +77,7 @@ ld hl, (arr + 6)        ; 16 T-states (assuming word[3])
 
 No address computation at runtime. This is the fastest path and should be the compiler's first check: if both base and offset are constant, fold and emit an absolute access.
 
-### 4.2 Constant Base + Register Offset (the common array case)
+### 4.2 Constant Base + Register Offset (the common array case, recommended)
 
 The base is a global symbol (compile-time address), and the index is in a register. This is the bread-and-butter case for array iteration: `arr[C]` where `arr` is module-scope storage and `C` is a loop counter.
 
@@ -83,9 +87,9 @@ The offset is in a single 8-bit register and needs zero-extension to 16 bits bef
 
 ```
 ; arr[C] where arr is global, byte elements
-ld hl, arr              ; 10 T-states — load base into HL
-ld d, 0                 ;  7 T-states — zero high byte
-ld e, c                 ;  4 T-states — offset into DE
+ld de, arr              ; 10 T-states — base in DE
+ld h, 0                 ;  7 T-states — zero high byte
+ld l, c                 ;  4 T-states — offset into HL
 add hl, de              ; 11 T-states — HL = arr + C
 ld a, (hl)              ;  7 T-states — load the byte
                         ; total: 39 T-states
@@ -99,7 +103,8 @@ If the index is already in a 16-bit register pair (say DE), no widening is neede
 
 ```
 ; arr[DE] — 16-bit index
-ld hl, arr              ; 10 T-states
+ld de, arr              ; 10 T-states
+; HL already holds offset
 add hl, de              ; 11 T-states
 ld a, (hl)              ;  7 T-states
                         ; total: 28 T-states
@@ -109,32 +114,19 @@ This is fast. For loops that index with a 16-bit counter, the programmer should 
 
 **With element scaling (element size > 1):**
 
-The scaling cost is added before the `add hl, de`. See Section 8 for scaling strategies. For a word array (`element_size = 2`), the cheapest scaling is a self-add:
+Scale in HL, keep base in DE:
 
 ```
 ; wordArr[C] — byte index, word elements
-ld d, 0                 ;  7
-ld e, c                 ;  4
-ex de, hl               ;  4 — put offset in HL for self-add
-add hl, hl              ; 11 — HL = index * 2
-ex de, hl               ;  4 — offset back in DE
-ld hl, wordArr          ; 10
-add hl, de              ; 11
-                        ; total before access: 51 T-states
-```
-
-Or, if HL is not in use, the compiler can keep the offset in HL throughout:
-
-```
 ld h, 0                 ;  7
 ld l, c                 ;  4
 add hl, hl              ; 11 — HL = index * 2
-ld de, wordArr          ; 10
+ld de, wordArr          ; 10 — base in DE
 add hl, de              ; 11
                         ; total before access: 43 T-states
 ```
 
-The second form is cheaper. The compiler should prefer loading the offset into HL (where scaling is cheapest via `add hl, hl`) and the base into DE, then adding. This is the opposite of the element-size-1 case where the base goes into HL directly. The compiler should choose based on whether scaling is needed.
+Guidance: use the same pattern for larger power-of-two element sizes (repeat `add hl, hl` as needed). Avoid shuttling the base through HL; keep it parked in DE.
 
 ### 4.3 Local/Arg Base + Register Offset
 
