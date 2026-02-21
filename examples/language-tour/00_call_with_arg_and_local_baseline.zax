@@ -14,6 +14,7 @@ end
 export func main()
   var
     result_word: word = $11
+    unused_word: word = $55
   end
 
   inc_one $44
