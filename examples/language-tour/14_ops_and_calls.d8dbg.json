@@ -153,9 +153,7 @@
       "end": 333
     }
   ],
-  "fileList": [
-    "14_ops_and_calls.zax"
-  ],
+  "fileList": ["14_ops_and_calls.zax"],
   "symbols": [
     {
       "name": "add_to_sample",
