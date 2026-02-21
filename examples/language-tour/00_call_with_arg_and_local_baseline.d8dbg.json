@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 348,
+          "end": 352,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -101,27 +101,34 @@
         {
           "start": 316,
           "end": 320,
-          "lstLine": 14,
+          "lstLine": 17,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 320,
-          "end": 329,
-          "lstLine": 19,
+          "end": 324,
+          "lstLine": 14,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 329,
-          "end": 339,
+          "start": 324,
+          "end": 333,
           "lstLine": 20,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 339,
-          "end": 348,
+          "start": 333,
+          "end": 343,
+          "lstLine": 21,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 343,
+          "end": 352,
           "lstLine": 14,
           "kind": "code",
           "confidence": "high"
@@ -152,7 +159,7 @@
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
-          "address": 339,
+          "address": 343,
           "line": 14,
           "scope": "local"
         }
@@ -162,7 +169,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 348
+      "end": 352
     }
   ],
   "fileList": [
@@ -196,7 +203,7 @@
     {
       "name": "__zax_epilogue_1",
       "kind": "label",
-      "address": 339,
+      "address": 343,
       "file": "00_call_with_arg_and_local_baseline.zax",
       "line": 14,
       "scope": "local"
