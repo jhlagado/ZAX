@@ -1,0 +1,171 @@
+{
+  "format": "d8-debug-map",
+  "version": 1,
+  "arch": "z80",
+  "addressWidth": 16,
+  "endianness": "little",
+  "files": {
+    "23_addr_records_fields.zax": {
+      "segments": [
+        {
+          "start": 256,
+          "end": 267,
+          "lstLine": 9,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 256,
+          "end": 351,
+          "lstLine": 0,
+          "kind": "unknown",
+          "confidence": "low"
+        },
+        {
+          "start": 267,
+          "end": 282,
+          "lstLine": 10,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 282,
+          "end": 304,
+          "lstLine": 11,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 304,
+          "end": 307,
+          "lstLine": 12,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 307,
+          "end": 315,
+          "lstLine": 9,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 315,
+          "end": 327,
+          "lstLine": 15,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 327,
+          "end": 342,
+          "lstLine": 16,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 342,
+          "end": 351,
+          "lstLine": 15,
+          "kind": "code",
+          "confidence": "high"
+        }
+      ],
+      "symbols": [
+        {
+          "name": "poke_record",
+          "kind": "label",
+          "address": 256,
+          "line": 9,
+          "scope": "global"
+        },
+        {
+          "name": "__zax_epilogue_0",
+          "kind": "label",
+          "address": 307,
+          "line": 9,
+          "scope": "local"
+        },
+        {
+          "name": "main",
+          "kind": "label",
+          "address": 315,
+          "line": 15,
+          "scope": "global"
+        },
+        {
+          "name": "__zax_epilogue_1",
+          "kind": "label",
+          "address": 342,
+          "line": 15,
+          "scope": "local"
+        },
+        {
+          "name": "rec_a",
+          "kind": "var",
+          "address": 352,
+          "line": 7,
+          "scope": "global",
+          "size": 4
+        }
+      ]
+    }
+  },
+  "segments": [
+    {
+      "start": 256,
+      "end": 351
+    }
+  ],
+  "fileList": [
+    "23_addr_records_fields.zax"
+  ],
+  "symbols": [
+    {
+      "name": "poke_record",
+      "kind": "label",
+      "address": 256,
+      "file": "23_addr_records_fields.zax",
+      "line": 9,
+      "scope": "global"
+    },
+    {
+      "name": "__zax_epilogue_0",
+      "kind": "label",
+      "address": 307,
+      "file": "23_addr_records_fields.zax",
+      "line": 9,
+      "scope": "local"
+    },
+    {
+      "name": "main",
+      "kind": "label",
+      "address": 315,
+      "file": "23_addr_records_fields.zax",
+      "line": 15,
+      "scope": "global"
+    },
+    {
+      "name": "__zax_epilogue_1",
+      "kind": "label",
+      "address": 342,
+      "file": "23_addr_records_fields.zax",
+      "line": 15,
+      "scope": "local"
+    },
+    {
+      "name": "rec_a",
+      "kind": "var",
+      "address": 352,
+      "file": "23_addr_records_fields.zax",
+      "line": 7,
+      "scope": "global",
+      "size": 4
+    }
+  ],
+  "generator": {
+    "tool": "zax",
+    "entrySymbol": "main",
+    "entryAddress": 315
+  }
+}

@@ -1,0 +1,212 @@
+{
+  "format": "d8-debug-map",
+  "version": 1,
+  "arch": "z80",
+  "addressWidth": 16,
+  "endianness": "little",
+  "files": {
+    "25_addr_arrays_index_runtime.zax": {
+      "segments": [
+        {
+          "start": 256,
+          "end": 267,
+          "lstLine": 5,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 256,
+          "end": 432,
+          "lstLine": 0,
+          "kind": "unknown",
+          "confidence": "low"
+        },
+        {
+          "start": 267,
+          "end": 291,
+          "lstLine": 6,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 291,
+          "end": 292,
+          "lstLine": 7,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 292,
+          "end": 315,
+          "lstLine": 8,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 315,
+          "end": 333,
+          "lstLine": 10,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 333,
+          "end": 334,
+          "lstLine": 11,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 334,
+          "end": 354,
+          "lstLine": 12,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 354,
+          "end": 378,
+          "lstLine": 14,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 378,
+          "end": 386,
+          "lstLine": 5,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 386,
+          "end": 398,
+          "lstLine": 17,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 398,
+          "end": 407,
+          "lstLine": 18,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 407,
+          "end": 416,
+          "lstLine": 17,
+          "kind": "code",
+          "confidence": "high"
+        }
+      ],
+      "symbols": [
+        {
+          "name": "bump_at",
+          "kind": "label",
+          "address": 256,
+          "line": 5,
+          "scope": "global"
+        },
+        {
+          "name": "__zax_epilogue_0",
+          "kind": "label",
+          "address": 378,
+          "line": 5,
+          "scope": "local"
+        },
+        {
+          "name": "main",
+          "kind": "label",
+          "address": 386,
+          "line": 17,
+          "scope": "global"
+        },
+        {
+          "name": "__zax_epilogue_1",
+          "kind": "label",
+          "address": 407,
+          "line": 17,
+          "scope": "local"
+        },
+        {
+          "name": "arr_b",
+          "kind": "data",
+          "address": 416,
+          "line": 2,
+          "scope": "global"
+        },
+        {
+          "name": "arr_w",
+          "kind": "data",
+          "address": 424,
+          "line": 3,
+          "scope": "global"
+        }
+      ]
+    }
+  },
+  "segments": [
+    {
+      "start": 256,
+      "end": 432
+    }
+  ],
+  "fileList": [
+    "25_addr_arrays_index_runtime.zax"
+  ],
+  "symbols": [
+    {
+      "name": "bump_at",
+      "kind": "label",
+      "address": 256,
+      "file": "25_addr_arrays_index_runtime.zax",
+      "line": 5,
+      "scope": "global"
+    },
+    {
+      "name": "__zax_epilogue_0",
+      "kind": "label",
+      "address": 378,
+      "file": "25_addr_arrays_index_runtime.zax",
+      "line": 5,
+      "scope": "local"
+    },
+    {
+      "name": "main",
+      "kind": "label",
+      "address": 386,
+      "file": "25_addr_arrays_index_runtime.zax",
+      "line": 17,
+      "scope": "global"
+    },
+    {
+      "name": "__zax_epilogue_1",
+      "kind": "label",
+      "address": 407,
+      "file": "25_addr_arrays_index_runtime.zax",
+      "line": 17,
+      "scope": "local"
+    },
+    {
+      "name": "arr_b",
+      "kind": "data",
+      "address": 416,
+      "file": "25_addr_arrays_index_runtime.zax",
+      "line": 2,
+      "scope": "global"
+    },
+    {
+      "name": "arr_w",
+      "kind": "data",
+      "address": 424,
+      "file": "25_addr_arrays_index_runtime.zax",
+      "line": 3,
+      "scope": "global"
+    }
+  ],
+  "generator": {
+    "tool": "zax",
+    "entrySymbol": "main",
+    "entryAddress": 386
+  }
+}
