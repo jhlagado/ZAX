@@ -1,6 +1,6 @@
 var
   counter: byte
 
-export func main(): void
+export func main()
   nop
 end

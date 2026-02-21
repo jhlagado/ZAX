@@ -3,7 +3,7 @@ extern
   func puts2(ch: byte): void at $1240
 end
 
-func main(): void
+func main()
     puts 7
     puts2 8
     ret

@@ -8,7 +8,7 @@ globals
   mat: word[8][8]
   arr: byte[32]
 
-export func main(): void
+export func main()
   ld a, 1
   ld grid[idx][0], a
   ld grid[0][idx], a

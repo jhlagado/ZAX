@@ -7,7 +7,7 @@ import type { Diagnostic } from '../src/diagnostics/types.js';
 describe('parser nested EA index expressions', () => {
   it('parses arr[table[0]] without spurious imm diagnostics', () => {
     const source = `
-export func main(): void
+export func main()
     ld hl, arr[table[0]]
 end
 `;
@@ -30,7 +30,7 @@ end
 
   it('reports malformed nested index syntax as operand error', () => {
     const source = `
-export func main(): void
+export func main()
     ld hl, arr[table[0]
 end
 `;
@@ -42,7 +42,7 @@ end
 
   it('distinguishes arr[HL] (reg16 index) from arr[(HL)] (indirect byte index)', () => {
     const source = `
-export func main(): void
+export func main()
     ld a, arr[HL]
     ld b, arr[(HL)]
 end

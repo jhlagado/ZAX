@@ -1,4 +1,4 @@
-func broken(): void
+func broken()
     nop
 const K = 1
 
@@ -6,6 +6,6 @@ op macro(a: reg8)
   ld a, a
 enum E A
 
-func ok(): void
+func ok()
     ret
   end

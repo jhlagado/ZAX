@@ -9,6 +9,6 @@ op route(src: mem8)
   ld b, 2
 end
 
-export func main(): void
+export func main()
   route (b)
 end

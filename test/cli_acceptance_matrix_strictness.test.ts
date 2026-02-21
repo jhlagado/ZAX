@@ -48,7 +48,7 @@ describe('cli acceptance matrix strictness', () => {
         'const X = 7',
         'const Y = 11',
         '',
-        'export func main(): void',
+        'export func main()',
         '  ld a, X',
         '  add a, Y',
         'end',
@@ -150,7 +150,7 @@ describe('cli acceptance matrix strictness', () => {
     await mkdir(incDir, { recursive: true });
     await writeFile(
       entry,
-      'import "shared.zax"\n\nexport func main(): void\n  ld a, Shared\nend\n',
+      'import "shared.zax"\n\nexport func main()\n  ld a, Shared\nend\n',
       'utf8',
     );
     await writeFile(join(incDir, 'shared.zax'), 'const Shared = 9\n', 'utf8');
@@ -188,7 +188,7 @@ describe('cli acceptance matrix strictness', () => {
   it('pins a strict negative contract matrix for malformed CLI argument shapes', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-negative-matrix-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main()\n  nop\nend\n', 'utf8');
 
     const cases: Array<{ name: string; args: string[]; message: string }> = [
       {

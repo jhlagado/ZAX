@@ -1,11 +1,11 @@
-func local_retn(): void
+func local_retn()
   var
     scratch: byte
   end
   retn
 end
 
-func local_reti(): void
+func local_reti()
   var
     scratch: byte
   end

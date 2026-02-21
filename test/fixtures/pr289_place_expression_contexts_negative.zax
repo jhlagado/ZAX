@@ -15,7 +15,7 @@ op readAddr(addr: ea)
   ld a, (addr)
 end
 
-export func main(): void
+export func main()
   readAddr (p.lo)
   readAddr (arr[idx])
   ret

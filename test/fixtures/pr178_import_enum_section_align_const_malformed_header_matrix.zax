@@ -13,6 +13,6 @@ align
 const
 const 9bad = 1
 
-func main(): void
+func main()
     ret
   end

@@ -8,15 +8,15 @@ globals
 data
   unknown_len: byte[] = [1, 2, 3]
 
-func take_ten(values: byte[10]): void
+func take_ten(values: byte[10])
   ret
 end
 
-func take_any(values: byte[]): void
+func take_any(values: byte[])
   ret
 end
 
-export func main(): void
+export func main()
   take_ten unknown_len
   take_any words10
   ret

@@ -10,7 +10,7 @@ op loadx(src: mem16)
   ld hl, src
 end
 
-export func main(): void
+export func main()
     loadx (b)
     loadx (w)
 end

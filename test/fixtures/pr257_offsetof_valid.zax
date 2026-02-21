@@ -24,7 +24,7 @@ const Idx = 3
 const OffSpritesIdxColor = offsetof(Scene, sprites[Idx].color)
 const OffPayloadWord = offsetof(Node, payload.asWord)
 
-export func main(): void
+export func main()
   ld a, OffY
   ld hl, OffSpritesIdxColor
   ld de, OffPayloadWord

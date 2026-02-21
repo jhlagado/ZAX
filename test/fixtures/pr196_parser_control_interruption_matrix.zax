@@ -1,4 +1,4 @@
-func broken_if(): void
+func broken_if()
   if z
     nop
 const A = 1
@@ -9,11 +9,11 @@ op broken_select(x: reg8)
       nop
 enum Mode Read
 
-func broken_repeat(): void
+func broken_repeat()
   repeat
     nop
 type T byte
 
-func ok(): void
+func ok()
   ret
 end

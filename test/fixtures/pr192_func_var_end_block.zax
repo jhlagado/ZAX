@@ -1,4 +1,4 @@
-func main(): void
+func main()
   var
     tmp: word
   end

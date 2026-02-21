@@ -6,7 +6,7 @@ end
 globals
   v: Value
 
-export func main(): void
+export func main()
     ld a, (v.b)
     ld hl, (v.w)
 end

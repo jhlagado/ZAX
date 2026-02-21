@@ -2,11 +2,11 @@ op set_a_7()
   ld a, 7
 end
 
-export func main(): void
+export func main()
   set_a_7
   helper
 end
 
-func helper(): void
+func helper()
   nop
 end

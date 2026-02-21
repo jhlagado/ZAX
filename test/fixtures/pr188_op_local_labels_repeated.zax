@@ -4,7 +4,7 @@ again:
   jr again
 end
 
-func main(): void
+func main()
     spin
     spin
     ret

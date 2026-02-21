@@ -6,6 +6,6 @@ op loadv(v: imm8)
   ld b, 2
 end
 
-export func main(): void
+export func main()
   loadv 42
 end

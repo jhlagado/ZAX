@@ -1,3 +1,3 @@
-export func main(): void
+export func main()
     ld a, '\xZ1'
   end

@@ -1,8 +1,8 @@
-func badFuncTrailing(a: byte,): void
+func badFuncTrailing(a: byte,)
     ret
   end
 
-func badFuncEmpty(a: byte,, b: byte): void
+func badFuncEmpty(a: byte,, b: byte)
     ret
   end
 
@@ -14,9 +14,9 @@ op badOpEmpty(a: reg8,, b: imm8)
   ret
 end
 
-extern func badExternTrailing(a: byte,): byte at $1200
-extern func badExternEmpty(a: byte,, b: byte): byte at $1202
+extern func badExternTrailing(a: byte,): HL at $1200
+extern func badExternEmpty(a: byte,, b: byte): HL at $1202
 
-func main(): void
+func main()
     ret
   end

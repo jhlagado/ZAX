@@ -1,7 +1,7 @@
 ; PR10 imports fixture: entry module
 import "pr10_import_lib.zax"
 
-export func main(): void
+export func main()
     main_start:
     ld a, LibConst
 end

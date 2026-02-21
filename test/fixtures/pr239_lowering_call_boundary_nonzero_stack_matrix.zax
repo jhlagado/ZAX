@@ -1,8 +1,8 @@
-func helper(): void
+func helper()
   ret
 end
 
-func call_nonzero(): void
+func call_nonzero()
   var
     local: word
   end
@@ -11,7 +11,7 @@ func call_nonzero(): void
   push hl
 end
 
-func callcc_nonzero(): void
+func callcc_nonzero()
   var
     local: word
   end
@@ -20,7 +20,7 @@ func callcc_nonzero(): void
   push hl
 end
 
-func rst_nonzero(): void
+func rst_nonzero()
   var
     local: word
   end

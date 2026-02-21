@@ -3,11 +3,11 @@ type	Word word
 enum	E A
 section	code
 align	1
-extern	func ext(): void at 4660
+extern	func ext() at 4660
 op	foo(a: reg8)
     nop
   end
 
-func	main(): void
+func	main()
     nop
   end

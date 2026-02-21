@@ -6,5 +6,5 @@ end
 data
   p: Point[1] = [0]
 
-export func main(): void
+export func main()
 end

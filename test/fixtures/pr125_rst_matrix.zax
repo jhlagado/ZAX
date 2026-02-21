@@ -1,4 +1,4 @@
-export func main(): void
+export func main()
     rst 0
     rst 8
     rst 16
