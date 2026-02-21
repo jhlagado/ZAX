@@ -1,4 +1,4 @@
-export func main(): void
+export func main()
     bit 0, b
     bit 1, c
     bit 2, d

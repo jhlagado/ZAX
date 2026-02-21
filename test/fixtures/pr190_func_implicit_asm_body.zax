@@ -1,9 +1,9 @@
-func main(): void
+func main()
   helper
   ret
 end
 
-func helper(): void
+func helper()
   ld A, 42
   ret
 end

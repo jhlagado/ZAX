@@ -10,7 +10,7 @@ op cond_nop(cc: Z)
   end
 end
 
-func main(): void
+func main()
     cond_nop Z
     ret
 end

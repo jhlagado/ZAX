@@ -9,5 +9,5 @@ data
   bad_missing: Pair = { lo: 1 }
   bad_shape: byte[2] = { lo: 1, hi: 2 }
 
-export func main(): void
+export func main()
 end

@@ -1,6 +1,6 @@
 ; PR10 imports fixture: cycle A -> B
 import "pr10_cycle_b.zax"
 
-export func main(): void
+export func main()
 end
 

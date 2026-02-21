@@ -1,6 +1,6 @@
 section code at $0000
 
-export func main(): void
+export func main()
   ld hl, @
   ld hl, @(3 + 2)
   ld hl, @3

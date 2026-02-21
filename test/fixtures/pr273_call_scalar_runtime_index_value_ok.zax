@@ -5,10 +5,10 @@ globals
   idx: byte
   arr: byte[16]
 
-export func sink(v: byte): void
+export func sink(v: byte)
   ret
 end
 
-export func main(): void
+export func main()
   sink arr[idx]
 end

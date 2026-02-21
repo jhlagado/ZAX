@@ -4,7 +4,7 @@ section var at $1000
 globals
   base: word
 
-export func main(): void
+export func main()
   var
     tmp: word = $1234
     local_ref = base

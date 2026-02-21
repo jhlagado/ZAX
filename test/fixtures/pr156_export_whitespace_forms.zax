@@ -4,7 +4,7 @@ export	op setb(v: reg8)
   ld b, v
 end
 
-export	func main(): void
+export	func main()
     setb b
     ld a, C
   end

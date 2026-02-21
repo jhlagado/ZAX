@@ -1,13 +1,13 @@
 section code at $0100
 
-func ret_byte_flags(): byte flags
+func ret_byte_flags(): HL flags
   ld a, $12
   ret
 end
 
-extern func ext_flags(): word flags at $2000
+extern func ext_flags(): HL flags at $2000
 
-func main(): void
+func main()
   ret_byte_flags
   call ext_flags
 end

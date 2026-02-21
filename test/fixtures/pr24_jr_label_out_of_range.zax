@@ -1,4 +1,4 @@
-export func main(): void
+export func main()
     jr far
     nop
     nop

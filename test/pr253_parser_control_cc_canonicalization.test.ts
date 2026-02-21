@@ -15,7 +15,7 @@ function controlItems(items: { kind: string }[]): AsmControlNode[] {
 describe('PR253 parser control cc canonicalization', () => {
   it('normalizes function-body condition codes to lower-case', () => {
     const source = `
-func main(): void
+func main()
   if Nz
     nop
   end

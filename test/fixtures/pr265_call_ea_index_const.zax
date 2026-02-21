@@ -8,7 +8,7 @@ extern func takeByte(v: byte): void at $1234
 data
   arr: byte[4] = [ 1, 2, 3, 4 ]
 
-export func main(): void
+export func main()
     takeAddr arr[2]
     takeByte (arr[2])
 end

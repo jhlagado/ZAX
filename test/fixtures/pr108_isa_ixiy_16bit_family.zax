@@ -1,4 +1,4 @@
-export func main(): void
+export func main()
     add ix, bc
     add ix, ix
     add iy, sp

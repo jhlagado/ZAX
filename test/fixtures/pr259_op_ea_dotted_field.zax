@@ -10,7 +10,7 @@ op touch(addr: ea)
   ld a, (addr)
 end
 
-func main(): void
+func main()
   touch p.lo
   ret
 end

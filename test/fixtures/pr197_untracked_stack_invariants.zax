@@ -7,7 +7,7 @@ func untracked_if_join(seed: byte): void
   ret
 end
 
-func untracked_while_backedge(): void
+func untracked_while_backedge()
   or a
   while Z
     ld sp, $1000
@@ -16,7 +16,7 @@ func untracked_while_backedge(): void
   ret
 end
 
-func untracked_repeat_backedge(): void
+func untracked_repeat_backedge()
   repeat
     ld sp, $1000
   until Z

@@ -10,6 +10,6 @@ union Pair extra
 globals extra
 data extra
 
-func main(): void
+func main()
     ret
   end

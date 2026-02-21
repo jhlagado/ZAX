@@ -6,7 +6,7 @@ import type { Diagnostic } from '../src/diagnostics/types.js';
 describe('PR193 parser: explicit asm marker diagnostics', () => {
   it('diagnoses explicit asm marker in function bodies', () => {
     const source = `
-func main(): void
+func main()
   asm
     nop
 end
@@ -72,7 +72,7 @@ export asm
 
   it('diagnoses asm marker used to terminate function-local var block', () => {
     const source = `
-func broken(): void
+func broken()
   var
     tmp: byte
   asm

@@ -6,6 +6,6 @@ op pick(x: reg8)
   nop
 end
 
-export func main(): void
+export func main()
     pick missingName
 end

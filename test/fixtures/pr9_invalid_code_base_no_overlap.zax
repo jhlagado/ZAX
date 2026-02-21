@@ -1,7 +1,7 @@
 section code at 70000
 section data at 0
 
-export func main(): void
+export func main()
 end
 
 data

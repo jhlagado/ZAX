@@ -37,8 +37,8 @@ describe('cli contract matrix', () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-multi-entry-'));
     const entryA = join(work, 'a.zax');
     const entryB = join(work, 'b.zax');
-    await writeFile(entryA, 'export func main(): void\n  nop\nend\n', 'utf8');
-    await writeFile(entryB, 'export func other(): void\n  nop\nend\n', 'utf8');
+    await writeFile(entryA, 'export func main()\n  nop\nend\n', 'utf8');
+    await writeFile(entryB, 'export func other()\n  nop\nend\n', 'utf8');
 
     const resMultiple = await runCli([entryA, entryB]);
     expect(resMultiple.code).toBe(2);
@@ -72,7 +72,7 @@ describe('cli contract matrix', () => {
   it('rejects unsupported type tokens and output/type extension mismatches', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-type-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main()\n  nop\nend\n', 'utf8');
 
     const unsupported = await runCli(['--type=rom', entry]);
     expect(unsupported.code).toBe(2);
@@ -119,7 +119,7 @@ describe('cli contract matrix', () => {
   it('rejects suppression of the selected primary output type', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-primary-suppress-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main()\n  nop\nend\n', 'utf8');
 
     const noBin = await runCli(['--type', 'bin', '--nobin', '-o', join(work, 'out.bin'), entry]);
     expect(noBin.code).toBe(2);
@@ -135,7 +135,7 @@ describe('cli contract matrix', () => {
   it('uses entry stem as default primary output for --type bin and writes siblings', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-default-bin-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main()\n  nop\nend\n', 'utf8');
 
     const res = await runCli(['--type', 'bin', entry]);
     expect(res.code).toBe(0);

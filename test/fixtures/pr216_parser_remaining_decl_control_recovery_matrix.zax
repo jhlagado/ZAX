@@ -1,4 +1,4 @@
-func parser_diag_probe(): void
+func parser_diag_probe()
   stray: end
 end
 

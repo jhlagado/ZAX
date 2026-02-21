@@ -2,7 +2,7 @@ globals
   base: word
   bad_global = 1
 
-func main(): void
+func main()
   var
     bad_local = 2 + 3
   end

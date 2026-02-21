@@ -1,11 +1,11 @@
-func callee_typed(a: byte): void
+func callee_typed(a: byte): HL
   var
     slot: byte
   end
   ret
 end
 
-func typed_unknown(a: byte): void
+func typed_unknown(a: byte): HL
   var
     slot: byte
   end
@@ -19,7 +19,7 @@ func typed_unknown(a: byte): void
   ret
 end
 
-func raw_unknown(a: byte): void
+func raw_unknown(a: byte): HL
   var
     slot: byte
   end

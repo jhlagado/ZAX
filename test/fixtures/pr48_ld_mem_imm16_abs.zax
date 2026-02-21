@@ -4,7 +4,7 @@ section var at $1000
 globals
   y: word
 
-export func main(): void
+export func main()
     ld (y), $1234
   end
 

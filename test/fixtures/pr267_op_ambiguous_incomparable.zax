@@ -6,6 +6,6 @@ op choose(dst: reg16, src: BC)
   nop
 end
 
-export func main(): void
+export func main()
   choose HL, BC
 end

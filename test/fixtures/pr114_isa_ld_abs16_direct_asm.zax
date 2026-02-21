@@ -12,7 +12,7 @@ globals
   w7: word
   b0: byte
 
-export func main(): void
+export func main()
     ld a, (b0)
     ld (b0), a
     ld hl, (w0)

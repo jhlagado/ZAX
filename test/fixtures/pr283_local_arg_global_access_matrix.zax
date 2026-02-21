@@ -5,11 +5,11 @@ globals
   gword: word
   gbyte: byte
 
-export func touch(v: word): void
+export func touch(v: word)
   ret
 end
 
-export func main(arg0: word): void
+export func main(arg0: word)
   var
     localw: word
     localb: byte
@@ -23,4 +23,3 @@ export func main(arg0: word): void
   touch gword
   ret
 end
-

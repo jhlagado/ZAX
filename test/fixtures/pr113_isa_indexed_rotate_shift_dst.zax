@@ -1,4 +1,4 @@
-export func main(): void
+export func main()
     rlc (ix[1]), b
     rrc (iy[-1]), c
     rl (ix[2]), d

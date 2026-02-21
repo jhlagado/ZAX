@@ -1,11 +1,11 @@
-func broken(): void
+func broken()
 const K = 1
 
-func also_broken(): void
+func also_broken()
   var
     tmp: byte
 section code
 
-func ok(): void
+func ok()
   ret
 end

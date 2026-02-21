@@ -1,4 +1,4 @@
-export func bad_func(): void
+export func bad_func()
   asm
     nop
 end
