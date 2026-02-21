@@ -5,5 +5,4 @@ end
 func main(): void
   load_idx A, (IX+2)
   load_idx B, (IY)
-  ret
 end

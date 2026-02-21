@@ -16,6 +16,4 @@ export func main(): void
   ld a, l
   getw 9
   ld out, hl
-  ret
 end
-

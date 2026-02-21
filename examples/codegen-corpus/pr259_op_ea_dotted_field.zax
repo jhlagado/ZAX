@@ -12,5 +12,4 @@ end
 
 func main(): void
   touch p.lo
-  ret
 end

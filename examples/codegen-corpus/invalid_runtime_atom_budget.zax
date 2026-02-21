@@ -8,6 +8,4 @@ globals
 
 export func main(): void
   ld a, arr[i + j]
-  ret
 end
-

@@ -13,6 +13,4 @@ export func main(): void
   ld a, arr[hl]
   ld a, arr[(hl)]
   ld a, grid[idx][0]
-  ret
 end
-
