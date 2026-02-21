@@ -7,11 +7,11 @@ This document is a codegen/lowering design reference.
 
 ## 1. Assumptions Used in These Examples
 
-Examples below assume the current v0.2 preservation policy (register-list returns):
+Examples below assume the current v0.2 preservation policy (register-list returns only):
 
-- Typed internal `func` calls are preservation-safe by default; typed `extern func` calls are not preservation-safe unless an ABI is declared.
-- Return declaration surface: no return clause (preserve-all), `: HL`, `: HL,DE`, `: HL,DE,BC`, with optional `AF` appended to publish flags. Byte results use the low byte of `HL`.
-- Preservation set is `{AF, BC, DE, HL} \ ReturnSet`; including `AF` in the return list makes flags volatile.
+- Typed internal `func` calls are preservation-safe by default; typed `extern func` calls are caller-preserve unless an ABI is declared.
+- Return surface: no return clause (preserve-all) or an explicit list: `: HL`, `: HL,DE`, `: HL,DE,BC`, optionally with `AF` added (e.g., `: HL,AF`, `: HL,DE,AF`). No legacy `void/byte/word/long/verylong/flags` keywords are valid.
+- Preservation set = `{AF, BC, DE, HL} \ ReturnSet`; HL is preserved only when omitted from the return set; AF is volatile only when listed.
 - `IX` is the frame anchor; any `IX+d` word transfer involving `HL` must shuttle through `DE` (never `IX+H/L`).
 - Locals are allocated/initialized before preserved registers are pushed; when `HL` is preserved (no `HL` in the return list), use the per-local swap init (`push hl` / `ld hl,imm` / `ex (sp),hl`).
 - Caller cleans pushed arguments after the call.
