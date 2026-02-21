@@ -94,7 +94,7 @@ Implementation note (non-normative): `docs/zax-dev-playbook.md` includes the imp
 
 ### 0.5 Entry Point (Non-normative)
 
-Entry-point selection is outside v0.1 scope. A typical convention is `export func main(): void`, but loaders/ROMs may enter at any address.
+Entry-point selection is outside v0.1 scope. A typical convention is `export func main()`, but loaders/ROMs may enter at any address.
 
 ## 1. Lexical Rules
 
@@ -489,7 +489,7 @@ Example (informative):
 globals
 v: Value
 
-func read_value_overlay(): void
+func read_value_overlay()
   ld a, (v.b) ; read low byte
   ld hl, (v.w) ; read word overlay
   ld de, (v.p) ; read pointer overlay
@@ -727,7 +727,7 @@ Bind callable names to absolute addresses:
 
 ```
 
-extern func bios_putc(ch: byte): void at $F003
+extern func bios_putc(ch: byte) at $F003
 
 ```
 
@@ -741,8 +741,8 @@ Bind multiple entry points relative to a `bin` base:
 
 bin legacy in code from "asm80/legacy.bin"
 extern legacy
-func legacy_init(): void at $0000
-func legacy_putc(ch: byte): void at $0030
+func legacy_init() at $0000
+func legacy_putc(ch: byte) at $0030
 end
 
 ```
@@ -876,7 +876,7 @@ Examples (normative classification):
 globals
   table: byte[4] = { 1, 2, 3, 4 }
 
-func sample(): void
+func sample()
   var
     a: word = 0             ; valid scalar value-init
     b = table               ; valid alias-init
@@ -975,7 +975,7 @@ func sum_any(values: byte[]): word
   ; flexible array-view contract
 end
 
-export func main(): void
+export func main()
   sum_fixed_10 sample_bytes   ; valid
   sum_any sample_bytes        ; valid ([10] -> [])
 end
@@ -1448,7 +1448,7 @@ const SpriteBytes = sizeof(Sprite)
 Typed call boundary expectations:
 
 ```zax
-extern func putc(ch: byte): void at $F003
+extern func putc(ch: byte) at $F003
 extern func next_char(): byte at $F010
 
 ; v0.2 typed-call boundary (internal funcs):
@@ -1866,7 +1866,7 @@ end
 At the call site, you invoke it by writing just the name on an instruction line:
 
 ```
-func panic(): void
+func panic()
   halt_system
 end
 ```
@@ -2722,7 +2722,7 @@ op simple_inc(dst: reg16)
   inc dst
 end
 
-func test(): void
+func test()
   simple_inc HL    ; should expand to: inc hl
   simple_inc DE    ; should expand to: inc de
 end
@@ -2742,7 +2742,7 @@ op add16(dst: DE, src: reg16)
   ex de, hl
 end
 
-func test(): void
+func test()
   add16 HL, BC     ; should select first overload
   add16 DE, BC     ; should select second overload
 end
@@ -2761,7 +2761,7 @@ op load_val(dst: reg8, val: imm16)
   ld dst, val
 end
 
-func test(): void
+func test()
   load_val A, 42   ; should select imm8 overload
   load_val A, 1000 ; should select imm16 overload
 end
@@ -2777,7 +2777,7 @@ end
 op ambig(dst: reg16, src: BC)
 end
 
-func test(): void
+func test()
   ambig HL, BC     ; ERROR: ambiguous
 end
 ```
@@ -2832,7 +2832,7 @@ op safe_add(dst: reg16, src: reg16)
   adc dst, src
 end
 
-func test(): void
+func test()
   safe_add HL, DE  ; should expand clear_flags then adc
 end
 ```
