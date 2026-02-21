@@ -1,8 +1,8 @@
-func badParamDecl(a): void
+func badParamDecl(a)
     ret
   end
 
-func badParamType(a: [byte]): void
+func badParamType(a: [byte])
     ret
   end
 
@@ -14,10 +14,10 @@ op badOpParam(a)
   ret
 end
 
-extern func extBadParamDecl(a): byte at $0100
-extern func extBadParamType(a: [byte]): byte at $0102
+extern func extBadParamDecl(a): HL at $0100
+extern func extBadParamType(a: [byte]): HL at $0102
 extern func extBadReturn(a: byte): [word] at $0104
 
-func main(): void
+func main()
     ret
   end

@@ -1,5 +1,5 @@
 import "bad_module.zax"
 
-func main(): void
+func main()
   ret
 end

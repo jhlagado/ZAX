@@ -21,7 +21,7 @@ describe('PR113 ISA: indexed set/res with destination register', () => {
   it('diagnoses invalid 3-operand source/destination forms', async () => {
     const entry = join(__dirname, 'fixtures', 'tmp-pr113-indexed-setres-invalid.zax');
     const source = [
-      'export func main(): void',
+      'export func main()',
       '    set 1, (hl), a',
       '    res 2, (ix[0]), ix',
       'end',

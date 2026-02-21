@@ -2,6 +2,6 @@ data
   func: byte = 1
   op: byte = 2
 
-func main(): void
+func main()
     ret
 end

@@ -7,7 +7,7 @@ globals
   arr: byte[16]
   grid: byte[4][8]
 
-export func main(): void
+export func main()
   ld a, arr[i + j]
   ld a, grid[i][j]
 

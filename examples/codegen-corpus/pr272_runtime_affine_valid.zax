@@ -6,7 +6,7 @@ globals
   idxw: word
   arr: byte[64]
 
-export func main(): void
+export func main()
   ld a, arr[idx + 1]
   ld a, arr[1 + idx]
   ld a, arr[idxw + 2]

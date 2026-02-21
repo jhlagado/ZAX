@@ -1,5 +1,4 @@
-export func main(): void
+export func main()
     select A
     end
   end
-

@@ -4,7 +4,7 @@ op cond_nop(cond: cc)
   end
 end
 
-func main(): void
+func main()
   cond_nop A
   ret
 end

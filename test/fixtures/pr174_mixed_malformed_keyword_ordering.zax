@@ -17,6 +17,6 @@ data
   extern x: byte = [1]
   extern: byte = [2]
 
-func main(): void
+func main()
     ret
   end

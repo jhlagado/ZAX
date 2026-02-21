@@ -22,7 +22,7 @@ const LegacyPutcOffset = $0030
 
 ; Bind callable names to entry points inside the imported blob.
 extern legacy
-  func legacy_init(): void at $0000
+  func legacy_init() at $0000
   func legacy_putc(ch: byte): void at LegacyPutcOffset
 end
 

@@ -1741,42 +1741,23 @@ export function parseModuleFile(
     text: string,
     stmtSpan: SourceSpan,
     lineNo: number,
-  ): string[] | undefined {
-    const tokens = text
+  ): { regs: string[]; flags: boolean } | undefined {
+    let flags = false;
+    let body = text.trim();
+    if (body.toLowerCase().endsWith(' flags')) {
+      flags = true;
+      body = body.slice(0, -' flags'.length).trim();
+    }
+    const tokens = body
       .split(',')
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
-    if (tokens.length === 0) return [];
-
-    const legacy = new Map<string, string[]>([
-      ['VOID', []],
-      ['BYTE', ['HL']],
-      ['WORD', ['HL']],
-      ['ADDR', ['HL']],
-      ['LONG', ['HL', 'DE']],
-      ['VERYLONG', ['HL', 'DE', 'BC']],
-    ]);
-    if (tokens.length === 1) {
-      const upperLegacy = tokens[0]!.toUpperCase();
-      const flagsMatch = /(.*)\s+FLAGS$/.exec(upperLegacy);
-      if (flagsMatch) {
-        const base = flagsMatch[1]!.trim();
-        const mapped = legacy.get(base);
-        if (mapped !== undefined) return [...mapped, 'AF'];
-      }
-      const mapped = legacy.get(upperLegacy);
-      if (mapped !== undefined) return mapped;
-    }
+    if (tokens.length === 0) return { regs: [], flags };
 
     const allowed = new Set(['AF', 'BC', 'DE', 'HL']);
     const seen = new Set<string>();
     for (const t of tokens) {
       const upper = t.toUpperCase();
-      if (upper === 'FLAGS') {
-        // Flags modifier: AF is volatile, so treat AF as part of the return set.
-        if (!seen.has('AF')) seen.add('AF');
-        continue;
-      }
       if (!allowed.has(upper)) {
         diag(
           diagnostics,
@@ -1795,7 +1776,7 @@ export function parseModuleFile(
       }
       seen.add(upper);
     }
-    return [...seen];
+    return { regs: [...seen], flags };
   }
 
   function parseExternFuncFromTail(
@@ -1852,8 +1833,10 @@ export function parseModuleFile(
     const atText = afterClose.slice(atIdx + 4).trim();
 
     let returnRegs: string[] | undefined;
+    let returnFlags: boolean | undefined;
     if (retTextRaw.length === 0) {
       returnRegs = [];
+      returnFlags = false;
     } else {
       if (!retTextRaw.startsWith(':')) {
         diagInvalidHeaderLine(
@@ -1865,9 +1848,10 @@ export function parseModuleFile(
         return undefined;
       }
       const regText = retTextRaw.slice(1).trim();
-      const parsedRegs = parseReturnRegsFromText(regText, stmtSpan, lineNo);
-      if (!parsedRegs) return undefined;
-      returnRegs = parsedRegs;
+      const parsed = parseReturnRegsFromText(regText, stmtSpan, lineNo);
+      if (!parsed) return undefined;
+      returnRegs = parsed.regs;
+      returnFlags = parsed.flags;
     }
 
     const paramsText = header.slice(openParen + 1, closeParen);
@@ -1883,6 +1867,7 @@ export function parseModuleFile(
       name,
       params,
       returnRegs,
+      ...(returnFlags ? { returnFlags } : {}),
       at,
     };
   }
@@ -2472,8 +2457,10 @@ export function parseModuleFile(
       const headerSpan = span(file, lineStartOffset, lineEndOffset);
       const afterClose = header.slice(closeParen + 1).trimStart();
       let returnRegs: string[] | undefined;
+      let returnFlags: boolean | undefined;
       if (afterClose.length === 0) {
         returnRegs = [];
+        returnFlags = false;
       } else {
         const retMatch = /^:\s*(.+)$/.exec(afterClose);
         if (!retMatch) {
@@ -2489,7 +2476,8 @@ export function parseModuleFile(
           i++;
           continue;
         }
-        returnRegs = parsedRegs;
+        returnRegs = parsedRegs.regs;
+        returnFlags = parsedRegs.flags;
       }
 
       const paramsText = header.slice(openParen + 1, closeParen);
@@ -2675,13 +2663,14 @@ export function parseModuleFile(
           const funcNode: FuncDeclNode = {
             kind: 'FuncDecl',
             span: funcSpan,
-            name,
-            exported,
-            params,
-            ...(returnRegs ? { returnRegs } : {}),
-            ...(locals ? { locals } : {}),
-            asm,
-          };
+          name,
+          exported,
+          params,
+          ...(returnRegs ? { returnRegs } : {}),
+          ...(returnFlags ? { returnFlags } : {}),
+          ...(locals ? { locals } : {}),
+          asm,
+        };
           items.push(funcNode);
           i++;
           break;

@@ -4,7 +4,7 @@ globals
   a: byte
   a: word
 
-export func main(): void
+export func main()
   var
     tmp byte
   end

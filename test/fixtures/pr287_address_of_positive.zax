@@ -4,11 +4,11 @@ section var at $1000
 globals
   b: byte
 
-func accept(v: word): void
+func accept(v: word): HL
   ret
 end
 
-export func main(): void
+export func main()
   accept @b
   ret
 end

@@ -1,4 +1,4 @@
-export func main(): void
+export func main()
     jp q, 1
     jp nz, a
     call q, 1

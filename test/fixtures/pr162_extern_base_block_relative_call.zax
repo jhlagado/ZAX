@@ -1,10 +1,10 @@
 bin legacy in code from "pr17_blob.bin"
 
 extern legacy
-  func legacy_putc(ch: byte): void at $0002
+  func legacy_putc(ch: byte): HL at $0002
 end
 
-func main(): void
+func main()
     legacy_putc 7
     ret
 end

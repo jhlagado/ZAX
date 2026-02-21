@@ -43,7 +43,7 @@ describe('cli failure contract matrix', () => {
     const base = join(work, 'out');
     await writeFile(
       entry,
-      ['import MissingModule', '', 'export func main(): void', '  nop', 'end', ''].join('\n'),
+      ['import MissingModule', '', 'export func main()', '  nop', 'end', ''].join('\n'),
       'utf8',
     );
 
@@ -69,8 +69,8 @@ describe('cli failure contract matrix', () => {
     const outHex = join(work, 'out.hex');
     const base = join(work, 'out');
 
-    await writeFile(entry, 'import "b.zax"\n\nfunc main(): void\n  ret\nend\n', 'utf8');
-    await writeFile(b, 'import "a.zax"\n\nfunc bmain(): void\n  ret\nend\n', 'utf8');
+    await writeFile(entry, 'import "b.zax"\n\nfunc main()\n  ret\nend\n', 'utf8');
+    await writeFile(b, 'import "a.zax"\n\nfunc bmain()\n  ret\nend\n', 'utf8');
 
     const res = await runCli(['-o', outHex, entry]);
 
@@ -101,7 +101,7 @@ describe('cli failure contract matrix', () => {
         'import "a/lib.zax"',
         'import "b/lib.zax"',
         '',
-        'func main(): void',
+        'func main()',
         '  ret',
         'end',
         '',
@@ -110,8 +110,8 @@ describe('cli failure contract matrix', () => {
     );
     await mkdir(aDir, { recursive: true });
     await mkdir(bDir, { recursive: true });
-    await writeFile(aModule, 'func a_lib(): void\n  ret\nend\n', 'utf8');
-    await writeFile(bModule, 'func b_lib(): void\n  ret\nend\n', 'utf8');
+    await writeFile(aModule, 'func a_lib()\n  ret\nend\n', 'utf8');
+    await writeFile(bModule, 'func b_lib()\n  ret\nend\n', 'utf8');
 
     const res = await runCli(['-o', outHex, entry]);
 
@@ -150,7 +150,7 @@ describe('cli failure contract matrix', () => {
     const entry = join(work, 'encode-error.zax');
     const outHex = join(work, 'out.hex');
     const base = join(work, 'out');
-    await writeFile(entry, 'func main(): void\n  ld a, 300\nend\n', 'utf8');
+    await writeFile(entry, 'func main()\n  ld a, 300\nend\n', 'utf8');
 
     const res = await runCli(['-o', outHex, entry]);
 
@@ -174,7 +174,7 @@ describe('cli failure contract matrix', () => {
       [
         'section code at $8000',
         'section code at $8100',
-        'func main(): void',
+        'func main()',
         '  ret',
         'end',
         '',
@@ -223,7 +223,7 @@ describe('cli failure contract matrix', () => {
 
     await writeFile(
       entry,
-      ['import "b.zax"', 'import "a.zax"', '', 'func main(): void', '  ret', 'end', ''].join('\n'),
+      ['import "b.zax"', 'import "a.zax"', '', 'func main()', '  ret', 'end', ''].join('\n'),
       'utf8',
     );
     await writeFile(a, 'func a(: void\nend\n', 'utf8');
@@ -257,7 +257,7 @@ describe('cli failure contract matrix', () => {
   it('returns code 2 for CLI parse errors and always includes usage text', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-usage-errors-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main()\n  nop\nend\n', 'utf8');
 
     const cases: Array<{ args: string[]; message: string }> = [
       { args: ['--badflag', entry], message: 'Unknown option' },
@@ -283,7 +283,7 @@ describe('cli failure contract matrix', () => {
   it('accepts uppercase output extensions and prints canonical primary artifact path', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-upper-ext-'));
     const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main(): void\n  nop\nend\n', 'utf8');
+    await writeFile(entry, 'export func main()\n  nop\nend\n', 'utf8');
 
     const outHexUpper = join(work, 'bundle.HEX');
     const resHex = await runCli(['--type', 'hex', '--output', outHexUpper, entry]);

@@ -26,7 +26,7 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     expect(res.diagnostics).toHaveLength(1);
     expect(res.diagnostics[0]?.message).toBe('"while" expects a condition code');
     expect(res.diagnostics[0]?.line).toBe(2);
-    expect(res.diagnostics[0]?.column).toBe(5);
+    expect(res.diagnostics[0]?.column).toBe(3);
   });
 
   it('reports line/column for select without arms', async () => {

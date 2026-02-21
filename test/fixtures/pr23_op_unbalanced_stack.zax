@@ -2,6 +2,6 @@ op leak()
   push bc
 end
 
-export func main(): void
+export func main()
     leak
 end

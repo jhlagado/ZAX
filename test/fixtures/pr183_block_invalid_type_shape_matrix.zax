@@ -16,6 +16,6 @@ data
   ok: byte = 1
   bad: [byte] = 2
 
-func main(): void
+func main()
     ret
   end

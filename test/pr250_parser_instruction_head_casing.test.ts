@@ -7,7 +7,7 @@ import type { Diagnostic } from '../src/diagnostics/types.js';
 describe('PR250 parser asm head canonicalization', () => {
   it('normalizes function-body instruction heads to lower-case', () => {
     const source = `
-func main(): void
+func main()
   LD A, 1
   dJnZ loop
   loop:

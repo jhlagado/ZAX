@@ -10,5 +10,5 @@ data
   msg: byte[2] = "HEY"
   p: Point = [0]
 
-export func main(): void
+export func main()
 end

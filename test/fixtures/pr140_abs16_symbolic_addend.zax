@@ -1,4 +1,4 @@
-export func main(): void
+export func main()
     jp nz, target + 1
     call c, target - 1
     jp target + 2

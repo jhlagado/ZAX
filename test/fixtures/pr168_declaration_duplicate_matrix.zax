@@ -14,7 +14,7 @@ globals
   counter: byte
   Counter: byte
 
-func main(): void
+func main()
   var
     tmp: byte
     TMP: byte

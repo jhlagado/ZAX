@@ -10,7 +10,7 @@ globals
 data
   msg: byte[2] = "HI"
 
-export func main(): void
+export func main()
     nop
 end
 

@@ -14,7 +14,7 @@ extern api
   put(ch: byte): void at $0002
 end
 
-func main(): void
+func main()
   var
     tmp byte
   end

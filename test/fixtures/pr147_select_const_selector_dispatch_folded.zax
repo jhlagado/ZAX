@@ -1,4 +1,4 @@
-export func main(): void
+export func main()
     ld a, 2
     select 2
       case 0

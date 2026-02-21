@@ -9,7 +9,7 @@ data
   w: word = [ $BEEF ]
   b: byte = [ $7F ]
 
-export func main(): void
+export func main()
     takeWord w
     takeWord (w)
     takeByte (b)

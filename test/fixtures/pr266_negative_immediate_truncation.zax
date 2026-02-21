@@ -1,6 +1,6 @@
 const NEG2 = -2
 
-export func main(): void
+export func main()
     ld a, -1
     ld b, NEG2
     ld hl, -1

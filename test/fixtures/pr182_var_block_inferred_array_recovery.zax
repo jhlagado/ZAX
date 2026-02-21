@@ -5,7 +5,7 @@ globals
 
 const K = 1
 
-func main(): void
+func main()
     ld a, K
     ret
   end

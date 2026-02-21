@@ -6,7 +6,7 @@ globals
   count: word = 7
   global_ref = base
 
-export func main(): void
+export func main()
   var
     tmp: word = 1
     local_ref = global_ref

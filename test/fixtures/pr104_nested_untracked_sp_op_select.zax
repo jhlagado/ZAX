@@ -2,7 +2,7 @@ op smash()
   ld sp, hl
 end
 
-export func main(): void
+export func main()
   var
     x: byte
   end

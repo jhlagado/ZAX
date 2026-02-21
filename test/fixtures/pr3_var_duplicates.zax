@@ -6,5 +6,5 @@ globals
   p: Point
   p: byte
 
-func main(): void
+func main()
 end

@@ -8,7 +8,7 @@
 
 import legacy_asm80_lib
 
-export func main(): void
+export func main()
   legacy_init
   legacy_putc 'H'
   legacy_putc 'i'
