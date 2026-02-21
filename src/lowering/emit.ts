@@ -2409,17 +2409,33 @@ export function emitProgram(
 
     if (r?.kind === 'stack') {
       const disp = r.ixDisp & 0xff;
+      const fmtDisp = (d: number): string =>
+        `(IX${r.ixDisp >= 0 ? '+' : '-'}$${Math.abs(r.ixDisp)
+          .toString(16)
+          .padStart(2, '0')
+          .toUpperCase()})`.replace(
+          '$' + Math.abs(r.ixDisp).toString(16).padStart(2, '0').toUpperCase(),
+          '$' + Math.abs(d).toString(16).padStart(2, '0').toUpperCase(),
+        );
       if (want === 'word') {
-        emitRawCodeBytes(Uint8Array.of(0xdd, 0x5e, disp), span.file, 'ld e, (ix+disp)');
+        emitRawCodeBytes(
+          Uint8Array.of(0xdd, 0x5e, disp),
+          span.file,
+          `ld e, ${fmtDisp(r.ixDisp)}`,
+        );
         emitRawCodeBytes(
           Uint8Array.of(0xdd, 0x56, (disp + 1) & 0xff),
           span.file,
-          'ld d, (ix+disp+1)',
+          `ld d, ${fmtDisp(r.ixDisp + 1)}`,
         );
         emitRawCodeBytes(Uint8Array.of(0xeb), span.file, 'ex de, hl');
         return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
       }
-      emitRawCodeBytes(Uint8Array.of(0xdd, 0x5e, disp), span.file, 'ld e, (ix+disp)');
+      emitRawCodeBytes(
+        Uint8Array.of(0xdd, 0x5e, disp),
+        span.file,
+        `ld e, ${fmtDisp(r.ixDisp)}`,
+      );
       return pushZeroExtendedReg8('E', span);
     }
 
