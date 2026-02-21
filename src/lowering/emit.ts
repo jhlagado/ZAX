@@ -3827,7 +3827,11 @@ export function emitProgram(
               'ld',
               [
                 { kind: 'Reg', span: item.span, name: 'IX' },
-                { kind: 'Imm', span: item.span, expr: { kind: 'ImmLiteral', span: item.span, value: 0 } },
+                {
+                  kind: 'Imm',
+                  span: item.span,
+                  expr: { kind: 'ImmLiteral', span: item.span, value: 0 },
+                },
               ],
               item.span,
             );
@@ -3869,8 +3873,7 @@ export function emitProgram(
                 );
                 continue;
               }
-              const narrowed =
-                init.scalarKind === 'byte' ? initValue! & 0xff : initValue! & 0xffff;
+              const narrowed = init.scalarKind === 'byte' ? initValue! & 0xff : initValue! & 0xffff;
               if (!loadImm16ToHL(narrowed, init.span)) continue;
               emitInstr(
                 'ex',
