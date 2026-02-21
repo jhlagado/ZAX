@@ -17,11 +17,11 @@ This playbook replaces the previous split across:
 
 ### 1.1 Decision Hierarchy
 
-| Level | Source                 | Role                                  |
-| ----- | ---------------------- | ------------------------------------- |
-| 1     | `docs/zax-spec.md`     | Canonical language authority          |
-| 2     | (retired) transition notes | Historical rationale (no active doc)    |
-| 3     | This playbook          | Execution and implementation guidance |
+| Level | Source                     | Role                                  |
+| ----- | -------------------------- | ------------------------------------- |
+| 1     | `docs/zax-spec.md`         | Canonical language authority          |
+| 2     | (retired) transition notes | Historical rationale (no active doc)  |
+| 3     | This playbook              | Execution and implementation guidance |
 
 Conflict rule: if guidance here conflicts with `docs/zax-spec.md`, the spec wins.
 

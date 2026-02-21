@@ -22,6 +22,7 @@ Loading a 16-bit value from a local requires two IX-relative byte loads plus reg
 The reason this trade-off is acceptable is that the alternative — using HL as a frame pointer, or computing SP-relative addresses on the fly — imposes a different cost that's harder to see in cycle counts: register pressure. On a machine with seven general-purpose 8-bit registers and three usable 16-bit pairs, tying up HL for frame access means every array operation, every pointer chase, and every 16-bit arithmetic operation has to work around the frame pointer. The result is a cascade of push/pop pairs, exchange instructions, and temporary spills that inflate code size and destroy readability. IX sits outside the main register file's traffic patterns. It costs more per access but it costs nothing in terms of register availability.
 
 Lowering convention (v0.2):
+
 - IX is always the frame pointer; never treat it as a scratch register.
 - Prefer **base in DE, offset in HL**. This makes scaling by powers of two cheap (`add hl, hl` chains) while keeping the base stable for the final `add hl, de`.
 - BC is the third working pair; use it sparingly so loops can keep counters live.
@@ -230,6 +231,7 @@ This is the case the programmer should aim for in hot loops. If both the base po
 ### 4.6 Local/Arg Base + Local/Arg Offset
 
 Both values live in the IX frame. This is the worst case: two IX-relative loads before any computation. In v0.2 this should be treated as a **discouraged** form and may be rejected by a future runtime-atom budget:
+
 - If allowed, the compiler must preserve DE (or BC) if used as scratch: push/pop adds ~21 T-states on top of the ~82 T-state baseline, pushing it over 100 T-states per access.
 - Recommended alternative: load one operand (base or index) into a register outside the hot loop, turning the pattern into Section 4.2/4.3/4.5.
 - Consider making “local + local” lowerings opt-in (warning) or rejected when inside the runtime-atom budget for array expressions.
@@ -237,12 +239,14 @@ Both values live in the IX frame. This is the worst case: two IX-relative loads 
 ### 4.7 Recommended vs. discouraged patterns (summary)
 
 **Recommended (fast, predictable)**
+
 - Constant base + register index; base in DE, scaled offset in HL; power-of-two element sizes so scaling is `add hl, hl` chains.
 - Constant base + constant index (fully folded).
 - Register base + register offset already in a 16-bit pair; just `add hl, de` then access.
 - Hoisted base pointer in a register across loop iterations; bump with `inc hl` or `add hl, de`.
 
 **Discouraged (slow / complex)**
+
 - Local/arg base plus local/arg index: double IX loads per access.
 - Multi-stage indirection (`arr[(HL)]`) inside hot loops.
 - Element sizes that require long multiply sequences (non–power-of-two, especially odd sizes) in hot loops.
@@ -326,12 +330,14 @@ The table above leads to a few rules of thumb that ZAX programmers should intern
 **Let the compiler handle cold paths.** For code that runs once (initialization, configuration, error handling), the IX overhead doesn't matter. Write clean, structured code using locals and let the compiler emit the straightforward lowering. Save the register-management effort for the paths where cycles actually matter.
 
 **Loop hot-path checklist (do this)**
+
 - Base in DE, offset/scale in HL; add at the end.
 - Hoist base/stride before the loop; bump pointer per-iteration (`inc hl` / `add hl, de`).
 - Keep index in B/DE/BC; prefer power-of-two element sizes.
 - Avoid IX-relative loads inside the loop when a hoisted pointer will do.
 
 **Not recommended in hot loops**
+
 - Local+local base/index (double IX loads per access; also triggers extra push/pop for scratch preservation if allowed).
 - Nested `(HL)` indirection for indices inside the loop.
 - Odd element sizes that need long multiply chains.

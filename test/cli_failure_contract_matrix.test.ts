@@ -97,15 +97,9 @@ describe('cli failure contract matrix', () => {
 
     await writeFile(
       entry,
-      [
-        'import "a/lib.zax"',
-        'import "b/lib.zax"',
-        '',
-        'func main()',
-        '  ret',
-        'end',
-        '',
-      ].join('\n'),
+      ['import "a/lib.zax"', 'import "b/lib.zax"', '', 'func main()', '  ret', 'end', ''].join(
+        '\n',
+      ),
       'utf8',
     );
     await mkdir(aDir, { recursive: true });
@@ -171,14 +165,9 @@ describe('cli failure contract matrix', () => {
     const base = join(work, 'out');
     await writeFile(
       entry,
-      [
-        'section code at $8000',
-        'section code at $8100',
-        'func main()',
-        '  ret',
-        'end',
-        '',
-      ].join('\n'),
+      ['section code at $8000', 'section code at $8100', 'func main()', '  ret', 'end', ''].join(
+        '\n',
+      ),
       'utf8',
     );
 

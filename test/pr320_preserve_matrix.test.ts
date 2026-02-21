@@ -18,8 +18,7 @@ function prologuePushes(text: string, label: string): string[] {
     if (m) {
       const reg = m[1]!.toUpperCase();
       if (preserveSet.has(reg)) pushes.push(reg);
-    }
-    else if (pushes.length > 0) break;
+    } else if (pushes.length > 0) break;
   }
   return pushes;
 }

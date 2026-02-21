@@ -3,6 +3,7 @@
 This is the minimal, living reference for v0.2 codegen. Everything else for v0.2 lowering/calling should flow from these sources; retired historical docs have been removed.
 
 ## What to read (in order)
+
 1. `docs/zax-spec.md` §8.2 + local-init/epilogue sections (frame, return registers, preserves).
 2. `docs/return-register-policy.md` (matrix + HL-preserve swap guidance).
 3. `docs/v02-codegen-worked-examples.md` (assumptions + worked lowerings).
@@ -10,6 +11,7 @@ This is the minimal, living reference for v0.2 codegen. Everything else for v0.2
 5. `docs/arrays.md` (IX + DE/HL lowering guidance and runtime-atom budget cues).
 
 ## Invariants to keep
+
 - Register-list returns; preservation = {AF, BC, DE, HL} \ ReturnSet; `AF` in return set makes flags volatile.
 - IX-anchored frames; locals at IX-2, -4… in declaration order; locals before preserves.
 - HL-preserve cases use per-local swap init; HL-return cases use simple init.

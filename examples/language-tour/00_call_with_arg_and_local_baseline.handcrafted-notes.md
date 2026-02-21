@@ -3,6 +3,7 @@
 This file captures the exact expected prologue/epilogue and frame layout for the baseline example. It is a human-written reference and must not be auto-regenerated.
 
 ## Invariants
+
 - Frame anchor: `IX` set to incoming `SP` (`push ix; ld ix,0; add ix,sp`).
 - Args at `IX+4..`; locals packed downward from `IX-2` in declaration order, independent of preserve bytes.
 - No-return clause → preserve `AF,BC,DE,HL`; return-in-`HL` → preserve `AF,BC,DE` only.
@@ -12,6 +13,7 @@ This file captures the exact expected prologue/epilogue and frame layout for the
 - IX+d word moves involving `HL` use `DE` shuttle.
 
 ## Expected lowering: `main` (no return clause, HL preserved)
+
 ```
 main:
 push IX                        ; save old IX
@@ -44,9 +46,11 @@ ld SP, IX
 pop IX
 ret
 ```
+
 Locals: `result_word` at `IX-2`/`IX-1`.
 
 ## Expected lowering: `inc_one` (returns in HL, HL volatile)
+
 ```
 inc_one:
 push IX
@@ -75,4 +79,5 @@ ld SP, IX
 pop IX
 ret
 ```
+
 Locals: `temp_word` at `IX-2`/`IX-1`, `unused_word` at `IX-4`/`IX-3` (initialized but unused).

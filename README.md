@@ -307,12 +307,12 @@ Tests are organized by spec section and PR scope under `test/`. Golden-file comp
 
 ## Documentation
 
-| Document                           | Purpose                                                             |
-| ---------------------------------- | ------------------------------------------------------------------- |
-| `docs/zax-spec.md`                 | **Normative** language specification (includes CLI/op appendices)   |
-| `docs/ZAX-quick-guide.md`          | Practical quick guide for daily language usage (non-normative)      |
-| `docs/zax-dev-playbook.md`         | Consolidated implementation, roadmap, checklist, and workflow guide |
-| `docs/v02-codegen-reference.md`    | Consolidated v0.2 codegen entry point and archive links             |
+| Document                        | Purpose                                                             |
+| ------------------------------- | ------------------------------------------------------------------- |
+| `docs/zax-spec.md`              | **Normative** language specification (includes CLI/op appendices)   |
+| `docs/ZAX-quick-guide.md`       | Practical quick guide for daily language usage (non-normative)      |
+| `docs/zax-dev-playbook.md`      | Consolidated implementation, roadmap, checklist, and workflow guide |
+| `docs/v02-codegen-reference.md` | Consolidated v0.2 codegen entry point and archive links             |
 
 ---
 
