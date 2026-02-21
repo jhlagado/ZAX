@@ -2428,7 +2428,7 @@ export function emitProgram(
           span.file,
           `ld d, ${fmtDisp(r.ixDisp + 1)}`,
         );
-        emitRawCodeBytes(Uint8Array.of(0xeb), span.file, 'ex de, hl');
+        emitRawCodeBytes(Uint8Array.of(0xeb), span.file, 'ex de, hl'); // HL = word
         return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
       }
       emitRawCodeBytes(
