@@ -3680,6 +3680,7 @@ export function emitProgram(
         }
         const preserveBytes = preserveSet.length * 2;
         const shouldPreserveTypedBoundary = preserveSet.length > 0;
+        const hlPreserved = preserveSet.includes('HL');
         let localSlotCount = 0;
         const localScalarInitializers: Array<{
           name: string;
@@ -3700,7 +3701,8 @@ export function emitProgram(
               );
               continue;
             }
-            const localIxDisp = -(preserveBytes + 2 * (localSlotCount + 1));
+            // Locals are packed tightly starting at IX-2, independent of preserve bytes.
+            const localIxDisp = -(2 * (localSlotCount + 1));
             stackSlotOffsets.set(declLower, localIxDisp);
             stackSlotTypes.set(declLower, decl.typeExpr);
             localSlotCount++;
@@ -3810,24 +3812,6 @@ export function emitProgram(
           }
         }
 
-        if (shouldPreserveTypedBoundary) {
-          const prevTag = currentCodeSegmentTag;
-          currentCodeSegmentTag = {
-            file: item.span.file,
-            line: item.span.start.line,
-            column: item.span.start.column,
-            kind: 'code',
-            confidence: 'high',
-          };
-          try {
-            for (const reg of preserveSet) {
-              emitInstr('push', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
-            }
-          } finally {
-            currentCodeSegmentTag = prevTag;
-          }
-        }
-
         for (const init of localScalarInitializers) {
           const prevTag = currentCodeSegmentTag;
           currentCodeSegmentTag = {
@@ -3848,8 +3832,40 @@ export function emitProgram(
               continue;
             }
             const narrowed = init.scalarKind === 'byte' ? initValue! & 0xff : initValue! & 0xffff;
-            if (!loadImm16ToHL(narrowed, init.span)) continue;
-            emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
+            if (hlPreserved) {
+              // Swap pattern: save incoming HL, load initializer, swap to stack, restore HL.
+              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
+              if (!loadImm16ToHL(narrowed, init.span)) continue;
+              emitInstr(
+                'ex',
+                [
+                  { kind: 'Mem', span: init.span, expr: { kind: 'EaName', span: init.span, name: 'SP' } },
+                  { kind: 'Reg', span: init.span, name: 'HL' },
+                ],
+                init.span,
+              );
+            } else {
+              if (!loadImm16ToHL(narrowed, init.span)) continue;
+              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
+            }
+          } finally {
+            currentCodeSegmentTag = prevTag;
+          }
+        }
+
+        if (shouldPreserveTypedBoundary) {
+          const prevTag = currentCodeSegmentTag;
+          currentCodeSegmentTag = {
+            file: item.span.file,
+            line: item.span.start.line,
+            column: item.span.start.column,
+            kind: 'code',
+            confidence: 'high',
+          };
+          try {
+            for (const reg of preserveSet) {
+              emitInstr('push', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
+            }
           } finally {
             currentCodeSegmentTag = prevTag;
           }
@@ -5737,26 +5753,6 @@ export function emitProgram(
               scope: 'local',
             });
             traceLabel(codeOffset, epilogueLabel);
-            if (localBytes > 0) {
-              if (loadImm16ToHL(localBytes, item.span)) {
-                emitInstr(
-                  'add',
-                  [
-                    { kind: 'Reg', span: item.span, name: 'HL' },
-                    { kind: 'Reg', span: item.span, name: 'SP' },
-                  ],
-                  item.span,
-                );
-                emitInstr(
-                  'ld',
-                  [
-                    { kind: 'Reg', span: item.span, name: 'SP' },
-                    { kind: 'Reg', span: item.span, name: 'HL' },
-                  ],
-                  item.span,
-                );
-              }
-            }
             const popOrder = preserveSet.slice().reverse();
             for (const reg of popOrder) {
               emitInstr('pop', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
