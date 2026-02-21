@@ -6,7 +6,6 @@ globals
   gbyte: byte
 
 export func touch(v: word): void
-  ret
 end
 
 export func main(arg0: word): void
@@ -21,6 +20,4 @@ export func main(arg0: word): void
   ld a, (localb)
   ld (gbyte), a
   touch gword
-  ret
 end
-

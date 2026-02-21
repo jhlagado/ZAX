@@ -8,5 +8,4 @@ func main(): void
   cond_nop NZ
   cond_nop Z
   cond_nop C
-  ret
 end
