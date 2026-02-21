@@ -9,8 +9,8 @@ add IX, SP                     ; 0106: DD 39
 push AF                        ; 0108: F5
 push BC                        ; 0109: C5
 push DE                        ; 010A: D5
-ld e, (ix+disp)                ; 010B: DD 5E 04
-ld d, (ix+disp+1)              ; 010E: DD 56 05
+ld e, (IX+$04)                 ; 010B: DD 5E 04
+ld d, (IX+$05)                 ; 010E: DD 56 05
 ex de, hl                      ; 0111: EB
 push HL                        ; 0112: E5
 pop HL                         ; 0113: E1
@@ -29,8 +29,8 @@ ld L, A                        ; 0121: 6F
 pop AF                         ; 0122: F1
 inc HL                         ; 0123: 23
 push HL                        ; 0124: E5
-ld e, (ix+disp)                ; 0125: DD 5E 04
-ld d, (ix+disp+1)              ; 0128: DD 56 05
+ld e, (IX+$04)                 ; 0125: DD 5E 04
+ld d, (IX+$05)                 ; 0128: DD 56 05
 ex de, hl                      ; 012B: EB
 push HL                        ; 012C: E5
 pop HL                         ; 012D: E1
@@ -43,8 +43,8 @@ push HL                        ; 0135: E5
 pop HL                         ; 0136: E1
 pop DE                         ; 0137: D1
 ld (hl), e ; inc hl ; ld (hl), d ; 0138: 73 23 72
-ld e, (ix+disp)                ; 013B: DD 5E 04
-ld d, (ix+disp+1)              ; 013E: DD 56 05
+ld e, (IX+$04)                 ; 013B: DD 5E 04
+ld d, (IX+$05)                 ; 013E: DD 56 05
 ex de, hl                      ; 0141: EB
 push HL                        ; 0142: E5
 pop HL                         ; 0143: E1
@@ -57,8 +57,8 @@ pop HL                         ; 014B: E1
 ld A, (hl)                     ; 014C: 7E
 inc A                          ; 014D: 3C
 push AF                        ; 014E: F5
-ld e, (ix+disp)                ; 014F: DD 5E 04
-ld d, (ix+disp+1)              ; 0152: DD 56 05
+ld e, (IX+$04)                 ; 014F: DD 5E 04
+ld d, (IX+$05)                 ; 0152: DD 56 05
 ex de, hl                      ; 0155: EB
 push HL                        ; 0156: E5
 pop HL                         ; 0157: E1
@@ -70,8 +70,8 @@ push HL                        ; 015E: E5
 pop HL                         ; 015F: E1
 pop AF                         ; 0160: F1
 ld (hl), A                     ; 0161: 77
-ld e, (ix+disp)                ; 0162: DD 5E 04
-ld d, (ix+disp+1)              ; 0165: DD 56 05
+ld e, (IX+$04)                 ; 0162: DD 5E 04
+ld d, (IX+$05)                 ; 0165: DD 56 05
 ex de, hl                      ; 0168: EB
 push HL                        ; 0169: E5
 pop HL                         ; 016A: E1
