@@ -1750,9 +1750,19 @@ export function parseModuleFile(
     if (tokens.length === 0) return { regs: [] };
 
     const allowed = new Set(['AF', 'BC', 'DE', 'HL']);
+    const legacyKeywords = new Set(['VOID', 'BYTE', 'WORD', 'LONG', 'VERYLONG', 'NONE', 'FLAGS']);
     const seen = new Set<string>();
     for (const t of tokens) {
       const upper = t.toUpperCase();
+      if (legacyKeywords.has(upper)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Legacy return keyword "${t}" is not supported; declare explicit registers (e.g., omit ":" for no returns, or use HL/DE/BC/AF list).`,
+          { line: lineNo, column: 1 },
+        );
+        return undefined;
+      }
       if (!allowed.has(upper)) {
         diag(
           diagnostics,
