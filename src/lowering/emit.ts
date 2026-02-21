@@ -2584,6 +2584,38 @@ export function emitProgram(
       }
       const d = reg8Code.get(dst.name.toUpperCase());
       if (d !== undefined) {
+        // Fast path: reg8 <- stack slot via IX+d. L/H need DE shuttle because IX+L/H is illegal.
+        if (
+          srcResolved?.kind === 'stack' &&
+          srcResolved.ixDisp >= -0x80 &&
+          srcResolved.ixDisp <= 0x7f
+        ) {
+          const disp = srcResolved.ixDisp & 0xff;
+          const fmtDisp = `IX${srcResolved.ixDisp >= 0 ? '+' : '-'}$${Math.abs(srcResolved.ixDisp)
+            .toString(16)
+            .padStart(2, '0')
+            .toUpperCase()}`;
+
+          // L via DE shuttle: preserves DE/HL
+          if (dst.name.toUpperCase() === 'L') {
+            emitRawCodeBytes(Uint8Array.of(0xeb), inst.span.file, 'ex de, hl');
+            emitRawCodeBytes(
+              Uint8Array.of(0xdd, 0x5e, disp),
+              inst.span.file,
+              `ld e, (${fmtDisp})`,
+            );
+            emitRawCodeBytes(Uint8Array.of(0x16, 0x00), inst.span.file, 'ld d, $00');
+            emitRawCodeBytes(Uint8Array.of(0xeb), inst.span.file, 'ex de, hl');
+            return true;
+          }
+
+          emitRawCodeBytes(
+            Uint8Array.of(0xdd, 0x46 + (d << 3), disp),
+            inst.span.file,
+            `ld ${dst.name.toUpperCase()}, (${fmtDisp})`,
+          );
+          return true;
+        }
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         emitRawCodeBytes(
           Uint8Array.of(0x46 + (d << 3)),
@@ -2598,8 +2630,6 @@ export function emitProgram(
         if (srcResolved?.kind === 'stack') {
           const lo = srcResolved.ixDisp;
           const hi = srcResolved.ixDisp + 1;
-          if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
-            return false;
           if (
             !emitInstr(
               'ex',
@@ -2638,7 +2668,7 @@ export function emitProgram(
             )
           )
             return false;
-          return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span);
+          return true;
         }
         const r = resolveEa(src.expr, inst.span);
         if (r?.kind === 'abs') {
@@ -2857,8 +2887,6 @@ export function emitProgram(
         if (dstResolved?.kind === 'stack') {
           const lo = dstResolved.ixDisp;
           const hi = dstResolved.ixDisp + 1;
-          if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
-            return false;
           if (
             !emitInstr(
               'ex',
@@ -2897,7 +2925,7 @@ export function emitProgram(
             )
           )
             return false;
-          return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span);
+          return true;
         }
         const r = resolveEa(dst.expr, inst.span);
         if (r?.kind === 'abs') {
@@ -3680,6 +3708,7 @@ export function emitProgram(
         }
         const preserveBytes = preserveSet.length * 2;
         const shouldPreserveTypedBoundary = preserveSet.length > 0;
+        const hlPreserved = preserveSet.includes('HL');
         let localSlotCount = 0;
         const localScalarInitializers: Array<{
           name: string;
@@ -3700,7 +3729,8 @@ export function emitProgram(
               );
               continue;
             }
-            const localIxDisp = -(preserveBytes + 2 * (localSlotCount + 1));
+            // Locals are packed tightly starting at IX-2, independent of preserve bytes.
+            const localIxDisp = -(2 * (localSlotCount + 1));
             stackSlotOffsets.set(declLower, localIxDisp);
             stackSlotTypes.set(declLower, decl.typeExpr);
             localSlotCount++;
@@ -3810,24 +3840,6 @@ export function emitProgram(
           }
         }
 
-        if (shouldPreserveTypedBoundary) {
-          const prevTag = currentCodeSegmentTag;
-          currentCodeSegmentTag = {
-            file: item.span.file,
-            line: item.span.start.line,
-            column: item.span.start.column,
-            kind: 'code',
-            confidence: 'high',
-          };
-          try {
-            for (const reg of preserveSet) {
-              emitInstr('push', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
-            }
-          } finally {
-            currentCodeSegmentTag = prevTag;
-          }
-        }
-
         for (const init of localScalarInitializers) {
           const prevTag = currentCodeSegmentTag;
           currentCodeSegmentTag = {
@@ -3848,8 +3860,40 @@ export function emitProgram(
               continue;
             }
             const narrowed = init.scalarKind === 'byte' ? initValue! & 0xff : initValue! & 0xffff;
-            if (!loadImm16ToHL(narrowed, init.span)) continue;
-            emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
+            if (hlPreserved) {
+              // Swap pattern: save incoming HL, load initializer, swap to stack, restore HL.
+              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
+              if (!loadImm16ToHL(narrowed, init.span)) continue;
+              emitInstr(
+                'ex',
+                [
+                  { kind: 'Mem', span: init.span, expr: { kind: 'EaName', span: init.span, name: 'SP' } },
+                  { kind: 'Reg', span: init.span, name: 'HL' },
+                ],
+                init.span,
+              );
+            } else {
+              if (!loadImm16ToHL(narrowed, init.span)) continue;
+              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
+            }
+          } finally {
+            currentCodeSegmentTag = prevTag;
+          }
+        }
+
+        if (shouldPreserveTypedBoundary) {
+          const prevTag = currentCodeSegmentTag;
+          currentCodeSegmentTag = {
+            file: item.span.file,
+            line: item.span.start.line,
+            column: item.span.start.column,
+            kind: 'code',
+            confidence: 'high',
+          };
+          try {
+            for (const reg of preserveSet) {
+              emitInstr('push', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
+            }
           } finally {
             currentCodeSegmentTag = prevTag;
           }
@@ -5737,26 +5781,6 @@ export function emitProgram(
               scope: 'local',
             });
             traceLabel(codeOffset, epilogueLabel);
-            if (localBytes > 0) {
-              if (loadImm16ToHL(localBytes, item.span)) {
-                emitInstr(
-                  'add',
-                  [
-                    { kind: 'Reg', span: item.span, name: 'HL' },
-                    { kind: 'Reg', span: item.span, name: 'SP' },
-                  ],
-                  item.span,
-                );
-                emitInstr(
-                  'ld',
-                  [
-                    { kind: 'Reg', span: item.span, name: 'SP' },
-                    { kind: 'Reg', span: item.span, name: 'HL' },
-                  ],
-                  item.span,
-                );
-              }
-            }
             const popOrder = preserveSet.slice().reverse();
             for (const reg of popOrder) {
               emitInstr('pop', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
