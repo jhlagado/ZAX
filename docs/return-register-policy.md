@@ -16,10 +16,6 @@ Status: non-normative companion to `docs/zax-spec.md` §8.2. Intended for develo
   - `HL,DE,BC`
   - Any of the above with `AF` appended (publishes flags)
 - Zero-syntax: `func name(...)` (no colon) is equivalent to `: none` — preserves AF/BC/DE/HL.
-- Aliases (compat):
-  - `byte` / `word` ≡ `HL` (byte returns in `L`)
-  - `long` ≡ `HL,DE`
-  - `verylong` ≡ `HL,DE,BC`
 - `extern func` uses the same form; `op` has no return declaration.
 
 ## 3. Preservation Matrix (derived)
