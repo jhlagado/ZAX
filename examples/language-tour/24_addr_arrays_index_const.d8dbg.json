@@ -1,0 +1,198 @@
+{
+  "format": "d8-debug-map",
+  "version": 1,
+  "arch": "z80",
+  "addressWidth": 16,
+  "endianness": "little",
+  "files": {
+    "24_addr_arrays_index_const.zax": {
+      "segments": [
+        {
+          "start": 256,
+          "end": 267,
+          "lstLine": 5,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 256,
+          "end": 326,
+          "lstLine": 0,
+          "kind": "unknown",
+          "confidence": "low"
+        },
+        {
+          "start": 267,
+          "end": 270,
+          "lstLine": 6,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 270,
+          "end": 273,
+          "lstLine": 7,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 273,
+          "end": 276,
+          "lstLine": 9,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 276,
+          "end": 279,
+          "lstLine": 10,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 279,
+          "end": 282,
+          "lstLine": 11,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 282,
+          "end": 290,
+          "lstLine": 5,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 290,
+          "end": 302,
+          "lstLine": 14,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 302,
+          "end": 305,
+          "lstLine": 15,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 305,
+          "end": 314,
+          "lstLine": 14,
+          "kind": "code",
+          "confidence": "high"
+        }
+      ],
+      "symbols": [
+        {
+          "name": "touch_arrays_const",
+          "kind": "label",
+          "address": 256,
+          "line": 5,
+          "scope": "global"
+        },
+        {
+          "name": "__zax_epilogue_0",
+          "kind": "label",
+          "address": 282,
+          "line": 5,
+          "scope": "local"
+        },
+        {
+          "name": "main",
+          "kind": "label",
+          "address": 290,
+          "line": 14,
+          "scope": "global"
+        },
+        {
+          "name": "__zax_epilogue_1",
+          "kind": "label",
+          "address": 305,
+          "line": 14,
+          "scope": "local"
+        },
+        {
+          "name": "arr_b",
+          "kind": "data",
+          "address": 314,
+          "line": 2,
+          "scope": "global"
+        },
+        {
+          "name": "arr_w",
+          "kind": "data",
+          "address": 318,
+          "line": 3,
+          "scope": "global"
+        }
+      ]
+    }
+  },
+  "segments": [
+    {
+      "start": 256,
+      "end": 326
+    }
+  ],
+  "fileList": [
+    "24_addr_arrays_index_const.zax"
+  ],
+  "symbols": [
+    {
+      "name": "touch_arrays_const",
+      "kind": "label",
+      "address": 256,
+      "file": "24_addr_arrays_index_const.zax",
+      "line": 5,
+      "scope": "global"
+    },
+    {
+      "name": "__zax_epilogue_0",
+      "kind": "label",
+      "address": 282,
+      "file": "24_addr_arrays_index_const.zax",
+      "line": 5,
+      "scope": "local"
+    },
+    {
+      "name": "main",
+      "kind": "label",
+      "address": 290,
+      "file": "24_addr_arrays_index_const.zax",
+      "line": 14,
+      "scope": "global"
+    },
+    {
+      "name": "__zax_epilogue_1",
+      "kind": "label",
+      "address": 305,
+      "file": "24_addr_arrays_index_const.zax",
+      "line": 14,
+      "scope": "local"
+    },
+    {
+      "name": "arr_b",
+      "kind": "data",
+      "address": 314,
+      "file": "24_addr_arrays_index_const.zax",
+      "line": 2,
+      "scope": "global"
+    },
+    {
+      "name": "arr_w",
+      "kind": "data",
+      "address": 318,
+      "file": "24_addr_arrays_index_const.zax",
+      "line": 3,
+      "scope": "global"
+    }
+  ],
+  "generator": {
+    "tool": "zax",
+    "entrySymbol": "main",
+    "entryAddress": 290
+  }
+}

@@ -1,0 +1,216 @@
+{
+  "format": "d8-debug-map",
+  "version": 1,
+  "arch": "z80",
+  "addressWidth": 16,
+  "endianness": "little",
+  "files": {
+    "20_addr_scalars_globals.zax": {
+      "segments": [
+        {
+          "start": 256,
+          "end": 267,
+          "lstLine": 5,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 256,
+          "end": 316,
+          "lstLine": 0,
+          "kind": "unknown",
+          "confidence": "low"
+        },
+        {
+          "start": 267,
+          "end": 270,
+          "lstLine": 6,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 270,
+          "end": 271,
+          "lstLine": 7,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 271,
+          "end": 274,
+          "lstLine": 8,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 274,
+          "end": 277,
+          "lstLine": 10,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 277,
+          "end": 278,
+          "lstLine": 11,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 278,
+          "end": 281,
+          "lstLine": 12,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 281,
+          "end": 284,
+          "lstLine": 14,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 284,
+          "end": 292,
+          "lstLine": 5,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 292,
+          "end": 304,
+          "lstLine": 17,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 304,
+          "end": 307,
+          "lstLine": 18,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 307,
+          "end": 316,
+          "lstLine": 17,
+          "kind": "code",
+          "confidence": "high"
+        }
+      ],
+      "symbols": [
+        {
+          "name": "bump_globals",
+          "kind": "label",
+          "address": 256,
+          "line": 5,
+          "scope": "global"
+        },
+        {
+          "name": "__zax_epilogue_0",
+          "kind": "label",
+          "address": 284,
+          "line": 5,
+          "scope": "local"
+        },
+        {
+          "name": "main",
+          "kind": "label",
+          "address": 292,
+          "line": 17,
+          "scope": "global"
+        },
+        {
+          "name": "__zax_epilogue_1",
+          "kind": "label",
+          "address": 307,
+          "line": 17,
+          "scope": "local"
+        },
+        {
+          "name": "gbyte",
+          "kind": "var",
+          "address": 316,
+          "line": 2,
+          "scope": "global",
+          "size": 1
+        },
+        {
+          "name": "gword",
+          "kind": "var",
+          "address": 317,
+          "line": 3,
+          "scope": "global",
+          "size": 2
+        }
+      ]
+    }
+  },
+  "segments": [
+    {
+      "start": 256,
+      "end": 316
+    }
+  ],
+  "fileList": [
+    "20_addr_scalars_globals.zax"
+  ],
+  "symbols": [
+    {
+      "name": "bump_globals",
+      "kind": "label",
+      "address": 256,
+      "file": "20_addr_scalars_globals.zax",
+      "line": 5,
+      "scope": "global"
+    },
+    {
+      "name": "__zax_epilogue_0",
+      "kind": "label",
+      "address": 284,
+      "file": "20_addr_scalars_globals.zax",
+      "line": 5,
+      "scope": "local"
+    },
+    {
+      "name": "main",
+      "kind": "label",
+      "address": 292,
+      "file": "20_addr_scalars_globals.zax",
+      "line": 17,
+      "scope": "global"
+    },
+    {
+      "name": "__zax_epilogue_1",
+      "kind": "label",
+      "address": 307,
+      "file": "20_addr_scalars_globals.zax",
+      "line": 17,
+      "scope": "local"
+    },
+    {
+      "name": "gbyte",
+      "kind": "var",
+      "address": 316,
+      "file": "20_addr_scalars_globals.zax",
+      "line": 2,
+      "scope": "global",
+      "size": 1
+    },
+    {
+      "name": "gword",
+      "kind": "var",
+      "address": 317,
+      "file": "20_addr_scalars_globals.zax",
+      "line": 3,
+      "scope": "global",
+      "size": 2
+    }
+  ],
+  "generator": {
+    "tool": "zax",
+    "entrySymbol": "main",
+    "entryAddress": 292
+  }
+}
