@@ -838,7 +838,7 @@ Notes (v0.1):
 Syntax:
 
 ```zax
-export func add(a: word, b: word): word
+export func add(a: word, b: word): HL
   var
     temp: word
   end
@@ -967,11 +967,11 @@ Example:
 globals
   sample_bytes: byte[10] = { 1,2,3,4,5,6,7,8,9,10 }
 
-func sum_fixed_10(values: byte[10]): word
+func sum_fixed_10(values: byte[10]): HL
   ; fixed-length contract
 end
 
-func sum_any(values: byte[]): word
+func sum_any(values: byte[]): HL
   ; flexible array-view contract
 end
 
@@ -1449,7 +1449,7 @@ Typed call boundary expectations:
 
 ```zax
 extern func putc(ch: byte) at $F003
-extern func next_char(): byte at $F010
+extern func next_char(): HL at $F010   ; returns byte in L
 
 ; v0.2 typed-call boundary (internal funcs):
 ; - putc may leave HL undefined (HL is boundary-volatile)
