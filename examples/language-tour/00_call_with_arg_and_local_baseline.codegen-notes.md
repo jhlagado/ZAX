@@ -3,6 +3,7 @@
 This memo captures the hand-crafted, must-not-change reference codegen for the two functions in the baseline example. It documents the required stack layout, prologue/epilogue strategy, and initialization order so generated output can be checked against an authoritative source.
 
 ## Shared context
+
 - Frame pointer: `IX` is set to the incoming `SP` at entry (`push IX; ld IX,0; add IX,SP`).
 - Arguments: live at positive displacements from `IX` (`+4` is the first word arg).
 - Locals: live at negative displacements, growing downward from `IX-2`.
@@ -13,18 +14,21 @@ This memo captures the hand-crafted, must-not-change reference codegen for the t
 Key rule: Because `HL` is preserved, local initialization cannot clobber it. Use the swap pattern per local.
 
 Prologue (required order):
+
 1. `push IX` / `ld IX,0` / `add IX,SP` — establish frame.
 2. For each local (here: `result_word = $0011`):
-   - `push HL`                     ; save incoming HL
-   - `ld HL,$0011`                 ; clobber HL with init value
-   - `ex (SP),HL`                  ; place init on stack, restore saved HL
+   - `push HL` ; save incoming HL
+   - `ld HL,$0011` ; clobber HL with init value
+   - `ex (SP),HL` ; place init on stack, restore saved HL
 3. Preserve all reg pairs (because no return): `push AF`, `push BC`, `push DE`, `push HL`.
 
 Body:
+
 - Load arg into stack: `ld HL,$0044; push HL; call inc_one; inc SP; inc SP`.
 - Store result using IX/DE shuttle: `push DE; ex DE,HL; ld (IX-$0002),E; ld (IX-$0001),D; ex DE,HL; pop DE`.
 
 Epilogue (restore full set, discard saved-HL slot):
+
 ```
 pop HL
 pop DE
@@ -39,9 +43,10 @@ Offsets: `result_word` is at `IX-$0002`/`IX-$0001`.
 
 ## Function: `inc_one` (return in HL ⇒ HL volatile)
 
-Key rule: HL is the return channel, so it is *not* preserved. Locals can be initialized with the simple load/push pattern before saving other registers.
+Key rule: HL is the return channel, so it is _not_ preserved. Locals can be initialized with the simple load/push pattern before saving other registers.
 
 Prologue (required order):
+
 1. `push IX` / `ld IX,0` / `add IX,SP` — establish frame.
 2. Initialize locals (HL free to clobber):
    - `ld HL,$0022` ; `push HL`
@@ -49,11 +54,13 @@ Prologue (required order):
 3. Preserve non-return regs: `push AF`, `push BC`, `push DE`. (HL is omitted.)
 
 Body:
+
 - Load arg: `ld E,(IX+$0004)` / `ld D,(IX+$0005)`; `inc DE`.
 - Store and reload temp via locals at `IX-$0002`/`IX-$0001`.
 - Move result into HL: `ex DE,HL`.
 
 Epilogue (restore preserved regs only, no SP rebasing):
+
 ```
 pop DE
 pop BC
@@ -66,6 +73,7 @@ ret
 Offsets: `temp_word` at `IX-$0002`/`IX-$0001`; `unused_word` at `IX-$0004`/`IX-$0003` (not used in the body, still initialized).
 
 ## Invariants to keep
+
 - Do **not** rebase SP inside epilogues; `ld SP,IX` is sufficient.
 - Do **not** push preserves before locals in functions that preserve HL.
 - Locals must start at `IX-$0002` and pack downward in declaration order.

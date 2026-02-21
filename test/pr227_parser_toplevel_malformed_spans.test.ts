@@ -115,6 +115,5 @@ describe('PR227 parser top-level malformed header span matrix', () => {
     }));
 
     expect(spans.length).toBe(15);
-
   });
 });
