@@ -3,7 +3,7 @@ op neutral()
   pop hl
 end
 
-export func main(): void
+export func main()
   var
     lo: word
     hi: byte

@@ -6,7 +6,7 @@ data
   op: byte = 1
   import: byte = 2
 
-func main(): void
+func main()
   var
     func: byte
   end

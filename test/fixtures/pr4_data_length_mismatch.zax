@@ -1,6 +1,6 @@
 data
   msg: byte[2] = "HEY"
 
-export func main(): void
+export func main()
 end
 

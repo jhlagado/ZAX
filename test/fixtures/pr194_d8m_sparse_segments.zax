@@ -1,12 +1,12 @@
 section code at $1000
 
-func a(): void
+func a()
   nop
 end
 
 align 16
 
-func b(): void
+func b()
   ret
 end
 

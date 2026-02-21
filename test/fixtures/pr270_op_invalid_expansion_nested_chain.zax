@@ -6,6 +6,6 @@ op mid(src: reg16)
   bad_inner src
 end
 
-export func main(): void
+export func main()
   mid SP
 end

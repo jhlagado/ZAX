@@ -1,6 +1,6 @@
 type Point
   x: byte
-func main(): void
+func main()
     ret
 end
 

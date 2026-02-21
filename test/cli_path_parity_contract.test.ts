@@ -22,7 +22,7 @@ describe.skip('cli path parity contract', () => {
 
     await writeFile(
       join(work, 'main.zax'),
-      'import "lib.zax"\n\nexport func main(): void\n  ld a, IncConst\nend\n',
+      'import "lib.zax"\n\nexport func main()\n  ld a, IncConst\nend\n',
       'utf8',
     );
     await writeFile(join(work, 'lib.zax'), 'const IncConst = 7\n', 'utf8');

@@ -6,6 +6,6 @@ op second()
   first
 end
 
-export func main(): void
+export func main()
     first
 end

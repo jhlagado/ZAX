@@ -1706,12 +1706,12 @@ export function parseModuleFile(
     { keyword: 'union', kind: 'union declaration', expected: '<name>' },
     { keyword: 'globals', kind: 'globals declaration', expected: 'globals' },
     { keyword: 'var', kind: 'globals declaration', expected: 'globals' },
-    { keyword: 'func', kind: 'func header', expected: '<name>(...): <retType>' },
+    { keyword: 'func', kind: 'func header', expected: '<name>(...)[ : <retRegs> ]' },
     { keyword: 'op', kind: 'op header', expected: '<name>(...)' },
     {
       keyword: 'extern',
       kind: 'extern declaration',
-      expected: '[<baseName>] or func <name>(...): <retType> at <imm16>',
+      expected: '[<baseName>] or func <name>(...)[ : <retRegs> ] at <imm16>',
     },
     { keyword: 'enum', kind: 'enum declaration', expected: '<name> <member>[, ...]' },
     { keyword: 'section', kind: 'section directive', expected: '<code|data|var> [at <imm16>]' },
@@ -1737,6 +1737,48 @@ export function parseModuleFile(
     data: 'data declarations',
   };
 
+  function parseReturnRegsFromText(
+    text: string,
+    stmtSpan: SourceSpan,
+    lineNo: number,
+  ): { regs: string[]; flags: boolean } | undefined {
+    let flags = false;
+    let body = text.trim();
+    if (body.toLowerCase().endsWith(' flags')) {
+      flags = true;
+      body = body.slice(0, -' flags'.length).trim();
+    }
+    const tokens = body
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+    if (tokens.length === 0) return { regs: [], flags };
+
+    const allowed = new Set(['AF', 'BC', 'DE', 'HL']);
+    const seen = new Set<string>();
+    for (const t of tokens) {
+      const upper = t.toUpperCase();
+      if (!allowed.has(upper)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid return register "${t}": expected HL, DE, BC, or AF.`,
+          { line: lineNo, column: 1 },
+        );
+        return undefined;
+      }
+      if (seen.has(upper)) {
+        diag(diagnostics, modulePath, `Duplicate return register "${t}".`, {
+          line: lineNo,
+          column: 1,
+        });
+        return undefined;
+      }
+      seen.add(upper);
+    }
+    return { regs: [...seen], flags };
+  }
+
   function parseExternFuncFromTail(
     tail: string,
     stmtSpan: SourceSpan,
@@ -1749,7 +1791,7 @@ export function parseModuleFile(
       diagInvalidHeaderLine(
         'extern func declaration',
         `func ${header}`,
-        '<name>(...): <retType> at <imm16>',
+        '<name>(...)[ : <retRegs> ] at <imm16>',
         lineNo,
       );
       return undefined;
@@ -1776,49 +1818,46 @@ export function parseModuleFile(
     }
 
     const afterClose = header.slice(closeParen + 1).trimStart();
-    const m = /^:\s*(.+?)(\s+flags)?\s+at\s+(.+)$/.exec(afterClose);
-    if (!m) {
+    const atIdx = afterClose.toLowerCase().lastIndexOf(' at ');
+    if (atIdx < 0) {
       diagInvalidHeaderLine(
         'extern func declaration',
         `func ${header}`,
-        '<name>(...): <retType> at <imm16>',
+        '<name>(...)[ : <retRegs> ] at <imm16>',
         lineNo,
       );
       return undefined;
+    }
+
+    const retTextRaw = afterClose.slice(0, atIdx).trim();
+    const atText = afterClose.slice(atIdx + 4).trim();
+
+    let returnRegs: string[] | undefined;
+    let returnFlags: boolean | undefined;
+    if (retTextRaw.length === 0) {
+      returnRegs = [];
+      returnFlags = false;
+    } else {
+      if (!retTextRaw.startsWith(':')) {
+        diagInvalidHeaderLine(
+          'extern func declaration',
+          `func ${header}`,
+          '<name>(...)[ : <retRegs> ] at <imm16>',
+          lineNo,
+        );
+        return undefined;
+      }
+      const regText = retTextRaw.slice(1).trim();
+      const parsed = parseReturnRegsFromText(regText, stmtSpan, lineNo);
+      if (!parsed) return undefined;
+      returnRegs = parsed.regs;
+      returnFlags = parsed.flags;
     }
 
     const paramsText = header.slice(openParen + 1, closeParen);
     const params = parseParamsFromText(modulePath, paramsText, stmtSpan, diagnostics);
     if (!params) return undefined;
 
-    const rawRetType = m[1]!.trim();
-    const returnFlags = !!m[2];
-    const retTypeText = rawRetType;
-    const returnType = parseTypeExprFromText(retTypeText, stmtSpan, {
-      allowInferredArrayLength: false,
-    });
-    if (!returnType) {
-      if (
-        diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, retTypeText, {
-          line: lineNo,
-          column: 1,
-        })
-      ) {
-        return undefined;
-      }
-      diag(
-        diagnostics,
-        modulePath,
-        `Invalid extern func return type "${retTypeText}": expected <type>`,
-        {
-          line: lineNo,
-          column: 1,
-        },
-      );
-      return undefined;
-    }
-
-    const atText = m[3]!.trim();
     const at = parseImmExprFromText(modulePath, atText, stmtSpan, diagnostics);
     if (!at) return undefined;
 
@@ -1827,8 +1866,8 @@ export function parseModuleFile(
       span: stmtSpan,
       name,
       params,
-      returnType,
-      ...(returnFlags ? { returnFlags: true } : {}),
+      returnRegs,
+      ...(returnFlags ? { returnFlags } : {}),
       at,
     };
   }
@@ -2414,19 +2453,33 @@ export function parseModuleFile(
         continue;
       }
 
-      const afterClose = header.slice(closeParen + 1).trimStart();
-      const retMatch = /^:\s*(.+)$/.exec(afterClose);
-      if (!retMatch) {
-        diag(diagnostics, modulePath, `Invalid func header: missing return type`, {
-          line: lineNo,
-          column: 1,
-        });
-        i++;
-        continue;
-      }
-
       const funcStartOffset = lineStartOffset;
       const headerSpan = span(file, lineStartOffset, lineEndOffset);
+      const afterClose = header.slice(closeParen + 1).trimStart();
+      let returnRegs: string[] | undefined;
+      let returnFlags: boolean | undefined;
+      if (afterClose.length === 0) {
+        returnRegs = [];
+        returnFlags = false;
+      } else {
+        const retMatch = /^:\s*(.+)$/.exec(afterClose);
+        if (!retMatch) {
+          diag(diagnostics, modulePath, `Invalid func header: expected ": <return registers>"`, {
+            line: lineNo,
+            column: 1,
+          });
+          i++;
+          continue;
+        }
+        const parsedRegs = parseReturnRegsFromText(retMatch[1]!.trim(), headerSpan, lineNo);
+        if (!parsedRegs) {
+          i++;
+          continue;
+        }
+        returnRegs = parsedRegs.regs;
+        returnFlags = parsedRegs.flags;
+      }
+
       const paramsText = header.slice(openParen + 1, closeParen);
       const params = parseParamsFromText(modulePath, paramsText, headerSpan, diagnostics);
       if (!params) {
@@ -2434,35 +2487,6 @@ export function parseModuleFile(
         continue;
       }
 
-      const rawRetType = retMatch[1]!.trim();
-      const flagsMatch = /^(.*?)(\s+flags)?$/i.exec(rawRetType);
-      const retTypeText = flagsMatch?.[1]?.trim() ?? rawRetType;
-      const returnFlags = !!flagsMatch?.[2];
-      const returnType = parseTypeExprFromText(retTypeText, headerSpan, {
-        allowInferredArrayLength: false,
-      });
-      if (!returnType) {
-        if (
-          diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, retTypeText, {
-            line: lineNo,
-            column: 1,
-          })
-        ) {
-          i++;
-          continue;
-        }
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid func return type "${retTypeText}": expected <type>`,
-          {
-            line: lineNo,
-            column: 1,
-          },
-        );
-        i++;
-        continue;
-      }
       i++;
 
       // Optional function-local `var` block; function instruction body is parsed
@@ -2639,14 +2663,14 @@ export function parseModuleFile(
           const funcNode: FuncDeclNode = {
             kind: 'FuncDecl',
             span: funcSpan,
-            name,
-            exported,
-            params,
-            returnType,
-            ...(returnFlags ? { returnFlags: true } : {}),
-            ...(locals ? { locals } : {}),
-            asm,
-          };
+          name,
+          exported,
+          params,
+          ...(returnRegs ? { returnRegs } : {}),
+          ...(returnFlags ? { returnFlags } : {}),
+          ...(locals ? { locals } : {}),
+          asm,
+        };
           items.push(funcNode);
           i++;
           break;

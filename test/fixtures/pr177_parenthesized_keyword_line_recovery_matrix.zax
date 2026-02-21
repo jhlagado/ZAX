@@ -22,7 +22,7 @@ data
   type: byte = [3]
   ok: byte = [4]
 
-func main(): void
+func main()
   var
     op z(a: byte): byte
     extern: byte

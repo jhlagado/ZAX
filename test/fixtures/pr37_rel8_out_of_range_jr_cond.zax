@@ -1,4 +1,4 @@
-export func main(): void
+export func main()
     jr nz, far
     ; 130 nops -> far is >127 bytes away from end-of-jr.
     nop

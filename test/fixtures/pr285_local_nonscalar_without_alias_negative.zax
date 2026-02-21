@@ -1,7 +1,7 @@
 globals
   arr: byte[4]
 
-func main(): void
+func main()
   var
     local_arr: byte[4]
   end

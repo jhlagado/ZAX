@@ -6,7 +6,7 @@ globals
   w1: word
   w2: word
 
-export func main(): void
+export func main()
     ld bc, (w0)
     ld (w0), bc
     ld de, (w1)

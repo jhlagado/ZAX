@@ -1,6 +1,6 @@
 import "pr243_a/lib.zax"
 import "pr243_b/lib.zax"
 
-func main(): void
+func main()
   ret
 end

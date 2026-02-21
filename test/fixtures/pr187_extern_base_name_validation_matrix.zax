@@ -8,6 +8,6 @@ extern assets
   func fromAssets(a: byte): byte at $1002
 end
 
-func main(): void
+func main()
     ret
   end

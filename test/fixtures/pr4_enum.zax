@@ -1,5 +1,5 @@
 enum Mode Read, Write, Append
 
-export func main(): void
+export func main()
     ld a, Mode.Write
 end

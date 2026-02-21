@@ -8,6 +8,6 @@ data
   arr: byte[4] = [ 10, 20, 30, 40 ]
   table: byte[2] = [ 1, 2 ]
 
-export func main(): void
+export func main()
     takeAddr arr[table[0]]
 end

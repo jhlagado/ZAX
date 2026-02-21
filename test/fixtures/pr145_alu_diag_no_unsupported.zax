@@ -1,4 +1,4 @@
-export func main(): void
+export func main()
     sub b, c
     cp b, c
     and b, c

@@ -4,7 +4,7 @@ section var at $1000
 globals
   arr: byte[16]
 
-export func main(): void
+export func main()
   ld a, arr[(3 + 5)]
   ld a, arr[(HL)]
   ld a, arr[(IX+1)]

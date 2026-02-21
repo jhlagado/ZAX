@@ -14,6 +14,6 @@ bin
 hex
 data extra
 
-func main(): void
+func main()
     ret
   end

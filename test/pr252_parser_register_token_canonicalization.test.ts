@@ -11,7 +11,7 @@ function asmInstructions(items: { kind: string }[]): AsmInstructionNode[] {
 describe('PR252 parser register token canonicalization', () => {
   it('normalizes reg operands and ea index reg operands in functions', () => {
     const source = `
-func main(): void
+func main()
   ld a, b
   push aF'
   ld hl, arr[d]

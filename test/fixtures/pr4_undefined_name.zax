@@ -1,5 +1,5 @@
 const X = Missing + 1
 
-export func main(): void
+export func main()
 end
 

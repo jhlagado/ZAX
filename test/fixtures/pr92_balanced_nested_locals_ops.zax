@@ -3,11 +3,11 @@ op preservebc()
   pop bc
 end
 
-func helper(x: byte): void
+func helper(x: byte)
     preservebc
 end
 
-export func main(arg0: byte): void
+export func main(arg0: byte)
   var
     x: byte
   end

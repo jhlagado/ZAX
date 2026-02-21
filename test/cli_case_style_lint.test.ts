@@ -17,7 +17,7 @@ describe('cli case-style linting', () => {
 
     await writeFile(
       entry,
-      ['export func main(): void', '  ld a, 1', '  ret', 'end', ''].join('\n'),
+      ['export func main()', '  ld a, 1', '  ret', 'end', ''].join('\n'),
       'utf8',
     );
 
@@ -38,7 +38,7 @@ describe('cli case-style linting', () => {
 
     await writeFile(
       entry,
-      ['export func main(): void', '  loop: ld a, $af', '  ret', 'end', ''].join('\n'),
+      ['export func main()', '  loop: ld a, $af', '  ret', 'end', ''].join('\n'),
       'utf8',
     );
 

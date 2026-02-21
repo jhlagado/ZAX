@@ -1,4 +1,4 @@
-export func main(): void
+export func main()
     jp (bc)
     jp (sp)
     jp (ix + 1)

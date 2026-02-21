@@ -7,6 +7,6 @@ op initbc()
   loadb C, 2
 end
 
-export func main(): void
+export func main()
     initbc
 end

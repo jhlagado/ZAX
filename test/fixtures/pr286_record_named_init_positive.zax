@@ -7,5 +7,5 @@ data
   named: Pair = { hi: $12, lo: $34 }
   positional: Pair = { $56, $78 }
 
-export func main(): void
+export func main()
 end
