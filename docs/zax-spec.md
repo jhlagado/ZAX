@@ -928,7 +928,7 @@ Function-body block termination (v0.1):
 Notes (v0.2):
 
 - Arguments are stack slots, regardless of declared type. For `byte` parameters, the low byte carries the value and the high byte is ignored (recommended: push a zero-extended value).
-- `void` functions return no value.
+- A function with **no return clause** returns no value channel and preserves `AF, BC, DE, HL` at the boundary (per the register-set table above).
 
 Non-scalar argument contract (v0.2):
 
@@ -1049,10 +1049,15 @@ ex de, hl
 Local initializer lowering order (v0.2):
 
 - Scalar local initializers are lowered in declaration order.
-- For word/addr-like zero or constant initialization at function entry, preferred lowering is:
+- Locals are allocated/initialized **before** callee-preserve pushes.
+- If `HL` is *not* in the preserve set (e.g., function returns in `HL`), use the simple form per local:
   - `LD HL, imm16`
   - `PUSH HL`
-- This allocates and initializes one local slot in one sequence and keeps stack shape aligned with declaration order.
+- If `HL` *is* in the preserve set (no return clause), use the swap form per local to avoid clobbering preserved `HL`:
+  - `PUSH HL`            ; save incoming HL
+  - `LD HL, imm16`       ; clobbers HL with init
+  - `EX (SP), HL`        ; init lands on stack, saved HL restored
+- This keeps locals packed from `IX-2` downward and preserves required registers.
 
 Return and cleanup model:
 
