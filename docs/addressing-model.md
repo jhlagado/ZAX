@@ -57,7 +57,7 @@ Disallowed (emit diagnostic):
 - **Frame accesses.** Locals/args load via `(IX+d)`; word moves involving HL must use the DE shuttle pattern:
   - Load slot → HL: `ex de,hl; ld e,(ix+d0); ld d,(ix+d1); ex de,hl`.
   - Store HL → slot: `ex de,hl; ld (ix+d0),e; ld (ix+d1),d; ex de,hl`.
-- **Preservation.** Preserve set = {AF, BC, DE, HL} \ ReturnSet. If DE is in the preserve set, save/restore around its shuttle use.
+- **Per-instruction scratch policy.** During lowering of a single ZAX instruction, all registers except the destination must emerge unchanged. If a scratch register (e.g., DE as shuttle) is needed and is not the destination, save/restore it inside the lowered sequence. This is distinct from the function-level preserve set used at call boundaries.
 - **Epilogue/prologue reminders.** Locals before preserves; if HL is preserved, use per-local swap init (`push hl; ld hl,imm; ex (sp),hl`). Epilogue: pop preserves reverse, `ld sp,ix`, `pop ix`, `ret`.
 
 ## 4. Example patterns (representative)
