@@ -143,7 +143,20 @@ ld d, (ix+dispL+1)
 ex de, hl
 ```
 
-A3 / A3w args — same as A2/A2w with arg displacement.
+A3 `ld a, arg`
+
+```
+ld a, (ix+dispA)
+```
+
+A3w `ld hl, arg`
+
+```
+ex de, hl
+ld e, (ix+dispA)
+ld d, (ix+dispA+1)
+ex de, hl
+```
 
 ### B. Indexed by const
 
