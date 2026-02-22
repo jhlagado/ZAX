@@ -52,7 +52,7 @@ Disallowed (emit diagnostic):
 ## 3. Lowering rules (summary)
 
 - **Base must be typed.** Indexing is only permitted when the base is a typed lvalue (`var`/`addr`). If the index resides in memory, load it to a register first.
-- **Scaling.** Offset = idx \* element_size (unsigned). For size 2 use `add hl,hl`; for size 1 no scale. Larger sizes: reject or emit a bounded multiply sequence (implementation-defined).
+- **Scaling (power-of-two only).** Offset = idx \* element_size (unsigned). Allowed element sizes are 1 (no scale) and powers of two. For size 2 use `add hl,hl`; for larger powers of two, repeat shifts/adds. Non-power-of-two element sizes are rejected.
 - **Base placement.** Prefer base in DE, offset/scale in HL, then `add hl,de`; keeps HL free to become the final address.
 - **Frame accesses.** Locals/args load via `(IX+d)`; word moves involving HL must use the DE shuttle pattern:
   - Load slot → HL: `ex de,hl; ld e,(ix+d0); ld d,(ix+d1); ex de,hl`.
