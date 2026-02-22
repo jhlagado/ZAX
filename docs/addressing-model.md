@@ -238,6 +238,7 @@ C2 `ld a, local[c]`
 
 ```
 push de
+push hl
 ex de, hl
 ld e, (ix+dispL)
 ld d, (ix+dispL+1)    ; DE = base
@@ -246,6 +247,7 @@ ld d, 0
 ld e, c               ; idx
 add hl, de
 ld a, (hl)
+pop hl
 pop de
 ```
 
