@@ -63,49 +63,102 @@ Disallowed (emit diagnostic):
 
 Each pattern shows the source ZAX instruction first, then one possible lowered sequence. The lowered sequences here are illustrative; a real lowering must also honor the per-instruction scratch rule (only the destination may change) by saving/restoring any extra registers it clobbers.
 
-- Global byte load with register index (element size 1):
+## 4. Exhaustive pattern list (byte/word; unsigned index)
+
+For each shape below, element size = 1 (byte) or 2/4… (power-of-two only). Record fields map to const offsets. Any idx in memory is first loaded to a register, then uses the register-index shape.
+
+Legend: G = global, L = local, A = arg, P = typed pointer variable (addr). idx = imm | reg (unsigned).
+
+### A. Scalars (no index)
+
+- A1 `ld reg, G`
+- A2 `ld reg, L`
+- A3 `ld reg, A`
+- A4 `ld reg, P`
+- A5 `ld G, reg`
+- A6 `ld L, reg`
+- A7 `ld A, reg`
+- A8 `ld P, reg`
+
+### B. Indexed by const
+
+- B1 `ld reg, G[imm]`
+- B2 `ld reg, L[imm]`
+- B3 `ld reg, A[imm]`
+- B4 `ld reg, P[imm]`
+- B5 `ld G[imm], reg`
+- B6 `ld L[imm], reg`
+- B7 `ld A[imm], reg`
+- B8 `ld P[imm], reg`
+
+### C. Indexed by register (idx unsigned)
+
+- C1 `ld reg, G[idx]`
+- C2 `ld reg, L[idx]`
+- C3 `ld reg, A[idx]`
+- C4 `ld reg, P[idx]`
+- C5 `ld G[idx], reg`
+- C6 `ld L[idx], reg`
+- C7 `ld A[idx], reg`
+- C8 `ld P[idx], reg`
+
+### D. Indexed by variable (load idx first, then C\*)
+
+- D1 `ld reg, G[idxVar]`
+- D2 `ld reg, L[idxVar]`
+- D3 `ld reg, A[idxVar]`
+- D4 `ld reg, P[idxVar]`
+- D5 `ld G[idxVar], reg`
+- D6 `ld L[idxVar], reg`
+- D7 `ld A[idxVar], reg`
+- D8 `ld P[idxVar], reg`
+
+### E. Record fields (const offsets)
+
+- E1 `ld reg, rec.field` (rec in G/L/A/P) ⇒ B\* with const offset
+- E2 `ld rec.field, reg`
+
+## 5. Representative lowering skeletons
+
+Each skeleton must preserve all non-destination registers (save/restore scratch as needed).
+
+- Load byte, global + reg index (C1, size=1):
   ```
-  ld a, global[C]
-  ```
-  ```
+  ld a, global[c]
+  ; skeleton (clobbers HL/DE unless saved):
   ld de, global        ; base
   ld h, 0
   ld l, c              ; idx in C
   add hl, de           ; HL = base + idx
   ld a, (hl)
-  ; NOTE: clobbers HL/DE as written; production lowering must preserve non-dest regs.
   ```
-- Global word store with runtime index (element size 2):
+- Store word, global + reg index (C5, size=2):
   ```
-  ld wordArr[C], hl
-  ```
-  ```
+  ld global[c], hl
+  ; skeleton:
   ld h, 0
   ld l, c
   add hl, hl           ; scale 2
-  ld de, wordArr       ; base
+  ld de, global        ; base
   add hl, de           ; HL = base + offset
   ex de, hl            ; shuttle for word store
   ld (hl), e
   inc hl
   ld (hl), d
   ex de, hl
-  ; NOTE: clobbers HL/DE as written; production lowering must preserve non-dest regs.
   ```
-- Local pointer base + register index (byte):
+- Load byte, local pointer + reg index (C2 with P in local):
   ```
-  ld a, ptrLocal[C]
-  ```
-  ```
+  ld a, ptrLocal[c]
+  ; skeleton:
   ex de, hl
-  ld e, (ix+disp)      ; load base.ptr
-  ld d, (ix+disp+1)
+  ld e, (ix+disp)      ; base ptr lo
+  ld d, (ix+disp+1)    ; base ptr hi
   ex de, hl
   ld h, 0
   ld l, c              ; idx
   add hl, de
   ld a, (hl)
-  ; NOTE: clobbers HL/DE as written; production lowering must preserve non-dest regs.
   ```
 
 ## 5. Diagnostics guidance
