@@ -118,50 +118,214 @@ Legend: G = global, L = local, A = arg, P = typed pointer variable (addr). idx =
 - E1 `ld reg, rec.field` (rec in G/L/A/P) ⇒ B\* with const offset
 - E2 `ld rec.field, reg`
 
-## 5. Representative lowering skeletons
+## 5. Exhaustive lowering catalog
 
-Each skeleton must preserve all non-destination registers (save/restore scratch as needed).
+For every allowed shape in Section 4, this catalog shows a ZAX instruction and one legal lowering. Each sequence must preserve all non-destination registers (save/restore scratch). Element size is power-of-two; examples show size=1 (byte) and size=2 (word).
 
-- Load byte, global + reg index (C1, size=1):
-  ```
-  ld a, global[c]
-  ; skeleton (clobbers HL/DE unless saved):
-  ld de, global        ; base
-  ld h, 0
-  ld l, c              ; idx in C
-  add hl, de           ; HL = base + idx
-  ld a, (hl)
-  ```
-- Store word, global + reg index (C5, size=2):
-  ```
-  ld global[c], hl
-  ; skeleton:
-  ld h, 0
-  ld l, c
-  add hl, hl           ; scale 2
-  ld de, global        ; base
-  add hl, de           ; HL = base + offset
-  ex de, hl            ; shuttle for word store
-  ld (hl), e
-  inc hl
-  ld (hl), d
-  ex de, hl
-  ```
-- Load byte, local pointer + reg index (C2 with P in local):
-  ```
-  ld a, ptrLocal[c]
-  ; skeleton:
-  ex de, hl
-  ld e, (ix+disp)      ; base ptr lo
-  ld d, (ix+disp+1)    ; base ptr hi
-  ex de, hl
-  ld h, 0
-  ld l, c              ; idx
-  add hl, de
-  ld a, (hl)
-  ```
+### A. Scalars (no index)
 
-## 5. Diagnostics guidance
+A1 `ld a, global`
+
+```
+ld a, (global)
+```
+
+A1w `ld hl, global`
+
+```
+ld hl, (global)
+```
+
+A2 `ld a, local`
+
+```
+ld a, (ix+dispL)
+```
+
+A2w `ld hl, local`
+
+```
+ex de, hl
+ld e, (ix+dispL)
+ld d, (ix+dispL+1)
+ex de, hl
+```
+
+A3 / A3w args — same as A2/A2w with arg displacement.
+
+A4 `ld a, P` (pointer variable anywhere)
+
+```
+push de
+ld e, (P)
+ld d, (P+1)   ; DE = ptr
+ex de, hl     ; HL = ptr, DE restored
+ld a, (hl)
+pop de
+```
+
+A4w `ld hl, P` — load pointer into HL via DE shuttle as above, then `ld l,(hl) / inc hl / ld h,(hl)` with DE saved/restored.
+
+Stores A5–A8 mirror the above with `ld (target), a` or word store via DE shuttle; save/restore scratch if target isn’t the scratch.
+
+### B. Indexed by const
+
+B1 `ld a, global+imm`
+
+```
+ld a, (global+imm)
+```
+
+B1w `ld hl, global+imm`
+
+```
+ld hl, (global+imm)
+```
+
+B2 `ld a, local+imm`
+
+```
+ld a, (ix+dispL+imm)
+```
+
+B2w `ld hl, local+imm`
+
+```
+ex de, hl
+ld e, (ix+dispL+imm)
+ld d, (ix+dispL+imm+1)
+ex de, hl
+```
+
+B3/B3w (args) — same as B2/B2w with arg displacement.
+
+B4 `ld a, P[imm]`
+
+```
+push de
+ld e, (P)
+ld d, (P+1)
+ex de, hl
+ld bc, imm
+add hl, bc
+ld a, (hl)
+pop de
+```
+
+B4w — same, then word load via DE shuttle.
+
+Stores B5–B8 mirror loads; for word stores use DE shuttle, saving/restoring scratch.
+
+### C. Indexed by register (idx unsigned)
+
+C1 `ld a, global[c]` (size=1)
+
+```
+push de
+ld de, global
+ld h, 0
+ld l, c
+add hl, de
+ld a, (hl)
+pop de
+```
+
+C1w `ld hl, global[c]` (size=2)
+
+```
+push de
+ld h, 0
+ld l, c
+add hl, hl
+ld de, global
+add hl, de
+ex de, hl
+ld l, (hl)
+inc hl
+ld h, (hl)
+ex de, hl
+pop de
+```
+
+C2 `ld a, local[c]`
+
+```
+push de
+ex de, hl
+ld e, (ix+dispL)
+ld d, (ix+dispL+1)    ; DE = base
+ex de, hl             ; HL = base
+ld d, 0
+ld e, c               ; idx
+add hl, de
+ld a, (hl)
+pop de
+```
+
+C2w `ld hl, local[c]` — add `add hl,hl` after `ld de,c` zero-extend; word load via DE shuttle; save/restore DE.
+
+C3/C3w (args) — same as C2/C2w with arg displacement.
+
+C4 `ld a, P[c]`
+
+```
+push de
+ld e, (P)
+ld d, (P+1)           ; DE = base
+ex de, hl             ; HL = base
+ld d, 0
+ld e, c               ; idx
+add hl, de
+ld a, (hl)
+pop de
+```
+
+C4w — add scaling, then DE shuttle for word load.
+
+Stores C5–C8 mirror loads, using DE shuttle for word stores, saving/restoring DE when not the destination.
+
+### D. Indexed by variable (idx in memory)
+
+Lower idx to a register, then reuse the matching C pattern.
+
+D1 `ld a, global[idxVar]`
+
+```
+ld c, (idxVar)        ; or ld c,(ix+dispIdx) for frame idx
+; then C1 skeleton
+push de
+ld de, global
+ld h, 0
+ld l, c
+add hl, de
+ld a, (hl)
+pop de
+```
+
+D2/D3/D4 loads: load idxVar to C (or HL for word index), then apply C2/C3/C4 skeletons respectively. Stores D5–D8 mirror loads.
+
+### E. Record fields (const offsets)
+
+E1 `ld a, rec.field` (rec in G/L/A/P)
+
+```
+; global form
+ld a, (rec+FIELD_OFF)
+; local/arg form uses IX+disp+FIELD_OFF, with DE shuttle for word field loads
+```
+
+E1w `ld hl, rec.field` (local/arg)
+
+```
+ex de, hl
+ld e, (ix+dispR+FIELD_OFF)
+ld d, (ix+dispR+FIELD_OFF+1)
+ex de, hl
+```
+
+E2 stores mirror loads; word stores use DE shuttle.
+
+## 6. Diagnostics guidance
 
 - “Indexing requires a typed base; cannot index from register-held address.”
 - “Legacy return keywords are invalid; declare registers explicitly.” (kept for consistency with return surface)
