@@ -13,6 +13,7 @@ Status: design/spec alignment for effective-address lowering. Audience: compiler
 
 ```
 imm8, imm16        ::= numeric literal
+imm                ::= imm8 | imm16
 reg8, reg16        ::= CPU registers (untyped)
 reg                ::= reg8 | reg16
 
