@@ -145,17 +145,6 @@ ex de, hl
 
 A3 / A3w args — same as A2/A2w with arg displacement.
 
-A4 `ld a, P` (pointer variable anywhere)
-
-```
-push de
-ld e, (P)
-ld d, (P+1)   ; DE = ptr
-ex de, hl     ; HL = ptr, DE restored
-ld a, (hl)
-pop de
-```
-
 ### B. Indexed by const
 
 B1 `ld a, global+imm`
