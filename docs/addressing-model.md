@@ -227,10 +227,9 @@ ld l, c
 add hl, hl
 ld de, global
 add hl, de
-ex de, hl
-ld l, (hl)
+ld e, (hl)
 inc hl
-ld h, (hl)
+ld d, (hl)
 ex de, hl
 pop de
 ```
