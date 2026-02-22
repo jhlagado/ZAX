@@ -249,7 +249,24 @@ ld a, (hl)
 pop de
 ```
 
-C2w `ld hl, local[c]` — add `add hl,hl` after `ld de,c` zero-extend; word load via DE shuttle; save/restore DE.
+C2w `ld hl, local[c]` (size=2)
+
+```
+push de
+ex de, hl
+ld e, (ix+dispL)
+ld d, (ix+dispL+1)    ; DE = base
+ex de, hl             ; HL = base
+ld d, 0
+ld e, c               ; idx
+add hl, hl            ; scale 2
+add hl, de            ; HL = base + offset
+ld e, (hl)
+inc hl
+ld d, (hl)
+ex de, hl
+pop de
+```
 
 C3 `ld a, arg[c]`
 
