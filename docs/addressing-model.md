@@ -58,7 +58,6 @@ Disallowed (emit diagnostic):
   - Load slot → HL: `ex de,hl; ld e,(ix+d0); ld d,(ix+d1); ex de,hl`.
   - Store HL → slot: `ex de,hl; ld (ix+d0),e; ld (ix+d1),d; ex de,hl`.
 - **Per-instruction scratch policy.** During lowering of a single ZAX instruction, all registers except the destination must emerge unchanged. If a scratch register (e.g., DE as shuttle) is needed and is not the destination, save/restore it inside the lowered sequence. This is distinct from the function-level preserve set used at call boundaries.
-- **Frame accesses reminder (scope).** This doc focuses on per-instruction lowering. Frame setup/teardown rules live in the calling-convention docs; keep locals before preserves and use DE shuttle for IX+d word moves when a lowered instruction touches frame slots.
 
 ## 4. Example patterns (representative)
 
