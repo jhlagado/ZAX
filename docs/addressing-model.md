@@ -160,25 +160,25 @@ ex de, hl
 
 ### B. Indexed by const
 
-B1 `ld a, global+imm`
+B1 `ld a, global[imm]`
 
 ```
 ld a, (global+imm)
 ```
 
-B1w `ld hl, global+imm`
+B1w `ld hl, global[imm]`
 
 ```
 ld hl, (global+imm)
 ```
 
-B2 `ld a, local+imm`
+B2 `ld a, local[imm]`
 
 ```
 ld a, (ix+dispL+imm)
 ```
 
-B2w `ld hl, local+imm`
+B2w `ld hl, local[imm]`
 
 ```
 ex de, hl
