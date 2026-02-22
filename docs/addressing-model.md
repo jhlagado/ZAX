@@ -169,7 +169,7 @@ ld a, (global+imm)
 B1w `ld hl, global[imm]`
 
 ```
-ld hl, (global+imm)
+ld hl, (global + imm*size)   ; if size=2, fold imm*2 into the address
 ```
 
 B2 `ld a, local[imm]`
