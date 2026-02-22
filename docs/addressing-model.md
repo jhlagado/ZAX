@@ -251,14 +251,13 @@ pop de
 
 C2w `ld hl, local[c]` — add `add hl,hl` after `ld de,c` zero-extend; word load via DE shuttle; save/restore DE.
 
-C3/C3w (args) — same as C2/C2w with arg displacement.
-
-C4 `ld a, P[c]`
+C3 `ld a, arg[c]`
 
 ```
 push de
-ld e, (P)
-ld d, (P+1)           ; DE = base
+ex de, hl
+ld e, (ix+dispA)
+ld d, (ix+dispA+1)    ; DE = base
 ex de, hl             ; HL = base
 ld d, 0
 ld e, c               ; idx
@@ -267,7 +266,24 @@ ld a, (hl)
 pop de
 ```
 
-C4w — add scaling, then DE shuttle for word load.
+C3w `ld hl, arg[c]` (size=2)
+
+```
+push de
+ex de, hl
+ld e, (ix+dispA)
+ld d, (ix+dispA+1)
+ex de, hl
+ld d, 0
+ld e, c
+add hl, hl           ; scale 2
+add hl, de           ; base
+ld e, (hl)
+inc hl
+ld d, (hl)
+ex de, hl
+pop de
+```
 
 Stores C5–C8 mirror loads, using DE shuttle for word stores, saving/restoring DE when not the destination.
 
