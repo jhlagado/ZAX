@@ -7,8 +7,7 @@ Status: design/spec alignment for effective-address lowering. Audience: compiler
 - **Typed bases, untyped registers.** Only variables (globals, args, locals, record fields, typed pointers) carry element size. Registers do not. Therefore indexing must be anchored on a typed lvalue; registers alone cannot express typed indexing.
 - **Unsigned indexing.** Index operands are interpreted as unsigned; scaling uses the element width (1 for byte, 2 for word, field offsets as constants).
 - **Minimal legal shapes.** Keep the set of address forms small, reject the rest with clear diagnostics.
-- **Volatility/preservation.** HL is the boundary-volatile pair; DE may be used as shuttle but must be restored if in the preserve set. IX is the frame anchor and never scratch.
-- **Non-destructive lowering.** When a temporary pair is needed (typically DE), save/restore if preservation requires; prefer `ex de,hl` over clobbering live registers; use the stack only when unavoidable.
+- **Per-instruction non-destruction.** For each lowered ZAX instruction, only the destination register(s) may change. Any scratch reg used to synthesize the addressing (e.g., DE shuttle when the destination is not DE) must be saved/restored so all non-destination regs are unchanged at the end of the instruction. IX is the frame anchor and never scratch.
 
 ## 2. Grammar (production rules)
 
