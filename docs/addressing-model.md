@@ -17,7 +17,7 @@ imm                ::= imm8 | imm16
 reg8, reg16        ::= CPU registers (untyped)
 reg                ::= reg8 | reg16
 
-addr               ::= typed pointer variable (global/arg/local)
+addr               ::= array or struct base (typed word lvalue)
 arg8,  local8      ::= byte arg/local
 arg16, local16     ::= word arg/local | addr
 global8            ::= byte global
@@ -67,55 +67,47 @@ Each pattern shows the source ZAX instruction first, then one possible lowered s
 
 For each shape below, element size = 1 (byte) or 2/4… (power-of-two only). Record fields map to const offsets. Any idx in memory is first loaded to a register, then uses the register-index shape.
 
-Legend: G = global, L = local, A = arg, P = typed pointer variable (addr). idx = imm | reg (unsigned).
+Legend: G = global, L = local, A = arg. idx = imm | reg (unsigned).
 
 ### A. Scalars (no index)
 
 - A1 `ld reg, G`
 - A2 `ld reg, L`
 - A3 `ld reg, A`
-- A4 `ld reg, P`
-- A5 `ld G, reg`
-- A6 `ld L, reg`
-- A7 `ld A, reg`
-- A8 `ld P, reg`
+- A4 `ld G, reg`
+- A5 `ld L, reg`
+- A6 `ld A, reg`
 
 ### B. Indexed by const
 
 - B1 `ld reg, G[imm]`
 - B2 `ld reg, L[imm]`
 - B3 `ld reg, A[imm]`
-- B4 `ld reg, P[imm]`
-- B5 `ld G[imm], reg`
-- B6 `ld L[imm], reg`
-- B7 `ld A[imm], reg`
-- B8 `ld P[imm], reg`
+- B4 `ld G[imm], reg`
+- B5 `ld L[imm], reg`
+- B6 `ld A[imm], reg`
 
 ### C. Indexed by register (idx unsigned)
 
 - C1 `ld reg, G[idx]`
 - C2 `ld reg, L[idx]`
 - C3 `ld reg, A[idx]`
-- C4 `ld reg, P[idx]`
-- C5 `ld G[idx], reg`
-- C6 `ld L[idx], reg`
-- C7 `ld A[idx], reg`
-- C8 `ld P[idx], reg`
+- C4 `ld G[idx], reg`
+- C5 `ld L[idx], reg`
+- C6 `ld A[idx], reg`
 
 ### D. Indexed by variable (load idx first, then C\*)
 
 - D1 `ld reg, G[idxVar]`
 - D2 `ld reg, L[idxVar]`
 - D3 `ld reg, A[idxVar]`
-- D4 `ld reg, P[idxVar]`
-- D5 `ld G[idxVar], reg`
-- D6 `ld L[idxVar], reg`
-- D7 `ld A[idxVar], reg`
-- D8 `ld P[idxVar], reg`
+- D4 `ld G[idxVar], reg`
+- D5 `ld L[idxVar], reg`
+- D6 `ld A[idxVar], reg`
 
 ### E. Record fields (const offsets)
 
-- E1 `ld reg, rec.field` (rec in G/L/A/P) ⇒ B\* with const offset
+- E1 `ld reg, rec.field` (rec in G/L/A) ⇒ B\* with const offset
 - E2 `ld rec.field, reg`
 
 ## 5. Exhaustive lowering catalog
@@ -163,10 +155,6 @@ ex de, hl     ; HL = ptr, DE restored
 ld a, (hl)
 pop de
 ```
-
-A4w `ld hl, P` — load pointer into HL via DE shuttle as above, then `ld l,(hl) / inc hl / ld h,(hl)` with DE saved/restored.
-
-Stores A5–A8 mirror the above with `ld (target), a` or word store via DE shuttle; save/restore scratch if target isn’t the scratch.
 
 ### B. Indexed by const
 
@@ -306,7 +294,7 @@ D2/D3/D4 loads: load idxVar to C (or HL for word index), then apply C2/C3/C4 ske
 
 ### E. Record fields (const offsets)
 
-E1 `ld a, rec.field` (rec in G/L/A/P)
+E1 `ld a, rec.field` (rec in G/L/A)
 
 ```
 ; global form
