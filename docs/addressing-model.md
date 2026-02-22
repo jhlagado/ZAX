@@ -61,28 +61,41 @@ Disallowed (emit diagnostic):
 
 ## 4. Example patterns (representative)
 
+Each pattern shows the source ZAX instruction first, then one possible lowered sequence. The lowered sequences here are illustrative; a real lowering must also honor the per-instruction scratch rule (only the destination may change) by saving/restoring any extra registers it clobbers.
+
 - Global byte load with register index (element size 1):
+  ```
+  ld a, global[C]
+  ```
   ```
   ld de, global        ; base
   ld h, 0
   ld l, c              ; idx in C
-  add hl, de
+  add hl, de           ; HL = base + idx
   ld a, (hl)
+  ; NOTE: clobbers HL/DE as written; production lowering must preserve non-dest regs.
   ```
 - Global word store with runtime index (element size 2):
+  ```
+  ld wordArr[C], hl
+  ```
   ```
   ld h, 0
   ld l, c
   add hl, hl           ; scale 2
   ld de, wordArr       ; base
-  add hl, de
+  add hl, de           ; HL = base + offset
   ex de, hl            ; shuttle for word store
   ld (hl), e
   inc hl
   ld (hl), d
   ex de, hl
+  ; NOTE: clobbers HL/DE as written; production lowering must preserve non-dest regs.
   ```
 - Local pointer base + register index (byte):
+  ```
+  ld a, ptrLocal[C]
+  ```
   ```
   ex de, hl
   ld e, (ix+disp)      ; load base.ptr
@@ -92,6 +105,7 @@ Disallowed (emit diagnostic):
   ld l, c              ; idx
   add hl, de
   ld a, (hl)
+  ; NOTE: clobbers HL/DE as written; production lowering must preserve non-dest regs.
   ```
 
 ## 5. Diagnostics guidance
