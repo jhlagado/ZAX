@@ -187,22 +187,20 @@ ld d, (ix+dispL + imm*size + 1)
 ex de, hl
 ```
 
-B3/B3w (args) — same as B2/B2w with arg displacement.
-
-B4 `ld a, P[imm]`
+B3 `ld a, arg[imm]`
 
 ```
-push de
-ld e, (P)
-ld d, (P+1)
+ld a, (ix+dispA + imm)
+```
+
+B3w `ld hl, arg[imm]`
+
+```
 ex de, hl
-ld bc, imm
-add hl, bc
-ld a, (hl)
-pop de
+ld e, (ix+dispA + imm*size)
+ld d, (ix+dispA + imm*size + 1)
+ex de, hl
 ```
-
-B4w — same, then word load via DE shuttle.
 
 Stores B5–B8 mirror loads; for word stores use DE shuttle, saving/restoring scratch.
 
