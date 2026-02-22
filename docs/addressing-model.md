@@ -182,8 +182,8 @@ B2w `ld hl, local[imm]`
 
 ```
 ex de, hl
-ld e, (ix+dispL+imm)
-ld d, (ix+dispL+imm+1)
+ld e, (ix+dispL + imm*size)      ; fold scaled offset into disp
+ld d, (ix+dispL + imm*size + 1)
 ex de, hl
 ```
 
