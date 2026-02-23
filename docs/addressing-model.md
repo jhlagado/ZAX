@@ -21,9 +21,7 @@ XCHG_SP_HL           ex (sp),hl   ; swap HL with top-of-stack
 
 ```
 BASE_GLOBAL sym      ld de,sym
-BASE_LOCAL disp      ld e,(ix+disp)
-                     ld d,(ix+disp+1)
-BASE_ARG disp        ld e,(ix+disp)
+BASE_FRAME disp      ld e,(ix+disp)
                      ld d,(ix+disp+1)
 ```
 
@@ -688,7 +686,7 @@ Steps
 ```
 SAVE_HL
 SAVE_DE
-BASE_LOCAL dispL
+BASE_FRAME dispL
 IDX_REG8 r
 SCALE_1
 ADD_BASE
@@ -721,7 +719,7 @@ ld hl, loc_w[r]
 Steps
 ```
 SAVE_DE
-BASE_LOCAL dispL
+BASE_FRAME dispL
 IDX_REG8 r
 SCALE_2
 ADD_BASE
@@ -756,7 +754,7 @@ Steps
 ```
 SAVE_HL
 SAVE_DE
-BASE_ARG dispA
+BASE_FRAME dispA
 IDX_REG8 r
 SCALE_1
 ADD_BASE
@@ -789,7 +787,7 @@ ld hl, arg_w[r]
 Steps
 ```
 SAVE_DE
-BASE_ARG dispA
+BASE_FRAME dispA
 IDX_REG8 r
 SCALE_2
 ADD_BASE
@@ -899,7 +897,7 @@ Steps
 ```
 SAVE_HL
 SAVE_DE
-BASE_LOCAL dispL
+BASE_FRAME dispL
 IDX_REG8 r
 SCALE_1
 ADD_BASE
@@ -933,7 +931,7 @@ Steps
 ```
 SAVE_DE
 SAVE_HL
-BASE_LOCAL dispL
+BASE_FRAME dispL
 IDX_REG8 r
 SCALE_2
 ADD_BASE
@@ -976,7 +974,7 @@ Steps
 ```
 SAVE_HL
 SAVE_DE
-BASE_ARG dispA
+BASE_FRAME dispA
 IDX_REG8 r
 SCALE_1
 ADD_BASE
@@ -1010,7 +1008,7 @@ Steps
 ```
 SAVE_DE
 SAVE_HL
-BASE_ARG dispA
+BASE_FRAME dispA
 IDX_REG8 r
 SCALE_2
 ADD_BASE
@@ -1187,7 +1185,7 @@ Steps
 ```
 SAVE_HL
 SAVE_DE
-BASE_LOCAL dispL
+BASE_FRAME dispL
 IDX_MEM_GLOBAL idxG
 SCALE_1
 ADD_BASE
@@ -1219,7 +1217,7 @@ ld hl, loc_w[idxG]
 Steps
 ```
 SAVE_DE
-BASE_LOCAL dispL
+BASE_FRAME dispL
 IDX_MEM_GLOBAL idxG
 SCALE_2
 ADD_BASE
@@ -1253,7 +1251,7 @@ Steps
 ```
 SAVE_HL
 SAVE_DE
-BASE_LOCAL dispL
+BASE_FRAME dispL
 IDX_MEM_FRAME dispIdx
 SCALE_1
 ADD_BASE
@@ -1286,7 +1284,7 @@ ld hl, loc_w[idxFrame]
 Steps
 ```
 SAVE_DE
-BASE_LOCAL dispL
+BASE_FRAME dispL
 IDX_MEM_FRAME dispIdx
 SCALE_2
 ADD_BASE
@@ -1321,7 +1319,7 @@ Steps
 ```
 SAVE_HL
 SAVE_DE
-BASE_ARG dispA
+BASE_FRAME dispA
 IDX_MEM_GLOBAL idxG
 SCALE_1
 ADD_BASE
@@ -1353,7 +1351,7 @@ ld hl, arg_w[idxG]
 Steps
 ```
 SAVE_DE
-BASE_ARG dispA
+BASE_FRAME dispA
 IDX_MEM_GLOBAL idxG
 SCALE_2
 ADD_BASE
@@ -1387,7 +1385,7 @@ Steps
 ```
 SAVE_HL
 SAVE_DE
-BASE_ARG dispA
+BASE_FRAME dispA
 IDX_MEM_FRAME dispIdx
 SCALE_1
 ADD_BASE
@@ -1420,7 +1418,7 @@ ld hl, arg_w[idxFrame]
 Steps
 ```
 SAVE_DE
-BASE_ARG dispA
+BASE_FRAME dispA
 IDX_MEM_FRAME dispIdx
 SCALE_2
 ADD_BASE
@@ -1603,7 +1601,7 @@ Steps
 ```
 SAVE_HL
 SAVE_DE
-BASE_LOCAL dispL
+BASE_FRAME dispL
 IDX_MEM_GLOBAL idxG
 SCALE_1
 ADD_BASE
@@ -1636,7 +1634,7 @@ Steps
 ```
 SAVE_DE
 SAVE_HL
-BASE_LOCAL dispL
+BASE_FRAME dispL
 IDX_MEM_GLOBAL idxG
 SCALE_2
 ADD_BASE
@@ -1678,7 +1676,7 @@ Steps
 ```
 SAVE_HL
 SAVE_DE
-BASE_LOCAL dispL
+BASE_FRAME dispL
 IDX_MEM_FRAME dispIdx
 SCALE_1
 ADD_BASE
@@ -1712,7 +1710,7 @@ Steps
 ```
 SAVE_DE
 SAVE_HL
-BASE_LOCAL dispL
+BASE_FRAME dispL
 IDX_MEM_FRAME dispIdx
 SCALE_2
 ADD_BASE
@@ -1755,7 +1753,7 @@ Steps
 ```
 SAVE_HL
 SAVE_DE
-BASE_ARG dispA
+BASE_FRAME dispA
 IDX_MEM_GLOBAL idxG
 SCALE_1
 ADD_BASE
@@ -1788,7 +1786,7 @@ Steps
 ```
 SAVE_DE
 SAVE_HL
-BASE_ARG dispA
+BASE_FRAME dispA
 IDX_MEM_GLOBAL idxG
 SCALE_2
 ADD_BASE
@@ -1830,7 +1828,7 @@ Steps
 ```
 SAVE_HL
 SAVE_DE
-BASE_ARG dispA
+BASE_FRAME dispA
 IDX_MEM_FRAME dispIdx
 SCALE_1
 ADD_BASE
@@ -1864,7 +1862,7 @@ Steps
 ```
 SAVE_DE
 SAVE_HL
-BASE_ARG dispA
+BASE_FRAME dispA
 IDX_MEM_FRAME dispIdx
 SCALE_2
 ADD_BASE
