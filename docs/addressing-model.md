@@ -222,10 +222,10 @@ C1w `ld hl, global[c]` (size=2)
 
 ```
 push de
+ld de, global
 ld h, 0
 ld l, c
 add hl, hl
-ld de, global
 add hl, de
 ld e, (hl)
 inc hl
@@ -238,16 +238,12 @@ C2 `ld a, local[c]`
 
 ```
 push de
-push hl
-ex de, hl
 ld e, (ix+dispL)
 ld d, (ix+dispL+1)    ; DE = base
-ex de, hl             ; HL = base
-ld d, 0
-ld e, c               ; idx
+ld h, 0
+ld l, c               ; idx
 add hl, de
 ld a, (hl)
-pop hl
 pop de
 ```
 
@@ -255,12 +251,10 @@ C2w `ld hl, local[c]` (size=2)
 
 ```
 push de
-ex de, hl
 ld e, (ix+dispL)
 ld d, (ix+dispL+1)    ; DE = base
-ex de, hl             ; HL = base
-ld d, 0
-ld e, c               ; idx
+ld h, 0
+ld l, c               ; idx
 add hl, hl            ; scale 2
 add hl, de            ; HL = base + offset
 ld e, (hl)
@@ -274,12 +268,10 @@ C3 `ld a, arg[c]`
 
 ```
 push de
-ex de, hl
 ld e, (ix+dispA)
 ld d, (ix+dispA+1)    ; DE = base
-ex de, hl             ; HL = base
-ld d, 0
-ld e, c               ; idx
+ld h, 0
+ld l, c               ; idx
 add hl, de
 ld a, (hl)
 pop de
@@ -289,12 +281,10 @@ C3w `ld hl, arg[c]` (size=2)
 
 ```
 push de
-ex de, hl
 ld e, (ix+dispA)
-ld d, (ix+dispA+1)
-ex de, hl
-ld d, 0
-ld e, c
+ld d, (ix+dispA+1)    ; DE = base
+ld h, 0
+ld l, c               ; idx
 add hl, hl           ; scale 2
 add hl, de           ; base
 ld e, (hl)
@@ -304,8 +294,6 @@ ex de, hl
 pop de
 ```
 
-Stores C5–C8 mirror loads, using DE shuttle for word stores, saving/restoring DE when not the destination.
-
 ### D. Indexed by variable (idx in memory)
 
 Lower idx to a register, then reuse the matching C pattern.
@@ -313,12 +301,10 @@ Lower idx to a register, then reuse the matching C pattern.
 D1 `ld a, global[idxVar]`
 
 ```
-ld c, (idxVar)        ; or ld c,(ix+dispIdx) for frame idx
-; then C1 skeleton
 push de
 ld de, global
 ld h, 0
-ld l, c
+ld l, (idxVar)        
 add hl, de
 ld a, (hl)
 pop de
