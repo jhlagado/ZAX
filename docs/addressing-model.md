@@ -1,443 +1,139 @@
-# ZAX Addressing Model (v0.2)
+# ZAX Addressing Model (v0.2) — Step Pipelines
 
-Status: design/spec alignment for effective-address lowering. Audience: compiler implementers and advanced users.
+Goal: express every allowed load/store addressing shape as a short pipeline of reusable **steps** (concatenative style). Each pipeline begins and ends with all registers restored except the destination. IX is never scratch.
 
-## 1. Core idea
+## 1. Steps (reusable words)
 
-- **Typed bases, untyped registers.** Only variables (GLOBs, ARGs, LOCs, record fields, typed pointers) carry element size. Registers do not. Therefore indexing must be anchored on a typed lvalue; registers alone cannot express typed indexing.
-- **Unsigned indexing.** Index operands are interpreted as unsigned; scaling uses the element width (1 for byte, 2 for word, field offsets as constants).
-- **Minimal legal shapes.** Keep the set of address forms small, reject the rest with clear diagnostics.
-- **Per-instruction non-destruction.** For each lowered ZAX instruction, only the destination register(s) may change. Any scratch reg used to synthesize the addressing (e.g., DE shuttle when the destination is not DE) must be saved/restored so all non-destination regs are unchanged at the end of the instruction. IX is the frame anchor and never scratch.
+Primitive saves/drops (use only when needed):
 
-## 2. Grammar (production rules)
+- `SAVE_HL` → `push hl`
+- `SAVE_DE` → `push de`
+- `RESTORE_HL` → `pop hl`
+- `RESTORE_DE` → `pop de`
+- `DROP_SAVED_HL` → `pop de` ; discard saved HL when dest=HL
+- `DROP_SAVED_DE` → `inc sp` `inc sp` ; discard saved DE when dest=DE
+- `XCHG_DE_HL` → `ex de, hl`
+- `XCHG_SP_HL` → `ex (sp), hl`
 
-```
-const8, const16   ::= numeric literal
-const             ::= const8 | const16
-reg8, reg16        ::= CPU registers (untyped)
-reg                ::= reg8 | reg16
+Base (choose the form for the source):
 
-addr               ::= array or struct base (typed word lvalue)
-ARG8,  LOC8      ::= byte ARG/LOC
-ARG16, LOC16     ::= word ARG/LOC | addr
-GLOB8            ::= byte GLOB
-GLOB16           ::= word GLOB | addr
+- `BASE_GLOBAL sym → DE` : `ld de, sym`
+- `BASE_LOCAL disp → DE` : `ld e,(ix+disp)` / `ld d,(ix+disp+1)`
+- `BASE_ARG disp → DE` : same as local with arg disp
 
-var8               ::= ARG8 | LOC8 | GLOB8
-var16              ::= ARG16 | LOC16 | GLOB16
-var                ::= var8 | var16
+Index:
 
-idx                ::= const8 | const16 | reg8 | reg16   ; zero-extend reg8
-```
+- `IDX_REG8 r → HL` : `ld h,0` / `ld l,r`
+- `IDX_REG16 rp → HL` : `ld hl,rp` (or `ex de,hl` if rp=de and you need DE free)
+- `IDX_MEM_GLOBAL sym → HL` : `ld hl,(sym)`
+- `IDX_MEM_FRAME disp → HL` : `ld l,(ix+disp)` / `ld h,(ix+disp+1)`
 
-Allowed loads/stores (element size comes from `var`):
+Scaling (power-of-two only):
 
-```
-ld reg, imm
-ld reg, reg
-ld reg, var
-ld reg, var[idx]
+- `SCALE_1` (no-op)
+- `SCALE_2` : `add hl, hl`
+- `SCALE_4` : `add hl, hl` twice (repeat as needed for higher powers)
 
-ld var, reg
-ld var[idx], reg
-```
+Combine:
 
-Struct fields: `var.field` lowers as `var[const]` (const offset only).
+- `ADD_BASE` : `add hl, de` ; assumes base in DE, offset in HL, result in HL
 
-## 3. Lowering rules (summary)
+Access (destinations: byte→A, word→HL; stores source is A or HL):
 
-- **Base must be typed.** Indexing is only permitted when the base is a typed lvalue (`var`/`addr`). If the index resides in memory, load it to a register first.
-- **Scaling (power-of-two only).** Offset = idx \* element_size (unsigned). Allowed element sizes are 1 (no scale) and powers of two. For size 2 use `add hl,hl`; for lARGer powers of two, repeat shifts/adds. Non-power-of-two element sizes are rejected.
-- **Base placement.** Prefer base in DE, offset/scale in HL, then `add hl,de`; keeps HL free to become the final address.
-- **Frame accesses.** Locals/ARGs load via `(IX+d)`; word moves involving HL must use the DE shuttle pattern:
-  - Load slot → HL: `ex de,hl; ld e,(ix+d0); ld d,(ix+d1); ex de,hl`.
-  - Store HL → slot: `ex de,hl; ld (ix+d0),e; ld (ix+d1),d; ex de,hl`.
-- **Per-instruction scratch policy.** During lowering of a single ZAX instruction, all registers except the destination must emerge unchanged. If a scratch register (e.g., DE as shuttle) is needed and is not the destination, save/restore it inside the lowered sequence. This is distinct from the function-level preserve set used at call boundaries.
+- `LOAD_BYTE` : `ld a,(hl)`
+- `LOAD_WORD` : `ld e,(hl)` / `inc hl` / `ld d,(hl)` / `ex de,hl`
+- `STORE_BYTE` : `ld (hl),a`
+- `STORE_WORD` : `ex de,hl` / `ld (hl),e` / `inc hl` / `ld (hl),d` / `ex de,hl`
 
-## 4. Stack pipeline model (per instruction)
+Save/restore policy per destination:
 
-- Treat each ZAX statement as a short pipeline that begins and ends in the same register state except for the destination.
-- Use `push de` / `push hl` to preserve scratch when needed; at the end, restore in reverse. If the destination is HL, discard the saved HL (e.g., `pop de` to drop old HL). If the destination is DE, discard the saved DE (e.g., `pop hl` + `inc sp` twice). Keep HL as the transient TOS during address synthesis to minimize stack traffic.
-- Bricks to compose: load typed base → HL, load/zero-extend idx → HL/DE, scale (power-of-two), add base+idx (HL+DE), then load/store via HL (word stores/loads use DE shuttle). Each brick must save/restore any scratch it uses.
+- Dest = A : save/restore HL and DE if used as scratch.
+- Dest = HL : save DE only; if HL was saved for scratch elsewhere, drop saved HL (`DROP_SAVED_HL`).
+- Dest = DE : save HL; drop saved DE at end (`DROP_SAVED_DE`).
 
-### 4.1 Brick library (per-instruction building blocks)
+## 2. Pipelines (exhaustive load/store shapes)
 
-All bricks assume IX is frame-only, never scratch. “Save/restore scratch” means `push`/`pop` around the brick if the scratch reg is not the destination. Destinations: byte → A; word → HL.
-
-**Base → HL (GLOB)**
-
-```
-; clobbers HL only
-ld hl, GLOB
-```
-
-**Base → HL (LOC/ARG word at IX+disp)**
-
-```
-; clobbers HL, uses DE shuttle; save/restore DE if needed
-push de
-ex de, hl
-ld e, (ix+disp)
-ld d, (ix+disp+1)
-ex de, hl
-pop de
-```
-
-**Idx → HL (reg8 unsigned)**
-
-```
-; zero-extend reg8 in C
-ld h, 0
-ld l, c
-```
-
-**Idx → HL (reg16)**
-
-```
-; HL already holds idx16 (ensure saved if dest != HL later)
-```
-
-**Scale idx (size=1)**
-
-```
-; no-op
-```
-
-**Scale idx (size=2)**
-
-```
-add hl, hl
-```
-
-**Add base+idx (base in DE, offset in HL)**
-
-```
-add hl, de          ; HL = base + offset
-```
-
-**Load byte via HL → A**
-
-```
-ld a, (hl)
-```
-
-**Load word via HL → HL (DE shuttle)**
-
-```
-push de
-ld e, (hl)
-inc hl
-ld d, (hl)
-ex de, hl
-pop de
-```
-
-**Store byte A → (HL)**
-
-```
-ld (hl), a
-```
-
-**Store word HL → (addr in HL) using DE shuttle**
-
-```
-push de
-ex de, hl           ; DE = value, HL = addr
-ld (hl), e
-inc hl
-ld (hl), d
-ex de, hl
-pop de
-```
-
-**Save/restore patterns for destinations**
-
-- Dest = A: save/restore both DE and HL if used as scratch.
-- Dest = HL: save DE; save HL only if some brick needs HL scratch before final value; discard saved HL at end (`pop de` to drop old HL).
-- Dest = DE: save HL and DE; at end restore HL; drop saved DE with `inc sp`/`inc sp`.
-
-## 5. Exhaustive pattern list (byte/word; unsigned index)
-
-For each shape below, element size = 1 (byte) or 2/4… (power-of-two only). Record fields map to const offsets. Any idx in memory is first loaded to a register, then uses the register-index shape.
-
-Legend: GLOB = GLOB, LOC = LOC, ARG = ARG. idx = const | reg (unsigned).
+Notation: pipelines are sequences of steps. Element size = 1 (byte) or 2 (word). For word, use the SCALE step appropriate to size (size=1 → `SCALE_1`, size=2 → `SCALE_2`; higher powers repeat `SCALE_2`).
 
 ### A. Scalars (no index)
 
-- A1 `ld reg, GLOB`
-- A2 `ld reg, LOC`
-- A3 `ld reg, ARG`
-- A4 `ld GLOB, reg`
-- A5 `ld LOC, reg`
-- A6 `ld ARG, reg`
+Load byte from global/local/arg:
 
-### B. Indexed by const
+- `SAVE_HL SAVE_DE BASE_GLOBAL sym → DE ADD_BASE?` (not needed) `LOAD_BYTE RESTORE_DE RESTORE_HL`
+  - Minimal form (no scratch beyond dest=A): `ld a,(sym)` (global), `ld a,(ix+disp)` (frame)
 
-- B1 `ld reg, GLOB[imm]`
-- B2 `ld reg, LOC[imm]`
-- B3 `ld reg, ARG[imm]`
-- B4 `ld GLOB[imm], reg`
-- B5 `ld LOC[imm], reg`
-- B6 `ld ARG[imm], reg`
+Load word from global/local/arg:
 
-### C. Indexed by register (idx unsigned)
+- `SAVE_DE BASE_* → DE`  
+  For frame: `BASE_LOCAL/BASE_ARG`
+- `LOAD_WORD RESTORE_DE`
 
-- C1 `ld reg, GLOB[idx]`
-- C2 `ld reg, LOC[idx]`
-- C3 `ld reg, ARG[idx]`
-- C4 `ld GLOB[idx], reg`
-- C5 `ld LOC[idx], reg`
-- C6 `ld ARG[idx], reg`
+Store byte to global/local/arg (src=A):
 
-### D. Indexed by variable (load idx first, then C\*)
+- `BASE_* → HL` (global: `ld hl,sym`; frame: `ld l,(ix+disp)` / `ld h,(ix+disp+1)` then `xchg_de_hl` as needed)
+- `STORE_BYTE`
 
-- D1 `ld reg, GLOB[idxVar]`
-- D2 `ld reg, LOC[idxVar]`
-- D3 `ld reg, ARG[idxVar]`
-- D4 `ld GLOB[idxVar], reg`
-- D5 `ld LOC[idxVar], reg`
-- D6 `ld ARG[idxVar], reg`
+Store word to global/local/arg (src=HL):
 
-### E. Record fields (const offsets)
+- `SAVE_DE BASE_* → DE` / `XCHG_DE_HL` if needed
+- `STORE_WORD RESTORE_DE`
 
-- E1 `ld reg, rec.field` (rec in G/L/A) ⇒ B\* with const offset
-- E2 `ld rec.field, reg`
+### B. Indexed by const (global/local/arg)
 
-## 5. Exhaustive lowering catalog
+Load byte:
 
-For every allowed shape in Section 4, this catalog shows a ZAX instruction and one legal lowering. Each sequence must preserve all non-destination registers (save/restore scratch). Element size is power-of-two; examples show size=1 (byte) and size=2 (word).
+- `SAVE_HL SAVE_DE BASE_* → DE`
+- `IDX_CONST const → HL` (folded: HL = const)
+- `SCALE_n` (according to element size)
+- `ADD_BASE`
+- `LOAD_BYTE`
+- `RESTORE_DE RESTORE_HL`
 
-### A. Scalars (no index)
+Load word: same pipeline, end with `LOAD_WORD`.
 
-A1 `ld a, GLOB`
+Store byte/word: same pipeline, end with `STORE_BYTE` or `STORE_WORD`.
 
-```
-ld a, (GLOB)
-```
+Const folding note: for globals, scale may be folded into the address; for IX-based locals/args, fold `const*size` into the displacements.
 
-A1w `ld hl, GLOB`
+### C. Indexed by register (global/local/arg)
 
-```
-ld hl, (GLOB)
-```
+Load byte:
 
-A2 `ld a, LOC`
+- `SAVE_HL SAVE_DE`
+- `BASE_* → DE`
+- `IDX_REG8 r → HL` (or `IDX_REG16`)
+- `SCALE_n`
+- `ADD_BASE`
+- `LOAD_BYTE`
+- `RESTORE_DE RESTORE_HL`
 
-```
-ld a, (ix+dispL)
-```
+Load word: same but `LOAD_WORD`.
 
-A2w `ld hl, LOC`
+Store byte/word: same pipeline ending with `STORE_BYTE` / `STORE_WORD`.
 
-```
-ex de, hl
-ld e, (ix+dispL)
-ld d, (ix+dispL+1)
-ex de, hl
-```
+### D. Indexed by variable in memory (global or frame idx)
 
-A3 `ld a, ARG`
+Load idx to HL first, then reuse C:
 
-```
-ld a, (ix+dispA)
-```
+- `SAVE_HL SAVE_DE`
+- `BASE_* → DE`
+- `IDX_MEM_GLOBAL sym → HL` **or** `IDX_MEM_FRAME disp → HL`
+- `SCALE_n`
+- `ADD_BASE`
+- `LOAD_BYTE` / `LOAD_WORD`
+- `RESTORE_DE RESTORE_HL`
 
-A3w `ld hl, ARG`
-
-```
-ex de, hl
-ld e, (ix+dispA)
-ld d, (ix+dispA+1)
-ex de, hl
-```
-
-### B. Indexed by const
-
-B1 `ld a, GLOB[const]`
-
-```
-ld a, (GLOB+imm)
-```
-
-B1w `ld hl, GLOB[const]`
-
-```
-ld hl, (GLOB + const*size)   ; if size=2, fold imm*2 into the address
-```
-
-B2 `ld a, LOC[const]`
-
-```
-ld a, (ix+dispL+imm)
-```
-
-B2w `ld hl, LOC[const]`
-
-```
-ex de, hl
-ld e, (ix+dispL + const*size)      ; fold scaled offset into disp
-ld d, (ix+dispL + const*size + 1)
-ex de, hl
-```
-
-B3 `ld a, ARG[const]`
-
-```
-ld a, (ix+dispA + imm)
-```
-
-B3w `ld hl, ARG[const]`
-
-```
-ex de, hl
-ld e, (ix+dispA + const*size)
-ld d, (ix+dispA + const*size + 1)
-ex de, hl
-```
-
-Stores B5–B8 mirror loads; for word stores use DE shuttle, saving/restoring scratch.
-
-### C. Indexed by register (idx unsigned)
-
-C1 `ld a, GLOB[c]` (size=1)
-
-```
-push de
-ld de, GLOB
-ld h, 0
-ld l, c
-add hl, de
-ld a, (hl)
-pop de
-```
-
-C1w `ld hl, GLOB[c]` (size=2)
-
-```
-push de
-ld de, GLOB
-ld h, 0
-ld l, c
-add hl, hl
-add hl, de
-ld e, (hl)
-inc hl
-ld d, (hl)
-ex de, hl
-pop de
-```
-
-C2 `ld a, LOC[c]`
-
-```
-push de
-ld e, (ix+dispL)
-ld d, (ix+dispL+1)    ; DE = base
-ld h, 0
-ld l, c               ; idx
-add hl, de
-ld a, (hl)
-pop de
-```
-
-C2w `ld hl, LOC[c]` (size=2)
-
-```
-push de
-ld e, (ix+dispL)
-ld d, (ix+dispL+1)    ; DE = base
-ld h, 0
-ld l, c               ; idx
-add hl, hl            ; scale 2
-add hl, de            ; HL = base + offset
-ld e, (hl)
-inc hl
-ld d, (hl)
-ex de, hl
-pop de
-```
-
-C3 `ld a, ARG[c]`
-
-```
-push de
-ld e, (ix+dispA)
-ld d, (ix+dispA+1)    ; DE = base
-ld h, 0
-ld l, c               ; idx
-add hl, de
-ld a, (hl)
-pop de
-```
-
-C3w `ld hl, ARG[c]` (size=2)
-
-```
-push de
-ld e, (ix+dispA)
-ld d, (ix+dispA+1)    ; DE = base
-ld h, 0
-ld l, c               ; idx
-add hl, hl           ; scale 2
-add hl, de           ; base
-ld e, (hl)
-inc hl
-ld d, (hl)
-ex de, hl
-pop de
-```
-
-### D. Indexed by variable (idx in memory)
-
-Lower idx to a register, then reuse the matching C pattern.
-
-D1 `ld a, GLOB[idxVar]`
-
-```
-push de
-ld de, GLOB
-ld h, 0
-ld l, (idxVar)
-add hl, de
-ld a, (hl)
-pop de
-```
-
-D2/D3/D4 loads: load idxVar to C (or HL for word index), then apply C2/C3/C4 skeletons respectively. Stores D5–D8 mirror loads.
+Stores analogous.
 
 ### E. Record fields (const offsets)
 
-E1 `ld a, rec.field` (rec in G/L/A)
+Treat as B with `const = field_offset`:
 
-```
-; GLOB form
-ld a, (rec+FIELD_OFF)
-; LOC/ARG form uses IX+disp+FIELD_OFF, with DE shuttle for word field loads
-```
+- Load byte/word: pipeline B with folded const.
+- Store byte/word: pipeline B with store op.
 
-E1w `ld hl, rec.field` (LOC/ARG)
+## 3. Notes
 
-```
-ex de, hl
-ld e, (ix+dispR+FIELD_OFF)
-ld d, (ix+dispR+FIELD_OFF+1)
-ex de, hl
-```
-
-E2 stores mirror loads; word stores use DE shuttle.
-
-## 6. Diagnostics guidance
-
-- “Indexing requires a typed base; cannot index from register-held address.”
-- “Legacy return keywords are invalid; declare registers explicitly.” (kept for consistency with return surface)
-- “IX+H/L byte-lane access is not supported; use DE shuttle for word frame slots.”
-
-## 6. Test/fixture expectations
-
-- Addressing mini-suite (issue #374) should cover: GLOBs/LOCs/ARGs, byte vs word, const vs runtime index, record fields, HL-preserved vs volatile prologues, extern caller-preserve boundary, DE shuttle usage, and rejection of `var[var]`.
-- Regression tests should assert absence of `IX+H/L` forms and presence of DE shuttle where required.
-
-## 7. Future considerations (v0.3+)
-
-- Optional typed casts on registers to re-enable reg-based indexing with explicit element size.
-- Higher arity scaled addressing only if bounded by runtime-atom budget; otherwise reject.
+- Power-of-two scaling only; reject other element sizes.
+- Each step is side-effect bounded: only its documented scratch may change, and must be restored by the end of the instruction pipeline.
+- Pipelines here are exhaustive over global/local/arg bases, byte/word widths, and const/reg/memory-held indices, for both loads and stores. Additional register-pair choices (e.g., base in HL instead of DE) can be derived if a lowering conflict demands it, by composing with the same primitives (`push/pop`, `ex de,hl`).
