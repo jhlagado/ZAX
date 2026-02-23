@@ -39,8 +39,10 @@ IDX_REG16 reg16      ld hl,reg16              ; dest=HL
 
 IDX_GLOBAL const     ld hl,(const)            ; dest=HL
 
-IDX_FRAME disp       ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
+IDX_FRAME disp       ex de,hl                 ; dest=HL
+                     ld e,(ix+disp)           
+                     ld d,(ix+disp+1)
+                     ex de,hl
 ```
 
 ### 1.4 Combine
@@ -160,7 +162,7 @@ ld hl,(glob_w)
 ZAX
 
 ```zax
-ld a,loc_b
+ld a,frame_b
 ```
 
 Steps
@@ -180,7 +182,7 @@ ld a,(ix+dispL)
 ZAX
 
 ```zax
-ld hl,loc_w
+ld hl,frame_w
 ```
 
 Steps
@@ -242,7 +244,7 @@ ld (glob_w),hl
 ZAX
 
 ```zax
-ld loc_b,a
+ld frame_b,a
 ```
 
 Steps
@@ -262,7 +264,7 @@ ld (ix+dispL),a
 ZAX
 
 ```zax
-ld loc_w,hl
+ld frame_w,hl
 ```
 
 Steps
@@ -345,7 +347,7 @@ ex de,hl
 ZAX
 
 ```zax
-ld a,loc_b[const]
+ld a,frame_b[const]
 ```
 
 Steps
@@ -365,7 +367,7 @@ ld a,(ix+dispL+const)
 ZAX
 
 ```zax
-ld hl,loc_w[const]
+ld hl,frame_w[const]
 ```
 
 Steps
@@ -442,12 +444,12 @@ inc hl
 ld (hl),d
 ```
 
-#### B5 store byte: local[const]
+#### B5 store byte: frame[const]
 
 ZAX
 
 ```zax
-ld loc_b[const],a
+ld frame_b[const],a
 ```
 
 Steps
@@ -462,12 +464,12 @@ ASM
 ld (ix+dispL+const),a
 ```
 
-#### B5w store word: local[const]
+#### B5w store word: frame[const]
 
 ZAX
 
 ```zax
-ld loc_w[const],hl
+ld frame_w[const],hl
 ```
 
 Steps
@@ -485,12 +487,12 @@ ld (ix+dispL+const*2+1),d
 ex de,hl
 ```
 
-#### B6 store byte: arg[const]
+#### B6 store byte: frame[const]
 
 ZAX
 
 ```zax
-ld arg_b[const],e
+ld frame_b[const],e
 ```
 
 Steps
@@ -505,12 +507,12 @@ ASM
 ld (ix+dispA+const),a
 ```
 
-#### B6w store word: arg[const]
+#### B6w store word: frame[const]
 
 ZAX
 
 ```zax
-ld arg_w[const],hl
+ld frame_w[const],hl
 ```
 
 Steps
@@ -594,12 +596,12 @@ ex de,hl
 pop de
 ```
 
-#### C2 load byte: local[r]
+#### C2 load byte: frame[r]
 
 ZAX
 
 ```zax
-ld a,loc_b[r]
+ld a,frame_b[r]
 ```
 
 Steps
@@ -624,12 +626,12 @@ ld l,(hl)
 pop de
 ```
 
-#### C2w load word: local[r]
+#### C2w load word: frame[r]
 
 ZAX
 
 ```zax
-ld hl,loc_w[r]
+ld hl,frame_w[r]
 ```
 
 Steps
@@ -658,12 +660,12 @@ ex de,hl
 pop de
 ```
 
-#### C3 load byte: arg[r]
+#### C3 load byte: frame[r]
 
 ZAX
 
 ```zax
-ld a,arg_b[r]
+ld a,frame_b[r]
 ```
 
 Steps
@@ -688,12 +690,12 @@ ld l,(hl)
 pop de
 ```
 
-#### C3w load word: arg[r]
+#### C3w load word: frame[r]
 
 ZAX
 
 ```zax
-ld hl,arg_w[r]
+ld hl,frame_w[r]
 ```
 
 Steps
@@ -791,12 +793,12 @@ ex de,hl
 pop de
 ```
 
-#### C5 store byte: local[r]
+#### C5 store byte: frame[r]
 
 ZAX
 
 ```zax
-ld loc_b[r],e
+ld frame_b[r],e
 ```
 
 Steps
@@ -821,12 +823,12 @@ ld (hl),e
 pop de
 ```
 
-#### C5w store word: local[r]
+#### C5w store word: frame[r]
 
 ZAX
 
 ```zax
-ld loc_w[r],hl
+ld frame_w[r],hl
 ```
 
 Steps
@@ -862,12 +864,12 @@ ex de,hl
 pop de
 ```
 
-#### C6 store byte: arg[r]
+#### C6 store byte: frame[r]
 
 ZAX
 
 ```zax
-ld arg_b[r],e
+ld frame_b[r],e
 ```
 
 Steps
@@ -892,12 +894,12 @@ ld (hl),e
 pop de
 ```
 
-#### C6w store word: arg[r]
+#### C6w store word: frame[r]
 
 ZAX
 
 ```zax
-ld arg_w[r],hl
+ld frame_w[r],hl
 ```
 
 Steps
@@ -1065,12 +1067,12 @@ ex de,hl
 pop de
 ```
 
-#### D3 load byte: local[idxG]
+#### D3 load byte: frame[idxG]
 
 ZAX
 
 ```zax
-ld a,loc_b[idxG]
+ld a,frame_b[idxG]
 ```
 
 Steps
@@ -1094,12 +1096,12 @@ ld l,(hl)
 pop de
 ```
 
-#### D3w load word: local[idxG]
+#### D3w load word: frame[idxG]
 
 ZAX
 
 ```zax
-ld hl,loc_w[idxG]
+ld hl,frame_w[idxG]
 ```
 
 Steps
@@ -1127,12 +1129,12 @@ ex de,hl
 pop de
 ```
 
-#### D4 load byte: local[idxFrame]
+#### D4 load byte: frame[idxFrame]
 
 ZAX
 
 ```zax
-ld a,loc_b[idxFrame]
+ld a,frame_b[idxFrame]
 ```
 
 Steps
@@ -1160,12 +1162,12 @@ ld l,(hl)
 pop de
 ```
 
-#### D4w load word: local[idxFrame]
+#### D4w load word: frame[idxFrame]
 
 ZAX
 
 ```zax
-ld hl,loc_w[idxFrame]
+ld hl,frame_w[idxFrame]
 ```
 
 Steps
@@ -1197,12 +1199,12 @@ ex de,hl
 pop de
 ```
 
-#### D5 load byte: arg[idxG]
+#### D5 load byte: frame[idxG]
 
 ZAX
 
 ```zax
-ld a,arg_b[idxG]
+ld a,frame_b[idxG]
 ```
 
 Steps
@@ -1226,12 +1228,12 @@ ld l,(hl)
 pop de
 ```
 
-#### D5w load word: arg[idxG]
+#### D5w load word: frame[idxG]
 
 ZAX
 
 ```zax
-ld hl,arg_w[idxG]
+ld hl,frame_w[idxG]
 ```
 
 Steps
@@ -1259,12 +1261,12 @@ ex de,hl
 pop de
 ```
 
-#### D6 load byte: arg[idxFrame]
+#### D6 load byte: frame[idxFrame]
 
 ZAX
 
 ```zax
-ld a,arg_b[idxFrame]
+ld a,frame_b[idxFrame]
 ```
 
 Steps
@@ -1292,12 +1294,12 @@ ld l,(hl)
 pop de
 ```
 
-#### D6w load word: arg[idxFrame]
+#### D6w load word: frame[idxFrame]
 
 ZAX
 
 ```zax
-ld hl,arg_w[idxFrame]
+ld hl,frame_w[idxFrame]
 ```
 
 Steps
@@ -1471,12 +1473,12 @@ ex de,hl
 pop de
 ```
 
-#### D9 store byte: local[idxG]
+#### D9 store byte: frame[idxG]
 
 ZAX
 
 ```zax
-ld loc_b[idxG],e
+ld frame_b[idxG],e
 ```
 
 Steps
@@ -1500,12 +1502,12 @@ ld (hl),e
 pop de
 ```
 
-#### D9w store word: local[idxG]
+#### D9w store word: frame[idxG]
 
 ZAX
 
 ```zax
-ld loc_w[idxG],hl
+ld frame_w[idxG],hl
 ```
 
 Steps
@@ -1540,12 +1542,12 @@ ex de,hl
 pop de
 ```
 
-#### D10 store byte: local[idxFrame]
+#### D10 store byte: frame[idxFrame]
 
 ZAX
 
 ```zax
-ld loc_b[idxFrame],e
+ld frame_b[idxFrame],e
 ```
 
 Steps
@@ -1573,12 +1575,12 @@ ld (hl),e
 pop de
 ```
 
-#### D10w store word: local[idxFrame]
+#### D10w store word: frame[idxFrame]
 
 ZAX
 
 ```zax
-ld loc_w[idxFrame],hl
+ld frame_w[idxFrame],hl
 ```
 
 Steps
@@ -1617,12 +1619,12 @@ ex de,hl
 pop de
 ```
 
-#### D11 store byte: arg[idxG]
+#### D11 store byte: frame[idxG]
 
 ZAX
 
 ```zax
-ld arg_b[idxG],e
+ld frame_b[idxG],e
 ```
 
 Steps
@@ -1646,12 +1648,12 @@ ld (hl),e
 pop de
 ```
 
-#### D11w store word: arg[idxG]
+#### D11w store word: frame[idxG]
 
 ZAX
 
 ```zax
-ld arg_w[idxG],hl
+ld frame_w[idxG],hl
 ```
 
 Steps
@@ -1686,12 +1688,12 @@ ex de,hl
 pop de
 ```
 
-#### D12 store byte: arg[idxFrame]
+#### D12 store byte: frame[idxFrame]
 
 ZAX
 
 ```zax
-ld arg_b[idxFrame],e
+ld frame_b[idxFrame],e
 ```
 
 Steps
@@ -1719,12 +1721,12 @@ ld (hl),e
 pop de
 ```
 
-#### D12w store word: arg[idxFrame]
+#### D12w store word: frame[idxFrame]
 
 ZAX
 
 ```zax
-ld arg_w[idxFrame],hl
+ld frame_w[idxFrame],hl
 ```
 
 Steps
@@ -1767,7 +1769,7 @@ pop de
 
 Record field access is the const-index case with `const = field_offset`.
 
-Example load word field from a local record:
+Example load word field from a frame record:
 
 ZAX
 
@@ -1791,7 +1793,7 @@ ex de,hl
 pop de
 ```
 
-Example store byte field into an arg record:
+Example store byte field into a frame record:
 
 ZAX
 
