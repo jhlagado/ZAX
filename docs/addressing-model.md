@@ -11,7 +11,7 @@ SAVE_HL              push hl
 SAVE_DE              push de
 RESTORE_HL           pop hl
 RESTORE_DE           pop de
-DROP_SAVED_DE        inc sp      ; drop low
+DROP_SAVED           inc sp      ; drop low
                      inc sp      ; drop high
 XCHG_DE_HL           ex de,hl
 XCHG_SP_HL           ex (sp),hl   ; swap HL with top-of-stack
