@@ -99,13 +99,13 @@ ld reg16h, (ix+disp + imm * 2 + 1)
 
 - preserve DE, HL (unless one is the destination, then save the other)
 
-- Gather inputs
+1. Gather inputs
   - load base into DE
   - load index into HL
-- Calculate effective address
+2. Calculate effective address
   - scaled_index = index \* scale
   - address = base + scaled_index
-- Load destination
+3. Load destination
   - load destination via HL
 
 - restore DE, HL
