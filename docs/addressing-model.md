@@ -59,11 +59,13 @@ Disallowed (emit diagnostic):
   - Store HL → slot: `ex de,hl; ld (ix+d0),e; ld (ix+d1),d; ex de,hl`.
 - **Per-instruction scratch policy.** During lowering of a single ZAX instruction, all registers except the destination must emerge unchanged. If a scratch register (e.g., DE as shuttle) is needed and is not the destination, save/restore it inside the lowered sequence. This is distinct from the function-level preserve set used at call boundaries.
 
-## 4. Example patterns (representative)
+## 4. Stack pipeline model (per instruction)
 
-Each pattern shows the source ZAX instruction first, then one possible lowered sequence. The lowered sequences here are illustrative; a real lowering must also honor the per-instruction scratch rule (only the destination may change) by saving/restoring any extra registers it clobbers.
+- Treat each ZAX statement as a short pipeline that begins and ends in the same register state except for the destination.
+- Use `push de` / `push hl` to preserve scratch when needed; at the end, restore in reverse. If the destination is HL, discard the saved HL (e.g., `pop de` to drop old HL). If the destination is DE, discard the saved DE (e.g., `pop hl` + `inc sp` twice). Keep HL as the transient TOS during address synthesis to minimize stack traffic.
+- Bricks to compose: load typed base → HL, load/zero-extend idx → HL/DE, scale (power-of-two), add base+idx (HL+DE), then load/store via HL (word stores/loads use DE shuttle). Each brick must save/restore any scratch it uses.
 
-## 4. Exhaustive pattern list (byte/word; unsigned index)
+## 5. Exhaustive pattern list (byte/word; unsigned index)
 
 For each shape below, element size = 1 (byte) or 2/4… (power-of-two only). Record fields map to const offsets. Any idx in memory is first loaded to a register, then uses the register-index shape.
 
@@ -304,7 +306,7 @@ D1 `ld a, global[idxVar]`
 push de
 ld de, global
 ld h, 0
-ld l, (idxVar)        
+ld l, (idxVar)
 add hl, de
 ld a, (hl)
 pop de
