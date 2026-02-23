@@ -489,7 +489,7 @@ ex de,hl
 ZAX
 
 ```zax
-ld frame_b[const],e
+ld frame_b[const],a
 ```
 
 Steps
@@ -712,7 +712,7 @@ ex de,hl
 ZAX
 
 ```zax
-ld glob_b[r],e
+ld glob_b[r],a
 ```
 
 Steps
@@ -843,7 +843,7 @@ ex de,hl
 ZAX
 
 ```zax
-ld frame_b[r],e
+ld frame_b[r],a
 ```
 
 Steps
@@ -1256,7 +1256,7 @@ ex de,hl
 ZAX
 
 ```zax
-ld glob_b[idxG],e
+ld glob_b[idxG],a
 ```
 
 Steps
@@ -1317,7 +1317,7 @@ ex de,hl
 ZAX
 
 ```zax
-ld glob_b[idxFrame],e
+ld glob_b[idxFrame],a
 ```
 
 Steps
@@ -1380,7 +1380,7 @@ ex de,hl
 ZAX
 
 ```zax
-ld frame_b[idxG],e
+ld frame_b[idxG],a
 ```
 
 Steps
@@ -1443,7 +1443,7 @@ ex de,hl
 ZAX
 
 ```zax
-ld frame_b[idxFrame],e
+ld frame_b[idxFrame],a
 ```
 
 Steps
@@ -1508,7 +1508,7 @@ ex de,hl
 ZAX
 
 ```zax
-ld frame_b[idxG],e
+ld frame_b[idxG],a
 ```
 
 Steps
@@ -1571,7 +1571,7 @@ ex de,hl
 ZAX
 
 ```zax
-ld frame_b[idxFrame],e
+ld frame_b[idxFrame],a
 ```
 
 Steps
