@@ -23,6 +23,7 @@ Base (choose the form for the source):
 
 Index:
 
+- `IDX_CONST const → HL` : `ld hl,const`
 - `IDX_REG8 r → HL` : `ld h,0` / `ld l,r`
 - `IDX_REG16 rp → HL` : `ld hl,rp` (or `ex de,hl` if rp=de and you need DE free)
 - `IDX_MEM_GLOBAL sym → HL` : `ld hl,(sym)`
@@ -53,84 +54,416 @@ Save/restore policy per destination:
 
 ## 2. Pipelines (exhaustive load/store shapes)
 
-Notation: pipelines are sequences of steps. Element size = 1 (byte) or 2 (word). For word, use the SCALE step appropriate to size (size=1 → `SCALE_1`, size=2 → `SCALE_2`; higher powers repeat `SCALE_2`).
+Notation: pipelines are sequences of steps. Element size = 1 (byte) or 2 (word). For word, use `SCALE_2`; higher powers repeat `SCALE_2`.
+
+For each shape below:
+
+- ZAX: source line
+- Steps: sequence with parameters
+- ASM: emitted instructions (single-instruction lines); `dispL/dispA` are frame displacements; `const` is unsigned.
 
 ### A. Scalars (no index)
 
-Load byte from global/local/arg:
+**A1 load byte from global**
 
-- `SAVE_HL SAVE_DE BASE_GLOBAL sym → DE ADD_BASE?` (not needed) `LOAD_BYTE RESTORE_DE RESTORE_HL`
-  - Minimal form (no scratch beyond dest=A): `ld a,(sym)` (global), `ld a,(ix+disp)` (frame)
+- ZAX: `ld a, glob_b`
+- Steps: `LOAD_BYTE` with implicit absolute; no scratch
+- ASM:
 
-Load word from global/local/arg:
+```
+ld a,(glob_b)
+```
 
-- `SAVE_DE BASE_* → DE`  
-  For frame: `BASE_LOCAL/BASE_ARG`
-- `LOAD_WORD RESTORE_DE`
+**A1w load word from global**
 
-Store byte to global/local/arg (src=A):
+- ZAX: `ld hl, glob_w`
+- Steps: `SAVE_DE BASE_GLOBAL glob_w → DE LOAD_WORD RESTORE_DE`
+- ASM:
 
-- `BASE_* → HL` (global: `ld hl,sym`; frame: `ld l,(ix+disp)` / `ld h,(ix+disp+1)` then `xchg_de_hl` as needed)
-- `STORE_BYTE`
+```
+push de
+ld de,glob_w
+ld e,(de)
+inc de
+ld d,(de)
+ex de,hl
+pop de
+```
 
-Store word to global/local/arg (src=HL):
+**A2 load byte from local**
 
-- `SAVE_DE BASE_* → DE` / `XCHG_DE_HL` if needed
-- `STORE_WORD RESTORE_DE`
+- ZAX: `ld a, loc_b`
+- Steps: `LOAD_BYTE` via IX
+- ASM:
 
-### B. Indexed by const (global/local/arg)
+```
+ld a,(ix+dispL)
+```
 
-Load byte:
+**A2w load word from local**
 
-- `SAVE_HL SAVE_DE BASE_* → DE`
-- `IDX_CONST const → HL` (folded: HL = const)
-- `SCALE_n` (according to element size)
-- `ADD_BASE`
-- `LOAD_BYTE`
-- `RESTORE_DE RESTORE_HL`
+- ZAX: `ld hl, loc_w`
+- Steps: `SAVE_DE BASE_LOCAL dispL → DE LOAD_WORD RESTORE_DE`
+- ASM:
 
-Load word: same pipeline, end with `LOAD_WORD`.
+```
+push de
+ld e,(ix+dispL)
+ld d,(ix+dispL+1)
+ld e,(de)
+inc de
+ld d,(de)
+ex de,hl
+pop de
+```
 
-Store byte/word: same pipeline, end with `STORE_BYTE` or `STORE_WORD`.
+**A3 load byte from arg**
 
-Const folding note: for globals, scale may be folded into the address; for IX-based locals/args, fold `const*size` into the displacements.
+- ZAX: `ld a, arg_b`
+- Steps: `LOAD_BYTE` via IX arg disp
+- ASM:
 
-### C. Indexed by register (global/local/arg)
+```
+ld a,(ix+dispA)
+```
 
-Load byte:
+**A3w load word from arg**
 
-- `SAVE_HL SAVE_DE`
-- `BASE_* → DE`
-- `IDX_REG8 r → HL` (or `IDX_REG16`)
-- `SCALE_n`
-- `ADD_BASE`
-- `LOAD_BYTE`
-- `RESTORE_DE RESTORE_HL`
+- ZAX: `ld hl, arg_w`
+- Steps: `SAVE_DE BASE_ARG dispA → DE LOAD_WORD RESTORE_DE`
+- ASM:
 
-Load word: same but `LOAD_WORD`.
+```
+push de
+ld e,(ix+dispA)
+ld d,(ix+dispA+1)
+ld e,(de)
+inc de
+ld d,(de)
+ex de,hl
+pop de
+```
 
-Store byte/word: same pipeline ending with `STORE_BYTE` / `STORE_WORD`.
+**A4 store byte to global**
 
-### D. Indexed by variable in memory (global or frame idx)
+- ZAX: `ld glob_b, a`
+- Steps: `BASE_GLOBAL glob_b → HL STORE_BYTE`
+- ASM:
 
-Load idx to HL first, then reuse C:
+```
+ld hl,glob_b
+ld (hl),a
+```
 
-- `SAVE_HL SAVE_DE`
-- `BASE_* → DE`
-- `IDX_MEM_GLOBAL sym → HL` **or** `IDX_MEM_FRAME disp → HL`
-- `SCALE_n`
-- `ADD_BASE`
-- `LOAD_BYTE` / `LOAD_WORD`
-- `RESTORE_DE RESTORE_HL`
+**A4w store word to global**
 
-Stores analogous.
+- ZAX: `ld glob_w, hl`
+- Steps: `SAVE_DE BASE_GLOBAL glob_w → DE STORE_WORD RESTORE_DE`
+- ASM:
+
+```
+push de
+ld de,glob_w
+ex de,hl
+ld (hl),e
+inc hl
+ld (hl),d
+ex de,hl
+pop de
+```
+
+**A5 store byte to local**
+
+- ZAX: `ld loc_b, a`
+- Steps: `STORE_BYTE` via IX
+- ASM:
+
+```
+ld (ix+dispL),a
+```
+
+**A5w store word to local**
+
+- ZAX: `ld loc_w, hl`
+- Steps: `SAVE_DE BASE_LOCAL dispL → DE STORE_WORD RESTORE_DE`
+- ASM:
+
+```
+push de
+ld e,(ix+dispL)
+ld d,(ix+dispL+1)
+ex de,hl
+ld (hl),e
+inc hl
+ld (hl),d
+ex de,hl
+pop de
+```
+
+**A6 store byte to arg**
+
+- ZAX: `ld arg_b, a`
+- Steps: `STORE_BYTE` via IX arg disp
+- ASM:
+
+```
+ld (ix+dispA),a
+```
+
+**A6w store word to arg**
+
+- ZAX: `ld arg_w, hl`
+- Steps: `SAVE_DE BASE_ARG dispA → DE STORE_WORD RESTORE_DE`
+- ASM:
+
+```
+push de
+ld e,(ix+dispA)
+ld d,(ix+dispA+1)
+ex de,hl
+ld (hl),e
+inc hl
+ld (hl),d
+ex de,hl
+pop de
+```
+
+### B. Indexed by const
+
+**B1 load byte: global[const]**
+
+- ZAX: `ld a, glob_b[const]`
+- Steps: `BASE_GLOBAL glob_b → DE IDX_CONST const → HL SCALE_1 ADD_BASE LOAD_BYTE`
+- ASM:
+
+```
+ld de,glob_b
+ld hl,const
+add hl,de
+ld a,(hl)
+```
+
+**B1w load word: global[const]**
+
+- ZAX: `ld hl, glob_w[const]`
+- Steps: `SAVE_DE BASE_GLOBAL glob_w → DE IDX_CONST const → HL SCALE_2 ADD_BASE LOAD_WORD RESTORE_DE`
+- ASM:
+
+```
+push de
+ld de,glob_w
+ld hl,const
+add hl,hl
+add hl,de
+ld e,(hl)
+inc hl
+ld d,(hl)
+ex de,hl
+pop de
+```
+
+**B2 load byte: local[const]**
+
+- ZAX: `ld a, loc_b[const]`
+- Steps: `LOAD_BYTE` with folded disp: `(ix+dispL+const)`
+- ASM:
+
+```
+ld a,(ix+dispL+const)
+```
+
+**B2w load word: local[const]**
+
+- ZAX: `ld hl, loc_w[const]`
+- Steps: `SAVE_DE BASE_LOCAL dispL+const*2 → DE LOAD_WORD RESTORE_DE`
+- ASM:
+
+```
+push de
+ld e,(ix+dispL+const*2)
+ld d,(ix+dispL+const*2+1)
+ld e,(de)
+inc de
+ld d,(de)
+ex de,hl
+pop de
+```
+
+**B3 load byte: arg[const]**
+
+- ZAX: `ld a, arg_b[const]`
+- ASM:
+
+```
+ld a,(ix+dispA+const)
+```
+
+**B3w load word: arg[const]**
+
+- ZAX: `ld hl, arg_w[const]`
+- ASM:
+
+```
+push de
+ld e,(ix+dispA+const*2)
+ld d,(ix+dispA+const*2+1)
+ld e,(de)
+inc de
+ld d,(de)
+ex de,hl
+pop de
+```
+
+**B4 store byte: global[const] = A**
+
+- ZAX: `ld glob_b[const], a`
+- Steps: `BASE_GLOBAL glob_b → DE IDX_CONST const → HL SCALE_1 ADD_BASE STORE_BYTE`
+- ASM:
+
+```
+ld de,glob_b
+ld hl,const
+add hl,de
+ld (hl),a
+```
+
+**B4w store word: global[const] = HL**
+
+- Steps: `SAVE_DE BASE_GLOBAL → DE IDX_CONST const → HL SCALE_2 ADD_BASE STORE_WORD RESTORE_DE`
+- ASM:
+
+```
+push de
+ld de,glob_w
+ld hl,const
+add hl,hl
+add hl,de
+ex de,hl
+ld (hl),e
+inc hl
+ld (hl),d
+ex de,hl
+pop de
+```
+
+**B5 store byte: local[const]**
+
+- ZAX: `ld loc_b[const], a`
+- ASM:
+
+```
+ld (ix+dispL+const),a
+```
+
+**B5w store word: local[const]**
+
+- ZAX: `ld loc_w[const], hl`
+- ASM:
+
+```
+push de
+ld e,(ix+dispL+const*2)
+ld d,(ix+dispL+const*2+1)
+ex de,hl
+ld (hl),e
+inc hl
+ld (hl),d
+ex de,hl
+pop de
+```
+
+**B6 store byte/word: arg[const]** — same as local with `dispA`.
+
+### C. Indexed by register
+
+**C1 load byte: global[r]**
+
+- ZAX: `ld a, glob_b[c]`
+- Steps: `SAVE_HL SAVE_DE BASE_GLOBAL glob_b → DE IDX_REG8 c → HL SCALE_1 ADD_BASE LOAD_BYTE RESTORE_DE RESTORE_HL`
+- ASM:
+
+```
+push hl
+push de
+ld de,glob_b
+ld h,0
+ld l,c
+add hl,de
+ld a,(hl)
+pop de
+pop hl
+```
+
+**C1w load word: global[r]**
+
+- Similar, with `SCALE_2` and `LOAD_WORD`.
+
+**C2 load byte: local[r]**
+
+- ZAX: `ld a, loc_b[c]`
+- Steps: `SAVE_HL SAVE_DE BASE_LOCAL dispL → DE IDX_REG8 c → HL SCALE_1 ADD_BASE LOAD_BYTE RESTORE_DE RESTORE_HL`
+- ASM:
+
+```
+push hl
+push de
+ld e,(ix+dispL)
+ld d,(ix+dispL+1)
+ld h,0
+ld l,c
+add hl,de
+ld a,(hl)
+pop de
+pop hl
+```
+
+**C2w load word: local[r]** — add `SCALE_2` and `LOAD_WORD`.
+
+**C3/C3w arg[r]** — same as C2/C2w with `dispA`.
+
+Stores C4–C6 mirror loads, ending with `STORE_BYTE`/`STORE_WORD` and the same save/restore envelope.
+
+### D. Indexed by variable in memory
+
+Example: global idx stored in memory, indexing a global byte array.
+
+**D1 load byte: glob_b[idxGlob]**
+
+- ZAX: `ld a, glob_b[idxGlob]`
+- Steps: `SAVE_HL SAVE_DE BASE_GLOBAL glob_b → DE IDX_MEM_GLOBAL idxGlob → HL SCALE_1 ADD_BASE LOAD_BYTE RESTORE_DE RESTORE_HL`
+- ASM:
+
+```
+push hl
+push de
+ld de,glob_b
+ld hl,(idxGlob)
+add hl,de
+ld a,(hl)
+pop de
+pop hl
+```
+
+**D2 load word: glob_w[idxFrame]**
+
+- ZAX: `ld hl, glob_w[idxFrame]`
+- Steps: `SAVE_HL SAVE_DE BASE_GLOBAL glob_w → DE IDX_MEM_FRAME dispIdx → HL SCALE_2 ADD_BASE LOAD_WORD RESTORE_DE RESTORE_HL`
+
+Stores D\* use the same pattern with `STORE_BYTE`/`STORE_WORD`.
 
 ### E. Record fields (const offsets)
 
-Treat as B with `const = field_offset`:
+Treat as const index with `const = field_off` on the base (global/local/arg).
 
-- Load byte/word: pipeline B with folded const.
-- Store byte/word: pipeline B with store op.
+Example load word field from local record:
+
+- ZAX: `ld hl, rec.field`
+- Steps: `SAVE_DE BASE_LOCAL dispRec+field_off → DE LOAD_WORD RESTORE_DE`
+
+Example store byte field to arg record:
+
+- ZAX: `ld rec.field, a`
+- Steps: `BASE_ARG dispRec+field_off → HL STORE_BYTE`
 
 ## 3. Notes
 
