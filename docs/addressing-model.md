@@ -90,7 +90,7 @@ FRAME_WORD_LOAD disp     ex de,hl
                          ld e,(ix+disp)
                          ld d,(ix+disp+1)
                          ex de,hl                 ; HL = value, DE = saved HL
-                         
+
 FRAME_BYTE_STORE disp    ld (ix+disp),a
 
 FRAME_WORD_STORE disp    ex de,hl
@@ -128,7 +128,7 @@ LOAD_BYTE
 ASM
 
 ```asm
-ld a,(hl)
+ld a,(glob_b)
 ```
 
 #### A1w load word from global
