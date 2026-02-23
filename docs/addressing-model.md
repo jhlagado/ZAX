@@ -66,13 +66,11 @@ LOAD_WORD            ld e,(hl)                ; dest=HL (uses DE scratch)
 
 STORE_BYTE           ld (hl),a                ; dest=mem (uses HL,A)
 
-STORE_WORD           push de                  ; dest=mem, preserves HL/DE
-                     ex de,hl                 ; DE = value, HL = addr
+STORE_WORD           ex de,hl                 ; DE = value, HL = addr
                      ld (hl),e
                      inc hl
                      ld (hl),d
                      ex de,hl                 ; restore value to HL
-                     pop de                   ; restore DE
 ```
 
 ### 1.6 Direct absolute / frame helpers
@@ -88,21 +86,17 @@ STORE_WORD_ABS const     ld (const),hl
 
 FRAME_BYTE_LOAD disp     ld a,(ix+disp)
 
-FRAME_WORD_LOAD disp     push de
-                         ex de,hl
+FRAME_WORD_LOAD disp     ex de,hl
                          ld e,(ix+disp)
                          ld d,(ix+disp+1)
                          ex de,hl                 ; HL = value, DE = saved HL
-                         pop de                   ; restore DE
-
+                         
 FRAME_BYTE_STORE disp    ld (ix+disp),a
 
-FRAME_WORD_STORE disp    push de
-                         ex de,hl
+FRAME_WORD_STORE disp    ex de,hl
                          ld (ix+disp),e
                          ld (ix+disp+1),d
                          ex de,hl
-                         pop de
 ```
 
 `disp` is the frame displacement: negative for locals,positive for args. When indexing with a constant,fold the scaled constant into `disp`.
@@ -194,12 +188,10 @@ FRAME_WORD_LOAD dispL
 ASM
 
 ```asm
-push de
 ex de,hl
 ld e,(ix+dispL)
 ld d,(ix+dispL+1)
 ex de,hl
-pop de
 ```
 
 #### A4 store byte to global
@@ -279,12 +271,10 @@ FRAME_WORD_STORE dispL
 ASM
 
 ```asm
-push de
 ex de,hl
 ld (ix+dispL),e
 ld (ix+dispL+1),d
 ex de,hl
-pop de
 ```
 
 ### B. Indexed by const
@@ -384,12 +374,10 @@ FRAME_WORD_LOAD dispL+const*2
 ASM
 
 ```asm
-push de
 ex de,hl
 ld e,(ix+dispL+const*2)
 ld d,(ix+dispL+const*2+1)
 ex de,hl
-pop de
 ```
 
 #### B4 store byte: global[const]
@@ -446,13 +434,11 @@ ld hl,const
 add hl,hl
 add hl,de
 pop de
-push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
 ex de,hl
-pop de
 ```
 
 #### B5 store byte: frame[const]
@@ -492,12 +478,10 @@ FRAME_WORD_STORE dispL+const*2
 ASM
 
 ```asm
-push de
 ex de,hl
 ld (ix+dispL+const*2),e
 ld (ix+dispL+const*2+1),d
 ex de,hl
-pop de
 ```
 
 #### B6 store byte: frame[const]
@@ -537,12 +521,10 @@ FRAME_WORD_STORE dispA+const*2
 ASM
 
 ```asm
-push de
 ex de,hl
 ld (ix+dispA+const*2),e
 ld (ix+dispA+const*2+1),d
 ex de,hl
-pop de
 ```
 
 ### C. Indexed by register (8-bit index in `r8`)
@@ -782,13 +764,11 @@ add hl,hl
 add hl,de
 ex (sp),hl
 ex de,hl
-push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
 ex de,hl
-pop de
 ex de,hl
 ```
 
@@ -851,13 +831,10 @@ add hl,hl
 add hl,de
 ex (sp),hl
 ex de,hl
-push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
-ex de,hl
-pop de
 ex de,hl
 ```
 
@@ -919,13 +896,10 @@ ld l,reg8
 add hl,de
 ex (sp),hl
 ex de,hl
-push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
-ex de,hl
-pop de
 ex de,hl
 ```
 
@@ -1331,13 +1305,10 @@ ld hl,(const)
 add hl,de
 ex (sp),hl
 ex de,hl
-push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
-ex de,hl
-pop de
 ex de,hl
 ```
 
@@ -1397,13 +1368,10 @@ ld h,(ix+disp+1)
 add hl,de
 ex (sp),hl
 ex de,hl
-push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
-ex de,hl
-pop de
 ex de,hl
 ```
 
@@ -1463,13 +1431,10 @@ ld hl,(const)
 add hl,de
 ex (sp),hl
 ex de,hl
-push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
-ex de,hl
-pop de
 ex de,hl
 ```
 
@@ -1531,13 +1496,10 @@ ld h,(ix+disp+1)
 add hl,de
 ex (sp),hl
 ex de,hl
-push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
-ex de,hl
-pop de
 ex de,hl
 ```
 
@@ -1597,13 +1559,10 @@ ld hl,(const)
 add hl,de
 ex (sp),hl
 ex de,hl
-push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
-ex de,hl
-pop de
 ex de,hl
 ```
 
@@ -1665,13 +1624,10 @@ ld h,(ix+disp+1)
 add hl,de
 ex (sp),hl
 ex de,hl
-push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
-ex de,hl
-pop de
 ex de,hl
 ```
 
@@ -1696,12 +1652,10 @@ FRAME_WORD_LOAD dispRec+field_offset
 ASM
 
 ```asm
-push de
 ex de,hl
 ld e,(ix+dispRec+field_offset)
 ld d,(ix+dispRec+field_offset+1)
 ex de,hl
-pop de
 ```
 
 Example store byte field into a frame record:
