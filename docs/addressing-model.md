@@ -44,10 +44,6 @@ ld var[idx], reg
 
 Struct fields: `var.field` lowers as `var[const]` (const offset only).
 
-Disallowed (emit diagnostic):
-
-- Any `(IX+d)` using H/L lanes; must shuttle through DE for word moves involving HL.
-
 ## 3. Lowering rules (summary)
 
 - **Base must be typed.** Indexing is only permitted when the base is a typed lvalue (`var`/`addr`). If the index resides in memory, load it to a register first.
