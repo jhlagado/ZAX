@@ -65,6 +65,102 @@ Disallowed (emit diagnostic):
 - Use `push de` / `push hl` to preserve scratch when needed; at the end, restore in reverse. If the destination is HL, discard the saved HL (e.g., `pop de` to drop old HL). If the destination is DE, discard the saved DE (e.g., `pop hl` + `inc sp` twice). Keep HL as the transient TOS during address synthesis to minimize stack traffic.
 - Bricks to compose: load typed base → HL, load/zero-extend idx → HL/DE, scale (power-of-two), add base+idx (HL+DE), then load/store via HL (word stores/loads use DE shuttle). Each brick must save/restore any scratch it uses.
 
+### 4.1 Brick library (per-instruction building blocks)
+
+All bricks assume IX is frame-only, never scratch. “Save/restore scratch” means `push`/`pop` around the brick if the scratch reg is not the destination. Destinations: byte → A; word → HL.
+
+**Base → HL (global)**
+
+```
+; clobbers HL only
+ld hl, global
+```
+
+**Base → HL (local/arg word at IX+disp)**
+
+```
+; clobbers HL, uses DE shuttle; save/restore DE if needed
+push de
+ex de, hl
+ld e, (ix+disp)
+ld d, (ix+disp+1)
+ex de, hl
+pop de
+```
+
+**Idx → HL (reg8 unsigned)**
+
+```
+; zero-extend reg8 in C
+ld h, 0
+ld l, c
+```
+
+**Idx → HL (reg16)**
+
+```
+; HL already holds idx16 (ensure saved if dest != HL later)
+```
+
+**Scale idx (size=1)**
+
+```
+; no-op
+```
+
+**Scale idx (size=2)**
+
+```
+add hl, hl
+```
+
+**Add base+idx (base in DE, offset in HL)**
+
+```
+add hl, de          ; HL = base + offset
+```
+
+**Load byte via HL → A**
+
+```
+ld a, (hl)
+```
+
+**Load word via HL → HL (DE shuttle)**
+
+```
+push de
+ld e, (hl)
+inc hl
+ld d, (hl)
+ex de, hl
+pop de
+```
+
+**Store byte A → (HL)**
+
+```
+ld (hl), a
+```
+
+**Store word HL → (addr in HL) using DE shuttle**
+
+```
+push de
+ex de, hl           ; DE = value, HL = addr
+ld (hl), e
+inc hl
+ld (hl), d
+ex de, hl
+pop de
+```
+
+**Save/restore patterns for destinations**
+
+- Dest = A: save/restore both DE and HL if used as scratch.
+- Dest = HL: save DE; save HL only if some brick needs HL scratch before final value; discard saved HL at end (`pop de` to drop old HL).
+- Dest = DE: save HL and DE; at end restore HL; drop saved DE with `inc sp`/`inc sp`.
+
 ## 5. Exhaustive pattern list (byte/word; unsigned index)
 
 For each shape below, element size = 1 (byte) or 2/4… (power-of-two only). Record fields map to const offsets. Any idx in memory is first loaded to a register, then uses the register-index shape.
