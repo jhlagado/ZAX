@@ -40,7 +40,7 @@ IDX_REG16 reg16      ld hl,reg16              ; dest=HL
 IDX_GLOBAL const     ld hl,(const)            ; dest=HL
 
 IDX_FRAME disp       ex de,hl                 ; dest=HL
-                     ld e,(ix+disp)           
+                     ld e,(ix+disp)
                      ld d,(ix+disp+1)
                      ex de,hl
 ```
@@ -134,7 +134,7 @@ LOAD_BYTE
 ASM
 
 ```asm
-ld a,(glob_b)
+ld a,(hl)
 ```
 
 #### A1w load word from global
@@ -194,9 +194,12 @@ FRAME_WORD_LOAD dispL
 ASM
 
 ```asm
+push de
+ex de,hl
 ld e,(ix+dispL)
 ld d,(ix+dispL+1)
 ex de,hl
+pop de
 ```
 
 #### A4 store byte to global
@@ -216,7 +219,7 @@ STORE_BYTE
 ASM
 
 ```asm
-ld (glob_b),a
+ld (hl),a
 ```
 
 #### A4w store word to global
@@ -276,10 +279,12 @@ FRAME_WORD_STORE dispL
 ASM
 
 ```asm
+push de
 ex de,hl
 ld (ix+dispL),e
 ld (ix+dispL+1),d
 ex de,hl
+pop de
 ```
 
 ### B. Indexed by const
@@ -297,7 +302,7 @@ ld a,glob_b[const]
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_b
 IDX_CONST const
 ADD_BASE
 LOAD_BYTE
@@ -309,7 +314,7 @@ ASM
 ld de,glob_b
 ld hl,const
 add hl,de
-ld l,(hl)
+ld a,(hl)
 ```
 
 #### B1w load word: global[const]
@@ -323,7 +328,7 @@ ld hl,glob_w[const]
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_w
 IDX_CONST const
 ADD_BASE_2
 LOAD_WORD
@@ -379,10 +384,12 @@ FRAME_WORD_LOAD dispL+const*2
 ASM
 
 ```asm
+push de
 ex de,hl
 ld e,(ix+dispL+const*2)
 ld d,(ix+dispL+const*2+1)
 ex de,hl
+pop de
 ```
 
 #### B4 store byte: global[const]
@@ -396,7 +403,7 @@ ld glob_b[const],a
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_b
 IDX_CONST const
 ADD_BASE
 STORE_BYTE
@@ -423,7 +430,7 @@ Steps
 
 ```
 SAVE_HL
-BASE_GLOBAL const
+BASE_GLOBAL glob_w
 IDX_CONST const
 ADD_BASE_2
 RESTORE_DE
@@ -439,9 +446,13 @@ ld hl,const
 add hl,hl
 add hl,de
 pop de
+push de
+ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
+ex de,hl
+pop de
 ```
 
 #### B5 store byte: frame[const]
@@ -481,10 +492,12 @@ FRAME_WORD_STORE dispL+const*2
 ASM
 
 ```asm
+push de
 ex de,hl
 ld (ix+dispL+const*2),e
 ld (ix+dispL+const*2+1),d
 ex de,hl
+pop de
 ```
 
 #### B6 store byte: frame[const]
@@ -545,7 +558,7 @@ ld a,glob_b[r]
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_b
 IDX_REG8 reg8
 ADD_BASE
 LOAD_BYTE
@@ -554,13 +567,11 @@ LOAD_BYTE
 ASM
 
 ```asm
-push de
 ld de,glob_b
 ld h,0
-ld l,r
+ld l,reg8
 add hl,de
-ld l,(hl)
-pop de
+ld a,(hl)
 ```
 
 #### C1w load word: global[r]
@@ -574,7 +585,7 @@ ld hl,glob_w[r]
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_w
 IDX_REG8 reg8
 ADD_BASE_2
 LOAD_WORD
@@ -583,17 +594,15 @@ LOAD_WORD
 ASM
 
 ```asm
-push de
 ld de,glob_w
 ld h,0
-ld l,r
+ld l,reg8
 add hl,hl
 add hl,de
 ld e,(hl)
 inc hl
 ld d,(hl)
 ex de,hl
-pop de
 ```
 
 #### C2 load byte: frame[r]
@@ -616,14 +625,12 @@ LOAD_BYTE
 ASM
 
 ```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
+ld e,(ix+disp)
+ld d,(ix+disp+1)
 ld h,0
-ld l,r
+ld l,reg8
 add hl,de
-ld l,(hl)
-pop de
+ld a,(hl)
 ```
 
 #### C2w load word: frame[r]
@@ -646,18 +653,16 @@ LOAD_WORD
 ASM
 
 ```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
+ld e,(ix+disp)
+ld d,(ix+disp+1)
 ld h,0
-ld l,r
+ld l,reg8
 add hl,hl
 add hl,de
 ld e,(hl)
 inc hl
 ld d,(hl)
 ex de,hl
-pop de
 ```
 
 #### C3 load byte: frame[r]
@@ -680,14 +685,12 @@ LOAD_BYTE
 ASM
 
 ```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
+ld e,(ix+disp)
+ld d,(ix+disp+1)
 ld h,0
-ld l,r
+ld l,reg8
 add hl,de
-ld l,(hl)
-pop de
+ld a,(hl)
 ```
 
 #### C3w load word: frame[r]
@@ -710,18 +713,16 @@ LOAD_WORD
 ASM
 
 ```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
+ld e,(ix+disp)
+ld d,(ix+disp+1)
 ld h,0
-ld l,r
+ld l,reg8
 add hl,hl
 add hl,de
 ld e,(hl)
 inc hl
 ld d,(hl)
 ex de,hl
-pop de
 ```
 
 #### C4 store byte: global[r]
@@ -735,7 +736,7 @@ ld glob_b[r],e
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_b
 IDX_REG8 reg8
 ADD_BASE
 STORE_BYTE
@@ -744,13 +745,11 @@ STORE_BYTE
 ASM
 
 ```asm
-push de
 ld de,glob_b
 ld h,0
-ld l,r
+ld l,reg8
 add hl,de
-ld (hl),e
-pop de
+ld (hl),a
 ```
 
 #### C4w store word: global[r]
@@ -764,7 +763,7 @@ ld glob_w[r],hl
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_w
 IDX_REG8 reg8
 ADD_BASE_2
 SWAP_SAVED
@@ -776,21 +775,21 @@ SWAP
 ASM
 
 ```asm
-push de
-push hl
 ld de,glob_w
 ld h,0
-ld l,r
+ld l,reg8
 add hl,hl
 add hl,de
 ex (sp),hl
-pop de
+ex de,hl
+push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
 ex de,hl
 pop de
+ex de,hl
 ```
 
 #### C5 store byte: frame[r]
@@ -813,14 +812,12 @@ STORE_BYTE
 ASM
 
 ```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
+ld e,(ix+disp)
+ld d,(ix+disp+1)
 ld h,0
-ld l,r
+ld l,reg8
 add hl,de
-ld (hl),e
-pop de
+ld (hl),a
 ```
 
 #### C5w store word: frame[r]
@@ -846,22 +843,22 @@ SWAP
 ASM
 
 ```asm
-push de
-push hl
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
+ld e,(ix+disp)
+ld d,(ix+disp+1)
 ld h,0
-ld l,r
+ld l,reg8
 add hl,hl
 add hl,de
 ex (sp),hl
-pop de
+ex de,hl
+push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
 ex de,hl
 pop de
+ex de,hl
 ```
 
 #### C6 store byte: frame[r]
@@ -884,14 +881,12 @@ STORE_BYTE
 ASM
 
 ```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
+ld e,(ix+disp)
+ld d,(ix+disp+1)
 ld h,0
-ld l,r
+ld l,reg8
 add hl,de
-ld (hl),e
-pop de
+ld (hl),a
 ```
 
 #### C6w store word: frame[r]
@@ -917,22 +912,21 @@ SWAP
 ASM
 
 ```asm
-push de
-push hl
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
+ld e,(ix+disp)
+ld d,(ix+disp+1)
 ld h,0
-ld l,r
-add hl,hl
+ld l,reg8
 add hl,de
 ex (sp),hl
-pop de
+ex de,hl
+push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
 ex de,hl
 pop de
+ex de,hl
 ```
 
 ### D. Indexed by variable in memory (typed address kept in memory)
@@ -950,7 +944,7 @@ ld a,glob_b[idxG]
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_b
 IDX_GLOBAL const
 ADD_BASE
 LOAD_BYTE
@@ -959,12 +953,10 @@ LOAD_BYTE
 ASM
 
 ```asm
-push de
 ld de,glob_b
-ld hl,(idxG)
+ld hl,(const)
 add hl,de
-ld l,(hl)
-pop de
+ld a,(hl)
 ```
 
 #### D1w load word: global[idxG]
@@ -978,7 +970,7 @@ ld hl,glob_w[idxG]
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_w
 IDX_GLOBAL const
 ADD_BASE
 LOAD_WORD
@@ -987,16 +979,13 @@ LOAD_WORD
 ASM
 
 ```asm
-push de
 ld de,glob_w
-ld hl,(idxG)
-add hl,hl
+ld hl,(const)
 add hl,de
 ld e,(hl)
 inc hl
 ld d,(hl)
 ex de,hl
-pop de
 ```
 
 #### D2 load byte: global[idxFrame]
@@ -1010,7 +999,7 @@ ld a,glob_b[idxFrame]
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_b
 IDX_FRAME disp
 ADD_BASE
 LOAD_BYTE
@@ -1019,16 +1008,11 @@ LOAD_BYTE
 ASM
 
 ```asm
-push de
 ld de,glob_b
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
+ld l,(ix+disp)
+ld h,(ix+disp+1)
 add hl,de
-ld l,(hl)
-pop de
+ld a,(hl)
 ```
 
 #### D2w load word: global[idxFrame]
@@ -1042,7 +1026,7 @@ ld hl,glob_w[idxFrame]
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_w
 IDX_FRAME disp
 ADD_BASE
 LOAD_WORD
@@ -1051,20 +1035,14 @@ LOAD_WORD
 ASM
 
 ```asm
-push de
 ld de,glob_w
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,hl
+ld l,(ix+disp)
+ld h,(ix+disp+1)
 add hl,de
 ld e,(hl)
 inc hl
 ld d,(hl)
 ex de,hl
-pop de
 ```
 
 #### D3 load byte: frame[idxG]
@@ -1087,13 +1065,11 @@ LOAD_BYTE
 ASM
 
 ```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ld hl,(idxG)
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld hl,(const)
 add hl,de
-ld l,(hl)
-pop de
+ld a,(hl)
 ```
 
 #### D3w load word: frame[idxG]
@@ -1116,17 +1092,14 @@ LOAD_WORD
 ASM
 
 ```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ld hl,(idxG)
-add hl,hl
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld hl,(const)
 add hl,de
 ld e,(hl)
 inc hl
 ld d,(hl)
 ex de,hl
-pop de
 ```
 
 #### D4 load byte: frame[idxFrame]
@@ -1149,17 +1122,12 @@ LOAD_BYTE
 ASM
 
 ```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld l,(ix+disp)
+ld h,(ix+disp+1)
 add hl,de
-ld l,(hl)
-pop de
+ld a,(hl)
 ```
 
 #### D4w load word: frame[idxFrame]
@@ -1182,21 +1150,15 @@ LOAD_WORD
 ASM
 
 ```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,hl
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld l,(ix+disp)
+ld h,(ix+disp+1)
 add hl,de
 ld e,(hl)
 inc hl
 ld d,(hl)
 ex de,hl
-pop de
 ```
 
 #### D5 load byte: frame[idxG]
@@ -1219,13 +1181,11 @@ LOAD_BYTE
 ASM
 
 ```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ld hl,(idxG)
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld hl,(const)
 add hl,de
-ld l,(hl)
-pop de
+ld a,(hl)
 ```
 
 #### D5w load word: frame[idxG]
@@ -1248,17 +1208,14 @@ LOAD_WORD
 ASM
 
 ```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ld hl,(idxG)
-add hl,hl
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld hl,(const)
 add hl,de
 ld e,(hl)
 inc hl
 ld d,(hl)
 ex de,hl
-pop de
 ```
 
 #### D6 load byte: frame[idxFrame]
@@ -1281,17 +1238,12 @@ LOAD_BYTE
 ASM
 
 ```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld l,(ix+disp)
+ld h,(ix+disp+1)
 add hl,de
-ld l,(hl)
-pop de
+ld a,(hl)
 ```
 
 #### D6w load word: frame[idxFrame]
@@ -1314,21 +1266,15 @@ LOAD_WORD
 ASM
 
 ```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,hl
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld l,(ix+disp)
+ld h,(ix+disp+1)
 add hl,de
 ld e,(hl)
 inc hl
 ld d,(hl)
 ex de,hl
-pop de
 ```
 
 #### D7 store byte: global[idxG]
@@ -1342,7 +1288,7 @@ ld glob_b[idxG],e
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_b
 IDX_GLOBAL const
 ADD_BASE
 STORE_BYTE
@@ -1351,12 +1297,10 @@ STORE_BYTE
 ASM
 
 ```asm
-push de
 ld de,glob_b
-ld hl,(idxG)
+ld hl,(const)
 add hl,de
-ld (hl),e
-pop de
+ld (hl),a
 ```
 
 #### D7w store word: global[idxG]
@@ -1370,7 +1314,7 @@ ld glob_w[idxG],hl
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_w
 IDX_GLOBAL const
 ADD_BASE
 SWAP_SAVED
@@ -1382,20 +1326,19 @@ SWAP
 ASM
 
 ```asm
-push de
-push hl
 ld de,glob_w
-ld hl,(idxG)
-add hl,hl
+ld hl,(const)
 add hl,de
 ex (sp),hl
-pop de
+ex de,hl
+push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
 ex de,hl
 pop de
+ex de,hl
 ```
 
 #### D8 store byte: global[idxFrame]
@@ -1409,7 +1352,7 @@ ld glob_b[idxFrame],e
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_b
 IDX_FRAME disp
 ADD_BASE
 STORE_BYTE
@@ -1418,16 +1361,11 @@ STORE_BYTE
 ASM
 
 ```asm
-push de
 ld de,glob_b
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
+ld l,(ix+disp)
+ld h,(ix+disp+1)
 add hl,de
-ld (hl),e
-pop de
+ld (hl),a
 ```
 
 #### D8w store word: global[idxFrame]
@@ -1441,7 +1379,7 @@ ld glob_w[idxFrame],hl
 Steps
 
 ```
-BASE_GLOBAL const
+BASE_GLOBAL glob_w
 IDX_FRAME disp
 ADD_BASE
 SWAP_SAVED
@@ -1453,24 +1391,20 @@ SWAP
 ASM
 
 ```asm
-push de
-push hl
 ld de,glob_w
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,hl
+ld l,(ix+disp)
+ld h,(ix+disp+1)
 add hl,de
 ex (sp),hl
-pop de
+ex de,hl
+push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
 ex de,hl
 pop de
+ex de,hl
 ```
 
 #### D9 store byte: frame[idxG]
@@ -1493,13 +1427,11 @@ STORE_BYTE
 ASM
 
 ```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ld hl,(idxG)
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld hl,(const)
 add hl,de
-ld (hl),e
-pop de
+ld (hl),a
 ```
 
 #### D9w store word: frame[idxG]
@@ -1525,21 +1457,20 @@ SWAP
 ASM
 
 ```asm
-push de
-push hl
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ld hl,(idxG)
-add hl,hl
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld hl,(const)
 add hl,de
 ex (sp),hl
-pop de
+ex de,hl
+push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
 ex de,hl
 pop de
+ex de,hl
 ```
 
 #### D10 store byte: frame[idxFrame]
@@ -1562,17 +1493,12 @@ STORE_BYTE
 ASM
 
 ```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld l,(ix+disp)
+ld h,(ix+disp+1)
 add hl,de
-ld (hl),e
-pop de
+ld (hl),a
 ```
 
 #### D10w store word: frame[idxFrame]
@@ -1598,25 +1524,21 @@ SWAP
 ASM
 
 ```asm
-push de
-push hl
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,hl
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld l,(ix+disp)
+ld h,(ix+disp+1)
 add hl,de
 ex (sp),hl
-pop de
+ex de,hl
+push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
 ex de,hl
 pop de
+ex de,hl
 ```
 
 #### D11 store byte: frame[idxG]
@@ -1639,13 +1561,11 @@ STORE_BYTE
 ASM
 
 ```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ld hl,(idxG)
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld hl,(const)
 add hl,de
-ld (hl),e
-pop de
+ld (hl),a
 ```
 
 #### D11w store word: frame[idxG]
@@ -1671,21 +1591,20 @@ SWAP
 ASM
 
 ```asm
-push de
-push hl
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ld hl,(idxG)
-add hl,hl
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld hl,(const)
 add hl,de
 ex (sp),hl
-pop de
+ex de,hl
+push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
 ex de,hl
 pop de
+ex de,hl
 ```
 
 #### D12 store byte: frame[idxFrame]
@@ -1708,17 +1627,12 @@ STORE_BYTE
 ASM
 
 ```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld l,(ix+disp)
+ld h,(ix+disp+1)
 add hl,de
-ld (hl),e
-pop de
+ld (hl),a
 ```
 
 #### D12w store word: frame[idxFrame]
@@ -1744,25 +1658,21 @@ SWAP
 ASM
 
 ```asm
-push de
-push hl
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,hl
+ld e,(ix+disp)
+ld d,(ix+disp+1)
+ld l,(ix+disp)
+ld h,(ix+disp+1)
 add hl,de
 ex (sp),hl
-pop de
+ex de,hl
+push de
 ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
 ex de,hl
 pop de
+ex de,hl
 ```
 
 ### E. Record fields (const offsets)
@@ -1787,6 +1697,7 @@ ASM
 
 ```asm
 push de
+ex de,hl
 ld e,(ix+dispRec+field_offset)
 ld d,(ix+dispRec+field_offset+1)
 ex de,hl
