@@ -1,6 +1,6 @@
 # ZAX Addressing Model (v0.2) — Step Pipelines
 
-Goal: express every allowed load/store addressing shape as a short pipeline of reusable **steps** (concatenative/Forth style). A pipeline must leave all registers untouched except the destination (for loads) or the value-carrying register (for stores, typically `A` or `HL`). IX is never scratch.
+Goal: express every allowed load/store addressing shape as a short pipeline of reusable **steps** (concatenative/Forth style). A pipeline must leave all registers untouched except the destination (for loads) or the value-carrying register (for stores,typically `A` or `HL`). IX is never scratch.
 
 ## 1. Step Library (reusable “words”)
 
@@ -55,16 +55,17 @@ ADD_BASE_2           add hl,hl                ; dest=HL (offset*2)
 ### 1.5 Accessors
 
 ```
-LOAD_BYTE            ld l,(hl)                ; dest=L
+LOAD_BYTE            ld a,(hl)               ; dest=A
 
 LOAD_WORD            ld e,(hl)                ; dest=HL (uses DE scratch)
                      inc hl
                      ld d,(hl)
-                     ex de,hl                 ; HL = word, DE = addr+1 (scratch)
+                     ex de,hl                 ; HL = word,DE = addr+1 (scratch)
 
-STORE_BYTE           ld (hl),e                ; dest=mem (uses HL,E)
+STORE_BYTE           ld (hl),a               ; dest=mem (uses HL,E)
 
-STORE_WORD           ld (hl),e                ; dest=mem (uses HL,DE)
+STORE_WORD           ex de,hl                ; dest=mem (uses HL,DE)
+                     ld (hl),e
                      inc hl
                      ld (hl),d
 ```
@@ -72,35 +73,30 @@ STORE_WORD           ld (hl),e                ; dest=mem (uses HL,DE)
 ### 1.6 Direct absolute / frame helpers
 
 ```
-LOAD_BYTE_ABS const      ld hl,const              ; dest=L
-                         ld l,(hl)
+LOAD_BYTE_ABS const      ld a,(const)
 
 LOAD_WORD_ABS const      ld hl,(const)
 
-STORE_BYTE_ABS const     ld hl,const
-                         ld (hl),e
+STORE_BYTE_ABS const     ld (const),a
 
 STORE_WORD_ABS const     ld (const),hl
 
-FRAME_BYTE_LOAD disp     ld l,(ix+disp)
+FRAME_BYTE_LOAD disp     ld a,(ix+disp)
 
-FRAME_WORD_LOAD disp     push de
+FRAME_WORD_LOAD disp     ex de,hl
                          ld e,(ix+disp)
                          ld d,(ix+disp+1)
-                         ex de,hl                 ; HL = value, DE restored by pop
-                         pop de
+                         ex de,hl                 ; HL = value,DE restored by pop
 
-FRAME_BYTE_STORE disp    ld (ix+disp),e
+FRAME_BYTE_STORE disp    ld (ix+disp),a
 
-FRAME_WORD_STORE disp    push de
-                         ex de,hl
+FRAME_WORD_STORE disp    ex de,hl
                          ld (ix+disp),e
                          ld (ix+disp+1),d
                          ex de,hl
-                         pop de
 ```
 
-`disp` is the frame displacement: negative for locals, positive for args. When indexing with a constant, fold the scaled constant into `disp`.
+`disp` is the frame displacement: negative for locals,positive for args. When indexing with a constant,fold the scaled constant into `disp`.
 
 ## 2. Pipelines (exhaustive load/store shapes)
 
@@ -117,10 +113,11 @@ For each shape:
 ZAX
 
 ```zax
-ld l, glob_b
+ld a,glob_b
 ```
 
 Steps
+
 ```
 LOAD_BYTE
 ```
@@ -128,8 +125,7 @@ LOAD_BYTE
 ASM
 
 ```asm
-ld hl,glob_b
-ld l,(hl)
+ld a,(glob_b)
 ```
 
 #### A1w load word from global
@@ -137,10 +133,11 @@ ld l,(hl)
 ZAX
 
 ```zax
-ld hl, glob_w
+ld hl,glob_w
 ```
 
 Steps
+
 ```
 LOAD_WORD_ABS glob_w
 ```
@@ -151,15 +148,16 @@ ASM
 ld hl,(glob_w)
 ```
 
-#### A2 load byte from local
+#### A2 load byte from frame var
 
 ZAX
 
 ```zax
-ld l, loc_b
+ld a,loc_b
 ```
 
 Steps
+
 ```
 FRAME_BYTE_LOAD dispL
 ```
@@ -167,18 +165,19 @@ FRAME_BYTE_LOAD dispL
 ASM
 
 ```asm
-ld l,(ix+dispL)
+ld a,(ix+dispL)
 ```
 
-#### A2w load word from local
+#### A2w load word from frame var
 
 ZAX
 
 ```zax
-ld hl, loc_w
+ld hl,loc_w
 ```
 
 Steps
+
 ```
 FRAME_WORD_LOAD dispL
 ```
@@ -186,53 +185,9 @@ FRAME_WORD_LOAD dispL
 ASM
 
 ```asm
-push de
 ld e,(ix+dispL)
 ld d,(ix+dispL+1)
 ex de,hl
-pop de
-```
-
-#### A3 load byte from arg
-
-ZAX
-
-```zax
-ld l, arg_b
-```
-
-Steps
-```
-FRAME_BYTE_LOAD dispA
-```
-
-ASM
-
-```asm
-ld l,(ix+dispA)
-```
-
-#### A3w load word from arg
-
-ZAX
-
-```zax
-ld hl, arg_w
-```
-
-Steps
-```
-FRAME_WORD_LOAD dispA
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ex de,hl
-pop de
 ```
 
 #### A4 store byte to global
@@ -240,10 +195,11 @@ pop de
 ZAX
 
 ```zax
-ld glob_b, e
+ld glob_b,a
 ```
 
 Steps
+
 ```
 STORE_BYTE
 ```
@@ -251,7 +207,7 @@ STORE_BYTE
 ASM
 
 ```asm
-ld (glob_b),e
+ld (glob_b),a
 ```
 
 #### A4w store word to global
@@ -259,10 +215,11 @@ ld (glob_b),e
 ZAX
 
 ```zax
-ld glob_w, hl
+ld glob_w,hl
 ```
 
 Steps
+
 ```
 STORE_WORD_ABS glob_w
 ```
@@ -273,15 +230,16 @@ ASM
 ld (glob_w),hl
 ```
 
-#### A5 store byte to local
+#### A5 store byte to frame var
 
 ZAX
 
 ```zax
-ld loc_b, e
+ld loc_b,a
 ```
 
 Steps
+
 ```
 FRAME_BYTE_STORE dispL
 ```
@@ -289,18 +247,19 @@ FRAME_BYTE_STORE dispL
 ASM
 
 ```asm
-ld (ix+dispL),e
+ld (ix+dispL),a
 ```
 
-#### A5w store word to local
+#### A5w store word to frame var
 
 ZAX
 
 ```zax
-ld loc_w, hl
+ld loc_w,hl
 ```
 
 Steps
+
 ```
 FRAME_WORD_STORE dispL
 ```
@@ -308,88 +267,40 @@ FRAME_WORD_STORE dispL
 ASM
 
 ```asm
-push de
 ex de,hl
 ld (ix+dispL),e
 ld (ix+dispL+1),d
 ex de,hl
-pop de
-```
-
-#### A6 store byte to arg
-
-ZAX
-
-```zax
-ld arg_b, e
-```
-
-Steps
-```
-FRAME_BYTE_STORE dispA
-```
-
-ASM
-
-```asm
-ld (ix+dispA),e
-```
-
-#### A6w store word to arg
-
-ZAX
-
-```zax
-ld arg_w, hl
-```
-
-Steps
-```
-FRAME_WORD_STORE dispA
-```
-
-ASM
-
-```asm
-push de
-ex de,hl
-ld (ix+dispA),e
-ld (ix+dispA+1),d
-ex de,hl
-pop de
 ```
 
 ### B. Indexed by const
 
-Element size = 1 for byte, 2 for word (use `ADD_BASE_2`; larger powers not supported).
+Element size = 1 for byte,2 for word (use `ADD_BASE_2`; larger powers not supported).
 
 #### B1 load byte: global[const]
 
 ZAX
 
 ```zax
-ld l, glob_b[const]
+ld a,glob_b[const]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_GLOBAL const
 IDX_CONST const
 ADD_BASE
 LOAD_BYTE
-RESTORE_DE
 ```
 
 ASM
 
 ```asm
-push de
 ld de,glob_b
 ld hl,const
 add hl,de
 ld l,(hl)
-pop de
 ```
 
 #### B1w load word: global[const]
@@ -397,23 +308,21 @@ pop de
 ZAX
 
 ```zax
-ld hl, glob_w[const]
+ld hl,glob_w[const]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_GLOBAL const
 IDX_CONST const
 ADD_BASE_2
 LOAD_WORD
-RESTORE_DE
 ```
 
 ASM
 
 ```asm
-push de
 ld de,glob_w
 ld hl,const
 add hl,hl
@@ -422,18 +331,18 @@ ld e,(hl)
 inc hl
 ld d,(hl)
 ex de,hl
-pop de
 ```
 
-#### B2 load byte: local[const]
+#### B2 load byte: frame[const]
 
 ZAX
 
 ```zax
-ld l, loc_b[const]
+ld a,loc_b[const]
 ```
 
 Steps
+
 ```
 FRAME_BYTE_LOAD dispL+const
 ```
@@ -441,18 +350,19 @@ FRAME_BYTE_LOAD dispL+const
 ASM
 
 ```asm
-ld l,(ix+dispL+const)
+ld a,(ix+dispL+const)
 ```
 
-#### B2w load word: local[const]
+#### B2w load word: frame[const]
 
 ZAX
 
 ```zax
-ld hl, loc_w[const]
+ld hl,loc_w[const]
 ```
 
 Steps
+
 ```
 FRAME_WORD_LOAD dispL+const*2
 ```
@@ -460,53 +370,10 @@ FRAME_WORD_LOAD dispL+const*2
 ASM
 
 ```asm
-push de
+ex de,hl
 ld e,(ix+dispL+const*2)
 ld d,(ix+dispL+const*2+1)
 ex de,hl
-pop de
-```
-
-#### B3 load byte: arg[const]
-
-ZAX
-
-```zax
-ld l, arg_b[const]
-```
-
-Steps
-```
-FRAME_BYTE_LOAD dispA+const
-```
-
-ASM
-
-```asm
-ld l,(ix+dispA+const)
-```
-
-#### B3w load word: arg[const]
-
-ZAX
-
-```zax
-ld hl, arg_w[const]
-```
-
-Steps
-```
-FRAME_WORD_LOAD dispA+const*2
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispA+const*2)
-ld d,(ix+dispA+const*2+1)
-ex de,hl
-pop de
 ```
 
 #### B4 store byte: global[const]
@@ -514,28 +381,25 @@ pop de
 ZAX
 
 ```zax
-ld glob_b[const], e
+ld glob_b[const],a
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_GLOBAL const
 IDX_CONST const
 ADD_BASE
 STORE_BYTE
-RESTORE_DE
 ```
 
 ASM
 
 ```asm
-push de
 ld de,glob_b
 ld hl,const
 add hl,de
-ld (hl),e
-pop de
+ld (hl),a
 ```
 
 #### B4w store word: global[const]
@@ -543,40 +407,32 @@ pop de
 ZAX
 
 ```zax
-ld glob_w[const], hl
+ld glob_w[const],hl
 ```
 
 Steps
+
 ```
-SAVE_DE
 SAVE_HL
 BASE_GLOBAL const
 IDX_CONST const
 ADD_BASE_2
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
 RESTORE_DE
+STORE_WORD
 ```
 
 ASM
 
 ```asm
-push de
 push hl
 ld de,glob_w
 ld hl,const
 add hl,hl
 add hl,de
-ex (sp),hl
 pop de
-ex de,hl
 ld (hl),e
 inc hl
 ld (hl),d
-ex de,hl
-pop de
 ```
 
 #### B5 store byte: local[const]
@@ -584,10 +440,11 @@ pop de
 ZAX
 
 ```zax
-ld loc_b[const], e
+ld loc_b[const],a
 ```
 
 Steps
+
 ```
 FRAME_BYTE_STORE dispL+const
 ```
@@ -603,10 +460,11 @@ ld (ix+dispL+const),a
 ZAX
 
 ```zax
-ld loc_w[const], hl
+ld loc_w[const],hl
 ```
 
 Steps
+
 ```
 FRAME_WORD_STORE dispL+const*2
 ```
@@ -614,12 +472,10 @@ FRAME_WORD_STORE dispL+const*2
 ASM
 
 ```asm
-push de
 ex de,hl
 ld (ix+dispL+const*2),e
 ld (ix+dispL+const*2+1),d
 ex de,hl
-pop de
 ```
 
 #### B6 store byte: arg[const]
@@ -627,10 +483,11 @@ pop de
 ZAX
 
 ```zax
-ld arg_b[const], e
+ld arg_b[const],e
 ```
 
 Steps
+
 ```
 FRAME_BYTE_STORE dispA+const
 ```
@@ -646,10 +503,11 @@ ld (ix+dispA+const),a
 ZAX
 
 ```zax
-ld arg_w[const], hl
+ld arg_w[const],hl
 ```
 
 Steps
+
 ```
 FRAME_WORD_STORE dispA+const*2
 ```
@@ -672,17 +530,16 @@ pop de
 ZAX
 
 ```zax
-ld l, glob_b[r]
+ld a,glob_b[r]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_GLOBAL const
 IDX_REG8 reg8
 ADD_BASE
 LOAD_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -702,17 +559,16 @@ pop de
 ZAX
 
 ```zax
-ld hl, glob_w[r]
+ld hl,glob_w[r]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_GLOBAL const
 IDX_REG8 reg8
 ADD_BASE_2
 LOAD_WORD
-RESTORE_DE
 ```
 
 ASM
@@ -736,17 +592,16 @@ pop de
 ZAX
 
 ```zax
-ld l, loc_b[r]
+ld a,loc_b[r]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_REG8 reg8
 ADD_BASE
 LOAD_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -767,17 +622,16 @@ pop de
 ZAX
 
 ```zax
-ld hl, loc_w[r]
+ld hl,loc_w[r]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_REG8 reg8
 ADD_BASE_2
 LOAD_WORD
-RESTORE_DE
 ```
 
 ASM
@@ -802,17 +656,16 @@ pop de
 ZAX
 
 ```zax
-ld l, arg_b[r]
+ld a,arg_b[r]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_REG8 reg8
 ADD_BASE
 LOAD_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -833,17 +686,16 @@ pop de
 ZAX
 
 ```zax
-ld hl, arg_w[r]
+ld hl,arg_w[r]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_REG8 reg8
 ADD_BASE_2
 LOAD_WORD
-RESTORE_DE
 ```
 
 ASM
@@ -868,17 +720,16 @@ pop de
 ZAX
 
 ```zax
-ld glob_b[r], e
+ld glob_b[r],e
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_GLOBAL const
 IDX_REG8 reg8
 ADD_BASE
 STORE_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -898,13 +749,12 @@ pop de
 ZAX
 
 ```zax
-ld glob_w[r], hl
+ld glob_w[r],hl
 ```
 
 Steps
+
 ```
-SAVE_DE
-SAVE_HL
 BASE_GLOBAL const
 IDX_REG8 reg8
 ADD_BASE_2
@@ -912,7 +762,6 @@ SWAP_SAVED
 SWAP
 STORE_WORD
 SWAP
-RESTORE_DE
 ```
 
 ASM
@@ -940,17 +789,16 @@ pop de
 ZAX
 
 ```zax
-ld loc_b[r], e
+ld loc_b[r],e
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_REG8 reg8
 ADD_BASE
 STORE_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -971,13 +819,12 @@ pop de
 ZAX
 
 ```zax
-ld loc_w[r], hl
+ld loc_w[r],hl
 ```
 
 Steps
+
 ```
-SAVE_DE
-SAVE_HL
 BASE_FRAME disp
 IDX_REG8 reg8
 ADD_BASE_2
@@ -985,7 +832,6 @@ SWAP_SAVED
 SWAP
 STORE_WORD
 SWAP
-RESTORE_DE
 ```
 
 ASM
@@ -1014,17 +860,16 @@ pop de
 ZAX
 
 ```zax
-ld arg_b[r], e
+ld arg_b[r],e
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_REG8 reg8
 ADD_BASE
 STORE_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1045,13 +890,12 @@ pop de
 ZAX
 
 ```zax
-ld arg_w[r], hl
+ld arg_w[r],hl
 ```
 
 Steps
+
 ```
-SAVE_DE
-SAVE_HL
 BASE_FRAME disp
 IDX_REG8 reg8
 ADD_BASE
@@ -1059,7 +903,6 @@ SWAP_SAVED
 SWAP
 STORE_WORD
 SWAP
-RESTORE_DE
 ```
 
 ASM
@@ -1092,17 +935,16 @@ Two index sources shown: a global word `idxG` and a frame word at `dispIdx`.
 ZAX
 
 ```zax
-ld l, glob_b[idxG]
+ld a,glob_b[idxG]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_GLOBAL const
 IDX_GLOBAL const
 ADD_BASE
 LOAD_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1121,17 +963,16 @@ pop de
 ZAX
 
 ```zax
-ld hl, glob_w[idxG]
+ld hl,glob_w[idxG]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_GLOBAL const
 IDX_GLOBAL const
 ADD_BASE
 LOAD_WORD
-RESTORE_DE
 ```
 
 ASM
@@ -1154,17 +995,16 @@ pop de
 ZAX
 
 ```zax
-ld l, glob_b[idxFrame]
+ld a,glob_b[idxFrame]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_GLOBAL const
 IDX_FRAME disp
 ADD_BASE
 LOAD_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1187,17 +1027,16 @@ pop de
 ZAX
 
 ```zax
-ld hl, glob_w[idxFrame]
+ld hl,glob_w[idxFrame]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_GLOBAL const
 IDX_FRAME disp
 ADD_BASE
 LOAD_WORD
-RESTORE_DE
 ```
 
 ASM
@@ -1224,17 +1063,16 @@ pop de
 ZAX
 
 ```zax
-ld l, loc_b[idxG]
+ld a,loc_b[idxG]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_GLOBAL const
 ADD_BASE
 LOAD_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1254,17 +1092,16 @@ pop de
 ZAX
 
 ```zax
-ld hl, loc_w[idxG]
+ld hl,loc_w[idxG]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_GLOBAL const
 ADD_BASE
 LOAD_WORD
-RESTORE_DE
 ```
 
 ASM
@@ -1288,17 +1125,16 @@ pop de
 ZAX
 
 ```zax
-ld l, loc_b[idxFrame]
+ld a,loc_b[idxFrame]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_FRAME disp
 ADD_BASE
 LOAD_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1322,17 +1158,16 @@ pop de
 ZAX
 
 ```zax
-ld hl, loc_w[idxFrame]
+ld hl,loc_w[idxFrame]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_FRAME disp
 ADD_BASE
 LOAD_WORD
-RESTORE_DE
 ```
 
 ASM
@@ -1360,17 +1195,16 @@ pop de
 ZAX
 
 ```zax
-ld l, arg_b[idxG]
+ld a,arg_b[idxG]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_GLOBAL const
 ADD_BASE
 LOAD_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1390,17 +1224,16 @@ pop de
 ZAX
 
 ```zax
-ld hl, arg_w[idxG]
+ld hl,arg_w[idxG]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_GLOBAL const
 ADD_BASE
 LOAD_WORD
-RESTORE_DE
 ```
 
 ASM
@@ -1424,17 +1257,16 @@ pop de
 ZAX
 
 ```zax
-ld l, arg_b[idxFrame]
+ld a,arg_b[idxFrame]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_FRAME disp
 ADD_BASE
 LOAD_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1458,17 +1290,16 @@ pop de
 ZAX
 
 ```zax
-ld hl, arg_w[idxFrame]
+ld hl,arg_w[idxFrame]
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_FRAME disp
 ADD_BASE
 LOAD_WORD
-RESTORE_DE
 ```
 
 ASM
@@ -1496,17 +1327,16 @@ pop de
 ZAX
 
 ```zax
-ld glob_b[idxG], e
+ld glob_b[idxG],e
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_GLOBAL const
 IDX_GLOBAL const
 ADD_BASE
 STORE_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1525,13 +1355,12 @@ pop de
 ZAX
 
 ```zax
-ld glob_w[idxG], hl
+ld glob_w[idxG],hl
 ```
 
 Steps
+
 ```
-SAVE_DE
-SAVE_HL
 BASE_GLOBAL const
 IDX_GLOBAL const
 ADD_BASE
@@ -1539,7 +1368,6 @@ SWAP_SAVED
 SWAP
 STORE_WORD
 SWAP
-RESTORE_DE
 ```
 
 ASM
@@ -1566,17 +1394,16 @@ pop de
 ZAX
 
 ```zax
-ld glob_b[idxFrame], e
+ld glob_b[idxFrame],e
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_GLOBAL const
 IDX_FRAME disp
 ADD_BASE
 STORE_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1599,13 +1426,12 @@ pop de
 ZAX
 
 ```zax
-ld glob_w[idxFrame], hl
+ld glob_w[idxFrame],hl
 ```
 
 Steps
+
 ```
-SAVE_DE
-SAVE_HL
 BASE_GLOBAL const
 IDX_FRAME disp
 ADD_BASE
@@ -1613,7 +1439,6 @@ SWAP_SAVED
 SWAP
 STORE_WORD
 SWAP
-RESTORE_DE
 ```
 
 ASM
@@ -1644,17 +1469,16 @@ pop de
 ZAX
 
 ```zax
-ld loc_b[idxG], e
+ld loc_b[idxG],e
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_GLOBAL const
 ADD_BASE
 STORE_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1674,13 +1498,12 @@ pop de
 ZAX
 
 ```zax
-ld loc_w[idxG], hl
+ld loc_w[idxG],hl
 ```
 
 Steps
+
 ```
-SAVE_DE
-SAVE_HL
 BASE_FRAME disp
 IDX_GLOBAL const
 ADD_BASE
@@ -1688,7 +1511,6 @@ SWAP_SAVED
 SWAP
 STORE_WORD
 SWAP
-RESTORE_DE
 ```
 
 ASM
@@ -1716,17 +1538,16 @@ pop de
 ZAX
 
 ```zax
-ld loc_b[idxFrame], e
+ld loc_b[idxFrame],e
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_FRAME disp
 ADD_BASE
 STORE_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1750,13 +1571,12 @@ pop de
 ZAX
 
 ```zax
-ld loc_w[idxFrame], hl
+ld loc_w[idxFrame],hl
 ```
 
 Steps
+
 ```
-SAVE_DE
-SAVE_HL
 BASE_FRAME disp
 IDX_FRAME disp
 ADD_BASE
@@ -1764,7 +1584,6 @@ SWAP_SAVED
 SWAP
 STORE_WORD
 SWAP
-RESTORE_DE
 ```
 
 ASM
@@ -1796,17 +1615,16 @@ pop de
 ZAX
 
 ```zax
-ld arg_b[idxG], e
+ld arg_b[idxG],e
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_GLOBAL const
 ADD_BASE
 STORE_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1826,13 +1644,12 @@ pop de
 ZAX
 
 ```zax
-ld arg_w[idxG], hl
+ld arg_w[idxG],hl
 ```
 
 Steps
+
 ```
-SAVE_DE
-SAVE_HL
 BASE_FRAME disp
 IDX_GLOBAL const
 ADD_BASE
@@ -1840,7 +1657,6 @@ SWAP_SAVED
 SWAP
 STORE_WORD
 SWAP
-RESTORE_DE
 ```
 
 ASM
@@ -1868,17 +1684,16 @@ pop de
 ZAX
 
 ```zax
-ld arg_b[idxFrame], e
+ld arg_b[idxFrame],e
 ```
 
 Steps
+
 ```
-SAVE_DE
 BASE_FRAME disp
 IDX_FRAME disp
 ADD_BASE
 STORE_BYTE
-RESTORE_DE
 ```
 
 ASM
@@ -1902,13 +1717,12 @@ pop de
 ZAX
 
 ```zax
-ld arg_w[idxFrame], hl
+ld arg_w[idxFrame],hl
 ```
 
 Steps
+
 ```
-SAVE_DE
-SAVE_HL
 BASE_FRAME disp
 IDX_FRAME disp
 ADD_BASE
@@ -1916,7 +1730,6 @@ SWAP_SAVED
 SWAP
 STORE_WORD
 SWAP
-RESTORE_DE
 ```
 
 ASM
@@ -1952,10 +1765,11 @@ Example load word field from a local record:
 ZAX
 
 ```zax
-ld hl, rec.field
+ld hl,rec.field
 ```
 
 Steps
+
 ```
 FRAME_WORD_LOAD dispRec+field_offset
 ```
@@ -1975,10 +1789,11 @@ Example store byte field into an arg record:
 ZAX
 
 ```zax
-ld rec.field, a
+ld rec.field,a
 ```
 
 Steps
+
 ```
 FRAME_BYTE_STORE dispRec+field_offset
 ```
@@ -1993,4 +1808,4 @@ ld (ix+dispRec+field_offset),a
 
 - Per-instruction preservation: only the destination register (loads) or value register (`A`/`HL` for stores) may change; all scratch registers are saved/restored in the pipelines above.
 - IX is never scratch; frame accesses use explicit displacements.
-- Pipelines above cover the full matrix of base (global/local/arg), index source (const, reg8, memory global/frame), width (byte/word), and operation (load/store). Additional register-pair shuffles can be composed from the same steps if a lowering conflict arises.
+- Pipelines above cover the full matrix of base (global/local/arg),index source (const,reg8,memory global/frame),width (byte/word),and operation (load/store). Additional register-pair shuffles can be composed from the same steps if a lowering conflict arises.
