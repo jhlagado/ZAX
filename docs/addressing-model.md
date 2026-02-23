@@ -4,7 +4,7 @@ Status: design/spec alignment for effective-address lowering. Audience: compiler
 
 ## 1. Core idea
 
-- **Typed bases, untyped registers.** Only variables (globals, args, locals, record fields, typed pointers) carry element size. Registers do not. Therefore indexing must be anchored on a typed lvalue; registers alone cannot express typed indexing.
+- **Typed bases, untyped registers.** Only variables (GLOBs, ARGs, LOCs, record fields, typed pointers) carry element size. Registers do not. Therefore indexing must be anchored on a typed lvalue; registers alone cannot express typed indexing.
 - **Unsigned indexing.** Index operands are interpreted as unsigned; scaling uses the element width (1 for byte, 2 for word, field offsets as constants).
 - **Minimal legal shapes.** Keep the set of address forms small, reject the rest with clear diagnostics.
 - **Per-instruction non-destruction.** For each lowered ZAX instruction, only the destination register(s) may change. Any scratch reg used to synthesize the addressing (e.g., DE shuttle when the destination is not DE) must be saved/restored so all non-destination regs are unchanged at the end of the instruction. IX is the frame anchor and never scratch.
@@ -18,13 +18,13 @@ reg8, reg16        ::= CPU registers (untyped)
 reg                ::= reg8 | reg16
 
 addr               ::= array or struct base (typed word lvalue)
-arg8,  local8      ::= byte arg/local
-arg16, local16     ::= word arg/local | addr
-global8            ::= byte global
-global16           ::= word global | addr
+ARG8,  LOC8      ::= byte ARG/LOC
+ARG16, LOC16     ::= word ARG/LOC | addr
+GLOB8            ::= byte GLOB
+GLOB16           ::= word GLOB | addr
 
-var8               ::= arg8 | local8 | global8
-var16              ::= arg16 | local16 | global16
+var8               ::= ARG8 | LOC8 | GLOB8
+var16              ::= ARG16 | LOC16 | GLOB16
 var                ::= var8 | var16
 
 idx                ::= const8 | const16 | reg8 | reg16   ; zero-extend reg8
@@ -47,9 +47,9 @@ Struct fields: `var.field` lowers as `var[const]` (const offset only).
 ## 3. Lowering rules (summary)
 
 - **Base must be typed.** Indexing is only permitted when the base is a typed lvalue (`var`/`addr`). If the index resides in memory, load it to a register first.
-- **Scaling (power-of-two only).** Offset = idx \* element_size (unsigned). Allowed element sizes are 1 (no scale) and powers of two. For size 2 use `add hl,hl`; for larger powers of two, repeat shifts/adds. Non-power-of-two element sizes are rejected.
+- **Scaling (power-of-two only).** Offset = idx \* element_size (unsigned). Allowed element sizes are 1 (no scale) and powers of two. For size 2 use `add hl,hl`; for lARGer powers of two, repeat shifts/adds. Non-power-of-two element sizes are rejected.
 - **Base placement.** Prefer base in DE, offset/scale in HL, then `add hl,de`; keeps HL free to become the final address.
-- **Frame accesses.** Locals/args load via `(IX+d)`; word moves involving HL must use the DE shuttle pattern:
+- **Frame accesses.** Locals/ARGs load via `(IX+d)`; word moves involving HL must use the DE shuttle pattern:
   - Load slot → HL: `ex de,hl; ld e,(ix+d0); ld d,(ix+d1); ex de,hl`.
   - Store HL → slot: `ex de,hl; ld (ix+d0),e; ld (ix+d1),d; ex de,hl`.
 - **Per-instruction scratch policy.** During lowering of a single ZAX instruction, all registers except the destination must emerge unchanged. If a scratch register (e.g., DE as shuttle) is needed and is not the destination, save/restore it inside the lowered sequence. This is distinct from the function-level preserve set used at call boundaries.
@@ -64,14 +64,14 @@ Struct fields: `var.field` lowers as `var[const]` (const offset only).
 
 All bricks assume IX is frame-only, never scratch. “Save/restore scratch” means `push`/`pop` around the brick if the scratch reg is not the destination. Destinations: byte → A; word → HL.
 
-**Base → HL (global)**
+**Base → HL (GLOB)**
 
 ```
 ; clobbers HL only
-ld hl, global
+ld hl, GLOB
 ```
 
-**Base → HL (local/arg word at IX+disp)**
+**Base → HL (LOC/ARG word at IX+disp)**
 
 ```
 ; clobbers HL, uses DE shuttle; save/restore DE if needed
@@ -160,43 +160,43 @@ pop de
 
 For each shape below, element size = 1 (byte) or 2/4… (power-of-two only). Record fields map to const offsets. Any idx in memory is first loaded to a register, then uses the register-index shape.
 
-Legend: G = global, L = local, A = arg. idx = const | reg (unsigned).
+Legend: GLOB = GLOB, LOC = LOC, ARG = ARG. idx = const | reg (unsigned).
 
 ### A. Scalars (no index)
 
-- A1 `ld reg, G`
-- A2 `ld reg, L`
-- A3 `ld reg, A`
-- A4 `ld G, reg`
-- A5 `ld L, reg`
-- A6 `ld A, reg`
+- A1 `ld reg, GLOB`
+- A2 `ld reg, LOC`
+- A3 `ld reg, ARG`
+- A4 `ld GLOB, reg`
+- A5 `ld LOC, reg`
+- A6 `ld ARG, reg`
 
 ### B. Indexed by const
 
-- B1 `ld reg, G[imm]`
-- B2 `ld reg, L[imm]`
-- B3 `ld reg, A[imm]`
-- B4 `ld G[imm], reg`
-- B5 `ld L[imm], reg`
-- B6 `ld A[imm], reg`
+- B1 `ld reg, GLOB[imm]`
+- B2 `ld reg, LOC[imm]`
+- B3 `ld reg, ARG[imm]`
+- B4 `ld GLOB[imm], reg`
+- B5 `ld LOC[imm], reg`
+- B6 `ld ARG[imm], reg`
 
 ### C. Indexed by register (idx unsigned)
 
-- C1 `ld reg, G[idx]`
-- C2 `ld reg, L[idx]`
-- C3 `ld reg, A[idx]`
-- C4 `ld G[idx], reg`
-- C5 `ld L[idx], reg`
-- C6 `ld A[idx], reg`
+- C1 `ld reg, GLOB[idx]`
+- C2 `ld reg, LOC[idx]`
+- C3 `ld reg, ARG[idx]`
+- C4 `ld GLOB[idx], reg`
+- C5 `ld LOC[idx], reg`
+- C6 `ld ARG[idx], reg`
 
 ### D. Indexed by variable (load idx first, then C\*)
 
-- D1 `ld reg, G[idxVar]`
-- D2 `ld reg, L[idxVar]`
-- D3 `ld reg, A[idxVar]`
-- D4 `ld G[idxVar], reg`
-- D5 `ld L[idxVar], reg`
-- D6 `ld A[idxVar], reg`
+- D1 `ld reg, GLOB[idxVar]`
+- D2 `ld reg, LOC[idxVar]`
+- D3 `ld reg, ARG[idxVar]`
+- D4 `ld GLOB[idxVar], reg`
+- D5 `ld LOC[idxVar], reg`
+- D6 `ld ARG[idxVar], reg`
 
 ### E. Record fields (const offsets)
 
@@ -209,25 +209,25 @@ For every allowed shape in Section 4, this catalog shows a ZAX instruction and o
 
 ### A. Scalars (no index)
 
-A1 `ld a, global`
+A1 `ld a, GLOB`
 
 ```
-ld a, (global)
+ld a, (GLOB)
 ```
 
-A1w `ld hl, global`
+A1w `ld hl, GLOB`
 
 ```
-ld hl, (global)
+ld hl, (GLOB)
 ```
 
-A2 `ld a, local`
+A2 `ld a, LOC`
 
 ```
 ld a, (ix+dispL)
 ```
 
-A2w `ld hl, local`
+A2w `ld hl, LOC`
 
 ```
 ex de, hl
@@ -236,13 +236,13 @@ ld d, (ix+dispL+1)
 ex de, hl
 ```
 
-A3 `ld a, arg`
+A3 `ld a, ARG`
 
 ```
 ld a, (ix+dispA)
 ```
 
-A3w `ld hl, arg`
+A3w `ld hl, ARG`
 
 ```
 ex de, hl
@@ -253,25 +253,25 @@ ex de, hl
 
 ### B. Indexed by const
 
-B1 `ld a, global[const]`
+B1 `ld a, GLOB[const]`
 
 ```
-ld a, (global+imm)
+ld a, (GLOB+imm)
 ```
 
-B1w `ld hl, global[const]`
+B1w `ld hl, GLOB[const]`
 
 ```
-ld hl, (global + const*size)   ; if size=2, fold imm*2 into the address
+ld hl, (GLOB + const*size)   ; if size=2, fold imm*2 into the address
 ```
 
-B2 `ld a, local[const]`
+B2 `ld a, LOC[const]`
 
 ```
 ld a, (ix+dispL+imm)
 ```
 
-B2w `ld hl, local[const]`
+B2w `ld hl, LOC[const]`
 
 ```
 ex de, hl
@@ -280,13 +280,13 @@ ld d, (ix+dispL + const*size + 1)
 ex de, hl
 ```
 
-B3 `ld a, arg[const]`
+B3 `ld a, ARG[const]`
 
 ```
 ld a, (ix+dispA + imm)
 ```
 
-B3w `ld hl, arg[const]`
+B3w `ld hl, ARG[const]`
 
 ```
 ex de, hl
@@ -299,11 +299,11 @@ Stores B5–B8 mirror loads; for word stores use DE shuttle, saving/restoring sc
 
 ### C. Indexed by register (idx unsigned)
 
-C1 `ld a, global[c]` (size=1)
+C1 `ld a, GLOB[c]` (size=1)
 
 ```
 push de
-ld de, global
+ld de, GLOB
 ld h, 0
 ld l, c
 add hl, de
@@ -311,11 +311,11 @@ ld a, (hl)
 pop de
 ```
 
-C1w `ld hl, global[c]` (size=2)
+C1w `ld hl, GLOB[c]` (size=2)
 
 ```
 push de
-ld de, global
+ld de, GLOB
 ld h, 0
 ld l, c
 add hl, hl
@@ -327,7 +327,7 @@ ex de, hl
 pop de
 ```
 
-C2 `ld a, local[c]`
+C2 `ld a, LOC[c]`
 
 ```
 push de
@@ -340,7 +340,7 @@ ld a, (hl)
 pop de
 ```
 
-C2w `ld hl, local[c]` (size=2)
+C2w `ld hl, LOC[c]` (size=2)
 
 ```
 push de
@@ -357,7 +357,7 @@ ex de, hl
 pop de
 ```
 
-C3 `ld a, arg[c]`
+C3 `ld a, ARG[c]`
 
 ```
 push de
@@ -370,7 +370,7 @@ ld a, (hl)
 pop de
 ```
 
-C3w `ld hl, arg[c]` (size=2)
+C3w `ld hl, ARG[c]` (size=2)
 
 ```
 push de
@@ -391,11 +391,11 @@ pop de
 
 Lower idx to a register, then reuse the matching C pattern.
 
-D1 `ld a, global[idxVar]`
+D1 `ld a, GLOB[idxVar]`
 
 ```
 push de
-ld de, global
+ld de, GLOB
 ld h, 0
 ld l, (idxVar)
 add hl, de
@@ -410,12 +410,12 @@ D2/D3/D4 loads: load idxVar to C (or HL for word index), then apply C2/C3/C4 ske
 E1 `ld a, rec.field` (rec in G/L/A)
 
 ```
-; global form
+; GLOB form
 ld a, (rec+FIELD_OFF)
-; local/arg form uses IX+disp+FIELD_OFF, with DE shuttle for word field loads
+; LOC/ARG form uses IX+disp+FIELD_OFF, with DE shuttle for word field loads
 ```
 
-E1w `ld hl, rec.field` (local/arg)
+E1w `ld hl, rec.field` (LOC/ARG)
 
 ```
 ex de, hl
@@ -434,7 +434,7 @@ E2 stores mirror loads; word stores use DE shuttle.
 
 ## 6. Test/fixture expectations
 
-- Addressing mini-suite (issue #374) should cover: globals/locals/args, byte vs word, const vs runtime index, record fields, HL-preserved vs volatile prologues, extern caller-preserve boundary, DE shuttle usage, and rejection of `var[var]`.
+- Addressing mini-suite (issue #374) should cover: GLOBs/LOCs/ARGs, byte vs word, const vs runtime index, record fields, HL-preserved vs volatile prologues, extern caller-preserve boundary, DE shuttle usage, and rejection of `var[var]`.
 - Regression tests should assert absence of `IX+H/L` forms and presence of DE shuttle where required.
 
 ## 7. Future considerations (v0.3+)
