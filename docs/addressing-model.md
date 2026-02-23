@@ -12,8 +12,8 @@ Status: design/spec alignment for effective-address lowering. Audience: compiler
 ## 2. Grammar (production rules)
 
 ```
-imm8, imm16        ::= numeric literal
-imm                ::= imm8 | imm16
+const8, const16   ::= numeric literal
+const             ::= const8 | const16
 reg8, reg16        ::= CPU registers (untyped)
 reg                ::= reg8 | reg16
 
@@ -27,7 +27,7 @@ var8               ::= arg8 | local8 | global8
 var16              ::= arg16 | local16 | global16
 var                ::= var8 | var16
 
-idx                ::= imm8 | imm16 | reg8 | reg16   ; zero-extend reg8
+idx                ::= const8 | const16 | reg8 | reg16   ; zero-extend reg8
 ```
 
 Allowed loads/stores (element size comes from `var`):
@@ -160,7 +160,7 @@ pop de
 
 For each shape below, element size = 1 (byte) or 2/4… (power-of-two only). Record fields map to const offsets. Any idx in memory is first loaded to a register, then uses the register-index shape.
 
-Legend: G = global, L = local, A = arg. idx = imm | reg (unsigned).
+Legend: G = global, L = local, A = arg. idx = const | reg (unsigned).
 
 ### A. Scalars (no index)
 
@@ -253,45 +253,45 @@ ex de, hl
 
 ### B. Indexed by const
 
-B1 `ld a, global[imm]`
+B1 `ld a, global[const]`
 
 ```
 ld a, (global+imm)
 ```
 
-B1w `ld hl, global[imm]`
+B1w `ld hl, global[const]`
 
 ```
-ld hl, (global + imm*size)   ; if size=2, fold imm*2 into the address
+ld hl, (global + const*size)   ; if size=2, fold imm*2 into the address
 ```
 
-B2 `ld a, local[imm]`
+B2 `ld a, local[const]`
 
 ```
 ld a, (ix+dispL+imm)
 ```
 
-B2w `ld hl, local[imm]`
+B2w `ld hl, local[const]`
 
 ```
 ex de, hl
-ld e, (ix+dispL + imm*size)      ; fold scaled offset into disp
-ld d, (ix+dispL + imm*size + 1)
+ld e, (ix+dispL + const*size)      ; fold scaled offset into disp
+ld d, (ix+dispL + const*size + 1)
 ex de, hl
 ```
 
-B3 `ld a, arg[imm]`
+B3 `ld a, arg[const]`
 
 ```
 ld a, (ix+dispA + imm)
 ```
 
-B3w `ld hl, arg[imm]`
+B3w `ld hl, arg[const]`
 
 ```
 ex de, hl
-ld e, (ix+dispA + imm*size)
-ld d, (ix+dispA + imm*size + 1)
+ld e, (ix+dispA + const*size)
+ld d, (ix+dispA + const*size + 1)
 ex de, hl
 ```
 
