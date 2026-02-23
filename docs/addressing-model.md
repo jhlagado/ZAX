@@ -40,13 +40,7 @@ IDX_FRAME disp       ld l,(ix+disp)           ; dest=HL
                      ld h,(ix+disp+1)
 ```
 
-### 1.4 Scaling (power-of-two)
-
-```
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
-```
-
-### 1.5 Combine
+### 1.4 Combine
 
 ```
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
@@ -362,7 +356,7 @@ pop de
 
 ### B. Indexed by const
 
-Element size = 1 for byte, 2 for word (use `SCALE_2`; larger powers repeat `SCALE_2`).
+Element size = 1 for byte, 2 for word (use `ADD_BASE_2`; larger powers not supported).
 
 #### B1 load byte: global[const]
 
@@ -1062,7 +1056,6 @@ ld d,(ix+disp+1)
 IDX_REG8 reg8        ld h,0                   ; dest=HL
 ld l,reg8
 ld l,reg8
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
@@ -1143,7 +1136,6 @@ Steps
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_GLOBAL const    ld de,const              ; dest=DE
 IDX_GLOBAL const ld hl,(const)            ; dest=HL
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_WORD
 RESTORE_DE           pop de                   ; restores DE
@@ -1214,7 +1206,6 @@ BASE_GLOBAL const    ld de,const              ; dest=DE
 IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
 ld h,(ix+disp+1)
 ld h,(ix+disp+1)
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_WORD
 RESTORE_DE           pop de                   ; restores DE
@@ -1286,7 +1277,6 @@ BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
 ld d,(ix+disp+1)
 ld d,(ix+disp+1)
 IDX_GLOBAL const ld hl,(const)            ; dest=HL
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_WORD
 RESTORE_DE           pop de                   ; restores DE
@@ -1363,7 +1353,6 @@ ld d,(ix+disp+1)
 IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
 ld h,(ix+disp+1)
 ld h,(ix+disp+1)
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_WORD
 RESTORE_DE           pop de                   ; restores DE
@@ -1436,7 +1425,6 @@ BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
 ld d,(ix+disp+1)
 ld d,(ix+disp+1)
 IDX_GLOBAL const ld hl,(const)            ; dest=HL
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_WORD
 RESTORE_DE           pop de                   ; restores DE
@@ -1513,7 +1501,6 @@ ld d,(ix+disp+1)
 IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
 ld h,(ix+disp+1)
 ld h,(ix+disp+1)
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_WORD
 RESTORE_DE           pop de                   ; restores DE
@@ -1582,7 +1569,6 @@ SAVE_DE              push de                  ; saves DE (no clobber)
 SAVE_HL              push hl                  ; saves HL (no clobber)
 BASE_GLOBAL const    ld de,const              ; dest=DE
 IDX_GLOBAL const ld hl,(const)            ; dest=HL
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
@@ -1666,7 +1652,6 @@ BASE_GLOBAL const    ld de,const              ; dest=DE
 IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
 ld h,(ix+disp+1)
 ld h,(ix+disp+1)
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
@@ -1751,7 +1736,6 @@ BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
 ld d,(ix+disp+1)
 ld d,(ix+disp+1)
 IDX_GLOBAL const ld hl,(const)            ; dest=HL
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
@@ -1841,7 +1825,6 @@ ld d,(ix+disp+1)
 IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
 ld h,(ix+disp+1)
 ld h,(ix+disp+1)
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
@@ -1927,7 +1910,6 @@ BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
 ld d,(ix+disp+1)
 ld d,(ix+disp+1)
 IDX_GLOBAL const ld hl,(const)            ; dest=HL
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
@@ -2017,7 +1999,6 @@ ld d,(ix+disp+1)
 IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
 ld h,(ix+disp+1)
 ld h,(ix+disp+1)
-SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
@@ -2103,7 +2084,6 @@ ld (ix+dispRec+field_offset),a
 
 ## 3. Notes
 
-- Scaling is power-of-two only; larger sizes repeat `SCALE_2`.
 - Per-instruction preservation: only the destination register (loads) or value register (`A`/`HL` for stores) may change; all scratch registers are saved/restored in the pipelines above.
 - IX is never scratch; frame accesses use explicit displacements.
 - Pipelines above cover the full matrix of base (global/local/arg), index source (const, reg8, memory global/frame), width (byte/word), and operation (load/store). Additional register-pair shuffles can be composed from the same steps if a lowering conflict arises.
