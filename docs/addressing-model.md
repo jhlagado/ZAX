@@ -78,8 +78,11 @@ STORE_BYTE_ABS sym       ld (sym),a
 STORE_WORD_ABS sym       ld (sym),hl
 
 FRAME_BYTE_LOAD disp     ld a,(ix+disp)
-FRAME_WORD_LOAD disp     ld l,(ix+disp)
-                         ld h,(ix+disp+1)
+FRAME_WORD_LOAD disp     push de
+                         ld e,(ix+disp)
+                         ld d,(ix+disp+1)
+                         ex de,hl          ; HL = value, DE restored by pop
+                         pop de
 
 FRAME_BYTE_STORE disp    ld (ix+disp),a
 FRAME_WORD_STORE disp    push de
