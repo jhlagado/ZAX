@@ -13,8 +13,8 @@ RESTORE_HL           pop hl
 RESTORE_DE           pop de
 DROP_SAVED           inc sp      ; drop low
                      inc sp      ; drop high
-XCHG_DE_HL           ex de,hl
-XCHG_SP_HL           ex (sp),hl   ; swap HL with top-of-stack
+SWAP                 ex de,hl
+SWAP_SAVED           ex (sp),hl   ; swap HL with top-of-stack
 ```
 
 ### 1.2 Base loaders (place base in DE)
@@ -506,11 +506,11 @@ BASE_GLOBAL glob_w
 IDX_CONST const
 SCALE_2
 ADD_BASE
-XCHG_SP_HL          ; HL = value, stack top = address
+SWAP_SAVED          ; HL = value, stack top = address
 POP_DE              ; DE = address
-XCHG_DE_HL          ; HL = address, DE = value
+SWAP          ; HL = address, DE = value
 STORE_WORD_FROM_DE
-XCHG_DE_HL          ; HL = value, DE = address+1
+SWAP          ; HL = value, DE = address+1
 RESTORE_DE
 ```
 
@@ -862,11 +862,11 @@ BASE_GLOBAL glob_w
 IDX_REG8 r
 SCALE_2
 ADD_BASE
-XCHG_SP_HL
+SWAP_SAVED
 POP_DE
-XCHG_DE_HL
+SWAP
 STORE_WORD_FROM_DE
-XCHG_DE_HL
+SWAP
 RESTORE_DE
 ```
 
@@ -938,11 +938,11 @@ BASE_FRAME dispL
 IDX_REG8 r
 SCALE_2
 ADD_BASE
-XCHG_SP_HL
+SWAP_SAVED
 POP_DE
-XCHG_DE_HL
+SWAP
 STORE_WORD_FROM_DE
-XCHG_DE_HL
+SWAP
 RESTORE_DE
 ```
 
@@ -1015,11 +1015,11 @@ BASE_FRAME dispA
 IDX_REG8 r
 SCALE_2
 ADD_BASE
-XCHG_SP_HL
+SWAP_SAVED
 POP_DE
-XCHG_DE_HL
+SWAP
 STORE_WORD_FROM_DE
-XCHG_DE_HL
+SWAP
 RESTORE_DE
 ```
 
@@ -1492,11 +1492,11 @@ BASE_GLOBAL glob_w
 IDX_MEM_GLOBAL idxG
 SCALE_2
 ADD_BASE
-XCHG_SP_HL
+SWAP_SAVED
 POP_DE
-XCHG_DE_HL
+SWAP
 STORE_WORD_FROM_DE
-XCHG_DE_HL
+SWAP
 RESTORE_DE
 ```
 
@@ -1566,11 +1566,11 @@ BASE_GLOBAL glob_w
 IDX_MEM_FRAME dispIdx
 SCALE_2
 ADD_BASE
-XCHG_SP_HL
+SWAP_SAVED
 POP_DE
-XCHG_DE_HL
+SWAP
 STORE_WORD_FROM_DE
-XCHG_DE_HL
+SWAP
 RESTORE_DE
 ```
 
@@ -1641,11 +1641,11 @@ BASE_FRAME dispL
 IDX_MEM_GLOBAL idxG
 SCALE_2
 ADD_BASE
-XCHG_SP_HL
+SWAP_SAVED
 POP_DE
-XCHG_DE_HL
+SWAP
 STORE_WORD_FROM_DE
-XCHG_DE_HL
+SWAP
 RESTORE_DE
 ```
 
@@ -1717,11 +1717,11 @@ BASE_FRAME dispL
 IDX_MEM_FRAME dispIdx
 SCALE_2
 ADD_BASE
-XCHG_SP_HL
+SWAP_SAVED
 POP_DE
-XCHG_DE_HL
+SWAP
 STORE_WORD_FROM_DE
-XCHG_DE_HL
+SWAP
 RESTORE_DE
 ```
 
@@ -1793,11 +1793,11 @@ BASE_FRAME dispA
 IDX_MEM_GLOBAL idxG
 SCALE_2
 ADD_BASE
-XCHG_SP_HL
+SWAP_SAVED
 POP_DE
-XCHG_DE_HL
+SWAP
 STORE_WORD_FROM_DE
-XCHG_DE_HL
+SWAP
 RESTORE_DE
 ```
 
@@ -1869,11 +1869,11 @@ BASE_FRAME dispA
 IDX_MEM_FRAME dispIdx
 SCALE_2
 ADD_BASE
-XCHG_SP_HL
+SWAP_SAVED
 POP_DE
-XCHG_DE_HL
+SWAP
 STORE_WORD_FROM_DE
-XCHG_DE_HL
+SWAP
 RESTORE_DE
 ```
 
