@@ -46,7 +46,6 @@ Struct fields: `var.field` lowers as `var[const]` (const offset only).
 
 Disallowed (emit diagnostic):
 
-- `ld reg, var[var]` and `ld var[var], reg` — the inner `var` yields a typed address, but once loaded into a register the type/element size is lost, so the outer index has no scale information.
 - Any `(IX+d)` using H/L lanes; must shuttle through DE for word moves involving HL.
 
 ## 3. Lowering rules (summary)
