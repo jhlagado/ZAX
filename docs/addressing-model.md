@@ -69,12 +69,12 @@ STORE_WORD_FROM_DE   ld (hl),e    ; HL = addr, DE = value
 ### 1.7 Direct absolute / frame helpers
 
 ```
-LOAD_BYTE_ABS sym        ld hl,sym
+LOAD_BYTE_ABS const      ld hl,const
                          ld l,(hl)
-LOAD_WORD_ABS sym        ld hl,(sym)
-STORE_BYTE_ABS sym       ld hl,sym
+LOAD_WORD_ABS const      ld hl,(const)
+STORE_BYTE_ABS const     ld hl,const
                          ld (hl),e
-STORE_WORD_ABS sym       ld (sym),hl
+STORE_WORD_ABS const     ld (const),hl
 
 FRAME_BYTE_LOAD disp     ld l,(ix+disp)
 FRAME_WORD_LOAD disp     push de
