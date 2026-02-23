@@ -33,8 +33,8 @@ IDX_REG8 reg8        ld h,0                   ; dest=HL
                      ld l,reg8
                      ld l,reg8
 IDX_REG16 reg16      ld hl,reg16              ; dest=HL
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
+IDX_GLOBAL const     ld hl,(const)            ; dest=HL
+IDX_FRAME disp       ld l,(ix+disp)           ; dest=HL
                      ld h,(ix+disp+1)
                      ld h,(ix+disp+1)
                      ld h,(ix+disp+1)
@@ -50,6 +50,8 @@ SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 
 ```
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
+ADD_BASE_2           add hl,hl                ; dest=HL (offset*2)
+                     add hl,de                ; dest=HL (base+offset*2)
 ```
 
 ### 1.6 Accessors
@@ -404,8 +406,7 @@ Steps
 SAVE_DE
 BASE_GLOBAL const
 IDX_CONST const
-SCALE_2
-ADD_BASE
+ADD_BASE_2
 LOAD_WORD
 RESTORE_DE
 ```
@@ -552,8 +553,7 @@ SAVE_DE
 SAVE_HL
 BASE_GLOBAL const
 IDX_CONST const
-SCALE_2
-ADD_BASE
+ADD_BASE_2
 SWAP_SAVED
 POP_DE
 SWAP
@@ -712,8 +712,7 @@ Steps
 SAVE_DE
 BASE_GLOBAL const
 IDX_REG8 reg8
-SCALE_2
-ADD_BASE
+ADD_BASE_2
 LOAD_WORD
 RESTORE_DE
 ```
@@ -778,8 +777,7 @@ Steps
 SAVE_DE
 BASE_FRAME disp
 IDX_REG8 reg8
-SCALE_2
-ADD_BASE
+ADD_BASE_2
 LOAD_WORD
 RESTORE_DE
 ```
@@ -845,8 +843,7 @@ Steps
 SAVE_DE
 BASE_FRAME disp
 IDX_REG8 reg8
-SCALE_2
-ADD_BASE
+ADD_BASE_2
 LOAD_WORD
 RESTORE_DE
 ```
@@ -912,8 +909,7 @@ SAVE_DE
 SAVE_HL
 BASE_GLOBAL const
 IDX_REG8 reg8
-SCALE_2
-ADD_BASE
+ADD_BASE_2
 SWAP_SAVED
 POP_DE
 SWAP
@@ -987,8 +983,7 @@ SAVE_DE
 SAVE_HL
 BASE_FRAME disp
 IDX_REG8 reg8
-SCALE_2
-ADD_BASE
+ADD_BASE_2
 SWAP_SAVED
 POP_DE
 SWAP
@@ -1062,21 +1057,21 @@ Steps
 SAVE_DE              push de                  ; saves DE (no clobber)
 SAVE_HL              push hl                  ; saves HL (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
 IDX_REG8 reg8        ld h,0                   ; dest=HL
-                     ld l,reg8
-                     ld l,reg8
+ld l,reg8
+ld l,reg8
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 STORE_WORD           ld (hl),e                ; dest=mem (uses HL,DE)
-                     inc hl
-                     ld (hl),d
-                     inc hl
-                     ld (hl),d
+inc hl
+ld (hl),d
+inc hl
+ld (hl),d
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 RESTORE_DE           pop de                   ; restores DE
 ```
@@ -1118,7 +1113,7 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_GLOBAL const    ld de,const              ; dest=DE
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
+IDX_GLOBAL const ld hl,(const)            ; dest=HL
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_BYTE            ld l,(hl)                ; dest=L
 RESTORE_DE           pop de                   ; restores DE
@@ -1147,7 +1142,7 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_GLOBAL const    ld de,const              ; dest=DE
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
+IDX_GLOBAL const ld hl,(const)            ; dest=HL
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_WORD
@@ -1181,9 +1176,9 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_GLOBAL const    ld de,const              ; dest=DE
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
-                     ld h,(ix+disp+1)
+IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
+ld h,(ix+disp+1)
+ld h,(ix+disp+1)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_BYTE            ld l,(hl)                ; dest=L
 RESTORE_DE           pop de                   ; restores DE
@@ -1216,9 +1211,9 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_GLOBAL const    ld de,const              ; dest=DE
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
-                     ld h,(ix+disp+1)
+IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
+ld h,(ix+disp+1)
+ld h,(ix+disp+1)
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_WORD
@@ -1256,9 +1251,9 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_GLOBAL const ld hl,(const)            ; dest=HL
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_BYTE            ld l,(hl)                ; dest=L
 RESTORE_DE           pop de                   ; restores DE
@@ -1288,9 +1283,9 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_GLOBAL const ld hl,(const)            ; dest=HL
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_WORD
@@ -1325,11 +1320,11 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
-                     ld h,(ix+disp+1)
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
+ld h,(ix+disp+1)
+ld h,(ix+disp+1)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_BYTE            ld l,(hl)                ; dest=L
 RESTORE_DE           pop de                   ; restores DE
@@ -1363,11 +1358,11 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
-                     ld h,(ix+disp+1)
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
+ld h,(ix+disp+1)
+ld h,(ix+disp+1)
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_WORD
@@ -1406,9 +1401,9 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_GLOBAL const ld hl,(const)            ; dest=HL
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_BYTE            ld l,(hl)                ; dest=L
 RESTORE_DE           pop de                   ; restores DE
@@ -1438,9 +1433,9 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_GLOBAL const ld hl,(const)            ; dest=HL
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_WORD
@@ -1475,11 +1470,11 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
-                     ld h,(ix+disp+1)
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
+ld h,(ix+disp+1)
+ld h,(ix+disp+1)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_BYTE            ld l,(hl)                ; dest=L
 RESTORE_DE           pop de                   ; restores DE
@@ -1513,11 +1508,11 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
-                     ld h,(ix+disp+1)
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
+ld h,(ix+disp+1)
+ld h,(ix+disp+1)
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 LOAD_WORD
@@ -1556,7 +1551,7 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_GLOBAL const    ld de,const              ; dest=DE
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
+IDX_GLOBAL const ld hl,(const)            ; dest=HL
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 STORE_BYTE           ld (hl),e                ; dest=mem (uses HL,E)
 RESTORE_DE           pop de                   ; restores DE
@@ -1586,17 +1581,17 @@ Steps
 SAVE_DE              push de                  ; saves DE (no clobber)
 SAVE_HL              push hl                  ; saves HL (no clobber)
 BASE_GLOBAL const    ld de,const              ; dest=DE
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
+IDX_GLOBAL const ld hl,(const)            ; dest=HL
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 STORE_WORD   ld (hl),e                ; dest=mem (uses HL,DE)
-                     inc hl
-                     ld (hl),d
-                     inc hl
-                     ld (hl),d
+inc hl
+ld (hl),d
+inc hl
+ld (hl),d
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 RESTORE_DE           pop de                   ; restores DE
 ```
@@ -1632,9 +1627,9 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_GLOBAL const    ld de,const              ; dest=DE
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
-                     ld h,(ix+disp+1)
+IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
+ld h,(ix+disp+1)
+ld h,(ix+disp+1)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 STORE_BYTE           ld (hl),e                ; dest=mem (uses HL,E)
 RESTORE_DE           pop de                   ; restores DE
@@ -1668,19 +1663,19 @@ Steps
 SAVE_DE              push de                  ; saves DE (no clobber)
 SAVE_HL              push hl                  ; saves HL (no clobber)
 BASE_GLOBAL const    ld de,const              ; dest=DE
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
-                     ld h,(ix+disp+1)
+IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
+ld h,(ix+disp+1)
+ld h,(ix+disp+1)
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 STORE_WORD   ld (hl),e                ; dest=mem (uses HL,DE)
-                     inc hl
-                     ld (hl),d
-                     inc hl
-                     ld (hl),d
+inc hl
+ld (hl),d
+inc hl
+ld (hl),d
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 RESTORE_DE           pop de                   ; restores DE
 ```
@@ -1720,9 +1715,9 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_GLOBAL const ld hl,(const)            ; dest=HL
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 STORE_BYTE           ld (hl),e                ; dest=mem (uses HL,E)
 RESTORE_DE           pop de                   ; restores DE
@@ -1753,19 +1748,19 @@ Steps
 SAVE_DE              push de                  ; saves DE (no clobber)
 SAVE_HL              push hl                  ; saves HL (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_GLOBAL const ld hl,(const)            ; dest=HL
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 STORE_WORD   ld (hl),e                ; dest=mem (uses HL,DE)
-                     inc hl
-                     ld (hl),d
-                     inc hl
-                     ld (hl),d
+inc hl
+ld (hl),d
+inc hl
+ld (hl),d
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 RESTORE_DE           pop de                   ; restores DE
 ```
@@ -1802,11 +1797,11 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
-                     ld h,(ix+disp+1)
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
+ld h,(ix+disp+1)
+ld h,(ix+disp+1)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 STORE_BYTE           ld (hl),e                ; dest=mem (uses HL,E)
 RESTORE_DE           pop de                   ; restores DE
@@ -1841,21 +1836,21 @@ Steps
 SAVE_DE              push de                  ; saves DE (no clobber)
 SAVE_HL              push hl                  ; saves HL (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
-                     ld h,(ix+disp+1)
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
+ld h,(ix+disp+1)
+ld h,(ix+disp+1)
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 STORE_WORD   ld (hl),e                ; dest=mem (uses HL,DE)
-                     inc hl
-                     ld (hl),d
-                     inc hl
-                     ld (hl),d
+inc hl
+ld (hl),d
+inc hl
+ld (hl),d
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 RESTORE_DE           pop de                   ; restores DE
 ```
@@ -1896,9 +1891,9 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_GLOBAL const ld hl,(const)            ; dest=HL
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 STORE_BYTE           ld (hl),e                ; dest=mem (uses HL,E)
 RESTORE_DE           pop de                   ; restores DE
@@ -1929,19 +1924,19 @@ Steps
 SAVE_DE              push de                  ; saves DE (no clobber)
 SAVE_HL              push hl                  ; saves HL (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_GLOBAL const ld hl,(const)            ; dest=HL
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_GLOBAL const ld hl,(const)            ; dest=HL
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 STORE_WORD   ld (hl),e                ; dest=mem (uses HL,DE)
-                     inc hl
-                     ld (hl),d
-                     inc hl
-                     ld (hl),d
+inc hl
+ld (hl),d
+inc hl
+ld (hl),d
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 RESTORE_DE           pop de                   ; restores DE
 ```
@@ -1978,11 +1973,11 @@ Steps
 ```
 SAVE_DE              push de                  ; saves DE (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
-                     ld h,(ix+disp+1)
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
+ld h,(ix+disp+1)
+ld h,(ix+disp+1)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 STORE_BYTE           ld (hl),e                ; dest=mem (uses HL,E)
 RESTORE_DE           pop de                   ; restores DE
@@ -2017,21 +2012,21 @@ Steps
 SAVE_DE              push de                  ; saves DE (no clobber)
 SAVE_HL              push hl                  ; saves HL (no clobber)
 BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
-                     ld d,(ix+disp+1)
-IDX_MEM_FRAME disp   ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
-                     ld h,(ix+disp+1)
+ld d,(ix+disp+1)
+ld d,(ix+disp+1)
+IDX_FRAME disp   ld l,(ix+disp)           ; dest=HL
+ld h,(ix+disp+1)
+ld h,(ix+disp+1)
 SCALE_2              add hl,hl                ; dest=HL (scaled offset)
 ADD_BASE             add hl,de                ; dest=HL (base+offset)
 SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 POP_DE
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 STORE_WORD   ld (hl),e                ; dest=mem (uses HL,DE)
-                     inc hl
-                     ld (hl),d
-                     inc hl
-                     ld (hl),d
+inc hl
+ld (hl),d
+inc hl
+ld (hl),d
 SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
 RESTORE_DE           pop de                   ; restores DE
 ```
