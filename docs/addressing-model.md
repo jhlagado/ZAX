@@ -67,7 +67,8 @@ For each shape below:
 **A1 load byte from global**
 
 - ZAX: `ld a, glob_b`
-- Steps: `LOAD_BYTE` with implicit absolute; no scratch
+- Steps:
+- LOAD_BYTE (implicit absolute)
 - ASM:
 
 ```
@@ -77,7 +78,11 @@ ld a,(glob_b)
 **A1w load word from global**
 
 - ZAX: `ld hl, glob_w`
-- Steps: `SAVE_DE BASE_GLOBAL glob_w → DE LOAD_WORD RESTORE_DE`
+- Steps:
+- SAVE_DE
+- BASE_GLOBAL glob_w → DE
+- LOAD_WORD
+- RESTORE_DE
 - ASM:
 
 ```
@@ -93,7 +98,8 @@ pop de
 **A2 load byte from local**
 
 - ZAX: `ld a, loc_b`
-- Steps: `LOAD_BYTE` via IX
+- Steps:
+- LOAD_BYTE via IX
 - ASM:
 
 ```
@@ -103,7 +109,11 @@ ld a,(ix+dispL)
 **A2w load word from local**
 
 - ZAX: `ld hl, loc_w`
-- Steps: `SAVE_DE BASE_LOCAL dispL → DE LOAD_WORD RESTORE_DE`
+- Steps:
+- SAVE_DE
+- BASE_LOCAL dispL → DE
+- LOAD_WORD
+- RESTORE_DE
 - ASM:
 
 ```
@@ -120,7 +130,8 @@ pop de
 **A3 load byte from arg**
 
 - ZAX: `ld a, arg_b`
-- Steps: `LOAD_BYTE` via IX arg disp
+- Steps:
+- LOAD_BYTE via IX arg disp
 - ASM:
 
 ```
@@ -130,7 +141,11 @@ ld a,(ix+dispA)
 **A3w load word from arg**
 
 - ZAX: `ld hl, arg_w`
-- Steps: `SAVE_DE BASE_ARG dispA → DE LOAD_WORD RESTORE_DE`
+- Steps:
+- SAVE_DE
+- BASE_ARG dispA → DE
+- LOAD_WORD
+- RESTORE_DE
 - ASM:
 
 ```
@@ -147,7 +162,9 @@ pop de
 **A4 store byte to global**
 
 - ZAX: `ld glob_b, a`
-- Steps: `BASE_GLOBAL glob_b → HL STORE_BYTE`
+- Steps:
+- BASE_GLOBAL glob_b → HL
+- STORE_BYTE
 - ASM:
 
 ```
@@ -158,7 +175,11 @@ ld (hl),a
 **A4w store word to global**
 
 - ZAX: `ld glob_w, hl`
-- Steps: `SAVE_DE BASE_GLOBAL glob_w → DE STORE_WORD RESTORE_DE`
+- Steps:
+- SAVE_DE
+- BASE_GLOBAL glob_w → DE
+- STORE_WORD
+- RESTORE_DE
 - ASM:
 
 ```
@@ -175,7 +196,8 @@ pop de
 **A5 store byte to local**
 
 - ZAX: `ld loc_b, a`
-- Steps: `STORE_BYTE` via IX
+- Steps:
+- STORE_BYTE via IX
 - ASM:
 
 ```
@@ -185,7 +207,11 @@ ld (ix+dispL),a
 **A5w store word to local**
 
 - ZAX: `ld loc_w, hl`
-- Steps: `SAVE_DE BASE_LOCAL dispL → DE STORE_WORD RESTORE_DE`
+- Steps:
+- SAVE_DE
+- BASE_LOCAL dispL → DE
+- STORE_WORD
+- RESTORE_DE
 - ASM:
 
 ```
@@ -203,7 +229,8 @@ pop de
 **A6 store byte to arg**
 
 - ZAX: `ld arg_b, a`
-- Steps: `STORE_BYTE` via IX arg disp
+- Steps:
+- STORE_BYTE via IX arg disp
 - ASM:
 
 ```
@@ -213,7 +240,11 @@ ld (ix+dispA),a
 **A6w store word to arg**
 
 - ZAX: `ld arg_w, hl`
-- Steps: `SAVE_DE BASE_ARG dispA → DE STORE_WORD RESTORE_DE`
+- Steps:
+- SAVE_DE
+- BASE_ARG dispA → DE
+- STORE_WORD
+- RESTORE_DE
 - ASM:
 
 ```
@@ -233,7 +264,12 @@ pop de
 **B1 load byte: global[const]**
 
 - ZAX: `ld a, glob_b[const]`
-- Steps: `BASE_GLOBAL glob_b → DE IDX_CONST const → HL SCALE_1 ADD_BASE LOAD_BYTE`
+- Steps:
+- BASE_GLOBAL glob_b → DE
+- IDX_CONST const → HL
+- SCALE_1
+- ADD_BASE
+- LOAD_BYTE
 - ASM:
 
 ```
@@ -246,7 +282,14 @@ ld a,(hl)
 **B1w load word: global[const]**
 
 - ZAX: `ld hl, glob_w[const]`
-- Steps: `SAVE_DE BASE_GLOBAL glob_w → DE IDX_CONST const → HL SCALE_2 ADD_BASE LOAD_WORD RESTORE_DE`
+- Steps:
+- SAVE_DE
+- BASE_GLOBAL glob_w → DE
+- IDX_CONST const → HL
+- SCALE_2
+- ADD_BASE
+- LOAD_WORD
+- RESTORE_DE
 - ASM:
 
 ```
@@ -275,7 +318,11 @@ ld a,(ix+dispL+const)
 **B2w load word: local[const]**
 
 - ZAX: `ld hl, loc_w[const]`
-- Steps: `SAVE_DE BASE_LOCAL dispL+const*2 → DE LOAD_WORD RESTORE_DE`
+- Steps:
+- SAVE_DE
+- BASE_LOCAL (dispL+const\*2) → DE
+- LOAD_WORD
+- RESTORE_DE
 - ASM:
 
 ```
@@ -317,7 +364,12 @@ pop de
 **B4 store byte: global[const] = A**
 
 - ZAX: `ld glob_b[const], a`
-- Steps: `BASE_GLOBAL glob_b → DE IDX_CONST const → HL SCALE_1 ADD_BASE STORE_BYTE`
+- Steps:
+- BASE_GLOBAL glob_b → DE
+- IDX_CONST const → HL
+- SCALE_1
+- ADD_BASE
+- STORE_BYTE
 - ASM:
 
 ```
@@ -329,7 +381,14 @@ ld (hl),a
 
 **B4w store word: global[const] = HL**
 
-- Steps: `SAVE_DE BASE_GLOBAL → DE IDX_CONST const → HL SCALE_2 ADD_BASE STORE_WORD RESTORE_DE`
+- Steps:
+- SAVE_DE
+- BASE_GLOBAL glob_w → DE
+- IDX_CONST const → HL
+- SCALE_2
+- ADD_BASE
+- STORE_WORD
+- RESTORE_DE
 - ASM:
 
 ```
@@ -379,7 +438,16 @@ pop de
 **C1 load byte: global[r]**
 
 - ZAX: `ld a, glob_b[c]`
-- Steps: `SAVE_HL SAVE_DE BASE_GLOBAL glob_b → DE IDX_REG8 c → HL SCALE_1 ADD_BASE LOAD_BYTE RESTORE_DE RESTORE_HL`
+- Steps:
+- SAVE_HL
+- SAVE_DE
+- BASE_GLOBAL glob_b → DE
+- IDX_REG8 c → HL
+- SCALE_1
+- ADD_BASE
+- LOAD_BYTE
+- RESTORE_DE
+- RESTORE_HL
 - ASM:
 
 ```
@@ -401,7 +469,16 @@ pop hl
 **C2 load byte: local[r]**
 
 - ZAX: `ld a, loc_b[c]`
-- Steps: `SAVE_HL SAVE_DE BASE_LOCAL dispL → DE IDX_REG8 c → HL SCALE_1 ADD_BASE LOAD_BYTE RESTORE_DE RESTORE_HL`
+- Steps:
+- SAVE_HL
+- SAVE_DE
+- BASE_LOCAL dispL → DE
+- IDX_REG8 c → HL
+- SCALE_1
+- ADD_BASE
+- LOAD_BYTE
+- RESTORE_DE
+- RESTORE_HL
 - ASM:
 
 ```
@@ -430,7 +507,16 @@ Example: global idx stored in memory, indexing a global byte array.
 **D1 load byte: glob_b[idxGlob]**
 
 - ZAX: `ld a, glob_b[idxGlob]`
-- Steps: `SAVE_HL SAVE_DE BASE_GLOBAL glob_b → DE IDX_MEM_GLOBAL idxGlob → HL SCALE_1 ADD_BASE LOAD_BYTE RESTORE_DE RESTORE_HL`
+- Steps:
+- SAVE_HL
+- SAVE_DE
+- BASE_GLOBAL glob_b → DE
+- IDX_MEM_GLOBAL idxGlob → HL
+- SCALE_1
+- ADD_BASE
+- LOAD_BYTE
+- RESTORE_DE
+- RESTORE_HL
 - ASM:
 
 ```
@@ -447,7 +533,16 @@ pop hl
 **D2 load word: glob_w[idxFrame]**
 
 - ZAX: `ld hl, glob_w[idxFrame]`
-- Steps: `SAVE_HL SAVE_DE BASE_GLOBAL glob_w → DE IDX_MEM_FRAME dispIdx → HL SCALE_2 ADD_BASE LOAD_WORD RESTORE_DE RESTORE_HL`
+- Steps:
+- SAVE_HL
+- SAVE_DE
+- BASE_GLOBAL glob_w → DE
+- IDX_MEM_FRAME dispIdx → HL
+- SCALE_2
+- ADD_BASE
+- LOAD_WORD
+- RESTORE_DE
+- RESTORE_HL
 
 Stores D\* use the same pattern with `STORE_BYTE`/`STORE_WORD`.
 
@@ -458,12 +553,18 @@ Treat as const index with `const = field_off` on the base (global/local/arg).
 Example load word field from local record:
 
 - ZAX: `ld hl, rec.field`
-- Steps: `SAVE_DE BASE_LOCAL dispRec+field_off → DE LOAD_WORD RESTORE_DE`
+- Steps:
+- SAVE_DE
+- BASE_LOCAL dispRec+field_off → DE
+- LOAD_WORD
+- RESTORE_DE
 
 Example store byte field to arg record:
 
 - ZAX: `ld rec.field, a`
-- Steps: `BASE_ARG dispRec+field_off → HL STORE_BYTE`
+- Steps:
+- BASE_ARG dispRec+field_off → HL
+- STORE_BYTE
 
 ## 3. Notes
 
