@@ -57,7 +57,7 @@ ADD_BASE             add hl,de    ; HL = base(DE) + offset(HL)
 ```
 LOAD_BYTE            ld a,(hl)
 
-LOAD_WORD_W_DE       ld e,(hl)
+LOAD_WORD            ld e,(hl)
                      inc hl
                      ld d,(hl)
                      ex de,hl     ; HL = word, DE = addr+1 (scratch)
@@ -371,7 +371,7 @@ BASE_GLOBAL glob_w
 IDX_CONST const
 SCALE_2
 ADD_BASE
-LOAD_WORD_W_DE
+LOAD_WORD
 RESTORE_DE
 ```
 
@@ -659,7 +659,7 @@ BASE_GLOBAL glob_w
 IDX_REG8 r
 SCALE_2
 ADD_BASE
-LOAD_WORD_W_DE
+LOAD_WORD
 RESTORE_DE
 ```
 
@@ -726,7 +726,7 @@ BASE_FRAME dispL
 IDX_REG8 r
 SCALE_2
 ADD_BASE
-LOAD_WORD_W_DE
+LOAD_WORD
 RESTORE_DE
 ```
 
@@ -794,7 +794,7 @@ BASE_FRAME dispA
 IDX_REG8 r
 SCALE_2
 ADD_BASE
-LOAD_WORD_W_DE
+LOAD_WORD
 RESTORE_DE
 ```
 
@@ -1093,7 +1093,7 @@ BASE_GLOBAL glob_w
 IDX_MEM_GLOBAL idxG
 SCALE_2
 ADD_BASE
-LOAD_WORD_W_DE
+LOAD_WORD
 RESTORE_DE
 ```
 
@@ -1158,7 +1158,7 @@ BASE_GLOBAL glob_w
 IDX_MEM_FRAME dispIdx
 SCALE_2
 ADD_BASE
-LOAD_WORD_W_DE
+LOAD_WORD
 RESTORE_DE
 ```
 
@@ -1224,7 +1224,7 @@ BASE_FRAME dispL
 IDX_MEM_GLOBAL idxG
 SCALE_2
 ADD_BASE
-LOAD_WORD_W_DE
+LOAD_WORD
 RESTORE_DE
 ```
 
@@ -1291,7 +1291,7 @@ BASE_FRAME dispL
 IDX_MEM_FRAME dispIdx
 SCALE_2
 ADD_BASE
-LOAD_WORD_W_DE
+LOAD_WORD
 RESTORE_DE
 ```
 
@@ -1358,7 +1358,7 @@ BASE_FRAME dispA
 IDX_MEM_GLOBAL idxG
 SCALE_2
 ADD_BASE
-LOAD_WORD_W_DE
+LOAD_WORD
 RESTORE_DE
 ```
 
@@ -1425,7 +1425,7 @@ BASE_FRAME dispA
 IDX_MEM_FRAME dispIdx
 SCALE_2
 ADD_BASE
-LOAD_WORD_W_DE
+LOAD_WORD
 RESTORE_DE
 ```
 
