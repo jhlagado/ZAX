@@ -1,9 +1,8 @@
 ## Notes
 
-The goal is to compose the lowering code from a series of reusable stages
+The goal is to compose the lowering code from a series of reusable stages.
 
-Frame vars are arguments and local variables.
-They work the same way by using IX:
+Frame vars are arguments and local variables. They work the same way by using IX:
 
 - args have +ve displacements
 - locals have -ve displacements
@@ -12,7 +11,7 @@ IX cannot access H or L registers so we often need to use the DE shuttle method 
 
 ## Scalars (no index)
 
-This is a single step process
+This is a single-step process.
 
 ### global
 
@@ -54,7 +53,7 @@ ld reg16h, (ix+dispF+1)
 
 ## Indexed by const
 
-This is a single step process
+This is a single-step process.
 
 ### Global
 
@@ -96,9 +95,9 @@ ld reg16h, (ix+disp + imm * 2 + 1)
 
 ## Indexed addressing
 
-### Multiple step process.
+### Multiple-step process.
 
-- preserve DE, HL
+- preserve DE, HL (unless one is the destination, then save the other)
 
 - Gather inputs
   - load base into DE
@@ -111,9 +110,9 @@ ld reg16h, (ix+disp + imm * 2 + 1)
 
 - restore DE, HL
 
-Register preservation is required for all registers except destination. Preservation happens at the level of register pair.
+Register preservation is required for all registers except the destination. Preservation happens at the level of register pair.
 
-if HL is the destination, handle differently
+If HL is the destination, handle differently (no need to save HL, but still preserve DE if used as scratch).
 
 ### Gather inputs
 
