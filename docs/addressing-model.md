@@ -7,93 +7,95 @@ Goal: express every allowed load/store addressing shape as a short pipeline of r
 ### 1.1 Save / restore
 
 ```
-SAVE_HL              push hl                  ; saves HL (no clobber)
+SAVE_HL                     push hl                  ; saves HL (no clobber)
 
-SAVE_DE              push de                  ; saves DE (no clobber)
+SAVE_DE                     push de                  ; saves DE (no clobber)
 
-RESTORE_DE           pop de                   ; restores DE
+RESTORE_HL                  pop hl                   ; restores DE
 
-SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
+RESTORE_DE                  pop de                   ; restores DE
 
-SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
+SWAP_HL_DE                        ex de,hl                 ; swaps DE<->HL (dest=both)
+
+SWAP_HL_SAVED               ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
 ```
 
 ### 1.2 Base loaders (place base in DE)
 
 ```
-BASE_GLOBAL const    ld de,const              ; dest=DE
+LOAD_BASE_GLOB glob         ld de,(glob)             ; dest=DE
 
-BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
+LOAD_BASE_FVAR fvar         ld e,(ix+fvar)           ; dest=DE
+                            ld d,(ix+fvar+1)
 ```
 
 ### 1.3 Index loaders (place index in HL)
 
 ```
-IDX_CONST const      ld hl,const              ; dest=HL
+LOAD_IDX_CONST const        ld hl,const              ; dest=HL
 
-IDX_REG8 reg8        ld h,0                   ; dest=HL
-                     ld l,reg8
+LOAD_IDX_REG reg            ld h,0                   ; dest=HL
+                            ld l,ireg
 
-IDX_REG16 reg16      ld hl,reg16              ; dest=HL
+LOAD_IDX_RP rp              ld hl,rp                 ; dest=HL
 
-IDX_GLOBAL const     ld hl,(const)            ; dest=HL
+LOAD_IDX_GLOB const         ld hl,(const)            ; dest=HL
 
-IDX_FRAME disp       ex de,hl                 ; dest=HL
-                     ld e,(ix+disp)
-                     ld d,(ix+disp+1)
-                     ex de,hl
+LOAD_IDX_FVAR fvar          ex de,hl                 ; dest=HL
+                            ld e,(ix+fvar)
+                            ld d,(ix+fvar+1)
+                            ex de,hl
 ```
 
 ### 1.4 Combine
 
 ```
-ADD_BASE             add hl,de                ; dest=HL (base+offset)
+CALC_EA                     add hl,de                ; dest=HL (base+offset)
 
-ADD_BASE_2           add hl,hl                ; dest=HL (offset*2)
-                     add hl,de                ; dest=HL (base+offset*2)
+CALC_EA_2                   add hl,hl                ; dest=HL (offset*2)
+                            add hl,de                ; dest=HL (base+offset*2)
 ```
 
 ### 1.5 Accessors (byte)
 
 ```
-LOAD_REG8_HL reg8             ld reg8,(hl)                
+LOAD_REG_EA reg             ld reg,(hl)                ; HL=addr dest=A
 
-STORE_REG8_HL reg8            ld (hl),reg8                
+STORE_REG_EA reg            ld (hl),reg                
 
-LOAD_REG8_ABS reg8 const      ld reg8,(const)
+LOAD_REG_GLOB reg glob      ld reg,(glob)
 
-STORE_REG8_ABS reg8 const     ld (const),reg8
+STORE_REG_GLOB reg glob     ld (glob),reg
 
-LOAD_REG8_FRAME reg8 disp     ld reg8,(ix+disp)
+LOAD_REG_FVAR reg fvar      ld reg,(ix+fvar)
 
-STORE_REG8_FRAME reg8 disp    ld (ix+disp),reg8
+STORE_REG_FVAR reg fvar     ld (ix+fvar),reg
 
 ```
 
 ### 1.6 Accessors (word)
 
 ```
-LOAD_REG16_HL reg16           ld reg16L,(hl)                
-                              inc hl
-                              ld reg16H,(hl)
+LOAD_RP_EA rp               ld lo(rp),(hl)                
+                            inc hl
+                            ld hi(rp),(hl)
 
-STORE_REG16_HL reg16          ld (hl),reg16L                
-                              inc hl
-                              ld (hl),reg16H
+STORE_RP_EA rp              ld (hl),lo(rp)                
+                            inc hl
+                            ld (hl),hi(rp)
 
-LOAD_REG16_ABS reg16 const    ld reg16,(const)
+LOAD_RP_GLOB rp glob        ld rp,(glob)
 
-STORE_REG16_ABS reg16 const   ld (const),reg16
+STORE_RP_GLOB rp glob       ld (glob),rp
 
-LOAD_REG16_FRAME reg16 disp   ld reg16L,(ix+disp)
-                              ld reg16H,(ix+disp+1)
+LOAD_RP_FVAR rp fvar        ld lo(rp),(ix+fvar)
+                            ld hi(rp),(ix+fvar+1)
 
-STORE_REG16_FRAME reg16 disp  ld (ix+disp),reg16l
-                              ld (ix+disp+1),reg16h
+STORE_RP_FVAR rp fvar       ld (ix+fvar),rpl
+                            ld (ix+fvar+1),rph
 ```
 
-`disp` is the frame displacement: negative for locals,positive for args. When indexing with a constant,fold the scaled constant into `disp`.
+`fvar` is the fvar displacement: negative for locals,positive for args. When indexing with a constant,fold the scaled constant into `fvar`.
 
 ## 2. Pipelines (byte)
 
@@ -105,803 +107,803 @@ For each shape:
 
 ### A. Scalars (no index)
 
-#### A1 load byte from global
+#### A1 load reg from glob
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,glob_b
+ld reg,glob
 ```
 
 Steps
 
 ```
-LOAD_REG8_HL
+LOAD_REG_GLOB reg
 ```
 
 ASM
 
 ```asm
-ld a,(glob_b)
+ld reg,(glob)
 ```
 
-#### A2 load byte from frame var
+#### A2 load reg from fvar
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,frame_b
+ld reg,fvar
 ```
 
 Steps
 
 ```
-FRAME_BYTE_LOAD dispL
+LOAD_REG_FVAR reg fvar
 ```
 
 ASM
 
 ```asm
-ld a,(ix+dispL)
+ld reg,(ix+fvar)
 ```
 
-#### A4 store byte to global
+#### A4 store reg to glob
 
-ZAX
+ZAX Example
 
 ```zax
-ld glob_b,a
+ld glob,reg
 ```
 
 Steps
 
 ```
-STORE_REG8_HL
+STORE_REG_GLOB reg
 ```
 
 ASM
 
 ```asm
-ld (hl),a
+ld (glob),reg
 ```
 
-#### A5 store byte to frame var
+#### A5 store reg to fvar
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_b,a
+ld fvar,reg
 ```
 
 Steps
 
 ```
-FRAME_BYTE_STORE dispL
+STORE_REG_FVAR reg fvar
 ```
 
 ASM
 
 ```asm
-ld (ix+dispL),a
+ld (ix+fvar),reg
 ```
 
-#### B1 load byte: global[const]
+#### B1 load reg from glob[const]
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,glob_b[const]
+ld reg,glob[const]
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_b
-IDX_CONST const
-ADD_BASE
-LOAD_REG8_HL
+LOAD_BASE_GLOB glob
+LOAD_IDX_CONST const
+CALC_EA
+LOAD_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld de,glob_b
+ld de,glob
 ld hl,const
 add hl,de
-ld a,(hl)
+ld reg,(hl)
 ```
 
-#### B2 load byte: frame[const]
+#### B2 load reg from fvar[const]
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,frame_b[const]
+ld reg,fvar[const]
 ```
 
 Steps
 
 ```
-FRAME_BYTE_LOAD dispL+const
+LOAD_REG_FVAR reg fvar+const
 ```
 
 ASM
 
 ```asm
-ld a,(ix+dispL+const)
+ld reg,(ix+fvar+const)
 ```
 
-#### B4 store byte: global[const]
+#### B4 store reg in glob[const]
 
-ZAX
+ZAX Example
 
 ```zax
-ld glob_b[const],a
+ld glob[const],reg
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_b
-IDX_CONST const
-ADD_BASE
-STORE_REG8_HL
+LOAD_BASE_GLOB glob
+LOAD_IDX_CONST const
+CALC_EA
+STORE_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld de,glob_b
+ld de,glob
 ld hl,const
 add hl,de
-ld (hl),a
+ld (hl),reg
 ```
 
-#### B5 store byte: frame[const]
+#### B5 store reg in fvar[const]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_b[const],a
+ld fvar[const],reg
 ```
 
 Steps
 
 ```
-FRAME_BYTE_STORE dispL+const
+STORE_REG_FVAR reg fvar+const
 ```
 
 ASM
 
 ```asm
-ld (ix+dispL+const),a
+ld (ix+fvar+const),reg
 ```
 
-#### B6 store byte: frame[const]
+#### B6 store reg in fvar[const]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_b[const],a
+ld fvar[const],reg
 ```
 
 Steps
 
 ```
-FRAME_BYTE_STORE dispA+const
+STORE_REG_FVAR reg fvar+const
 ```
 
 ASM
 
 ```asm
-ld (ix+dispA+const),a
+ld (ix+fvar+const),reg
 ```
 
-#### C1 load byte: global[r]
+#### C1 load reg glob[ireg]
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,glob_b[r]
+ld reg,glob[ireg]
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_b
-IDX_REG8 reg8
-ADD_BASE
-LOAD_REG8_HL
+LOAD_BASE_GLOB glob
+LOAD_IDX_REG ireg
+CALC_EA
+LOAD_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld de,glob_b
+ld de,glob
 ld h,0
-ld l,reg8
+ld l,ireg
 add hl,de
-ld a,(hl)
+ld reg,(hl)
 ```
 
-#### C2 load byte: frame[r]
+#### C2 load reg from fvar[ireg]
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,frame_b[r]
+ld reg,fvar[ireg]
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE
-LOAD_REG8_HL
+LOAD_BASE_FVAR fvar
+LOAD_IDX_REG ireg
+CALC_EA
+LOAD_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld h,0
-ld l,reg8
+ld l,ireg
 add hl,de
-ld a,(hl)
+ld reg,(hl)
 ```
 
-#### C3 load byte: frame[r]
+#### C3 load reg from fvar[ireg]
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,frame_b[r]
+ld reg,fvar[ireg]
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE
-LOAD_REG8_HL
+LOAD_BASE_FVAR fvar
+LOAD_IDX_REG ireg
+CALC_EA
+LOAD_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld h,0
-ld l,reg8
+ld l,ireg
 add hl,de
-ld a,(hl)
+ld reg,(hl)
 ```
 
-#### C4 store byte: global[r]
+#### C4 store reg in glob[ireg]
 
-ZAX
+ZAX Example
 
 ```zax
-ld glob_b[r],a
+ld glob[ireg],reg
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_b
-IDX_REG8 reg8
-ADD_BASE
-STORE_REG8_HL
+LOAD_BASE_GLOB glob
+LOAD_IDX_REG ireg
+CALC_EA
+STORE_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld de,glob_b
+ld de,glob
 ld h,0
-ld l,reg8
+ld l,ireg
 add hl,de
-ld (hl),a
+ld (hl),reg
 ```
 
-#### C5 store byte: frame[r]
+#### C5 store reg in fvar[ireg]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_b[r],e
+ld fvar[ireg],reg
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE
-STORE_REG8_HL
+LOAD_BASE_FVAR fvar
+LOAD_IDX_REG ireg
+CALC_EA
+STORE_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld h,0
-ld l,reg8
+ld l,ireg
 add hl,de
-ld (hl),a
+ld (hl),reg
 ```
 
-#### C6 store byte: frame[r]
+#### C6 store reg in fvar[ireg]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_b[r],a
+ld fvar[ireg],reg
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE
-STORE_REG8_HL
+LOAD_BASE_FVAR fvar
+LOAD_IDX_REG ireg
+CALC_EA
+STORE_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld h,0
-ld l,reg8
+ld l,ireg
 add hl,de
-ld (hl),a
+ld (hl),reg
 ```
 
-#### D1 load byte: global[idxG]
+#### D1 load reg: glob1[glob2]
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,glob_b[idxG]
+ld reg,glob1[glob2]
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_b
-IDX_GLOBAL const
-ADD_BASE
-LOAD_REG8_HL
+LOAD_BASE_GLOB glob1
+LOAD_IDX_GLOB glob2
+CALC_EA
+LOAD_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld de,glob_b
+ld de,glob1
+ld hl,(glob2)
+add hl,de
+ld reg,(hl)
+```
+
+#### D2 load reg from glob[fvar]
+
+ZAX Example
+
+```zax
+ld reg,glob[fvar]
+```
+
+Steps
+
+```
+LOAD_BASE_GLOB glob
+LOAD_IDX_FVAR fvar
+CALC_EA
+LOAD_REG_EA reg
+```
+
+ASM
+
+```asm
+ld de,glob
+ld l,(ix+fvar)
+ld h,(ix+fvar+1)
+add hl,de
+ld reg,(hl)
+```
+
+#### D3 load reg from fvar[glob]
+
+ZAX Example
+
+```zax
+ld reg,fvar[glob]
+```
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_GLOB glob
+CALC_EA
+LOAD_REG_EA reg
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld hl,(const)
 add hl,de
-ld a,(hl)
+ld reg,(hl)
 ```
 
-#### D2 load byte: global[idxFrame]
+#### D4 load reg from fvar[fvar2]
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,glob_b[idxFrame]
+ld reg,fvar[fvar2]
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_b
-IDX_FRAME disp
-ADD_BASE
-LOAD_REG8_HL
+LOAD_BASE_FVAR fvar
+LOAD_IDX_FVAR fvar
+CALC_EA
+LOAD_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld de,glob_b
-ld l,(ix+disp)
-ld h,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld l,(ix+fvar)
+ld h,(ix+fvar+1)
 add hl,de
-ld a,(hl)
+ld reg,(hl)
 ```
 
-#### D3 load byte: frame[idxG]
+#### D5 load reg from fvar[glob]
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,frame_b[idxG]
+ld reg,fvar[glob]
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-LOAD_REG8_HL
+LOAD_BASE_FVAR fvar
+LOAD_IDX_GLOB const
+CALC_EA
+LOAD_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld hl,(const)
 add hl,de
-ld a,(hl)
+ld reg,(hl)
 ```
 
-#### D4 load byte: frame[idxFrame]
+#### D6 load reg from fvar1[fvar2]
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,frame_b[idxFrame]
+ld reg,fvar1[fvar2]
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-LOAD_REG8_HL
+LOAD_BASE_FVAR fvar1
+LOAD_IDX_FVAR fvar2
+CALC_EA
+LOAD_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
-ld l,(ix+disp)
-ld h,(ix+disp+1)
+ld e,(ix+fvar1)
+ld d,(ix+fvar1+1)
+ld l,(ix+fvar2)
+ld h,(ix+fvar2+1)
 add hl,de
-ld a,(hl)
+ld reg,(hl)
 ```
 
-#### D5 load byte: frame[idxG]
+#### D7 store reg in glob1[glob2]
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,frame_b[idxG]
+ld glob1[glob2],reg
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-LOAD_REG8_HL
+LOAD_BASE_GLOB glob1
+LOAD_IDX_GLOB glob2
+CALC_EA
+STORE_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld de,glob
 ld hl,(const)
 add hl,de
-ld a,(hl)
+ld (hl),reg
 ```
 
-#### D6 load byte: frame[idxFrame]
+#### D8 store reg in glob[fvar]
 
-ZAX
+ZAX Example
 
 ```zax
-ld a,frame_b[idxFrame]
+ld glob[fvar],reg
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-LOAD_REG8_HL
+LOAD_BASE_GLOB glob
+LOAD_IDX_FVAR fvar
+CALC_EA
+STORE_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
-ld l,(ix+disp)
-ld h,(ix+disp+1)
+ld de,glob
+ld l,(ix+fvar)
+ld h,(ix+fvar+1)
 add hl,de
-ld a,(hl)
+ld (hl),reg
 ```
 
-#### D7 store byte: global[idxG]
+#### D9 store reg in fvar[glob]
 
-ZAX
+ZAX Example
 
 ```zax
-ld glob_b[idxG],a
+ld fvar[glob],reg
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_b
-IDX_GLOBAL const
-ADD_BASE
-STORE_REG8_HL
+LOAD_BASE_FVAR fvar
+LOAD_IDX_GLOB glob
+CALC_EA
+STORE_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld de,glob_b
-ld hl,(const)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld hl,(glob)
 add hl,de
-ld (hl),a
+ld (hl),reg
 ```
 
-#### D8 store byte: global[idxFrame]
+#### D10 store reg in fvar1[fvar2]
 
-ZAX
+ZAX Example
 
 ```zax
-ld glob_b[idxFrame],a
+ld fvar1[fvar2],reg
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_b
-IDX_FRAME disp
-ADD_BASE
-STORE_REG8_HL
+LOAD_BASE_FVAR fvar1
+LOAD_IDX_FVAR fvar2
+CALC_EA
+STORE_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld de,glob_b
-ld l,(ix+disp)
-ld h,(ix+disp+1)
+ld e,(ix+fvar1)
+ld d,(ix+fvar1+1)
+ld l,(ix+fvar2)
+ld h,(ix+fvar2+1)
 add hl,de
-ld (hl),a
+ld (hl),reg
 ```
 
-#### D9 store byte: frame[idxG]
+#### D11 store reg in fvar[glob]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_b[idxG],a
+ld fvar[glob],reg
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-STORE_REG8_HL
+LOAD_BASE_FVAR fvar
+LOAD_IDX_GLOB glob
+CALC_EA
+STORE_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
-ld hl,(const)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld hl,(glob)
 add hl,de
-ld (hl),a
+ld (hl),reg
 ```
 
-#### D10 store byte: frame[idxFrame]
+#### D12 store reg in fvar1[fvar2]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_b[idxFrame],a
+ld fvar1[fvar2],reg
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-STORE_REG8_HL
+LOAD_BASE_FVAR fvar1
+LOAD_IDX_FVAR fvar2
+CALC_EA
+STORE_REG_EA reg
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
-ld l,(ix+disp)
-ld h,(ix+disp+1)
+ld e,(ix+fvar1)
+ld d,(ix+fvar1+1)
+ld l,(ix+fvar2)
+ld h,(ix+fvar2+1)
 add hl,de
-ld (hl),a
-```
-
-#### D11 store byte: frame[idxG]
-
-ZAX
-
-```zax
-ld frame_b[idxG],a
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-STORE_REG8_HL
-```
-
-ASM
-
-```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
-ld hl,(const)
-add hl,de
-ld (hl),a
-```
-
-#### D12 store byte: frame[idxFrame]
-
-ZAX
-
-```zax
-ld frame_b[idxFrame],a
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-STORE_REG8_HL
-```
-
-ASM
-
-```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
-ld l,(ix+disp)
-ld h,(ix+disp+1)
-add hl,de
-ld (hl),a
+ld (hl),reg
 ```
 
 ## 3. Pipelines (word)
 
-#### A1w load word from global
+#### A1w load word from glob
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,glob_w
+ld hl,glob
 ```
 
 Steps
 
 ```
-LOAD_WORD_ABS glob_w
+LOAD_RP_GLOB HL glob
 ```
 
 ASM
 
 ```asm
-ld hl,(glob_w)
+ld hl,(glob)
 ```
 
-#### A2w load word from frame var
+#### A2w load word from fvar
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,frame_w
+ld hl,fvar
 ```
 
 Steps
 
 ```
-FRAME_WORD_LOAD dispL
-```
-
-ASM
-
-```asm
-ex de,hl
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ex de,hl
-```
-
-#### A4w store word to global
-
-ZAX
-
-```zax
-ld glob_w,hl
-```
-
-Steps
-
-```
-STORE_WORD_ABS glob_w
-```
-
-ASM
-
-```asm
-ld (glob_w),hl
-```
-
-#### A5w store word to frame var
-
-ZAX
-
-```zax
-ld frame_w,hl
-```
-
-Steps
-
-```
-FRAME_WORD_STORE dispL
+LOAD_RP_FVAR DE fvar
 ```
 
 ASM
 
 ```asm
 ex de,hl
-ld (ix+dispL),e
-ld (ix+dispL+1),d
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ex de,hl
+```
+
+#### A4w store word to glob
+
+ZAX Example
+
+```zax
+ld glob,hl
+```
+
+Steps
+
+```
+STORE_RP_GLOB DE glob
+```
+
+ASM
+
+```asm
+ld (glob),hl
+```
+
+#### A5w store word to fvar
+
+ZAX Example
+
+```zax
+ld fvar,hl
+```
+
+Steps
+
+```
+STORE_RP_FVAR DE fvar
+```
+
+ASM
+
+```asm
+ex de,hl
+ld (ix+fvar),e
+ld (ix+fvar+1),d
 ex de,hl
 ```
 
 ### B. Indexed by const
 
-Element size = 1 for byte,2 for word (use `ADD_BASE_2`; larger powers not supported).
+Element size = 1 for byte,2 for word (use `CALC_EA_2`; larger powers not supported).
 
-#### B1w load word: global[const]
+#### B1w load word: glob[const]
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,glob_w[const]
+ld hl,glob[const]
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_w
-IDX_CONST const
-ADD_BASE_2
-LOAD_WORD
+LOAD_BASE_GLOB glob
+LOAD_IDX_CONST const
+CALC_EA_2
+LOAD_RP_EA DE
 ```
 
 ASM
 
 ```asm
-ld de,glob_w
+ld de,glob
 ld hl,const
 add hl,hl
 add hl,de
@@ -911,53 +913,53 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### B2w load word: frame[const]
+#### B2w load word: fvar[const]
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,frame_w[const]
+ld hl,fvar[const]
 ```
 
 Steps
 
 ```
-FRAME_WORD_LOAD dispL+const*2
+LOAD_RP_FVAR DE fvar+const*2
 ```
 
 ASM
 
 ```asm
 ex de,hl
-ld e,(ix+dispL+const*2)
-ld d,(ix+dispL+const*2+1)
+ld e,(ix+fvar+const*2)
+ld d,(ix+fvar+const*2+1)
 ex de,hl
 ```
 
-#### B4w store word: global[const]
+#### B4w store word: glob[const]
 
-ZAX
+ZAX Example
 
 ```zax
-ld glob_w[const],hl
+ld glob[const],hl
 ```
 
 Steps
 
 ```
 SAVE_HL
-BASE_GLOBAL glob_w
-IDX_CONST const
-ADD_BASE_2
+LOAD_BASE_GLOB glob
+LOAD_IDX_CONST const
+CALC_EA_2
 RESTORE_DE
-STORE_WORD
+STORE_RP_EA DE
 ```
 
 ASM
 
 ```asm
 push hl
-ld de,glob_w
+ld de,glob
 ld hl,const
 add hl,hl
 add hl,de
@@ -969,77 +971,77 @@ ld (hl),d
 ex de,hl
 ```
 
-#### B5w store word: frame[const]
+#### B5w store word: fvar[const]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_w[const],hl
+ld fvar[const],hl
 ```
 
 Steps
 
 ```
-FRAME_WORD_STORE dispL+const*2
+STORE_RP_FVAR DE fvar+const*2
 ```
 
 ASM
 
 ```asm
 ex de,hl
-ld (ix+dispL+const*2),e
-ld (ix+dispL+const*2+1),d
+ld (ix+fvar+const*2),e
+ld (ix+fvar+const*2+1),d
 ex de,hl
 ```
 
-#### B6w store word: frame[const]
+#### B6w store word: fvar[const]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_w[const],hl
+ld fvar[const],hl
 ```
 
 Steps
 
 ```
-FRAME_WORD_STORE dispA+const*2
+STORE_RP_FVAR DE fvar+const*2
 ```
 
 ASM
 
 ```asm
 ex de,hl
-ld (ix+dispA+const*2),e
-ld (ix+dispA+const*2+1),d
+ld (ix+fvar+const*2),e
+ld (ix+fvar+const*2+1),d
 ex de,hl
 ```
 
 ### C. Indexed by register (8-bit index in `r8`)
 
-#### C1w load word: global[r]
+#### C1w load word: glob[reg]
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,glob_w[r]
+ld hl,glob[ireg]
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_w
-IDX_REG8 reg8
-ADD_BASE_2
-LOAD_WORD
+LOAD_BASE_GLOB glob
+LOAD_IDX_REG reg
+CALC_EA_2
+LOAD_RP_EA DE
 ```
 
 ASM
 
 ```asm
-ld de,glob_w
+ld de,glob
 ld h,0
-ld l,reg8
+ld l,ireg
 add hl,hl
 add hl,de
 ld e,(hl)
@@ -1048,30 +1050,30 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### C2w load word: frame[r]
+#### C2w load word: fvar[ireg]
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,frame_w[r]
+ld hl,fvar[ireg]
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE_2
-LOAD_WORD
+LOAD_BASE_FVAR fvar
+LOAD_IDX_REG reg
+CALC_EA_2
+LOAD_RP_EA DE
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld h,0
-ld l,reg8
+ld l,ireg
 add hl,hl
 add hl,de
 ld e,(hl)
@@ -1080,30 +1082,30 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### C3w load word: frame[r]
+#### C3w load word: fvar[ireg]
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,frame_w[r]
+ld hl,fvar[ireg]
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE_2
-LOAD_WORD
+LOAD_BASE_FVAR fvar
+LOAD_IDX_REG reg
+CALC_EA_2
+LOAD_RP_EA DE
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld h,0
-ld l,reg8
+ld l,ireg
 add hl,hl
 add hl,de
 ld e,(hl)
@@ -1112,32 +1114,32 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### C4w store word: global[r]
+#### C4w store word: glob[reg]
 
-ZAX
+ZAX Example
 
 ```zax
-ld glob_w[r],hl
+ld glob[ireg],hl
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_w
-IDX_REG8 reg8
-ADD_BASE_2
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
+LOAD_BASE_GLOB glob
+LOAD_IDX_REG reg
+CALC_EA_2
+SWAP_HL_SAVED
+SWAP_HL_DE
+STORE_RP_EA DE
+SWAP_HL_DE
 ```
 
 ASM
 
 ```asm
-ld de,glob_w
+ld de,glob
 ld h,0
-ld l,reg8
+ld l,ireg
 add hl,hl
 add hl,de
 ex (sp),hl
@@ -1150,33 +1152,33 @@ ex de,hl
 ex de,hl
 ```
 
-#### C5w store word: frame[r]
+#### C5w store word: fvar[ireg]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_w[r],hl
+ld fvar[ireg],hl
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE_2
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
+LOAD_BASE_FVAR fvar
+LOAD_IDX_REG reg
+CALC_EA_2
+SWAP_HL_SAVED
+SWAP_HL_DE
+STORE_RP_EA DE
+SWAP_HL_DE
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld h,0
-ld l,reg8
+ld l,ireg
 add hl,hl
 add hl,de
 ex (sp),hl
@@ -1188,33 +1190,33 @@ ld (hl),d
 ex de,hl
 ```
 
-#### C6w store word: frame[r]
+#### C6w store word: fvar[ireg]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_w[r],hl
+ld fvar[ireg],hl
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
+LOAD_BASE_FVAR fvar
+LOAD_IDX_REG reg
+CALC_EA
+SWAP_HL_SAVED
+SWAP_HL_DE
+STORE_RP_EA DE
+SWAP_HL_DE
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld h,0
-ld l,reg8
+ld l,ireg
 add hl,de
 ex (sp),hl
 ex de,hl
@@ -1227,29 +1229,29 @@ ex de,hl
 
 ### D. Indexed by variable in memory (typed address kept in memory)
 
-Two index sources shown: a global word `idxG` and a frame word at `dispIdx`.
+Two index sources shown: a glob word `glob` and a fvar word at `fvarIdx`.
 
-#### D1w load word: global[idxG]
+#### D1w load word: glob[glob]
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,glob_w[idxG]
+ld hl,glob[glob]
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_w
-IDX_GLOBAL const
-ADD_BASE
-LOAD_WORD
+LOAD_BASE_GLOB glob
+LOAD_IDX_GLOB const
+CALC_EA
+LOAD_RP_EA DE
 ```
 
 ASM
 
 ```asm
-ld de,glob_w
+ld de,glob
 ld hl,(const)
 add hl,de
 ld e,(hl)
@@ -1258,29 +1260,29 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### D2w load word: global[idxFrame]
+#### D2w load word: glob[fvar2]
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,glob_w[idxFrame]
+ld hl,glob[fvar2]
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_w
-IDX_FRAME disp
-ADD_BASE
-LOAD_WORD
+LOAD_BASE_GLOB glob
+LOAD_IDX_FVAR fvar
+CALC_EA
+LOAD_RP_EA DE
 ```
 
 ASM
 
 ```asm
-ld de,glob_w
-ld l,(ix+disp)
-ld h,(ix+disp+1)
+ld de,glob
+ld l,(ix+fvar)
+ld h,(ix+fvar+1)
 add hl,de
 ld e,(hl)
 inc hl
@@ -1288,28 +1290,28 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### D3w load word: frame[idxG]
+#### D3w load word: fvar[glob]
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,frame_w[idxG]
+ld hl,fvar[glob]
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-LOAD_WORD
+LOAD_BASE_FVAR fvar
+LOAD_IDX_GLOB const
+CALC_EA
+LOAD_RP_EA DE
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld hl,(const)
 add hl,de
 ld e,(hl)
@@ -1318,30 +1320,30 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### D4w load word: frame[idxFrame]
+#### D4w load word: fvar[fvar2]
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,frame_w[idxFrame]
+ld hl,fvar[fvar2]
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-LOAD_WORD
+LOAD_BASE_FVAR fvar
+LOAD_IDX_FVAR fvar
+CALC_EA
+LOAD_RP_EA DE
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
-ld l,(ix+disp)
-ld h,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld l,(ix+fvar)
+ld h,(ix+fvar+1)
 add hl,de
 ld e,(hl)
 inc hl
@@ -1349,28 +1351,28 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### D5w load word: frame[idxG]
+#### D5w load word: fvar[glob]
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,frame_w[idxG]
+ld hl,fvar[glob]
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-LOAD_WORD
+LOAD_BASE_FVAR fvar
+LOAD_IDX_GLOB const
+CALC_EA
+LOAD_RP_EA DE
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld hl,(const)
 add hl,de
 ld e,(hl)
@@ -1379,30 +1381,30 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### D6w load word: frame[idxFrame]
+#### D6w load word: fvar[fvar2]
 
-ZAX
+ZAX Example
 
 ```zax
-ld hl,frame_w[idxFrame]
+ld hl,fvar[fvar2]
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-LOAD_WORD
+LOAD_BASE_FVAR fvar
+LOAD_IDX_FVAR fvar
+CALC_EA
+LOAD_RP_EA DE
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
-ld l,(ix+disp)
-ld h,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld l,(ix+fvar)
+ld h,(ix+fvar+1)
 add hl,de
 ld e,(hl)
 inc hl
@@ -1410,102 +1412,30 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### D7w store word: global[idxG]
+#### D7w store word: glob[glob]
 
-ZAX
+ZAX Example
 
 ```zax
-ld glob_w[idxG],hl
+ld glob[glob],hl
 ```
 
 Steps
 
 ```
-BASE_GLOBAL glob_w
-IDX_GLOBAL const
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
+LOAD_BASE_GLOB glob
+LOAD_IDX_GLOB const
+CALC_EA
+SWAP_HL_SAVED
+SWAP_HL_DE
+STORE_RP_EA DE
+SWAP_HL_DE
 ```
 
 ASM
 
 ```asm
-ld de,glob_w
-ld hl,(const)
-add hl,de
-ex (sp),hl
-ex de,hl
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-```
-
-#### D8w store word: global[idxFrame]
-
-ZAX
-
-```zax
-ld glob_w[idxFrame],hl
-```
-
-Steps
-
-```
-BASE_GLOBAL glob_w
-IDX_FRAME disp
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
-```
-
-ASM
-
-```asm
-ld de,glob_w
-ld l,(ix+disp)
-ld h,(ix+disp+1)
-add hl,de
-ex (sp),hl
-ex de,hl
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-```
-
-#### D9w store word: frame[idxG]
-
-ZAX
-
-```zax
-ld frame_w[idxG],hl
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
-```
-
-ASM
-
-```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld de,glob
 ld hl,(const)
 add hl,de
 ex (sp),hl
@@ -1517,33 +1447,32 @@ ld (hl),d
 ex de,hl
 ```
 
-#### D10w store word: frame[idxFrame]
+#### D8w store word: glob[fvar2]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_w[idxFrame],hl
+ld glob[fvar2],hl
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
+LOAD_BASE_GLOB glob
+LOAD_IDX_FVAR fvar
+CALC_EA
+SWAP_HL_SAVED
+SWAP_HL_DE
+STORE_RP_EA DE
+SWAP_HL_DE
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
-ld l,(ix+disp)
-ld h,(ix+disp+1)
+ld de,glob
+ld l,(ix+fvar)
+ld h,(ix+fvar+1)
 add hl,de
 ex (sp),hl
 ex de,hl
@@ -1554,31 +1483,31 @@ ld (hl),d
 ex de,hl
 ```
 
-#### D11w store word: frame[idxG]
+#### D9w store word: fvar[glob]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_w[idxG],hl
+ld fvar[glob],hl
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
+LOAD_BASE_FVAR fvar
+LOAD_IDX_GLOB const
+CALC_EA
+SWAP_HL_SAVED
+SWAP_HL_DE
+STORE_RP_EA DE
+SWAP_HL_DE
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld hl,(const)
 add hl,de
 ex (sp),hl
@@ -1590,33 +1519,106 @@ ld (hl),d
 ex de,hl
 ```
 
-#### D12w store word: frame[idxFrame]
+#### D10w store word: fvar[fvar2]
 
-ZAX
+ZAX Example
 
 ```zax
-ld frame_w[idxFrame],hl
+ld fvar[fvar2],hl
 ```
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
+LOAD_BASE_FVAR fvar
+LOAD_IDX_FVAR fvar
+CALC_EA
+SWAP_HL_SAVED
+SWAP_HL_DE
+STORE_RP_EA DE
+SWAP_HL_DE
 ```
 
 ASM
 
 ```asm
-ld e,(ix+disp)
-ld d,(ix+disp+1)
-ld l,(ix+disp)
-ld h,(ix+disp+1)
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld l,(ix+fvar)
+ld h,(ix+fvar+1)
+add hl,de
+ex (sp),hl
+ex de,hl
+ex de,hl
+ld (hl),e
+inc hl
+ld (hl),d
+ex de,hl
+```
+
+#### D11w store word: fvar[glob]
+
+ZAX Example
+
+```zax
+ld fvar[glob],hl
+```
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_GLOB const
+CALC_EA
+SWAP_HL_SAVED
+SWAP_HL_DE
+STORE_RP_EA DE
+SWAP_HL_DE
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld hl,(const)
+add hl,de
+ex (sp),hl
+ex de,hl
+ex de,hl
+ld (hl),e
+inc hl
+ld (hl),d
+ex de,hl
+```
+
+#### D12w store word: fvar[fvar2]
+
+ZAX Example
+
+```zax
+ld fvar[fvar2],hl
+```
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_FVAR fvar
+CALC_EA
+SWAP_HL_SAVED
+SWAP_HL_DE
+STORE_RP_EA DE
+SWAP_HL_DE
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld l,(ix+fvar)
+ld h,(ix+fvar+1)
 add hl,de
 ex (sp),hl
 ex de,hl
@@ -1631,9 +1633,9 @@ ex de,hl
 
 Record field access is the const-index case with `const = field_offset`.
 
-Example load word field from a frame record:
+Example load word field from a fvar record:
 
-ZAX
+ZAX Example
 
 ```zax
 ld hl,rec.field
@@ -1642,40 +1644,40 @@ ld hl,rec.field
 Steps
 
 ```
-FRAME_WORD_LOAD dispRec+field_offset
+LOAD_RP_FVAR DE fvarRec+field_offset
 ```
 
 ASM
 
 ```asm
 ex de,hl
-ld e,(ix+dispRec+field_offset)
-ld d,(ix+dispRec+field_offset+1)
+ld e,(ix+fvarRec+field_offset)
+ld d,(ix+fvarRec+field_offset+1)
 ex de,hl
 ```
 
-Example store byte field into a frame record:
+Example store reg field into a fvar record:
 
-ZAX
+ZAX Example
 
 ```zax
-ld rec.field,a
+ld rec.field,reg
 ```
 
 Steps
 
 ```
-FRAME_BYTE_STORE dispRec+field_offset
+STORE_REG_FVAR A fvarRec+field_offset
 ```
 
 ASM
 
 ```asm
-ld (ix+dispRec+field_offset),a
+ld (ix+fvarRec+field_offset),reg
 ```
 
 ## 4. Notes
 
 - Per-instruction preservation: only the destination register (loads) or value register (`A`/`HL` for stores) may change; all scratch registers are saved/restored in the pipelines above.
-- IX is never scratch; frame accesses use explicit displacements.
-- Pipelines above cover the full matrix of base (global/local/arg),index source (const,reg8,memory global/frame),width (byte/word),and operation (load/store). Additional register-pair shuffles can be composed from the same steps if a lowering conflict arises.
+- IX is never scratch; fvar accesses use explicit displacements.
+- Pipelines above cover the full matrix of base (glob/local/arg),index source (const,reg,memory glob/fvar),width (byte/word),and operation (load/store). Additional register-pair shuffles can be composed from the same steps if a lowering conflict arises.
