@@ -23,9 +23,9 @@ SWAP_HL_SAVED               ex (sp),hl
 ### 1.2 Base loaders (place base in DE)
 
 ```
-LOAD_BASE_GLOB glob         ld de,(glob)              dest=DE
+LOAD_BASE_GLOB glob         ld de,glob              
 
-LOAD_BASE_FVAR fvar         ld e,(ix+fvar)            dest=DE
+LOAD_BASE_FVAR fvar         ld e,(ix+fvar)            
                             ld d,(ix+fvar+1)
 ```
 
@@ -78,17 +78,30 @@ LOAD_REG_REG dreg sreg      ld dreg,sreg
 ### 1.6 Accessors (word)
 
 ```
-LOAD_RP_EA rp               ld lo(rp),(hl)
+LOAD_RP_EA rp               ld e,(hl)
                             inc hl
-                            ld hi(rp),(hl)
+                            ld d,(hl)
+                            ld lo(rp),e
+                            ld hi(rp),d
 
-STORE_RP_EA rp              ld (hl),lo(rp)
+STORE_RP_EA rp              ld e,lo(rp)              ; rp = DE or BC, HL = EA
+                            ld d,hi(rp)
+                            ld (hl),e
                             inc hl
-                            ld (hl),hi(rp)
+                            ld (hl),d
 
-LOAD_RP_GLOB rp glob        ld rp,(glob)
+STORE_RP_EA HL              pop de                   ; value from stack (SW-HL)
+                            ld (hl),e
+                            inc hl
+                            ld (hl),d
 
-STORE_RP_GLOB rp glob       ld (glob),rp
+LOAD_RP_GLOB rp glob        ld hl,(glob)
+                            ld lo(rp),l
+                            ld hi(rp),h
+
+STORE_RP_GLOB rp glob       ld l,lo(rp)
+                            ld h,hi(rp)
+                            ld (glob),hl
 
 LOAD_RP_FVAR rp fvar        ld lo(rp),(ix+fvar)
                             ld hi(rp),(ix+fvar+1)
@@ -156,9 +169,9 @@ These templates define how to preserve HL/DE while materializing an indexed addr
   SAVE_DE              ; if EA/STORE borrow DE
   SAVE_HL              ; HL used for EA
   EA_*                 ; EA in HL
+  STORE_REG_EA vreg    ; write byte
   RESTORE_HL           ; restore original H/L (source byte back)
   RESTORE_DE
-  STORE_REG_EA vreg    ; write byte
   ```
 
 EA\_\* is any of the byte-width EA builders above (size = 1). Word-sized store templates will follow in Section 3.
@@ -308,8 +321,10 @@ ASM
 
 ```asm
 ld de,glob
-ld l,(ix+fvar)
-ld h,(ix+fvar+1)
+ex de,hl
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ex de,hl
 add hl,de
 ```
 
@@ -330,8 +345,10 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld l,(ix+fvar2)
-ld h,(ix+fvar2+1)
+ex de,hl
+ld e,(ix+fvar2)
+ld d,(ix+fvar2+1)
+ex de,hl
 add hl,de
 ```
 
@@ -584,8 +601,10 @@ ASM
 
 ```asm
 ld de,glob
-ld l,(ix+fvar)
-ld h,(ix+fvar+1)
+ex de,hl
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ex de,hl
 add hl,hl
 add hl,de
 ```
@@ -607,8 +626,10 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld l,(ix+fvar2)
-ld h,(ix+fvar2+1)
+ex de,hl
+ld e,(ix+fvar2)
+ld d,(ix+fvar2+1)
+ex de,hl
 add hl,hl
 add hl,de
 ```
@@ -665,4 +686,3 @@ add hl,de
 - EA/EAW builders may borrow HL/DE internally; the templates already save/restore HL/DE to protect caller state. Do not add extra saves outside the templates.
 - Per-instruction preservation: the only registers allowed to change are the destination register (load) or the value register/pair (store). All other registers must be restored by the end of the pipeline.
 - IX is the frame pointer. Never repurpose IX as a scratch register; keep all scratch and EA work to HL/DE with proper saves/restores.
-
