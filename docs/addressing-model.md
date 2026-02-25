@@ -147,7 +147,7 @@ ASM
 ld reg,(ix+fvar)
 ```
 
-#### A4 store reg to glob
+#### A3 store reg to glob
 
 ZAX Example
 
@@ -167,7 +167,7 @@ ASM
 ld (glob),reg
 ```
 
-#### A5 store reg to fvar
+#### A4 store reg to fvar
 
 ZAX Example
 
@@ -186,6 +186,8 @@ ASM
 ```asm
 ld (ix+fvar),reg
 ```
+
+### B. Indexed by const
 
 #### B1 load reg from glob[const]
 
@@ -233,7 +235,7 @@ ASM
 ld reg,(ix+fvar+const)
 ```
 
-#### B4 store reg in glob[const]
+#### B3 store reg in glob[const]
 
 ZAX Example
 
@@ -259,7 +261,7 @@ add hl,de
 ld (hl),reg
 ```
 
-#### B5 store reg in fvar[const]
+#### B4 store reg in fvar[const]
 
 ZAX Example
 
@@ -278,6 +280,8 @@ ASM
 ```asm
 ld (ix+fvar+const),reg
 ```
+
+### C. Indexed by register (8-bit index in `r8`)
 
 #### C1 load reg glob[ireg]
 
@@ -444,6 +448,8 @@ ld l,ireg
 add hl,de
 ld (hl),reg
 ```
+
+### D. Indexed by variable in memory (typed address kept in memory)
 
 #### D1 load reg: glob1[glob2]
 
@@ -816,7 +822,7 @@ ld d,(ix+fvar+1)
 ex de,hl
 ```
 
-#### A4w store word to glob
+#### A3w store word to glob
 
 ZAX Example
 
@@ -836,7 +842,7 @@ ASM
 ld (glob),hl
 ```
 
-#### A5w store word to fvar
+#### A4w store word to fvar
 
 ZAX Example
 
@@ -916,7 +922,7 @@ ld d,(ix+fvar+const*2+1)
 ex de,hl
 ```
 
-#### B4w store word: glob[const]
+#### B3w store word: glob[const]
 
 ZAX Example
 
@@ -951,7 +957,7 @@ ld (hl),d
 ex de,hl
 ```
 
-#### B5w store word: fvar[const]
+#### B4w store word: fvar[const]
 
 ZAX Example
 
@@ -974,7 +980,7 @@ ld (ix+fvar+const*2+1),d
 ex de,hl
 ```
 
-#### B6w store word: fvar[const]
+#### B5w store word: fvar[const]
 
 ZAX Example
 
@@ -1062,7 +1068,7 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### C4w store word: glob[reg]
+#### C3w store word: glob[reg]
 
 ZAX Example
 
@@ -1100,7 +1106,7 @@ ex de,hl
 ex de,hl
 ```
 
-#### C5w store word: fvar[ireg]
+#### C4w store word: fvar[ireg]
 
 ZAX Example
 
