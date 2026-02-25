@@ -107,7 +107,9 @@ For each shape:
 
 ### A. Scalars (no index)
 
-#### A1 load reg from glob
+#### Loads
+
+##### A1 load reg from glob
 
 ZAX Example
 
@@ -127,7 +129,7 @@ ASM
 ld reg,(glob)
 ```
 
-#### A2 load reg from fvar
+##### A2 load reg from fvar
 
 ZAX Example
 
@@ -147,7 +149,9 @@ ASM
 ld reg,(ix+fvar)
 ```
 
-#### A3 store reg to glob
+#### Stores
+
+##### A3 store reg to glob
 
 ZAX Example
 
@@ -167,7 +171,7 @@ ASM
 ld (glob),reg
 ```
 
-#### A4 store reg to fvar
+##### A4 store reg to fvar
 
 ZAX Example
 
@@ -189,7 +193,9 @@ ld (ix+fvar),reg
 
 ### B. Indexed by const
 
-#### B1 load reg from glob[const]
+#### Loads
+
+##### B1 load reg from glob[const]
 
 ZAX Example
 
@@ -215,7 +221,7 @@ add hl,de
 ld reg,(hl)
 ```
 
-#### B2 load reg from fvar[const]
+##### B2 load reg from fvar[const]
 
 ZAX Example
 
@@ -235,7 +241,9 @@ ASM
 ld reg,(ix+fvar+const)
 ```
 
-#### B3 store reg in glob[const]
+#### Stores
+
+##### B3 store reg in glob[const]
 
 ZAX Example
 
@@ -261,7 +269,7 @@ add hl,de
 ld (hl),reg
 ```
 
-#### B4 store reg in fvar[const]
+##### B4 store reg in fvar[const]
 
 ZAX Example
 
@@ -283,7 +291,9 @@ ld (ix+fvar+const),reg
 
 ### C. Indexed by register (8-bit index in `r8`)
 
-#### C1 load reg glob[ireg]
+#### Loads
+
+##### C1 load reg glob[ireg]
 
 ZAX Example
 
@@ -310,7 +320,7 @@ add hl,de
 ld reg,(hl)
 ```
 
-#### C2 load reg from fvar[ireg]
+##### C2 load reg from fvar[ireg]
 
 ZAX Example
 
@@ -338,7 +348,7 @@ add hl,de
 ld reg,(hl)
 ```
 
-#### C3 load reg from fvar[ireg]
+##### C3 load reg from fvar[ireg]
 
 ZAX Example
 
@@ -366,7 +376,9 @@ add hl,de
 ld reg,(hl)
 ```
 
-#### C4 store reg in glob[ireg]
+#### Stores
+
+##### C4 store reg in glob[ireg]
 
 ZAX Example
 
@@ -393,7 +405,7 @@ add hl,de
 ld (hl),reg
 ```
 
-#### C5 store reg in fvar[ireg]
+##### C5 store reg in fvar[ireg]
 
 ZAX Example
 
@@ -421,7 +433,7 @@ add hl,de
 ld (hl),reg
 ```
 
-#### C6 store reg in fvar[ireg]
+##### C6 store reg in fvar[ireg]
 
 ZAX Example
 
@@ -448,10 +460,14 @@ ld l,ireg
 add hl,de
 ld (hl),reg
 ```
+
+#### Stores
 
 ### D. Indexed by variable in memory (typed address kept in memory)
 
-#### D1 load reg: glob1[glob2]
+#### Loads
+
+##### D1 load reg: glob1[glob2]
 
 ZAX Example
 
@@ -477,7 +493,7 @@ add hl,de
 ld reg,(hl)
 ```
 
-#### D2 load reg from glob[fvar]
+##### D2 load reg from glob[fvar]
 
 ZAX Example
 
@@ -504,7 +520,7 @@ add hl,de
 ld reg,(hl)
 ```
 
-#### D3 load reg from fvar[glob]
+##### D3 load reg from fvar[glob]
 
 ZAX Example
 
@@ -531,7 +547,7 @@ add hl,de
 ld reg,(hl)
 ```
 
-#### D4 load reg from fvar[fvar2]
+##### D4 load reg from fvar[fvar2]
 
 ZAX Example
 
@@ -559,7 +575,7 @@ add hl,de
 ld reg,(hl)
 ```
 
-#### D5 load reg from fvar[glob]
+##### D5 load reg from fvar[glob]
 
 ZAX Example
 
@@ -586,7 +602,7 @@ add hl,de
 ld reg,(hl)
 ```
 
-#### D6 load reg from fvar1[fvar2]
+##### D6 load reg from fvar1[fvar2]
 
 ZAX Example
 
@@ -614,7 +630,9 @@ add hl,de
 ld reg,(hl)
 ```
 
-#### D7 store reg in glob1[glob2]
+#### Stores
+
+##### D7 store reg in glob1[glob2]
 
 ZAX Example
 
@@ -640,7 +658,7 @@ add hl,de
 ld (hl),reg
 ```
 
-#### D8 store reg in glob[fvar]
+##### D8 store reg in glob[fvar]
 
 ZAX Example
 
@@ -667,7 +685,7 @@ add hl,de
 ld (hl),reg
 ```
 
-#### D9 store reg in fvar[glob]
+##### D9 store reg in fvar[glob]
 
 ZAX Example
 
@@ -694,7 +712,7 @@ add hl,de
 ld (hl),reg
 ```
 
-#### D10 store reg in fvar1[fvar2]
+##### D10 store reg in fvar1[fvar2]
 
 ZAX Example
 
@@ -722,7 +740,7 @@ add hl,de
 ld (hl),reg
 ```
 
-#### D11 store reg in fvar[glob]
+##### D11 store reg in fvar[glob]
 
 ZAX Example
 
@@ -749,7 +767,7 @@ add hl,de
 ld (hl),reg
 ```
 
-#### D12 store reg in fvar1[fvar2]
+##### D12 store reg in fvar1[fvar2]
 
 ZAX Example
 
