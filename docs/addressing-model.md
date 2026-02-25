@@ -109,7 +109,7 @@ For each shape:
 
 ### Load templates (8-bit only)
 
-These templates define how to preserve HL/DE while materializing an indexed address and loading one byte. Pick the template by destination register; plug any EA builder (`EA_*`) in the slot noted below. EA_* may borrow HL/DE; the saves/restores here provide the protection.
+These templates define how to preserve HL/DE while materializing an indexed address and loading one byte. Pick the template by destination register; plug any EA builder (`EA_*`) in the slot noted below. EA\_\* may borrow HL/DE; the saves/restores here provide the protection.
 
 - **L-ABC (dest in A/B/C)** — protected path even for non-overlapping dests
 
@@ -148,7 +148,7 @@ These templates define how to preserve HL/DE while materializing an indexed addr
 
 ### Store templates (8-bit only)
 
-These templates define how to preserve HL/DE while materializing an indexed address and storing one byte held in `vreg`. A single template works for any source register; EA_* may borrow HL/DE, so we save/restore around it.
+These templates define how to preserve HL/DE while materializing an indexed address and storing one byte held in `vreg`. A single template works for any source register; EA\_\* may borrow HL/DE, so we save/restore around it.
 
 - **S-ANY (vreg in any reg8)** — non-destructive store
 
@@ -161,13 +161,15 @@ These templates define how to preserve HL/DE while materializing an indexed addr
   STORE_REG_EA vreg    ; write byte
   ```
 
-EA_* is any of the byte-width EA builders above (size = 1). Word-sized store templates will follow in Section 3.
+EA\_\* is any of the byte-width EA builders above (size = 1). Word-sized store templates will follow in Section 3.
 
 ### EA builders (byte width, HL=EA on exit)
 
-Element size = 1. HL returns the effective address; DE must be preserved. EA_* borrows HL/DE; callers save/restore as shown in the load/store templates.
+Element size = 1. HL returns the effective address; DE must be preserved. EA\_\* borrows HL/DE; callers save/restore as shown in the load/store templates.
 
 #### EA_GLOB_CONST (base=glob, idx=const)
+
+ZAX example: `ld reg, glob[const]`
 
 Steps
 
@@ -186,6 +188,8 @@ add hl,de
 ```
 
 #### EA_GLOB_REG (base=glob, idx=reg8)
+
+ZAX example: `ld reg, glob[ireg]`
 
 Steps
 
@@ -206,6 +210,8 @@ add hl,de
 
 #### EA_GLOB_RP (base=glob, idx=reg16)
 
+ZAX example: `ld reg, glob[rp]`
+
 Steps
 
 ```
@@ -223,6 +229,8 @@ add hl,de
 ```
 
 #### EA_FVAR_CONST (base=fvar, idx=const)
+
+ZAX example: `ld reg, fvar[const]`
 
 Steps
 
@@ -242,6 +250,8 @@ add hl,de
 ```
 
 #### EA_FVAR_REG (base=fvar, idx=reg8)
+
+ZAX example: `ld reg, fvar[ireg]`
 
 Steps
 
@@ -263,6 +273,8 @@ add hl,de
 
 #### EA_FVAR_RP (base=fvar, idx=reg16)
 
+ZAX example: `ld reg, fvar[rp]`
+
 Steps
 
 ```
@@ -282,6 +294,8 @@ add hl,de
 
 #### EA_GLOB_FVAR (base=glob, idx=word at fvar)
 
+ZAX example: `ld reg, glob[fvar]`
+
 Steps
 
 ```
@@ -300,6 +314,8 @@ add hl,de
 ```
 
 #### EA_FVAR_FVAR (base=fvar, idx=word at fvar2)
+
+ZAX example: `ld reg, fvar[fvar2]`
 
 Steps
 
@@ -321,6 +337,8 @@ add hl,de
 
 #### EA_FVAR_GLOB (base=fvar, idx=word at glob)
 
+ZAX example: `ld reg, fvar[glob]`
+
 Steps
 
 ```
@@ -340,6 +358,8 @@ add hl,de
 
 #### EA_GLOB_GLOB (base=glob1, idx=word at glob2)
 
+ZAX example: `ld reg, glob1[glob2]`
+
 Steps
 
 ```
@@ -354,696 +374,6 @@ ASM
 ld de,glob1
 ld hl,(glob2)
 add hl,de
-```
-
-### A. Scalars (no index)
-
-#### Loads
-
-##### A1 load reg from glob
-
-ZAX Example
-
-```zax
-ld reg,glob
-```
-
-Steps
-
-```
-LOAD_REG_GLOB reg glob
-```
-
-ASM
-
-```asm
-ld reg,(glob)
-```
-
-##### A2 load reg from fvar
-
-ZAX Example
-
-```zax
-ld reg,fvar
-```
-
-Steps
-
-```
-LOAD_REG_FVAR reg fvar
-```
-
-ASM
-
-```asm
-ld reg,(ix+fvar)
-```
-
-#### Stores
-
-##### A3 store reg to glob
-
-ZAX Example
-
-```zax
-ld glob,reg
-```
-
-Steps
-
-```
-STORE_REG_GLOB reg glob
-```
-
-ASM
-
-```asm
-ld (glob),reg
-```
-
-##### A4 store reg to fvar
-
-ZAX Example
-
-```zax
-ld fvar,reg
-```
-
-Steps
-
-```
-STORE_REG_FVAR reg fvar
-```
-
-ASM
-
-```asm
-ld (ix+fvar),reg
-```
-
-### B. Indexed by const
-
-#### Loads
-
-##### B1 load reg from glob[const]
-
-ZAX Example
-
-```zax
-ld reg,glob[const]
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob
-LOAD_IDX_CONST const
-CALC_EA
-LOAD_REG_EA reg
-```
-
-ASM
-
-```asm
-ld de,glob
-ld hl,const
-add hl,de
-ld reg,(hl)
-```
-
-##### B2 load reg from fvar[const]
-
-ZAX Example
-
-```zax
-ld reg,fvar[const]
-```
-
-Steps
-
-```
-LOAD_REG_FVAR reg fvar+const
-```
-
-ASM
-
-```asm
-ld reg,(ix+fvar+const)
-```
-
-#### Stores
-
-##### B3 store reg in glob[const]
-
-ZAX Example
-
-```zax
-ld glob[const],reg
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob
-LOAD_IDX_CONST const
-CALC_EA
-STORE_REG_EA reg
-```
-
-ASM
-
-```asm
-ld de,glob
-ld hl,const
-add hl,de
-ld (hl),reg
-```
-
-##### B4 store reg in fvar[const]
-
-ZAX Example
-
-```zax
-ld fvar[const],reg
-```
-
-Steps
-
-```
-STORE_REG_FVAR reg fvar+const
-```
-
-ASM
-
-```asm
-ld (ix+fvar+const),reg
-```
-
-### C. Indexed by register (8-bit index in `r8`)
-
-#### Loads
-
-##### C1 load reg glob[ireg]
-
-ZAX Example
-
-```zax
-ld reg,glob[ireg]
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob
-LOAD_IDX_REG ireg
-CALC_EA
-LOAD_REG_EA reg
-```
-
-ASM
-
-```asm
-ld de,glob
-ld h,0
-ld l,ireg
-add hl,de
-ld reg,(hl)
-```
-
-##### C2 load reg from fvar[ireg]
-
-ZAX Example
-
-```zax
-ld reg,fvar[ireg]
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_REG ireg
-CALC_EA
-LOAD_REG_EA reg
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld h,0
-ld l,ireg
-add hl,de
-ld reg,(hl)
-```
-
-##### C3 load reg from fvar[ireg]
-
-ZAX Example
-
-```zax
-ld reg,fvar[ireg]
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_REG ireg
-CALC_EA
-LOAD_REG_EA reg
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld h,0
-ld l,ireg
-add hl,de
-ld reg,(hl)
-```
-
-#### Stores
-
-##### C4 store reg in glob[ireg]
-
-ZAX Example
-
-```zax
-ld glob[ireg],reg
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob
-LOAD_IDX_REG ireg
-CALC_EA
-STORE_REG_EA reg
-```
-
-ASM
-
-```asm
-ld de,glob
-ld h,0
-ld l,ireg
-add hl,de
-ld (hl),reg
-```
-
-##### C5 store reg in fvar[ireg]
-
-ZAX Example
-
-```zax
-ld fvar[ireg],reg
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_REG ireg
-CALC_EA
-STORE_REG_EA reg
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld h,0
-ld l,ireg
-add hl,de
-ld (hl),reg
-```
-
-##### C6 store reg in fvar[ireg]
-
-ZAX Example
-
-```zax
-ld fvar[ireg],reg
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_REG ireg
-CALC_EA
-STORE_REG_EA reg
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld h,0
-ld l,ireg
-add hl,de
-ld (hl),reg
-```
-
-#### Stores
-
-### D. Indexed by variable in memory (typed address kept in memory)
-
-#### Loads
-
-##### D1 load reg: glob1[glob2]
-
-ZAX Example
-
-```zax
-ld reg,glob1[glob2]
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob1
-LOAD_IDX_GLOB glob2
-CALC_EA
-LOAD_REG_EA reg
-```
-
-ASM
-
-```asm
-ld de,glob1
-ld hl,(glob2)
-add hl,de
-ld reg,(hl)
-```
-
-##### D2 load reg from glob[fvar]
-
-ZAX Example
-
-```zax
-ld reg,glob[fvar]
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob
-LOAD_IDX_FVAR fvar
-CALC_EA
-LOAD_REG_EA reg
-```
-
-ASM
-
-```asm
-ld de,glob
-ld l,(ix+fvar)
-ld h,(ix+fvar+1)
-add hl,de
-ld reg,(hl)
-```
-
-##### D3 load reg from fvar[glob]
-
-ZAX Example
-
-```zax
-ld reg,fvar[glob]
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB glob
-CALC_EA
-LOAD_REG_EA reg
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld hl,(glob)
-add hl,de
-ld reg,(hl)
-```
-
-##### D4 load reg from fvar[fvar2]
-
-ZAX Example
-
-```zax
-ld reg,fvar[fvar2]
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_FVAR fvar2
-CALC_EA
-LOAD_REG_EA reg
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld l,(ix+fvar2)
-ld h,(ix+fvar2+1)
-add hl,de
-ld reg,(hl)
-```
-
-##### D5 load reg from fvar[glob]
-
-ZAX Example
-
-```zax
-ld reg,fvar[glob]
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB glob
-CALC_EA
-LOAD_REG_EA reg
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld hl,(glob)
-add hl,de
-ld reg,(hl)
-```
-
-##### D6 load reg from fvar1[fvar2]
-
-ZAX Example
-
-```zax
-ld reg,fvar1[fvar2]
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar1
-LOAD_IDX_FVAR fvar2
-CALC_EA
-LOAD_REG_EA reg
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar1)
-ld d,(ix+fvar1+1)
-ld l,(ix+fvar2)
-ld h,(ix+fvar2+1)
-add hl,de
-ld reg,(hl)
-```
-
-#### Stores
-
-##### D7 store reg in glob1[glob2]
-
-ZAX Example
-
-```zax
-ld glob1[glob2],reg
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob1
-LOAD_IDX_GLOB glob2
-CALC_EA
-STORE_REG_EA reg
-```
-
-ASM
-
-```asm
-ld de,glob1
-ld hl,(glob2)
-add hl,de
-ld (hl),reg
-```
-
-##### D8 store reg in glob[fvar]
-
-ZAX Example
-
-```zax
-ld glob[fvar],reg
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob
-LOAD_IDX_FVAR fvar
-CALC_EA
-STORE_REG_EA reg
-```
-
-ASM
-
-```asm
-ld de,glob
-ld l,(ix+fvar)
-ld h,(ix+fvar+1)
-add hl,de
-ld (hl),reg
-```
-
-##### D9 store reg in fvar[glob]
-
-ZAX Example
-
-```zax
-ld fvar[glob],reg
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB glob
-CALC_EA
-STORE_REG_EA reg
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld hl,(glob)
-add hl,de
-ld (hl),reg
-```
-
-##### D10 store reg in fvar1[fvar2]
-
-ZAX Example
-
-```zax
-ld fvar1[fvar2],reg
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar1
-LOAD_IDX_FVAR fvar2
-CALC_EA
-STORE_REG_EA reg
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar1)
-ld d,(ix+fvar1+1)
-ld l,(ix+fvar2)
-ld h,(ix+fvar2+1)
-add hl,de
-ld (hl),reg
-```
-
-##### D11 store reg in fvar[glob]
-
-ZAX Example
-
-```zax
-ld fvar[glob],reg
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB glob
-CALC_EA
-STORE_REG_EA reg
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld hl,(glob)
-add hl,de
-ld (hl),reg
-```
-
-##### D12 store reg in fvar1[fvar2]
-
-ZAX Example
-
-```zax
-ld fvar1[fvar2],reg
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar1
-LOAD_IDX_FVAR fvar2
-CALC_EA
-STORE_REG_EA reg
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar1)
-ld d,(ix+fvar1+1)
-ld l,(ix+fvar2)
-ld h,(ix+fvar2+1)
-add hl,de
-ld (hl),reg
 ```
 
 ## 3. Pipelines (word)
