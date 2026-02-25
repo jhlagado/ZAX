@@ -380,13 +380,13 @@ add hl,de
 
 ### Load templates (16-bit only)
 
-These templates define how to preserve HL/DE while materializing an indexed address and loading one word. EA_W\* returns EA in HL and may borrow HL/DE; saves/restores here provide the protection.
+These templates define how to preserve HL/DE while materializing an indexed address and loading one word. EAW_* returns EA in HL and may borrow HL/DE; saves/restores here provide the protection.
 
 - **LW-HL (dest HL)** — preferred channel
 
   ```
   SAVE_DE
-  EA_W*                ; EA in HL (scale by 2 where needed)
+  EAW_*                ; EA in HL (scale by 2 where needed)
   LOAD_RP_EA HL        ; load into HL
   RESTORE_DE
   ```
@@ -395,7 +395,7 @@ These templates define how to preserve HL/DE while materializing an indexed addr
 
   ```
   SAVE_HL
-  EA_W*                ; EA in HL
+  EAW_*                ; EA in HL
   LOAD_RP_EA HL        ; word in HL
   SWAP_HL_DE           ; move result into DE
   RESTORE_HL           ; restore caller HL
@@ -406,7 +406,7 @@ These templates define how to preserve HL/DE while materializing an indexed addr
   ```
   SAVE_DE
   SAVE_HL
-  EA_W*                ; EA in HL
+  EAW_*                ; EA in HL
   LOAD_RP_EA HL        ; word in HL
   LOAD_REG_REG C L     ; move lo byte
   LOAD_REG_REG B H     ; move hi byte
@@ -414,24 +414,24 @@ These templates define how to preserve HL/DE while materializing an indexed addr
   RESTORE_DE           ; restore caller DE
   ```
 
-EA_W\* denotes any word-width EA builder (below).
+EAW_* denotes any word-width EA builder (below).
 
 ### Store templates (16-bit only)
 
-Non-destructive store of a word in `vpair` to EA_W\*.
+Non-destructive store of a word in `vpair` to EAW_*.
 
 - **SW-ANY (vpair HL/DE/BC)** — unified pattern
 
   ```
   SAVE_DE
   SAVE_HL
-  EA_W*                ; EA in HL
+  EAW_*                ; EA in HL
   RESTORE_HL           ; restore caller HL
   RESTORE_DE           ; restore caller DE
   STORE_RP_EA vpair    ; write word (vpair may be HL/DE/BC)
   ```
 
-EA_W* is any word-width EA builder (size = 2). Scaling is baked into EA_W*.
+EAW_* is any word-width EA builder (size = 2). Scaling is baked into EAW_*.
 
 ### EA builders (word width, HL=EA on exit, size = 2)
 
@@ -655,3 +655,14 @@ ld hl,(glob2)
 add hl,hl
 add hl,de
 ```
+
+## Notes / Appendix
+
+- Choose an EA/EAW builder based on the base and index source. If the index is a constant, fold it into the frame displacement (`fvar+const`) when that keeps the EA simple.
+- Choose a load/store template based on the destination (for loads) or source register (for stores):
+  - Byte: L-ABC, L-HL, L-DE, S-ANY
+  - Word: LW-HL, LW-DE, LW-BC, SW-ANY
+- EA/EAW builders may borrow HL/DE internally; the templates already save/restore HL/DE to protect caller state. Do not add extra saves outside the templates.
+- Per-instruction preservation: the only registers allowed to change are the destination register (load) or the value register/pair (store). All other registers must be restored by the end of the pipeline.
+- IX is the frame pointer. Never repurpose IX as a scratch register; keep all scratch and EA work to HL/DE with proper saves/restores.
+
