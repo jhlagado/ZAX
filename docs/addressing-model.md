@@ -71,6 +71,8 @@ LOAD_REG_FVAR reg fvar      ld reg,(ix+fvar)
 
 STORE_REG_FVAR reg fvar     ld (ix+fvar),reg
 
+LOAD_REG_REG dreg sreg      ld dreg,sreg
+
 ```
 
 ### 1.6 Accessors (word)
@@ -104,6 +106,255 @@ For each shape:
 - ZAX: the source line.
 - Steps: vertical list of step names with parameters.
 - ASM: exact codegen (one instruction per line).
+
+### Load templates (8-bit only)
+
+These templates define how to preserve HL/DE while materializing an indexed address and loading one byte. Pick the template by destination register; plug any EA builder (`EA_*`) in the slot noted below.
+
+- **L-ABC (dest in A/B/C)** — simplest path
+
+  ```
+  SAVE_DE              ; DE may be borrowed by EA/LOAD
+  SAVE_HL              ; protect both H/L
+  EA_*                 ; result EA in HL (may borrow HL/DE internally)
+  LOAD_REG_EA dest     ; direct load into dest
+  RESTORE_HL           ; restore original H/L
+  RESTORE_DE
+  ```
+
+- **L-HL (dest in H or L)** — protect the non-dest half of HL
+
+  ```
+  SAVE_DE              ; DE may be borrowed by EA/LOAD
+  SAVE_HL              ; protect both H/L
+  EA_*                 ; EA in HL
+  LOAD_REG_EA E        ; temp byte in E
+  RESTORE_HL           ; restore original H/L
+  LOAD_REG_REG dest E  ; dest = H or L
+  RESTORE_DE
+  ```
+
+- **L-DE (dest in D or E)** — protect DE while using HL as EA
+
+  ```
+  SAVE_HL              ; HL will hold EA
+  SAVE_DE              ; protect D/E pair
+  EA_*                 ; EA in HL
+  LOAD_REG_EA L        ; temp byte in L
+  RESTORE_DE           ; restore original D/E
+  LOAD_REG_REG dest L  ; dest = D or E
+  RESTORE_HL
+  ```
+
+### Store templates (8-bit only)
+
+These templates define how to preserve HL/DE while materializing an indexed address and storing one byte held in `vreg`. One unified template works for any source register; plug any EA builder (`EA_*`) in the slot.
+
+- **S-ANY (vreg in any reg8)** — non-destructive store
+
+  ```
+  SAVE_DE              ; if EA/STORE borrow DE
+  SAVE_HL              ; HL used for EA
+  EA_*                 ; EA in HL
+  RESTORE_HL           ; restore original H/L (source byte back)
+  RESTORE_DE
+  STORE_REG_EA vreg    ; write byte
+  ```
+
+EA_* is any of the byte-width EA builders above (size = 1). Word-sized store templates will follow in Section 3.
+
+### EA builders (byte width, HL=EA on exit)
+
+Element size = 1. HL returns the effective address; DE must be preserved.
+
+#### EA_GLOB_CONST (base=glob, idx=const)
+
+Steps
+
+```
+LOAD_BASE_GLOB glob
+LOAD_IDX_CONST const
+CALC_EA
+```
+
+ASM
+
+```asm
+ld de,glob
+ld hl,const
+add hl,de
+```
+
+#### EA_GLOB_REG (base=glob, idx=reg8)
+
+Steps
+
+```
+LOAD_BASE_GLOB glob
+LOAD_IDX_REG reg8
+CALC_EA
+```
+
+ASM
+
+```asm
+ld de,glob
+ld h,0
+ld l,reg8
+add hl,de
+```
+
+#### EA_GLOB_RP (base=glob, idx=reg16)
+
+Steps
+
+```
+LOAD_BASE_GLOB glob
+LOAD_IDX_RP rp
+CALC_EA
+```
+
+ASM
+
+```asm
+ld de,glob
+ld hl,rp
+add hl,de
+```
+
+#### EA_FVAR_CONST (base=fvar, idx=const)
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_CONST const
+CALC_EA
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld hl,const
+add hl,de
+```
+
+#### EA_FVAR_REG (base=fvar, idx=reg8)
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_REG reg8
+CALC_EA
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld h,0
+ld l,reg8
+add hl,de
+```
+
+#### EA_FVAR_RP (base=fvar, idx=reg16)
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_RP rp
+CALC_EA
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld hl,rp
+add hl,de
+```
+
+#### EA_GLOB_FVAR (base=glob, idx=word at fvar)
+
+Steps
+
+```
+LOAD_BASE_GLOB glob
+LOAD_IDX_FVAR fvar
+CALC_EA
+```
+
+ASM
+
+```asm
+ld de,glob
+ld l,(ix+fvar)
+ld h,(ix+fvar+1)
+add hl,de
+```
+
+#### EA_FVAR_FVAR (base=fvar, idx=word at fvar2)
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_FVAR fvar2
+CALC_EA
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld l,(ix+fvar2)
+ld h,(ix+fvar2+1)
+add hl,de
+```
+
+#### EA_FVAR_GLOB (base=fvar, idx=word at glob)
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_GLOB glob
+CALC_EA
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld hl,(glob)
+add hl,de
+```
+
+#### EA_GLOB_GLOB (base=glob1, idx=word at glob2)
+
+Steps
+
+```
+LOAD_BASE_GLOB glob1
+LOAD_IDX_GLOB glob2
+CALC_EA
+```
+
+ASM
+
+```asm
+ld de,glob1
+ld hl,(glob2)
+add hl,de
+```
 
 ### A. Scalars (no index)
 
