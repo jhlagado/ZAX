@@ -109,9 +109,9 @@ For each shape:
 
 ### Load templates (8-bit only)
 
-These templates define how to preserve HL/DE while materializing an indexed address and loading one byte. Pick the template by destination register; plug any EA builder (`EA_*`) in the slot noted below.
+These templates define how to preserve HL/DE while materializing an indexed address and loading one byte. Pick the template by destination register; plug any EA builder (`EA_*`) in the slot noted below. EA_* may borrow HL/DE; the saves/restores here provide the protection.
 
-- **L-ABC (dest in A/B/C)** — simplest path
+- **L-ABC (dest in A/B/C)** — protected path even for non-overlapping dests
 
   ```
   SAVE_DE              ; DE may be borrowed by EA/LOAD
@@ -148,7 +148,7 @@ These templates define how to preserve HL/DE while materializing an indexed addr
 
 ### Store templates (8-bit only)
 
-These templates define how to preserve HL/DE while materializing an indexed address and storing one byte held in `vreg`. One unified template works for any source register; plug any EA builder (`EA_*`) in the slot.
+These templates define how to preserve HL/DE while materializing an indexed address and storing one byte held in `vreg`. A single template works for any source register; EA_* may borrow HL/DE, so we save/restore around it.
 
 - **S-ANY (vreg in any reg8)** — non-destructive store
 
@@ -165,7 +165,7 @@ EA_* is any of the byte-width EA builders above (size = 1). Word-sized store tem
 
 ### EA builders (byte width, HL=EA on exit)
 
-Element size = 1. HL returns the effective address; DE must be preserved.
+Element size = 1. HL returns the effective address; DE must be preserved. EA_* borrows HL/DE; callers save/restore as shown in the load/store templates.
 
 #### EA_GLOB_CONST (base=glob, idx=const)
 
