@@ -7,41 +7,41 @@ Goal: express every allowed load/store addressing shape as a short pipeline of r
 ### 1.1 Save / restore
 
 ```
-SAVE_HL                     push hl                  ; saves HL (no clobber)
+SAVE_HL                     push hl
 
-SAVE_DE                     push de                  ; saves DE (no clobber)
+SAVE_DE                     push de
 
-RESTORE_HL                  pop hl                   ; restores DE
+RESTORE_HL                  pop hl
 
-RESTORE_DE                  pop de                   ; restores DE
+RESTORE_DE                  pop de
 
-SWAP_HL_DE                        ex de,hl                 ; swaps DE<->HL (dest=both)
+SWAP_HL_DE                  ex de,hl
 
-SWAP_HL_SAVED               ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
+SWAP_HL_SAVED               ex (sp),hl
 ```
 
 ### 1.2 Base loaders (place base in DE)
 
 ```
-LOAD_BASE_GLOB glob         ld de,(glob)             ; dest=DE
+LOAD_BASE_GLOB glob         ld de,(glob)              dest=DE
 
-LOAD_BASE_FVAR fvar         ld e,(ix+fvar)           ; dest=DE
+LOAD_BASE_FVAR fvar         ld e,(ix+fvar)            dest=DE
                             ld d,(ix+fvar+1)
 ```
 
 ### 1.3 Index loaders (place index in HL)
 
 ```
-LOAD_IDX_CONST const        ld hl,const              ; dest=HL
+LOAD_IDX_CONST const        ld hl,const
 
-LOAD_IDX_REG reg            ld h,0                   ; dest=HL
-                            ld l,ireg
+LOAD_IDX_REG reg            ld h,0
+                            ld l,reg
 
-LOAD_IDX_RP rp              ld hl,rp                 ; dest=HL
+LOAD_IDX_RP rp              ld hl,rp
 
-LOAD_IDX_GLOB const         ld hl,(const)            ; dest=HL
+LOAD_IDX_GLOB const         ld hl,(const)
 
-LOAD_IDX_FVAR fvar          ex de,hl                 ; dest=HL
+LOAD_IDX_FVAR fvar          ex de,hl
                             ld e,(ix+fvar)
                             ld d,(ix+fvar+1)
                             ex de,hl
@@ -50,18 +50,18 @@ LOAD_IDX_FVAR fvar          ex de,hl                 ; dest=HL
 ### 1.4 Combine
 
 ```
-CALC_EA                     add hl,de                ; dest=HL (base+offset)
+CALC_EA                     add hl,de
 
-CALC_EA_2                   add hl,hl                ; dest=HL (offset*2)
-                            add hl,de                ; dest=HL (base+offset*2)
+CALC_EA_2                   add hl,hl
+                            add hl,de
 ```
 
 ### 1.5 Accessors (byte)
 
 ```
-LOAD_REG_EA reg             ld reg,(hl)                ; HL=addr dest=A
+LOAD_REG_EA reg             ld reg,(hl)
 
-STORE_REG_EA reg            ld (hl),reg                
+STORE_REG_EA reg            ld (hl),reg
 
 LOAD_REG_GLOB reg glob      ld reg,(glob)
 
@@ -76,11 +76,11 @@ STORE_REG_FVAR reg fvar     ld (ix+fvar),reg
 ### 1.6 Accessors (word)
 
 ```
-LOAD_RP_EA rp               ld lo(rp),(hl)                
+LOAD_RP_EA rp               ld lo(rp),(hl)
                             inc hl
                             ld hi(rp),(hl)
 
-STORE_RP_EA rp              ld (hl),lo(rp)                
+STORE_RP_EA rp              ld (hl),lo(rp)
                             inc hl
                             ld (hl),hi(rp)
 
@@ -91,11 +91,11 @@ STORE_RP_GLOB rp glob       ld (glob),rp
 LOAD_RP_FVAR rp fvar        ld lo(rp),(ix+fvar)
                             ld hi(rp),(ix+fvar+1)
 
-STORE_RP_FVAR rp fvar       ld (ix+fvar),rpl
-                            ld (ix+fvar+1),rph
+STORE_RP_FVAR rp fvar       ld (ix+fvar),lo(rp)
+                            ld (ix+fvar+1),hi(rp)
 ```
 
-`fvar` is the fvar displacement: negative for locals,positive for args. When indexing with a constant,fold the scaled constant into `fvar`.
+`fvar` is the frame displacement (IX-relative). Positive displacements address args; negative displacements address locals. When indexing with a constant, fold the scaled constant into `fvar`.
 
 ## 2. Pipelines (byte)
 
@@ -118,7 +118,7 @@ ld reg,glob
 Steps
 
 ```
-LOAD_REG_GLOB reg
+LOAD_REG_GLOB reg glob
 ```
 
 ASM
@@ -158,7 +158,7 @@ ld glob,reg
 Steps
 
 ```
-STORE_REG_GLOB reg
+STORE_REG_GLOB reg glob
 ```
 
 ASM
@@ -260,26 +260,6 @@ ld (hl),reg
 ```
 
 #### B5 store reg in fvar[const]
-
-ZAX Example
-
-```zax
-ld fvar[const],reg
-```
-
-Steps
-
-```
-STORE_REG_FVAR reg fvar+const
-```
-
-ASM
-
-```asm
-ld (ix+fvar+const),reg
-```
-
-#### B6 store reg in fvar[const]
 
 ZAX Example
 
@@ -540,7 +520,7 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld hl,(const)
+ld hl,(glob)
 add hl,de
 ld reg,(hl)
 ```
@@ -557,7 +537,7 @@ Steps
 
 ```
 LOAD_BASE_FVAR fvar
-LOAD_IDX_FVAR fvar
+LOAD_IDX_FVAR fvar2
 CALC_EA
 LOAD_REG_EA reg
 ```
@@ -567,8 +547,8 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld l,(ix+fvar)
-ld h,(ix+fvar+1)
+ld l,(ix+fvar2)
+ld h,(ix+fvar2+1)
 add hl,de
 ld reg,(hl)
 ```
@@ -585,7 +565,7 @@ Steps
 
 ```
 LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB const
+LOAD_IDX_GLOB glob
 CALC_EA
 LOAD_REG_EA reg
 ```
@@ -595,7 +575,7 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld hl,(const)
+ld hl,(glob)
 add hl,de
 ld reg,(hl)
 ```
@@ -648,8 +628,8 @@ STORE_REG_EA reg
 ASM
 
 ```asm
-ld de,glob
-ld hl,(const)
+ld de,glob1
+ld hl,(glob2)
 add hl,de
 ld (hl),reg
 ```
@@ -881,7 +861,7 @@ ex de,hl
 
 ### B. Indexed by const
 
-Element size = 1 for byte,2 for word (use `CALC_EA_2`; larger powers not supported).
+Element size = 1 for byte,2 for word (use `CALC_EA_2`, larger powers not supported).
 
 #### B1w load word: glob[const]
 
@@ -1342,8 +1322,8 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld l,(ix+fvar)
-ld h,(ix+fvar+1)
+ld l,(ix+fvar2)
+ld h,(ix+fvar2+1)
 add hl,de
 ld e,(hl)
 inc hl
@@ -1363,7 +1343,7 @@ Steps
 
 ```
 LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB const
+LOAD_IDX_GLOB glob
 CALC_EA
 LOAD_RP_EA DE
 ```
@@ -1373,7 +1353,7 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld hl,(const)
+ld hl,(glob)
 add hl,de
 ld e,(hl)
 inc hl
@@ -1435,8 +1415,8 @@ SWAP_HL_DE
 ASM
 
 ```asm
-ld de,glob
-ld hl,(const)
+ld de,glob1
+ld hl,(glob2)
 add hl,de
 ex (sp),hl
 ex de,hl
@@ -1667,7 +1647,7 @@ ld rec.field,reg
 Steps
 
 ```
-STORE_REG_FVAR A fvarRec+field_offset
+STORE_REG_FVAR reg fvarRec+field_offset
 ```
 
 ASM
@@ -1678,6 +1658,6 @@ ld (ix+fvarRec+field_offset),reg
 
 ## 4. Notes
 
-- Per-instruction preservation: only the destination register (loads) or value register (`A`/`HL` for stores) may change; all scratch registers are saved/restored in the pipelines above.
-- IX is never scratch; fvar accesses use explicit displacements.
+- Per-instruction preservation: only the destination register (loads) or value register (`A`/`HL` for stores) may change, all scratch registers are saved/restored in the pipelines above.
+- IX is never scratch fvar accesses use explicit displacements.
 - Pipelines above cover the full matrix of base (glob/local/arg),index source (const,reg,memory glob/fvar),width (byte/word),and operation (load/store). Additional register-pair shuffles can be composed from the same steps if a lowering conflict arises.
