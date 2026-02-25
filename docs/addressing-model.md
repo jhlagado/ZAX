@@ -1062,38 +1062,6 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### C3w load word: fvar[ireg]
-
-ZAX Example
-
-```zax
-ld hl,fvar[ireg]
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_REG reg
-CALC_EA_2
-LOAD_RP_EA DE
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld h,0
-ld l,ireg
-add hl,hl
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-```
-
 #### C4w store word: glob[reg]
 
 ZAX Example
@@ -1170,60 +1138,23 @@ ld (hl),d
 ex de,hl
 ```
 
-#### C6w store word: fvar[ireg]
-
-ZAX Example
-
-```zax
-ld fvar[ireg],hl
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_REG reg
-CALC_EA
-SWAP_HL_SAVED
-SWAP_HL_DE
-STORE_RP_EA DE
-SWAP_HL_DE
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld h,0
-ld l,ireg
-add hl,de
-ex (sp),hl
-ex de,hl
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-```
-
 ### D. Indexed by variable in memory (typed address kept in memory)
 
 Two index sources shown: a glob word `glob` and a fvar word at `fvarIdx`.
 
-#### D1w load word: glob[glob]
+#### D1w load word: glob1[glob2]
 
 ZAX Example
 
 ```zax
-ld hl,glob[glob]
+ld hl,glob1[glob2]
 ```
 
 Steps
 
 ```
-LOAD_BASE_GLOB glob
-LOAD_IDX_GLOB const
+LOAD_BASE_GLOB glob1
+LOAD_IDX_GLOB glob2
 CALC_EA
 LOAD_RP_EA DE
 ```
@@ -1231,8 +1162,8 @@ LOAD_RP_EA DE
 ASM
 
 ```asm
-ld de,glob
-ld hl,(const)
+ld de,glob1
+ld hl,(glob2)
 add hl,de
 ld e,(hl)
 inc hl
@@ -1252,7 +1183,7 @@ Steps
 
 ```
 LOAD_BASE_GLOB glob
-LOAD_IDX_FVAR fvar
+LOAD_IDX_FVAR fvar2
 CALC_EA
 LOAD_RP_EA DE
 ```
@@ -1261,8 +1192,8 @@ ASM
 
 ```asm
 ld de,glob
-ld l,(ix+fvar)
-ld h,(ix+fvar+1)
+ld l,(ix+fvar2)
+ld h,(ix+fvar2+1)
 add hl,de
 ld e,(hl)
 inc hl
@@ -1282,7 +1213,7 @@ Steps
 
 ```
 LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB const
+LOAD_IDX_GLOB glob
 CALC_EA
 LOAD_RP_EA DE
 ```
@@ -1292,7 +1223,7 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld hl,(const)
+ld hl,(glob)
 add hl,de
 ld e,(hl)
 inc hl
@@ -1312,7 +1243,7 @@ Steps
 
 ```
 LOAD_BASE_FVAR fvar
-LOAD_IDX_FVAR fvar
+LOAD_IDX_FVAR fvar2
 CALC_EA
 LOAD_RP_EA DE
 ```
@@ -1373,7 +1304,7 @@ Steps
 
 ```
 LOAD_BASE_FVAR fvar
-LOAD_IDX_FVAR fvar
+LOAD_IDX_FVAR fvar2
 CALC_EA
 LOAD_RP_EA DE
 ```
@@ -1383,8 +1314,8 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld l,(ix+fvar)
-ld h,(ix+fvar+1)
+ld l,(ix+fvar2)
+ld h,(ix+fvar2+1)
 add hl,de
 ld e,(hl)
 inc hl
@@ -1392,19 +1323,19 @@ ld d,(hl)
 ex de,hl
 ```
 
-#### D7w store word: glob[glob]
+#### D7w store word: glob1[glob2]
 
 ZAX Example
 
 ```zax
-ld glob[glob],hl
+ld glob1[glob2],hl
 ```
 
 Steps
 
 ```
-LOAD_BASE_GLOB glob
-LOAD_IDX_GLOB const
+LOAD_BASE_GLOB glob1
+LOAD_IDX_GLOB glob2
 CALC_EA
 SWAP_HL_SAVED
 SWAP_HL_DE
@@ -1439,7 +1370,7 @@ Steps
 
 ```
 LOAD_BASE_GLOB glob
-LOAD_IDX_FVAR fvar
+LOAD_IDX_FVAR fvar2
 CALC_EA
 SWAP_HL_SAVED
 SWAP_HL_DE
@@ -1451,8 +1382,8 @@ ASM
 
 ```asm
 ld de,glob
-ld l,(ix+fvar)
-ld h,(ix+fvar+1)
+ld l,(ix+fvar2)
+ld h,(ix+fvar2+1)
 add hl,de
 ex (sp),hl
 ex de,hl
@@ -1475,7 +1406,7 @@ Steps
 
 ```
 LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB const
+LOAD_IDX_GLOB glob
 CALC_EA
 SWAP_HL_SAVED
 SWAP_HL_DE
@@ -1488,7 +1419,7 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld hl,(const)
+ld hl,(glob)
 add hl,de
 ex (sp),hl
 ex de,hl
@@ -1511,7 +1442,7 @@ Steps
 
 ```
 LOAD_BASE_FVAR fvar
-LOAD_IDX_FVAR fvar
+LOAD_IDX_FVAR fvar2
 CALC_EA
 SWAP_HL_SAVED
 SWAP_HL_DE
@@ -1524,8 +1455,8 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld l,(ix+fvar)
-ld h,(ix+fvar+1)
+ld l,(ix+fvar2)
+ld h,(ix+fvar2+1)
 add hl,de
 ex (sp),hl
 ex de,hl
@@ -1548,7 +1479,7 @@ Steps
 
 ```
 LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB const
+LOAD_IDX_GLOB glob
 CALC_EA
 SWAP_HL_SAVED
 SWAP_HL_DE
@@ -1561,7 +1492,7 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld hl,(const)
+ld hl,(glob)
 add hl,de
 ex (sp),hl
 ex de,hl
@@ -1584,7 +1515,7 @@ Steps
 
 ```
 LOAD_BASE_FVAR fvar
-LOAD_IDX_FVAR fvar
+LOAD_IDX_FVAR fvar2
 CALC_EA
 SWAP_HL_SAVED
 SWAP_HL_DE
@@ -1597,8 +1528,8 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld l,(ix+fvar)
-ld h,(ix+fvar+1)
+ld l,(ix+fvar2)
+ld h,(ix+fvar2+1)
 add hl,de
 ex (sp),hl
 ex de,hl
@@ -1655,9 +1586,3 @@ ASM
 ```asm
 ld (ix+fvarRec+field_offset),reg
 ```
-
-## 4. Notes
-
-- Per-instruction preservation: only the destination register (loads) or value register (`A`/`HL` for stores) may change, all scratch registers are saved/restored in the pipelines above.
-- IX is never scratch fvar accesses use explicit displacements.
-- Pipelines above cover the full matrix of base (glob/local/arg),index source (const,reg,memory glob/fvar),width (byte/word),and operation (load/store). Additional register-pair shuffles can be composed from the same steps if a lowering conflict arises.
