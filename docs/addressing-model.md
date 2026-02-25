@@ -378,103 +378,68 @@ add hl,de
 
 ## 3. Pipelines (word)
 
-#### A1w load word from glob
+### Load templates (16-bit only)
 
-ZAX Example
+These templates define how to preserve HL/DE while materializing an indexed address and loading one word. EA_W\* returns EA in HL and may borrow HL/DE; saves/restores here provide the protection.
 
-```zax
-ld hl,glob
-```
+- **LW-HL (dest HL)** — preferred channel
 
-Steps
+  ```
+  SAVE_DE
+  EA_W*                ; EA in HL (scale by 2 where needed)
+  LOAD_RP_EA HL        ; load into HL
+  RESTORE_DE
+  ```
 
-```
-LOAD_RP_GLOB HL glob
-```
+- **LW-DE (dest DE)** — load via HL then swap
 
-ASM
+  ```
+  SAVE_HL
+  EA_W*                ; EA in HL
+  LOAD_RP_EA HL        ; word in HL
+  SWAP_HL_DE           ; move result into DE
+  RESTORE_HL           ; restore caller HL
+  ```
 
-```asm
-ld hl,(glob)
-```
+- **LW-BC (dest BC)** — load via HL then move
 
-#### A2w load word from fvar
+  ```
+  SAVE_DE
+  SAVE_HL
+  EA_W*                ; EA in HL
+  LOAD_RP_EA HL        ; word in HL
+  LOAD_REG_REG C L     ; move lo byte
+  LOAD_REG_REG B H     ; move hi byte
+  RESTORE_HL           ; restore caller HL
+  RESTORE_DE           ; restore caller DE
+  ```
 
-ZAX Example
+EA_W\* denotes any word-width EA builder (below).
 
-```zax
-ld hl,fvar
-```
+### Store templates (16-bit only)
 
-Steps
+Non-destructive store of a word in `vpair` to EA_W\*.
 
-```
-LOAD_RP_FVAR DE fvar
-```
+- **SW-ANY (vpair HL/DE/BC)** — unified pattern
 
-ASM
+  ```
+  SAVE_DE
+  SAVE_HL
+  EA_W*                ; EA in HL
+  RESTORE_HL           ; restore caller HL
+  RESTORE_DE           ; restore caller DE
+  STORE_RP_EA vpair    ; write word (vpair may be HL/DE/BC)
+  ```
 
-```asm
-ex de,hl
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ex de,hl
-```
+EA_W* is any word-width EA builder (size = 2). Scaling is baked into EA_W*.
 
-#### A3w store word to glob
+### EA builders (word width, HL=EA on exit, size = 2)
 
-ZAX Example
+Element size = 2. These scale the index by 2 (CALC_EA_2). HL returns the effective address; DE must be preserved. ZAX examples show typical shapes.
 
-```zax
-ld glob,hl
-```
+#### EA_GLOB_CONST_W (base=glob, idx=const)
 
-Steps
-
-```
-STORE_RP_GLOB DE glob
-```
-
-ASM
-
-```asm
-ld (glob),hl
-```
-
-#### A4w store word to fvar
-
-ZAX Example
-
-```zax
-ld fvar,hl
-```
-
-Steps
-
-```
-STORE_RP_FVAR DE fvar
-```
-
-ASM
-
-```asm
-ex de,hl
-ld (ix+fvar),e
-ld (ix+fvar+1),d
-ex de,hl
-```
-
-### B. Indexed by const
-
-Element size = 1 for byte,2 for word (use `CALC_EA_2`, larger powers not supported).
-
-#### B1w load word: glob[const]
-
-ZAX Example
-
-```zax
-ld hl,glob[const]
-```
+ZAX example: `ld rp, glob[const]`
 
 Steps
 
@@ -482,7 +447,6 @@ Steps
 LOAD_BASE_GLOB glob
 LOAD_IDX_CONST const
 CALC_EA_2
-LOAD_RP_EA DE
 ```
 
 ASM
@@ -492,164 +456,83 @@ ld de,glob
 ld hl,const
 add hl,hl
 add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
 ```
 
-#### B2w load word: fvar[const]
+#### EA_GLOB_REG_W (base=glob, idx=reg8)
 
-ZAX Example
-
-```zax
-ld hl,fvar[const]
-```
+ZAX example: `ld rp, glob[ireg]`
 
 Steps
 
 ```
-LOAD_RP_FVAR DE fvar+const*2
+LOAD_BASE_GLOB glob
+LOAD_IDX_REG reg8
+CALC_EA_2
 ```
 
 ASM
 
 ```asm
-ex de,hl
-ld e,(ix+fvar+const*2)
-ld d,(ix+fvar+const*2+1)
-ex de,hl
+ld de,glob
+ld h,0
+ld l,reg8
+add hl,hl
+add hl,de
 ```
 
-#### B3w store word: glob[const]
+#### EA_GLOB_RP_W (base=glob, idx=reg16)
 
-ZAX Example
-
-```zax
-ld glob[const],hl
-```
+ZAX example: `ld rp, glob[rp]`
 
 Steps
 
 ```
-SAVE_HL
 LOAD_BASE_GLOB glob
+LOAD_IDX_RP rp
+CALC_EA_2
+```
+
+ASM
+
+```asm
+ld de,glob
+ld hl,rp
+add hl,hl
+add hl,de
+```
+
+#### EA_FVAR_CONST_W (base=fvar, idx=const)
+
+ZAX example: `ld rp, fvar[const]`
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
 LOAD_IDX_CONST const
 CALC_EA_2
-RESTORE_DE
-STORE_RP_EA DE
 ```
 
 ASM
 
 ```asm
-push hl
-ld de,glob
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld hl,const
 add hl,hl
 add hl,de
-pop de
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
 ```
 
-#### B4w store word: fvar[const]
+#### EA_FVAR_REG_W (base=fvar, idx=reg8)
 
-ZAX Example
-
-```zax
-ld fvar[const],hl
-```
-
-Steps
-
-```
-STORE_RP_FVAR DE fvar+const*2
-```
-
-ASM
-
-```asm
-ex de,hl
-ld (ix+fvar+const*2),e
-ld (ix+fvar+const*2+1),d
-ex de,hl
-```
-
-#### B5w store word: fvar[const]
-
-ZAX Example
-
-```zax
-ld fvar[const],hl
-```
-
-Steps
-
-```
-STORE_RP_FVAR DE fvar+const*2
-```
-
-ASM
-
-```asm
-ex de,hl
-ld (ix+fvar+const*2),e
-ld (ix+fvar+const*2+1),d
-ex de,hl
-```
-
-### C. Indexed by register (8-bit index in `r8`)
-
-#### C1w load word: glob[reg]
-
-ZAX Example
-
-```zax
-ld hl,glob[ireg]
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob
-LOAD_IDX_REG reg
-CALC_EA_2
-LOAD_RP_EA DE
-```
-
-ASM
-
-```asm
-ld de,glob
-ld h,0
-ld l,ireg
-add hl,hl
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-```
-
-#### C2w load word: fvar[ireg]
-
-ZAX Example
-
-```zax
-ld hl,fvar[ireg]
-```
+ZAX example: `ld rp, fvar[ireg]`
 
 Steps
 
 ```
 LOAD_BASE_FVAR fvar
-LOAD_IDX_REG reg
+LOAD_IDX_REG reg8
 CALC_EA_2
-LOAD_RP_EA DE
 ```
 
 ASM
@@ -658,71 +541,21 @@ ASM
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
 ld h,0
-ld l,ireg
+ld l,reg8
 add hl,hl
 add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
 ```
 
-#### C3w store word: glob[reg]
+#### EA_FVAR_RP_W (base=fvar, idx=reg16)
 
-ZAX Example
-
-```zax
-ld glob[ireg],hl
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob
-LOAD_IDX_REG reg
-CALC_EA_2
-SWAP_HL_SAVED
-SWAP_HL_DE
-STORE_RP_EA DE
-SWAP_HL_DE
-```
-
-ASM
-
-```asm
-ld de,glob
-ld h,0
-ld l,ireg
-add hl,hl
-add hl,de
-ex (sp),hl
-ex de,hl
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-ex de,hl
-```
-
-#### C4w store word: fvar[ireg]
-
-ZAX Example
-
-```zax
-ld fvar[ireg],hl
-```
+ZAX example: `ld rp, fvar[rp]`
 
 Steps
 
 ```
 LOAD_BASE_FVAR fvar
-LOAD_IDX_REG reg
+LOAD_IDX_RP rp
 CALC_EA_2
-SWAP_HL_SAVED
-SWAP_HL_DE
-STORE_RP_EA DE
-SWAP_HL_DE
 ```
 
 ASM
@@ -730,38 +563,88 @@ ASM
 ```asm
 ld e,(ix+fvar)
 ld d,(ix+fvar+1)
-ld h,0
-ld l,ireg
+ld hl,rp
 add hl,hl
 add hl,de
-ex (sp),hl
-ex de,hl
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
 ```
 
-### D. Indexed by variable in memory (typed address kept in memory)
+#### EA_GLOB_FVAR_W (base=glob, idx=word at fvar)
 
-Two index sources shown: a glob word `glob` and a fvar word at `fvarIdx`.
+ZAX example: `ld rp, glob[fvar]`
 
-#### D1w load word: glob1[glob2]
+Steps
 
-ZAX Example
-
-```zax
-ld hl,glob1[glob2]
 ```
+LOAD_BASE_GLOB glob
+LOAD_IDX_FVAR fvar
+CALC_EA_2
+```
+
+ASM
+
+```asm
+ld de,glob
+ld l,(ix+fvar)
+ld h,(ix+fvar+1)
+add hl,hl
+add hl,de
+```
+
+#### EA_FVAR_FVAR_W (base=fvar, idx=word at fvar2)
+
+ZAX example: `ld rp, fvar[fvar2]`
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_FVAR fvar2
+CALC_EA_2
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld l,(ix+fvar2)
+ld h,(ix+fvar2+1)
+add hl,hl
+add hl,de
+```
+
+#### EA_FVAR_GLOB_W (base=fvar, idx=word at glob)
+
+ZAX example: `ld rp, fvar[glob]`
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_GLOB glob
+CALC_EA_2
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld hl,(glob)
+add hl,hl
+add hl,de
+```
+
+#### EA_GLOB_GLOB_W (base=glob1, idx=word at glob2)
+
+ZAX example: `ld rp, glob1[glob2]`
 
 Steps
 
 ```
 LOAD_BASE_GLOB glob1
 LOAD_IDX_GLOB glob2
-CALC_EA
-LOAD_RP_EA DE
+CALC_EA_2
 ```
 
 ASM
@@ -769,425 +652,6 @@ ASM
 ```asm
 ld de,glob1
 ld hl,(glob2)
+add hl,hl
 add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-```
-
-#### D2w load word: glob[fvar2]
-
-ZAX Example
-
-```zax
-ld hl,glob[fvar2]
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob
-LOAD_IDX_FVAR fvar2
-CALC_EA
-LOAD_RP_EA DE
-```
-
-ASM
-
-```asm
-ld de,glob
-ld l,(ix+fvar2)
-ld h,(ix+fvar2+1)
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-```
-
-#### D3w load word: fvar[glob]
-
-ZAX Example
-
-```zax
-ld hl,fvar[glob]
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB glob
-CALC_EA
-LOAD_RP_EA DE
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld hl,(glob)
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-```
-
-#### D4w load word: fvar[fvar2]
-
-ZAX Example
-
-```zax
-ld hl,fvar[fvar2]
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_FVAR fvar2
-CALC_EA
-LOAD_RP_EA DE
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld l,(ix+fvar2)
-ld h,(ix+fvar2+1)
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-```
-
-#### D5w load word: fvar[glob]
-
-ZAX Example
-
-```zax
-ld hl,fvar[glob]
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB glob
-CALC_EA
-LOAD_RP_EA DE
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld hl,(glob)
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-```
-
-#### D6w load word: fvar[fvar2]
-
-ZAX Example
-
-```zax
-ld hl,fvar[fvar2]
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_FVAR fvar2
-CALC_EA
-LOAD_RP_EA DE
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld l,(ix+fvar2)
-ld h,(ix+fvar2+1)
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-```
-
-#### D7w store word: glob1[glob2]
-
-ZAX Example
-
-```zax
-ld glob1[glob2],hl
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob1
-LOAD_IDX_GLOB glob2
-CALC_EA
-SWAP_HL_SAVED
-SWAP_HL_DE
-STORE_RP_EA DE
-SWAP_HL_DE
-```
-
-ASM
-
-```asm
-ld de,glob1
-ld hl,(glob2)
-add hl,de
-ex (sp),hl
-ex de,hl
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-```
-
-#### D8w store word: glob[fvar2]
-
-ZAX Example
-
-```zax
-ld glob[fvar2],hl
-```
-
-Steps
-
-```
-LOAD_BASE_GLOB glob
-LOAD_IDX_FVAR fvar2
-CALC_EA
-SWAP_HL_SAVED
-SWAP_HL_DE
-STORE_RP_EA DE
-SWAP_HL_DE
-```
-
-ASM
-
-```asm
-ld de,glob
-ld l,(ix+fvar2)
-ld h,(ix+fvar2+1)
-add hl,de
-ex (sp),hl
-ex de,hl
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-```
-
-#### D9w store word: fvar[glob]
-
-ZAX Example
-
-```zax
-ld fvar[glob],hl
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB glob
-CALC_EA
-SWAP_HL_SAVED
-SWAP_HL_DE
-STORE_RP_EA DE
-SWAP_HL_DE
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld hl,(glob)
-add hl,de
-ex (sp),hl
-ex de,hl
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-```
-
-#### D10w store word: fvar[fvar2]
-
-ZAX Example
-
-```zax
-ld fvar[fvar2],hl
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_FVAR fvar2
-CALC_EA
-SWAP_HL_SAVED
-SWAP_HL_DE
-STORE_RP_EA DE
-SWAP_HL_DE
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld l,(ix+fvar2)
-ld h,(ix+fvar2+1)
-add hl,de
-ex (sp),hl
-ex de,hl
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-```
-
-#### D11w store word: fvar[glob]
-
-ZAX Example
-
-```zax
-ld fvar[glob],hl
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_GLOB glob
-CALC_EA
-SWAP_HL_SAVED
-SWAP_HL_DE
-STORE_RP_EA DE
-SWAP_HL_DE
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld hl,(glob)
-add hl,de
-ex (sp),hl
-ex de,hl
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-```
-
-#### D12w store word: fvar[fvar2]
-
-ZAX Example
-
-```zax
-ld fvar[fvar2],hl
-```
-
-Steps
-
-```
-LOAD_BASE_FVAR fvar
-LOAD_IDX_FVAR fvar2
-CALC_EA
-SWAP_HL_SAVED
-SWAP_HL_DE
-STORE_RP_EA DE
-SWAP_HL_DE
-```
-
-ASM
-
-```asm
-ld e,(ix+fvar)
-ld d,(ix+fvar+1)
-ld l,(ix+fvar2)
-ld h,(ix+fvar2+1)
-add hl,de
-ex (sp),hl
-ex de,hl
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-```
-
-### E. Record fields (const offsets)
-
-Record field access is the const-index case with `const = field_offset`.
-
-Example load word field from a fvar record:
-
-ZAX Example
-
-```zax
-ld hl,rec.field
-```
-
-Steps
-
-```
-LOAD_RP_FVAR DE fvarRec+field_offset
-```
-
-ASM
-
-```asm
-ex de,hl
-ld e,(ix+fvarRec+field_offset)
-ld d,(ix+fvarRec+field_offset+1)
-ex de,hl
-```
-
-Example store reg field into a fvar record:
-
-ZAX Example
-
-```zax
-ld rec.field,reg
-```
-
-Steps
-
-```
-STORE_REG_FVAR reg fvarRec+field_offset
-```
-
-ASM
-
-```asm
-ld (ix+fvarRec+field_offset),reg
 ```
