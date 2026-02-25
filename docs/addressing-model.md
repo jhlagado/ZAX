@@ -120,6 +120,20 @@ For each shape:
 - Steps: vertical list of step names with parameters.
 - ASM: exact codegen (one instruction per line).
 
+**Scalar fast path:** If there is no index and the base is a direct symbol, use the step library accessors directly (no template):
+
+- Globals: `ld reg,glob` → `LOAD_REG_GLOB` / `ld glob,reg` → `STORE_REG_GLOB`
+- Frame vars: `ld reg,fvar` → `LOAD_REG_FVAR` / `ld fvar,reg` → `STORE_REG_FVAR`
+
+Examples:
+
+```
+ld a, glob_b         ; LOAD_REG_GLOB A glob_b
+ld glob_w, hl        ; STORE_REG_GLOB HL glob_w
+ld b, (ix-4)         ; LOAD_REG_FVAR B fvar=-4
+ld (ix+6), e         ; STORE_REG_FVAR E fvar=+6
+```
+
 ### Load templates (8-bit only)
 
 These templates define how to preserve HL/DE while materializing an indexed address and loading one byte. Pick the template by destination register; plug any EA builder (`EA_*`) in the slot noted below. EA\_\* may borrow HL/DE; the saves/restores here provide the protection.
@@ -394,6 +408,20 @@ add hl,de
 ```
 
 ## 3. Pipelines (word)
+
+**Scalar fast path:** With no index, use the word accessors directly (no templates):
+
+- Globals: `ld rp,glob` → `LOAD_RP_GLOB` / `ld glob,rp` → `STORE_RP_GLOB`
+- Frame vars: `ld rp,fvar` → `LOAD_RP_FVAR` / `ld fvar,rp` → `STORE_RP_FVAR`
+
+Examples:
+
+```
+ld hl, glob_w        ; LOAD_RP_GLOB HL glob_w
+ld glob_w, de        ; STORE_RP_GLOB DE glob_w
+ld bc, (ix-4)        ; LOAD_RP_FVAR BC fvar=-4
+ld (ix+6), hl        ; STORE_RP_FVAR HL fvar=+6
+```
 
 ### Load templates (16-bit only)
 
