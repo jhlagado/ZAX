@@ -2621,6 +2621,12 @@ export function emitProgram(
         emitRawCodeBytes(Uint8Array.of(0xeb), span.file, 'ex de, hl');
         return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
       }
+      const pipe = buildEaWordPipeline(ea, span);
+      if (pipe) {
+        // Load to DE then push HL via template (DE result).
+        if (!emitStepPipeline(TEMPLATE_LW_DE(pipe), span)) return false;
+        return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
+      }
       // fallback: compute address and load word
       if (!pushEaAddress(ea, span)) return false;
       if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
@@ -3150,6 +3156,14 @@ export function emitProgram(
         if (r?.kind === 'abs') {
           emitAbs16Fixup(0x22, r.baseLower, r.addend, inst.span); // ld (nn), hl
           return true;
+        }
+        const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
+        if (dstPipeW) {
+          // HL already holds the value; move it to DE/BC scratch via template store path.
+          if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
+            return false;
+          if (!emitStepPipeline(TEMPLATE_SW_DEBC('DE', dstPipeW), inst.span)) return false;
+          return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span);
         }
         // Preserve HL value while materializing the destination address into HL.
         if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
