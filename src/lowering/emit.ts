@@ -3066,10 +3066,7 @@ export function emitProgram(
       if (s8 !== undefined) {
         const regUp = src.name.toUpperCase();
         const dstPipe = buildEaBytePipeline(dst.expr, inst.span);
-        if (dstPipe) {
-          const templated = TEMPLATE_S_ANY(regUp, dstPipe);
-          if (emitStepPipeline(templated, inst.span)) return true;
-        }
+        if (dstPipe && emitStepPipeline(TEMPLATE_S_ANY(regUp, dstPipe), inst.span)) return true;
         // Fallback: materialize address and emit direct store.
         const preserveA = regUp === 'A';
         if (preserveA && !emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
@@ -3090,13 +3087,6 @@ export function emitProgram(
           `ld (hl), ${regUp}`,
         );
         return true;
-      }
-
-      // Template-based store path (preservation-safe) when EA can be built.
-      const dstPipe = buildEaBytePipeline(dst.expr, inst.span);
-      if (dstPipe && reg8Code.has(src.name.toUpperCase())) {
-        const templated = TEMPLATE_S_ANY(src.name.toUpperCase(), dstPipe);
-        if (emitStepPipeline(templated, inst.span)) return true;
       }
 
       const r16 = src.name.toUpperCase();
