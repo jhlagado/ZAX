@@ -2588,7 +2588,16 @@ export function emitProgram(
         ) {
           return false;
         }
-        if (!emitInstr('ld', [{ kind: 'Reg', span, name: 'L' }, { kind: 'Reg', span, name: r8 }], span)) {
+        if (
+          !emitInstr(
+            'ld',
+            [
+              { kind: 'Reg', span, name: 'L' },
+              { kind: 'Reg', span, name: r8 },
+            ],
+            span,
+          )
+        ) {
           return false;
         }
       } else if (ea.index.kind === 'IndexMemHL' || ea.index.kind === 'IndexMemIxIy') {
