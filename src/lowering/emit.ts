@@ -3318,6 +3318,13 @@ export function emitProgram(
 
       if (!scalar) return false;
       if (scalar === 'byte') {
+        const srcPipe = buildEaBytePipeline(src.expr, inst.span);
+        const dstPipe = buildEaBytePipeline(dst.expr, inst.span);
+        if (srcPipe && dstPipe) {
+          if (!emitStepPipeline(TEMPLATE_L_ABC('A', srcPipe), inst.span)) return false;
+          if (!emitStepPipeline(TEMPLATE_S_ANY('A', dstPipe), inst.span)) return false;
+          return true;
+        }
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         emitRawCodeBytes(Uint8Array.of(0x7e), inst.span.file, 'ld a, (hl)');
         if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
