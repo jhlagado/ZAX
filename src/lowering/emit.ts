@@ -3,9 +3,13 @@ import { dirname, resolve } from 'node:path';
 import {
   EA_GLOB_CONST,
   EA_FVAR_CONST,
+  EAW_GLOB_CONST,
+  EAW_FVAR_CONST,
   TEMPLATE_L_ABC,
   TEMPLATE_L_HL,
   TEMPLATE_L_DE,
+  TEMPLATE_LW_DE,
+  TEMPLATE_SW_DEBC,
   TEMPLATE_S_ANY,
   type StepInstr,
   type StepPipeline,
@@ -2590,6 +2594,14 @@ export function emitProgram(
     return null;
   };
 
+  const buildEaWordPipeline = (ea: EaExprNode, span: SourceSpan): StepPipeline | null => {
+    const r = resolveEa(ea, span);
+    if (!r) return null;
+    if (r.kind === 'abs') return EAW_GLOB_CONST(r.baseLower, r.addend);
+    if (r.kind === 'stack') return EAW_FVAR_CONST(r.ixDisp, 0);
+    return null;
+  };
+
   const pushMemValue = (ea: EaExprNode, want: 'byte' | 'word', span: SourceSpan): boolean => {
     // Use step-library EA builders and templates for byte paths; word paths remain as-is for now.
     if (want === 'word') {
@@ -3329,6 +3341,13 @@ export function emitProgram(
         emitRawCodeBytes(Uint8Array.of(0x7e), inst.span.file, 'ld a, (hl)');
         if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
         emitRawCodeBytes(Uint8Array.of(0x77), inst.span.file, 'ld (hl), a');
+        return true;
+      }
+      const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
+      const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
+      if (srcPipeW && dstPipeW) {
+        if (!emitStepPipeline(TEMPLATE_LW_DE(srcPipeW), inst.span)) return false;
+        if (!emitStepPipeline(TEMPLATE_SW_DEBC('DE', dstPipeW), inst.span)) return false;
         return true;
       }
       if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
