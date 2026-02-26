@@ -160,7 +160,7 @@ ld glob_b, a                ; STORE_REG_GLOB A glob_b
 ld (ix-4), l                ; STORE_REG_FVAR L fvar=-4
 ```
 
-> **Routing rule (byte):** If there is **no `[]` index**, stay on the scalar accessors above. If the index is a **constant**, fold it into the frame displacement and use the constant-index EA builders; otherwise use the EA_* builders plus the load/store templates below. Routing scalars through EA_* only adds wasted base+index math and save/restore traffic.
+**Routing rule (byte):** If there is **no `[]` index**, stay on the scalar accessors above. If the index is a **constant**, fold it into the frame displacement and use the constant-index EA builders; otherwise use the EA_* builders plus the load/store templates below. Routing scalars through EA_* only adds wasted base+index math and save/restore traffic.
 
 | Access shape             | Path to use                      |
 | ---                      | ---                              |
