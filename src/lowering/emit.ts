@@ -2074,10 +2074,7 @@ export function emitProgram(
           };
         }
 
-        // Runtime index: carry the element size for later scaling.
-        if (expr.index.kind === 'IndexReg8' || expr.index.kind === 'IndexReg16') {
-          return { ...base, elemSize, typeExpr: base.typeExpr.element, indexReg: expr.index.reg } as any;
-        }
+        // Runtime index: defer to runtime EA construction; resolved EA not available.
         return undefined;
       }
     }
@@ -2088,6 +2085,83 @@ export function emitProgram(
 
   const pushEaAddress = (ea: EaExprNode, span: SourceSpan): boolean => {
     const r = resolveEa(ea, span);
+    // Runtime indexed array address (reg8/reg16 index): handle explicitly since resolveEa returns undefined.
+    if (!r && ea.kind === 'EaIndex' && (ea.index.kind === 'IndexReg8' || ea.index.kind === 'IndexReg16')) {
+      // Resolve base to get element size and base kind.
+      const baseResolved = resolveEa(ea.base, span);
+      const baseType = resolveEaTypeExpr(ea.base);
+      if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return false;
+      const elemSize = sizeOfTypeExpr(baseType.element, env, diagnostics);
+      const shiftCount = (() => {
+        if (elemSize === undefined) return -1;
+        let n = elemSize;
+        let s = 0;
+        while (n > 1 && (n & 1) === 0) {
+          n >>= 1;
+          s++;
+        }
+        return n === 1 ? s : -1;
+      })();
+      // Support power-of-two element sizes up to 16 bytes for runtime indexing.
+      if (shiftCount < 0 || shiftCount > 4) return false;
+
+      // HL = index (zero-extend if reg8), then scale if word elements.
+      const loadIndexToHL = (): boolean => {
+        if (ea.index.kind === 'IndexReg16') {
+          const r16 = (ea.index as any).reg.toUpperCase();
+          if (r16 === 'HL') return true;
+          if (r16 === 'DE') {
+            return (
+              emitInstr('ld', [{ kind: 'Reg', span, name: 'H' }, { kind: 'Reg', span, name: 'D' }], span) &&
+              emitInstr('ld', [{ kind: 'Reg', span, name: 'L' }, { kind: 'Reg', span, name: 'E' }], span)
+            );
+          }
+          if (r16 === 'BC') {
+            return (
+              emitInstr('ld', [{ kind: 'Reg', span, name: 'H' }, { kind: 'Reg', span, name: 'B' }], span) &&
+              emitInstr('ld', [{ kind: 'Reg', span, name: 'L' }, { kind: 'Reg', span, name: 'C' }], span)
+            );
+          }
+          diagAt(diagnostics, span, `Invalid reg16 index "${ea.index.reg}".`);
+          return false;
+        }
+        // reg8
+        const r8 = (ea.index as any).reg.toUpperCase();
+        if (!reg8.has(r8)) {
+          diagAt(diagnostics, span, `Invalid reg8 index "${(ea.index as any).reg}".`);
+          return false;
+        }
+        return (
+          emitInstr('ld', [{ kind: 'Reg', span, name: 'H' }, { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }], span) &&
+          emitInstr('ld', [{ kind: 'Reg', span, name: 'L' }, { kind: 'Reg', span, name: r8 }], span)
+        );
+      };
+
+      if (!loadIndexToHL()) return false;
+      for (let i = 0; i < shiftCount; i++) {
+        if (!emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'HL' }], span)) return false;
+      }
+
+      if (baseResolved.kind === 'abs') {
+        emitAbs16Fixup(0x11, baseResolved.baseLower, baseResolved.addend, span); // ld de, nn
+        if (!emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span)) return false;
+        return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
+      }
+
+      // stack base: base address = IX + disp
+      if (!emitInstr('ex', [{ kind: 'Reg', span, name: 'DE' }, { kind: 'Reg', span, name: 'HL' }], span)) return false; // DE=index
+      if (!emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false; // save index
+      if (!emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span)) return false;
+      if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false; // HL=IX
+      if (baseResolved.ixDisp !== 0) {
+        if (!loadImm16ToDE(baseResolved.ixDisp, span)) return false;
+        if (!emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span)) return false;
+      }
+      if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span)) return false; // DE=index
+      if (!emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span)) return false;
+      return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
+    }
+
     if (!r) {
       type RuntimeLinear = {
         constTerm: number;
@@ -2326,12 +2400,25 @@ export function emitProgram(
         return false;
       }
       const elemSize = sizeOfTypeExpr(baseType.element, env, diagnostics);
-      if (elemSize === undefined) return false;
-      if (elemSize !== 1 && elemSize !== 2) {
-        diagAt(diagnostics, span, `Runtime indexing currently supports element sizes 1 or 2 (got ${elemSize}).`);
+      const shiftCount = (() => {
+        if (elemSize === undefined) return -1;
+        let n = elemSize;
+        let s = 0;
+        while (n > 1 && (n & 1) === 0) {
+          n >>= 1;
+          s++;
+        }
+        return n === 1 ? s : -1;
+      })();
+      // Allow power-of-two element sizes up to 16 bytes; larger or non-power-of-two are unsupported for runtime indexing.
+      if (shiftCount < 0 || shiftCount > 4) {
+        diagAt(
+          diagnostics,
+          span,
+          `Runtime indexing currently supports element sizes that are powers of two up to 16 bytes (got ${elemSize}).`,
+        );
         return false;
       }
-      const shiftCount = elemSize === 2 ? 1 : 0;
 
       // If the index is sourced from (HL), read it before clobbering HL.
       if (ea.index.kind === 'IndexMemHL') {
@@ -2590,8 +2677,11 @@ export function emitProgram(
     if (!hasIndex(ea)) return null; // only use scaled EAW when an index is present
     const r = resolveEa(ea, span);
     if (!r) return null;
+    // If resolveEa carried an elemSize, honor it; otherwise default to 2 when indexed.
+    const elemSize: number | undefined = (r as any).elemSize ?? 2;
     const scalarKind = r.typeExpr ? resolveScalarKind(r.typeExpr) : undefined;
     if (scalarKind !== 'word' && scalarKind !== 'addr') return null;
+    if (elemSize !== 2) return null; // only scale-by-2 for now
     if (r.kind === 'abs') return EAW_GLOB_CONST(r.baseLower, r.addend);
     if (r.kind === 'stack') return EAW_FVAR_CONST(r.ixDisp, 0);
     return null;
