@@ -10,6 +10,7 @@ import {
   TEMPLATE_L_DE,
   TEMPLATE_LW_DE,
   TEMPLATE_SW_DEBC,
+  TEMPLATE_SW_HL,
   TEMPLATE_S_ANY,
   type StepInstr,
   type StepPipeline,
@@ -3159,11 +3160,9 @@ export function emitProgram(
         }
         const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
         if (dstPipeW) {
-          // HL already holds the value; move it to DE/BC scratch via template store path.
-          if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
-            return false;
-          if (!emitStepPipeline(TEMPLATE_SW_DEBC('DE', dstPipeW), inst.span)) return false;
-          return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span);
+          // HL already holds the value; store via template using DE scratch.
+          if (!emitStepPipeline(TEMPLATE_SW_HL(dstPipeW), inst.span)) return false;
+          return true;
         }
         // Preserve HL value while materializing the destination address into HL.
         if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
@@ -3179,6 +3178,11 @@ export function emitProgram(
         return true;
       }
       if (r16 === 'DE') {
+        const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
+        if (dstPipeW) {
+          // Store DE via template.
+          return emitStepPipeline(TEMPLATE_SW_DEBC('DE', dstPipeW), inst.span);
+        }
         if (dstResolved?.kind === 'stack') {
           const lo = dstResolved.ixDisp;
           const hi = dstResolved.ixDisp + 1;
@@ -3210,6 +3214,11 @@ export function emitProgram(
         return true;
       }
       if (r16 === 'BC') {
+        const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
+        if (dstPipeW) {
+          // Store BC via template (uses DE/BC path).
+          return emitStepPipeline(TEMPLATE_SW_DEBC('BC', dstPipeW), inst.span);
+        }
         if (dstResolved?.kind === 'stack') {
           const lo = dstResolved.ixDisp;
           const hi = dstResolved.ixDisp + 1;
