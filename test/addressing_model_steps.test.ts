@@ -27,22 +27,12 @@ describe('addressing-model step library', () => {
 
   it('EA_FVAR_CONST folds small disps', () => {
     const p = EA_FVAR_CONST(-4, 2);
-    expect(asm(p)).toEqual([
-      'ld e, (ix-$02)',
-      'ld d, (ix-$01)',
-      'ld hl, $0000',
-      'add hl, de',
-    ]);
+    expect(asm(p)).toEqual(['ld e, (ix-$02)', 'ld d, (ix-$01)', 'ld hl, $0000', 'add hl, de']);
   });
 
   it('EAW_GLOB_CONST scales by two', () => {
     const p = EAW_GLOB_CONST('glob_w', 3);
-    expect(asm(p)).toEqual([
-      'ld de, glob_w',
-      'ld hl, $0003',
-      'add hl, hl',
-      'add hl, de',
-    ]);
+    expect(asm(p)).toEqual(['ld de, glob_w', 'ld hl, $0003', 'add hl, hl', 'add hl, de']);
   });
 
   it('EAW_FVAR_CONST folds scaled const when possible', () => {
@@ -57,7 +47,11 @@ describe('addressing-model step library', () => {
   });
 
   it('L-ABC template wraps EA with saves/restores', () => {
-    const p = TEMPLATE_L_ABC('a', [...LOAD_BASE_GLOB('glob_b'), ...LOAD_IDX_CONST(1), ...CALC_EA()]);
+    const p = TEMPLATE_L_ABC('a', [
+      ...LOAD_BASE_GLOB('glob_b'),
+      ...LOAD_IDX_CONST(1),
+      ...CALC_EA(),
+    ]);
     expect(asm(p)).toEqual([
       'push de',
       'push hl',

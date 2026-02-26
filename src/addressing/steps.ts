@@ -28,9 +28,7 @@ export const SWAP_HL_SAVED = (): StepPipeline => [instr('ex (sp), hl')];
 // ---------------------------------------------------------------------------
 // Base loaders (DE = base)
 // ---------------------------------------------------------------------------
-export const LOAD_BASE_GLOB = (glob: string): StepPipeline => [
-  instr(`ld de, ${glob}`),
-];
+export const LOAD_BASE_GLOB = (glob: string): StepPipeline => [instr(`ld de, ${glob}`)];
 
 export const LOAD_BASE_FVAR = (disp: number): StepPipeline => {
   const d = formatDisp(disp);
@@ -49,13 +47,9 @@ export const LOAD_IDX_REG = (reg8: string): StepPipeline => [
   instr(`ld l, ${reg8}`),
 ];
 
-export const LOAD_IDX_RP = (rp: string): StepPipeline => [
-  instr(`ld hl, ${rp}`),
-];
+export const LOAD_IDX_RP = (rp: string): StepPipeline => [instr(`ld hl, ${rp}`)];
 
-export const LOAD_IDX_GLOB = (glob: string): StepPipeline => [
-  instr(`ld hl, (${glob})`),
-];
+export const LOAD_IDX_GLOB = (glob: string): StepPipeline => [instr(`ld hl, (${glob})`)];
 
 export const LOAD_IDX_FVAR = (disp: number): StepPipeline => [
   ...SWAP_HL_DE(),
@@ -68,21 +62,14 @@ export const LOAD_IDX_FVAR = (disp: number): StepPipeline => [
 // ---------------------------------------------------------------------------
 export const CALC_EA = (): StepPipeline => [instr('add hl, de')];
 
-export const CALC_EA_2 = (): StepPipeline => [
-  instr('add hl, hl'),
-  instr('add hl, de'),
-];
+export const CALC_EA_2 = (): StepPipeline => [instr('add hl, hl'), instr('add hl, de')];
 
 // ---------------------------------------------------------------------------
 // Accessors (byte)
 // ---------------------------------------------------------------------------
-export const LOAD_REG_EA = (reg: string): StepPipeline => [
-  instr(`ld ${reg}, (hl)`),
-];
+export const LOAD_REG_EA = (reg: string): StepPipeline => [instr(`ld ${reg}, (hl)`)];
 
-export const STORE_REG_EA = (reg: string): StepPipeline => [
-  instr(`ld (hl), ${reg}`),
-];
+export const STORE_REG_EA = (reg: string): StepPipeline => [instr(`ld (hl), ${reg}`)];
 
 export const LOAD_REG_GLOB = (reg: string, glob: string): StepPipeline => [
   instr(`ld ${reg}, (${glob})`),
@@ -171,11 +158,7 @@ export const EA_GLOB_RP = (glob: string, rp: string): StepPipeline => [
 
 export const EA_FVAR_CONST = (fvar: number, idxConst: number): StepPipeline => {
   const folded = foldFvar(fvar, idxConst);
-  return [
-    ...LOAD_BASE_FVAR(folded.base),
-    ...LOAD_IDX_CONST(folded.idx),
-    ...CALC_EA(),
-  ];
+  return [...LOAD_BASE_FVAR(folded.base), ...LOAD_IDX_CONST(folded.idx), ...CALC_EA()];
 };
 
 export const EA_FVAR_REG = (fvar: number, reg8: string): StepPipeline => [
@@ -237,11 +220,7 @@ export const EAW_GLOB_RP = (glob: string, rp: string): StepPipeline => [
 
 export const EAW_FVAR_CONST = (fvar: number, idxConst: number): StepPipeline => {
   const folded = foldFvar(fvar, idxConst * 2); // scale const when folding
-  return [
-    ...LOAD_BASE_FVAR(folded.base),
-    ...LOAD_IDX_CONST(folded.idx),
-    ...CALC_EA_2(),
-  ];
+  return [...LOAD_BASE_FVAR(folded.base), ...LOAD_IDX_CONST(folded.idx), ...CALC_EA_2()];
 };
 
 export const EAW_FVAR_REG = (fvar: number, reg8: string): StepPipeline => [

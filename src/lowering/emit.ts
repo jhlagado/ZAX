@@ -819,7 +819,12 @@ export function emitProgram(
         expr:
           disp >= 0
             ? { kind: 'EaAdd', span, base: { kind: 'EaName', span, name: 'IX' }, offset: offsetImm }
-            : { kind: 'EaSub', span, base: { kind: 'EaName', span, name: 'IX' }, offset: offsetImm },
+            : {
+                kind: 'EaSub',
+                span,
+                base: { kind: 'EaName', span, name: 'IX' },
+                offset: offsetImm,
+              },
       };
     };
 
@@ -842,11 +847,19 @@ export function emitProgram(
       if (lower === 'add hl, hl') return emitInstr('add', [mkReg('HL'), mkReg('HL')], span);
       if (lower === 'inc hl') return emitInstr('inc', [mkReg('HL')], span);
       if (lower === 'ld h, 0')
-        return emitInstr('ld', [mkReg('H'), { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }], span);
+        return emitInstr(
+          'ld',
+          [mkReg('H'), { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }],
+          span,
+        );
 
       const ldRegReg = lower.match(/^ld ([abcdehl]), ([abcdehl])$/);
       if (ldRegReg) {
-        return emitInstr('ld', [mkReg(ldRegReg[1]!.toUpperCase()), mkReg(ldRegReg[2]!.toUpperCase())], span);
+        return emitInstr(
+          'ld',
+          [mkReg(ldRegReg[1]!.toUpperCase()), mkReg(ldRegReg[2]!.toUpperCase())],
+          span,
+        );
       }
 
       const ldRegMemHl = lower.match(/^ld ([abcdehl]), \(hl\)$/);
@@ -914,10 +927,7 @@ export function emitProgram(
         const glob = ldRegGlob[2]!;
         return emitInstr(
           'ld',
-          [
-            mkReg(reg),
-            { kind: 'Mem', span, expr: { kind: 'EaName', span, name: glob } },
-          ],
+          [mkReg(reg), { kind: 'Mem', span, expr: { kind: 'EaName', span, name: glob } }],
           span,
         );
       }
@@ -928,10 +938,7 @@ export function emitProgram(
         const reg = ldGlobReg[2]!.toUpperCase();
         return emitInstr(
           'ld',
-          [
-            { kind: 'Mem', span, expr: { kind: 'EaName', span, name: glob } },
-            mkReg(reg),
-          ],
+          [{ kind: 'Mem', span, expr: { kind: 'EaName', span, name: glob } }, mkReg(reg)],
           span,
         );
       }
@@ -2051,34 +2058,34 @@ export function emitProgram(
             diagAt(diagnostics, span, `Indexing requires an array type.`);
             return undefined;
           }
-        const elemSize = sizeOfTypeExpr(base.typeExpr.element, env, diagnostics);
-        if (elemSize === undefined) return undefined;
+          const elemSize = sizeOfTypeExpr(base.typeExpr.element, env, diagnostics);
+          if (elemSize === undefined) return undefined;
 
-        // Constant index: fold into displacement.
-        if (expr.index.kind === 'IndexImm') {
-          const idx = evalImmExpr(expr.index.value, env, diagnostics);
-          if (idx === undefined) return undefined;
-          const delta = idx * elemSize;
-          if (base.kind === 'abs') {
+          // Constant index: fold into displacement.
+          if (expr.index.kind === 'IndexImm') {
+            const idx = evalImmExpr(expr.index.value, env, diagnostics);
+            if (idx === undefined) return undefined;
+            const delta = idx * elemSize;
+            if (base.kind === 'abs') {
+              return {
+                kind: 'abs',
+                baseLower: base.baseLower,
+                addend: base.addend + delta,
+                typeExpr: base.typeExpr.element,
+              };
+            }
             return {
-              kind: 'abs',
-              baseLower: base.baseLower,
-              addend: base.addend + delta,
+              kind: 'stack',
+              ixDisp: base.ixDisp + delta,
               typeExpr: base.typeExpr.element,
             };
           }
-          return {
-            kind: 'stack',
-            ixDisp: base.ixDisp + delta,
-            typeExpr: base.typeExpr.element,
-          };
-        }
 
-        // Runtime index: defer to runtime EA construction; resolved EA not available.
-        return undefined;
+          // Runtime index: defer to runtime EA construction; resolved EA not available.
+          return undefined;
+        }
       }
-    }
-  };
+    };
 
     return go(ea, new Set<string>());
   };
@@ -2086,7 +2093,11 @@ export function emitProgram(
   const pushEaAddress = (ea: EaExprNode, span: SourceSpan): boolean => {
     const r = resolveEa(ea, span);
     // Runtime indexed array address (reg8/reg16 index): handle explicitly since resolveEa returns undefined.
-    if (!r && ea.kind === 'EaIndex' && (ea.index.kind === 'IndexReg8' || ea.index.kind === 'IndexReg16')) {
+    if (
+      !r &&
+      ea.kind === 'EaIndex' &&
+      (ea.index.kind === 'IndexReg8' || ea.index.kind === 'IndexReg16')
+    ) {
       // Resolve base to get element size and base kind.
       const baseResolved = resolveEa(ea.base, span);
       const baseType = resolveEaTypeExpr(ea.base);
@@ -2112,14 +2123,42 @@ export function emitProgram(
           if (r16 === 'HL') return true;
           if (r16 === 'DE') {
             return (
-              emitInstr('ld', [{ kind: 'Reg', span, name: 'H' }, { kind: 'Reg', span, name: 'D' }], span) &&
-              emitInstr('ld', [{ kind: 'Reg', span, name: 'L' }, { kind: 'Reg', span, name: 'E' }], span)
+              emitInstr(
+                'ld',
+                [
+                  { kind: 'Reg', span, name: 'H' },
+                  { kind: 'Reg', span, name: 'D' },
+                ],
+                span,
+              ) &&
+              emitInstr(
+                'ld',
+                [
+                  { kind: 'Reg', span, name: 'L' },
+                  { kind: 'Reg', span, name: 'E' },
+                ],
+                span,
+              )
             );
           }
           if (r16 === 'BC') {
             return (
-              emitInstr('ld', [{ kind: 'Reg', span, name: 'H' }, { kind: 'Reg', span, name: 'B' }], span) &&
-              emitInstr('ld', [{ kind: 'Reg', span, name: 'L' }, { kind: 'Reg', span, name: 'C' }], span)
+              emitInstr(
+                'ld',
+                [
+                  { kind: 'Reg', span, name: 'H' },
+                  { kind: 'Reg', span, name: 'B' },
+                ],
+                span,
+              ) &&
+              emitInstr(
+                'ld',
+                [
+                  { kind: 'Reg', span, name: 'L' },
+                  { kind: 'Reg', span, name: 'C' },
+                ],
+                span,
+              )
             );
           }
           diagAt(diagnostics, span, `Invalid reg16 index "${ea.index.reg}".`);
@@ -2132,33 +2171,97 @@ export function emitProgram(
           return false;
         }
         return (
-          emitInstr('ld', [{ kind: 'Reg', span, name: 'H' }, { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }], span) &&
-          emitInstr('ld', [{ kind: 'Reg', span, name: 'L' }, { kind: 'Reg', span, name: r8 }], span)
+          emitInstr(
+            'ld',
+            [
+              { kind: 'Reg', span, name: 'H' },
+              { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } },
+            ],
+            span,
+          ) &&
+          emitInstr(
+            'ld',
+            [
+              { kind: 'Reg', span, name: 'L' },
+              { kind: 'Reg', span, name: r8 },
+            ],
+            span,
+          )
         );
       };
 
       if (!loadIndexToHL()) return false;
       for (let i = 0; i < shiftCount; i++) {
-        if (!emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'HL' }], span)) return false;
+        if (
+          !emitInstr(
+            'add',
+            [
+              { kind: 'Reg', span, name: 'HL' },
+              { kind: 'Reg', span, name: 'HL' },
+            ],
+            span,
+          )
+        )
+          return false;
       }
 
       if (baseResolved.kind === 'abs') {
         emitAbs16Fixup(0x11, baseResolved.baseLower, baseResolved.addend, span); // ld de, nn
-        if (!emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span)) return false;
+        if (
+          !emitInstr(
+            'add',
+            [
+              { kind: 'Reg', span, name: 'HL' },
+              { kind: 'Reg', span, name: 'DE' },
+            ],
+            span,
+          )
+        )
+          return false;
         return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
       }
 
       // stack base: base address = IX + disp
-      if (!emitInstr('ex', [{ kind: 'Reg', span, name: 'DE' }, { kind: 'Reg', span, name: 'HL' }], span)) return false; // DE=index
+      if (
+        !emitInstr(
+          'ex',
+          [
+            { kind: 'Reg', span, name: 'DE' },
+            { kind: 'Reg', span, name: 'HL' },
+          ],
+          span,
+        )
+      )
+        return false; // DE=index
       if (!emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false; // save index
       if (!emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span)) return false;
       if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false; // HL=IX
       if (baseResolved.ixDisp !== 0) {
         if (!loadImm16ToDE(baseResolved.ixDisp, span)) return false;
-        if (!emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span)) return false;
+        if (
+          !emitInstr(
+            'add',
+            [
+              { kind: 'Reg', span, name: 'HL' },
+              { kind: 'Reg', span, name: 'DE' },
+            ],
+            span,
+          )
+        )
+          return false;
       }
       if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span)) return false; // DE=index
-      if (!emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span)) return false;
+      if (
+        !emitInstr(
+          'add',
+          [
+            { kind: 'Reg', span, name: 'HL' },
+            { kind: 'Reg', span, name: 'DE' },
+          ],
+          span,
+        )
+      )
+        return false;
       return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
     }
 
@@ -2474,7 +2577,11 @@ export function emitProgram(
           return false;
         }
         emitRawCodeBytes(Uint8Array.of(0x26, 0x00), span.file, 'ld h, 0');
-        emitRawCodeBytes(Uint8Array.of(0x6f + ((r8 === 'A' ? 0x7 : reg8Code.get(r8)!) << 3)), span.file, `ld l, ${r8}`);
+        emitRawCodeBytes(
+          Uint8Array.of(0x6f + ((r8 === 'A' ? 0x7 : reg8Code.get(r8)!) << 3)),
+          span.file,
+          `ld l, ${r8}`,
+        );
       } else if (ea.index.kind === 'IndexMemHL' || ea.index.kind === 'IndexMemIxIy') {
         if (
           !emitInstr(
@@ -2697,7 +2804,11 @@ export function emitProgram(
       }
       if (r?.kind === 'stack') {
         const disp = r.ixDisp & 0xff;
-        emitRawCodeBytes(Uint8Array.of(0xdd, 0x5e, disp), span.file, `ld e, (ix${formatIxDisp(r.ixDisp)})`);
+        emitRawCodeBytes(
+          Uint8Array.of(0xdd, 0x5e, disp),
+          span.file,
+          `ld e, (ix${formatIxDisp(r.ixDisp)})`,
+        );
         emitRawCodeBytes(
           Uint8Array.of(0xdd, 0x56, (disp + 1) & 0xff),
           span.file,
@@ -2715,7 +2826,11 @@ export function emitProgram(
       // fallback: compute address and load word
       if (!pushEaAddress(ea, span)) return false;
       if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
-      emitRawCodeBytes(Uint8Array.of(0x5e, 0x23, 0x56, 0xeb), span.file, 'ld e, (hl) ; inc hl ; ld d, (hl) ; ex de, hl');
+      emitRawCodeBytes(
+        Uint8Array.of(0x5e, 0x23, 0x56, 0xeb),
+        span.file,
+        'ld e, (hl) ; inc hl ; ld d, (hl) ; ex de, hl',
+      );
       return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
     }
 
@@ -2728,7 +2843,11 @@ export function emitProgram(
     }
     if (r?.kind === 'stack' && r.ixDisp >= -128 && r.ixDisp <= 127) {
       const d = r.ixDisp & 0xff;
-      emitRawCodeBytes(Uint8Array.of(0xdd, 0x5e, d), span.file, `ld e, (ix${formatIxDisp(r.ixDisp)})`);
+      emitRawCodeBytes(
+        Uint8Array.of(0xdd, 0x5e, d),
+        span.file,
+        `ld e, (ix${formatIxDisp(r.ixDisp)})`,
+      );
       return pushZeroExtendedReg8('E', span);
     }
 
@@ -3172,23 +3291,28 @@ export function emitProgram(
         if (dstPipe && emitStepPipeline(TEMPLATE_S_ANY(regUp, dstPipe), inst.span)) return true;
         // Fallback: materialize address and emit direct store.
         const preserveA = regUp === 'A';
-        if (preserveA && !emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
+        if (
+          preserveA &&
+          !emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)
+        ) {
           return false;
         }
         if (!materializeEaAddressToHL(dst.expr, inst.span)) {
-          if (preserveA && !emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
+          if (
+            preserveA &&
+            !emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)
+          ) {
             return false;
           }
           return false;
         }
-        if (preserveA && !emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
+        if (
+          preserveA &&
+          !emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)
+        ) {
           return false;
         }
-        emitRawCodeBytes(
-          Uint8Array.of(0x70 + s8),
-          inst.span.file,
-          `ld (hl), ${regUp}`,
-        );
+        emitRawCodeBytes(Uint8Array.of(0x70 + s8), inst.span.file, `ld (hl), ${regUp}`);
         return true;
       }
 
@@ -4840,7 +4964,11 @@ export function emitProgram(
                         continue;
                       }
                     }
-                    ok = emitInstr('push', [{ kind: 'Reg', span: asmItem.span, name: regUp }], asmItem.span);
+                    ok = emitInstr(
+                      'push',
+                      [{ kind: 'Reg', span: asmItem.span, name: regUp }],
+                      asmItem.span,
+                    );
                     if (!ok) break;
                     pushedArgWords++;
                     continue;
