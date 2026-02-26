@@ -530,6 +530,15 @@ ex de,hl
 pop de
 ```
 
+> **Routing rule:** use the simplest path that matches the source shape. If there is **no `[]` index**, stay on the A-series scalar paths (direct glob/frame accessors). If the index is a **constant**, fold it into the frame displacement and use the B-series constant-index paths. Only use the indexed pipelines (C/D/E) when a runtime index is present. Do not send scalars through the indexed pipelines—they will add unnecessary base+index math and save/restore traffic.
+
+| Access shape             | Path to use          |
+| ---                      | ---                  |
+| glob / frame var (no []) | A-series (scalar)    |
+| glob / frame[var+const]  | B-series (const idx) |
+| glob / frame[r8]         | C-series             |
+| glob / frame[word index] | D/E-series           |
+
 ### C. Indexed by register (8-bit index in `r8`)
 
 #### C1 load byte: global[r]
