@@ -175,20 +175,31 @@ These templates define how to preserve HL/DE while materializing an indexed addr
 
 ### Store templates (8-bit only)
 
-These templates define how to preserve HL/DE while materializing an indexed address and storing one byte held in `vreg`. A single template works for any source register; EA\_\* may borrow HL/DE, so we save/restore around it.
+These templates define how to preserve HL/DE while materializing an indexed address and storing one byte held in `vreg`. EA_* may borrow HL/DE, so we save/restore around it.
 
-- **S-ANY (vreg in any reg8)** — non-destructive store
+- **S-ANY (vreg not in H/L)** — non-destructive store
 
   ```
   SAVE_DE              ; if EA/STORE borrow DE
   SAVE_HL              ; HL used for EA
   EA_*                 ; EA in HL
-  STORE_REG_EA vreg    ; write byte
-  RESTORE_HL           ; restore original H/L (source byte back)
+  STORE_REG_EA vreg    ; write byte (vreg ≠ H/L)
+  RESTORE_HL           ; restore original H/L
   RESTORE_DE
   ```
 
-EA\_\* is any of the byte-width EA builders above (size = 1). Word-sized store templates will follow in Section 3.
+- **S-HL (vreg in H or L)** — value on stack, EA in HL
+
+  ```
+  SAVE_DE              ; stack: [orig DE]
+  SAVE_HL              ; stack: [orig DE, value] ← TOS holds H/L
+  EA_*                 ; HL = EA, stack unchanged
+  POP DE               ; DE = saved value (E=L, D=H)
+  STORE_REG_EA E|D     ; use E if dest=L, D if dest=H
+  RESTORE_DE           ; stack: []
+  ```
+
+EA_* is any of the byte-width EA builders above (size = 1). Word-sized store templates will follow in Section 3.
 
 ### EA builders (byte width, HL=EA on exit)
 
@@ -413,6 +424,7 @@ add hl,de
 
 - Globals: `ld rp,glob` → `LOAD_RP_GLOB` / `ld glob,rp` → `STORE_RP_GLOB`
 - Frame vars: `ld rp,fvar` → `LOAD_RP_FVAR` / `ld fvar,rp` → `STORE_RP_FVAR`
+- If `rp` is not HL, wrap the accessor with `SAVE_HL`/`RESTORE_HL` to preserve the caller’s HL.
 
 Examples:
 
@@ -465,7 +477,7 @@ EAW_* denotes any word-width EA builder (below).
 
 Non-destructive store of a word in `vpair` to EAW_*.
 
-- **SW-ANY (vpair HL/DE/BC)** — unified pattern
+- **SW-DEBC (vpair = DE or BC)** — EA in HL, value in DE/BC
 
   ```
   SAVE_DE
@@ -473,7 +485,17 @@ Non-destructive store of a word in `vpair` to EAW_*.
   EAW_*                ; EA in HL
   RESTORE_HL           ; restore caller HL
   RESTORE_DE           ; restore caller DE
-  STORE_RP_EA vpair    ; write word (vpair may be HL/DE/BC)
+  STORE_RP_EA vpair    ; vpair = DE or BC
+  ```
+
+- **SW-HL (vpair = HL)** — EA in HL, value on stack (from SAVE_HL)
+
+  ```
+  SAVE_DE              ; stack: [orig DE]
+  SAVE_HL              ; stack: [orig DE, value]  ← TOS holds value
+  EAW_*                ; HL = EA, stack unchanged
+  STORE_RP_EA HL       ; pops value into DE, stores through HL
+  RESTORE_DE           ; stack: []
   ```
 
 EAW_* is any word-width EA builder (size = 2). Scaling is baked into EAW_*.
