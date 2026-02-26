@@ -23,9 +23,9 @@ SWAP_HL_SAVED               ex (sp),hl
 ### 1.2 Base loaders (place base in DE)
 
 ```
-LOAD_BASE_GLOB glob         ld de,glob              
+LOAD_BASE_GLOB glob         ld de,glob
 
-LOAD_BASE_FVAR fvar         ld e,(ix+fvar)            
+LOAD_BASE_FVAR fvar         ld e,(ix+fvar)
                             ld d,(ix+fvar+1)
 ```
 
@@ -124,14 +124,45 @@ For each shape:
 
 - Globals: `ld reg,glob` → `LOAD_REG_GLOB` / `ld glob,reg` → `STORE_REG_GLOB`
 - Frame vars: `ld reg,fvar` → `LOAD_REG_FVAR` / `ld fvar,reg` → `STORE_REG_FVAR`
-
-Examples:
+  Examples:
 
 ```
 ld a, glob_b         ; LOAD_REG_GLOB A glob_b
 ld glob_w, hl        ; STORE_REG_GLOB HL glob_w
 ld b, (ix-4)         ; LOAD_REG_FVAR B fvar=-4
 ld (ix+6), e         ; STORE_REG_FVAR E fvar=+6
+```
+
+### Scalars (byte, no index)
+
+Use direct accessors; no saves needed for byte destinations.
+
+#### Loads
+
+- Global byte: `ld reg, glob` → `LOAD_REG_GLOB reg glob`
+
+```
+ld a, glob_b                ; LOAD_REG_GLOB A glob_b
+```
+
+- Frame byte: `ld reg, fvar` → `LOAD_REG_FVAR reg fvar`
+
+```
+ld l, (ix-4)                ; LOAD_REG_FVAR L fvar=-4
+```
+
+#### Stores
+
+- Global byte: `ld glob, reg` → `STORE_REG_GLOB reg glob`
+
+```
+ld glob_b, a                ; STORE_REG_GLOB A glob_b
+```
+
+- Frame byte: `ld fvar, reg` → `STORE_REG_FVAR reg fvar`
+
+```
+ld (ix-4), l                ; STORE_REG_FVAR L fvar=-4
 ```
 
 ### Load templates (8-bit only)
@@ -175,7 +206,7 @@ These templates define how to preserve HL/DE while materializing an indexed addr
 
 ### Store templates (8-bit only)
 
-These templates define how to preserve HL/DE while materializing an indexed address and storing one byte held in `vreg`. EA_* may borrow HL/DE, so we save/restore around it.
+These templates define how to preserve HL/DE while materializing an indexed address and storing one byte held in `vreg`. EA\_\* may borrow HL/DE, so we save/restore around it.
 
 - **S-ANY (vreg not in H/L)** — non-destructive store
 
@@ -199,7 +230,7 @@ These templates define how to preserve HL/DE while materializing an indexed addr
   RESTORE_DE           ; stack: []
   ```
 
-EA_* is any of the byte-width EA builders above (size = 1). Word-sized store templates will follow in Section 3.
+EA\_\* is any of the byte-width EA builders above (size = 1). Word-sized store templates will follow in Section 3.
 
 ### EA builders (byte width, HL=EA on exit)
 
@@ -420,24 +451,75 @@ add hl,de
 
 ## 3. Pipelines (word)
 
-**Scalar fast path:** With no index, use the word accessors directly (no templates):
+### Scalars (word, no index)
 
-- Globals: `ld rp,glob` → `LOAD_RP_GLOB` / `ld glob,rp` → `STORE_RP_GLOB`
-- Frame vars: `ld rp,fvar` → `LOAD_RP_FVAR` / `ld fvar,rp` → `STORE_RP_FVAR`
-- If `rp` is not HL, wrap the accessor with `SAVE_HL`/`RESTORE_HL` to preserve the caller’s HL.
+#### Load global word into rp
 
-Examples:
-
+ZAX
+```zax
+ld rp, glob_w
 ```
-ld hl, glob_w        ; LOAD_RP_GLOB HL glob_w
-ld glob_w, de        ; STORE_RP_GLOB DE glob_w
-ld bc, (ix-4)        ; LOAD_RP_FVAR BC fvar=-4
-ld (ix+6), hl        ; STORE_RP_FVAR HL fvar=+6
+Steps
+```
+LOAD_REG_GLOB lo(rp) glob_w
+LOAD_REG_GLOB hi(rp) glob_w+1
+```
+ASM
+```asm
+ld lo(rp),(glob_w)
+ld hi(rp),(glob_w+1)
 ```
 
-### Load templates (16-bit only)
+#### Load frame word into rp
 
-These templates define how to preserve HL/DE while materializing an indexed address and loading one word. EAW_* returns EA in HL and may borrow HL/DE; saves/restores here provide the protection.
+ZAX
+```zax
+ld rp, (ix-4)
+```
+Steps
+```
+LOAD_REG_FVAR lo(rp) fvar=-4
+LOAD_REG_FVAR hi(rp) fvar=-3
+```
+ASM
+```asm
+ld lo(rp),(ix-4)
+ld hi(rp),(ix-3)
+```
+
+#### Store rp into global word
+
+ZAX
+```zax
+ld glob_w, rp
+```
+Steps
+```
+STORE_REG_GLOB lo(rp) glob_w
+STORE_REG_GLOB hi(rp) glob_w+1
+```
+ASM
+```asm
+ld (glob_w),lo(rp)
+ld (glob_w+1),hi(rp)
+```
+
+#### Store rp into frame word
+
+ZAX
+```zax
+ld (ix-4), rp
+```
+Steps
+```
+STORE_REG_FVAR lo(rp) fvar=-4
+STORE_REG_FVAR hi(rp) fvar=-3
+```
+ASM
+```asm
+ld (ix-4),lo(rp)
+ld (ix-3),hi(rp)
+```
 
 - **LW-HL (dest HL)** — preferred channel
 
@@ -471,11 +553,11 @@ These templates define how to preserve HL/DE while materializing an indexed addr
   RESTORE_DE           ; restore caller DE
   ```
 
-EAW_* denotes any word-width EA builder (below).
+EAW\_\* denotes any word-width EA builder (below).
 
 ### Store templates (16-bit only)
 
-Non-destructive store of a word in `vpair` to EAW_*.
+Non-destructive store of a word in `vpair` to EAW\_\*.
 
 - **SW-DEBC (vpair = DE or BC)** — EA in HL, value in DE/BC
 
@@ -498,7 +580,7 @@ Non-destructive store of a word in `vpair` to EAW_*.
   RESTORE_DE           ; stack: []
   ```
 
-EAW_* is any word-width EA builder (size = 2). Scaling is baked into EAW_*.
+EAW*\* is any word-width EA builder (size = 2). Scaling is baked into EAW*\*.
 
 ### EA builders (word width, HL=EA on exit, size = 2)
 
