@@ -4743,11 +4743,20 @@ export function emitProgram(
                   break;
                 } else {
                   if (arg.kind === 'Reg' && reg16.has(arg.name.toUpperCase())) {
-                    ok = emitInstr(
-                      'push',
-                      [{ kind: 'Reg', span: asmItem.span, name: arg.name.toUpperCase() }],
+                    const regUp = arg.name.toUpperCase();
+                    // Prefer templated store when EA is resolvable.
+                    const pipe = buildEaWordPipeline(
+                      { kind: 'EaName', span: asmItem.span, name: param.name },
                       asmItem.span,
                     );
+                    if (pipe) {
+                      const templated = TEMPLATE_SW_DEBC(regUp as 'DE' | 'BC', pipe);
+                      if (emitStepPipeline(templated, asmItem.span)) {
+                        pushedArgWords++;
+                        continue;
+                      }
+                    }
+                    ok = emitInstr('push', [{ kind: 'Reg', span: asmItem.span, name: regUp }], asmItem.span);
                     if (!ok) break;
                     pushedArgWords++;
                     continue;
