@@ -160,14 +160,14 @@ ld glob_b, a                ; STORE_REG_GLOB A glob_b
 ld (ix-4), l                ; STORE_REG_FVAR L fvar=-4
 ```
 
-> **Routing rule (byte):** If there is **no `[]` index**, stay on the scalar accessors above. If the index is a **constant**, fold it into the frame displacement and use the constant-index EA builders; otherwise use the EA_* builders plus the load/store templates below. Routing scalars through EA_* only adds wasted base+index math and save/restore traffic.
+> **Routing rule (byte):** If there is **no `[]` index**, stay on the scalar accessors above. If the index is a **constant**, fold it into the frame displacement and use the constant-index EA builders; otherwise use the EA*\* builders plus the load/store templates below. Routing scalars through EA*\* only adds wasted base+index math and save/restore traffic.
 
-| Access shape             | Path to use                      |
-| ---                      | ---                              |
-| glob / frame var (no []) | Scalars (byte) accessors         |
-| glob / frame[var+const]  | EA_* with CONST idx (fold disp)  |
-| glob / frame[r8]         | EA_* + L-ABC/L-HL/L-DE or S-ANY/S-HL |
-| glob / frame[word index] | EA_* (word idx) + templates      |
+| Access shape             | Path to use                            |
+| ------------------------ | -------------------------------------- |
+| glob / frame var (no []) | Scalars (byte) accessors               |
+| glob / frame[var+const]  | EA\_\* with CONST idx (fold disp)      |
+| glob / frame[r8]         | EA\_\* + L-ABC/L-HL/L-DE or S-ANY/S-HL |
+| glob / frame[word index] | EA\_\* (word idx) + templates          |
 
 ### Load templates (8-bit only)
 
@@ -539,14 +539,14 @@ ld (ix-4),lo(rp)
 ld (ix-3),hi(rp)
 ```
 
-> **Routing rule (word):** If there is **no `[]` index**, use these scalar word accessors directly. For frame vars with constant offsets, fold the constant into the displacement and stay scalar. Only use `EAW_*` plus the LW/SW templates when a runtime index is present; sending scalars through EAW_* introduces needless scaling and save/restore traffic.
+> **Routing rule (word):** If there is **no `[]` index**, use these scalar word accessors directly. For frame vars with constant offsets, fold the constant into the displacement and stay scalar. Only use `EAW_*` plus the LW/SW templates when a runtime index is present; sending scalars through EAW\_\* introduces needless scaling and save/restore traffic.
 
-| Access shape             | Path to use                              |
-| ---                      | ---                                      |
-| glob / frame var (no []) | Scalars (word) accessors                 |
-| glob / frame[var+const]  | Scalars (word), folded displacement      |
-| glob / frame[r8]         | EAW_* + LW-HL/LW-DE/LW-BC or SW-*        |
-| glob / frame[word index] | EAW_* + LW-HL/LW-DE/LW-BC or SW-*        |
+| Access shape             | Path to use                         |
+| ------------------------ | ----------------------------------- |
+| glob / frame var (no []) | Scalars (word) accessors            |
+| glob / frame[var+const]  | Scalars (word), folded displacement |
+| glob / frame[r8]         | EAW\__ + LW-HL/LW-DE/LW-BC or SW-_  |
+| glob / frame[word index] | EAW\__ + LW-HL/LW-DE/LW-BC or SW-_  |
 
 ### Load templates (16-bit only)
 
