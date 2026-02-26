@@ -6,6 +6,7 @@ import {
   TEMPLATE_L_ABC,
   TEMPLATE_L_HL,
   TEMPLATE_L_DE,
+  TEMPLATE_S_ANY,
   type StepInstr,
   type StepPipeline,
 } from '../addressing/steps.js';
@@ -3091,6 +3092,13 @@ export function emitProgram(
           `ld (hl), ${src.name.toUpperCase()}`,
         );
         return true;
+      }
+
+      // Template-based store path (preservation-safe) when EA can be built.
+      const dstPipe = buildEaBytePipeline(dst.expr, inst.span);
+      if (dstPipe && reg8Code.has(src.name.toUpperCase())) {
+        const templated = TEMPLATE_S_ANY(src.name.toUpperCase(), dstPipe);
+        if (emitStepPipeline(templated, inst.span)) return true;
       }
 
       const r16 = src.name.toUpperCase();
