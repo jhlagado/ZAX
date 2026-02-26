@@ -4,6 +4,8 @@ import {
   EA_GLOB_CONST,
   EA_FVAR_CONST,
   TEMPLATE_L_ABC,
+  TEMPLATE_L_HL,
+  TEMPLATE_L_DE,
   type StepInstr,
   type StepPipeline,
 } from '../addressing/steps.js';
@@ -2579,6 +2581,14 @@ export function emitProgram(
     return emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span); // restore DE
   };
 
+  const buildEaBytePipeline = (ea: EaExprNode, span: SourceSpan): StepPipeline | null => {
+    const r = resolveEa(ea, span);
+    if (!r) return null;
+    if (r.kind === 'abs') return EA_GLOB_CONST(r.baseLower, r.addend);
+    if (r.kind === 'stack') return EA_FVAR_CONST(r.ixDisp, 0);
+    return null;
+  };
+
   const pushMemValue = (ea: EaExprNode, want: 'byte' | 'word', span: SourceSpan): boolean => {
     // Use step-library EA builders and templates for byte paths; word paths remain as-is for now.
     if (want === 'word') {
@@ -2606,18 +2616,6 @@ export function emitProgram(
     }
 
     // Byte path: preserve caller registers per template; dest/value is the pushed word (HL zero-extended).
-    const buildEaByte = (ea: EaExprNode): StepPipeline | null => {
-      const r = resolveEa(ea, span);
-      if (!r) return null;
-      if (r.kind === 'abs') {
-        return EA_GLOB_CONST(r.baseLower, r.addend);
-      }
-      if (r.kind === 'stack') {
-        return EA_FVAR_CONST(r.ixDisp, 0);
-      }
-      return null;
-    };
-
     // Scalar fast paths (no index, direct base)
     const r = resolveEa(ea, span);
     if (r?.kind === 'abs') {
@@ -2631,7 +2629,7 @@ export function emitProgram(
     }
 
     // Indexed / general path: build EA then apply L-ABC with dest=A (pushed as HL zero-extended).
-    const eaPipe = buildEaByte(ea);
+    const eaPipe = buildEaBytePipeline(ea, span);
     if (!eaPipe) return false;
     const templated = TEMPLATE_L_ABC('A', eaPipe);
     return emitStepPipeline(templated, span);
@@ -2821,6 +2819,21 @@ export function emitProgram(
           `ld ${dst.name.toUpperCase()}, (hl)`,
         );
         return true;
+      }
+
+      // Template path via step library (preservation-safe) when EA can be built.
+      const eaPipe = buildEaBytePipeline(src.expr, inst.span);
+      if (eaPipe) {
+        const reg = dst.name.toUpperCase();
+        let templated: StepPipeline | null = null;
+        if (reg === 'A' || reg === 'B' || reg === 'C') {
+          templated = TEMPLATE_L_ABC(reg, eaPipe);
+        } else if (reg === 'H' || reg === 'L') {
+          templated = TEMPLATE_L_HL(reg as 'H' | 'L', eaPipe);
+        } else if (reg === 'D' || reg === 'E') {
+          templated = TEMPLATE_L_DE(reg as 'D' | 'E', eaPipe);
+        }
+        if (templated && emitStepPipeline(templated, inst.span)) return true;
       }
 
       const r16 = dst.name.toUpperCase();
