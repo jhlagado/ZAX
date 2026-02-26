@@ -548,7 +548,7 @@ EAW\_\* denotes any word-width EA builder (below).
 
 Non-destructive store of a word in `vpair` to EAW\_\*.
 
-- **SW-DEBC (vpair = DE or BC)** — EA in HL, value in DE/BC
+- **SW-DEBC (vpair = DE or BC)** — EA in HL, value in DE/BC. SAVE_DE also preserves the source when vpair=DE; do not drop it.
 
   ```
   SAVE_DE
