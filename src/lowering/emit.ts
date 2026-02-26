@@ -2596,10 +2596,8 @@ export function emitProgram(
   };
 
   const buildEaWordPipeline = (ea: EaExprNode, span: SourceSpan): StepPipeline | null => {
-    const r = resolveEa(ea, span);
-    if (!r) return null;
-    if (r.kind === 'abs') return EAW_GLOB_CONST(r.baseLower, r.addend);
-    if (r.kind === 'stack') return EAW_FVAR_CONST(r.ixDisp, 0);
+    // TODO: word-scaled EA pipelines (EAW_*) are disabled for now until type-aware
+    // scaling is wired; returning null forces existing non-templated paths.
     return null;
   };
 
