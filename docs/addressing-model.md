@@ -124,7 +124,6 @@ For each shape:
 
 ```
 ld a, glob_b         ; LOAD_REG_GLOB A glob_b
-ld glob_w, hl        ; STORE_REG_GLOB HL glob_w
 ld b, (ix-4)         ; LOAD_REG_FVAR B fvar=-4
 ld (ix+6), e         ; STORE_REG_FVAR E fvar=+6
 ```
@@ -510,6 +509,8 @@ ASM
 ld (ix-4),lo(rp)
 ld (ix-3),hi(rp)
 ```
+### Load templates (16-bit only)
+
 - **LW-HL (dest HL)** — preferred channel
 
   ```
