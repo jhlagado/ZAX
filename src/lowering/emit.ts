@@ -2051,32 +2051,37 @@ export function emitProgram(
             diagAt(diagnostics, span, `Indexing requires an array type.`);
             return undefined;
           }
-          if (expr.index.kind === 'IndexEa') {
-            return undefined;
-          }
-          if (expr.index.kind !== 'IndexImm') return undefined;
+        const elemSize = sizeOfTypeExpr(base.typeExpr.element, env, diagnostics);
+        if (elemSize === undefined) return undefined;
+
+        // Constant index: fold into displacement.
+        if (expr.index.kind === 'IndexImm') {
           const idx = evalImmExpr(expr.index.value, env, diagnostics);
-          if (idx === undefined) {
-            return undefined;
-          }
-          const elemSize = sizeOfTypeExpr(base.typeExpr.element, env, diagnostics);
-          if (elemSize === undefined) return undefined;
+          if (idx === undefined) return undefined;
+          const delta = idx * elemSize;
           if (base.kind === 'abs') {
             return {
               kind: 'abs',
               baseLower: base.baseLower,
-              addend: base.addend + idx * elemSize,
+              addend: base.addend + delta,
               typeExpr: base.typeExpr.element,
             };
           }
           return {
             kind: 'stack',
-            ixDisp: base.ixDisp + idx * elemSize,
+            ixDisp: base.ixDisp + delta,
             typeExpr: base.typeExpr.element,
           };
         }
+
+        // Runtime index: carry the element size for later scaling.
+        if (expr.index.kind === 'IndexReg8' || expr.index.kind === 'IndexReg16') {
+          return { ...base, elemSize, typeExpr: base.typeExpr.element, indexReg: expr.index.reg } as any;
+        }
+        return undefined;
       }
-    };
+    }
+  };
 
     return go(ea, new Set<string>());
   };
@@ -2322,15 +2327,11 @@ export function emitProgram(
       }
       const elemSize = sizeOfTypeExpr(baseType.element, env, diagnostics);
       if (elemSize === undefined) return false;
-      if (elemSize <= 0 || (elemSize & (elemSize - 1)) !== 0) {
-        diagAt(
-          diagnostics,
-          span,
-          `Non-constant indexing requires power-of-2 element size (got ${elemSize}).`,
-        );
+      if (elemSize !== 1 && elemSize !== 2) {
+        diagAt(diagnostics, span, `Runtime indexing currently supports element sizes 1 or 2 (got ${elemSize}).`);
         return false;
       }
-      const shiftCount = elemSize <= 1 ? 0 : Math.log2(elemSize);
+      const shiftCount = elemSize === 2 ? 1 : 0;
 
       // If the index is sourced from (HL), read it before clobbering HL.
       if (ea.index.kind === 'IndexMemHL') {
@@ -2385,30 +2386,8 @@ export function emitProgram(
           diagAt(diagnostics, span, `Invalid reg8 index "${ea.index.reg}".`);
           return false;
         }
-        if (
-          !emitInstr(
-            'ld',
-            [
-              { kind: 'Reg', span, name: 'L' },
-              { kind: 'Reg', span, name: r8 },
-            ],
-            span,
-          )
-        ) {
-          return false;
-        }
-        if (
-          !emitInstr(
-            'ld',
-            [
-              { kind: 'Reg', span, name: 'H' },
-              { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } },
-            ],
-            span,
-          )
-        ) {
-          return false;
-        }
+        emitRawCodeBytes(Uint8Array.of(0x26, 0x00), span.file, 'ld h, 0');
+        emitRawCodeBytes(Uint8Array.of(0x6f + ((r8 === 'A' ? 0x7 : reg8Code.get(r8)!) << 3)), span.file, `ld l, ${r8}`);
       } else if (ea.index.kind === 'IndexMemHL' || ea.index.kind === 'IndexMemIxIy') {
         if (
           !emitInstr(
