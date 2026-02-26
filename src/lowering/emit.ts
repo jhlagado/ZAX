@@ -1,5 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import {
+  EA_GLOB_CONST,
+  EA_FVAR_CONST,
+  TEMPLATE_L_ABC,
+  type StepInstr,
+  type StepPipeline,
+} from '../addressing/steps.js';
 import type { Diagnostic, DiagnosticId } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
 import type {
@@ -766,6 +773,182 @@ export function emitProgram(
       return false;
     }
     return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
+  };
+
+  const formatIxDisp = (disp: number): string => {
+    const hex = Math.abs(disp).toString(16).padStart(2, '0');
+    const sign = disp >= 0 ? '+' : '-';
+    return `${sign}$${hex}`;
+  };
+
+  const emitStepPipeline = (pipe: StepPipeline, span: SourceSpan): boolean => {
+    const rpByte = (rp: string, which: 'lo' | 'hi'): string | undefined => {
+      const up = rp.toUpperCase();
+      if (up === 'HL') return which === 'lo' ? 'L' : 'H';
+      if (up === 'DE') return which === 'lo' ? 'E' : 'D';
+      if (up === 'BC') return which === 'lo' ? 'C' : 'B';
+      return undefined;
+    };
+
+    const mkReg = (name: string): AsmOperandNode => ({ kind: 'Reg', span, name });
+    const mkMemHl = (): AsmOperandNode => ({
+      kind: 'Mem',
+      span,
+      expr: { kind: 'EaName', span, name: 'HL' },
+    });
+    const mkMemIxDisp = (disp: number): AsmOperandNode => {
+      if (disp === 0) {
+        return { kind: 'Mem', span, expr: { kind: 'EaName', span, name: 'IX' } };
+      }
+      const offsetImm: ImmExprNode = {
+        kind: 'ImmLiteral',
+        span,
+        value: Math.abs(disp),
+      };
+      return {
+        kind: 'Mem',
+        span,
+        expr:
+          disp >= 0
+            ? { kind: 'EaAdd', span, base: { kind: 'EaName', span, name: 'IX' }, offset: offsetImm }
+            : { kind: 'EaSub', span, base: { kind: 'EaName', span, name: 'IX' }, offset: offsetImm },
+      };
+    };
+
+    const emitStepInstr = (step: StepInstr): boolean => {
+      const asm = step.asm.trim();
+      const lower = asm.toLowerCase();
+
+      if (lower === 'push hl') return emitInstr('push', [mkReg('HL')], span);
+      if (lower === 'push de') return emitInstr('push', [mkReg('DE')], span);
+      if (lower === 'pop hl') return emitInstr('pop', [mkReg('HL')], span);
+      if (lower === 'pop de') return emitInstr('pop', [mkReg('DE')], span);
+      if (lower === 'ex de, hl') return emitInstr('ex', [mkReg('DE'), mkReg('HL')], span);
+      if (lower === 'ex (sp), hl')
+        return emitInstr(
+          'ex',
+          [{ kind: 'Mem', span, expr: { kind: 'EaName', span, name: 'SP' } }, mkReg('HL')],
+          span,
+        );
+      if (lower === 'add hl, de') return emitInstr('add', [mkReg('HL'), mkReg('DE')], span);
+      if (lower === 'add hl, hl') return emitInstr('add', [mkReg('HL'), mkReg('HL')], span);
+      if (lower === 'inc hl') return emitInstr('inc', [mkReg('HL')], span);
+      if (lower === 'ld h, 0')
+        return emitInstr('ld', [mkReg('H'), { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }], span);
+
+      const ldRegReg = lower.match(/^ld ([abcdehl]), ([abcdehl])$/);
+      if (ldRegReg) {
+        return emitInstr('ld', [mkReg(ldRegReg[1]!.toUpperCase()), mkReg(ldRegReg[2]!.toUpperCase())], span);
+      }
+
+      const ldRegMemHl = lower.match(/^ld ([abcdehl]), \(hl\)$/);
+      if (ldRegMemHl) {
+        return emitInstr('ld', [mkReg(ldRegMemHl[1]!.toUpperCase()), mkMemHl()], span);
+      }
+
+      const ldMemHlReg = lower.match(/^ld \(hl\), ([abcdehl])$/);
+      if (ldMemHlReg) {
+        return emitInstr('ld', [mkMemHl(), mkReg(ldMemHlReg[1]!.toUpperCase())], span);
+      }
+
+      const ldRegIx = lower.match(/^ld ([abcdehl]), \(ix([+-])\$([0-9a-f]+)\)$/);
+      if (ldRegIx) {
+        const disp = parseInt(ldRegIx[3]!, 16);
+        const signed = ldRegIx[2] === '-' ? -disp : disp;
+        return emitInstr('ld', [mkReg(ldRegIx[1]!.toUpperCase()), mkMemIxDisp(signed)], span);
+      }
+
+      const ldIxReg = lower.match(/^ld \(ix([+-])\$([0-9a-f]+)\), ([abcdehl])$/);
+      if (ldIxReg) {
+        const disp = parseInt(ldIxReg[2]!, 16);
+        const signed = ldIxReg[1] === '-' ? -disp : disp;
+        return emitInstr('ld', [mkMemIxDisp(signed), mkReg(ldIxReg[3]!.toUpperCase())], span);
+      }
+
+      const ldRpImm = lower.match(/^ld (de|hl), \$(\w{1,4})$/);
+      if (ldRpImm) {
+        const value = parseInt(ldRpImm[2]!, 16);
+        return ldRpImm[1] === 'de' ? loadImm16ToDE(value, span) : loadImm16ToHL(value, span);
+      }
+
+      const ldRpGlob = lower.match(/^ld (de|hl), ([a-z_][\w.]*)$/i);
+      if (ldRpGlob) {
+        const op = ldRpGlob[1] === 'de' ? 0x11 : 0x21;
+        emitAbs16Fixup(op, ldRpGlob[2]!.toLowerCase(), 0, span, asm);
+        return true;
+      }
+
+      const ldHlPtrGlob = lower.match(/^ld hl, \(([a-z_][\w.]*)\)$/i);
+      if (ldHlPtrGlob) {
+        emitAbs16Fixup(0x2a, ldHlPtrGlob[1]!.toLowerCase(), 0, span, asm);
+        return true;
+      }
+
+      const ldHlRp = lower.match(/^ld hl, (bc|de|hl)$/);
+      if (ldHlRp) {
+        const rp = ldHlRp[1]!.toUpperCase();
+        if (rp === 'HL') return true;
+        if (rp === 'DE') {
+          return (
+            emitInstr('ld', [mkReg('H'), mkReg('D')], span) &&
+            emitInstr('ld', [mkReg('L'), mkReg('E')], span)
+          );
+        }
+        return (
+          emitInstr('ld', [mkReg('H'), mkReg('B')], span) &&
+          emitInstr('ld', [mkReg('L'), mkReg('C')], span)
+        );
+      }
+
+      const ldRegGlob = lower.match(/^ld ([abcdehl]), \(([a-z_][\w.]*)\)$/i);
+      if (ldRegGlob) {
+        const reg = ldRegGlob[1]!.toUpperCase();
+        const glob = ldRegGlob[2]!;
+        return emitInstr(
+          'ld',
+          [
+            mkReg(reg),
+            { kind: 'Mem', span, expr: { kind: 'EaName', span, name: glob } },
+          ],
+          span,
+        );
+      }
+
+      const ldGlobReg = lower.match(/^ld \(([a-z_][\w.]*)\), ([abcdehl])$/i);
+      if (ldGlobReg) {
+        const glob = ldGlobReg[1]!;
+        const reg = ldGlobReg[2]!.toUpperCase();
+        return emitInstr(
+          'ld',
+          [
+            { kind: 'Mem', span, expr: { kind: 'EaName', span, name: glob } },
+            mkReg(reg),
+          ],
+          span,
+        );
+      }
+
+      const ldRpByteFromReg = lower.match(/^ld (lo|hi)\((bc|de|hl)\), ([abcdehl])$/);
+      if (ldRpByteFromReg) {
+        const regName = rpByte(ldRpByteFromReg[2]!, ldRpByteFromReg[1] as 'lo' | 'hi');
+        if (!regName) return false;
+        return emitInstr('ld', [mkReg(regName), mkReg(ldRpByteFromReg[3]!.toUpperCase())], span);
+      }
+
+      const ldRegFromRpByte = lower.match(/^ld ([abcdehl]), (lo|hi)\((bc|de|hl)\)$/);
+      if (ldRegFromRpByte) {
+        const src = rpByte(ldRegFromRpByte[3]!, ldRegFromRpByte[2] as 'lo' | 'hi');
+        if (!src) return false;
+        return emitInstr('ld', [mkReg(ldRegFromRpByte[1]!.toUpperCase()), mkReg(src)], span);
+      }
+
+      return false;
+    };
+
+    for (const step of pipe) {
+      if (!emitStepInstr(step)) return false;
+    }
+    return true;
   };
 
   const emitAbs16Fixup = (
@@ -2397,42 +2580,61 @@ export function emitProgram(
   };
 
   const pushMemValue = (ea: EaExprNode, want: 'byte' | 'word', span: SourceSpan): boolean => {
-    const r = resolveEa(ea, span);
-    if (r?.kind === 'abs') {
-      if (want === 'word') {
+    // Use step-library EA builders and templates for byte paths; word paths remain as-is for now.
+    if (want === 'word') {
+      const r = resolveEa(ea, span);
+      if (r?.kind === 'abs') {
         emitAbs16Fixup(0x2a, r.baseLower, r.addend, span); // ld hl, (nn)
         return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
       }
-      emitAbs16Fixup(0x3a, r.baseLower, r.addend, span); // ld a, (nn)
-      return pushZeroExtendedReg8('A', span);
-    }
-
-    if (r?.kind === 'stack') {
-      const disp = r.ixDisp & 0xff;
-      if (want === 'word') {
-        emitRawCodeBytes(Uint8Array.of(0xdd, 0x5e, disp), span.file, 'ld e, (ix+disp)');
+      if (r?.kind === 'stack') {
+        const disp = r.ixDisp & 0xff;
+        emitRawCodeBytes(Uint8Array.of(0xdd, 0x5e, disp), span.file, `ld e, (ix${formatIxDisp(r.ixDisp)})`);
         emitRawCodeBytes(
           Uint8Array.of(0xdd, 0x56, (disp + 1) & 0xff),
           span.file,
-          'ld d, (ix+disp+1)',
+          `ld d, (ix${formatIxDisp(r.ixDisp + 1)})`,
         );
         emitRawCodeBytes(Uint8Array.of(0xeb), span.file, 'ex de, hl');
         return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
       }
-      emitRawCodeBytes(Uint8Array.of(0xdd, 0x5e, disp), span.file, 'ld e, (ix+disp)');
+      // fallback: compute address and load word
+      if (!pushEaAddress(ea, span)) return false;
+      if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
+      emitRawCodeBytes(Uint8Array.of(0x5e, 0x23, 0x56, 0xeb), span.file, 'ld e, (hl) ; inc hl ; ld d, (hl) ; ex de, hl');
+      return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
+    }
+
+    // Byte path: preserve caller registers per template; dest/value is the pushed word (HL zero-extended).
+    const buildEaByte = (ea: EaExprNode): StepPipeline | null => {
+      const r = resolveEa(ea, span);
+      if (!r) return null;
+      if (r.kind === 'abs') {
+        return EA_GLOB_CONST(r.baseLower, r.addend);
+      }
+      if (r.kind === 'stack') {
+        return EA_FVAR_CONST(r.ixDisp, 0);
+      }
+      return null;
+    };
+
+    // Scalar fast paths (no index, direct base)
+    const r = resolveEa(ea, span);
+    if (r?.kind === 'abs') {
+      emitAbs16Fixup(0x3a, r.baseLower, r.addend, span); // ld a,(nn)
+      return pushZeroExtendedReg8('A', span);
+    }
+    if (r?.kind === 'stack' && r.ixDisp >= -128 && r.ixDisp <= 127) {
+      const d = r.ixDisp & 0xff;
+      emitRawCodeBytes(Uint8Array.of(0xdd, 0x5e, d), span.file, `ld e, (ix${formatIxDisp(r.ixDisp)})`);
       return pushZeroExtendedReg8('E', span);
     }
 
-    if (!pushEaAddress(ea, span)) return false;
-    if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
-    if (want === 'word') {
-      emitRawCodeBytes(Uint8Array.of(0x7e), span.file, 'ld a, (hl)');
-      if (!emitInstr('inc', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
-      emitRawCodeBytes(Uint8Array.of(0x66, 0x6f), span.file, 'ld h, (hl) ; ld l, a');
-      return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
-    }
-    emitRawCodeBytes(Uint8Array.of(0x7e), span.file, 'ld a, (hl)');
-    return pushZeroExtendedReg8('A', span);
+    // Indexed / general path: build EA then apply L-ABC with dest=A (pushed as HL zero-extended).
+    const eaPipe = buildEaByte(ea);
+    if (!eaPipe) return false;
+    const templated = TEMPLATE_L_ABC('A', eaPipe);
+    return emitStepPipeline(templated, span);
   };
 
   const materializeEaAddressToHL = (ea: EaExprNode, span: SourceSpan): boolean => {
