@@ -2,7 +2,7 @@
 
 Goal: express every allowed load/store addressing shape as a short pipeline of reusable **steps** (concatenative/Forth style). A pipeline must leave all registers untouched except the destination (for loads) or the value-carrying register (for stores, typically `A` or `HL`). IX is never scratch.
 
-## 1. Step Library (reusable “words”)
+## 1. Step Library (reusable "words")
 
 ### 1.1 Save / restore
 
@@ -451,14 +451,19 @@ add hl,de
 #### Load global word into rp
 
 ZAX
+
 ```zax
 ld rp, glob_w
 ```
+
 Steps
+
 ```
 LOAD_RP_GLOB rp glob_w
 ```
+
 ASM
+
 ```asm
 ld rp,(glob_w)
 ```
@@ -466,14 +471,19 @@ ld rp,(glob_w)
 #### Load frame word into rp
 
 ZAX
+
 ```zax
 ld rp, (ix-4)
 ```
+
 Steps
+
 ```
 LOAD_RP_FVAR rp fvar=-4
 ```
+
 ASM
+
 ```asm
 ld lo(rp),(ix-4)
 ld hi(rp),(ix-3)
@@ -482,14 +492,19 @@ ld hi(rp),(ix-3)
 #### Store rp into global word
 
 ZAX
+
 ```zax
 ld glob_w, rp
 ```
+
 Steps
+
 ```
 STORE_RP_GLOB rp glob_w
 ```
+
 ASM
+
 ```asm
 ld (glob_w),rp
 ```
@@ -497,18 +512,24 @@ ld (glob_w),rp
 #### Store rp into frame word
 
 ZAX
+
 ```zax
 ld (ix-4), rp
 ```
+
 Steps
+
 ```
 STORE_RP_FVAR rp fvar=-4
 ```
+
 ASM
+
 ```asm
 ld (ix-4),lo(rp)
 ld (ix-3),hi(rp)
 ```
+
 ### Load templates (16-bit only)
 
 - **LW-HL (dest HL)** — preferred channel
@@ -570,7 +591,7 @@ Non-destructive store of a word in `vpair` to EAW\_\*.
   RESTORE_DE           ; stack: []
   ```
 
-EAW_* is any word-width EA builder (size = 2). Scaling is baked into EAW_*.
+EAW\_\* is any word-width EA builder (size = 2). Scaling is baked into EAW\_\*.
 
 ### EA builders (word width, HL=EA on exit, size = 2)
 
@@ -803,8 +824,8 @@ add hl,de
 
 - Choose an EA/EAW builder based on the base and index source. If the index is a constant, fold it into the frame displacement (`fvar+const`) when that keeps the EA simple.
 - Choose a load/store template based on the destination (for loads) or source register (for stores):
-  - Byte: L-ABC, L-HL, L-DE, S-ANY
-  - Word: LW-HL, LW-DE, LW-BC, SW-ANY
+  - Byte: L-ABC, L-HL, L-DE, S-ANY, S-HL
+  - Word: LW-HL, LW-DE, LW-BC, SW-HL, SW-DEBC
 - EA/EAW builders may borrow HL/DE internally; the templates already save/restore HL/DE to protect caller state. Do not add extra saves outside the templates.
 - Per-instruction preservation: the only registers allowed to change are the destination register (load) or the value register/pair (store). All other registers must be restored by the end of the pipeline.
 - IX is the frame pointer. Never repurpose IX as a scratch register; keep all scratch and EA work to HL/DE with proper saves/restores.
