@@ -2,110 +2,113 @@
 
 Goal: express every allowed load/store addressing shape as a short pipeline of reusable **steps** (concatenative/Forth style). A pipeline must leave all registers untouched except the destination (for loads) or the value-carrying register (for stores, typically `A` or `HL`). IX is never scratch.
 
-## 1. Step Library (reusable “words”)
+## 1. Step Library (reusable "words")
 
 ### 1.1 Save / restore
 
 ```
-SAVE_HL              push hl                  ; saves HL (no clobber)
+SAVE_HL                     push hl
 
-SAVE_DE              push de                  ; saves DE (no clobber)
+SAVE_DE                     push de
 
-RESTORE_DE           pop de                   ; restores DE
+RESTORE_HL                  pop hl
 
-SWAP                 ex de,hl                 ; swaps DE<->HL (dest=both)
+RESTORE_DE                  pop de
 
-SWAP_SAVED           ex (sp),hl               ; swaps HL with TOS (dest=HL + TOS word)
+SWAP_HL_DE                  ex de,hl
+
+SWAP_HL_SAVED               ex (sp),hl
 ```
 
 ### 1.2 Base loaders (place base in DE)
 
 ```
-BASE_GLOBAL const    ld de,const              ; dest=DE
+LOAD_BASE_GLOB glob         ld de,glob
 
-BASE_FRAME disp      ld e,(ix+disp)           ; dest=DE
-                     ld d,(ix+disp+1)
+LOAD_BASE_FVAR fvar         ld e,(ix+fvar)
+                            ld d,(ix+fvar+1)
 ```
 
 ### 1.3 Index loaders (place index in HL)
 
 ```
-IDX_CONST const      ld hl,const              ; dest=HL
+LOAD_IDX_CONST const        ld hl,const
 
-IDX_REG8 reg8        ld h,0                   ; dest=HL
-                     ld l,reg8
+LOAD_IDX_REG reg            ld h,0
+                            ld l,reg
 
-IDX_REG16 reg16      ld hl,reg16              ; dest=HL
+LOAD_IDX_RP rp              ld hl,rp
 
-IDX_GLOBAL const     ld hl,(const)            ; dest=HL
+LOAD_IDX_GLOB const         ld hl,(const)
 
-IDX_FRAME disp       ld l,(ix+disp)           ; dest=HL
-                     ld h,(ix+disp+1)
+LOAD_IDX_FVAR fvar          ex de,hl
+                            ld e,(ix+fvar)
+                            ld d,(ix+fvar+1)
+                            ex de,hl
 ```
 
 ### 1.4 Combine
 
 ```
-ADD_BASE             add hl,de                ; dest=HL (base+offset)
+CALC_EA                     add hl,de
 
-ADD_BASE_2           add hl,hl                ; dest=HL (offset*2)
-                     add hl,de                ; dest=HL (base+offset*2)
+CALC_EA_2                   add hl,hl
+                            add hl,de
 ```
 
-### 1.5 Accessors
+### 1.5 Accessors (byte)
 
 ```
-LOAD_BYTE            ld a,(hl)                ; dest=A
+LOAD_REG_EA reg             ld reg,(hl)
 
-LOAD_WORD            ld e,(hl)                ; dest=HL (uses DE scratch)
-                     inc hl
-                     ld d,(hl)
-                     ex de,hl                 ; HL = word, DE = addr+1 (scratch)
+STORE_REG_EA reg            ld (hl),reg
 
-STORE_BYTE           ld (hl),a                ; dest=mem (uses HL,A)
+LOAD_REG_GLOB reg glob      ld reg,(glob)
 
-STORE_WORD           push de                  ; dest=mem, preserves HL/DE
-                     ex de,hl                 ; DE = value, HL = addr
-                     ld (hl),e
-                     inc hl
-                     ld (hl),d
-                     ex de,hl                 ; restore value to HL
-                     pop de                   ; restore DE
-```
+STORE_REG_GLOB reg glob     ld (glob),reg
 
-### 1.6 Direct absolute / frame helpers
+LOAD_REG_FVAR reg fvar      ld reg,(ix+fvar)
+
+STORE_REG_FVAR reg fvar     ld (ix+fvar),reg
+
+LOAD_REG_REG dreg sreg      ld dreg,sreg
 
 ```
-LOAD_BYTE_ABS const      ld a,(const)
 
-LOAD_WORD_ABS const      ld hl,(const)
+### 1.6 Accessors (word)
 
-STORE_BYTE_ABS const     ld (const),a
+```
+LOAD_RP_EA rp               ld e,(hl)
+                            inc hl
+                            ld d,(hl)
+                            ld lo(rp),e
+                            ld hi(rp),d
 
-STORE_WORD_ABS const     ld (const),hl
+STORE_RP_EA rp              ld e,lo(rp)              ; rp = DE or BC, HL = EA
+                            ld d,hi(rp)
+                            ld (hl),e
+                            inc hl
+                            ld (hl),d
 
-FRAME_BYTE_LOAD disp     ld a,(ix+disp)
+STORE_RP_EA HL              pop de                   ; value from stack (SW-HL)
+                            ld (hl),e
+                            inc hl
+                            ld (hl),d
 
-FRAME_WORD_LOAD disp     push de
-                         ex de,hl
-                         ld e,(ix+disp)
-                         ld d,(ix+disp+1)
-                         ex de,hl                 ; HL = value, DE = saved HL
-                         pop de                   ; restore DE
+LOAD_RP_GLOB rp glob        ld rp,(glob)
 
-FRAME_BYTE_STORE disp    ld (ix+disp),a
+STORE_RP_GLOB rp glob       ld (glob),rp
 
-FRAME_WORD_STORE disp    push de
-                         ex de,hl
-                         ld (ix+disp),e
-                         ld (ix+disp+1),d
-                         ex de,hl
-                         pop de
+LOAD_RP_FVAR rp fvar        ld lo(rp),(ix+fvar)
+                            ld hi(rp),(ix+fvar+1)
+
+STORE_RP_FVAR rp fvar       ld (ix+fvar),lo(rp)
+                            ld (ix+fvar+1),hi(rp)
 ```
 
-`disp` is the frame displacement: negative for locals,positive for args. When indexing with a constant,fold the scaled constant into `disp`.
+`fvar` is the frame displacement (IX-relative). Positive displacements address args; negative displacements address locals. When indexing with a constant, fold the scaled constant into `fvar`.
 
-## 2. Pipelines (exhaustive load/store shapes)
+## 2. Pipelines (byte)
 
 For each shape:
 
@@ -113,1715 +116,734 @@ For each shape:
 - Steps: vertical list of step names with parameters.
 - ASM: exact codegen (one instruction per line).
 
-### A. Scalars (no index)
+**Scalar fast path:** If there is no index and the base is a direct symbol, use the step library accessors directly (no template):
 
-#### A1 load byte from global
+- Globals: `ld reg,glob` → `LOAD_REG_GLOB` / `ld glob,reg` → `STORE_REG_GLOB`
+- Frame vars: `ld reg,fvar` → `LOAD_REG_FVAR` / `ld fvar,reg` → `STORE_REG_FVAR`
+  Examples:
 
-ZAX
-
-```zax
-ld a,glob_b
 ```
+ld a, glob_b         ; LOAD_REG_GLOB A glob_b
+ld b, (ix-4)         ; LOAD_REG_FVAR B fvar=-4
+ld (ix+6), e         ; STORE_REG_FVAR E fvar=+6
+```
+
+### Scalars (byte, no index)
+
+Use direct accessors; no saves needed for byte destinations.
+
+#### Loads
+
+- Global byte: `ld reg, glob` → `LOAD_REG_GLOB reg glob`
+
+```
+ld a, glob_b                ; LOAD_REG_GLOB A glob_b
+```
+
+- Frame byte: `ld reg, fvar` → `LOAD_REG_FVAR reg fvar`
+
+```
+ld l, (ix-4)                ; LOAD_REG_FVAR L fvar=-4
+```
+
+#### Stores
+
+- Global byte: `ld glob, reg` → `STORE_REG_GLOB reg glob`
+
+```
+ld glob_b, a                ; STORE_REG_GLOB A glob_b
+```
+
+- Frame byte: `ld fvar, reg` → `STORE_REG_FVAR reg fvar`
+
+```
+ld (ix-4), l                ; STORE_REG_FVAR L fvar=-4
+```
+
+> **Routing rule (byte):** If there is **no `[]` index**, stay on the scalar accessors above. If the index is a **constant**, fold it into the frame displacement and use the constant-index EA builders; otherwise use the EA_* builders plus the load/store templates below. Routing scalars through EA_* only adds wasted base+index math and save/restore traffic.
+
+| Access shape             | Path to use                      |
+| ---                      | ---                              |
+| glob / frame var (no []) | Scalars (byte) accessors         |
+| glob / frame[var+const]  | EA_* with CONST idx (fold disp)  |
+| glob / frame[r8]         | EA_* + L-ABC/L-HL/L-DE or S-ANY/S-HL |
+| glob / frame[word index] | EA_* (word idx) + templates      |
+
+### Load templates (8-bit only)
+
+These templates define how to preserve HL/DE while materializing an indexed address and loading one byte. Pick the template by destination register; plug any EA builder (`EA_*`) in the slot noted below. EA\_\* may borrow HL/DE; the saves/restores here provide the protection.
+
+- **L-ABC (dest in A/B/C)** — protected path even for non-overlapping dests
+
+  ```
+  SAVE_DE              ; DE may be borrowed by EA/LOAD
+  SAVE_HL              ; protect both H/L
+  EA_*                 ; result EA in HL (may borrow HL/DE internally)
+  LOAD_REG_EA dest     ; direct load into dest
+  RESTORE_HL           ; restore original H/L
+  RESTORE_DE
+  ```
+
+- **L-HL (dest in H or L)** — protect the non-dest half of HL
+
+  ```
+  SAVE_DE              ; DE may be borrowed by EA/LOAD
+  SAVE_HL              ; protect both H/L
+  EA_*                 ; EA in HL
+  LOAD_REG_EA E        ; temp byte in E
+  RESTORE_HL           ; restore original H/L
+  LOAD_REG_REG dest E  ; dest = H or L
+  RESTORE_DE
+  ```
+
+- **L-DE (dest in D or E)** — protect DE while using HL as EA
+
+  ```
+  SAVE_HL              ; HL will hold EA
+  SAVE_DE              ; protect D/E pair
+  EA_*                 ; EA in HL
+  LOAD_REG_EA L        ; temp byte in L
+  RESTORE_DE           ; restore original D/E
+  LOAD_REG_REG dest L  ; dest = D or E
+  RESTORE_HL
+  ```
+
+### Store templates (8-bit only)
+
+These templates define how to preserve HL/DE while materializing an indexed address and storing one byte held in `vreg`. EA\_\* may borrow HL/DE, so we save/restore around it.
+
+- **S-ANY (vreg not in H/L)** — non-destructive store
+
+  ```
+  SAVE_DE              ; if EA/STORE borrow DE
+  SAVE_HL              ; HL used for EA
+  EA_*                 ; EA in HL
+  STORE_REG_EA vreg    ; write byte (vreg ≠ H/L)
+  RESTORE_HL           ; restore original H/L
+  RESTORE_DE
+  ```
+
+- **S-HL (vreg in H or L)** — value on stack, EA in HL
+
+  ```
+  SAVE_DE              ; stack: [orig DE]
+  SAVE_HL              ; stack: [orig DE, value] ← TOS holds H/L
+  EA_*                 ; HL = EA, stack unchanged
+  POP DE               ; DE = saved value (E=L, D=H)
+  STORE_REG_EA E|D     ; use E if dest=L, D if dest=H
+  RESTORE_DE           ; stack: []
+  ```
+
+EA\_\* is any of the byte-width EA builders above (size = 1). Word-sized store templates will follow in Section 3.
+
+### EA builders (byte width, HL=EA on exit)
+
+Element size = 1. HL returns the effective address; DE must be preserved. EA\_\* borrows HL/DE; callers save/restore as shown in the load/store templates.
+
+#### EA_GLOB_CONST (base=glob, idx=const)
+
+ZAX example: `ld reg, glob[const]`
 
 Steps
 
 ```
-LOAD_BYTE
+LOAD_BASE_GLOB glob
+LOAD_IDX_CONST const
+CALC_EA
 ```
 
 ASM
 
 ```asm
-ld a,(glob_b)
-```
-
-#### A1w load word from global
-
-ZAX
-
-```zax
-ld hl,glob_w
-```
-
-Steps
-
-```
-LOAD_WORD_ABS glob_w
-```
-
-ASM
-
-```asm
-ld hl,(glob_w)
-```
-
-#### A2 load byte from frame var
-
-ZAX
-
-```zax
-ld a,loc_b
-```
-
-Steps
-
-```
-FRAME_BYTE_LOAD dispL
-```
-
-ASM
-
-```asm
-ld a,(ix+dispL)
-```
-
-#### A2w load word from frame var
-
-ZAX
-
-```zax
-ld hl,loc_w
-```
-
-Steps
-
-```
-FRAME_WORD_LOAD dispL
-```
-
-ASM
-
-```asm
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ex de,hl
-```
-
-#### A4 store byte to global
-
-ZAX
-
-```zax
-ld glob_b,a
-```
-
-Steps
-
-```
-STORE_BYTE
-```
-
-ASM
-
-```asm
-ld (glob_b),a
-```
-
-#### A4w store word to global
-
-ZAX
-
-```zax
-ld glob_w,hl
-```
-
-Steps
-
-```
-STORE_WORD_ABS glob_w
-```
-
-ASM
-
-```asm
-ld (glob_w),hl
-```
-
-#### A5 store byte to frame var
-
-ZAX
-
-```zax
-ld loc_b,a
-```
-
-Steps
-
-```
-FRAME_BYTE_STORE dispL
-```
-
-ASM
-
-```asm
-ld (ix+dispL),a
-```
-
-#### A5w store word to frame var
-
-ZAX
-
-```zax
-ld loc_w,hl
-```
-
-Steps
-
-```
-FRAME_WORD_STORE dispL
-```
-
-ASM
-
-```asm
-ex de,hl
-ld (ix+dispL),e
-ld (ix+dispL+1),d
-ex de,hl
-```
-
-### B. Indexed by const
-
-Element size = 1 for byte,2 for word (use `ADD_BASE_2`; larger powers not supported).
-
-#### B1 load byte: global[const]
-
-ZAX
-
-```zax
-ld a,glob_b[const]
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_CONST const
-ADD_BASE
-LOAD_BYTE
-```
-
-ASM
-
-```asm
-ld de,glob_b
+ld de,glob
 ld hl,const
 add hl,de
-ld l,(hl)
 ```
 
-#### B1w load word: global[const]
+#### EA_GLOB_REG (base=glob, idx=reg8)
 
-ZAX
-
-```zax
-ld hl,glob_w[const]
-```
+ZAX example: `ld reg, glob[ireg]`
 
 Steps
 
 ```
-BASE_GLOBAL const
-IDX_CONST const
-ADD_BASE_2
-LOAD_WORD
+LOAD_BASE_GLOB glob
+LOAD_IDX_REG reg8
+CALC_EA
 ```
 
 ASM
 
 ```asm
-ld de,glob_w
+ld de,glob
+ld h,0
+ld l,reg8
+add hl,de
+```
+
+#### EA_GLOB_RP (base=glob, idx=reg16)
+
+ZAX example: `ld reg, glob[rp]`
+
+Steps
+
+```
+LOAD_BASE_GLOB glob
+LOAD_IDX_RP rp
+CALC_EA
+```
+
+ASM
+
+```asm
+ld de,glob
+ld hl,rp
+add hl,de
+```
+
+#### EA_FVAR_CONST (base=fvar, idx=const)
+
+ZAX example: `ld reg, fvar[const]`
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_CONST const
+CALC_EA
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld hl,const
+add hl,de
+```
+
+#### EA_FVAR_REG (base=fvar, idx=reg8)
+
+ZAX example: `ld reg, fvar[ireg]`
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_REG reg8
+CALC_EA
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld h,0
+ld l,reg8
+add hl,de
+```
+
+#### EA_FVAR_RP (base=fvar, idx=reg16)
+
+ZAX example: `ld reg, fvar[rp]`
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_RP rp
+CALC_EA
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld hl,rp
+add hl,de
+```
+
+#### EA_GLOB_FVAR (base=glob, idx=word at fvar)
+
+ZAX example: `ld reg, glob[fvar]`
+
+Steps
+
+```
+LOAD_BASE_GLOB glob
+LOAD_IDX_FVAR fvar
+CALC_EA
+```
+
+ASM
+
+```asm
+ld de,glob
+ex de,hl
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ex de,hl
+add hl,de
+```
+
+#### EA_FVAR_FVAR (base=fvar, idx=word at fvar2)
+
+ZAX example: `ld reg, fvar[fvar2]`
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_FVAR fvar2
+CALC_EA
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ex de,hl
+ld e,(ix+fvar2)
+ld d,(ix+fvar2+1)
+ex de,hl
+add hl,de
+```
+
+#### EA_FVAR_GLOB (base=fvar, idx=word at glob)
+
+ZAX example: `ld reg, fvar[glob]`
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_GLOB glob
+CALC_EA
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld hl,(glob)
+add hl,de
+```
+
+#### EA_GLOB_GLOB (base=glob1, idx=word at glob2)
+
+ZAX example: `ld reg, glob1[glob2]`
+
+Steps
+
+```
+LOAD_BASE_GLOB glob1
+LOAD_IDX_GLOB glob2
+CALC_EA
+```
+
+ASM
+
+```asm
+ld de,glob1
+ld hl,(glob2)
+add hl,de
+```
+
+## 3. Pipelines (word)
+
+### Scalars (word, no index)
+
+#### Load global word into rp
+
+ZAX
+
+```zax
+ld rp, glob_w
+```
+
+Steps
+
+```
+LOAD_RP_GLOB rp glob_w
+```
+
+ASM
+
+```asm
+ld rp,(glob_w)
+```
+
+#### Load frame word into rp
+
+ZAX
+
+```zax
+ld rp, (ix-4)
+```
+
+Steps
+
+```
+LOAD_RP_FVAR rp fvar=-4
+```
+
+ASM
+
+```asm
+ld lo(rp),(ix-4)
+ld hi(rp),(ix-3)
+```
+
+#### Store rp into global word
+
+ZAX
+
+```zax
+ld glob_w, rp
+```
+
+Steps
+
+```
+STORE_RP_GLOB rp glob_w
+```
+
+ASM
+
+```asm
+ld (glob_w),rp
+```
+
+#### Store rp into frame word
+
+ZAX
+
+```zax
+ld (ix-4), rp
+```
+
+Steps
+
+```
+STORE_RP_FVAR rp fvar=-4
+```
+
+ASM
+
+```asm
+ld (ix-4),lo(rp)
+ld (ix-3),hi(rp)
+```
+
+> **Routing rule (word):** If there is **no `[]` index**, use these scalar word accessors directly. For frame vars with constant offsets, fold the constant into the displacement and stay scalar. Only use `EAW_*` plus the LW/SW templates when a runtime index is present; sending scalars through EAW_* introduces needless scaling and save/restore traffic.
+
+| Access shape             | Path to use                              |
+| ---                      | ---                                      |
+| glob / frame var (no []) | Scalars (word) accessors                 |
+| glob / frame[var+const]  | Scalars (word), folded displacement      |
+| glob / frame[r8]         | EAW_* + LW-HL/LW-DE/LW-BC or SW-*        |
+| glob / frame[word index] | EAW_* + LW-HL/LW-DE/LW-BC or SW-*        |
+
+### Load templates (16-bit only)
+
+- **LW-HL (dest HL)** — preferred channel
+
+  ```
+  SAVE_DE
+  EAW_*                ; EA in HL (scale by 2 where needed)
+  LOAD_RP_EA HL        ; load into HL
+  RESTORE_DE
+  ```
+
+- **LW-DE (dest DE)** — load via HL then swap
+
+  ```
+  SAVE_HL
+  EAW_*                ; EA in HL
+  LOAD_RP_EA HL        ; word in HL
+  SWAP_HL_DE           ; move result into DE
+  RESTORE_HL           ; restore caller HL
+  ```
+
+- **LW-BC (dest BC)** — load via HL then move
+
+  ```
+  SAVE_DE
+  SAVE_HL
+  EAW_*                ; EA in HL
+  LOAD_RP_EA HL        ; word in HL
+  LOAD_REG_REG C L     ; move lo byte
+  LOAD_REG_REG B H     ; move hi byte
+  RESTORE_HL           ; restore caller HL
+  RESTORE_DE           ; restore caller DE
+  ```
+
+EAW\_\* denotes any word-width EA builder (below).
+
+### Store templates (16-bit only)
+
+Non-destructive store of a word in `vpair` to EAW\_\*.
+
+- **SW-DEBC (vpair = DE or BC)** — EA in HL, value in DE/BC. SAVE_DE also preserves the source when vpair=DE; do not drop it.
+
+  ```
+  SAVE_DE
+  SAVE_HL
+  EAW_*                ; EA in HL
+  RESTORE_HL           ; restore caller HL
+  RESTORE_DE           ; restore caller DE
+  STORE_RP_EA vpair    ; vpair = DE or BC
+  ```
+
+- **SW-HL (vpair = HL)** — EA in HL, value on stack (from SAVE_HL)
+
+  ```
+  SAVE_DE              ; stack: [orig DE]
+  SAVE_HL              ; stack: [orig DE, value]  ← TOS holds value
+  EAW_*                ; HL = EA, stack unchanged
+  STORE_RP_EA HL       ; pops value into DE, stores through HL
+  RESTORE_DE           ; stack: []
+  ```
+
+EAW\_\* is any word-width EA builder (size = 2). Scaling is baked into EAW\_\*.
+
+### EA builders (word width, HL=EA on exit, size = 2)
+
+Element size = 2. These scale the index by 2 (CALC_EA_2). HL returns the effective address; DE must be preserved. ZAX examples show typical shapes.
+
+#### EA_GLOB_CONST_W (base=glob, idx=const)
+
+ZAX example: `ld rp, glob[const]`
+
+Steps
+
+```
+LOAD_BASE_GLOB glob
+LOAD_IDX_CONST const
+CALC_EA_2
+```
+
+ASM
+
+```asm
+ld de,glob
 ld hl,const
 add hl,hl
 add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
 ```
 
-#### B2 load byte: frame[const]
+#### EA_GLOB_REG_W (base=glob, idx=reg8)
 
-ZAX
-
-```zax
-ld a,loc_b[const]
-```
+ZAX example: `ld rp, glob[ireg]`
 
 Steps
 
 ```
-FRAME_BYTE_LOAD dispL+const
+LOAD_BASE_GLOB glob
+LOAD_IDX_REG reg8
+CALC_EA_2
 ```
 
 ASM
 
 ```asm
-ld a,(ix+dispL+const)
-```
-
-#### B2w load word: frame[const]
-
-ZAX
-
-```zax
-ld hl,loc_w[const]
-```
-
-Steps
-
-```
-FRAME_WORD_LOAD dispL+const*2
-```
-
-ASM
-
-```asm
-ex de,hl
-ld e,(ix+dispL+const*2)
-ld d,(ix+dispL+const*2+1)
-ex de,hl
-```
-
-#### B4 store byte: global[const]
-
-ZAX
-
-```zax
-ld glob_b[const],a
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_CONST const
-ADD_BASE
-STORE_BYTE
-```
-
-ASM
-
-```asm
-ld de,glob_b
-ld hl,const
+ld de,glob
+ld h,0
+ld l,reg8
+add hl,hl
 add hl,de
-ld (hl),a
 ```
 
-#### B4w store word: global[const]
+#### EA_GLOB_RP_W (base=glob, idx=reg16)
 
-ZAX
-
-```zax
-ld glob_w[const],hl
-```
+ZAX example: `ld rp, glob[rp]`
 
 Steps
 
 ```
-SAVE_HL
-BASE_GLOBAL const
-IDX_CONST const
-ADD_BASE_2
-RESTORE_DE
-STORE_WORD
+LOAD_BASE_GLOB glob
+LOAD_IDX_RP rp
+CALC_EA_2
 ```
 
 ASM
 
 ```asm
-push hl
-ld de,glob_w
+ld de,glob
+ld hl,rp
+add hl,hl
+add hl,de
+```
+
+#### EA_FVAR_CONST_W (base=fvar, idx=const)
+
+ZAX example: `ld rp, fvar[const]`
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_CONST const
+CALC_EA_2
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld hl,const
 add hl,hl
 add hl,de
-pop de
-ld (hl),e
-inc hl
-ld (hl),d
 ```
 
-#### B5 store byte: local[const]
+#### EA_FVAR_REG_W (base=fvar, idx=reg8)
 
-ZAX
-
-```zax
-ld loc_b[const],a
-```
+ZAX example: `ld rp, fvar[ireg]`
 
 Steps
 
 ```
-FRAME_BYTE_STORE dispL+const
+LOAD_BASE_FVAR fvar
+LOAD_IDX_REG reg8
+CALC_EA_2
 ```
 
 ASM
 
 ```asm
-ld (ix+dispL+const),a
-```
-
-#### B5w store word: local[const]
-
-ZAX
-
-```zax
-ld loc_w[const],hl
-```
-
-Steps
-
-```
-FRAME_WORD_STORE dispL+const*2
-```
-
-ASM
-
-```asm
-ex de,hl
-ld (ix+dispL+const*2),e
-ld (ix+dispL+const*2+1),d
-ex de,hl
-```
-
-#### B6 store byte: arg[const]
-
-ZAX
-
-```zax
-ld arg_b[const],e
-```
-
-Steps
-
-```
-FRAME_BYTE_STORE dispA+const
-```
-
-ASM
-
-```asm
-ld (ix+dispA+const),a
-```
-
-#### B6w store word: arg[const]
-
-ZAX
-
-```zax
-ld arg_w[const],hl
-```
-
-Steps
-
-```
-FRAME_WORD_STORE dispA+const*2
-```
-
-ASM
-
-```asm
-push de
-ex de,hl
-ld (ix+dispA+const*2),e
-ld (ix+dispA+const*2+1),d
-ex de,hl
-pop de
-```
-
-> **Routing rule:** use the simplest path that matches the source shape. If there is **no `[]` index**, stay on the A-series scalar paths (direct glob/frame accessors). If the index is a **constant**, fold it into the frame displacement and use the B-series constant-index paths. Only use the indexed pipelines (C/D/E) when a runtime index is present. Do not send scalars through the indexed pipelines—they will add unnecessary base+index math and save/restore traffic.
-
-| Access shape             | Path to use          |
-| ---                      | ---                  |
-| glob / frame var (no []) | A-series (scalar)    |
-| glob / frame[var+const]  | B-series (const idx) |
-| glob / frame[r8]         | C-series             |
-| glob / frame[word index] | D/E-series           |
-
-### C. Indexed by register (8-bit index in `r8`)
-
-#### C1 load byte: global[r]
-
-ZAX
-
-```zax
-ld a,glob_b[r]
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_REG8 reg8
-ADD_BASE
-LOAD_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld de,glob_b
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ld h,0
-ld l,r
-add hl,de
-ld l,(hl)
-pop de
-```
-
-#### C1w load word: global[r]
-
-ZAX
-
-```zax
-ld hl,glob_w[r]
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_REG8 reg8
-ADD_BASE_2
-LOAD_WORD
-```
-
-ASM
-
-```asm
-push de
-ld de,glob_w
-ld h,0
-ld l,r
+ld l,reg8
 add hl,hl
 add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-pop de
 ```
 
-#### C2 load byte: local[r]
+#### EA_FVAR_RP_W (base=fvar, idx=reg16)
 
-ZAX
-
-```zax
-ld a,loc_b[r]
-```
+ZAX example: `ld rp, fvar[rp]`
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE
-LOAD_BYTE
+LOAD_BASE_FVAR fvar
+LOAD_IDX_RP rp
+CALC_EA_2
 ```
 
 ASM
 
 ```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ld h,0
-ld l,r
-add hl,de
-ld l,(hl)
-pop de
-```
-
-#### C2w load word: local[r]
-
-ZAX
-
-```zax
-ld hl,loc_w[r]
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE_2
-LOAD_WORD
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ld h,0
-ld l,r
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld hl,rp
 add hl,hl
 add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
+```
+
+#### EA_GLOB_FVAR_W (base=glob, idx=word at fvar)
+
+ZAX example: `ld rp, glob[fvar]`
+
+Steps
+
+```
+LOAD_BASE_GLOB glob
+LOAD_IDX_FVAR fvar
+CALC_EA_2
+```
+
+ASM
+
+```asm
+ld de,glob
 ex de,hl
-pop de
-```
-
-#### C3 load byte: arg[r]
-
-ZAX
-
-```zax
-ld a,arg_b[r]
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE
-LOAD_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ld h,0
-ld l,r
-add hl,de
-ld l,(hl)
-pop de
-```
-
-#### C3w load word: arg[r]
-
-ZAX
-
-```zax
-ld hl,arg_w[r]
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE_2
-LOAD_WORD
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ld h,0
-ld l,r
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ex de,hl
 add hl,hl
 add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
+```
+
+#### EA_FVAR_FVAR_W (base=fvar, idx=word at fvar2)
+
+ZAX example: `ld rp, fvar[fvar2]`
+
+Steps
+
+```
+LOAD_BASE_FVAR fvar
+LOAD_IDX_FVAR fvar2
+CALC_EA_2
+```
+
+ASM
+
+```asm
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
 ex de,hl
-pop de
-```
-
-#### C4 store byte: global[r]
-
-ZAX
-
-```zax
-ld glob_b[r],e
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_REG8 reg8
-ADD_BASE
-STORE_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld de,glob_b
-ld h,0
-ld l,r
-add hl,de
-ld (hl),e
-pop de
-```
-
-#### C4w store word: global[r]
-
-ZAX
-
-```zax
-ld glob_w[r],hl
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_REG8 reg8
-ADD_BASE_2
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
-```
-
-ASM
-
-```asm
-push de
-push hl
-ld de,glob_w
-ld h,0
-ld l,r
+ld e,(ix+fvar2)
+ld d,(ix+fvar2+1)
+ex de,hl
 add hl,hl
 add hl,de
-ex (sp),hl
-pop de
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-pop de
 ```
 
-#### C5 store byte: local[r]
+#### EA_FVAR_GLOB_W (base=fvar, idx=word at glob)
 
-ZAX
-
-```zax
-ld loc_b[r],e
-```
+ZAX example: `ld rp, fvar[glob]`
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE
-STORE_BYTE
+LOAD_BASE_FVAR fvar
+LOAD_IDX_GLOB glob
+CALC_EA_2
 ```
 
 ASM
 
 ```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ld h,0
-ld l,r
-add hl,de
-ld (hl),e
-pop de
-```
-
-#### C5w store word: local[r]
-
-ZAX
-
-```zax
-ld loc_w[r],hl
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE_2
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
-```
-
-ASM
-
-```asm
-push de
-push hl
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ld h,0
-ld l,r
+ld e,(ix+fvar)
+ld d,(ix+fvar+1)
+ld hl,(glob)
 add hl,hl
 add hl,de
-ex (sp),hl
-pop de
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-pop de
 ```
 
-#### C6 store byte: arg[r]
+#### EA_GLOB_GLOB_W (base=glob1, idx=word at glob2)
 
-ZAX
-
-```zax
-ld arg_b[r],e
-```
+ZAX example: `ld rp, glob1[glob2]`
 
 Steps
 
 ```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE
-STORE_BYTE
+LOAD_BASE_GLOB glob1
+LOAD_IDX_GLOB glob2
+CALC_EA_2
 ```
 
 ASM
 
 ```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ld h,0
-ld l,r
-add hl,de
-ld (hl),e
-pop de
-```
-
-#### C6w store word: arg[r]
-
-ZAX
-
-```zax
-ld arg_w[r],hl
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_REG8 reg8
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
-```
-
-ASM
-
-```asm
-push de
-push hl
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ld h,0
-ld l,r
+ld de,glob1
+ld hl,(glob2)
 add hl,hl
 add hl,de
-ex (sp),hl
-pop de
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-pop de
 ```
 
-### D. Indexed by variable in memory (typed address kept in memory)
+## Notes / Appendix
 
-Two index sources shown: a global word `idxG` and a frame word at `dispIdx`.
-
-#### D1 load byte: global[idxG]
-
-ZAX
-
-```zax
-ld a,glob_b[idxG]
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_GLOBAL const
-ADD_BASE
-LOAD_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld de,glob_b
-ld hl,(idxG)
-add hl,de
-ld l,(hl)
-pop de
-```
-
-#### D1w load word: global[idxG]
-
-ZAX
-
-```zax
-ld hl,glob_w[idxG]
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_GLOBAL const
-ADD_BASE
-LOAD_WORD
-```
-
-ASM
-
-```asm
-push de
-ld de,glob_w
-ld hl,(idxG)
-add hl,hl
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-pop de
-```
-
-#### D2 load byte: global[idxFrame]
-
-ZAX
-
-```zax
-ld a,glob_b[idxFrame]
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_FRAME disp
-ADD_BASE
-LOAD_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld de,glob_b
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,de
-ld l,(hl)
-pop de
-```
-
-#### D2w load word: global[idxFrame]
-
-ZAX
-
-```zax
-ld hl,glob_w[idxFrame]
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_FRAME disp
-ADD_BASE
-LOAD_WORD
-```
-
-ASM
-
-```asm
-push de
-ld de,glob_w
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,hl
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-pop de
-```
-
-#### D3 load byte: local[idxG]
-
-ZAX
-
-```zax
-ld a,loc_b[idxG]
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-LOAD_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ld hl,(idxG)
-add hl,de
-ld l,(hl)
-pop de
-```
-
-#### D3w load word: local[idxG]
-
-ZAX
-
-```zax
-ld hl,loc_w[idxG]
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-LOAD_WORD
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ld hl,(idxG)
-add hl,hl
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-pop de
-```
-
-#### D4 load byte: local[idxFrame]
-
-ZAX
-
-```zax
-ld a,loc_b[idxFrame]
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-LOAD_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,de
-ld l,(hl)
-pop de
-```
-
-#### D4w load word: local[idxFrame]
-
-ZAX
-
-```zax
-ld hl,loc_w[idxFrame]
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-LOAD_WORD
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,hl
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-pop de
-```
-
-#### D5 load byte: arg[idxG]
-
-ZAX
-
-```zax
-ld a,arg_b[idxG]
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-LOAD_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ld hl,(idxG)
-add hl,de
-ld l,(hl)
-pop de
-```
-
-#### D5w load word: arg[idxG]
-
-ZAX
-
-```zax
-ld hl,arg_w[idxG]
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-LOAD_WORD
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ld hl,(idxG)
-add hl,hl
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-pop de
-```
-
-#### D6 load byte: arg[idxFrame]
-
-ZAX
-
-```zax
-ld a,arg_b[idxFrame]
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-LOAD_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,de
-ld l,(hl)
-pop de
-```
-
-#### D6w load word: arg[idxFrame]
-
-ZAX
-
-```zax
-ld hl,arg_w[idxFrame]
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-LOAD_WORD
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,hl
-add hl,de
-ld e,(hl)
-inc hl
-ld d,(hl)
-ex de,hl
-pop de
-```
-
-#### D7 store byte: global[idxG]
-
-ZAX
-
-```zax
-ld glob_b[idxG],e
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_GLOBAL const
-ADD_BASE
-STORE_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld de,glob_b
-ld hl,(idxG)
-add hl,de
-ld (hl),e
-pop de
-```
-
-#### D7w store word: global[idxG]
-
-ZAX
-
-```zax
-ld glob_w[idxG],hl
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_GLOBAL const
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
-```
-
-ASM
-
-```asm
-push de
-push hl
-ld de,glob_w
-ld hl,(idxG)
-add hl,hl
-add hl,de
-ex (sp),hl
-pop de
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-pop de
-```
-
-#### D8 store byte: global[idxFrame]
-
-ZAX
-
-```zax
-ld glob_b[idxFrame],e
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_FRAME disp
-ADD_BASE
-STORE_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld de,glob_b
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,de
-ld (hl),e
-pop de
-```
-
-#### D8w store word: global[idxFrame]
-
-ZAX
-
-```zax
-ld glob_w[idxFrame],hl
-```
-
-Steps
-
-```
-BASE_GLOBAL const
-IDX_FRAME disp
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
-```
-
-ASM
-
-```asm
-push de
-push hl
-ld de,glob_w
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,hl
-add hl,de
-ex (sp),hl
-pop de
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-pop de
-```
-
-#### D9 store byte: local[idxG]
-
-ZAX
-
-```zax
-ld loc_b[idxG],e
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-STORE_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ld hl,(idxG)
-add hl,de
-ld (hl),e
-pop de
-```
-
-#### D9w store word: local[idxG]
-
-ZAX
-
-```zax
-ld loc_w[idxG],hl
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
-```
-
-ASM
-
-```asm
-push de
-push hl
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-ld hl,(idxG)
-add hl,hl
-add hl,de
-ex (sp),hl
-pop de
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-pop de
-```
-
-#### D10 store byte: local[idxFrame]
-
-ZAX
-
-```zax
-ld loc_b[idxFrame],e
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-STORE_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,de
-ld (hl),e
-pop de
-```
-
-#### D10w store word: local[idxFrame]
-
-ZAX
-
-```zax
-ld loc_w[idxFrame],hl
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
-```
-
-ASM
-
-```asm
-push de
-push hl
-ld e,(ix+dispL)
-ld d,(ix+dispL+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,hl
-add hl,de
-ex (sp),hl
-pop de
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-pop de
-```
-
-#### D11 store byte: arg[idxG]
-
-ZAX
-
-```zax
-ld arg_b[idxG],e
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-STORE_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ld hl,(idxG)
-add hl,de
-ld (hl),e
-pop de
-```
-
-#### D11w store word: arg[idxG]
-
-ZAX
-
-```zax
-ld arg_w[idxG],hl
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_GLOBAL const
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
-```
-
-ASM
-
-```asm
-push de
-push hl
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-ld hl,(idxG)
-add hl,hl
-add hl,de
-ex (sp),hl
-pop de
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-pop de
-```
-
-#### D12 store byte: arg[idxFrame]
-
-ZAX
-
-```zax
-ld arg_b[idxFrame],e
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-STORE_BYTE
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,de
-ld (hl),e
-pop de
-```
-
-#### D12w store word: arg[idxFrame]
-
-ZAX
-
-```zax
-ld arg_w[idxFrame],hl
-```
-
-Steps
-
-```
-BASE_FRAME disp
-IDX_FRAME disp
-ADD_BASE
-SWAP_SAVED
-SWAP
-STORE_WORD
-SWAP
-```
-
-ASM
-
-```asm
-push de
-push hl
-ld e,(ix+dispA)
-ld d,(ix+dispA+1)
-push de
-ld e,(ix+dispIdx)
-ld d,(ix+dispIdx+1)
-ex de,hl
-pop de
-add hl,hl
-add hl,de
-ex (sp),hl
-pop de
-ex de,hl
-ld (hl),e
-inc hl
-ld (hl),d
-ex de,hl
-pop de
-```
-
-### E. Record fields (const offsets)
-
-Record field access is the const-index case with `const = field_offset`.
-
-Example load word field from a local record:
-
-ZAX
-
-```zax
-ld hl,rec.field
-```
-
-Steps
-
-```
-FRAME_WORD_LOAD dispRec+field_offset
-```
-
-ASM
-
-```asm
-push de
-ld e,(ix+dispRec+field_offset)
-ld d,(ix+dispRec+field_offset+1)
-ex de,hl
-pop de
-```
-
-Example store byte field into an arg record:
-
-ZAX
-
-```zax
-ld rec.field,a
-```
-
-Steps
-
-```
-FRAME_BYTE_STORE dispRec+field_offset
-```
-
-ASM
-
-```asm
-ld (ix+dispRec+field_offset),a
-```
-
-## 3. Notes
-
-- Per-instruction preservation: only the destination register (loads) or value register (`A`/`HL` for stores) may change; all scratch registers are saved/restored in the pipelines above.
-- IX is never scratch; frame accesses use explicit displacements.
-- Pipelines above cover the full matrix of base (global/local/arg),index source (const,reg8,memory global/frame),width (byte/word),and operation (load/store). Additional register-pair shuffles can be composed from the same steps if a lowering conflict arises.
+- Choose an EA/EAW builder based on the base and index source. If the index is a constant, fold it into the frame displacement (`fvar+const`) when that keeps the EA simple.
+- Choose a load/store template based on the destination (for loads) or source register (for stores):
+  - Byte: L-ABC, L-HL, L-DE, S-ANY, S-HL
+  - Word: LW-HL, LW-DE, LW-BC, SW-HL, SW-DEBC
+- EA/EAW builders may borrow HL/DE internally; the templates already save/restore HL/DE to protect caller state. Do not add extra saves outside the templates.
+- Per-instruction preservation: the only registers allowed to change are the destination register (load) or the value register/pair (store). All other registers must be restored by the end of the pipeline.
+- IX is the frame pointer. Never repurpose IX as a scratch register; keep all scratch and EA work to HL/DE with proper saves/restores.
