@@ -1,6 +1,6 @@
 # ZAX Addressing Model (v0.2) — Step Pipelines
 
-Goal: express every allowed load/store addressing shape as a short pipeline of reusable **steps** (concatenative/Forth style). A pipeline must leave all registers untouched except the destination (for loads) or the value-carrying register (for stores, typically `A` or `HL`). IX is never scratch.
+Goal: express every allowed load/store addressing shape as a short pipeline of reusable **steps** (concatenative/Forth style). A pipeline must leave all registers untouched except the destination (for loads) or the value-carrying register (for stores,typically `A` or `HL`). IX is never scratch.
 
 ## 1. Step Library (reusable “words”)
 
@@ -55,22 +55,19 @@ ADD_BASE_2           add hl,hl                ; dest=HL (offset*2)
 ### 1.5 Accessors
 
 ```
-LOAD_BYTE            ld a,(hl)                ; dest=A
+LOAD_BYTE            ld a,(hl)               ; dest=A
 
 LOAD_WORD            ld e,(hl)                ; dest=HL (uses DE scratch)
                      inc hl
                      ld d,(hl)
-                     ex de,hl                 ; HL = word, DE = addr+1 (scratch)
+                     ex de,hl                 ; HL = word,DE = addr+1 (scratch)
 
-STORE_BYTE           ld (hl),a                ; dest=mem (uses HL,A)
+STORE_BYTE           ld (hl),a               ; dest=mem (uses HL,E)
 
-STORE_WORD           push de                  ; dest=mem, preserves HL/DE
-                     ex de,hl                 ; DE = value, HL = addr
+STORE_WORD           ex de,hl                ; dest=mem (uses HL,DE)
                      ld (hl),e
                      inc hl
                      ld (hl),d
-                     ex de,hl                 ; restore value to HL
-                     pop de                   ; restore DE
 ```
 
 ### 1.6 Direct absolute / frame helpers
@@ -86,21 +83,17 @@ STORE_WORD_ABS const     ld (const),hl
 
 FRAME_BYTE_LOAD disp     ld a,(ix+disp)
 
-FRAME_WORD_LOAD disp     push de
-                         ex de,hl
+FRAME_WORD_LOAD disp     ex de,hl
                          ld e,(ix+disp)
                          ld d,(ix+disp+1)
-                         ex de,hl                 ; HL = value, DE = saved HL
-                         pop de                   ; restore DE
+                         ex de,hl                 ; HL = value,DE restored by pop
 
 FRAME_BYTE_STORE disp    ld (ix+disp),a
 
-FRAME_WORD_STORE disp    push de
-                         ex de,hl
+FRAME_WORD_STORE disp    ex de,hl
                          ld (ix+disp),e
                          ld (ix+disp+1),d
                          ex de,hl
-                         pop de
 ```
 
 `disp` is the frame displacement: negative for locals,positive for args. When indexing with a constant,fold the scaled constant into `disp`.
