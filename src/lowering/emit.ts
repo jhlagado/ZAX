@@ -2596,7 +2596,25 @@ export function emitProgram(
   };
 
   const buildEaWordPipeline = (ea: EaExprNode, span: SourceSpan): StepPipeline | null => {
-    // TODO: word-scaled EA pipelines (EAW_*) require type-aware scaling; disabled for now.
+    const hasIndex = (expr: EaExprNode): boolean => {
+      switch (expr.kind) {
+        case 'EaIndex':
+          return true;
+        case 'EaAdd':
+        case 'EaSub':
+        case 'EaField':
+          return hasIndex(expr.base);
+        default:
+          return false;
+      }
+    };
+    if (!hasIndex(ea)) return null; // only use scaled EAW when an index is present
+    const r = resolveEa(ea, span);
+    if (!r) return null;
+    const scalarKind = r.typeExpr ? resolveScalarKind(r.typeExpr) : undefined;
+    if (scalarKind !== 'word' && scalarKind !== 'addr') return null;
+    if (r.kind === 'abs') return EAW_GLOB_CONST(r.baseLower, r.addend);
+    if (r.kind === 'stack') return EAW_FVAR_CONST(r.ixDisp, 0);
     return null;
   };
 
