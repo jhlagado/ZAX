@@ -307,8 +307,8 @@ export const TEMPLATE_S_HL = (vreg: 'H' | 'L', ea: StepPipeline): StepPipeline =
   ...SAVE_DE(),
   ...SAVE_HL(),
   ...ea,
-  ...RESTORE_HL(), // value in HL on stack top
-  ...STORE_REG_EA(vreg === 'H' ? 'D' : 'E'), // after pop, DE holds value
+  ...STORE_REG_EA(vreg),
+  ...RESTORE_HL(),
   ...RESTORE_DE(),
 ];
 

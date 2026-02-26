@@ -2576,12 +2576,21 @@ export function emitProgram(
           diagAt(diagnostics, span, `Invalid reg8 index "${ea.index.reg}".`);
           return false;
         }
-        emitRawCodeBytes(Uint8Array.of(0x26, 0x00), span.file, 'ld h, 0');
-        emitRawCodeBytes(
-          Uint8Array.of(0x6f + ((r8 === 'A' ? 0x7 : reg8Code.get(r8)!) << 3)),
-          span.file,
-          `ld l, ${r8}`,
-        );
+        if (
+          !emitInstr(
+            'ld',
+            [
+              { kind: 'Reg', span, name: 'H' },
+              { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } },
+            ],
+            span,
+          )
+        ) {
+          return false;
+        }
+        if (!emitInstr('ld', [{ kind: 'Reg', span, name: 'L' }, { kind: 'Reg', span, name: r8 }], span)) {
+          return false;
+        }
       } else if (ea.index.kind === 'IndexMemHL' || ea.index.kind === 'IndexMemIxIy') {
         if (
           !emitInstr(
@@ -2819,9 +2828,9 @@ export function emitProgram(
       }
       const pipe = buildEaWordPipeline(ea, span);
       if (pipe) {
-        // Load to DE then push HL via template (DE result).
+        // Load to DE then push the loaded word (DE).
         if (!emitStepPipeline(TEMPLATE_LW_DE(pipe), span)) return false;
-        return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
+        return emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span);
       }
       // fallback: compute address and load word
       if (!pushEaAddress(ea, span)) return false;
@@ -2855,7 +2864,7 @@ export function emitProgram(
     const eaPipe = buildEaBytePipeline(ea, span);
     if (!eaPipe) return false;
     const templated = TEMPLATE_L_ABC('A', eaPipe);
-    return emitStepPipeline(templated, span);
+    return emitStepPipeline(templated, span) && pushZeroExtendedReg8('A', span);
   };
 
   const materializeEaAddressToHL = (ea: EaExprNode, span: SourceSpan): boolean => {
