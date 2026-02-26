@@ -95,13 +95,9 @@ STORE_RP_EA HL              pop de                   ; value from stack (SW-HL)
                             inc hl
                             ld (hl),d
 
-LOAD_RP_GLOB rp glob        ld hl,(glob)
-                            ld lo(rp),l
-                            ld hi(rp),h
+LOAD_RP_GLOB rp glob        ld rp,(glob)
 
-STORE_RP_GLOB rp glob       ld l,lo(rp)
-                            ld h,hi(rp)
-                            ld (glob),hl
+STORE_RP_GLOB rp glob       ld (glob),rp
 
 LOAD_RP_FVAR rp fvar        ld lo(rp),(ix+fvar)
                             ld hi(rp),(ix+fvar+1)
@@ -461,13 +457,11 @@ ld rp, glob_w
 ```
 Steps
 ```
-LOAD_REG_GLOB lo(rp) glob_w
-LOAD_REG_GLOB hi(rp) glob_w+1
+LOAD_RP_GLOB rp glob_w
 ```
 ASM
 ```asm
-ld lo(rp),(glob_w)
-ld hi(rp),(glob_w+1)
+ld rp,(glob_w)
 ```
 
 #### Load frame word into rp
@@ -478,8 +472,7 @@ ld rp, (ix-4)
 ```
 Steps
 ```
-LOAD_REG_FVAR lo(rp) fvar=-4
-LOAD_REG_FVAR hi(rp) fvar=-3
+LOAD_RP_FVAR rp fvar=-4
 ```
 ASM
 ```asm
@@ -495,13 +488,11 @@ ld glob_w, rp
 ```
 Steps
 ```
-STORE_REG_GLOB lo(rp) glob_w
-STORE_REG_GLOB hi(rp) glob_w+1
+STORE_RP_GLOB rp glob_w
 ```
 ASM
 ```asm
-ld (glob_w),lo(rp)
-ld (glob_w+1),hi(rp)
+ld (glob_w),rp
 ```
 
 #### Store rp into frame word
@@ -512,15 +503,13 @@ ld (ix-4), rp
 ```
 Steps
 ```
-STORE_REG_FVAR lo(rp) fvar=-4
-STORE_REG_FVAR hi(rp) fvar=-3
+STORE_RP_FVAR rp fvar=-4
 ```
 ASM
 ```asm
 ld (ix-4),lo(rp)
 ld (ix-3),hi(rp)
 ```
-
 - **LW-HL (dest HL)** — preferred channel
 
   ```
@@ -580,7 +569,7 @@ Non-destructive store of a word in `vpair` to EAW\_\*.
   RESTORE_DE           ; stack: []
   ```
 
-EAW*\* is any word-width EA builder (size = 2). Scaling is baked into EAW*\*.
+EAW_* is any word-width EA builder (size = 2). Scaling is baked into EAW_*.
 
 ### EA builders (word width, HL=EA on exit, size = 2)
 
