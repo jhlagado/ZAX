@@ -3064,32 +3064,30 @@ export function emitProgram(
       }
       const s8 = reg8Code.get(src.name.toUpperCase());
       if (s8 !== undefined) {
-        const preserveA = src.name.toUpperCase() === 'A';
-        if (
-          preserveA &&
-          !emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)
-        ) {
+        const regUp = src.name.toUpperCase();
+        const dstPipe = buildEaBytePipeline(dst.expr, inst.span);
+        if (dstPipe) {
+          const templated = TEMPLATE_S_ANY(regUp, dstPipe);
+          if (emitStepPipeline(templated, inst.span)) return true;
+        }
+        // Fallback: materialize address and emit direct store.
+        const preserveA = regUp === 'A';
+        if (preserveA && !emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
           return false;
         }
         if (!materializeEaAddressToHL(dst.expr, inst.span)) {
-          if (
-            preserveA &&
-            !emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)
-          ) {
+          if (preserveA && !emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
             return false;
           }
           return false;
         }
-        if (
-          preserveA &&
-          !emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)
-        ) {
+        if (preserveA && !emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
           return false;
         }
         emitRawCodeBytes(
           Uint8Array.of(0x70 + s8),
           inst.span.file,
-          `ld (hl), ${src.name.toUpperCase()}`,
+          `ld (hl), ${regUp}`,
         );
         return true;
       }
