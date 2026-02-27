@@ -1,11 +1,7 @@
-section code at $0100
-section data at $2000
-
 data
   dummy: word = 0
-end
 
-export func touch_scalar_word_frame(arg_w: word): HL
+func touch_scalar_word_frame(arg_w: word): HL
   ld de, arg_w
   ld arg_w, de
   ex de, hl
