@@ -26,7 +26,7 @@ describe('PR406 word store (runtime index, DE)', () => {
     expect(text).toMatch(/add hl, hl/i); // scale idx
     expect(text).toMatch(/ld de, arr_w/i); // base load
     expect(text).toMatch(/add hl, de/i); // combine
-    expect(text).toMatch(/ld \\(hl\\), e/i); // store low
-    expect(text).toMatch(/ld \\(hl\\), d/i); // store high
+    expect(text).toContain('ld (HL), E'); // store low
+    expect(text).toContain('ld (HL), D'); // store high
   });
 });
