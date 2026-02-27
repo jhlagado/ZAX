@@ -2821,6 +2821,11 @@ export function emitProgram(
             diagAt(diagnostics, span, `Invalid reg16 index "${(ea.index as any).reg}".`);
             return null;
           }
+          if (rp === 'HL') {
+            return baseResolved.kind === 'abs'
+              ? [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA()]
+              : [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA()];
+          }
           return baseResolved.kind === 'abs'
             ? EA_GLOB_RP(baseResolved.baseLower, rp)
             : EA_FVAR_RP(baseResolved.ixDisp, rp);
