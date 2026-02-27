@@ -36,6 +36,14 @@ describe('PR407 word addressing regressions', () => {
     expect(text).toMatch(/ld \(hl\), e/i);
     expect(text).toMatch(/ld \(hl\), d/i);
 
+    // Exact HL-indexed word load shape (doc: add hl,hl; ld de,base; add hl,de; ld e,(hl); inc hl; ld d,(hl))
+    expect(text).toMatch(
+      /add hl, hl[\s\S]*?ld de, gw[\s\S]*?add hl, de[\s\S]*?ld e, \(hl\)[\s\S]*?inc hl[\s\S]*?ld d, \(hl\)/i,
+    );
+
+    // No bogus ld hl,hl noise
+    expect(text).not.toMatch(/ld hl, hl/i);
+
     // reg16 HL index
     expect(text).toMatch(/add hl, hl/i);
     expect(text).toMatch(/ld de, gw/i);
