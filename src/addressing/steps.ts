@@ -304,11 +304,12 @@ export const TEMPLATE_S_ANY = (vreg: string, ea: StepPipeline): StepPipeline => 
 ];
 
 export const TEMPLATE_S_HL = (vreg: 'H' | 'L', ea: StepPipeline): StepPipeline => [
-  ...SAVE_DE(),
-  ...SAVE_HL(),
-  ...ea,
-  ...STORE_REG_EA(vreg),
-  ...RESTORE_HL(),
+  // Save DE (caller may need it) and save the source byte (H/L) on the stack.
+  ...SAVE_DE(), // stack: [orig DE]
+  ...SAVE_HL(), // stack: [orig DE, value] (value = original H|L)
+  ...ea, // HL = EA
+  ...RESTORE_DE(), // DE = saved value (E=L, D=H). Stack: [orig DE]
+  ...STORE_REG_EA(vreg === 'L' ? 'E' : 'D'), // store source byte at EA
   ...RESTORE_DE(),
 ];
 

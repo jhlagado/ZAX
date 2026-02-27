@@ -6,6 +6,7 @@ import {
   EA_GLOB_GLOB,
   EA_FVAR_GLOB,
   EA_FVAR_FVAR,
+  TEMPLATE_S_HL,
   EAW_GLOB_CONST,
   EAW_FVAR_CONST,
   TEMPLATE_L_ABC,
@@ -104,6 +105,20 @@ describe('addressing-model step library', () => {
       'ld d, (ix-$09)',
       'ex de, hl',
       'add hl, de',
+    ]);
+  });
+
+  it('S-HL stores via saved value and EA in HL', () => {
+    const p = TEMPLATE_S_HL('H', EA_GLOB_CONST('glob', 1));
+    expect(asm(p)).toEqual([
+      'push de',
+      'push hl',
+      'ld de, glob',
+      'ld hl, $0001',
+      'add hl, de',
+      'pop de',
+      'ld (hl), D',
+      'pop de',
     ]);
   });
 });
