@@ -26,7 +26,7 @@ describe('PR412 runtime array indexing (word)', () => {
     expect(text).toMatch(/add hl, hl/i); // scale idx
     expect(text).toMatch(/ld de, arr_w/i); // base load
     expect(text).toMatch(/add hl, de/i); // combine base + scaled idx
-    // Word load via HL address (A/H shuffle acceptable for now)
-    expect(text).toMatch(/ld a, \(hl\)[\s\S]*ld h, \(hl\)/i);
+    // Word load via HL address (any register shuffle is fine)
+    expect(text).toMatch(/ld e, \(hl\)[\s\S]*ld d, \(hl\)/i);
   });
 });

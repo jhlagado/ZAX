@@ -2,9 +2,21 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import {
   EA_GLOB_CONST,
+  EA_GLOB_REG,
+  EA_GLOB_RP,
   EA_FVAR_CONST,
+  EA_FVAR_REG,
+  EA_FVAR_RP,
   EAW_GLOB_CONST,
+  EAW_GLOB_REG,
+  EAW_GLOB_RP,
   EAW_FVAR_CONST,
+  EAW_FVAR_REG,
+  EAW_FVAR_RP,
+  LOAD_BASE_GLOB,
+  LOAD_BASE_FVAR,
+  CALC_EA,
+  CALC_EA_2,
   TEMPLATE_L_ABC,
   TEMPLATE_LW_HL,
   TEMPLATE_L_HL,
@@ -2782,6 +2794,42 @@ export function emitProgram(
   };
 
   const buildEaBytePipeline = (ea: EaExprNode, span: SourceSpan): StepPipeline | null => {
+    // Runtime index with reg8/reg16 → EA builders, byte elements only.
+    if (
+      ea.kind === 'EaIndex' &&
+      (ea.index.kind === 'IndexReg8' || ea.index.kind === 'IndexReg16')
+    ) {
+      const idxReg = (ea.index as any).reg;
+      if (!idxReg || typeof idxReg !== 'string') return null;
+      const baseResolved = resolveEa(ea.base, span);
+      const baseType = resolveEaTypeExpr(ea.base);
+      if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return null;
+      const elemSize = sizeOfTypeExpr(baseType.element, env, diagnostics);
+      if (elemSize !== 1) return null; // EA handles byte elements only
+
+      const idxUpper = idxReg.toUpperCase();
+      if (baseResolved.kind === 'abs') {
+        if (ea.index.kind === 'IndexReg8') {
+          return EA_GLOB_REG(baseResolved.baseLower, idxReg.toLowerCase());
+        }
+        if (idxUpper === 'HL') {
+          return [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA()];
+        }
+        return EA_GLOB_RP(baseResolved.baseLower, idxUpper);
+      }
+      if (baseResolved.kind === 'stack') {
+        if (ea.index.kind === 'IndexReg8') {
+          return EA_FVAR_REG(baseResolved.ixDisp, idxReg.toLowerCase());
+        }
+        if (idxUpper === 'HL') {
+          return [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA()];
+        }
+        return EA_FVAR_RP(baseResolved.ixDisp, idxUpper);
+      }
+      return null;
+    }
+
+    // Folded/scalar path: resolveEa already folded const indexes.
     const r = resolveEa(ea, span);
     if (!r) return null;
     if (r.kind === 'abs') return EA_GLOB_CONST(r.baseLower, r.addend);
@@ -2802,14 +2850,50 @@ export function emitProgram(
           return false;
       }
     };
-    if (!hasIndex(ea)) return null; // only use scaled EAW when an index is present
+    if (!hasIndex(ea)) return null; // only indexed shapes use EAW
+
+    // Runtime index with reg8/reg16, element size 2 → EAW builders
+    if (
+      ea.kind === 'EaIndex' &&
+      (ea.index.kind === 'IndexReg8' || ea.index.kind === 'IndexReg16')
+    ) {
+      const idxReg = (ea.index as any).reg;
+      if (!idxReg || typeof idxReg !== 'string') return null;
+      const baseResolved = resolveEa(ea.base, span);
+      const baseType = resolveEaTypeExpr(ea.base);
+      if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return null;
+      const elemSize = sizeOfTypeExpr(baseType.element, env, diagnostics);
+      if (elemSize !== 2) return null; // scale-by-2 only
+
+      const idxUpper = idxReg.toUpperCase();
+      if (baseResolved.kind === 'abs') {
+        if (ea.index.kind === 'IndexReg8') {
+          return EAW_GLOB_REG(baseResolved.baseLower, idxReg.toLowerCase());
+        }
+        if (idxUpper === 'HL') {
+          return [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA_2()];
+        }
+        return EAW_GLOB_RP(baseResolved.baseLower, idxUpper);
+      }
+      if (baseResolved.kind === 'stack') {
+        if (ea.index.kind === 'IndexReg8') {
+          return EAW_FVAR_REG(baseResolved.ixDisp, idxReg.toLowerCase());
+        }
+        if (idxUpper === 'HL') {
+          return [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA_2()];
+        }
+        return EAW_FVAR_RP(baseResolved.ixDisp, idxUpper);
+      }
+      return null;
+    }
+
+    // Folded/scalar path: resolveEa may already include addends.
     const r = resolveEa(ea, span);
     if (!r) return null;
-    // If resolveEa carried an elemSize, honor it; otherwise default to 2 when indexed.
-    const elemSize: number | undefined = (r as any).elemSize ?? 2;
     const scalarKind = r.typeExpr ? resolveScalarKind(r.typeExpr) : undefined;
+    const elemSize: number | undefined = (r as any).elemSize ?? 2;
     if (scalarKind !== 'word' && scalarKind !== 'addr') return null;
-    if (elemSize !== 2) return null; // only scale-by-2 for now
+    if (elemSize !== 2) return null;
     if (r.kind === 'abs') return EAW_GLOB_CONST(r.baseLower, r.addend);
     if (r.kind === 'stack') return EAW_FVAR_CONST(r.ixDisp, 0);
     return null;
