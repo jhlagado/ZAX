@@ -3479,7 +3479,17 @@ export function emitProgram(
         if (dstResolved?.kind === 'stack') {
           const lo = dstResolved.ixDisp;
           const hi = dstResolved.ixDisp + 1;
-          if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
+          // Use DE shuttle per spec: swap, store E/D, swap back.
+          if (
+            !emitInstr(
+              'ex',
+              [
+                { kind: 'Reg', span: inst.span, name: 'DE' },
+                { kind: 'Reg', span: inst.span, name: 'HL' },
+              ],
+              inst.span,
+            )
+          )
             return false;
           if (
             !emitInstr(
@@ -3497,17 +3507,14 @@ export function emitProgram(
             )
           )
             return false;
-          emitRawCodeBytes(
-            Uint8Array.of(0xeb),
-            inst.span.file,
-            'ex de, hl',
+          return emitInstr(
+            'ex',
+            [
+              { kind: 'Reg', span: inst.span, name: 'DE' },
+              { kind: 'Reg', span: inst.span, name: 'HL' },
+            ],
+            inst.span,
           );
-          emitRawCodeBytes(
-            Uint8Array.of(0x73, 0x23, 0x72),
-            inst.span.file,
-            'ld (hl), e ; inc hl ; ld (hl), d',
-          );
-          return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span);
         }
         const r = resolveEa(dst.expr, inst.span);
         if (r?.kind === 'abs') {
@@ -3515,11 +3522,32 @@ export function emitProgram(
           return true;
         }
         if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
-        emitRawCodeBytes(
-          Uint8Array.of(0x73, 0x23, 0x72),
-          inst.span.file,
-          'ld (hl), e ; inc hl ; ld (hl), d',
-        );
+        // DE shuttle around the two stores to keep HL intact.
+        if (
+          !emitInstr(
+            'ex',
+            [
+              { kind: 'Reg', span: inst.span, name: 'DE' },
+              { kind: 'Reg', span: inst.span, name: 'HL' },
+            ],
+            inst.span,
+          )
+        )
+          return false;
+        emitRawCodeBytes(Uint8Array.of(0x73), inst.span.file, 'ld (hl), e');
+        if (!emitInstr('inc', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span)) return false;
+        emitRawCodeBytes(Uint8Array.of(0x72), inst.span.file, 'ld (hl), d');
+        if (
+          !emitInstr(
+            'ex',
+            [
+              { kind: 'Reg', span: inst.span, name: 'DE' },
+              { kind: 'Reg', span: inst.span, name: 'HL' },
+            ],
+            inst.span,
+          )
+        )
+          return false;
         return true;
       }
       if (r16 === 'DE') {
