@@ -1,0 +1,19 @@
+section code at $0100
+section data at $2000
+
+data
+  glob_words: word[8] = { $6001,$6002,$6003,$6004,$6005,$6006,$6007,$6008 }
+end
+
+export func word_fvar_reg16(arr: word[], idx: word): HL
+  ld h, high idx
+  ld l, low idx
+  ld bc, arr[hl]
+  ld arr[hl], bc
+  ld h, b
+  ld l, c
+end
+
+export func main()
+  word_fvar_reg16 glob_words, $0006
+end
