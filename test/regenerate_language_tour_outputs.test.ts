@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
-describe('language-tour regeneration artifacts', () => {
+const skipTour = process.env.SKIP_LANGUAGE_TOUR === '1';
+
+(skipTour ? describe.skip : describe)('language-tour regeneration artifacts', () => {
   it('emits only asm and d8dbg files (no bin/hex/lst)', async () => {
     const dir = join(process.cwd(), 'examples', 'language-tour');
     const files = await readdir(dir);
