@@ -88,7 +88,7 @@ jobs:
         run: npm ci
 
       - name: Format check
-        if: env.SKIP_LANGUAGE_TOUR != '1'
+        if: ${{ env.SKIP_LANGUAGE_TOUR != '1' }}
         run: npm run format:check
 
       - name: Typecheck
