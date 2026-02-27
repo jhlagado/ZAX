@@ -1,0 +1,9 @@
+data
+  arr_w: word[2] = { $1111, $2222 }
+  tmp: word = $0000
+
+export func main()
+  ld hl, $0001      ; index
+  ld hl, (arr_w[hl])  ; load word via runtime index
+  ld (tmp), hl        ; store word to global
+end
