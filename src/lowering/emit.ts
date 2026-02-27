@@ -6,12 +6,15 @@ import {
   EAW_GLOB_CONST,
   EAW_FVAR_CONST,
   TEMPLATE_L_ABC,
+  TEMPLATE_LW_HL,
   TEMPLATE_L_HL,
   TEMPLATE_L_DE,
+  TEMPLATE_LW_BC,
   TEMPLATE_LW_DE,
   TEMPLATE_SW_DEBC,
   TEMPLATE_SW_HL,
   TEMPLATE_S_ANY,
+  TEMPLATE_S_HL,
   type StepInstr,
   type StepPipeline,
 } from '../addressing/steps.js';
@@ -3127,6 +3130,11 @@ export function emitProgram(
           emitAbs16Fixup(0x2a, r.baseLower, r.addend, inst.span); // ld hl, (nn)
           return true;
         }
+        const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
+        if (srcPipeW) {
+          if (!emitStepPipeline(TEMPLATE_LW_HL(srcPipeW), inst.span)) return false;
+          return true;
+        }
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
           return false;
@@ -3206,6 +3214,11 @@ export function emitProgram(
           emitAbs16FixupEd(0x5b, r.baseLower, r.addend, inst.span); // ld de, (nn)
           return true;
         }
+        const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
+        if (srcPipeW) {
+          if (!emitStepPipeline(TEMPLATE_LW_DE(srcPipeW), inst.span)) return false;
+          return true;
+        }
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         emitRawCodeBytes(
           Uint8Array.of(0x7e, 0x23, 0x56, 0x5f),
@@ -3241,6 +3254,11 @@ export function emitProgram(
         const r = resolveEa(src.expr, inst.span);
         if (r?.kind === 'abs') {
           emitAbs16FixupEd(0x4b, r.baseLower, r.addend, inst.span); // ld bc, (nn)
+          return true;
+        }
+        const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
+        if (srcPipeW) {
+          if (!emitStepPipeline(TEMPLATE_LW_BC(srcPipeW), inst.span)) return false;
           return true;
         }
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
