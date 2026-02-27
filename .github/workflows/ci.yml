@@ -69,7 +69,7 @@ jobs:
     if: needs.changes.outputs.run_full == 'true'
     runs-on: ${{ matrix.os }}
     env:
-      SKIP_LANGUAGE_TOUR: "1"
+      SKIP_LANGUAGE_TOUR: '1'
     timeout-minutes: 10
     strategy:
       fail-fast: false
