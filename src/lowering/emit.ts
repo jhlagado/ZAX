@@ -17,6 +17,10 @@ import {
   EAW_FVAR_CONST,
   EAW_FVAR_REG,
   EAW_FVAR_RP,
+  EAW_GLOB_GLOB,
+  EAW_FVAR_GLOB,
+  EAW_GLOB_FVAR,
+  EAW_FVAR_FVAR,
   LOAD_BASE_GLOB,
   LOAD_BASE_FVAR,
   CALC_EA,
@@ -2873,39 +2877,54 @@ export function emitProgram(
     };
     if (!hasIndex(ea)) return null; // only indexed shapes use EAW
 
-    // Runtime index with reg8/reg16, element size 2 → EAW builders
-    if (
-      ea.kind === 'EaIndex' &&
-      (ea.index.kind === 'IndexReg8' || ea.index.kind === 'IndexReg16')
-    ) {
-      const idxReg = (ea.index as any).reg;
-      if (!idxReg || typeof idxReg !== 'string') return null;
+    // Runtime index with reg8/reg16 or Ea → EAW builders
+    if (ea.kind === 'EaIndex') {
       const baseResolved = resolveEa(ea.base, span);
       const baseType = resolveEaTypeExpr(ea.base);
       if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return null;
       const elemSize = sizeOfTypeExpr(baseType.element, env, diagnostics);
       if (elemSize !== 2) return null; // scale-by-2 only
 
-      const idxUpper = idxReg.toUpperCase();
-      if (baseResolved.kind === 'abs') {
-        if (ea.index.kind === 'IndexReg8') {
-          return EAW_GLOB_REG(baseResolved.baseLower, idxReg.toLowerCase());
+      if (ea.index.kind === 'IndexReg8' || ea.index.kind === 'IndexReg16') {
+        const idxReg = (ea.index as any).reg;
+        if (!idxReg || typeof idxReg !== 'string') return null;
+        const idxUpper = idxReg.toUpperCase();
+        if (baseResolved.kind === 'abs') {
+          if (ea.index.kind === 'IndexReg8') {
+            return EAW_GLOB_REG(baseResolved.baseLower, idxReg.toLowerCase());
+          }
+          if (idxUpper === 'HL') {
+            return [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA_2()];
+          }
+          return EAW_GLOB_RP(baseResolved.baseLower, idxUpper);
         }
-        if (idxUpper === 'HL') {
-          return [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA_2()];
+        if (baseResolved.kind === 'stack') {
+          if (ea.index.kind === 'IndexReg8') {
+            return EAW_FVAR_REG(baseResolved.ixDisp, idxReg.toLowerCase());
+          }
+          if (idxUpper === 'HL') {
+            return [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA_2()];
+          }
+          return EAW_FVAR_RP(baseResolved.ixDisp, idxUpper);
         }
-        return EAW_GLOB_RP(baseResolved.baseLower, idxUpper);
+        return null;
       }
-      if (baseResolved.kind === 'stack') {
-        if (ea.index.kind === 'IndexReg8') {
-          return EAW_FVAR_REG(baseResolved.ixDisp, idxReg.toLowerCase());
+
+      if (ea.index.kind === 'IndexEa') {
+        const idxResolved = resolveEa(ea.index.expr, span);
+        if (!idxResolved) return null;
+        if (idxResolved.kind === 'abs') {
+          return baseResolved.kind === 'abs'
+            ? EAW_GLOB_GLOB(baseResolved.baseLower, idxResolved.baseLower)
+            : EAW_FVAR_GLOB(baseResolved.ixDisp, idxResolved.baseLower);
         }
-        if (idxUpper === 'HL') {
-          return [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA_2()];
+        if (idxResolved.kind === 'stack') {
+          return baseResolved.kind === 'abs'
+            ? EAW_GLOB_FVAR(baseResolved.baseLower, idxResolved.ixDisp)
+            : EAW_FVAR_FVAR(baseResolved.ixDisp, idxResolved.ixDisp);
         }
-        return EAW_FVAR_RP(baseResolved.ixDisp, idxUpper);
+        return null;
       }
-      return null;
     }
 
     // Folded/scalar path: resolveEa may already include addends.
@@ -3233,10 +3252,7 @@ export function emitProgram(
           return true;
         }
         const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
-        if (srcPipeW) {
-          if (!emitStepPipeline(TEMPLATE_LW_HL(srcPipeW), inst.span)) return false;
-          return true;
-        }
+        if (srcPipeW && emitStepPipeline(TEMPLATE_LW_HL(srcPipeW), inst.span)) return true;
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
           return false;
@@ -3317,10 +3333,7 @@ export function emitProgram(
           return true;
         }
         const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
-        if (srcPipeW) {
-          if (!emitStepPipeline(TEMPLATE_LW_DE(srcPipeW), inst.span)) return false;
-          return true;
-        }
+        if (srcPipeW && emitStepPipeline(TEMPLATE_LW_DE(srcPipeW), inst.span)) return true;
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         emitRawCodeBytes(
           Uint8Array.of(0x7e, 0x23, 0x56, 0x5f),
@@ -3359,10 +3372,7 @@ export function emitProgram(
           return true;
         }
         const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
-        if (srcPipeW) {
-          if (!emitStepPipeline(TEMPLATE_LW_BC(srcPipeW), inst.span)) return false;
-          return true;
-        }
+        if (srcPipeW && emitStepPipeline(TEMPLATE_LW_BC(srcPipeW), inst.span)) return true;
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         emitRawCodeBytes(
           Uint8Array.of(0x7e, 0x23, 0x46, 0x4f),
@@ -3464,19 +3474,12 @@ export function emitProgram(
 
       const r16 = src.name.toUpperCase();
       if (r16 === 'HL') {
+        const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
+        if (dstPipeW && emitStepPipeline(TEMPLATE_SW_HL(dstPipeW), inst.span)) return true;
         if (dstResolved?.kind === 'stack') {
           const lo = dstResolved.ixDisp;
           const hi = dstResolved.ixDisp + 1;
-          if (
-            !emitInstr(
-              'ex',
-              [
-                { kind: 'Reg', span: inst.span, name: 'DE' },
-                { kind: 'Reg', span: inst.span, name: 'HL' },
-              ],
-              inst.span,
-            )
-          )
+          if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
             return false;
           if (
             !emitInstr(
@@ -3494,36 +3497,24 @@ export function emitProgram(
             )
           )
             return false;
-          if (
-            !emitInstr(
-              'ex',
-              [
-                { kind: 'Reg', span: inst.span, name: 'DE' },
-                { kind: 'Reg', span: inst.span, name: 'HL' },
-              ],
-              inst.span,
-            )
-          )
-            return false;
-          return true;
+          emitRawCodeBytes(
+            Uint8Array.of(0xeb),
+            inst.span.file,
+            'ex de, hl',
+          );
+          emitRawCodeBytes(
+            Uint8Array.of(0x73, 0x23, 0x72),
+            inst.span.file,
+            'ld (hl), e ; inc hl ; ld (hl), d',
+          );
+          return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span);
         }
         const r = resolveEa(dst.expr, inst.span);
         if (r?.kind === 'abs') {
           emitAbs16Fixup(0x22, r.baseLower, r.addend, inst.span); // ld (nn), hl
           return true;
         }
-        const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
-        if (dstPipeW) {
-          // HL already holds the value; store via template using DE scratch.
-          if (!emitStepPipeline(TEMPLATE_SW_HL(dstPipeW), inst.span)) return false;
-          return true;
-        }
-        // Preserve HL value while materializing the destination address into HL.
-        if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
-          return false;
         if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
-        if (!emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
-          return false;
         emitRawCodeBytes(
           Uint8Array.of(0x73, 0x23, 0x72),
           inst.span.file,
