@@ -3,6 +3,9 @@ import {
   EA_GLOB_CONST,
   EA_GLOB_REG,
   EA_FVAR_CONST,
+  EA_GLOB_GLOB,
+  EA_FVAR_GLOB,
+  EA_FVAR_FVAR,
   EAW_GLOB_CONST,
   EAW_FVAR_CONST,
   TEMPLATE_L_ABC,
@@ -78,6 +81,29 @@ describe('addressing-model step library', () => {
       'ld lo(HL), e',
       'ld hi(HL), d',
       'pop de',
+    ]);
+  });
+
+  it('EA_GLOB_GLOB uses glob index (byte)', () => {
+    const p = EA_GLOB_GLOB('base', 'idx');
+    expect(asm(p)).toEqual(['ld de, base', 'ld hl, (idx)', 'add hl, de']);
+  });
+
+  it('EA_FVAR_GLOB mixes frame base with glob index (byte)', () => {
+    const p = EA_FVAR_GLOB(-8, 'idx');
+    expect(asm(p)).toEqual(['ld e, (ix-$08)', 'ld d, (ix-$07)', 'ld hl, (idx)', 'add hl, de']);
+  });
+
+  it('EA_FVAR_FVAR indexes frame base by frame idx (byte)', () => {
+    const p = EA_FVAR_FVAR(-4, -10);
+    expect(asm(p)).toEqual([
+      'ld e, (ix-$04)',
+      'ld d, (ix-$03)',
+      'ex de, hl',
+      'ld e, (ix-$0a)',
+      'ld d, (ix-$09)',
+      'ex de, hl',
+      'add hl, de',
     ]);
   });
 });

@@ -2794,39 +2794,51 @@ export function emitProgram(
   };
 
   const buildEaBytePipeline = (ea: EaExprNode, span: SourceSpan): StepPipeline | null => {
-    // Runtime index with reg8/reg16 → EA builders, byte elements only.
-    if (
-      ea.kind === 'EaIndex' &&
-      (ea.index.kind === 'IndexReg8' || ea.index.kind === 'IndexReg16')
-    ) {
-      const idxReg = (ea.index as any).reg;
-      if (!idxReg || typeof idxReg !== 'string') return null;
+    // Runtime indexed arrays (byte elements only) use the EA_* matrix.
+    if (ea.kind === 'EaIndex') {
       const baseResolved = resolveEa(ea.base, span);
       const baseType = resolveEaTypeExpr(ea.base);
       if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return null;
       const elemSize = sizeOfTypeExpr(baseType.element, env, diagnostics);
-      if (elemSize !== 1) return null; // EA handles byte elements only
+      if (elemSize !== 1) return null; // byte elements only
 
-      const idxUpper = idxReg.toUpperCase();
-      if (baseResolved.kind === 'abs') {
-        if (ea.index.kind === 'IndexReg8') {
-          return EA_GLOB_REG(baseResolved.baseLower, idxReg.toLowerCase());
+      switch (ea.index.kind) {
+        case 'IndexReg8': {
+          const reg = (ea.index as any).reg;
+          const regLower = typeof reg === 'string' ? reg.toLowerCase() : undefined;
+          if (!regLower || !reg8.has(regLower.toUpperCase())) return null;
+          return baseResolved.kind === 'abs'
+            ? EA_GLOB_REG(baseResolved.baseLower, regLower)
+            : EA_FVAR_REG(baseResolved.ixDisp, regLower);
         }
-        if (idxUpper === 'HL') {
-          return [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA()];
+        case 'IndexReg16': {
+          const rp = (ea.index as any).reg?.toUpperCase();
+          if (!rp || (rp !== 'HL' && rp !== 'DE' && rp !== 'BC')) {
+            diagAt(diagnostics, span, `Invalid reg16 index "${(ea.index as any).reg}".`);
+            return null;
+          }
+          return baseResolved.kind === 'abs'
+            ? EA_GLOB_RP(baseResolved.baseLower, rp)
+            : EA_FVAR_RP(baseResolved.ixDisp, rp);
         }
-        return EA_GLOB_RP(baseResolved.baseLower, idxUpper);
+        case 'IndexEa': {
+          const idxResolved = resolveEa(ea.index.expr, span);
+          if (!idxResolved) return null;
+          if (idxResolved.kind === 'abs') {
+            return baseResolved.kind === 'abs'
+              ? EA_GLOB_GLOB(baseResolved.baseLower, idxResolved.baseLower)
+              : EA_FVAR_GLOB(baseResolved.ixDisp, idxResolved.baseLower);
+          }
+          if (idxResolved.kind === 'stack') {
+            return baseResolved.kind === 'abs'
+              ? EA_GLOB_FVAR(baseResolved.baseLower, idxResolved.ixDisp)
+              : EA_FVAR_FVAR(baseResolved.ixDisp, idxResolved.ixDisp);
+          }
+          return null;
+        }
+        default:
+          return null;
       }
-      if (baseResolved.kind === 'stack') {
-        if (ea.index.kind === 'IndexReg8') {
-          return EA_FVAR_REG(baseResolved.ixDisp, idxReg.toLowerCase());
-        }
-        if (idxUpper === 'HL') {
-          return [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA()];
-        }
-        return EA_FVAR_RP(baseResolved.ixDisp, idxUpper);
-      }
-      return null;
     }
 
     // Folded/scalar path: resolveEa already folded const indexes.
@@ -3110,7 +3122,8 @@ export function emitProgram(
           return true;
         }
       }
-      const d = reg8Code.get(dst.name.toUpperCase());
+      const regUp = dst.name.toUpperCase();
+      const d = reg8Code.get(regUp);
       if (d !== undefined) {
         // Fast path: reg8 <- stack slot via IX+d. L/H need DE shuttle because IX+L/H is illegal.
         if (
@@ -3125,7 +3138,7 @@ export function emitProgram(
             .toUpperCase()}`;
 
           // L via DE shuttle: preserves DE/HL
-          if (dst.name.toUpperCase() === 'L') {
+          if (regUp === 'L') {
             emitRawCodeBytes(Uint8Array.of(0xeb), inst.span.file, 'ex de, hl');
             emitRawCodeBytes(Uint8Array.of(0xdd, 0x5e, disp), inst.span.file, `ld e, (${fmtDisp})`);
             emitRawCodeBytes(Uint8Array.of(0x16, 0x00), inst.span.file, 'ld d, $00');
@@ -3136,32 +3149,28 @@ export function emitProgram(
           emitRawCodeBytes(
             Uint8Array.of(0xdd, 0x46 + (d << 3), disp),
             inst.span.file,
-            `ld ${dst.name.toUpperCase()}, (${fmtDisp})`,
+            `ld ${regUp}, (${fmtDisp})`,
           );
           return true;
         }
-        if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
-        emitRawCodeBytes(
-          Uint8Array.of(0x46 + (d << 3)),
-          inst.span.file,
-          `ld ${dst.name.toUpperCase()}, (hl)`,
-        );
-        return true;
-      }
 
-      // Template path via step library (preservation-safe) when EA can be built.
-      const eaPipe = buildEaBytePipeline(src.expr, inst.span);
-      if (eaPipe) {
-        const reg = dst.name.toUpperCase();
-        let templated: StepPipeline | null = null;
-        if (reg === 'A' || reg === 'B' || reg === 'C') {
-          templated = TEMPLATE_L_ABC(reg, eaPipe);
-        } else if (reg === 'H' || reg === 'L') {
-          templated = TEMPLATE_L_HL(reg as 'H' | 'L', eaPipe);
-        } else if (reg === 'D' || reg === 'E') {
-          templated = TEMPLATE_L_DE(reg as 'D' | 'E', eaPipe);
+        // Template path via step library (preservation-safe) when EA can be built.
+        const eaPipe = buildEaBytePipeline(src.expr, inst.span);
+        if (eaPipe) {
+          let templated: StepPipeline | null = null;
+          if (regUp === 'A' || regUp === 'B' || regUp === 'C') {
+            templated = TEMPLATE_L_ABC(regUp, eaPipe);
+          } else if (regUp === 'H' || regUp === 'L') {
+            templated = TEMPLATE_L_HL(regUp as 'H' | 'L', eaPipe);
+          } else if (regUp === 'D' || regUp === 'E') {
+            templated = TEMPLATE_L_DE(regUp as 'D' | 'E', eaPipe);
+          }
+          if (templated && emitStepPipeline(templated, inst.span)) return true;
         }
-        if (templated && emitStepPipeline(templated, inst.span)) return true;
+
+        if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
+        emitRawCodeBytes(Uint8Array.of(0x46 + (d << 3)), inst.span.file, `ld ${regUp}, (hl)`);
+        return true;
       }
 
       const r16 = dst.name.toUpperCase();
@@ -3434,13 +3443,13 @@ export function emitProgram(
           }
           return false;
         }
+        emitRawCodeBytes(Uint8Array.of(0x70 + s8), inst.span.file, `ld (hl), ${regUp}`);
         if (
           preserveA &&
           !emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)
         ) {
           return false;
         }
-        emitRawCodeBytes(Uint8Array.of(0x70 + s8), inst.span.file, `ld (hl), ${regUp}`);
         return true;
       }
 
@@ -3692,14 +3701,20 @@ export function emitProgram(
         const srcPipe = buildEaBytePipeline(src.expr, inst.span);
         const dstPipe = buildEaBytePipeline(dst.expr, inst.span);
         if (srcPipe && dstPipe) {
+          // Load via L-ABC (dest=A), then store via S-ANY. Templates preserve AF/DE/HL.
           if (!emitStepPipeline(TEMPLATE_L_ABC('A', srcPipe), inst.span)) return false;
           if (!emitStepPipeline(TEMPLATE_S_ANY('A', dstPipe), inst.span)) return false;
           return true;
         }
+        // Fallback: materialize addresses, preserve A manually.
+        if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span))
+          return false;
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         emitRawCodeBytes(Uint8Array.of(0x7e), inst.span.file, 'ld a, (hl)');
         if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
         emitRawCodeBytes(Uint8Array.of(0x77), inst.span.file, 'ld (hl), a');
+        if (!emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span))
+          return false;
         return true;
       }
       const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
