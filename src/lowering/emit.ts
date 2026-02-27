@@ -2890,24 +2890,18 @@ export function emitProgram(
         if (!idxReg || typeof idxReg !== 'string') return null;
         const idxUpper = idxReg.toUpperCase();
 
-        // HL as index: HL already holds idx. Just load base to DE and scale/add.
-        const hlIndexAbs =
-          baseResolved.kind === 'abs'
-            ? [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA_2()]
-            : [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA_2()];
-
         if (baseResolved.kind === 'abs') {
           if (ea.index.kind === 'IndexReg8') {
             return EAW_GLOB_REG(baseResolved.baseLower, idxReg.toLowerCase());
           }
-          if (idxUpper === 'HL') return hlIndexAbs;
+          if (idxUpper === 'HL') return [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA_2()];
           return EAW_GLOB_RP(baseResolved.baseLower, idxUpper);
         }
         if (baseResolved.kind === 'stack') {
           if (ea.index.kind === 'IndexReg8') {
             return EAW_FVAR_REG(baseResolved.ixDisp, idxReg.toLowerCase());
           }
-          if (idxUpper === 'HL') return hlIndexAbs;
+          if (idxUpper === 'HL') return [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA_2()];
           return EAW_FVAR_RP(baseResolved.ixDisp, idxUpper);
         }
         return null;
