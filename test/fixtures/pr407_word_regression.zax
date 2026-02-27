@@ -1,0 +1,23 @@
+data
+  gw: word[4] = { $1111, $2222, $3333, $4444 }
+
+export func main()
+  var
+    idx8: byte = $01
+    idxw: word = $0002
+    tmp: word = $5555
+  end
+
+  ; reg8 index load/store
+  ld hl, (gw[idx8])
+  ld (gw[idx8]), hl
+
+  ; reg16 index load/store (HL as index)
+  ld hl, idxw
+  ld de, (gw[hl])
+  ld (gw[hl]), de
+
+  ; store tmp via reg8 index
+  ld hl, tmp
+  ld (gw[idx8]), hl
+end
