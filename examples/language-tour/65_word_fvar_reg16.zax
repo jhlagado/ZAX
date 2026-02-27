@@ -10,7 +10,8 @@ export func word_fvar_reg16(arr: word[], idx: word): HL
   ld l, low idx
   ld bc, arr[hl]
   ld arr[hl], bc
-  ex bc, hl
+  ld h, b
+  ld l, c
 end
 
 export func main()
