@@ -2,6 +2,8 @@
 
 Goal: express every allowed load/store addressing shape as a short pipeline of reusable **steps** (concatenative/Forth style). A pipeline must leave all registers untouched except the destination (for loads) or the value-carrying register (for stores, typically `A` or `HL`). IX is never scratch.
 
+> **Normative** — This document is the contract for addressing lowering in v0.2. The code generator and tests MUST match the Steps/ASM shown here. Any divergence is a bug to be fixed in code or tests, not by relaxing this doc.
+
 ## 1. Step Library (reusable "words")
 
 ### 1.1 Save / restore
