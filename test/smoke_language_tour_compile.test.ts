@@ -6,8 +6,9 @@ import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 
 const tourDir = join(process.cwd(), 'examples', 'language-tour');
+const skipTour = process.env.SKIP_LANGUAGE_TOUR === '1';
 
-describe('Language tour smoke compile', () => {
+(skipTour ? describe.skip : describe)('Language tour smoke compile', () => {
   const entries = readdirSync(tourDir).filter((f) => f.endsWith('.zax'));
   for (const file of entries) {
     it(`compiles ${file} without diagnostics`, async () => {
