@@ -2891,9 +2891,10 @@ export function emitProgram(
         const idxUpper = idxReg.toUpperCase();
 
         // HL as index: HL already holds idx. Just load base to DE and scale/add.
-        const hlIndexAbs = baseResolved.kind === 'abs'
-          ? [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA_2()]
-          : [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA_2()];
+        const hlIndexAbs =
+          baseResolved.kind === 'abs'
+            ? [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA_2()]
+            : [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA_2()];
 
         if (baseResolved.kind === 'abs') {
           if (ea.index.kind === 'IndexReg8') {
@@ -3537,7 +3538,8 @@ export function emitProgram(
         )
           return false;
         emitRawCodeBytes(Uint8Array.of(0x73), inst.span.file, 'ld (hl), e');
-        if (!emitInstr('inc', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span)) return false;
+        if (!emitInstr('inc', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
+          return false;
         emitRawCodeBytes(Uint8Array.of(0x72), inst.span.file, 'ld (hl), d');
         if (
           !emitInstr(
