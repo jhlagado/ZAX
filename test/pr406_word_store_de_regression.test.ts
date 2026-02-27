@@ -9,9 +9,9 @@ import type { AsmArtifact } from '../src/formats/types.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-describe('PR406 word store (runtime index, BC)', () => {
-  it('uses scaled EAW and stores both bytes', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr406_word_store_bc.zax');
+describe('PR406 word store (runtime index, DE)', () => {
+  it('scales index and stores both bytes from DE', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr406_word_store_de.zax');
     const res = await compile(
       entry,
       { emitBin: false, emitHex: false, emitD8m: false, emitListing: false, emitAsm: true },
@@ -26,7 +26,6 @@ describe('PR406 word store (runtime index, BC)', () => {
     expect(text).toMatch(/add hl, hl/i); // scale idx
     expect(text).toMatch(/ld de, arr_w/i); // base load
     expect(text).toMatch(/add hl, de/i); // combine
-    // Template path moves BC into DE, then stores via E/D.
     expect(text).toContain('ld (HL), E'); // store low
     expect(text).toContain('ld (HL), D'); // store high
   });
