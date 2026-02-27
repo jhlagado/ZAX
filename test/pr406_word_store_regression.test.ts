@@ -27,7 +27,7 @@ describe('PR406 word store (runtime index, BC)', () => {
     expect(text).toMatch(/ld de, arr_w/i); // base load
     expect(text).toMatch(/add hl, de/i); // combine
     // Template path moves BC into DE, then stores via E/D.
-    expect(text).toMatch(/ld \\(hl\\), e/i); // store low
-    expect(text).toMatch(/ld \\(hl\\), d/i); // store high
+    expect(text).toMatch(/ld \(hl\), e/i); // store low
+    expect(text).toMatch(/ld \(hl\), d/i); // store high
   });
 });
