@@ -27,13 +27,13 @@ describe('PR406 word mem→mem via runtime index', () => {
     expect(text).toMatch(/add hl, hl/i);
     expect(text).toMatch(/ld de, src/i);
     expect(text).toMatch(/add hl, de/i);
-    expect(text).toMatch(/ld e, \\(hl\\)/i);
-    expect(text).toMatch(/ld d, \\(hl\\)/i);
+    expect(text).toContain('ld E, (HL)');
+    expect(text).toContain('ld D, (HL)');
 
     // Store path: base dst, store lo/hi bytes
     expect(text).toMatch(/ld de, dst/i);
     expect(text).toMatch(/add hl, de/i);
-    expect(text).toMatch(/ld \\(hl\\), e/i);
-    expect(text).toMatch(/ld \\(hl\\), d/i);
+    expect(text).toContain('ld (HL), E');
+    expect(text).toContain('ld (HL), D');
   });
 });
