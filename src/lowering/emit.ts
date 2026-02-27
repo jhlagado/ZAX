@@ -3308,7 +3308,10 @@ export function emitProgram(
         const regUp = src.name.toUpperCase();
         const dstPipe = buildEaBytePipeline(dst.expr, inst.span);
         if (dstPipe) {
-          if ((regUp === 'H' || regUp === 'L') && emitStepPipeline(TEMPLATE_S_HL(regUp as 'H' | 'L', dstPipe), inst.span)) {
+          if (
+            (regUp === 'H' || regUp === 'L') &&
+            emitStepPipeline(TEMPLATE_S_HL(regUp as 'H' | 'L', dstPipe), inst.span)
+          ) {
             return true;
           }
           if (emitStepPipeline(TEMPLATE_S_ANY(regUp, dstPipe), inst.span)) return true;
