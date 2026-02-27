@@ -12,6 +12,7 @@ import {
   TEMPLATE_SW_DEBC,
   TEMPLATE_SW_HL,
   TEMPLATE_S_ANY,
+  TEMPLATE_S_HL,
   type StepInstr,
   type StepPipeline,
 } from '../addressing/steps.js';
@@ -3306,7 +3307,15 @@ export function emitProgram(
       if (s8 !== undefined) {
         const regUp = src.name.toUpperCase();
         const dstPipe = buildEaBytePipeline(dst.expr, inst.span);
-        if (dstPipe && emitStepPipeline(TEMPLATE_S_ANY(regUp, dstPipe), inst.span)) return true;
+        if (dstPipe) {
+          if (
+            (regUp === 'H' || regUp === 'L') &&
+            emitStepPipeline(TEMPLATE_S_HL(regUp as 'H' | 'L', dstPipe), inst.span)
+          ) {
+            return true;
+          }
+          if (emitStepPipeline(TEMPLATE_S_ANY(regUp, dstPipe), inst.span)) return true;
+        }
         // Fallback: materialize address and emit direct store.
         const preserveA = regUp === 'A';
         if (
