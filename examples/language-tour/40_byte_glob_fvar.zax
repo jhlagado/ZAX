@@ -1,0 +1,17 @@
+section code at $0100
+section data at $2000
+
+data
+  glob_bytes: byte[8] = { 0,1,2,3,4,5,6,7 }
+end
+
+export func byte_glob_fvar(idx_word: word): HL
+  ld a, glob_bytes[idx_word]
+  ld glob_bytes[idx_word], a
+  ld h, 0
+  ld l, a
+end
+
+export func main()
+  byte_glob_fvar $0002
+end
