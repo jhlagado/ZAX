@@ -1,0 +1,15 @@
+section code at $0100
+section data at $2000
+
+data
+  glob_w: word = $BEEF
+end
+
+export func touch_scalar_word_glob(): HL
+  ld hl, glob_w
+  ld glob_w, hl
+end
+
+export func main()
+  touch_scalar_word_glob
+end
