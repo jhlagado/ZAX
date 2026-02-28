@@ -5,136 +5,128 @@
   "addressWidth": 16,
   "endianness": "little",
   "files": {
-    "03_globals_and_aliases.zax": {
+    "65_word_fvar_reg16.zax": {
       "segments": [
         {
           "start": 256,
           "end": 267,
-          "lstLine": 5,
+          "lstLine": 7,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 256,
-          "end": 354,
+          "end": 357,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
         },
         {
           "start": 267,
-          "end": 270,
-          "lstLine": 6,
+          "end": 275,
+          "lstLine": 8,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 270,
-          "end": 278,
-          "lstLine": 5,
-          "kind": "code",
-          "confidence": "high"
-        },
-        {
-          "start": 278,
-          "end": 290,
+          "start": 275,
+          "end": 294,
           "lstLine": 9,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 290,
-          "end": 312,
+          "start": 294,
+          "end": 311,
           "lstLine": 10,
           "kind": "code",
           "confidence": "high"
         },
         {
+          "start": 311,
+          "end": 312,
+          "lstLine": 11,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
           "start": 312,
+          "end": 313,
+          "lstLine": 12,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 313,
           "end": 321,
-          "lstLine": 9,
+          "lstLine": 7,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 321,
           "end": 333,
-          "lstLine": 13,
+          "lstLine": 15,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 333,
-          "end": 342,
-          "lstLine": 18,
+          "end": 348,
+          "lstLine": 16,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 342,
-          "end": 345,
-          "lstLine": 19,
+          "start": 348,
+          "end": 357,
+          "lstLine": 15,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 345,
-          "end": 354,
-          "lstLine": 13,
-          "kind": "code",
-          "confidence": "high"
+          "start": 8192,
+          "end": 8208,
+          "lstLine": 0,
+          "kind": "unknown",
+          "confidence": "low"
         }
       ],
       "symbols": [
         {
-          "name": "read_counter",
+          "name": "word_fvar_reg16",
           "kind": "label",
           "address": 256,
-          "line": 5,
+          "line": 7,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_0",
           "kind": "label",
-          "address": 270,
-          "line": 5,
-          "scope": "local"
-        },
-        {
-          "name": "write_counter",
-          "kind": "label",
-          "address": 278,
-          "line": 9,
-          "scope": "global"
-        },
-        {
-          "name": "__zax_epilogue_1",
-          "kind": "label",
-          "address": 312,
-          "line": 9,
+          "address": 313,
+          "line": 7,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
           "address": 321,
-          "line": 13,
+          "line": 15,
           "scope": "global"
         },
         {
-          "name": "__zax_epilogue_2",
+          "name": "__zax_epilogue_1",
           "kind": "label",
-          "address": 345,
-          "line": 13,
+          "address": 348,
+          "line": 15,
           "scope": "local"
         },
         {
-          "name": "counter",
-          "kind": "var",
-          "address": 354,
-          "line": 2,
-          "scope": "global",
-          "size": 2
+          "name": "glob_words",
+          "kind": "data",
+          "address": 8192,
+          "line": 5,
+          "scope": "global"
         }
       ]
     }
@@ -142,69 +134,56 @@
   "segments": [
     {
       "start": 256,
-      "end": 354
+      "end": 357
+    },
+    {
+      "start": 8192,
+      "end": 8208
     }
   ],
   "fileList": [
-    "03_globals_and_aliases.zax"
+    "65_word_fvar_reg16.zax"
   ],
   "symbols": [
     {
-      "name": "read_counter",
+      "name": "word_fvar_reg16",
       "kind": "label",
       "address": 256,
-      "file": "03_globals_and_aliases.zax",
-      "line": 5,
+      "file": "65_word_fvar_reg16.zax",
+      "line": 7,
       "scope": "global"
     },
     {
       "name": "__zax_epilogue_0",
       "kind": "label",
-      "address": 270,
-      "file": "03_globals_and_aliases.zax",
-      "line": 5,
-      "scope": "local"
-    },
-    {
-      "name": "write_counter",
-      "kind": "label",
-      "address": 278,
-      "file": "03_globals_and_aliases.zax",
-      "line": 9,
-      "scope": "global"
-    },
-    {
-      "name": "__zax_epilogue_1",
-      "kind": "label",
-      "address": 312,
-      "file": "03_globals_and_aliases.zax",
-      "line": 9,
+      "address": 313,
+      "file": "65_word_fvar_reg16.zax",
+      "line": 7,
       "scope": "local"
     },
     {
       "name": "main",
       "kind": "label",
       "address": 321,
-      "file": "03_globals_and_aliases.zax",
-      "line": 13,
+      "file": "65_word_fvar_reg16.zax",
+      "line": 15,
       "scope": "global"
     },
     {
-      "name": "__zax_epilogue_2",
+      "name": "__zax_epilogue_1",
       "kind": "label",
-      "address": 345,
-      "file": "03_globals_and_aliases.zax",
-      "line": 13,
+      "address": 348,
+      "file": "65_word_fvar_reg16.zax",
+      "line": 15,
       "scope": "local"
     },
     {
-      "name": "counter",
-      "kind": "var",
-      "address": 354,
-      "file": "03_globals_and_aliases.zax",
-      "line": 2,
-      "scope": "global",
-      "size": 2
+      "name": "glob_words",
+      "kind": "data",
+      "address": 8192,
+      "file": "65_word_fvar_reg16.zax",
+      "line": 5,
+      "scope": "global"
     }
   ],
   "generator": {

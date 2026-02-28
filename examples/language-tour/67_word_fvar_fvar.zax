@@ -8,6 +8,7 @@ export func word_fvar_fvar(arr: word[], idx_word: word): HL
   ld de, arr[idx_word]
   ld arr[idx_word], de
   ex de, hl
+end
 
 export func main()
   word_fvar_fvar glob_words, $0005
