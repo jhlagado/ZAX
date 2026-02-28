@@ -7,6 +7,8 @@ data
 export func word_glob_fvar(idx_word: word): HL
   ld hl, glob_words[idx_word]
   ld glob_words[idx_word], hl
+end
 
 export func main()
   word_glob_fvar $0002
+end

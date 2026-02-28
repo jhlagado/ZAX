@@ -7,6 +7,8 @@ data
 export func word_glob_reg(idx: word): HL
   ld hl, glob_words[idx]
   ld glob_words[idx], hl
+end
 
 export func main()
   word_glob_reg $0003
+end

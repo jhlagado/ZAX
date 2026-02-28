@@ -7,6 +7,8 @@ data
 export func touch_scalar_word_glob(): HL
   ld hl, glob_w
   ld glob_w, hl
+end
 
 export func main()
   touch_scalar_word_glob
+end

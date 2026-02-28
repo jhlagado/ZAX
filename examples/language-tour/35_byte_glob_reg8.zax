@@ -9,6 +9,8 @@ export func byte_glob_reg(idx: word): HL
   ld glob_bytes[idx], b
   ld h, 0
   ld l, b
+end
 
 export func main()
   byte_glob_reg $0003
+end
