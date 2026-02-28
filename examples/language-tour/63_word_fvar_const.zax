@@ -3,7 +3,6 @@ section data at $2000
 
 data
   glob_words: word[8] = { $4001,$4002,$4003,$4004,$4005,$4006,$4007,$4008 }
-end
 
 export func word_fvar_const(arr: word[]): HL
   ld hl, arr[2]
