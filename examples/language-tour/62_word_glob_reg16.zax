@@ -3,11 +3,9 @@ section data at $2000
 
 data
   glob_words: word[8] = { $3001,$3002,$3003,$3004,$3005,$3006,$3007,$3008 }
-end
 
 export func word_glob_reg16(idx: word): HL
-  ld h, high idx
-  ld l, low idx
+  ld hl, idx
   ld de, glob_words[hl]
   ld glob_words[hl], de
   ex de, hl

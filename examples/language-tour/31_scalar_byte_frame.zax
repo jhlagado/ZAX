@@ -3,15 +3,12 @@ section data at $2000
 
 data
   dummy: byte = 0
-end
 
 export func touch_scalar_byte_frame(arg_b: byte): HL
   ld b, arg_b
   ld arg_b, b
   ld h, 0
   ld l, b
-end
 
 export func main()
   touch_scalar_byte_frame $44
-end

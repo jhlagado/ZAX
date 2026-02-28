@@ -8,8 +8,6 @@ data
 export func word_glob_glob(): HL
   ld hl, glob_words[glob_idx_word]
   ld glob_words[glob_idx_word], hl
-end
 
 export func main()
   word_glob_glob
-end
