@@ -345,14 +345,24 @@ export const TEMPLATE_LW_BC = (ea: StepPipeline): StepPipeline => [
 // ---------------------------------------------------------------------------
 // Templates: word stores
 // ---------------------------------------------------------------------------
-export const TEMPLATE_SW_DEBC = (vpair: 'DE' | 'BC', ea: StepPipeline): StepPipeline => [
-  ...SAVE_DE(),
-  ...SAVE_HL(),
-  ...ea,
-  ...RESTORE_HL(),
-  ...RESTORE_DE(),
-  ...STORE_RP_EA(vpair),
-];
+export const TEMPLATE_SW_DEBC = (vpair: 'DE' | 'BC', ea: StepPipeline): StepPipeline =>
+  vpair === 'DE'
+    ? [
+        ...SAVE_HL(),
+        ...SAVE_DE(),
+        ...ea,
+        ...RESTORE_DE(),
+        ...STORE_RP_EA('DE'),
+        ...RESTORE_HL(),
+      ]
+    : [
+        ...SAVE_DE(),
+        ...SAVE_HL(),
+        ...ea,
+        ...STORE_RP_EA('BC'),
+        ...RESTORE_HL(),
+        ...RESTORE_DE(),
+      ];
 
 export const TEMPLATE_SW_HL = (ea: StepPipeline): StepPipeline => [
   ...SAVE_DE(),
