@@ -11,4 +11,3 @@ export func word_glob_glob(): HL
 
 export func main()
   word_glob_glob
-end
