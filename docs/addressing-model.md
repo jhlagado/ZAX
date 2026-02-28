@@ -588,17 +588,28 @@ EAW\_\* denotes any word-width EA builder (below).
 
 ### Store templates (16-bit only)
 
-Non-destructive store of a word in `vpair` to EAW\_\*.
+Non-destructive store of a word in a register pair to EAW\_\*.
 
-- **SW-DEBC (vpair = DE or BC)** — EA in HL, value in DE/BC. SAVE_DE also preserves the source when vpair=DE; do not drop it.
+- **SW-DE (vpair = DE)** — EA in HL, value in DE. `SAVE_DE` preserves the value so it can be restored after `EAW_*` clobbers DE.
+
+  ```
+  SAVE_HL
+  SAVE_DE
+  EAW_*                ; EA in HL
+  RESTORE_DE           ; restore value to DE
+  STORE_RP_EA DE
+  RESTORE_HL           ; restore caller HL
+  ```
+
+- **SW-BC (vpair = BC)** — EA in HL, value in BC. `STORE_RP_EA BC` uses DE as scratch, so caller DE must be restored after the store.
 
   ```
   SAVE_DE
   SAVE_HL
   EAW_*                ; EA in HL
+  STORE_RP_EA BC       ; uses DE scratch
   RESTORE_HL           ; restore caller HL
   RESTORE_DE           ; restore caller DE
-  STORE_RP_EA vpair    ; vpair = DE or BC
   ```
 
 - **SW-HL (vpair = HL)** — EA in HL, value on stack (from SAVE_HL)
@@ -845,7 +856,7 @@ add hl,de
 - Choose an EA/EAW builder based on the base and index source. If the index is a constant, fold it into the frame displacement (`fvar+const`) when that keeps the EA simple.
 - Choose a load/store template based on the destination (for loads) or source register (for stores):
   - Byte: L-ABC, L-HL, L-DE, S-ANY, S-HL
-  - Word: LW-HL, LW-DE, LW-BC, SW-HL, SW-DEBC
+  - Word: LW-HL, LW-DE, LW-BC, SW-HL, SW-DE, SW-BC
 - EA/EAW builders may borrow HL/DE internally; the templates already save/restore HL/DE to protect caller state. Do not add extra saves outside the templates.
 - Per-instruction preservation: the only registers allowed to change are the destination register (load) or the value register/pair (store). All other registers must be restored by the end of the pipeline.
 - IX is the frame pointer. Never repurpose IX as a scratch register; keep all scratch and EA work to HL/DE with proper saves/restores.
