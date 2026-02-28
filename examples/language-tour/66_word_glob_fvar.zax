@@ -3,13 +3,10 @@ section data at $2000
 
 data
   glob_words: word[8] = { $7001,$7002,$7003,$7004,$7005,$7006,$7007,$7008 }
-end
 
 export func word_glob_fvar(idx_word: word): HL
   ld hl, glob_words[idx_word]
   ld glob_words[idx_word], hl
-end
 
 export func main()
   word_glob_fvar $0002
-end
