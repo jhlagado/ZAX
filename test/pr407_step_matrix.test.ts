@@ -86,7 +86,8 @@ describe('PR407 addressing-model coverage: step pipelines stay single-instructio
       ['TEMPLATE_LW_HL', TEMPLATE_LW_HL(sampleEA)],
       ['TEMPLATE_LW_DE', TEMPLATE_LW_DE(sampleEA)],
       ['TEMPLATE_LW_BC', TEMPLATE_LW_BC(sampleEA)],
-      ['TEMPLATE_SW_DEBC', TEMPLATE_SW_DEBC('DE', sampleEA)],
+      ['TEMPLATE_SW_DEBC(DE)', TEMPLATE_SW_DEBC('DE', sampleEA)],
+      ['TEMPLATE_SW_DEBC(BC)', TEMPLATE_SW_DEBC('BC', sampleEA)],
       ['TEMPLATE_SW_HL', TEMPLATE_SW_HL(sampleEA)],
     ];
 
