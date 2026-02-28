@@ -9,8 +9,8 @@ add IX, SP                     ; 0106: DD 39
 push AF                        ; 0108: F5
 push BC                        ; 0109: C5
 push DE                        ; 010A: D5
-ld e, (ix+disp)                ; 010B: DD 5E 04
-ld d, (ix+disp+1)              ; 010E: DD 56 05
+ld e, (ix+$04)                 ; 010B: DD 5E 04
+ld d, (ix+$05)                 ; 010E: DD 56 05
 ex de, hl                      ; 0111: EB
 push HL                        ; 0112: E5
 pop HL                         ; 0113: E1
@@ -39,8 +39,8 @@ add IX, SP                     ; 012E: DD 39
 push AF                        ; 0130: F5
 push BC                        ; 0131: C5
 push DE                        ; 0132: D5
-ld e, (ix+disp)                ; 0133: DD 5E 04
-ld d, (ix+disp+1)              ; 0136: DD 56 05
+ld e, (ix+$04)                 ; 0133: DD 5E 04
+ld d, (ix+$05)                 ; 0136: DD 56 05
 ex de, hl                      ; 0139: EB
 push HL                        ; 013A: E5
 pop HL                         ; 013B: E1

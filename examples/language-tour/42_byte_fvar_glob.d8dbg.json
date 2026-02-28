@@ -1,0 +1,202 @@
+{
+  "format": "d8-debug-map",
+  "version": 1,
+  "arch": "z80",
+  "addressWidth": 16,
+  "endianness": "little",
+  "files": {
+    "42_byte_fvar_glob.zax": {
+      "segments": [
+        {
+          "start": 256,
+          "end": 267,
+          "lstLine": 8,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 256,
+          "end": 350,
+          "lstLine": 0,
+          "kind": "unknown",
+          "confidence": "low"
+        },
+        {
+          "start": 267,
+          "end": 287,
+          "lstLine": 9,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 287,
+          "end": 309,
+          "lstLine": 10,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 309,
+          "end": 311,
+          "lstLine": 11,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 311,
+          "end": 312,
+          "lstLine": 12,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 312,
+          "end": 320,
+          "lstLine": 8,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 320,
+          "end": 332,
+          "lstLine": 15,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 332,
+          "end": 341,
+          "lstLine": 16,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 341,
+          "end": 350,
+          "lstLine": 15,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 8192,
+          "end": 8202,
+          "lstLine": 0,
+          "kind": "unknown",
+          "confidence": "low"
+        }
+      ],
+      "symbols": [
+        {
+          "name": "byte_fvar_glob",
+          "kind": "label",
+          "address": 256,
+          "line": 8,
+          "scope": "global"
+        },
+        {
+          "name": "__zax_epilogue_0",
+          "kind": "label",
+          "address": 312,
+          "line": 8,
+          "scope": "local"
+        },
+        {
+          "name": "main",
+          "kind": "label",
+          "address": 320,
+          "line": 15,
+          "scope": "global"
+        },
+        {
+          "name": "__zax_epilogue_1",
+          "kind": "label",
+          "address": 341,
+          "line": 15,
+          "scope": "local"
+        },
+        {
+          "name": "glob_bytes",
+          "kind": "data",
+          "address": 8192,
+          "line": 5,
+          "scope": "global"
+        },
+        {
+          "name": "glob_idx_word",
+          "kind": "data",
+          "address": 8200,
+          "line": 6,
+          "scope": "global"
+        }
+      ]
+    }
+  },
+  "segments": [
+    {
+      "start": 256,
+      "end": 350
+    },
+    {
+      "start": 8192,
+      "end": 8202
+    }
+  ],
+  "fileList": [
+    "42_byte_fvar_glob.zax"
+  ],
+  "symbols": [
+    {
+      "name": "byte_fvar_glob",
+      "kind": "label",
+      "address": 256,
+      "file": "42_byte_fvar_glob.zax",
+      "line": 8,
+      "scope": "global"
+    },
+    {
+      "name": "__zax_epilogue_0",
+      "kind": "label",
+      "address": 312,
+      "file": "42_byte_fvar_glob.zax",
+      "line": 8,
+      "scope": "local"
+    },
+    {
+      "name": "main",
+      "kind": "label",
+      "address": 320,
+      "file": "42_byte_fvar_glob.zax",
+      "line": 15,
+      "scope": "global"
+    },
+    {
+      "name": "__zax_epilogue_1",
+      "kind": "label",
+      "address": 341,
+      "file": "42_byte_fvar_glob.zax",
+      "line": 15,
+      "scope": "local"
+    },
+    {
+      "name": "glob_bytes",
+      "kind": "data",
+      "address": 8192,
+      "file": "42_byte_fvar_glob.zax",
+      "line": 5,
+      "scope": "global"
+    },
+    {
+      "name": "glob_idx_word",
+      "kind": "data",
+      "address": 8200,
+      "file": "42_byte_fvar_glob.zax",
+      "line": 6,
+      "scope": "global"
+    }
+  ],
+  "generator": {
+    "tool": "zax",
+    "entrySymbol": "main",
+    "entryAddress": 320
+  }
+}
