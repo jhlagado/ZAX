@@ -24,18 +24,18 @@ ld L, E                        ; 011C: 6B
 ld H, D                        ; 011D: 62
 ex DE, HL                      ; 011E: EB
 pop HL                         ; 011F: E1
-push DE                        ; 0120: D5
-push HL                        ; 0121: E5
+push HL                        ; 0120: E5
+push DE                        ; 0121: D5
 ld de, glob_words              ; 0122: 11 00 00
 add HL, HL                     ; 0125: 29
 add HL, DE                     ; 0126: 19
-pop HL                         ; 0127: E1
-pop DE                         ; 0128: D1
-ld E, E                        ; 0129: 5B
-ld D, D                        ; 012A: 52
-ld (HL), E                     ; 012B: 73
-inc HL                         ; 012C: 23
-ld (HL), D                     ; 012D: 72
+pop DE                         ; 0127: D1
+ld E, E                        ; 0128: 5B
+ld D, D                        ; 0129: 52
+ld (HL), E                     ; 012A: 73
+inc HL                         ; 012B: 23
+ld (HL), D                     ; 012C: 72
+pop HL                         ; 012D: E1
 ex DE, HL                      ; 012E: EB
 __zax_epilogue_0:
 pop DE                         ; 012F: D1

@@ -34,13 +34,13 @@ ld E, (IX + $0004)             ; 0128: DD 5E 04
 ld D, (IX + $0005)             ; 012B: DD 56 05
 add HL, HL                     ; 012E: 29
 add HL, DE                     ; 012F: 19
-pop HL                         ; 0130: E1
-pop DE                         ; 0131: D1
-ld E, C                        ; 0132: 59
-ld D, B                        ; 0133: 50
-ld (HL), E                     ; 0134: 73
-inc HL                         ; 0135: 23
-ld (HL), D                     ; 0136: 72
+ld E, C                        ; 0130: 59
+ld D, B                        ; 0131: 50
+ld (HL), E                     ; 0132: 73
+inc HL                         ; 0133: 23
+ld (HL), D                     ; 0134: 72
+pop HL                         ; 0135: E1
+pop DE                         ; 0136: D1
 ld H, B                        ; 0137: 60
 ld L, C                        ; 0138: 69
 __zax_epilogue_0:
