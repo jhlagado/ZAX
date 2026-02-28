@@ -3,11 +3,9 @@ section data at $2000
 
 data
   glob_bytes: byte[8] = { 0,1,2,3,4,5,6,7 }
-end
 
 export func byte_glob_reg16(idx: word): HL
-  ld h, high idx
-  ld l, low idx
+  ld hl, idx
   ld a, glob_bytes[hl]
   ld glob_bytes[hl], a
   ld h, 0

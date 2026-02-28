@@ -4,7 +4,6 @@ section data at $2000
 data
   glob_bytes: byte[8] = { 0,1,2,3,4,5,6,7 }
   glob_idx_word: word = 6
-end
 
 export func byte_fvar_glob(arr: byte[]): HL
   ld a, arr[glob_idx_word]

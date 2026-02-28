@@ -3,7 +3,6 @@ section data at $2000
 
 data
   dummy: word = 0
-end
 
 export func touch_scalar_word_frame(arg_w: word): HL
   ld de, arg_w

@@ -3,7 +3,6 @@ section data at $2000
 
 data
   glob_b: byte = $AA
-end
 
 export func touch_scalar_byte_glob(): HL
   ld a, glob_b

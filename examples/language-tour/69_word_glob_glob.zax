@@ -4,12 +4,10 @@ section data at $2000
 data
   glob_words: word[8] = { $A001,$A002,$A003,$A004,$A005,$A006,$A007,$A008 }
   glob_idx_word: word = 4
-end
 
 export func word_glob_glob(): HL
   ld hl, glob_words[glob_idx_word]
   ld glob_words[glob_idx_word], hl
-end
 
 export func main()
   word_glob_glob
