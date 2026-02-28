@@ -1857,6 +1857,17 @@ export function emitProgram(
     return resolveScalarKind(typeExpr);
   };
 
+  // Version for ld/st lowering that allows indexed/field access to data arrays.
+  // For ld instructions, indexed access to data arrays should use value semantics.
+  const resolveScalarTypeForLd = (ea: EaExprNode): 'byte' | 'word' | 'addr' | undefined => {
+    // Only reject scalar resolution for direct name access to rawAddressSymbols.
+    // Indexed/field access (even to data arrays) should resolve to scalar element types.
+    if (ea.kind === 'EaName' && rawAddressSymbols.has(ea.name.toLowerCase())) return undefined;
+    const typeExpr = resolveEaTypeExpr(ea);
+    if (!typeExpr) return undefined;
+    return resolveScalarKind(typeExpr);
+  };
+
   for (const [aliasLower, aliasTarget] of moduleAliasTargets) {
     if (storageTypes.has(aliasLower)) continue;
     const inferred = resolveEaTypeExpr(aliasTarget);
@@ -3059,7 +3070,8 @@ export function emitProgram(
       }
       if (op.kind === 'Ea') {
         if (op.explicitAddressOf) return op;
-        const scalar = resolveScalarTypeForEa(op.expr);
+        // Use resolveScalarTypeForLd to allow indexed access to data arrays
+        const scalar = resolveScalarTypeForLd(op.expr);
         if (scalar) return { kind: 'Mem', span: op.span, expr: op.expr };
       }
       return op;
@@ -4036,8 +4048,14 @@ export function emitProgram(
       } else if (item.kind === 'DataBlock') {
         const db = item as DataBlockNode;
         for (const decl of db.decls) {
-          rawAddressSymbols.add(decl.name.toLowerCase());
-          storageTypes.set(decl.name.toLowerCase(), decl.typeExpr);
+          const lower = decl.name.toLowerCase();
+          storageTypes.set(lower, decl.typeExpr);
+          // Only add non-scalar data symbols to rawAddressSymbols.
+          // Scalar data symbols (byte, word, addr) use value semantics like globals.
+          const scalar = resolveScalarKind(decl.typeExpr);
+          if (!scalar) {
+            rawAddressSymbols.add(lower);
+          }
         }
       }
     }
