@@ -9,6 +9,8 @@ export func byte_fvar_const(arr: byte[]): HL
   ld arr[3], a
   ld h, 0
   ld l, a
+end
 
 export func main()
   byte_fvar_const glob_bytes
+end

@@ -8,6 +8,8 @@ export func word_fvar_reg(arr: word[], idx: word): HL
   ld de, arr[idx]
   ld arr[idx], de
   ex de, hl
+end
 
 export func main()
   word_fvar_reg glob_words, $0001
+end

@@ -9,6 +9,8 @@ export func byte_fvar_reg(arr: byte[], idx: word): HL
   ld arr[idx], b
   ld h, 0
   ld l, b
+end
 
 export func main()
   byte_fvar_reg glob_bytes, $0001
+end
