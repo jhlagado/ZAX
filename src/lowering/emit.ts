@@ -5791,7 +5791,7 @@ export function emitProgram(
                 if (emitSyntheticEpilogue) {
                   emitJumpCondTo(op, epilogueLabel, asmItem.span);
                 } else {
-                  emitJumpCondTo(op, epilogueLabel, asmItem.span);
+                  emitInstr('ret', [asmItem.operands[0]!], asmItem.span);
                 }
                 syncToFlow();
                 return;
