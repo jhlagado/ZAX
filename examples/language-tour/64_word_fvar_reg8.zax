@@ -3,7 +3,6 @@ section data at $2000
 
 data
   glob_words: word[8] = { $5001,$5002,$5003,$5004,$5005,$5006,$5007,$5008 }
-end
 
 export func word_fvar_reg(arr: word[], idx: word): HL
   ld de, arr[idx]
