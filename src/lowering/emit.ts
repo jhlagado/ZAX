@@ -2954,6 +2954,8 @@ export function emitProgram(
         }
 
         if (ea.index.value.kind === 'ImmName') {
+          const idxScalar = resolveScalarBinding(ea.index.value.name);
+          if (idxScalar !== 'word' && idxScalar !== 'addr') return null;
           const idxNameEa: EaExprNode = { kind: 'EaName', span, name: ea.index.value.name };
           const idxResolved = resolveEa(idxNameEa, span);
           if (!idxResolved) return null;
@@ -3036,6 +3038,9 @@ export function emitProgram(
     }
     return false;
   };
+
+  const canUseScalarWordAccessor = (resolved: ReturnType<typeof resolveEa>): boolean =>
+    !!resolved && ((resolved.kind === 'abs' && resolved.addend === 0) || resolved.kind === 'stack');
 
   const emitScalarWordStore = (
     source: 'HL' | 'DE' | 'BC',
@@ -3728,10 +3733,9 @@ export function emitProgram(
         if (!emitStepPipeline(TEMPLATE_SW_DEBC('DE', dstPipeW), inst.span)) return false;
         return true;
       }
-      if (
-        emitScalarWordLoad('DE', srcResolved, inst.span) &&
-        emitScalarWordStore('DE', dstResolved, inst.span)
-      ) {
+      if (canUseScalarWordAccessor(srcResolved) && canUseScalarWordAccessor(dstResolved)) {
+        if (!emitScalarWordLoad('DE', srcResolved, inst.span)) return false;
+        if (!emitScalarWordStore('DE', dstResolved, inst.span)) return false;
         return true;
       }
       if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
