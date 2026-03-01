@@ -1,5 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import {
   EA_GLOB_CONST,
   EA_GLOB_REG,
@@ -83,6 +82,7 @@ import { evalImmExpr } from '../semantics/env.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { encodeInstruction } from '../z80/encode.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
+import { loadBinInput, loadHexInput } from './inputAssets.js';
 
 function diag(diagnostics: Diagnostic[], file: string, message: string): void {
   diagnostics.push({ id: DiagnosticIds.EmitError, severity: 'error', message, file });
@@ -3934,115 +3934,6 @@ export function emitProgram(
 
   const alignTo = (n: number, a: number) => (a <= 0 ? n : Math.ceil(n / a) * a);
 
-  const resolveInputPath = (fromFile: string, fromPath: string): string | undefined => {
-    const candidates: string[] = [];
-    candidates.push(resolve(dirname(fromFile), fromPath));
-    for (const inc of includeDirs) candidates.push(resolve(inc, fromPath));
-    const seen = new Set<string>();
-    for (const c of candidates) {
-      if (seen.has(c)) continue;
-      seen.add(c);
-      if (existsSync(c)) return c;
-    }
-    diag(diagnostics, fromFile, `Failed to resolve input path "${fromPath}".`);
-    return undefined;
-  };
-
-  const parseIntelHex = (
-    ownerFile: string,
-    hexText: string,
-  ): { bytes: Map<number, number>; minAddress: number } | undefined => {
-    const out = new Map<number, number>();
-    let minAddress = Number.POSITIVE_INFINITY;
-    const lines = hexText.split(/\r?\n/);
-    let sawData = false;
-    let sawEof = false;
-
-    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-      const raw = lines[lineIndex]!.trim();
-      if (raw.length === 0) continue;
-      if (!raw.startsWith(':')) {
-        diag(diagnostics, ownerFile, `Invalid Intel HEX record at line ${lineIndex + 1}.`);
-        return undefined;
-      }
-      const body = raw.slice(1);
-      if (body.length < 10 || body.length % 2 !== 0) {
-        diag(diagnostics, ownerFile, `Malformed Intel HEX record at line ${lineIndex + 1}.`);
-        return undefined;
-      }
-      const bytesLine: number[] = [];
-      for (let i = 0; i < body.length; i += 2) {
-        const pair = body.slice(i, i + 2);
-        const value = Number.parseInt(pair, 16);
-        if (Number.isNaN(value)) {
-          diag(diagnostics, ownerFile, `Invalid HEX byte "${pair}" at line ${lineIndex + 1}.`);
-          return undefined;
-        }
-        bytesLine.push(value & 0xff);
-      }
-
-      const len = bytesLine[0]!;
-      const addr = ((bytesLine[1]! << 8) | bytesLine[2]!) & 0xffff;
-      const type = bytesLine[3]!;
-      const data = bytesLine.slice(4, bytesLine.length - 1);
-      const checksum = bytesLine[bytesLine.length - 1]!;
-      if (len !== data.length) {
-        diag(diagnostics, ownerFile, `Intel HEX length mismatch at line ${lineIndex + 1}.`);
-        return undefined;
-      }
-      const sum = bytesLine.reduce((acc, b) => (acc + b) & 0xff, 0);
-      if (sum !== 0) {
-        diag(diagnostics, ownerFile, `Intel HEX checksum mismatch at line ${lineIndex + 1}.`);
-        return undefined;
-      }
-      if (sawEof) {
-        diag(diagnostics, ownerFile, `Intel HEX data found after EOF record.`);
-        return undefined;
-      }
-
-      if (type === 0x00) {
-        for (let i = 0; i < data.length; i++) {
-          const address = addr + i;
-          if (address < 0 || address > 0xffff) {
-            diag(
-              diagnostics,
-              ownerFile,
-              `Intel HEX address out of range at line ${lineIndex + 1}.`,
-            );
-            return undefined;
-          }
-          if (out.has(address)) {
-            diag(diagnostics, ownerFile, `Intel HEX overlaps itself at address ${address}.`);
-            return undefined;
-          }
-          out.set(address, data[i]!);
-          minAddress = Math.min(minAddress, address);
-        }
-        sawData = true;
-        continue;
-      }
-
-      if (type === 0x01) {
-        sawEof = true;
-        continue;
-      }
-
-      diag(
-        diagnostics,
-        ownerFile,
-        `Unsupported Intel HEX record type ${type.toString(16).padStart(2, '0')} at line ${lineIndex + 1}.`,
-      );
-      return undefined;
-    }
-
-    if (!sawData) {
-      diag(diagnostics, ownerFile, `Intel HEX file has no data records.`);
-      return undefined;
-    }
-
-    return { bytes: out, minAddress };
-  };
-
   // Pre-scan callables for resolution (forward references allowed).
   for (const module of program.files) {
     for (const item of module.items) {
@@ -4284,16 +4175,13 @@ export function emitProgram(
         }
         taken.add(binDecl.name);
 
-        const path = resolveInputPath(binDecl.span.file, binDecl.fromPath);
-        if (!path) continue;
-
-        let blob: Buffer;
-        try {
-          blob = readFileSync(path);
-        } catch (err) {
-          diag(diagnostics, binDecl.span.file, `Failed to read bin file "${path}": ${String(err)}`);
-          continue;
-        }
+        const blob = loadBinInput(
+          binDecl.span.file,
+          binDecl.fromPath,
+          includeDirs,
+          (file, message) => diag(diagnostics, file, message),
+        );
+        if (!blob) continue;
 
         if (binDecl.section === 'var') {
           diag(
@@ -4338,18 +4226,12 @@ export function emitProgram(
         }
         taken.add(hexDecl.name);
 
-        const path = resolveInputPath(hexDecl.span.file, hexDecl.fromPath);
-        if (!path) continue;
-
-        let text: string;
-        try {
-          text = readFileSync(path, 'utf8');
-        } catch (err) {
-          diag(diagnostics, hexDecl.span.file, `Failed to read hex file "${path}": ${String(err)}`);
-          continue;
-        }
-
-        const parsed = parseIntelHex(hexDecl.span.file, text);
+        const parsed = loadHexInput(
+          hexDecl.span.file,
+          hexDecl.fromPath,
+          includeDirs,
+          (file, message) => diag(diagnostics, file, message),
+        );
         if (!parsed) continue;
 
         for (const [addr, b] of parsed.bytes) {
