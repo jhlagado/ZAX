@@ -3,13 +3,13 @@
 
 ; func main begin
 main:
-jp cc, __zax_if_else_1         ; 0100: CA 00 00
+jp z, __zax_if_else_1          ; 0100: CA 00 00
 nop                            ; 0103: 00
 __zax_if_else_1:
-jp cc, __zax_if_else_3         ; 0104: C2 00 00
+jp nz, __zax_if_else_3         ; 0104: C2 00 00
 nop                            ; 0107: 00
 __zax_if_else_3:
-jp cc, __zax_if_else_5         ; 0108: D2 00 00
+jp nc, __zax_if_else_5         ; 0108: D2 00 00
 nop                            ; 010B: 00
 __zax_if_else_5:
 ret                            ; 010C: C9
