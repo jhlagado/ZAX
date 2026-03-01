@@ -9,69 +9,71 @@ add IX, SP                     ; 0106: DD 39
 push AF                        ; 0108: F5
 push BC                        ; 0109: C5
 push DE                        ; 010A: D5
-ld e, (ix+$04)                 ; 010B: DD 5E 04
-ld d, (ix+$05)                 ; 010E: DD 56 05
-ex de, hl                      ; 0111: EB
-push HL                        ; 0112: E5
-pop HL                         ; 0113: E1
-push HL                        ; 0114: E5
-ld HL, glob_bytes              ; 0115: 21 00 00
-pop DE                         ; 0118: D1
-add HL, DE                     ; 0119: 19
-push HL                        ; 011A: E5
-pop HL                         ; 011B: E1
-ld A, (hl)                     ; 011C: 7E
-push AF                        ; 011D: F5
-ld e, (ix+$04)                 ; 011E: DD 5E 04
-ld d, (ix+$05)                 ; 0121: DD 56 05
-ex de, hl                      ; 0124: EB
-push HL                        ; 0125: E5
-pop HL                         ; 0126: E1
+ex DE, HL                      ; 010B: EB
+ld E, (IX + $0004)             ; 010C: DD 5E 04
+ld D, (IX + $0005)             ; 010F: DD 56 05
+ex DE, HL                      ; 0112: EB
+push HL                        ; 0113: E5
+pop HL                         ; 0114: E1
+push HL                        ; 0115: E5
+ld HL, glob_bytes              ; 0116: 21 00 00
+pop DE                         ; 0119: D1
+add HL, DE                     ; 011A: 19
+push HL                        ; 011B: E5
+pop HL                         ; 011C: E1
+ld A, (hl)                     ; 011D: 7E
+push AF                        ; 011E: F5
+ex DE, HL                      ; 011F: EB
+ld E, (IX + $0004)             ; 0120: DD 5E 04
+ld D, (IX + $0005)             ; 0123: DD 56 05
+ex DE, HL                      ; 0126: EB
 push HL                        ; 0127: E5
-ld HL, glob_bytes              ; 0128: 21 00 00
-pop DE                         ; 012B: D1
-add HL, DE                     ; 012C: 19
-push HL                        ; 012D: E5
-pop HL                         ; 012E: E1
-ld (hl), A                     ; 012F: 77
-pop AF                         ; 0130: F1
-ld H, $0000                    ; 0131: 26 00
-ld L, A                        ; 0133: 6F
+pop HL                         ; 0128: E1
+push HL                        ; 0129: E5
+ld HL, glob_bytes              ; 012A: 21 00 00
+pop DE                         ; 012D: D1
+add HL, DE                     ; 012E: 19
+push HL                        ; 012F: E5
+pop HL                         ; 0130: E1
+ld (hl), A                     ; 0131: 77
+pop AF                         ; 0132: F1
+ld H, $0000                    ; 0133: 26 00
+ld L, A                        ; 0135: 6F
 __zax_epilogue_0:
-pop DE                         ; 0134: D1
-pop BC                         ; 0135: C1
-pop AF                         ; 0136: F1
-ld SP, IX                      ; 0137: DD F9
-pop IX                         ; 0139: DD E1
-ret                            ; 013B: C9
+pop DE                         ; 0136: D1
+pop BC                         ; 0137: C1
+pop AF                         ; 0138: F1
+ld SP, IX                      ; 0139: DD F9
+pop IX                         ; 013B: DD E1
+ret                            ; 013D: C9
 ; func byte_glob_fvar end
 ; func main begin
 main:
-push IX                        ; 013C: DD E5
-ld IX, $0000                   ; 013E: DD 21 00 00
-add IX, SP                     ; 0142: DD 39
-push AF                        ; 0144: F5
-push BC                        ; 0145: C5
-push DE                        ; 0146: D5
-push HL                        ; 0147: E5
-ld HL, $0002                   ; 0148: 21 02 00
-push HL                        ; 014B: E5
-call byte_glob_fvar            ; 014C: CD 00 00
-inc SP                         ; 014F: 33
-inc SP                         ; 0150: 33
+push IX                        ; 013E: DD E5
+ld IX, $0000                   ; 0140: DD 21 00 00
+add IX, SP                     ; 0144: DD 39
+push AF                        ; 0146: F5
+push BC                        ; 0147: C5
+push DE                        ; 0148: D5
+push HL                        ; 0149: E5
+ld HL, $0002                   ; 014A: 21 02 00
+push HL                        ; 014D: E5
+call byte_glob_fvar            ; 014E: CD 00 00
+inc SP                         ; 0151: 33
+inc SP                         ; 0152: 33
 __zax_epilogue_1:
-pop HL                         ; 0151: E1
-pop DE                         ; 0152: D1
-pop BC                         ; 0153: C1
-pop AF                         ; 0154: F1
-ld SP, IX                      ; 0155: DD F9
-pop IX                         ; 0157: DD E1
-ret                            ; 0159: C9
+pop HL                         ; 0153: E1
+pop DE                         ; 0154: D1
+pop BC                         ; 0155: C1
+pop AF                         ; 0156: F1
+ld SP, IX                      ; 0157: DD F9
+pop IX                         ; 0159: DD E1
+ret                            ; 015B: C9
 ; func main end
 
 ; symbols:
 ; label byte_glob_fvar = $0100
-; label __zax_epilogue_0 = $0134
-; label main = $013C
-; label __zax_epilogue_1 = $0151
+; label __zax_epilogue_0 = $0136
+; label main = $013E
+; label __zax_epilogue_1 = $0153
 ; data glob_bytes = $2000
