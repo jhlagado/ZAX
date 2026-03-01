@@ -103,3 +103,11 @@ jobs:
 
       - name: Test
         run: npm run test:coverage
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.os }}
+          path: coverage
+          if-no-files-found: error
