@@ -25,6 +25,7 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `return-register-policy.md` — preservation/return matrix detail.
 - `arrays.md` — IX + DE/HL lowering guidance and runtime-atom cues.
 - `v03-planning-track.md` — post-v0.2 planning scaffold.
+- `v03-priority-queue.md` — explicit short-form developer order for the current post-v0.2 queue.
 - `github-backlog-workflow.md` — GitHub issue/label/milestone workflow used as the project backlog system.
 
 ## Definitive v0.2 Baseline Set
