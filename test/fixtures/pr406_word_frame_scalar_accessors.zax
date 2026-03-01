@@ -1,0 +1,12 @@
+section code at $0100
+
+export func main(): AF, BC, DE, HL
+  var
+    local_w: word = $1234
+  end
+
+  ld bc, local_w
+  ld de, local_w
+  ld local_w, bc
+  ld local_w, de
+end
