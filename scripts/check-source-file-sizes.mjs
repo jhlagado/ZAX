@@ -29,7 +29,12 @@ async function collectTsFiles(dirUrl) {
 async function countLines(fileUrl) {
   const text = await readFile(fileUrl, 'utf8');
   if (text.length === 0) return 0;
-  return text.split('\n').length;
+  let lines = 1;
+  for (const ch of text) {
+    if (ch === '\n') lines += 1;
+  }
+  if (text.endsWith('\n')) lines -= 1;
+  return lines;
 }
 
 function toWorkspaceRelative(fileUrl) {

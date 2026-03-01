@@ -8,7 +8,9 @@ const execFileAsync = promisify(execFile);
 async function currentLineCount(file: string): Promise<number> {
   const text = await readFile(file, 'utf8');
   if (text.length === 0) return 0;
-  return text.split('\n').length;
+  const normalized = text.endsWith('\n') ? text.slice(0, -1) : text;
+  if (normalized.length === 0) return 0;
+  return normalized.split('\n').length;
 }
 
 describe('PR472: source file size guard', () => {
