@@ -17,6 +17,8 @@ import {
   LOAD_BASE_GLOB,
   LOAD_IDX_CONST,
   CALC_EA,
+  LOAD_RP_FVAR,
+  STORE_RP_FVAR,
 } from '../src/addressing/steps';
 
 const asm = (pipeline: { asm: string }[]) => pipeline.map((s) => s.asm);
@@ -70,6 +72,21 @@ describe('addressing-model step library', () => {
       'ld hl, $0000',
       'add hl, hl',
       'add hl, de',
+    ]);
+  });
+
+  it('word frame access uses DE shuttle for HL', () => {
+    expect(asm(LOAD_RP_FVAR('HL', -2))).toEqual([
+      'ex de, hl',
+      'ld e, (ix-$02)',
+      'ld d, (ix-$01)',
+      'ex de, hl',
+    ]);
+    expect(asm(STORE_RP_FVAR('HL', -2))).toEqual([
+      'ex de, hl',
+      'ld (ix-$02), e',
+      'ld (ix-$01), d',
+      'ex de, hl',
     ]);
   });
 

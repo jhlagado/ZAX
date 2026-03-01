@@ -3311,35 +3311,31 @@ export function emitProgram(
           return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span);
         }
 
-        // Fast path: reg8 <- stack slot via IX+d. L/H need DE shuttle because IX+L/H is illegal.
+        // Fast path: reg8 <- stack slot via IX+d. H/L use the DE shuttle so DE is preserved.
         if (
           srcResolved?.kind === 'stack' &&
           srcResolved.ixDisp >= -0x80 &&
           srcResolved.ixDisp <= 0x7f
         ) {
           if (regUp === 'H' || regUp === 'L') {
-            if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
-              return false;
-            if (
-              !emitInstr(
-                'ld',
-                [{ kind: 'Reg', span: inst.span, name: 'E' }, ixDispMem(srcResolved.ixDisp)],
-                inst.span,
-              )
-            )
+            if (!emitInstr('ex', [{ kind: 'Reg', span: inst.span, name: 'DE' }, { kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
               return false;
             if (
               !emitInstr(
                 'ld',
                 [
-                  { kind: 'Reg', span: inst.span, name: regUp },
-                  { kind: 'Reg', span: inst.span, name: 'E' },
+                  { kind: 'Reg', span: inst.span, name: regUp === 'H' ? 'D' : 'E' },
+                  ixDispMem(srcResolved.ixDisp),
                 ],
                 inst.span,
               )
             )
               return false;
-            return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span);
+            return emitInstr(
+              'ex',
+              [{ kind: 'Reg', span: inst.span, name: 'DE' }, { kind: 'Reg', span: inst.span, name: 'HL' }],
+              inst.span,
+            );
           }
 
           emitRawCodeBytes(
@@ -3507,28 +3503,24 @@ export function emitProgram(
           dstResolved.ixDisp <= 0x7f
         ) {
           if (regUp === 'H' || regUp === 'L') {
-            if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
+            if (!emitInstr('ex', [{ kind: 'Reg', span: inst.span, name: 'DE' }, { kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
               return false;
             if (
               !emitInstr(
                 'ld',
                 [
-                  { kind: 'Reg', span: inst.span, name: 'E' },
-                  { kind: 'Reg', span: inst.span, name: regUp },
+                  ixDispMem(dstResolved.ixDisp),
+                  { kind: 'Reg', span: inst.span, name: regUp === 'H' ? 'D' : 'E' },
                 ],
                 inst.span,
               )
             )
               return false;
-            if (
-              !emitInstr(
-                'ld',
-                [ixDispMem(dstResolved.ixDisp), { kind: 'Reg', span: inst.span, name: 'E' }],
-                inst.span,
-              )
-            )
-              return false;
-            return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span);
+            return emitInstr(
+              'ex',
+              [{ kind: 'Reg', span: inst.span, name: 'DE' }, { kind: 'Reg', span: inst.span, name: 'HL' }],
+              inst.span,
+            );
           }
           emitRawCodeBytes(
             Uint8Array.of(0xdd, 0x70 + s8, dstResolved.ixDisp & 0xff),
