@@ -65,9 +65,19 @@ LOAD_REG_EA reg             ld reg,(hl)
 
 STORE_REG_EA reg            ld (hl),reg
 
-LOAD_REG_GLOB reg glob      ld reg,(glob)
+LOAD_REG_GLOB A glob        ld a,(glob)
 
-STORE_REG_GLOB reg glob     ld (glob),reg
+LOAD_REG_GLOB reg glob      push af                  ; reg != A, borrows AF
+                            ld a,(glob)
+                            ld reg,a
+                            pop af
+
+STORE_REG_GLOB A glob       ld (glob),a
+
+STORE_REG_GLOB reg glob     push af                  ; reg != A, borrows AF
+                            ld a,reg
+                            ld (glob),a
+                            pop af
 
 LOAD_REG_FVAR reg fvar      ld reg,(ix+fvar)
 
@@ -120,7 +130,7 @@ For each shape:
 
 **Scalar fast path:** If there is no index and the base is a direct symbol, use the step library accessors directly (no template):
 
-- Globals: `ld reg,glob` → `LOAD_REG_GLOB` / `ld glob,reg` → `STORE_REG_GLOB`
+- Globals: `LOAD_REG_GLOB` / `STORE_REG_GLOB` are scalar-accessor intents. `A` uses the direct Z80 absolute-byte form; non-`A` registers borrow AF internally.
 - Frame vars: `ld reg,fvar` → `LOAD_REG_FVAR` / `ld fvar,reg` → `STORE_REG_FVAR`
   Examples:
 
@@ -132,7 +142,7 @@ ld (ix+6), e         ; STORE_REG_FVAR E fvar=+6
 
 ### Scalars (byte, no index)
 
-Use direct accessors; no saves needed for byte destinations.
+Use the scalar accessors. Frame-byte accesses and global `A` accesses are direct. Global non-`A` accesses borrow AF inside `LOAD_REG_GLOB` / `STORE_REG_GLOB`.
 
 #### Loads
 
@@ -140,6 +150,16 @@ Use direct accessors; no saves needed for byte destinations.
 
 ```
 ld a, glob_b                ; LOAD_REG_GLOB A glob_b
+ld b, glob_b                ; LOAD_REG_GLOB B glob_b
+```
+
+For global non-`A` byte loads, `LOAD_REG_GLOB` expands as:
+
+```asm
+push af
+ld a,(glob)
+ld reg,a
+pop af
 ```
 
 - Frame byte: `ld reg, fvar` → `LOAD_REG_FVAR reg fvar`
@@ -154,6 +174,16 @@ ld l, (ix-4)                ; LOAD_REG_FVAR L fvar=-4
 
 ```
 ld glob_b, a                ; STORE_REG_GLOB A glob_b
+ld glob_b, b                ; STORE_REG_GLOB B glob_b
+```
+
+For global non-`A` byte stores, `STORE_REG_GLOB` expands as:
+
+```asm
+push af
+ld a,reg
+ld (glob),a
+pop af
 ```
 
 - Frame byte: `ld fvar, reg` → `STORE_REG_FVAR reg fvar`

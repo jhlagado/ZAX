@@ -1,0 +1,12 @@
+section var at $1000
+
+globals
+  glob_b: byte
+
+func sink(v: byte)
+  ret
+end
+
+export func main(): AF, BC, DE, HL
+  sink glob_b
+end
