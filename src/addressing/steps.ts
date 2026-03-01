@@ -129,13 +129,25 @@ export const STORE_RP_GLOB = (rp: string, glob: string): StepPipeline => [
 ];
 
 export const LOAD_RP_FVAR = (rp: string, disp: number): StepPipeline => [
-  instr(`ld lo(${rp}), (ix${formatDisp(disp)})`),
-  instr(`ld hi(${rp}), (ix${formatDisp(disp + 1)})`),
+  ...(rp.toUpperCase() === 'HL'
+    ? [
+        instr('ex de, hl'),
+        instr(`ld e, (ix${formatDisp(disp)})`),
+        instr(`ld d, (ix${formatDisp(disp + 1)})`),
+        instr('ex de, hl'),
+      ]
+    : [instr(`ld lo(${rp}), (ix${formatDisp(disp)})`), instr(`ld hi(${rp}), (ix${formatDisp(disp + 1)})`)]),
 ];
 
 export const STORE_RP_FVAR = (rp: string, disp: number): StepPipeline => [
-  instr(`ld (ix${formatDisp(disp)}), lo(${rp})`),
-  instr(`ld (ix${formatDisp(disp + 1)}), hi(${rp})`),
+  ...(rp.toUpperCase() === 'HL'
+    ? [
+        instr('ex de, hl'),
+        instr(`ld (ix${formatDisp(disp)}), e`),
+        instr(`ld (ix${formatDisp(disp + 1)}), d`),
+        instr('ex de, hl'),
+      ]
+    : [instr(`ld (ix${formatDisp(disp)}), lo(${rp})`), instr(`ld (ix${formatDisp(disp + 1)}), hi(${rp})`)]),
 ];
 
 // ---------------------------------------------------------------------------

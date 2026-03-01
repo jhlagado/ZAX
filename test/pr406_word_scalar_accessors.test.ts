@@ -63,9 +63,9 @@ describe('PR406: word scalar accessors', () => {
 
     expect(text).toContain('LD HL, (GLOB_W)');
     expect(text).toContain('PUSH HL');
-    expect(text).toContain('LD L, (IX - $0002)');
-    expect(text).toContain('LD H, (IX - $0001)');
-    expect(text).not.toContain('EX DE, HL');
+    expect(text).toContain('EX DE, HL');
+    expect(text).toContain('LD E, (IX - $0002)');
+    expect(text).toContain('LD D, (IX - $0001)');
   });
 
   it('uses scalar word accessors for scalar mem-to-mem moves', async () => {
