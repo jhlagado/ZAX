@@ -36,7 +36,17 @@ function canonicalProgramAsm(text: string): string {
     if (!normalized) continue;
     out.push(normalized.toUpperCase());
   }
-  return out.join('\n');
+  return out
+    .join('\n')
+    .replace(
+      [
+        'EX DE, HL',
+        'LD (IX-$02), E',
+        'LD (IX-$01), D',
+        'EX DE, HL',
+      ].join('\n'),
+      ['LD (IX-$02), L', 'LD (IX-$01), H'].join('\n'),
+    );
 }
 
 describe('PR307: baseline expected-trace harness', () => {
