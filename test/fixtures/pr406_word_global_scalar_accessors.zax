@@ -1,0 +1,12 @@
+section code at $0100
+section data at $2000
+
+data
+  glob_w: word = $1234
+
+export func main(): AF, BC, DE, HL
+  ld bc, glob_w
+  ld de, glob_w
+  ld glob_w, bc
+  ld glob_w, de
+end
