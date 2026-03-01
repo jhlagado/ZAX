@@ -19,9 +19,10 @@ import {
   CALC_EA,
   LOAD_RP_FVAR,
   STORE_RP_FVAR,
+  renderStepPipeline,
 } from '../src/addressing/steps';
 
-const asm = (pipeline: { asm: string }[]) => pipeline.map((s) => s.asm);
+const asm = renderStepPipeline;
 
 describe('addressing-model step library', () => {
   it('EA_GLOB_CONST matches doc (byte)', () => {
