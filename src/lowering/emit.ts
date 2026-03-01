@@ -84,6 +84,13 @@ import { encodeInstruction } from '../z80/encode.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import { loadBinInput, loadHexInput } from './inputAssets.js';
 import {
+  alignTo,
+  computeWrittenRange,
+  rebaseAsmTrace,
+  rebaseCodeSourceSegments,
+  writeSection,
+} from './sectionLayout.js';
+import {
   formatAbs16FixupAsm,
   formatAbs16FixupEdAsm,
   formatAbs16FixupPrefixedAsm,
@@ -3719,8 +3726,6 @@ export function emitProgram(
   const primaryFile = firstModule.span.file ?? program.entryFile;
   const includeDirs = (options?.includeDirs ?? []).map((p) => resolve(p));
 
-  const alignTo = (n: number, a: number) => (a <= 0 ? n : Math.ceil(n / a) * a);
-
   // Pre-scan callables for resolution (forward references allowed).
   for (const module of program.files) {
     for (const item of module.items) {
@@ -6552,21 +6557,6 @@ export function emitProgram(
         0));
   const varOk = explicitVarBase !== undefined || (baseExprs.var === undefined && dataOk);
 
-  const writeSection = (base: number, section: Map<number, number>, file: string) => {
-    for (const [off, b] of section) {
-      const addr = base + off;
-      if (addr < 0 || addr > 0xffff) {
-        diag(diagnostics, file, `Emitted byte address out of range: ${addr}.`);
-        continue;
-      }
-      if (bytes.has(addr)) {
-        diag(diagnostics, file, `Byte overlap at address ${addr}.`);
-        continue;
-      }
-      bytes.set(addr, b);
-    }
-  };
-
   // Resolve symbol addresses for fixups (functions/labels/etc).
   const addrByNameLower = new Map<string, number>();
   for (const ps of pending) {
@@ -6667,8 +6657,10 @@ export function emitProgram(
     bytes.set(addr, b);
   }
 
-  if (codeOk) writeSection(codeBase, codeBytes, primaryFile);
-  if (dataOk) writeSection(dataBase, dataBytes, primaryFile);
+  if (codeOk)
+    writeSection(codeBase, codeBytes, bytes, (message) => diag(diagnostics, primaryFile, message));
+  if (dataOk)
+    writeSection(dataBase, dataBytes, bytes, (message) => diag(diagnostics, primaryFile, message));
 
   for (const ps of pending) {
     const base = ps.section === 'code' ? codeBase : ps.section === 'data' ? dataBase : varBase;
@@ -6687,32 +6679,9 @@ export function emitProgram(
   }
   symbols.push(...absoluteSymbols);
 
-  let min = Number.POSITIVE_INFINITY;
-  let max = Number.NEGATIVE_INFINITY;
-  for (const addr of bytes.keys()) {
-    min = Math.min(min, addr);
-    max = Math.max(max, addr);
-  }
-  const writtenRange =
-    Number.isFinite(min) && Number.isFinite(max)
-      ? { start: min, end: max + 1 }
-      : { start: 0, end: 0 };
-  const sourceSegments = codeOk
-    ? codeSourceSegments
-        .map((segment) => ({
-          ...segment,
-          start: codeBase + segment.start,
-          end: codeBase + segment.end,
-        }))
-        .filter(
-          (segment) => segment.start >= 0 && segment.end <= 0x10000 && segment.end > segment.start,
-        )
-    : [];
-  const asmTrace = codeOk
-    ? codeAsmTrace
-        .map((entry) => ({ ...entry, offset: codeBase + entry.offset }))
-        .filter((entry) => entry.offset >= 0 && entry.offset <= 0xffff)
-    : [];
+  const writtenRange = computeWrittenRange(bytes);
+  const sourceSegments = codeOk ? rebaseCodeSourceSegments(codeBase, codeSourceSegments) : [];
+  const asmTrace = codeOk ? rebaseAsmTrace(codeBase, codeAsmTrace) : [];
 
   return {
     map: {
