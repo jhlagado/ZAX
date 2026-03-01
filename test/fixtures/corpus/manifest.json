@@ -1,0 +1,24 @@
+{
+  "curatedCases": [
+    {
+      "name": "basic_control_flow",
+      "source": "examples/codegen-corpus/basic_control_flow.zax",
+      "kind": "corpus-only"
+    },
+    {
+      "name": "intermediate_indexing",
+      "source": "examples/codegen-corpus/intermediate_indexing.zax",
+      "kind": "corpus-only"
+    }
+  ],
+  "negativeCases": [
+    {
+      "name": "invalid_runtime_atom_budget",
+      "source": "examples/codegen-corpus/invalid_runtime_atom_budget.zax",
+      "kind": "corpus-only"
+    }
+  ],
+  "goldenAsmDir": "test/fixtures/corpus/golden",
+  "opcodeHexDir": "test/fixtures/corpus/opcode_expected",
+  "mirrorDir": "examples/codegen-corpus"
+}

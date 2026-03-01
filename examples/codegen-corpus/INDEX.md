@@ -1,42 +1,46 @@
 # Codegen Corpus (Curated Inspection Set)
 
-This directory is a committed, human-inspection corpus.
+This folder is the committed inspection mirror for the curated codegen corpus.
 
-Canonical ownership remains:
+The supported workflow is defined in:
 
-- source-of-truth fixtures: `test/fixtures/` and `test/fixtures/corpus/`
-- this folder: curated mirror for side-by-side `.zax` and generated artifacts
+- `docs/codegen-corpus-workflow.md`
 
-## Included per positive case
+The manifest for the curated set is:
 
-- `<name>.zax`
-- `<name>.asm`
-- `<name>.bin`
-- `<name>.hex`
+- `test/fixtures/corpus/manifest.json`
 
-## Cases
+The manifest uses explicit mixed-source entries. It does not assume one source
+folder for every curated case.
 
-1. `basic_control_flow`
-2. `intermediate_indexing`
-3. `advanced_typed_calls`
-4. `pr222_locals_retcc_and_ret`
-5. `pr258_op_cc_matcher`
-6. `pr258_op_idx16_matcher`
-7. `pr259_op_ea_dotted_field`
-8. `pr266_negative_immediate_lowering`
-9. `pr269_d8m_op_macro_callsite`
-10. `pr272_runtime_affine_valid`
-11. `pr276_typed_call_preservation_matrix`
-12. `pr283_local_arg_global_access_matrix`
+## Ownership
 
-Negative fixture (source-only expected failure):
+Canonical ownership is split:
 
-- `invalid_runtime_atom_budget.zax`
+- curated source inputs: the explicit `source` paths listed in the manifest
+- automated golden traces: `test/fixtures/corpus/golden/*.asm`
+- automated expected opcodes: `test/fixtures/corpus/opcode_expected/*.hex`
 
-## Regeneration
+This folder is the side-by-side review mirror:
 
-Use the assembler directly for each fixture:
+- `examples/codegen-corpus/*.zax`
+- `examples/codegen-corpus/*.asm`
+- `examples/codegen-corpus/*.bin`
+- `examples/codegen-corpus/*.hex`
+
+## Supported regeneration
+
+Use exactly:
 
 ```bash
-npm run zax -- -o examples/codegen-corpus/<name>.hex -t hex --nod8m --nolist test/fixtures/<name>.zax
+npm run regen:codegen-corpus
 ```
+
+Do not regenerate curated files one by one by hand.
+
+## Current curated set
+
+Read `test/fixtures/corpus/manifest.json` for the supported list.
+
+For future expansion, prefer `examples/language-tour/30+` for addressing/codegen
+cases and use this folder for synthetic non-teaching cases.
