@@ -3733,6 +3733,16 @@ export function emitProgram(
         if (!emitStepPipeline(TEMPLATE_SW_DEBC('DE', dstPipeW), inst.span)) return false;
         return true;
       }
+      if (srcPipeW && canUseScalarWordAccessor(dstResolved)) {
+        if (!emitStepPipeline(TEMPLATE_LW_DE(srcPipeW), inst.span)) return false;
+        if (!emitScalarWordStore('DE', dstResolved, inst.span)) return false;
+        return true;
+      }
+      if (canUseScalarWordAccessor(srcResolved) && dstPipeW) {
+        if (!emitScalarWordLoad('DE', srcResolved, inst.span)) return false;
+        if (!emitStepPipeline(TEMPLATE_SW_DEBC('DE', dstPipeW), inst.span)) return false;
+        return true;
+      }
       if (canUseScalarWordAccessor(srcResolved) && canUseScalarWordAccessor(dstResolved)) {
         if (!emitScalarWordLoad('DE', srcResolved, inst.span)) return false;
         if (!emitScalarWordStore('DE', dstResolved, inst.span)) return false;

@@ -1,0 +1,10 @@
+section data at $2000
+
+data
+  arr_w: word[8] = { $1001,$1002,$1003,$1004,$1005,$1006,$1007,$1008 }
+  dst_w: word = $2222
+
+export func main(): AF, BC, DE, HL
+  ld hl, $0001
+  ld dst_w, arr_w[hl]
+end
