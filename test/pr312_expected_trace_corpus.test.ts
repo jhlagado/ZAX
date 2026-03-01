@@ -98,4 +98,11 @@ describe('PR312: expected-trace corpus expansion', () => {
       'pr312_11_records_and_fields.expected.asm',
     );
   });
+
+  it('matches the curated args-with-arrays-and-records trace', async () => {
+    await expectLanguageTourTrace(
+      '12_args_with_arrays_records',
+      'pr312_12_args_with_arrays_records.expected.asm',
+    );
+  });
 });
