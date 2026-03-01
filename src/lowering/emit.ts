@@ -855,8 +855,10 @@ export function emitProgram(
       const asm = step.asm.trim();
       const lower = asm.toLowerCase();
 
+      if (lower === 'push af') return emitInstr('push', [mkReg('AF')], span);
       if (lower === 'push hl') return emitInstr('push', [mkReg('HL')], span);
       if (lower === 'push de') return emitInstr('push', [mkReg('DE')], span);
+      if (lower === 'pop af') return emitInstr('pop', [mkReg('AF')], span);
       if (lower === 'pop hl') return emitInstr('pop', [mkReg('HL')], span);
       if (lower === 'pop de') return emitInstr('pop', [mkReg('DE')], span);
       if (lower === 'ex de, hl') return emitInstr('ex', [mkReg('DE'), mkReg('HL')], span);
@@ -3162,31 +3164,59 @@ export function emitProgram(
       const regUp = dst.name.toUpperCase();
       const d = reg8Code.get(regUp);
       if (d !== undefined) {
+        if (srcResolved?.kind === 'abs' && srcResolved.addend === 0) {
+          if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span))
+            return false;
+          emitAbs16Fixup(0x3a, srcResolved.baseLower, 0, inst.span); // ld a, (nn)
+          if (
+            !emitInstr(
+              'ld',
+              [
+                { kind: 'Reg', span: inst.span, name: regUp },
+                { kind: 'Reg', span: inst.span, name: 'A' },
+              ],
+              inst.span,
+            )
+          )
+            return false;
+          return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span);
+        }
+
         // Fast path: reg8 <- stack slot via IX+d. L/H need DE shuttle because IX+L/H is illegal.
         if (
           srcResolved?.kind === 'stack' &&
           srcResolved.ixDisp >= -0x80 &&
           srcResolved.ixDisp <= 0x7f
         ) {
-          const disp = srcResolved.ixDisp & 0xff;
-          const fmtDisp = `IX${srcResolved.ixDisp >= 0 ? '+' : '-'}$${Math.abs(srcResolved.ixDisp)
-            .toString(16)
-            .padStart(2, '0')
-            .toUpperCase()}`;
-
-          // L via DE shuttle: preserves DE/HL
-          if (regUp === 'L') {
-            emitRawCodeBytes(Uint8Array.of(0xeb), inst.span.file, 'ex de, hl');
-            emitRawCodeBytes(Uint8Array.of(0xdd, 0x5e, disp), inst.span.file, `ld e, (${fmtDisp})`);
-            emitRawCodeBytes(Uint8Array.of(0x16, 0x00), inst.span.file, 'ld d, $00');
-            emitRawCodeBytes(Uint8Array.of(0xeb), inst.span.file, 'ex de, hl');
-            return true;
+          if (regUp === 'H' || regUp === 'L') {
+            if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
+              return false;
+            if (
+              !emitInstr(
+                'ld',
+                [{ kind: 'Reg', span: inst.span, name: 'E' }, ixDispMem(srcResolved.ixDisp)],
+                inst.span,
+              )
+            )
+              return false;
+            if (
+              !emitInstr(
+                'ld',
+                [
+                  { kind: 'Reg', span: inst.span, name: regUp },
+                  { kind: 'Reg', span: inst.span, name: 'E' },
+                ],
+                inst.span,
+              )
+            )
+              return false;
+            return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span);
           }
 
           emitRawCodeBytes(
-            Uint8Array.of(0xdd, 0x46 + (d << 3), disp),
+            Uint8Array.of(0xdd, 0x46 + (d << 3), srcResolved.ixDisp & 0xff),
             inst.span.file,
-            `ld ${regUp}, (${fmtDisp})`,
+            `ld ${regUp}, (ix${formatIxDisp(srcResolved.ixDisp)})`,
           );
           return true;
         }
@@ -3444,6 +3474,60 @@ export function emitProgram(
       const s8 = reg8Code.get(src.name.toUpperCase());
       if (s8 !== undefined) {
         const regUp = src.name.toUpperCase();
+        if (dstResolved?.kind === 'abs' && dstResolved.addend === 0) {
+          if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span))
+            return false;
+          if (
+            !emitInstr(
+              'ld',
+              [
+                { kind: 'Reg', span: inst.span, name: 'A' },
+                { kind: 'Reg', span: inst.span, name: regUp },
+              ],
+              inst.span,
+            )
+          )
+            return false;
+          emitAbs16Fixup(0x32, dstResolved.baseLower, 0, inst.span); // ld (nn), a
+          return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span);
+        }
+
+        if (
+          dstResolved?.kind === 'stack' &&
+          dstResolved.ixDisp >= -0x80 &&
+          dstResolved.ixDisp <= 0x7f
+        ) {
+          if (regUp === 'H' || regUp === 'L') {
+            if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
+              return false;
+            if (
+              !emitInstr(
+                'ld',
+                [
+                  { kind: 'Reg', span: inst.span, name: 'E' },
+                  { kind: 'Reg', span: inst.span, name: regUp },
+                ],
+                inst.span,
+              )
+            )
+              return false;
+            if (
+              !emitInstr(
+                'ld',
+                [ixDispMem(dstResolved.ixDisp), { kind: 'Reg', span: inst.span, name: 'E' }],
+                inst.span,
+              )
+            )
+              return false;
+            return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span);
+          }
+          emitRawCodeBytes(
+            Uint8Array.of(0xdd, 0x70 + s8, dstResolved.ixDisp & 0xff),
+            inst.span.file,
+            `ld (ix${formatIxDisp(dstResolved.ixDisp)}), ${regUp}`,
+          );
+          return true;
+        }
         const dstPipe = buildEaBytePipeline(dst.expr, inst.span);
         if (dstPipe) {
           if (
@@ -5809,7 +5893,7 @@ export function emitProgram(
                 if (emitSyntheticEpilogue) {
                   emitJumpCondTo(op, epilogueLabel, asmItem.span);
                 } else {
-                  emitJumpCondTo(op, epilogueLabel, asmItem.span);
+                  emitInstr('ret', [asmItem.operands[0]!], asmItem.span);
                 }
                 syncToFlow();
                 return;

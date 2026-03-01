@@ -72,11 +72,15 @@ export const LOAD_REG_EA = (reg: string): StepPipeline => [instr(`ld ${reg}, (hl
 export const STORE_REG_EA = (reg: string): StepPipeline => [instr(`ld (hl), ${reg}`)];
 
 export const LOAD_REG_GLOB = (reg: string, glob: string): StepPipeline => [
-  instr(`ld ${reg}, (${glob})`),
+  ...(reg.toUpperCase() === 'A'
+    ? [instr(`ld a, (${glob})`)]
+    : [instr('push af'), instr(`ld a, (${glob})`), instr(`ld ${reg}, a`), instr('pop af')]),
 ];
 
 export const STORE_REG_GLOB = (reg: string, glob: string): StepPipeline => [
-  instr(`ld (${glob}), ${reg}`),
+  ...(reg.toUpperCase() === 'A'
+    ? [instr(`ld (${glob}), a`)]
+    : [instr('push af'), instr(`ld a, ${reg}`), instr(`ld (${glob}), a`), instr('pop af')]),
 ];
 
 export const LOAD_REG_FVAR = (reg: string, disp: number): StepPipeline => [

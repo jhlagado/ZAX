@@ -1,0 +1,10 @@
+export func main()
+  var
+    slot: byte = 0
+  end
+
+  ld h, slot
+  ld l, slot
+  ld slot, h
+  ld slot, l
+end

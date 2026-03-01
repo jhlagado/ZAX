@@ -11,6 +11,8 @@ import {
   EAW_FVAR_CONST,
   TEMPLATE_L_ABC,
   TEMPLATE_LW_HL,
+  LOAD_REG_GLOB,
+  STORE_REG_GLOB,
   LOAD_BASE_GLOB,
   LOAD_IDX_CONST,
   CALC_EA,
@@ -27,6 +29,26 @@ describe('addressing-model step library', () => {
   it('EA_GLOB_REG (byte) zero-extends reg8', () => {
     const p = EA_GLOB_REG('glob_b', 'c');
     expect(asm(p)).toEqual(['ld de, glob_b', 'ld h, 0', 'ld l, c', 'add hl, de']);
+  });
+
+  it('LOAD_REG_GLOB uses AF borrow for non-A byte globals', () => {
+    expect(asm(LOAD_REG_GLOB('A', 'glob_b'))).toEqual(['ld a, (glob_b)']);
+    expect(asm(LOAD_REG_GLOB('B', 'glob_b'))).toEqual([
+      'push af',
+      'ld a, (glob_b)',
+      'ld B, a',
+      'pop af',
+    ]);
+  });
+
+  it('STORE_REG_GLOB uses AF borrow for non-A byte globals', () => {
+    expect(asm(STORE_REG_GLOB('A', 'glob_b'))).toEqual(['ld (glob_b), a']);
+    expect(asm(STORE_REG_GLOB('B', 'glob_b'))).toEqual([
+      'push af',
+      'ld a, B',
+      'ld (glob_b), a',
+      'pop af',
+    ]);
   });
 
   it('EA_FVAR_CONST folds small disps', () => {
