@@ -24,13 +24,12 @@ describe('PR405: byte scalar fast paths', () => {
     expect(text).not.toMatch(/LD\s+\(IX[^\n]*,\s+H/i);
     expect(text).not.toMatch(/LD\s+\(IX[^\n]*,\s+L/i);
 
-    expect((text.match(/\bPUSH DE\b/g) ?? []).length).toBeGreaterThanOrEqual(4);
-    expect((text.match(/\bPOP DE\b/g) ?? []).length).toBeGreaterThanOrEqual(4);
+    expect((text.match(/\bEX DE, HL\b/g) ?? []).length).toBeGreaterThanOrEqual(4);
     expect(text).toContain('LD E, (IX - $0002)');
-    expect(text).toContain('LD H, E');
-    expect(text).toContain('LD L, E');
-    expect(text).toContain('LD E, H');
-    expect(text).toContain('LD E, L');
+    expect(text).not.toContain('LD H, E');
+    expect(text).not.toContain('LD L, E');
+    expect(text).not.toContain('LD E, H');
+    expect(text).not.toContain('LD E, L');
     expect(text).toContain('LD (IX - $0002), E');
   });
 });
