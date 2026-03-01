@@ -40,6 +40,7 @@ import {
   TEMPLATE_SW_HL,
   TEMPLATE_S_ANY,
   TEMPLATE_S_HL,
+  renderStepInstr,
   type StepInstr,
   type StepPipeline,
 } from '../addressing/steps.js';
@@ -622,6 +623,7 @@ export function emitProgram(
     };
 
     const mkReg = (name: string): AsmOperandNode => ({ kind: 'Reg', span, name });
+    const mkStepReg = (name: string): AsmOperandNode => mkReg(name.toUpperCase());
     const mkMemHl = (): AsmOperandNode => ({
       kind: 'Mem',
       span,
@@ -652,178 +654,130 @@ export function emitProgram(
     };
 
     const emitStepInstr = (step: StepInstr): boolean => {
-      const asm = step.asm.trim();
-      const lower = asm.toLowerCase();
-
-      if (lower === 'push af') return emitInstr('push', [mkReg('AF')], span);
-      if (lower === 'push hl') return emitInstr('push', [mkReg('HL')], span);
-      if (lower === 'push de') return emitInstr('push', [mkReg('DE')], span);
-      if (lower === 'pop af') return emitInstr('pop', [mkReg('AF')], span);
-      if (lower === 'pop hl') return emitInstr('pop', [mkReg('HL')], span);
-      if (lower === 'pop de') return emitInstr('pop', [mkReg('DE')], span);
-      if (lower === 'ex de, hl') return emitInstr('ex', [mkReg('DE'), mkReg('HL')], span);
-      if (lower === 'ex (sp), hl')
-        return emitInstr(
-          'ex',
-          [{ kind: 'Mem', span, expr: { kind: 'EaName', span, name: 'SP' } }, mkReg('HL')],
-          span,
-        );
-      if (lower === 'add hl, de') return emitInstr('add', [mkReg('HL'), mkReg('DE')], span);
-      if (lower === 'add hl, hl') return emitInstr('add', [mkReg('HL'), mkReg('HL')], span);
-      if (lower === 'inc hl') return emitInstr('inc', [mkReg('HL')], span);
-      if (lower === 'ld h, 0')
-        return emitInstr(
-          'ld',
-          [mkReg('H'), { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }],
-          span,
-        );
-
-      const ldRegReg = lower.match(/^ld ([abcdehl]), ([abcdehl])$/);
-      if (ldRegReg) {
-        return emitInstr(
-          'ld',
-          [mkReg(ldRegReg[1]!.toUpperCase()), mkReg(ldRegReg[2]!.toUpperCase())],
-          span,
-        );
-      }
-
-      const ldRegMemHl = lower.match(/^ld ([abcdehl]), \(hl\)$/);
-      if (ldRegMemHl) {
-        return emitInstr('ld', [mkReg(ldRegMemHl[1]!.toUpperCase()), mkMemHl()], span);
-      }
-
-      const ldMemHlReg = lower.match(/^ld \(hl\), ([abcdehl])$/);
-      if (ldMemHlReg) {
-        return emitInstr('ld', [mkMemHl(), mkReg(ldMemHlReg[1]!.toUpperCase())], span);
-      }
-
-      const ldRegIx = lower.match(/^ld ([abcdehl]), \(ix([+-])\$([0-9a-f]+)\)$/);
-      if (ldRegIx) {
-        const disp = parseInt(ldRegIx[3]!, 16);
-        const signed = ldRegIx[2] === '-' ? -disp : disp;
-        return emitInstr('ld', [mkReg(ldRegIx[1]!.toUpperCase()), mkMemIxDisp(signed)], span);
-      }
-
-      const ldIxReg = lower.match(/^ld \(ix([+-])\$([0-9a-f]+)\), ([abcdehl])$/);
-      if (ldIxReg) {
-        const disp = parseInt(ldIxReg[2]!, 16);
-        const signed = ldIxReg[1] === '-' ? -disp : disp;
-        return emitInstr('ld', [mkMemIxDisp(signed), mkReg(ldIxReg[3]!.toUpperCase())], span);
-      }
-
-      const ldRpByteFromIx = lower.match(/^ld (lo|hi)\((bc|de|hl)\), \(ix([+-])\$([0-9a-f]+)\)$/);
-      if (ldRpByteFromIx) {
-        const regName = rpByte(ldRpByteFromIx[2]!, ldRpByteFromIx[1] as 'lo' | 'hi');
-        if (!regName) return false;
-        const disp = parseInt(ldRpByteFromIx[4]!, 16);
-        const signed = ldRpByteFromIx[3] === '-' ? -disp : disp;
-        return emitInstr('ld', [mkReg(regName), mkMemIxDisp(signed)], span);
-      }
-
-      const ldIxFromRpByte = lower.match(/^ld \(ix([+-])\$([0-9a-f]+)\), (lo|hi)\((bc|de|hl)\)$/);
-      if (ldIxFromRpByte) {
-        const regName = rpByte(ldIxFromRpByte[4]!, ldIxFromRpByte[3] as 'lo' | 'hi');
-        if (!regName) return false;
-        const disp = parseInt(ldIxFromRpByte[2]!, 16);
-        const signed = ldIxFromRpByte[1] === '-' ? -disp : disp;
-        return emitInstr('ld', [mkMemIxDisp(signed), mkReg(regName)], span);
-      }
-
-      const ldRpImm = lower.match(/^ld (de|hl), \$(\w{1,4})$/);
-      if (ldRpImm) {
-        const value = parseInt(ldRpImm[2]!, 16);
-        return ldRpImm[1] === 'de' ? loadImm16ToDE(value, span) : loadImm16ToHL(value, span);
-      }
-
-      const ldRpGlob = lower.match(/^ld (de|hl), ([a-z_][\w.]*)$/i);
-      if (ldRpGlob) {
-        const op = ldRpGlob[1] === 'de' ? 0x11 : 0x21;
-        emitAbs16Fixup(op, ldRpGlob[2]!.toLowerCase(), 0, span, asm);
-        return true;
-      }
-
-      const ldHlPtrGlob = lower.match(/^ld hl, \(([a-z_][\w.]*)\)$/i);
-      if (ldHlPtrGlob) {
-        emitAbs16Fixup(0x2a, ldHlPtrGlob[1]!.toLowerCase(), 0, span, asm);
-        return true;
-      }
-
-      const ldRpPtrGlob = lower.match(/^ld (bc|de), \(([a-z_][\w.]*)\)$/i);
-      if (ldRpPtrGlob) {
-        emitAbs16FixupEd(
-          ldRpPtrGlob[1]!.toLowerCase() === 'bc' ? 0x4b : 0x5b,
-          ldRpPtrGlob[2]!.toLowerCase(),
-          0,
-          span,
-          asm,
-        );
-        return true;
-      }
-
-      const ldPtrGlobRp = lower.match(/^ld \(([a-z_][\w.]*)\), (bc|de|hl)$/i);
-      if (ldPtrGlobRp) {
-        const rp = ldPtrGlobRp[2]!.toLowerCase();
-        if (rp === 'hl') {
-          emitAbs16Fixup(0x22, ldPtrGlobRp[1]!.toLowerCase(), 0, span, asm);
-        } else {
-          emitAbs16FixupEd(rp === 'bc' ? 0x43 : 0x53, ldPtrGlobRp[1]!.toLowerCase(), 0, span, asm);
-        }
-        return true;
-      }
-
-      const ldHlRp = lower.match(/^ld hl, (bc|de|hl)$/);
-      if (ldHlRp) {
-        const rp = ldHlRp[1]!.toUpperCase();
-        if (rp === 'HL') return true;
-        if (rp === 'DE') {
-          return (
-            emitInstr('ld', [mkReg('H'), mkReg('D')], span) &&
-            emitInstr('ld', [mkReg('L'), mkReg('E')], span)
+      switch (step.kind) {
+        case 'push':
+          return emitInstr('push', [mkReg(step.reg)], span);
+        case 'pop':
+          return emitInstr('pop', [mkReg(step.reg)], span);
+        case 'exDeHl':
+          return emitInstr('ex', [mkReg('DE'), mkReg('HL')], span);
+        case 'exSpHl':
+          return emitInstr(
+            'ex',
+            [{ kind: 'Mem', span, expr: { kind: 'EaName', span, name: 'SP' } }, mkReg('HL')],
+            span,
           );
+        case 'addHlDe':
+          return emitInstr('add', [mkReg('HL'), mkReg('DE')], span);
+        case 'addHlHl':
+          return emitInstr('add', [mkReg('HL'), mkReg('HL')], span);
+        case 'incHl':
+          return emitInstr('inc', [mkReg('HL')], span);
+        case 'ldHZero':
+          return emitInstr(
+            'ld',
+            [mkReg('H'), { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }],
+            span,
+          );
+        case 'ldRegReg':
+          return emitInstr('ld', [mkStepReg(step.dst), mkStepReg(step.src)], span);
+        case 'ldRegMemHl':
+          return emitInstr('ld', [mkStepReg(step.reg), mkMemHl()], span);
+        case 'ldMemHlReg':
+          return emitInstr('ld', [mkMemHl(), mkStepReg(step.reg)], span);
+        case 'ldRegIxDisp':
+          return emitInstr('ld', [mkStepReg(step.reg), mkMemIxDisp(step.disp)], span);
+        case 'ldIxDispReg':
+          return emitInstr('ld', [mkMemIxDisp(step.disp), mkStepReg(step.reg)], span);
+        case 'ldRpByteFromIx': {
+          const regName = rpByte(step.rp, step.part);
+          if (!regName) return false;
+          return emitInstr('ld', [mkReg(regName), mkMemIxDisp(step.disp)], span);
         }
-        return (
-          emitInstr('ld', [mkReg('H'), mkReg('B')], span) &&
-          emitInstr('ld', [mkReg('L'), mkReg('C')], span)
-        );
+        case 'ldIxDispFromRpByte': {
+          const regName = rpByte(step.rp, step.part);
+          if (!regName) return false;
+          return emitInstr('ld', [mkMemIxDisp(step.disp), mkReg(regName)], span);
+        }
+        case 'ldRpImm':
+          return step.rp === 'DE'
+            ? loadImm16ToDE(step.value, span)
+            : loadImm16ToHL(step.value, span);
+        case 'ldRpGlob':
+          emitAbs16Fixup(
+            step.rp === 'DE' ? 0x11 : 0x21,
+            step.glob.toLowerCase(),
+            0,
+            span,
+            renderStepInstr(step),
+          );
+          return true;
+        case 'ldHlPtrGlob':
+          emitAbs16Fixup(0x2a, step.glob.toLowerCase(), 0, span, renderStepInstr(step));
+          return true;
+        case 'ldRpPtrGlob':
+          emitAbs16FixupEd(
+            step.rp === 'BC' ? 0x4b : 0x5b,
+            step.glob.toLowerCase(),
+            0,
+            span,
+            renderStepInstr(step),
+          );
+          return true;
+        case 'ldPtrGlobRp':
+          if (step.rp === 'HL') {
+            emitAbs16Fixup(0x22, step.glob.toLowerCase(), 0, span, renderStepInstr(step));
+          } else {
+            emitAbs16FixupEd(
+              step.rp === 'BC' ? 0x43 : 0x53,
+              step.glob.toLowerCase(),
+              0,
+              span,
+              renderStepInstr(step),
+            );
+          }
+          return true;
+        case 'ldHlRp':
+          if (step.rp === 'HL') return true;
+          if (step.rp === 'DE') {
+            return (
+              emitInstr('ld', [mkReg('H'), mkReg('D')], span) &&
+              emitInstr('ld', [mkReg('L'), mkReg('E')], span)
+            );
+          }
+          return (
+            emitInstr('ld', [mkReg('H'), mkReg('B')], span) &&
+            emitInstr('ld', [mkReg('L'), mkReg('C')], span)
+          );
+        case 'ldRegGlob':
+          return emitInstr(
+            'ld',
+            [
+              mkStepReg(step.reg),
+              { kind: 'Mem', span, expr: { kind: 'EaName', span, name: step.glob } },
+            ],
+            span,
+          );
+        case 'ldGlobReg':
+          return emitInstr(
+            'ld',
+            [
+              { kind: 'Mem', span, expr: { kind: 'EaName', span, name: step.glob } },
+              mkStepReg(step.reg),
+            ],
+            span,
+          );
+        case 'ldRpByteFromReg': {
+          const regName = rpByte(step.rp, step.part);
+          if (!regName) return false;
+          return emitInstr('ld', [mkReg(regName), mkStepReg(step.reg)], span);
+        }
+        case 'ldRegFromRpByte': {
+          const src = rpByte(step.rp, step.part);
+          if (!src) return false;
+          return emitInstr('ld', [mkStepReg(step.reg), mkReg(src)], span);
+        }
       }
-
-      const ldRegGlob = lower.match(/^ld ([abcdehl]), \(([a-z_][\w.]*)\)$/i);
-      if (ldRegGlob) {
-        const reg = ldRegGlob[1]!.toUpperCase();
-        const glob = ldRegGlob[2]!;
-        return emitInstr(
-          'ld',
-          [mkReg(reg), { kind: 'Mem', span, expr: { kind: 'EaName', span, name: glob } }],
-          span,
-        );
-      }
-
-      const ldGlobReg = lower.match(/^ld \(([a-z_][\w.]*)\), ([abcdehl])$/i);
-      if (ldGlobReg) {
-        const glob = ldGlobReg[1]!;
-        const reg = ldGlobReg[2]!.toUpperCase();
-        return emitInstr(
-          'ld',
-          [{ kind: 'Mem', span, expr: { kind: 'EaName', span, name: glob } }, mkReg(reg)],
-          span,
-        );
-      }
-
-      const ldRpByteFromReg = lower.match(/^ld (lo|hi)\((bc|de|hl)\), ([abcdehl])$/);
-      if (ldRpByteFromReg) {
-        const regName = rpByte(ldRpByteFromReg[2]!, ldRpByteFromReg[1] as 'lo' | 'hi');
-        if (!regName) return false;
-        return emitInstr('ld', [mkReg(regName), mkReg(ldRpByteFromReg[3]!.toUpperCase())], span);
-      }
-
-      const ldRegFromRpByte = lower.match(/^ld ([abcdehl]), (lo|hi)\((bc|de|hl)\)$/);
-      if (ldRegFromRpByte) {
-        const src = rpByte(ldRegFromRpByte[3]!, ldRegFromRpByte[2] as 'lo' | 'hi');
-        if (!src) return false;
-        return emitInstr('ld', [mkReg(ldRegFromRpByte[1]!.toUpperCase()), mkReg(src)], span);
-      }
-
-      return false;
     };
 
     for (const step of pipe) {
