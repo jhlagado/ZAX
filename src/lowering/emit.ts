@@ -3039,8 +3039,19 @@ export function emitProgram(
     return false;
   };
 
+  const resolvedScalarKind = (
+    resolved: ReturnType<typeof resolveEa>,
+  ): 'byte' | 'word' | 'addr' | undefined =>
+    resolved?.typeExpr ? resolveScalarKind(resolved.typeExpr) : undefined;
+
+  const isWordCompatibleScalarKind = (
+    scalar: 'byte' | 'word' | 'addr' | undefined,
+  ): scalar is 'word' | 'addr' => scalar === 'word' || scalar === 'addr';
+
   const canUseScalarWordAccessor = (resolved: ReturnType<typeof resolveEa>): boolean =>
-    !!resolved && ((resolved.kind === 'abs' && resolved.addend === 0) || resolved.kind === 'stack');
+    !!resolved &&
+    isWordCompatibleScalarKind(resolvedScalarKind(resolved)) &&
+    ((resolved.kind === 'abs' && resolved.addend === 0) || resolved.kind === 'stack');
 
   const emitScalarWordStore = (
     source: 'HL' | 'DE' | 'BC',
@@ -3360,6 +3371,10 @@ export function emitProgram(
 
       const r16 = dst.name.toUpperCase();
       if (r16 === 'HL') {
+        if (resolvedScalarKind(srcResolved) === 'byte') {
+          diagAt(diagnostics, inst.span, `Word register load requires a word-typed source.`);
+          return true;
+        }
         if (srcResolved?.kind === 'stack') {
           return emitStepPipeline(LOAD_RP_FVAR('HL', srcResolved.ixDisp), inst.span);
         }
@@ -3377,6 +3392,10 @@ export function emitProgram(
         return emitLoadWordFromHlAddress('HL', inst.span);
       }
       if (r16 === 'DE') {
+        if (resolvedScalarKind(srcResolved) === 'byte') {
+          diagAt(diagnostics, inst.span, `Word register load requires a word-typed source.`);
+          return true;
+        }
         if (srcResolved?.kind === 'stack') {
           return emitStepPipeline(LOAD_RP_FVAR('DE', srcResolved.ixDisp), inst.span);
         }
@@ -3394,6 +3413,10 @@ export function emitProgram(
         return emitLoadWordFromHlAddress('DE', inst.span);
       }
       if (r16 === 'BC') {
+        if (resolvedScalarKind(srcResolved) === 'byte') {
+          diagAt(diagnostics, inst.span, `Word register load requires a word-typed source.`);
+          return true;
+        }
         if (srcResolved?.kind === 'stack') {
           return emitStepPipeline(LOAD_RP_FVAR('BC', srcResolved.ixDisp), inst.span);
         }
@@ -3553,6 +3576,10 @@ export function emitProgram(
 
       const r16 = src.name.toUpperCase();
       if (r16 === 'HL') {
+        if (resolvedScalarKind(dstResolved) === 'byte') {
+          diagAt(diagnostics, inst.span, `Word register store requires a word-typed destination.`);
+          return true;
+        }
         const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
         if (dstPipeW && emitStepPipeline(TEMPLATE_SW_HL(dstPipeW), inst.span)) return true;
         if (dstResolved?.kind === 'stack') {
@@ -3569,6 +3596,10 @@ export function emitProgram(
         return emitStoreSavedHlToEa(dst.expr, inst.span);
       }
       if (r16 === 'DE') {
+        if (resolvedScalarKind(dstResolved) === 'byte') {
+          diagAt(diagnostics, inst.span, `Word register store requires a word-typed destination.`);
+          return true;
+        }
         const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
         if (dstPipeW) {
           // Store DE via template.
@@ -3589,6 +3620,10 @@ export function emitProgram(
         return emitStoreWordToHlAddress('DE', inst.span);
       }
       if (r16 === 'BC') {
+        if (resolvedScalarKind(dstResolved) === 'byte') {
+          diagAt(diagnostics, inst.span, `Word register store requires a word-typed destination.`);
+          return true;
+        }
         const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
         if (dstPipeW) {
           // Store BC via template (uses DE/BC path).
@@ -3644,6 +3679,19 @@ export function emitProgram(
         resolveScalarTypeForEa(dst.expr) ?? resolveScalarTypeForEa(src.expr) ?? undefined;
       const dstResolved = resolveEa(dst.expr, inst.span);
       const srcResolved = resolveEa(src.expr, inst.span);
+      const dstScalarExact = resolvedScalarKind(dstResolved);
+      const srcScalarExact = resolvedScalarKind(srcResolved);
+      if (
+        (srcScalarExact === 'byte' && isWordCompatibleScalarKind(dstScalarExact)) ||
+        (dstScalarExact === 'byte' && isWordCompatibleScalarKind(srcScalarExact))
+      ) {
+        diagAt(
+          diagnostics,
+          inst.span,
+          `Word mem->mem move requires word-typed source and destination.`,
+        );
+        return true;
+      }
       // Stack-to-stack fast path using IX+d with DE shuttle; avoids HL address materialization.
       if (
         scalar !== undefined &&

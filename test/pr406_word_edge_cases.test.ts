@@ -17,6 +17,18 @@ describe('PR406: word edge cases', () => {
     expect(res.diagnostics.some((d) => d.severity === 'error')).toBe(true);
   });
 
+  it('rejects byte-typed storage in word scalar load/store paths', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr406_word_invalid_scalar_widths.zax');
+    const res = await compile(
+      entry,
+      { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+      { formats: defaultFormatWriters },
+    );
+
+    const errors = res.diagnostics.filter((d) => d.severity === 'error');
+    expect(errors.length).toBeGreaterThanOrEqual(4);
+  });
+
   it('does not partially emit the scalar word fast path when only the source is scalar-fast-path eligible', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_mem_to_mem_partial_fast_path.zax');
     const res = await compile(
