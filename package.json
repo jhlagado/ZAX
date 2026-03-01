@@ -18,7 +18,8 @@
     "format": "prettier -w .",
     "format:check": "prettier -c .",
     "zax": "npm run build && node dist/src/cli.js",
-    "regen:language-tour": "bash scripts/regenerate-language-tour.sh"
+    "regen:language-tour": "bash scripts/regenerate-language-tour.sh",
+    "regen:codegen-corpus": "node scripts/regenerate-codegen-corpus.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.13.1",
