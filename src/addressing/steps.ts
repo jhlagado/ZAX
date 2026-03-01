@@ -107,8 +107,7 @@ export const LOAD_RP_EA = (rp: string): StepPipeline => [
 ];
 
 export const STORE_RP_EA = (rp: string): StepPipeline => [
-  instr(`ld e, lo(${rp})`),
-  instr(`ld d, hi(${rp})`),
+  ...(rp.toUpperCase() === 'DE' ? [] : [instr(`ld e, lo(${rp})`), instr(`ld d, hi(${rp})`)]),
   instr('ld (hl), e'),
   instr('inc hl'),
   instr('ld (hl), d'),
@@ -351,22 +350,8 @@ export const TEMPLATE_LW_BC = (ea: StepPipeline): StepPipeline => [
 // ---------------------------------------------------------------------------
 export const TEMPLATE_SW_DEBC = (vpair: 'DE' | 'BC', ea: StepPipeline): StepPipeline =>
   vpair === 'DE'
-    ? [
-        ...SAVE_HL(),
-        ...SAVE_DE(),
-        ...ea,
-        ...RESTORE_DE(),
-        ...STORE_RP_EA('DE'),
-        ...RESTORE_HL(),
-      ]
-    : [
-        ...SAVE_DE(),
-        ...SAVE_HL(),
-        ...ea,
-        ...STORE_RP_EA('BC'),
-        ...RESTORE_HL(),
-        ...RESTORE_DE(),
-      ];
+    ? [...SAVE_HL(), ...SAVE_DE(), ...ea, ...RESTORE_DE(), ...STORE_RP_EA('DE'), ...RESTORE_HL()]
+    : [...SAVE_DE(), ...SAVE_HL(), ...ea, ...STORE_RP_EA('BC'), ...RESTORE_HL(), ...RESTORE_DE()];
 
 export const TEMPLATE_SW_HL = (ea: StepPipeline): StepPipeline => [
   ...SAVE_DE(),

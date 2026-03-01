@@ -13,6 +13,7 @@ import {
   TEMPLATE_LW_HL,
   LOAD_REG_GLOB,
   STORE_REG_GLOB,
+  STORE_RP_EA,
   LOAD_BASE_GLOB,
   LOAD_IDX_CONST,
   CALC_EA,
@@ -104,6 +105,17 @@ describe('addressing-model step library', () => {
       'ld lo(HL), e',
       'ld hi(HL), d',
       'pop de',
+    ]);
+  });
+
+  it('STORE_RP_EA omits self-moves for DE', () => {
+    expect(asm(STORE_RP_EA('DE'))).toEqual(['ld (hl), e', 'inc hl', 'ld (hl), d']);
+    expect(asm(STORE_RP_EA('BC'))).toEqual([
+      'ld e, lo(BC)',
+      'ld d, hi(BC)',
+      'ld (hl), e',
+      'inc hl',
+      'ld (hl), d',
     ]);
   });
 
