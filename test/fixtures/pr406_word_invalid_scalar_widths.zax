@@ -1,0 +1,14 @@
+section var at $1000
+
+globals
+  src_b: byte
+  dst_b: byte
+  src_w: word
+  dst_w: word
+
+export func main(): AF, BC, DE, HL
+  ld de, src_b
+  ld dst_b, de
+  ld dst_w, src_b
+  ld dst_b, src_w
+end

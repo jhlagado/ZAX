@@ -30,5 +30,30 @@ describe('PR406 word templates (runtime index → BC)', () => {
     expect(text).toMatch(/ld d, \(hl\)/i); // word load hi
     expect(text).toMatch(/ld c, l/i);
     expect(text).toMatch(/ld b, h/i);
+    expect(text).not.toMatch(/ld a, \(hl\)/i);
+  });
+
+  it('uses EAW + SW-BC template for reg16 index HL stores', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr406_word_index_bc_store.zax');
+    const res = await compile(
+      entry,
+      { emitBin: false, emitHex: false, emitD8m: false, emitListing: false, emitAsm: true },
+      { formats: defaultFormatWriters },
+    );
+
+    expect(res.diagnostics).toEqual([]);
+    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
+    expect(asm).toBeDefined();
+    const text = asm!.text;
+
+    expect(text).toMatch(/add hl, hl/i);
+    expect(text).toMatch(/ld de, arr_w/i);
+    expect(text).toMatch(/add hl, de/i);
+    expect(text).toMatch(/ld e, c/i);
+    expect(text).toMatch(/ld d, b/i);
+    expect(text).toMatch(/ld \(hl\), e/i);
+    expect(text).toMatch(/ld \(hl\), d/i);
+    expect(text).not.toMatch(/ld a, \(hl\)/i);
+    expect(text).not.toMatch(/ld a, c/i);
   });
 });

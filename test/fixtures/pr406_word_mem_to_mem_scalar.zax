@@ -1,0 +1,15 @@
+section var at $1000
+
+globals
+  glob_src: word
+  glob_dst: word
+
+export func main(): AF, BC, DE, HL
+  var
+    local_w: word = $1234
+  end
+
+  ld glob_dst, glob_src
+  ld local_w, glob_src
+  ld glob_dst, local_w
+end

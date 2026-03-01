@@ -1,0 +1,17 @@
+section var at $1000
+
+globals
+  glob_w: word
+
+func sink(v: word)
+  ret
+end
+
+export func main(): AF, BC, DE, HL
+  var
+    local_w: word = $1234
+  end
+
+  sink glob_w
+  sink local_w
+end

@@ -23,6 +23,12 @@ import {
   EAW_FVAR_FVAR,
   LOAD_BASE_GLOB,
   LOAD_BASE_FVAR,
+  LOAD_RP_EA,
+  LOAD_RP_FVAR,
+  LOAD_RP_GLOB,
+  STORE_RP_EA,
+  STORE_RP_FVAR,
+  STORE_RP_GLOB,
   CALC_EA,
   CALC_EA_2,
   TEMPLATE_L_ABC,
@@ -911,6 +917,24 @@ export function emitProgram(
         return emitInstr('ld', [mkMemIxDisp(signed), mkReg(ldIxReg[3]!.toUpperCase())], span);
       }
 
+      const ldRpByteFromIx = lower.match(/^ld (lo|hi)\((bc|de|hl)\), \(ix([+-])\$([0-9a-f]+)\)$/);
+      if (ldRpByteFromIx) {
+        const regName = rpByte(ldRpByteFromIx[2]!, ldRpByteFromIx[1] as 'lo' | 'hi');
+        if (!regName) return false;
+        const disp = parseInt(ldRpByteFromIx[4]!, 16);
+        const signed = ldRpByteFromIx[3] === '-' ? -disp : disp;
+        return emitInstr('ld', [mkReg(regName), mkMemIxDisp(signed)], span);
+      }
+
+      const ldIxFromRpByte = lower.match(/^ld \(ix([+-])\$([0-9a-f]+)\), (lo|hi)\((bc|de|hl)\)$/);
+      if (ldIxFromRpByte) {
+        const regName = rpByte(ldIxFromRpByte[4]!, ldIxFromRpByte[3] as 'lo' | 'hi');
+        if (!regName) return false;
+        const disp = parseInt(ldIxFromRpByte[2]!, 16);
+        const signed = ldIxFromRpByte[1] === '-' ? -disp : disp;
+        return emitInstr('ld', [mkMemIxDisp(signed), mkReg(regName)], span);
+      }
+
       const ldRpImm = lower.match(/^ld (de|hl), \$(\w{1,4})$/);
       if (ldRpImm) {
         const value = parseInt(ldRpImm[2]!, 16);
@@ -927,6 +951,29 @@ export function emitProgram(
       const ldHlPtrGlob = lower.match(/^ld hl, \(([a-z_][\w.]*)\)$/i);
       if (ldHlPtrGlob) {
         emitAbs16Fixup(0x2a, ldHlPtrGlob[1]!.toLowerCase(), 0, span, asm);
+        return true;
+      }
+
+      const ldRpPtrGlob = lower.match(/^ld (bc|de), \(([a-z_][\w.]*)\)$/i);
+      if (ldRpPtrGlob) {
+        emitAbs16FixupEd(
+          ldRpPtrGlob[1]!.toLowerCase() === 'bc' ? 0x4b : 0x5b,
+          ldRpPtrGlob[2]!.toLowerCase(),
+          0,
+          span,
+          asm,
+        );
+        return true;
+      }
+
+      const ldPtrGlobRp = lower.match(/^ld \(([a-z_][\w.]*)\), (bc|de|hl)$/i);
+      if (ldPtrGlobRp) {
+        const rp = ldPtrGlobRp[2]!.toLowerCase();
+        if (rp === 'hl') {
+          emitAbs16Fixup(0x22, ldPtrGlobRp[1]!.toLowerCase(), 0, span, asm);
+        } else {
+          emitAbs16FixupEd(rp === 'bc' ? 0x43 : 0x53, ldPtrGlobRp[1]!.toLowerCase(), 0, span, asm);
+        }
         return true;
       }
 
@@ -2898,6 +2945,34 @@ export function emitProgram(
       const elemSize = sizeOfTypeExpr(baseType.element, env, diagnostics);
       if (elemSize !== 2) return null; // scale-by-2 only
 
+      if (ea.index.kind === 'IndexImm') {
+        const imm = evalImmExpr(ea.index.value, env, diagnostics);
+        if (imm !== undefined) {
+          return baseResolved.kind === 'abs'
+            ? EAW_GLOB_CONST(baseResolved.baseLower, imm)
+            : EAW_FVAR_CONST(baseResolved.ixDisp, imm);
+        }
+
+        if (ea.index.value.kind === 'ImmName') {
+          const idxScalar = resolveScalarBinding(ea.index.value.name);
+          if (idxScalar !== 'word' && idxScalar !== 'addr') return null;
+          const idxNameEa: EaExprNode = { kind: 'EaName', span, name: ea.index.value.name };
+          const idxResolved = resolveEa(idxNameEa, span);
+          if (!idxResolved) return null;
+          if (idxResolved.kind === 'abs') {
+            return baseResolved.kind === 'abs'
+              ? EAW_GLOB_GLOB(baseResolved.baseLower, idxResolved.baseLower)
+              : EAW_FVAR_GLOB(baseResolved.ixDisp, idxResolved.baseLower);
+          }
+          if (idxResolved.kind === 'stack') {
+            return baseResolved.kind === 'abs'
+              ? EAW_GLOB_FVAR(baseResolved.baseLower, idxResolved.ixDisp)
+              : EAW_FVAR_FVAR(baseResolved.ixDisp, idxResolved.ixDisp);
+          }
+        }
+        return null;
+      }
+
       if (ea.index.kind === 'IndexReg8' || ea.index.kind === 'IndexReg16') {
         const idxReg = (ea.index as any).reg;
         if (!idxReg || typeof idxReg !== 'string') return null;
@@ -2949,27 +3024,81 @@ export function emitProgram(
     return null;
   };
 
+  const emitScalarWordLoad = (
+    target: 'HL' | 'DE' | 'BC',
+    resolved: ReturnType<typeof resolveEa>,
+    span: SourceSpan,
+  ): boolean => {
+    if (!resolved) return false;
+    if (resolved.kind === 'abs' && resolved.addend === 0) {
+      return emitStepPipeline(LOAD_RP_GLOB(target, resolved.baseLower), span);
+    }
+    if (resolved.kind === 'stack') {
+      return emitStepPipeline(LOAD_RP_FVAR(target, resolved.ixDisp), span);
+    }
+    return false;
+  };
+
+  const resolvedScalarKind = (
+    resolved: ReturnType<typeof resolveEa>,
+  ): 'byte' | 'word' | 'addr' | undefined =>
+    resolved?.typeExpr ? resolveScalarKind(resolved.typeExpr) : undefined;
+
+  const isWordCompatibleScalarKind = (
+    scalar: 'byte' | 'word' | 'addr' | undefined,
+  ): scalar is 'word' | 'addr' => scalar === 'word' || scalar === 'addr';
+
+  const canUseScalarWordAccessor = (resolved: ReturnType<typeof resolveEa>): boolean =>
+    !!resolved &&
+    isWordCompatibleScalarKind(resolvedScalarKind(resolved)) &&
+    ((resolved.kind === 'abs' && resolved.addend === 0) || resolved.kind === 'stack');
+
+  const emitScalarWordStore = (
+    source: 'HL' | 'DE' | 'BC',
+    resolved: ReturnType<typeof resolveEa>,
+    span: SourceSpan,
+  ): boolean => {
+    if (!resolved) return false;
+    if (resolved.kind === 'abs' && resolved.addend === 0) {
+      return emitStepPipeline(STORE_RP_GLOB(source, resolved.baseLower), span);
+    }
+    if (resolved.kind === 'stack') {
+      return emitStepPipeline(STORE_RP_FVAR(source, resolved.ixDisp), span);
+    }
+    return false;
+  };
+
+  const emitLoadWordFromHlAddress = (target: 'HL' | 'DE' | 'BC', span: SourceSpan): boolean => {
+    if (target === 'DE') {
+      return emitStepPipeline(LOAD_RP_EA('DE'), span);
+    }
+    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
+    if (!emitStepPipeline(LOAD_RP_EA(target), span)) return false;
+    return emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span);
+  };
+
+  const emitStoreWordToHlAddress = (source: 'DE' | 'BC', span: SourceSpan): boolean =>
+    emitStepPipeline(STORE_RP_EA(source), span);
+
+  const emitStoreSavedHlToEa = (ea: EaExprNode, span: SourceSpan): boolean => {
+    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
+    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
+    if (!pushEaAddress(ea, span)) return false;
+    if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false; // HL = EA
+    if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span)) return false; // DE = value
+    if (!emitStoreWordToHlAddress('DE', span)) return false;
+    return emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span); // restore caller DE
+  };
+
   const pushMemValue = (ea: EaExprNode, want: 'byte' | 'word', span: SourceSpan): boolean => {
     // Use step-library EA builders and templates for byte paths; word paths remain as-is for now.
     if (want === 'word') {
       const r = resolveEa(ea, span);
-      if (r?.kind === 'abs') {
-        emitAbs16Fixup(0x2a, r.baseLower, r.addend, span); // ld hl, (nn)
+      if (emitScalarWordLoad('HL', r, span)) {
         return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
       }
-      if (r?.kind === 'stack') {
-        const disp = r.ixDisp & 0xff;
-        emitRawCodeBytes(
-          Uint8Array.of(0xdd, 0x5e, disp),
-          span.file,
-          `ld e, (ix${formatIxDisp(r.ixDisp)})`,
-        );
-        emitRawCodeBytes(
-          Uint8Array.of(0xdd, 0x56, (disp + 1) & 0xff),
-          span.file,
-          `ld d, (ix${formatIxDisp(r.ixDisp + 1)})`,
-        );
-        emitRawCodeBytes(Uint8Array.of(0xeb), span.file, 'ex de, hl');
+      if (r?.kind === 'abs') {
+        emitAbs16Fixup(0x2a, r.baseLower, r.addend, span); // ld hl, (nn)
         return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
       }
       const pipe = buildEaWordPipeline(ea, span);
@@ -3242,183 +3371,67 @@ export function emitProgram(
 
       const r16 = dst.name.toUpperCase();
       if (r16 === 'HL') {
-        if (srcResolved?.kind === 'stack') {
-          const lo = srcResolved.ixDisp;
-          const hi = srcResolved.ixDisp + 1;
-          if (
-            !emitInstr(
-              'ex',
-              [
-                { kind: 'Reg', span: inst.span, name: 'DE' },
-                { kind: 'Reg', span: inst.span, name: 'HL' },
-              ],
-              inst.span,
-            )
-          )
-            return false;
-          if (
-            !emitInstr(
-              'ld',
-              [{ kind: 'Reg', span: inst.span, name: 'E' }, ixDispMem(lo)],
-              inst.span,
-            )
-          )
-            return false;
-          if (
-            !emitInstr(
-              'ld',
-              [{ kind: 'Reg', span: inst.span, name: 'D' }, ixDispMem(hi)],
-              inst.span,
-            )
-          )
-            return false;
-          if (
-            !emitInstr(
-              'ex',
-              [
-                { kind: 'Reg', span: inst.span, name: 'DE' },
-                { kind: 'Reg', span: inst.span, name: 'HL' },
-              ],
-              inst.span,
-            )
-          )
-            return false;
+        if (resolvedScalarKind(srcResolved) === 'byte') {
+          diagAt(diagnostics, inst.span, `Word register load requires a word-typed source.`);
           return true;
+        }
+        if (srcResolved?.kind === 'stack') {
+          return emitStepPipeline(LOAD_RP_FVAR('HL', srcResolved.ixDisp), inst.span);
         }
         const r = resolveEa(src.expr, inst.span);
         if (r?.kind === 'abs') {
+          if (r.addend === 0 && emitStepPipeline(LOAD_RP_GLOB('HL', r.baseLower), inst.span)) {
+            return true;
+          }
           emitAbs16Fixup(0x2a, r.baseLower, r.addend, inst.span); // ld hl, (nn)
           return true;
         }
         const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
         if (srcPipeW && emitStepPipeline(TEMPLATE_LW_HL(srcPipeW), inst.span)) return true;
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
-        if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
-          return false;
-        }
-        if (
-          !emitInstr(
-            'ld',
-            [
-              { kind: 'Reg', span: inst.span, name: 'A' },
-              {
-                kind: 'Mem',
-                span: inst.span,
-                expr: { kind: 'EaName', span: inst.span, name: 'HL' },
-              },
-            ],
-            inst.span,
-          )
-        ) {
-          return false;
-        }
-        if (!emitInstr('inc', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span)) {
-          return false;
-        }
-        if (
-          !emitInstr(
-            'ld',
-            [
-              { kind: 'Reg', span: inst.span, name: 'H' },
-              {
-                kind: 'Mem',
-                span: inst.span,
-                expr: { kind: 'EaName', span: inst.span, name: 'HL' },
-              },
-            ],
-            inst.span,
-          )
-        ) {
-          return false;
-        }
-        if (
-          !emitInstr(
-            'ld',
-            [
-              { kind: 'Reg', span: inst.span, name: 'L' },
-              { kind: 'Reg', span: inst.span, name: 'A' },
-            ],
-            inst.span,
-          )
-        ) {
-          return false;
-        }
-        if (!emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) {
-          return false;
-        }
-        return true;
+        return emitLoadWordFromHlAddress('HL', inst.span);
       }
       if (r16 === 'DE') {
+        if (resolvedScalarKind(srcResolved) === 'byte') {
+          diagAt(diagnostics, inst.span, `Word register load requires a word-typed source.`);
+          return true;
+        }
         if (srcResolved?.kind === 'stack') {
-          const lo = srcResolved.ixDisp;
-          const hi = srcResolved.ixDisp + 1;
-          if (
-            !emitInstr(
-              'ld',
-              [{ kind: 'Reg', span: inst.span, name: 'E' }, ixDispMem(lo)],
-              inst.span,
-            )
-          )
-            return false;
-          return emitInstr(
-            'ld',
-            [{ kind: 'Reg', span: inst.span, name: 'D' }, ixDispMem(hi)],
-            inst.span,
-          );
+          return emitStepPipeline(LOAD_RP_FVAR('DE', srcResolved.ixDisp), inst.span);
         }
         const r = resolveEa(src.expr, inst.span);
         if (r?.kind === 'abs') {
+          if (r.addend === 0 && emitStepPipeline(LOAD_RP_GLOB('DE', r.baseLower), inst.span)) {
+            return true;
+          }
           emitAbs16FixupEd(0x5b, r.baseLower, r.addend, inst.span); // ld de, (nn)
           return true;
         }
         const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
         if (srcPipeW && emitStepPipeline(TEMPLATE_LW_DE(srcPipeW), inst.span)) return true;
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
-        emitRawCodeBytes(
-          Uint8Array.of(0x7e, 0x23, 0x56, 0x5f),
-          inst.span.file,
-          'ld a, (hl) ; inc hl ; ld d, (hl) ; ld e, a',
-        );
-        return true;
+        return emitLoadWordFromHlAddress('DE', inst.span);
       }
       if (r16 === 'BC') {
+        if (resolvedScalarKind(srcResolved) === 'byte') {
+          diagAt(diagnostics, inst.span, `Word register load requires a word-typed source.`);
+          return true;
+        }
         if (srcResolved?.kind === 'stack') {
-          const lo = srcResolved.ixDisp;
-          const hi = srcResolved.ixDisp + 1;
-          if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
-            return false;
-          if (
-            !emitInstr(
-              'ld',
-              [{ kind: 'Reg', span: inst.span, name: 'C' }, ixDispMem(lo)],
-              inst.span,
-            )
-          )
-            return false;
-          if (
-            !emitInstr(
-              'ld',
-              [{ kind: 'Reg', span: inst.span, name: 'B' }, ixDispMem(hi)],
-              inst.span,
-            )
-          )
-            return false;
-          return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span);
+          return emitStepPipeline(LOAD_RP_FVAR('BC', srcResolved.ixDisp), inst.span);
         }
         const r = resolveEa(src.expr, inst.span);
         if (r?.kind === 'abs') {
+          if (r.addend === 0 && emitStepPipeline(LOAD_RP_GLOB('BC', r.baseLower), inst.span)) {
+            return true;
+          }
           emitAbs16FixupEd(0x4b, r.baseLower, r.addend, inst.span); // ld bc, (nn)
           return true;
         }
         const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
         if (srcPipeW && emitStepPipeline(TEMPLATE_LW_BC(srcPipeW), inst.span)) return true;
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
-        emitRawCodeBytes(
-          Uint8Array.of(0x7e, 0x23, 0x46, 0x4f),
-          inst.span.file,
-          'ld a, (hl) ; inc hl ; ld b, (hl) ; ld c, a',
-        );
-        return true;
+        return emitLoadWordFromHlAddress('BC', inst.span);
       }
       if (r16 === 'SP') {
         const r = resolveEa(src.expr, inst.span);
@@ -3442,11 +3455,7 @@ export function emitProgram(
           return true;
         }
         if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
-        emitRawCodeBytes(
-          Uint8Array.of(0x7e, 0x23, 0x66, 0x6f),
-          inst.span.file,
-          'ld a, (hl) ; inc hl ; ld h, (hl) ; ld l, a',
-        );
+        if (!emitLoadWordFromHlAddress('HL', inst.span)) return false;
         if (
           !emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span) ||
           !emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: r16 }], inst.span)
@@ -3567,154 +3576,72 @@ export function emitProgram(
 
       const r16 = src.name.toUpperCase();
       if (r16 === 'HL') {
+        if (resolvedScalarKind(dstResolved) === 'byte') {
+          diagAt(diagnostics, inst.span, `Word register store requires a word-typed destination.`);
+          return true;
+        }
         const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
         if (dstPipeW && emitStepPipeline(TEMPLATE_SW_HL(dstPipeW), inst.span)) return true;
         if (dstResolved?.kind === 'stack') {
-          const lo = dstResolved.ixDisp;
-          const hi = dstResolved.ixDisp + 1;
-          // Use DE shuttle per spec: swap, store E/D, swap back.
-          if (
-            !emitInstr(
-              'ex',
-              [
-                { kind: 'Reg', span: inst.span, name: 'DE' },
-                { kind: 'Reg', span: inst.span, name: 'HL' },
-              ],
-              inst.span,
-            )
-          )
-            return false;
-          if (
-            !emitInstr(
-              'ld',
-              [ixDispMem(lo), { kind: 'Reg', span: inst.span, name: 'E' }],
-              inst.span,
-            )
-          )
-            return false;
-          if (
-            !emitInstr(
-              'ld',
-              [ixDispMem(hi), { kind: 'Reg', span: inst.span, name: 'D' }],
-              inst.span,
-            )
-          )
-            return false;
-          return emitInstr(
-            'ex',
-            [
-              { kind: 'Reg', span: inst.span, name: 'DE' },
-              { kind: 'Reg', span: inst.span, name: 'HL' },
-            ],
-            inst.span,
-          );
+          return emitStepPipeline(STORE_RP_FVAR('HL', dstResolved.ixDisp), inst.span);
         }
         const r = resolveEa(dst.expr, inst.span);
         if (r?.kind === 'abs') {
+          if (r.addend === 0 && emitStepPipeline(STORE_RP_GLOB('HL', r.baseLower), inst.span)) {
+            return true;
+          }
           emitAbs16Fixup(0x22, r.baseLower, r.addend, inst.span); // ld (nn), hl
           return true;
         }
-        if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
-        // DE shuttle around the two stores to keep HL intact.
-        if (
-          !emitInstr(
-            'ex',
-            [
-              { kind: 'Reg', span: inst.span, name: 'DE' },
-              { kind: 'Reg', span: inst.span, name: 'HL' },
-            ],
-            inst.span,
-          )
-        )
-          return false;
-        emitRawCodeBytes(Uint8Array.of(0x73), inst.span.file, 'ld (hl), e');
-        if (!emitInstr('inc', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
-          return false;
-        emitRawCodeBytes(Uint8Array.of(0x72), inst.span.file, 'ld (hl), d');
-        if (
-          !emitInstr(
-            'ex',
-            [
-              { kind: 'Reg', span: inst.span, name: 'DE' },
-              { kind: 'Reg', span: inst.span, name: 'HL' },
-            ],
-            inst.span,
-          )
-        )
-          return false;
-        return true;
+        return emitStoreSavedHlToEa(dst.expr, inst.span);
       }
       if (r16 === 'DE') {
+        if (resolvedScalarKind(dstResolved) === 'byte') {
+          diagAt(diagnostics, inst.span, `Word register store requires a word-typed destination.`);
+          return true;
+        }
         const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
         if (dstPipeW) {
           // Store DE via template.
           return emitStepPipeline(TEMPLATE_SW_DEBC('DE', dstPipeW), inst.span);
         }
         if (dstResolved?.kind === 'stack') {
-          const lo = dstResolved.ixDisp;
-          const hi = dstResolved.ixDisp + 1;
-          if (
-            !emitInstr(
-              'ld',
-              [ixDispMem(lo), { kind: 'Reg', span: inst.span, name: 'E' }],
-              inst.span,
-            )
-          )
-            return false;
-          return emitInstr(
-            'ld',
-            [ixDispMem(hi), { kind: 'Reg', span: inst.span, name: 'D' }],
-            inst.span,
-          );
+          return emitStepPipeline(STORE_RP_FVAR('DE', dstResolved.ixDisp), inst.span);
         }
         const r = resolveEa(dst.expr, inst.span);
         if (r?.kind === 'abs') {
+          if (r.addend === 0 && emitStepPipeline(STORE_RP_GLOB('DE', r.baseLower), inst.span)) {
+            return true;
+          }
           emitAbs16FixupEd(0x53, r.baseLower, r.addend, inst.span); // ld (nn), de
           return true;
         }
         if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
-        emitRawCodeBytes(
-          Uint8Array.of(0x73, 0x23, 0x72),
-          inst.span.file,
-          'ld (hl), e ; inc hl ; ld (hl), d',
-        );
-        return true;
+        return emitStoreWordToHlAddress('DE', inst.span);
       }
       if (r16 === 'BC') {
+        if (resolvedScalarKind(dstResolved) === 'byte') {
+          diagAt(diagnostics, inst.span, `Word register store requires a word-typed destination.`);
+          return true;
+        }
         const dstPipeW = buildEaWordPipeline(dst.expr, inst.span);
         if (dstPipeW) {
           // Store BC via template (uses DE/BC path).
           return emitStepPipeline(TEMPLATE_SW_DEBC('BC', dstPipeW), inst.span);
         }
         if (dstResolved?.kind === 'stack') {
-          const lo = dstResolved.ixDisp;
-          const hi = dstResolved.ixDisp + 1;
-          if (
-            !emitInstr(
-              'ld',
-              [ixDispMem(lo), { kind: 'Reg', span: inst.span, name: 'C' }],
-              inst.span,
-            )
-          )
-            return false;
-          return emitInstr(
-            'ld',
-            [ixDispMem(hi), { kind: 'Reg', span: inst.span, name: 'B' }],
-            inst.span,
-          );
+          return emitStepPipeline(STORE_RP_FVAR('BC', dstResolved.ixDisp), inst.span);
         }
         const r = resolveEa(dst.expr, inst.span);
         if (r?.kind === 'abs') {
+          if (r.addend === 0 && emitStepPipeline(STORE_RP_GLOB('BC', r.baseLower), inst.span)) {
+            return true;
+          }
           emitAbs16FixupEd(0x43, r.baseLower, r.addend, inst.span); // ld (nn), bc
           return true;
         }
         if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
-        emitRawCodeBytes(
-          Uint8Array.of(0x71, 0x23, 0x70),
-          inst.span.file,
-          'ld (hl), c ; inc hl ; ld (hl), b',
-        );
-        return true;
+        return emitStoreWordToHlAddress('BC', inst.span);
       }
       if (r16 === 'SP') {
         const r = resolveEa(dst.expr, inst.span);
@@ -3742,12 +3669,7 @@ export function emitProgram(
           return false;
         }
         if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
-        emitRawCodeBytes(
-          Uint8Array.of(0x73, 0x23, 0x72),
-          inst.span.file,
-          'ld (hl), e ; inc hl ; ld (hl), d',
-        );
-        return true;
+        return emitStoreWordToHlAddress('DE', inst.span);
       }
     }
 
@@ -3757,6 +3679,19 @@ export function emitProgram(
         resolveScalarTypeForEa(dst.expr) ?? resolveScalarTypeForEa(src.expr) ?? undefined;
       const dstResolved = resolveEa(dst.expr, inst.span);
       const srcResolved = resolveEa(src.expr, inst.span);
+      const dstScalarExact = resolvedScalarKind(dstResolved);
+      const srcScalarExact = resolvedScalarKind(srcResolved);
+      if (
+        (srcScalarExact === 'byte' && isWordCompatibleScalarKind(dstScalarExact)) ||
+        (dstScalarExact === 'byte' && isWordCompatibleScalarKind(srcScalarExact))
+      ) {
+        diagAt(
+          diagnostics,
+          inst.span,
+          `Word mem->mem move requires word-typed source and destination.`,
+        );
+        return true;
+      }
       // Stack-to-stack fast path using IX+d with DE shuttle; avoids HL address materialization.
       if (
         scalar !== undefined &&
@@ -3846,23 +3781,29 @@ export function emitProgram(
         if (!emitStepPipeline(TEMPLATE_SW_DEBC('DE', dstPipeW), inst.span)) return false;
         return true;
       }
+      if (srcPipeW && canUseScalarWordAccessor(dstResolved)) {
+        if (!emitStepPipeline(TEMPLATE_LW_DE(srcPipeW), inst.span)) return false;
+        if (!emitScalarWordStore('DE', dstResolved, inst.span)) return false;
+        return true;
+      }
+      if (canUseScalarWordAccessor(srcResolved) && dstPipeW) {
+        if (!emitScalarWordLoad('DE', srcResolved, inst.span)) return false;
+        if (!emitStepPipeline(TEMPLATE_SW_DEBC('DE', dstPipeW), inst.span)) return false;
+        return true;
+      }
+      if (canUseScalarWordAccessor(srcResolved) && canUseScalarWordAccessor(dstResolved)) {
+        if (!emitScalarWordLoad('DE', srcResolved, inst.span)) return false;
+        if (!emitScalarWordStore('DE', dstResolved, inst.span)) return false;
+        return true;
+      }
       if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
-      emitRawCodeBytes(
-        Uint8Array.of(0x7e, 0x23, 0x66, 0x6f),
-        inst.span.file,
-        'ld a, (hl) ; inc hl ; ld h, (hl) ; ld l, a',
-      );
-      if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
+      if (!emitLoadWordFromHlAddress('DE', inst.span)) return false;
+      if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
         return false;
       if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
       if (!emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span))
         return false;
-      emitRawCodeBytes(
-        Uint8Array.of(0x73, 0x23, 0x72),
-        inst.span.file,
-        'ld (hl), e ; inc hl ; ld (hl), d',
-      );
-      return true;
+      return emitStoreWordToHlAddress('DE', inst.span);
     }
 
     // LD (ea), imm (imm8 for byte, imm16 for word/addr)
