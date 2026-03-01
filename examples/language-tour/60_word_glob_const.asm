@@ -13,7 +13,7 @@ ld HL, (glob_words + 2)        ; 010B: 2A 00 00
 push DE                        ; 010E: D5
 push HL                        ; 010F: E5
 ld de, glob_words              ; 0110: 11 00 00
-ld HL, $0004                   ; 0113: 21 04 00
+ld HL, $0002                   ; 0113: 21 02 00
 add HL, HL                     ; 0116: 29
 add HL, DE                     ; 0117: 19
 pop DE                         ; 0118: D1
