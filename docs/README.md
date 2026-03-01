@@ -22,10 +22,15 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `v02-codegen-reference.md` — single-stop v0.2 codegen reference (what to read, invariants).
 - `v02-codegen-worked-examples.md` — worked `.zax` → `.asm` examples for frame/call behavior.
 - `v02-closeout-and-followups.md` — records v0.2 closeout state and pushes future capability work into post-v0.2 tickets.
+- `v03-closeout-and-followups.md` — records v0.3 closeout and the transition boundary into v0.4 planning.
+- `v04-planning-track.md` — active v0.4 planning view.
+- `v04-priority-queue.md` — active short-form v0.4 queue.
 - `return-register-policy.md` — preservation/return matrix detail.
 - `arrays.md` — IX + DE/HL lowering guidance and runtime-atom cues.
-- `v03-planning-track.md` — post-v0.2 planning scaffold.
-- `v03-priority-queue.md` — explicit short-form developer order for the current post-v0.2 queue.
+- `codegen-corpus-workflow.md` — supported workflow and ownership rules for the curated codegen corpus.
+- `virtual-reg16-transfer-patterns.md` — supported `rp -> rp` virtual transfer patterns for the current low-level convenience slice.
+- `v03-planning-track.md` — historical v0.3 planning record.
+- `v03-priority-queue.md` — historical v0.3 short-form queue.
 - `github-backlog-workflow.md` — GitHub issue/label/milestone workflow used as the project backlog system.
 
 ## Definitive v0.2 Baseline Set

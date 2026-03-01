@@ -1,5 +1,8 @@
 # v0.3 Priority Queue
 
+This file is now a historical queue record. Active planning has moved to
+`docs/v04-priority-queue.md`.
+
 This is the explicit current developer work order for post-v0.2 work.
 
 Use this as the short operational queue. The broader rationale remains in
