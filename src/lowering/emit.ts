@@ -855,8 +855,10 @@ export function emitProgram(
       const asm = step.asm.trim();
       const lower = asm.toLowerCase();
 
+      if (lower === 'push af') return emitInstr('push', [mkReg('AF')], span);
       if (lower === 'push hl') return emitInstr('push', [mkReg('HL')], span);
       if (lower === 'push de') return emitInstr('push', [mkReg('DE')], span);
+      if (lower === 'pop af') return emitInstr('pop', [mkReg('AF')], span);
       if (lower === 'pop hl') return emitInstr('pop', [mkReg('HL')], span);
       if (lower === 'pop de') return emitInstr('pop', [mkReg('DE')], span);
       if (lower === 'ex de, hl') return emitInstr('ex', [mkReg('DE'), mkReg('HL')], span);
@@ -4118,7 +4120,6 @@ export function emitProgram(
       } else if (item.kind === 'DataBlock') {
         const db = item as DataBlockNode;
         for (const decl of db.decls) {
-          rawAddressSymbols.add(decl.name.toLowerCase());
           storageTypes.set(decl.name.toLowerCase(), decl.typeExpr);
         }
       }
