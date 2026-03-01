@@ -18,12 +18,12 @@ ZAX uses variable semantics for named storage. A bare variable name means the st
 
 Quick reference:
 
-| Source form         | Meaning in source                  | Lowering intent                       |
-| ------------------- | ---------------------------------- | ------------------------------------- |
-| `glob_b`            | scalar variable value              | read/write the stored byte            |
-| `arr[i]`            | element access                     | load/store element, or continue path  |
-| `rec.field`         | field access                       | load/store field, or continue path    |
-| `loop` in `jp loop` | control-flow target label          | branch/call target                    |
+| Source form         | Meaning in source         | Lowering intent                      |
+| ------------------- | ------------------------- | ------------------------------------ |
+| `glob_b`            | scalar variable value     | read/write the stored byte           |
+| `arr[i]`            | element access            | load/store element, or continue path |
+| `rec.field`         | field access              | load/store field, or continue path   |
+| `loop` in `jp loop` | control-flow target label | branch/call target                   |
 
 Practical rule:
 
