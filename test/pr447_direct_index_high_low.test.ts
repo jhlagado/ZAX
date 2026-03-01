@@ -13,6 +13,8 @@ type IndexedFamily = {
   regs: readonly string[];
 };
 
+type IndexedLane = 'IXH' | 'IXL' | 'IYH' | 'IYL';
+
 const indexedFamilies: readonly IndexedFamily[] = [
   { prefix: 0xdd, lanes: ['IXH', 'IXL'], regs: ['A', 'B', 'C', 'D', 'E', 'IXH', 'IXL'] },
   { prefix: 0xfd, lanes: ['IYH', 'IYL'], regs: ['A', 'B', 'C', 'D', 'E', 'IYH', 'IYL'] },
@@ -53,11 +55,11 @@ describe('PR447: direct IXH/IXL/IYH/IYL forms', () => {
     const expected: number[] = [];
 
     for (const family of indexedFamilies) {
+      const familyLanes = new Set<IndexedLane>(family.lanes);
       for (const dst of family.regs) {
         for (const src of family.regs) {
           const touchesLane =
-            family.lanes.includes(dst as 'IXH' | 'IXL' | 'IYH' | 'IYL') ||
-            family.lanes.includes(src as 'IXH' | 'IXL' | 'IYH' | 'IYL');
+            familyLanes.has(dst as IndexedLane) || familyLanes.has(src as IndexedLane);
           if (!touchesLane) continue;
 
           lines.push(`ld ${dst.toLowerCase()}, ${src.toLowerCase()}`);
