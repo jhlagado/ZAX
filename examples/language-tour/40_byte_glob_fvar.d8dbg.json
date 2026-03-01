@@ -16,63 +16,63 @@
         },
         {
           "start": 256,
-          "end": 346,
+          "end": 348,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
         },
         {
           "start": 267,
-          "end": 285,
+          "end": 286,
           "lstLine": 8,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 285,
-          "end": 305,
+          "start": 286,
+          "end": 307,
           "lstLine": 9,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 305,
-          "end": 307,
+          "start": 307,
+          "end": 309,
           "lstLine": 10,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 307,
-          "end": 308,
+          "start": 309,
+          "end": 310,
           "lstLine": 11,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 308,
-          "end": 316,
+          "start": 310,
+          "end": 318,
           "lstLine": 7,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 316,
-          "end": 328,
+          "start": 318,
+          "end": 330,
           "lstLine": 14,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 328,
-          "end": 337,
+          "start": 330,
+          "end": 339,
           "lstLine": 15,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 337,
-          "end": 346,
+          "start": 339,
+          "end": 348,
           "lstLine": 14,
           "kind": "code",
           "confidence": "high"
@@ -96,21 +96,21 @@
         {
           "name": "__zax_epilogue_0",
           "kind": "label",
-          "address": 308,
+          "address": 310,
           "line": 7,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
-          "address": 316,
+          "address": 318,
           "line": 14,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
-          "address": 337,
+          "address": 339,
           "line": 14,
           "scope": "local"
         },
@@ -127,7 +127,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 346
+      "end": 348
     },
     {
       "start": 8192,
@@ -149,7 +149,7 @@
     {
       "name": "__zax_epilogue_0",
       "kind": "label",
-      "address": 308,
+      "address": 310,
       "file": "40_byte_glob_fvar.zax",
       "line": 7,
       "scope": "local"
@@ -157,7 +157,7 @@
     {
       "name": "main",
       "kind": "label",
-      "address": 316,
+      "address": 318,
       "file": "40_byte_glob_fvar.zax",
       "line": 14,
       "scope": "global"
@@ -165,7 +165,7 @@
     {
       "name": "__zax_epilogue_1",
       "kind": "label",
-      "address": 337,
+      "address": 339,
       "file": "40_byte_glob_fvar.zax",
       "line": 14,
       "scope": "local"
@@ -182,6 +182,6 @@
   "generator": {
     "tool": "zax",
     "entrySymbol": "main",
-    "entryAddress": 316
+    "entryAddress": 318
   }
 }
