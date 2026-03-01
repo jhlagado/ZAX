@@ -4,6 +4,35 @@ Goal: express every allowed load/store addressing shape as a short pipeline of r
 
 > **Normative** — This document is the contract for addressing lowering in v0.2. The code generator and tests MUST match the Steps/ASM shown here. Any divergence is a bug to be fixed in code or tests, not by relaxing this doc.
 
+## Source Semantics (v0.2)
+
+ZAX uses variable semantics for named storage. A bare variable name means the stored value, not the address of the storage.
+
+> **Key invariant:** Bare variable names (`globals`, frame vars, args, scalar `data`) are value accesses, not address expressions. In load/store contexts, the compiler must lower them as reads/writes of the stored value. Arithmetic on bare scalar variables as if they were addresses is invalid and must be rejected.
+
+- Scalars (`globals`, frame vars, args, scalar `data`) are used by value.
+- Indexable aggregates (arrays, records) are still source-level variables, but the compiler transparently passes their storage reference when an aggregate-typed operation needs a base.
+- Indexed forms such as `arr[i]` and field forms such as `rec.field` mean the stored element/field value.
+- This address materialization is a lowering detail only. It does not change the source-level semantics into raw symbol or pointer arithmetic.
+- The only source-level names that are address-like are control-flow labels used by jump/call forms. Raw `DB` / `DW` style storage labels are future work and are out of scope here.
+
+Quick reference:
+
+| Source form         | Meaning in source                  | Lowering intent                       |
+| ------------------- | ---------------------------------- | ------------------------------------- |
+| `glob_b`            | scalar variable value              | read/write the stored byte            |
+| `arr[i]`            | element access                     | load/store element, or continue path  |
+| `rec.field`         | field access                       | load/store field, or continue path    |
+| `loop` in `jp loop` | control-flow target label          | branch/call target                    |
+
+Practical rule:
+
+- `ld a, glob_b` loads the byte stored in `glob_b`.
+- `ld glob_b, a` stores into `glob_b`.
+- Bare scalar variables are not pointer values and are not valid for arithmetic.
+- Array/record addressing in this document describes how the compiler lowers aggregate access internally; it does not expose general address semantics to user code.
+- The emitter must never reinterpret a bare scalar variable as an immediate address operand. If lowering needs an address internally, it derives that from the variable's storage location; source semantics stay value-based.
+
 ## 1. Step Library (reusable "words")
 
 ### 1.1 Save / restore
@@ -65,9 +94,19 @@ LOAD_REG_EA reg             ld reg,(hl)
 
 STORE_REG_EA reg            ld (hl),reg
 
-LOAD_REG_GLOB reg glob      ld reg,(glob)
+LOAD_REG_GLOB A glob        ld a,(glob)
 
-STORE_REG_GLOB reg glob     ld (glob),reg
+LOAD_REG_GLOB reg glob      push af                  ; reg != A, borrows AF
+                            ld a,(glob)
+                            ld reg,a
+                            pop af
+
+STORE_REG_GLOB A glob       ld (glob),a
+
+STORE_REG_GLOB reg glob     push af                  ; reg != A, borrows AF
+                            ld a,reg
+                            ld (glob),a
+                            pop af
 
 LOAD_REG_FVAR reg fvar      ld reg,(ix+fvar)
 
@@ -118,9 +157,9 @@ For each shape:
 - Steps: vertical list of step names with parameters.
 - ASM: exact codegen (one instruction per line).
 
-**Scalar fast path:** If there is no index and the base is a direct symbol, use the step library accessors directly (no template):
+**Scalar fast path:** If there is no index and the operand is a direct scalar variable, use the step library accessors directly (no template):
 
-- Globals: `ld reg,glob` → `LOAD_REG_GLOB` / `ld glob,reg` → `STORE_REG_GLOB`
+- Globals: `LOAD_REG_GLOB` / `STORE_REG_GLOB` are scalar-accessor intents. `A` uses the direct Z80 absolute-byte form; non-`A` registers borrow AF internally.
 - Frame vars: `ld reg,fvar` → `LOAD_REG_FVAR` / `ld fvar,reg` → `STORE_REG_FVAR`
   Examples:
 
@@ -132,7 +171,7 @@ ld (ix+6), e         ; STORE_REG_FVAR E fvar=+6
 
 ### Scalars (byte, no index)
 
-Use direct accessors; no saves needed for byte destinations.
+Use the scalar accessors. Frame-byte accesses and global `A` accesses are direct. Global non-`A` accesses borrow AF inside `LOAD_REG_GLOB` / `STORE_REG_GLOB`.
 
 #### Loads
 
@@ -140,6 +179,16 @@ Use direct accessors; no saves needed for byte destinations.
 
 ```
 ld a, glob_b                ; LOAD_REG_GLOB A glob_b
+ld b, glob_b                ; LOAD_REG_GLOB B glob_b
+```
+
+For global non-`A` byte loads, `LOAD_REG_GLOB` expands as:
+
+```asm
+push af
+ld a,(glob)
+ld reg,a
+pop af
 ```
 
 - Frame byte: `ld reg, fvar` → `LOAD_REG_FVAR reg fvar`
@@ -154,6 +203,16 @@ ld l, (ix-4)                ; LOAD_REG_FVAR L fvar=-4
 
 ```
 ld glob_b, a                ; STORE_REG_GLOB A glob_b
+ld glob_b, b                ; STORE_REG_GLOB B glob_b
+```
+
+For global non-`A` byte stores, `STORE_REG_GLOB` expands as:
+
+```asm
+push af
+ld a,reg
+ld (glob),a
+pop af
 ```
 
 - Frame byte: `ld fvar, reg` → `STORE_REG_FVAR reg fvar`
@@ -604,7 +663,18 @@ Non-destructive store of a word in a register pair to EAW\_\*.
 - **SW-BC (vpair = BC)** — EA in HL, value in BC. `STORE_RP_EA BC` uses DE as scratch, so caller DE must be restored after the store.
 
   ```
+  SAVE_HL
   SAVE_DE
+  EAW_*                ; EA in HL
+  RESTORE_DE           ; restore value to DE
+  STORE_RP_EA DE
+  RESTORE_HL           ; restore caller HL
+  ```
+
+- **SW-BC (vpair = BC)** — EA in HL, value in BC. `STORE_RP_EA BC` uses DE as scratch, so caller DE must be restored after the store.
+
+  ```
+  SAVE_DE              ; preserve caller DE (scratch)
   SAVE_HL
   EAW_*                ; EA in HL
   STORE_RP_EA BC       ; uses DE scratch

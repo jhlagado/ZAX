@@ -566,7 +566,7 @@ end
 func main()
   LD A, p.lo            ; value context: reads byte at p.lo
   LD p.lo, A            ; store context: writes byte to p.lo
-  touch p.lo            ; ea context: passes address of p.lo
+  touch p.lo            ; ea context: passes the storage location of p.lo
 end
 ```
 
@@ -574,14 +574,14 @@ Context rule:
 
 - `rec.field` and `arr[idx]` are place expressions.
 - In value/store instruction contexts, scalar places are read/written as values.
-- When a matcher/parameter requires `ea`, place expressions are passed as addresses.
-- Explicit address-of is available via `@place` (for example `@p.lo`) when address intent should be explicit.
+- When a matcher/parameter requires `ea`, place expressions are passed as storage locations.
+- Older address-of wording (`@place`) is retired from the normative v0.2 model.
 
 ### 11.3 Non-Scalar Function Arguments: `[]` vs `[N]` (Design Target)
 
 Policy:
 
-- Non-scalar function arguments are passed as 16-bit address-like references at call boundary.
+- Non-scalar function arguments are passed as 16-bit storage references at call boundary.
 - Parameter type controls callee-side access semantics.
 - `T[]` in parameter position means element-shape contract only (length unspecified by signature).
 - `T[N]` in parameter position means exact-length contract.
