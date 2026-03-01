@@ -1,0 +1,11 @@
+section data at $2000
+
+data
+  arr_b: byte[8] = { $01,$02,$03,$04,$05,$06,$07,$08 }
+
+export func main(): AF, BC, DE, HL
+  ld a, $03
+  ld b, arr_b[a]
+  ld hl, $0002
+  ld c, arr_b[hl]
+end
