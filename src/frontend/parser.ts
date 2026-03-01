@@ -63,6 +63,7 @@ import {
   topLevelStartKeyword,
   unsupportedExportTargetKind,
 } from './parseModuleCommon.js';
+import { parseExternFuncFromTail } from './parseExtern.js';
 
 const RESERVED_TOP_LEVEL_KEYWORDS = new Set([
   'func',
@@ -407,101 +408,6 @@ export function parseModuleFile(
       index++;
     }
     return lineCount;
-  }
-
-  function parseExternFuncFromTail(
-    tail: string,
-    stmtSpan: SourceSpan,
-    lineNo: number,
-  ): ExternFuncNode | undefined {
-    const header = tail;
-    const openParen = header.indexOf('(');
-    const closeParen = header.lastIndexOf(')');
-    if (openParen < 0 || closeParen < openParen) {
-      diagInvalidHeaderLine(
-        diagnostics,
-        modulePath,
-        'extern func declaration',
-        `func ${header}`,
-        '<name>(...)[ : <retRegs> ] at <imm16>',
-        lineNo,
-      );
-      return undefined;
-    }
-
-    const name = header.slice(0, openParen).trim();
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-      diag(
-        diagnostics,
-        modulePath,
-        `Invalid extern func name ${formatIdentifierToken(name)}: expected <identifier>.`,
-        { line: lineNo, column: 1 },
-      );
-      return undefined;
-    }
-    if (isReservedTopLevelName(name)) {
-      diag(
-        diagnostics,
-        modulePath,
-        `Invalid extern func name "${name}": collides with a top-level keyword.`,
-        { line: lineNo, column: 1 },
-      );
-      return undefined;
-    }
-
-    const afterClose = header.slice(closeParen + 1).trimStart();
-    const atIdx = afterClose.toLowerCase().lastIndexOf(' at ');
-    if (atIdx < 0) {
-      diagInvalidHeaderLine(
-        diagnostics,
-        modulePath,
-        'extern func declaration',
-        `func ${header}`,
-        '<name>(...)[ : <retRegs> ] at <imm16>',
-        lineNo,
-      );
-      return undefined;
-    }
-
-    const retTextRaw = afterClose.slice(0, atIdx).trim();
-    const atText = afterClose.slice(atIdx + 4).trim();
-
-    let returnRegs: string[] | undefined;
-    if (retTextRaw.length === 0) {
-      returnRegs = [];
-    } else {
-      if (!retTextRaw.startsWith(':')) {
-        diagInvalidHeaderLine(
-          diagnostics,
-          modulePath,
-          'extern func declaration',
-          `func ${header}`,
-          '<name>(...)[ : <retRegs> ] at <imm16>',
-          lineNo,
-        );
-        return undefined;
-      }
-      const regText = retTextRaw.slice(1).trim();
-      const parsed = parseReturnRegsFromText(regText, stmtSpan, lineNo, diagnostics, modulePath);
-      if (!parsed) return undefined;
-      returnRegs = parsed.regs;
-    }
-
-    const paramsText = header.slice(openParen + 1, closeParen);
-    const params = parseParamsFromText(modulePath, paramsText, stmtSpan, diagnostics);
-    if (!params) return undefined;
-
-    const at = parseImmExprFromText(modulePath, atText, stmtSpan, diagnostics);
-    if (!at) return undefined;
-
-    return {
-      kind: 'ExternFunc',
-      span: stmtSpan,
-      name,
-      params,
-      returnRegs,
-      at,
-    };
   }
 
   let i = 0;
@@ -1675,7 +1581,12 @@ export function parseModuleFile(
       const stmtSpan = span(file, lineStartOffset, lineEndOffset);
       const externFuncTail = consumeKeywordPrefix(decl, 'func');
       if (externFuncTail !== undefined) {
-        const externFunc = parseExternFuncFromTail(externFuncTail, stmtSpan, lineNo);
+        const externFunc = parseExternFuncFromTail(externFuncTail, stmtSpan, lineNo, {
+          diagnostics,
+          modulePath,
+          isReservedTopLevelName,
+          parseParamsFromText,
+        });
         if (externFunc) {
           const externDecl: ExternDeclNode = {
             kind: 'ExternDecl',
@@ -1809,7 +1720,12 @@ export function parseModuleFile(
           continue;
         }
 
-        const fn = parseExternFuncFromTail(funcTail, span(file, so, eo), i + 1);
+        const fn = parseExternFuncFromTail(funcTail, span(file, so, eo), i + 1, {
+          diagnostics,
+          modulePath,
+          isReservedTopLevelName,
+          parseParamsFromText,
+        });
         if (fn) funcs.push(fn);
         i++;
       }
