@@ -269,18 +269,18 @@ Use `sizeof` and `offsetof` everywhere instead of hand-computed constants. They 
 
 ### 3.1 Place Expressions
 
-In ZAX, `rec.field` and `arr[i]` are **place expressions** — they denote an addressable location in memory, not a value. The compiler resolves them to actual addresses at code-generation time.
+In ZAX, `rec.field` and `arr[i]` are **place expressions** — typed storage paths that the compiler can lower to a concrete location when needed.
 
-In **value/store contexts** (such as `LD A, rec.field` or `LD rec.field, A`), the compiler inserts the required load or store automatically. In **address contexts** (such as an `ea`-typed `op` parameter), the place expression is passed as a 16-bit address without dereferencing.
+In ordinary **value/store contexts** (such as `LD A, rec.field` or `LD rec.field, A`), scalar places use value semantics and the compiler inserts the required load or store automatically. In **storage-location contexts** (such as an `ea`-typed `op` parameter), the same place expression is passed as a storage location for the op body to use.
 
-Use `@place` to force address-of intent explicitly, even in a context that would otherwise apply value semantics:
+Examples:
 
 ```zax
-ld hl, @sprite.x        ; HL = address of sprite.x field, not its contents
-ld hl, sprite.x         ; HL = value stored at sprite.x (value semantics)
+ld a, sprite.flags      ; value semantics: load the byte stored in sprite.flags
+ld sprite.flags, a      ; value semantics: store A into sprite.flags
 ```
 
-`@` is a unary prefix operator. It binds tightly: `@arr[i].field` parses as `@(arr[i].field)`, not as `(@arr)[i].field`. `@` may not be applied to registers, immediate expressions, or dereference forms `(ea)`.
+There is no general-purpose source-level address-of operator in the normative v0.2 model. Effective addresses are a lowering detail unless a construct explicitly consumes an `ea` storage-location operand.
 
 ### 3.2 Valid Index Forms
 
@@ -332,7 +332,7 @@ Explicit parentheses on scalar globals are still accepted but are redundant. Par
 
 ### 3.5 Field and Element Access
 
-`rec.field` and `arr[idx]` are place expressions that resolve to addresses at compile time (for constant indices) or with a shift-chain sequence (for register indices). In `LD` contexts with scalar types, the compiler dereferences them:
+`rec.field` and `arr[idx]` are place expressions. In scalar `LD` contexts, the compiler lowers them to the required address calculation and load/store sequence:
 
 ```zax
 globals
@@ -653,7 +653,7 @@ end
 | `reg8`   | 8-bit register value (zero-extended to 16 bits)       |
 | `reg16`  | 16-bit register value                                 |
 | `imm`    | compile-time constant (may be folded at compile time) |
-| `ea`     | address value of the expression (not a memory read)   |
+| `ea`     | storage reference value carried by the expression     |
 | `(ea)`   | 16-bit word loaded from memory at `ea`                |
 
 If you want to dispatch on a byte value stored in memory, load it into a register first. `select (ea)` reads a 16-bit word — if the high byte of that word is non-zero, no 8-bit `case` value will match.
@@ -830,7 +830,7 @@ Argument forms accepted at call sites:
 | `reg16` | 16-bit register value                                                               |
 | `reg8`  | 8-bit register, zero-extended to 16 bits                                            |
 | `imm`   | compile-time immediate, as 16-bit value                                             |
-| `ea`    | 16-bit address value of the expression                                              |
+| `ea`    | 16-bit storage reference for the matched location                                   |
 | `(ea)`  | value loaded from memory (word or byte per parameter type; `byte` is zero-extended) |
 
 Arguments are pushed right-to-left (last argument first). The compiler emits the required pushes, the `call`, and cleans up the arguments after return.
@@ -859,7 +859,7 @@ An identifier that matches none of these is a compile error.
 
 ### 6.5 Non-Scalar Argument Contracts
 
-Non-scalar parameters (`T[N]` or `T[]`) are passed as a 16-bit address in one stack slot. The type annotation controls what the callee is permitted to assume about the referenced data:
+Non-scalar parameters (`T[N]` or `T[]`) are passed as a 16-bit storage reference in one stack slot. The type annotation controls what the callee is permitted to assume about the referenced data:
 
 | Parameter type | Contract                                               |
 | -------------- | ------------------------------------------------------ |
@@ -1115,7 +1115,7 @@ Invocation: write the op name alone on a line. The compiler recognises it as an 
 
 | Matcher | Accepts                                 | Substitution                             |
 | ------- | --------------------------------------- | ---------------------------------------- |
-| `ea`    | effective address expression, no parens | substitutes the address expression       |
+| `ea`    | storage-location expression, no parens  | substitutes the location expression      |
 | `mem8`  | `(ea)` dereference, byte-width context  | substitutes full `(ea)` including parens |
 | `mem16` | `(ea)` dereference, word-width context  | substitutes full `(ea)` including parens |
 
@@ -1480,7 +1480,7 @@ Records must contain at least one field — an empty `type ... end` is a compile
 
 ### 9.2 Field Access and Value Semantics
 
-`rec.field` is a **place expression** — it denotes the address of the field, not its value. In value/store contexts (LD, typed call arguments), the compiler inserts the required load or store automatically:
+`rec.field` is a **place expression** — a typed field location. In value/store contexts (LD, typed call arguments), the compiler inserts the required load or store automatically:
 
 ```zax
 globals

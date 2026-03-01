@@ -191,7 +191,7 @@ These are semantic constraints enforced beyond pure grammar:
   - `name: Type = rhsAlias`
 - Local non-scalar value-init declarations are invalid.
 - Local non-scalar declarations are alias-only (`name = rhs`).
-- `@place` explicit address-of syntax is deferred to v0.3.
+- `@place` explicit address-of syntax is not part of the normative v0.2 surface.
 - `globals` composite aggregate initializer forms may be subset-constrained by current implementation; check `docs/zax-spec.md` and implementation issues for current support.
 
 ## 9. Maintenance Rule
