@@ -1,5 +1,8 @@
 # ZAX v0.3 Planning Track
 
+This file is now a historical planning record. Active planning has moved to
+`docs/v04-planning-track.md`.
+
 This document is the current post-v0.2 roadmap.
 
 Normative language behavior for shipped versions remains in `docs/zax-spec.md`.
