@@ -45,6 +45,8 @@ describe('PR406: word edge cases', () => {
     expect(text).toContain('LD DE, (SRC_W)');
     expect(text).toContain('ADD HL, HL');
     expect(text).toContain('LD DE, ARR_W');
+    expect(text).not.toContain('LD E, E');
+    expect(text).not.toContain('LD D, D');
     expect(text).not.toContain('LD HL, SRC_W');
   });
 
