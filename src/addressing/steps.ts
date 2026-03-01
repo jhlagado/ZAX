@@ -1,55 +1,157 @@
 /**
- * Addressing step library (spec-driven, v0.2).
+ * Addressing step library (spec-driven, v0.4).
  *
- * These helpers are pure: they return pipelines of assembly strings
- * (one instruction per entry) and perform only light arithmetic
- * (const folding of frame displacements). No emitter side effects.
- *
- * Later, the lowering emitter can map these strings to actual
- * instruction emission; for now, the unit tests assert the sequences
- * match the reviewed `docs/addressing-model.md`.
+ * These helpers are pure: they return typed step pipelines.
+ * Rendering to pseudo-assembly text is only for tests/document checks.
  */
 
-export type StepInstr = { asm: string };
+export type StepReg8 =
+  | 'A'
+  | 'B'
+  | 'C'
+  | 'D'
+  | 'E'
+  | 'H'
+  | 'L'
+  | 'a'
+  | 'b'
+  | 'c'
+  | 'd'
+  | 'e'
+  | 'h'
+  | 'l';
+export type StepReg16 = 'BC' | 'DE' | 'HL';
+export type StepStackReg = 'AF' | 'DE' | 'HL';
+export type StepBytePart = 'lo' | 'hi';
+
+export type StepInstr =
+  | { kind: 'push'; reg: StepStackReg }
+  | { kind: 'pop'; reg: StepStackReg }
+  | { kind: 'exDeHl' }
+  | { kind: 'exSpHl' }
+  | { kind: 'addHlDe' }
+  | { kind: 'addHlHl' }
+  | { kind: 'incHl' }
+  | { kind: 'ldHZero' }
+  | { kind: 'ldRegReg'; dst: StepReg8; src: StepReg8 }
+  | { kind: 'ldRegMemHl'; reg: StepReg8 }
+  | { kind: 'ldMemHlReg'; reg: StepReg8 }
+  | { kind: 'ldRegIxDisp'; reg: StepReg8; disp: number }
+  | { kind: 'ldIxDispReg'; disp: number; reg: StepReg8 }
+  | { kind: 'ldRpByteFromIx'; part: StepBytePart; rp: StepReg16; disp: number }
+  | { kind: 'ldIxDispFromRpByte'; disp: number; part: StepBytePart; rp: StepReg16 }
+  | { kind: 'ldRpImm'; rp: 'DE' | 'HL'; value: number }
+  | { kind: 'ldRpGlob'; rp: 'DE' | 'HL'; glob: string }
+  | { kind: 'ldHlPtrGlob'; glob: string }
+  | { kind: 'ldRpPtrGlob'; rp: 'BC' | 'DE'; glob: string }
+  | { kind: 'ldPtrGlobRp'; glob: string; rp: 'BC' | 'DE' | 'HL' }
+  | { kind: 'ldHlRp'; rp: StepReg16 }
+  | { kind: 'ldRegGlob'; reg: StepReg8; glob: string }
+  | { kind: 'ldGlobReg'; glob: string; reg: StepReg8 }
+  | { kind: 'ldRpByteFromReg'; part: StepBytePart; rp: StepReg16; reg: StepReg8 }
+  | { kind: 'ldRegFromRpByte'; reg: StepReg8; part: StepBytePart; rp: StepReg16 };
+
 export type StepPipeline = StepInstr[];
 
-const instr = (asm: string): StepInstr => ({ asm });
+const step = <T extends StepInstr>(instr: T): T => instr;
+
+export function renderStepInstr(instr: StepInstr): string {
+  switch (instr.kind) {
+    case 'push':
+      return `push ${instr.reg.toLowerCase()}`;
+    case 'pop':
+      return `pop ${instr.reg.toLowerCase()}`;
+    case 'exDeHl':
+      return 'ex de, hl';
+    case 'exSpHl':
+      return 'ex (sp), hl';
+    case 'addHlDe':
+      return 'add hl, de';
+    case 'addHlHl':
+      return 'add hl, hl';
+    case 'incHl':
+      return 'inc hl';
+    case 'ldHZero':
+      return 'ld h, 0';
+    case 'ldRegReg':
+      return `ld ${instr.dst}, ${instr.src}`;
+    case 'ldRegMemHl':
+      return `ld ${instr.reg}, (hl)`;
+    case 'ldMemHlReg':
+      return `ld (hl), ${instr.reg}`;
+    case 'ldRegIxDisp':
+      return `ld ${instr.reg}, (ix${formatDisp(instr.disp)})`;
+    case 'ldIxDispReg':
+      return `ld (ix${formatDisp(instr.disp)}), ${instr.reg}`;
+    case 'ldRpByteFromIx':
+      return `ld ${instr.part}(${instr.rp}), (ix${formatDisp(instr.disp)})`;
+    case 'ldIxDispFromRpByte':
+      return `ld (ix${formatDisp(instr.disp)}), ${instr.part}(${instr.rp})`;
+    case 'ldRpImm':
+      return `ld ${instr.rp.toLowerCase()}, ${formatImm16(instr.value)}`;
+    case 'ldRpGlob':
+      return `ld ${instr.rp.toLowerCase()}, ${instr.glob}`;
+    case 'ldHlPtrGlob':
+      return `ld hl, (${instr.glob})`;
+    case 'ldRpPtrGlob':
+      return `ld ${instr.rp.toLowerCase()}, (${instr.glob})`;
+    case 'ldPtrGlobRp':
+      return `ld (${instr.glob}), ${instr.rp}`;
+    case 'ldHlRp':
+      return `ld hl, ${instr.rp.toLowerCase()}`;
+    case 'ldRegGlob':
+      return `ld ${instr.reg}, (${instr.glob})`;
+    case 'ldGlobReg':
+      return `ld (${instr.glob}), ${instr.reg}`;
+    case 'ldRpByteFromReg':
+      return `ld ${instr.part}(${instr.rp}), ${instr.reg}`;
+    case 'ldRegFromRpByte':
+      return `ld ${instr.reg}, ${instr.part}(${instr.rp})`;
+  }
+}
+
+export const renderStepPipeline = (pipeline: StepPipeline): string[] =>
+  pipeline.map(renderStepInstr);
 
 // ---------------------------------------------------------------------------
 // Save / restore
 // ---------------------------------------------------------------------------
-export const SAVE_HL = (): StepPipeline => [instr('push hl')];
-export const SAVE_DE = (): StepPipeline => [instr('push de')];
-export const RESTORE_HL = (): StepPipeline => [instr('pop hl')];
-export const RESTORE_DE = (): StepPipeline => [instr('pop de')];
-export const SWAP_HL_DE = (): StepPipeline => [instr('ex de, hl')];
-export const SWAP_HL_SAVED = (): StepPipeline => [instr('ex (sp), hl')];
+export const SAVE_HL = (): StepPipeline => [step({ kind: 'push', reg: 'HL' })];
+export const SAVE_DE = (): StepPipeline => [step({ kind: 'push', reg: 'DE' })];
+export const RESTORE_HL = (): StepPipeline => [step({ kind: 'pop', reg: 'HL' })];
+export const RESTORE_DE = (): StepPipeline => [step({ kind: 'pop', reg: 'DE' })];
+export const SWAP_HL_DE = (): StepPipeline => [step({ kind: 'exDeHl' })];
+export const SWAP_HL_SAVED = (): StepPipeline => [step({ kind: 'exSpHl' })];
 
 // ---------------------------------------------------------------------------
 // Base loaders (DE = base)
 // ---------------------------------------------------------------------------
-export const LOAD_BASE_GLOB = (glob: string): StepPipeline => [instr(`ld de, ${glob}`)];
+export const LOAD_BASE_GLOB = (glob: string): StepPipeline => [
+  step({ kind: 'ldRpGlob', rp: 'DE', glob }),
+];
 
-export const LOAD_BASE_FVAR = (disp: number): StepPipeline => {
-  const d = formatDisp(disp);
-  return [instr(`ld e, (ix${d})`), instr(`ld d, (ix${formatDisp(disp + 1)})`)];
-};
+export const LOAD_BASE_FVAR = (disp: number): StepPipeline => [
+  step({ kind: 'ldRegIxDisp', reg: 'e', disp }),
+  step({ kind: 'ldRegIxDisp', reg: 'd', disp: disp + 1 }),
+];
 
 // ---------------------------------------------------------------------------
 // Index loaders (HL = index)
 // ---------------------------------------------------------------------------
 export const LOAD_IDX_CONST = (value: number): StepPipeline => [
-  instr(`ld hl, ${formatImm16(value)}`),
+  step({ kind: 'ldRpImm', rp: 'HL', value }),
 ];
 
 export const LOAD_IDX_REG = (reg8: string): StepPipeline => [
-  instr('ld h, 0'),
-  instr(`ld l, ${reg8}`),
+  step({ kind: 'ldHZero' }),
+  step({ kind: 'ldRegReg', dst: 'l', src: reg8 as StepReg8 }),
 ];
 
-export const LOAD_IDX_RP = (rp: string): StepPipeline => [instr(`ld hl, ${rp}`)];
+export const LOAD_IDX_RP = (rp: string): StepPipeline => [
+  step({ kind: 'ldHlRp', rp: rp.toUpperCase() as StepReg16 }),
+];
 
-export const LOAD_IDX_GLOB = (glob: string): StepPipeline => [instr(`ld hl, (${glob})`)];
+export const LOAD_IDX_GLOB = (glob: string): StepPipeline => [step({ kind: 'ldHlPtrGlob', glob })];
 
 export const LOAD_IDX_FVAR = (disp: number): StepPipeline => [
   ...SWAP_HL_DE(),
@@ -60,94 +162,145 @@ export const LOAD_IDX_FVAR = (disp: number): StepPipeline => [
 // ---------------------------------------------------------------------------
 // Combine
 // ---------------------------------------------------------------------------
-export const CALC_EA = (): StepPipeline => [instr('add hl, de')];
+export const CALC_EA = (): StepPipeline => [step({ kind: 'addHlDe' })];
 
-export const CALC_EA_2 = (): StepPipeline => [instr('add hl, hl'), instr('add hl, de')];
+export const CALC_EA_2 = (): StepPipeline => [step({ kind: 'addHlHl' }), step({ kind: 'addHlDe' })];
 
 // ---------------------------------------------------------------------------
 // Accessors (byte)
 // ---------------------------------------------------------------------------
-export const LOAD_REG_EA = (reg: string): StepPipeline => [instr(`ld ${reg}, (hl)`)];
+export const LOAD_REG_EA = (reg: string): StepPipeline => [
+  step({ kind: 'ldRegMemHl', reg: reg as StepReg8 }),
+];
 
-export const STORE_REG_EA = (reg: string): StepPipeline => [instr(`ld (hl), ${reg}`)];
+export const STORE_REG_EA = (reg: string): StepPipeline => [
+  step({ kind: 'ldMemHlReg', reg: reg as StepReg8 }),
+];
 
 export const LOAD_REG_GLOB = (reg: string, glob: string): StepPipeline => [
   ...(reg.toUpperCase() === 'A'
-    ? [instr(`ld a, (${glob})`)]
-    : [instr('push af'), instr(`ld a, (${glob})`), instr(`ld ${reg}, a`), instr('pop af')]),
+    ? [step({ kind: 'ldRegGlob', reg: 'a', glob })]
+    : [
+        step({ kind: 'push', reg: 'AF' }),
+        step({ kind: 'ldRegGlob', reg: 'a', glob }),
+        step({ kind: 'ldRegReg', dst: reg as StepReg8, src: 'a' }),
+        step({ kind: 'pop', reg: 'AF' }),
+      ]),
 ];
 
 export const STORE_REG_GLOB = (reg: string, glob: string): StepPipeline => [
   ...(reg.toUpperCase() === 'A'
-    ? [instr(`ld (${glob}), a`)]
-    : [instr('push af'), instr(`ld a, ${reg}`), instr(`ld (${glob}), a`), instr('pop af')]),
+    ? [step({ kind: 'ldGlobReg', glob, reg: 'a' })]
+    : [
+        step({ kind: 'push', reg: 'AF' }),
+        step({ kind: 'ldRegReg', dst: 'a', src: reg as StepReg8 }),
+        step({ kind: 'ldGlobReg', glob, reg: 'a' }),
+        step({ kind: 'pop', reg: 'AF' }),
+      ]),
 ];
 
 export const LOAD_REG_FVAR = (reg: string, disp: number): StepPipeline => [
-  instr(`ld ${reg}, (ix${formatDisp(disp)})`),
+  step({ kind: 'ldRegIxDisp', reg: reg as StepReg8, disp }),
 ];
 
 export const STORE_REG_FVAR = (reg: string, disp: number): StepPipeline => [
-  instr(`ld (ix${formatDisp(disp)}), ${reg}`),
+  step({ kind: 'ldIxDispReg', disp, reg: reg as StepReg8 }),
 ];
 
 export const LOAD_REG_REG = (dst: string, src: string): StepPipeline => [
-  instr(`ld ${dst}, ${src}`),
+  step({
+    kind: 'ldRegReg',
+    dst: dst as StepReg8,
+    src: src as StepReg8,
+  }),
 ];
 
 // ---------------------------------------------------------------------------
 // Accessors (word)
 // ---------------------------------------------------------------------------
 export const LOAD_RP_EA = (rp: string): StepPipeline => [
-  instr('ld e, (hl)'),
-  instr('inc hl'),
-  instr('ld d, (hl)'),
-  instr(`ld lo(${rp}), e`),
-  instr(`ld hi(${rp}), d`),
+  step({ kind: 'ldRegMemHl', reg: 'e' }),
+  step({ kind: 'incHl' }),
+  step({ kind: 'ldRegMemHl', reg: 'd' }),
+  step({ kind: 'ldRpByteFromReg', part: 'lo', rp: rp.toUpperCase() as StepReg16, reg: 'e' }),
+  step({ kind: 'ldRpByteFromReg', part: 'hi', rp: rp.toUpperCase() as StepReg16, reg: 'd' }),
 ];
 
 export const STORE_RP_EA = (rp: string): StepPipeline => [
-  ...(rp.toUpperCase() === 'DE' ? [] : [instr(`ld e, lo(${rp})`), instr(`ld d, hi(${rp})`)]),
-  instr('ld (hl), e'),
-  instr('inc hl'),
-  instr('ld (hl), d'),
+  ...(rp.toUpperCase() === 'DE'
+    ? []
+    : [
+        step({ kind: 'ldRegFromRpByte', reg: 'e', part: 'lo', rp: rp.toUpperCase() as StepReg16 }),
+        step({ kind: 'ldRegFromRpByte', reg: 'd', part: 'hi', rp: rp.toUpperCase() as StepReg16 }),
+      ]),
+  step({ kind: 'ldMemHlReg', reg: 'e' }),
+  step({ kind: 'incHl' }),
+  step({ kind: 'ldMemHlReg', reg: 'd' }),
 ];
 
 export const STORE_RP_EA_FROM_STACK = (): StepPipeline => [
-  instr('pop de'), // value
-  instr('ld (hl), e'),
-  instr('inc hl'),
-  instr('ld (hl), d'),
+  step({ kind: 'pop', reg: 'DE' }),
+  step({ kind: 'ldMemHlReg', reg: 'e' }),
+  step({ kind: 'incHl' }),
+  step({ kind: 'ldMemHlReg', reg: 'd' }),
 ];
 
-export const LOAD_RP_GLOB = (rp: string, glob: string): StepPipeline => [
-  instr(`ld ${rp}, (${glob})`),
-];
+export const LOAD_RP_GLOB = (rp: string, glob: string): StepPipeline => {
+  const upper = rp.toUpperCase();
+  if (upper === 'HL') return [step({ kind: 'ldHlPtrGlob', glob })];
+  return [step({ kind: 'ldRpPtrGlob', rp: upper as 'BC' | 'DE', glob })];
+};
 
 export const STORE_RP_GLOB = (rp: string, glob: string): StepPipeline => [
-  instr(`ld (${glob}), ${rp}`),
+  step({ kind: 'ldPtrGlobRp', glob, rp: rp.toUpperCase() as 'BC' | 'DE' | 'HL' }),
 ];
 
 export const LOAD_RP_FVAR = (rp: string, disp: number): StepPipeline => [
   ...(rp.toUpperCase() === 'HL'
     ? [
-        instr('ex de, hl'),
-        instr(`ld e, (ix${formatDisp(disp)})`),
-        instr(`ld d, (ix${formatDisp(disp + 1)})`),
-        instr('ex de, hl'),
+        step({ kind: 'exDeHl' }),
+        step({ kind: 'ldRegIxDisp', reg: 'e', disp }),
+        step({ kind: 'ldRegIxDisp', reg: 'd', disp: disp + 1 }),
+        step({ kind: 'exDeHl' }),
       ]
-    : [instr(`ld lo(${rp}), (ix${formatDisp(disp)})`), instr(`ld hi(${rp}), (ix${formatDisp(disp + 1)})`)]),
+    : [
+        step({
+          kind: 'ldRpByteFromIx',
+          part: 'lo',
+          rp: rp.toUpperCase() as Exclude<StepReg16, never>,
+          disp,
+        }),
+        step({
+          kind: 'ldRpByteFromIx',
+          part: 'hi',
+          rp: rp.toUpperCase() as Exclude<StepReg16, never>,
+          disp: disp + 1,
+        }),
+      ]),
 ];
 
 export const STORE_RP_FVAR = (rp: string, disp: number): StepPipeline => [
   ...(rp.toUpperCase() === 'HL'
     ? [
-        instr('ex de, hl'),
-        instr(`ld (ix${formatDisp(disp)}), e`),
-        instr(`ld (ix${formatDisp(disp + 1)}), d`),
-        instr('ex de, hl'),
+        step({ kind: 'exDeHl' }),
+        step({ kind: 'ldIxDispReg', disp, reg: 'e' }),
+        step({ kind: 'ldIxDispReg', disp: disp + 1, reg: 'd' }),
+        step({ kind: 'exDeHl' }),
       ]
-    : [instr(`ld (ix${formatDisp(disp)}), lo(${rp})`), instr(`ld (ix${formatDisp(disp + 1)}), hi(${rp})`)]),
+    : [
+        step({
+          kind: 'ldIxDispFromRpByte',
+          disp,
+          part: 'lo',
+          rp: rp.toUpperCase() as Exclude<StepReg16, never>,
+        }),
+        step({
+          kind: 'ldIxDispFromRpByte',
+          disp: disp + 1,
+          part: 'hi',
+          rp: rp.toUpperCase() as Exclude<StepReg16, never>,
+        }),
+      ]),
 ];
 
 // ---------------------------------------------------------------------------
@@ -234,7 +387,7 @@ export const EAW_GLOB_RP = (glob: string, rp: string): StepPipeline => [
 ];
 
 export const EAW_FVAR_CONST = (fvar: number, idxConst: number): StepPipeline => {
-  const folded = foldFvar(fvar, idxConst * 2); // scale const when folding
+  const folded = foldFvar(fvar, idxConst * 2);
   return [...LOAD_BASE_FVAR(folded.base), ...LOAD_IDX_CONST(folded.idx), ...CALC_EA_2()];
 };
 
@@ -319,12 +472,11 @@ export const TEMPLATE_S_ANY = (vreg: string, ea: StepPipeline): StepPipeline => 
 ];
 
 export const TEMPLATE_S_HL = (vreg: 'H' | 'L', ea: StepPipeline): StepPipeline => [
-  // Save DE (caller may need it) and save the source byte (H/L) on the stack.
-  ...SAVE_DE(), // stack: [orig DE]
-  ...SAVE_HL(), // stack: [orig DE, value] (value = original H|L)
-  ...ea, // HL = EA
-  ...RESTORE_DE(), // DE = saved value (E=L, D=H). Stack: [orig DE]
-  ...STORE_REG_EA(vreg === 'L' ? 'E' : 'D'), // store source byte at EA
+  ...SAVE_DE(),
+  ...SAVE_HL(),
+  ...ea,
+  ...RESTORE_DE(),
+  ...STORE_REG_EA(vreg === 'L' ? 'E' : 'D'),
   ...RESTORE_DE(),
 ];
 
@@ -369,13 +521,10 @@ export const TEMPLATE_SW_HL = (ea: StepPipeline): StepPipeline => [
   ...SAVE_DE(),
   ...SAVE_HL(),
   ...ea,
-  ...STORE_RP_EA_FROM_STACK(), // pops value into DE
+  ...STORE_RP_EA_FROM_STACK(),
   ...RESTORE_DE(),
 ];
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 function formatDisp(disp: number): string {
   const hex = Math.abs(disp).toString(16).padStart(2, '0');
   const sign = disp >= 0 ? '+' : '-';
@@ -388,8 +537,6 @@ function formatImm16(n: number): string {
 }
 
 function foldFvar(fvar: number, idxConst: number): { base: number; idx: number } {
-  // Fold constant index into frame displacement when possible.
-  // If folding would overflow byte displacement range, leave as-is.
   const disp = fvar + idxConst;
   if (disp >= -128 && disp <= 127) {
     return { base: disp, idx: 0 };

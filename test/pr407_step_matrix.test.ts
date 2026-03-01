@@ -33,21 +33,23 @@ import {
   LOAD_BASE_GLOB,
   LOAD_IDX_CONST,
   CALC_EA,
+  renderStepPipeline,
+  type StepPipeline,
 } from '../src/addressing/steps';
 
-const asm = (pipeline: { asm: string }[]) => pipeline.map((s) => s.asm);
+const asm = renderStepPipeline;
 
-const assertSingleInstr = (name: string, pipeline: { asm: string }[]) => {
+const assertSingleInstr = (name: string, pipeline: StepPipeline) => {
   expect(pipeline.length, `${name} should not be empty`).toBeGreaterThan(0);
-  for (const step of pipeline) {
-    expect(step.asm.includes('\n'), `${name} contains newline in ${step.asm}`).toBe(false);
-    expect(step.asm.includes(';'), `${name} contains multi-op/comment in ${step.asm}`).toBe(false);
+  for (const text of renderStepPipeline(pipeline)) {
+    expect(text.includes('\n'), `${name} contains newline in ${text}`).toBe(false);
+    expect(text.includes(';'), `${name} contains multi-op/comment in ${text}`).toBe(false);
   }
 };
 
 describe('PR407 addressing-model coverage: step pipelines stay single-instruction', () => {
   it('EA and EAW builders emit single-op steps', () => {
-    const builders: [string, { asm: string }[]][] = [
+    const builders: [string, StepPipeline][] = [
       ['EA_GLOB_CONST', EA_GLOB_CONST('glob_b', 1)],
       ['EA_GLOB_REG', EA_GLOB_REG('glob_b', 'c')],
       ['EA_GLOB_RP', EA_GLOB_RP('glob_b', 'de')],
@@ -77,7 +79,7 @@ describe('PR407 addressing-model coverage: step pipelines stay single-instructio
 
   it('templates keep one-instruction steps around EA', () => {
     const sampleEA = [...LOAD_BASE_GLOB('glob_b'), ...LOAD_IDX_CONST(0), ...CALC_EA()];
-    const templates: [string, { asm: string }[]][] = [
+    const templates: [string, StepPipeline][] = [
       ['TEMPLATE_L_ABC', TEMPLATE_L_ABC('a', sampleEA)],
       ['TEMPLATE_L_HL', TEMPLATE_L_HL('H', sampleEA)],
       ['TEMPLATE_L_DE', TEMPLATE_L_DE('D', sampleEA)],
