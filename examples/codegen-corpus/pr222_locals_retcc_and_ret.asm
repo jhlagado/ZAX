@@ -4,7 +4,7 @@
 ; func main begin
 main:
 push BC                        ; 0100: C5
-jp cc, __zax_epilogue_0        ; 0101: CA 00 00
+jp z, __zax_epilogue_0         ; 0101: CA 00 00
 jp __zax_epilogue_0            ; 0104: C3 00 00
 __zax_epilogue_0:
 pop BC                         ; 0107: C1
