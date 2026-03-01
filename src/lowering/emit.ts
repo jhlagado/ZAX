@@ -3318,7 +3318,16 @@ export function emitProgram(
           srcResolved.ixDisp <= 0x7f
         ) {
           if (regUp === 'H' || regUp === 'L') {
-            if (!emitInstr('ex', [{ kind: 'Reg', span: inst.span, name: 'DE' }, { kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
+            if (
+              !emitInstr(
+                'ex',
+                [
+                  { kind: 'Reg', span: inst.span, name: 'DE' },
+                  { kind: 'Reg', span: inst.span, name: 'HL' },
+                ],
+                inst.span,
+              )
+            )
               return false;
             if (
               !emitInstr(
@@ -3333,7 +3342,10 @@ export function emitProgram(
               return false;
             return emitInstr(
               'ex',
-              [{ kind: 'Reg', span: inst.span, name: 'DE' }, { kind: 'Reg', span: inst.span, name: 'HL' }],
+              [
+                { kind: 'Reg', span: inst.span, name: 'DE' },
+                { kind: 'Reg', span: inst.span, name: 'HL' },
+              ],
               inst.span,
             );
           }
@@ -3503,7 +3515,16 @@ export function emitProgram(
           dstResolved.ixDisp <= 0x7f
         ) {
           if (regUp === 'H' || regUp === 'L') {
-            if (!emitInstr('ex', [{ kind: 'Reg', span: inst.span, name: 'DE' }, { kind: 'Reg', span: inst.span, name: 'HL' }], inst.span))
+            if (
+              !emitInstr(
+                'ex',
+                [
+                  { kind: 'Reg', span: inst.span, name: 'DE' },
+                  { kind: 'Reg', span: inst.span, name: 'HL' },
+                ],
+                inst.span,
+              )
+            )
               return false;
             if (
               !emitInstr(
@@ -3518,7 +3539,10 @@ export function emitProgram(
               return false;
             return emitInstr(
               'ex',
-              [{ kind: 'Reg', span: inst.span, name: 'DE' }, { kind: 'Reg', span: inst.span, name: 'HL' }],
+              [
+                { kind: 'Reg', span: inst.span, name: 'DE' },
+                { kind: 'Reg', span: inst.span, name: 'HL' },
+              ],
               inst.span,
             );
           }
@@ -4730,6 +4754,40 @@ export function emitProgram(
             return false;
           }
           emitJumpCondTo(op, label, span);
+          return true;
+        };
+        const emitVirtualReg16Transfer = (asmItem: AsmInstructionNode): boolean => {
+          if (asmItem.head.toLowerCase() !== 'ld' || asmItem.operands.length !== 2) return false;
+          const dstOp = asmItem.operands[0]!;
+          const srcOp = asmItem.operands[1]!;
+          if (dstOp.kind !== 'Reg' || srcOp.kind !== 'Reg') return false;
+
+          const dst = dstOp.name.toUpperCase();
+          const src = srcOp.name.toUpperCase();
+          const supported = new Set(['BC', 'DE', 'HL']);
+          if (!supported.has(dst) || !supported.has(src) || dst === src) return false;
+
+          const hi = (reg16: string): 'B' | 'D' | 'H' =>
+            reg16 === 'BC' ? 'B' : reg16 === 'DE' ? 'D' : 'H';
+          const lo = (reg16: string): 'C' | 'E' | 'L' =>
+            reg16 === 'BC' ? 'C' : reg16 === 'DE' ? 'E' : 'L';
+
+          emitInstr(
+            'ld',
+            [
+              { kind: 'Reg', span: asmItem.span, name: hi(dst) },
+              { kind: 'Reg', span: asmItem.span, name: hi(src) },
+            ],
+            asmItem.span,
+          );
+          emitInstr(
+            'ld',
+            [
+              { kind: 'Reg', span: asmItem.span, name: lo(dst) },
+              { kind: 'Reg', span: asmItem.span, name: lo(src) },
+            ],
+            asmItem.span,
+          );
           return true;
         };
         const joinFlows = (
@@ -5994,6 +6052,11 @@ export function emitProgram(
             }
 
             if (lowerLdWithEa(asmItem)) {
+              syncToFlow();
+              return;
+            }
+
+            if (emitVirtualReg16Transfer(asmItem)) {
               syncToFlow();
               return;
             }
