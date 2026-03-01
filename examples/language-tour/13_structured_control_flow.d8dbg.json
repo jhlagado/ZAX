@@ -327,7 +327,9 @@
       "end": 379
     }
   ],
-  "fileList": ["13_structured_control_flow.zax"],
+  "fileList": [
+    "13_structured_control_flow.zax"
+  ],
   "symbols": [
     {
       "name": "run_once",

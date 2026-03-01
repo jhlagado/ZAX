@@ -647,9 +647,20 @@ EAW\_\* denotes any word-width EA builder (below).
 
 ### Store templates (16-bit only)
 
-Non-destructive store of a word in `vpair` to EAW\_\*.
+Non-destructive store of a word in a register pair to EAW\_\*.
 
-- **SW-DE (vpair = DE)** — EA in HL, value in DE. `SAVE_DE` preserves the source value so `EAW_*` may borrow DE and the value can be restored before the store.
+- **SW-DE (vpair = DE)** — EA in HL, value in DE. `SAVE_DE` preserves the value so it can be restored after `EAW_*` clobbers DE.
+
+  ```
+  SAVE_HL
+  SAVE_DE
+  EAW_*                ; EA in HL
+  RESTORE_DE           ; restore value to DE
+  STORE_RP_EA DE
+  RESTORE_HL           ; restore caller HL
+  ```
+
+- **SW-BC (vpair = BC)** — EA in HL, value in BC. `STORE_RP_EA BC` uses DE as scratch, so caller DE must be restored after the store.
 
   ```
   SAVE_HL

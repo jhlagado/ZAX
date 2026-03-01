@@ -5,156 +5,121 @@
   "addressWidth": 16,
   "endianness": "little",
   "files": {
-    "00_call_with_arg_and_local_baseline.zax": {
+    "37_byte_fvar_const.zax": {
       "segments": [
         {
           "start": 256,
-          "end": 264,
-          "lstLine": 1,
-          "kind": "code",
-          "confidence": "high"
-        },
-        {
-          "start": 256,
-          "end": 346,
-          "lstLine": 0,
-          "kind": "unknown",
-          "confidence": "low"
-        },
-        {
-          "start": 264,
-          "end": 268,
-          "lstLine": 3,
-          "kind": "code",
-          "confidence": "high"
-        },
-        {
-          "start": 268,
-          "end": 272,
-          "lstLine": 4,
-          "kind": "code",
-          "confidence": "high"
-        },
-        {
-          "start": 272,
-          "end": 275,
-          "lstLine": 1,
-          "kind": "code",
-          "confidence": "high"
-        },
-        {
-          "start": 275,
-          "end": 281,
+          "end": 267,
           "lstLine": 7,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 281,
-          "end": 282,
+          "start": 256,
+          "end": 324,
+          "lstLine": 0,
+          "kind": "unknown",
+          "confidence": "low"
+        },
+        {
+          "start": 267,
+          "end": 270,
           "lstLine": 8,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 282,
-          "end": 288,
+          "start": 270,
+          "end": 283,
           "lstLine": 9,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 288,
-          "end": 294,
+          "start": 283,
+          "end": 285,
           "lstLine": 10,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 294,
-          "end": 295,
+          "start": 285,
+          "end": 286,
           "lstLine": 11,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 295,
-          "end": 303,
-          "lstLine": 1,
+          "start": 286,
+          "end": 294,
+          "lstLine": 7,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 303,
-          "end": 311,
+          "start": 294,
+          "end": 306,
           "lstLine": 14,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 311,
-          "end": 316,
-          "lstLine": 16,
+          "start": 306,
+          "end": 315,
+          "lstLine": 15,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 316,
-          "end": 320,
+          "start": 315,
+          "end": 324,
           "lstLine": 14,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 320,
-          "end": 329,
-          "lstLine": 19,
-          "kind": "code",
-          "confidence": "high"
-        },
-        {
-          "start": 329,
-          "end": 337,
-          "lstLine": 20,
-          "kind": "code",
-          "confidence": "high"
-        },
-        {
-          "start": 337,
-          "end": 346,
-          "lstLine": 14,
-          "kind": "code",
-          "confidence": "high"
+          "start": 8192,
+          "end": 8200,
+          "lstLine": 0,
+          "kind": "unknown",
+          "confidence": "low"
         }
       ],
       "symbols": [
         {
-          "name": "inc_one",
+          "name": "byte_fvar_const",
           "kind": "label",
           "address": 256,
-          "line": 1,
+          "line": 7,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_0",
           "kind": "label",
-          "address": 295,
-          "line": 1,
+          "address": 286,
+          "line": 7,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
-          "address": 303,
+          "address": 294,
           "line": 14,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
-          "address": 337,
+          "address": 315,
           "line": 14,
           "scope": "local"
+        },
+        {
+          "name": "glob_bytes",
+          "kind": "data",
+          "address": 8192,
+          "line": 5,
+          "scope": "global"
         }
       ]
     }
@@ -162,49 +127,61 @@
   "segments": [
     {
       "start": 256,
-      "end": 346
+      "end": 324
+    },
+    {
+      "start": 8192,
+      "end": 8200
     }
   ],
   "fileList": [
-    "00_call_with_arg_and_local_baseline.zax"
+    "37_byte_fvar_const.zax"
   ],
   "symbols": [
     {
-      "name": "inc_one",
+      "name": "byte_fvar_const",
       "kind": "label",
       "address": 256,
-      "file": "00_call_with_arg_and_local_baseline.zax",
-      "line": 1,
+      "file": "37_byte_fvar_const.zax",
+      "line": 7,
       "scope": "global"
     },
     {
       "name": "__zax_epilogue_0",
       "kind": "label",
-      "address": 295,
-      "file": "00_call_with_arg_and_local_baseline.zax",
-      "line": 1,
+      "address": 286,
+      "file": "37_byte_fvar_const.zax",
+      "line": 7,
       "scope": "local"
     },
     {
       "name": "main",
       "kind": "label",
-      "address": 303,
-      "file": "00_call_with_arg_and_local_baseline.zax",
+      "address": 294,
+      "file": "37_byte_fvar_const.zax",
       "line": 14,
       "scope": "global"
     },
     {
       "name": "__zax_epilogue_1",
       "kind": "label",
-      "address": 337,
-      "file": "00_call_with_arg_and_local_baseline.zax",
+      "address": 315,
+      "file": "37_byte_fvar_const.zax",
       "line": 14,
       "scope": "local"
+    },
+    {
+      "name": "glob_bytes",
+      "kind": "data",
+      "address": 8192,
+      "file": "37_byte_fvar_const.zax",
+      "line": 5,
+      "scope": "global"
     }
   ],
   "generator": {
     "tool": "zax",
     "entrySymbol": "main",
-    "entryAddress": 303
+    "entryAddress": 294
   }
 }

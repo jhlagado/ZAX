@@ -28,8 +28,8 @@ add IX, SP                     ; 011F: DD 39
 push AF                        ; 0121: F5
 push BC                        ; 0122: C5
 push DE                        ; 0123: D5
-ld e, (ix+disp)                ; 0124: DD 5E 04
-ld d, (ix+disp+1)              ; 0127: DD 56 05
+ld e, (ix+$04)                 ; 0124: DD 5E 04
+ld d, (ix+$05)                 ; 0127: DD 56 05
 ex de, hl                      ; 012A: EB
 push HL                        ; 012B: E5
 pop HL                         ; 012C: E1
@@ -67,8 +67,8 @@ push BC                        ; 0152: C5
 push DE                        ; 0153: D5
 push HL                        ; 0154: E5
 call first_byte                ; 0155: CD 00 00
-ld e, (ix+disp)                ; 0158: DD 5E FE
-ld d, (ix+disp+1)              ; 015B: DD 56 FF
+ld e, (ix-$02)                 ; 0158: DD 5E FE
+ld d, (ix-$01)                 ; 015B: DD 56 FF
 ex de, hl                      ; 015E: EB
 push HL                        ; 015F: E5
 call read_word_at              ; 0160: CD 00 00
