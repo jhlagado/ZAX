@@ -1113,11 +1113,11 @@ Invocation: write the op name alone on a line. The compiler recognises it as an 
 
 #### Address and Dereference Matchers
 
-| Matcher | Accepts                                 | Substitution                             |
-| ------- | --------------------------------------- | ---------------------------------------- |
-| `ea`    | storage-location expression, no parens  | substitutes the location expression      |
-| `mem8`  | `(ea)` dereference, byte-width context  | substitutes full `(ea)` including parens |
-| `mem16` | `(ea)` dereference, word-width context  | substitutes full `(ea)` including parens |
+| Matcher | Accepts                                | Substitution                             |
+| ------- | -------------------------------------- | ---------------------------------------- |
+| `ea`    | storage-location expression, no parens | substitutes the location expression      |
+| `mem8`  | `(ea)` dereference, byte-width context | substitutes full `(ea)` including parens |
+| `mem16` | `(ea)` dereference, word-width context | substitutes full `(ea)` including parens |
 
 `mem8` and `mem16` are more specific than `ea` in overload resolution.
 

@@ -21,6 +21,7 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `zax-dev-playbook.md` — implementation/workflow guidance for contributors.
 - `v02-codegen-reference.md` — single-stop v0.2 codegen reference (what to read, invariants).
 - `v02-codegen-worked-examples.md` — worked `.zax` → `.asm` examples for frame/call behavior.
+- `v02-closeout-and-followups.md` — records v0.2 closeout state and pushes future capability work into post-v0.2 tickets.
 - `return-register-policy.md` — preservation/return matrix detail.
 - `arrays.md` — IX + DE/HL lowering guidance and runtime-atom cues.
 - `v03-planning-track.md` — post-v0.2 planning scaffold.
