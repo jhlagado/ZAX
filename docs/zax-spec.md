@@ -69,7 +69,7 @@ end
 Key ideas this demonstrates:
 
 - `data` emits bytes; `var` reserves addresses (emits no bytes).
-- `rec.field` and `arr[i]` are effective addresses; when the resulting type is scalar, `LD` and call arguments treat them as values (compiler inserts loads/stores).
+- `rec.field` and `arr[i]` are typed storage accesses. In normal instruction and call contexts, scalar fields/elements use value semantics; aggregate fields/elements continue as storage bases.
 - Structured control flow exists only inside function/op instruction streams.
 
 ### 0.3 Design Philosophy
@@ -389,15 +389,16 @@ Arrays are nested fixed-size arrays:
 
 Indexing:
 
-- `a[i]` denotes the **effective address** of element `i`.
-- When the element type is scalar, `LD A, a[i]` and `LD a[i], A` are allowed and imply a dereference.
+- `a[i]` denotes the element access for index `i`.
+- If the element type is scalar, bare use has value semantics in `LD` and call arguments.
+- If the element type is aggregate, the result is the nested storage object and may be indexed or field-selected further.
 - Arrays are **0-based**: valid indices are `0..len-1`. No runtime bounds checks are emitted.
 
 Layout:
 
 - Arrays are contiguous, row-major (C style).
-- `a[i]` addresses `base + i * sizeof(T)`.
-- `a[r][c]` addresses `base + r * sizeof(T[c]) + c * sizeof(T)` (row stride is `sizeof(T[c])`).
+- Lowering computes `base + i * sizeof(T)` internally.
+- Lowering computes `base + r * sizeof(T[c]) + c * sizeof(T)` for nested arrays (row stride is `sizeof(T[c])`).
 
 Index forms (v0.1):
 
@@ -410,7 +411,7 @@ Index forms (v0.1):
 Notes (v0.1):
 
 - Parentheses inside `[]` are permitted only for Z80 indirect index patterns.
-- `arr[i]` is an effective address (`ea`). Use parentheses for explicit dereference, or rely on value semantics in `LD` when the element type is scalar.
+- `arr[i]` is not a general-purpose pointer value. It is an access path to an element, and the compiler materializes any needed effective address internally during lowering.
 
 ### 5.2 Records (Power-of-2 Sized)
 
@@ -439,15 +440,16 @@ Layout rules:
 
 Field access:
 
-- `rec.field` denotes the **effective address** of the field.
-- When the field type is scalar, `LD` and call arguments treat `rec.field` as a value (implicit dereference).
+- `rec.field` denotes field access.
+- If the field type is scalar, bare use has value semantics in `LD` and call arguments.
+- If the field type is aggregate, the result is the nested storage object and may be indexed or field-selected further.
 
-Example: arrays of records use `ea` paths (informative):
+Example: arrays of records lower through storage-path access (informative):
 
 ```
 
-; `sprites[C].x` is an `ea` (address) but in value contexts the compiler
-; performs the load/store implicitly:
+; `sprites[C].x` is a scalar field access. The compiler performs the
+; required address calculation internally, then loads/stores the value:
 ld hl, sprites[C].x   ; load word at sprites[C].x
 ld sprites[C].x, hl   ; store word to sprites[C].x
 
@@ -478,7 +480,7 @@ Layout rules (v0.1):
 
 Field access:
 
-- `u.field` denotes the **effective address** of the field (which is the union base address plus offset 0).
+- `u.field` denotes field access (the field location at union base plus offset 0).
 - Because union fields are overlaid, reading/writing different fields reads/writes the same underlying bytes.
 
 Example (informative):
@@ -488,10 +490,10 @@ Example (informative):
 globals
 v: Value
 
-func read_value_overlay(): void
-  ld a, (v.b) ; read low byte
-  ld hl, (v.w) ; read word overlay
-  ld de, (v.p) ; read pointer overlay
+func read_value_overlay()
+  ld a, v.b  ; read low byte
+  ld hl, v.w ; read word overlay
+  ld de, v.p ; read pointer overlay
 end
 
 ```
@@ -506,11 +508,13 @@ ZAX separates **module variable storage** (`globals`) from **data block declarat
 - `data` defines initialized table/blob declarations in the `data` section.
 - Both can contribute bytes to final emitted artifacts depending on declaration form.
 
-### 6.1 Address vs Dereference
+### 6.1 Storage Semantics and Dereference
 
-- `globals` declarations are typed. Scalar globals use **value semantics** in `LD` and call arguments; composite globals remain addresses.
-- `data`, `bin`, and `hex` names denote **addresses** when used as operands.
-- Parentheses dereference memory: `(ea)` denotes memory at address `ea` (for scalar globals, `(name)` is allowed but redundant).
+- `globals`, function-local `var`, parameters, and `data` declarations are typed storage.
+- Scalar storage uses **value semantics** in `LD` and call arguments: a bare name means the stored value.
+- Composite storage (arrays, records, unions) is still referred to by name in source, but the compiler transparently passes or lowers it as a storage base when an aggregate operation needs one.
+- `bin` and `hex` names denote storage regions/blobs and are primarily used as storage bases rather than scalar values.
+- Parentheses are an explicit low-level dereference form: `(ea)` denotes memory at the computed location `ea`. For normal scalar variables, bare forms are the normative source syntax.
 - Dereference width is implied by the instruction operand size:
   - `LD A, (ea)` reads a byte
   - `LD HL, (ea)` reads a word
@@ -761,7 +765,7 @@ Expressions are used in `imm` and `ea` contexts.
 
 ### 7.0 Fixups and Forward References (v0.1)
 
-ZAX supports forward references for labels and symbols that are ultimately resolved to an address (e.g. `jp label`, `jr label`, `call func`, `ld hl, dataSymbol`).
+ZAX supports forward references for labels and symbols that are ultimately resolved to a code target or storage reference (e.g. `jp label`, `jr label`, `call func`, `ld hl, dataSymbol`).
 
 Implementation model (v0.1):
 
@@ -801,7 +805,7 @@ Integer semantics (v0.1):
 
 ### 7.2 `ea` (Effective Address) Expressions
 
-`ea` denotes an address, not a value. Allowed:
+`ea` is the compiler's storage-location expression class. It identifies an addressable place that lowering can materialize when needed; it is not the primary source-level value model for ordinary variables. Allowed:
 
 - storage symbols: `globals` names, `data` names, `bin` base names
 - function-scope symbols: argument names and local `var` names (as frame slots)
@@ -809,15 +813,14 @@ Integer semantics (v0.1):
 - indexing: `arr[i]` and nested `arr[r][c]` (index forms as defined above)
 - address arithmetic: `ea + imm`, `ea - imm`
 
-Conceptually, an `ea` is a base address plus a sequence of **address-path** segments: `.field` selects a record field, and `[index]` selects an array element. Both forms produce an address; dereference requires parentheses as described in 6.1.
+Conceptually, an `ea` is a base storage location plus a sequence of path segments: `.field` selects a record field, and `[index]` selects an array element. Lowering turns that path into an effective address when a Z80 instruction sequence needs one.
 
 Value semantics note (v0.2):
 
-- `rec.field` and `arr[idx]` are place expressions (addressable locations).
-- In scalar value/store instruction contexts (for example `LD A, rec.field`, `LD rec.field, A`), the compiler inserts required load/store lowering.
-- In explicit address contexts (for example `ea`-typed matchers/parameters), the same place expression is used as an address value.
-- Explicit address-of syntax is supported as `@place` (for example `@rec.field`, `@arr[idx]`, `@symbol`).
-  Use `@place` to force address intent in source even when the surrounding context could otherwise infer value semantics.
+- Bare scalar variables use value semantics in ordinary instruction and call contexts.
+- `rec.field` and `arr[idx]` are storage-path expressions. In scalar value/store contexts (for example `LD A, rec.field`, `LD rec.field, A`), the compiler inserts the required load/store lowering.
+- In aggregate contexts (for example passing an array/record parameter), the compiler passes the storage reference transparently.
+- Older address-of style wording (including `@place`) is retired from the normative v0.2 source model.
 
 Precedence (v0.1):
 
@@ -931,7 +934,7 @@ Notes (v0.2):
 
 Non-scalar argument contract (v0.2):
 
-- Non-scalar parameters are passed in one 16-bit argument slot as address-like references.
+- Non-scalar parameters are passed in one 16-bit argument slot as storage references.
 - Parameter type controls callee semantics:
   - `T[]` means element-shape contract only (length unspecified by signature).
   - `T[N]` means exact-length contract.
@@ -955,7 +958,7 @@ Argument values (v0.2):
 - `reg16`: passed as a 16-bit value.
 - `reg8`: passed as a zero-extended 16-bit value.
 - `imm` expression: passed as a 16-bit immediate.
-- `ea` expression: passed as the 16-bit address value.
+- `ea` expression: passes the storage reference for that location when the callee expects an addressable or non-scalar operand.
 - `(ea)` dereference: reads from memory and passes the loaded value (word or byte depending on the parameter type; `byte` is zero-extended).
 
 Calls follow the calling convention in 8.2 (compiler emits the required pushes, call, and any temporary saves/restores).
@@ -1174,9 +1177,9 @@ Immediate matchers:
 
 - `imm8`, `imm16`: compile-time immediate expressions (Section 7.1)
 
-Address/deref matchers:
+Location/deref matchers:
 
-- `ea`: effective address expressions (Section 7.2)
+- `ea`: storage-location expressions (Section 7.2)
 - `mem8`, `mem16`: dereference operands written as `(ea)` with implied width
 
 Notes (v0.1):
@@ -1192,7 +1195,7 @@ Operand substitution (v0.1):
 - `op` parameters bind to parsed operands (AST operands), not text.
   - `reg8`/`reg16` parameters substitute the matched register token(s).
   - `imm8`/`imm16` parameters substitute the immediate expression value.
-  - `ea` parameters substitute the effective-address expression (without implicit parentheses).
+  - `ea` parameters substitute the storage-location expression (without implicit parentheses).
   - `mem8`/`mem16` parameters substitute the full dereference operand including parentheses.
     - Example: if `src: mem8` matches `(hero.flags)`, then `ld a, src` emits `ld a, (hero.flags)`.
 
@@ -1279,7 +1282,7 @@ end
 Rules:
 
 - `<selector>` is evaluated once at `select` and treated as a 16-bit value.
-  - Allowed selector forms: `reg16`, `reg8` (zero-extended), `imm` expression, `ea` (address value), `(ea)` (loaded value).
+  - Allowed selector forms: `reg16`, `reg8` (zero-extended), `imm` expression, `ea` (storage reference value), `(ea)` (loaded value).
   - `(ea)` selectors read a 16-bit word from memory.
 - Each `case` value must be a compile-time immediate (`imm`) and is compared against the selector.
   - Comparisons are by 16-bit equality.
@@ -1305,7 +1308,7 @@ Rules:
 
 Notes:
 
-- `select <ea>` dispatches on the address value of `<ea>`. To dispatch on the stored value, use `select (ea)`.
+- `select <ea>` dispatches on the storage reference value carried by `<ea>`. To dispatch on the stored value, use `select (ea)`.
 - If you want to dispatch on a byte-sized value in memory, prefer loading into a `reg8` and using `select <reg8>` rather than `select (ea)` (which reads a 16-bit word).
 - The current compiler implementation emits a warning when a `reg8` selector has a `case` value outside `0..255`, because that arm can never match.
   - Those unreachable `reg8` case values are omitted from runtime dispatch comparisons.
@@ -1930,9 +1933,9 @@ op load_indexed(dst: reg8, src: imm16)
 end
 ```
 
-### 3.3 Address and Dereference Matchers
+### 3.3 Location and Dereference Matchers
 
-**`ea`** matches an effective-address expression as defined in Section 7.2 of the spec: storage symbols (`globals`/`data`/`bin` names), function-local names (as frame slots), field access (`rec.field`), array indexing (`arr[i]`), and address arithmetic (`ea + imm`, `ea - imm`). When substituted, the parameter carries the address expression _without_ implicit parentheses — it names a location, not its contents.
+**`ea`** matches a storage-location expression as defined in Section 7.2 of the spec: storage names (`globals`/`data`/`bin` names), function-local names (as frame slots), field access (`rec.field`), array indexing (`arr[i]`), and address arithmetic (`ea + imm`, `ea - imm`). When substituted, the parameter carries the location expression _without_ implicit parentheses, so the op body decides whether to use it as a location or an explicitly dereferenced operand.
 
 The main spec's runtime-atom expression budget applies to `ea` matching. In v0.2, matcher acceptance does not bypass that budget: if a call-site `ea` contains too many runtime atoms, the invocation is rejected before or during semantic validation.
 
@@ -1947,12 +1950,12 @@ op read_byte(dst: reg8, src: mem8)
   ld dst, src        ; src substitutes as (ea), producing e.g. ld a, (hero.flags)
 end
 
-op get_address(dst: reg16, src: ea)
-  ld dst, src        ; src substitutes as ea (no parens), producing e.g. ld hl, hero.flags
+op write_word(dst: ea, src: HL)
+  ld dst, src        ; dst substitutes as ea (no parens), producing e.g. ld hero.pos, hl
 end
 ```
 
-If `src` is bound to `(hero.flags)` via a `mem8` matcher, then `ld dst, src` expands to `ld a, (hero.flags)`. If `src` is bound to `hero.flags` via an `ea` matcher, then `ld dst, src` expands to `ld hl, hero.flags` — loading the _address_ of the field, not its contents.
+If `src` is bound to `(hero.flags)` via a `mem8` matcher, then `ld dst, src` expands to `ld a, (hero.flags)`. If `dst` is bound to `hero.pos` via an `ea` matcher, then `ld dst, src` expands to `ld hero.pos, hl` — the matched location is used directly as the store target, without implicit parentheses being inserted by the matcher layer.
 
 ### 3.4 Matcher Summary
 
@@ -1969,7 +1972,7 @@ The following table collects matcher types available in v0.2. The "Accepts" colu
 | `SP`    | `SP` only                              | `SP`                                  |
 | `imm8`  | Immediate expression fitting 8 bits    | The immediate value                   |
 | `imm16` | Immediate expression fitting 16 bits   | The immediate value                   |
-| `ea`    | Effective-address expression           | The address expression (no parens)    |
+| `ea`    | Storage-location expression            | The location expression (no parens)   |
 | `mem8`  | `(ea)` dereference, byte-width implied | The full dereference including parens |
 | `mem16` | `(ea)` dereference, word-width implied | The full dereference including parens |
 | `idx16` | `IX` or `IY`                           | The index register token              |
@@ -2337,7 +2340,7 @@ op fill8(dst: ea, val: imm8, count: imm8)
 end
 ```
 
-Invoked as `fill8 screenBuffer, $20, 80`, this expands to a loop that writes the value `$20` to 80 consecutive bytes starting at the address `screenBuffer`. The `ea` matcher binds to the effective address of `screenBuffer` (its location in memory), and the two `imm8` matchers bind to the literal values.
+Invoked as `fill8 screenBuffer, $20, 80`, this expands to a loop that writes the value `$20` to 80 consecutive bytes starting at the storage region `screenBuffer`. The `ea` matcher binds to the storage location of `screenBuffer`, and the two `imm8` matchers bind to the literal values.
 
 Note that this op clobbers `HL`, `B`, and `A` internally, plus flags. Because ops have no automatic preservation, these effects are visible to the caller unless the op body explicitly saves/restores registers.
 
@@ -2512,7 +2515,7 @@ Several features that would be natural extensions of the op system are intention
 
 **Variadic parameters.** Ops with a variable number of operands (e.g., a `push_all` that saves an arbitrary set of registers) would be powerful but significantly complicate overload resolution.
 
-**Typed pointer/array matchers.** Matching on the _type_ of an `ea` (e.g., "this must be an address of a `Sprite` record") would enable safer ops but requires deeper type system integration than v0.2 currently supports.
+**Typed storage-path matchers.** Matching on the _type_ of an `ea` (e.g., "this must be the storage location of a `Sprite` record") would enable safer ops but requires deeper type system integration than v0.2 currently supports.
 
 **Guard expressions.** Allowing overloads to specify additional constraints beyond matcher types (e.g., "only when `imm8` value is non-zero") would increase expressiveness but adds complexity to the resolution algorithm.
 

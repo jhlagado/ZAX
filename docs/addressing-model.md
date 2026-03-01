@@ -4,6 +4,35 @@ Goal: express every allowed load/store addressing shape as a short pipeline of r
 
 > **Normative** — This document is the contract for addressing lowering in v0.2. The code generator and tests MUST match the Steps/ASM shown here. Any divergence is a bug to be fixed in code or tests, not by relaxing this doc.
 
+## Source Semantics (v0.2)
+
+ZAX uses variable semantics for named storage. A bare variable name means the stored value, not the address of the storage.
+
+> **Key invariant:** Bare variable names (`globals`, frame vars, args, scalar `data`) are value accesses, not address expressions. In load/store contexts, the compiler must lower them as reads/writes of the stored value. Arithmetic on bare scalar variables as if they were addresses is invalid and must be rejected.
+
+- Scalars (`globals`, frame vars, args, scalar `data`) are used by value.
+- Indexable aggregates (arrays, records) are still source-level variables, but the compiler transparently passes their storage reference when an aggregate-typed operation needs a base.
+- Indexed forms such as `arr[i]` and field forms such as `rec.field` mean the stored element/field value.
+- This address materialization is a lowering detail only. It does not change the source-level semantics into raw symbol or pointer arithmetic.
+- The only source-level names that are address-like are control-flow labels used by jump/call forms. Raw `DB` / `DW` style storage labels are future work and are out of scope here.
+
+Quick reference:
+
+| Source form         | Meaning in source                  | Lowering intent                       |
+| ------------------- | ---------------------------------- | ------------------------------------- |
+| `glob_b`            | scalar variable value              | read/write the stored byte            |
+| `arr[i]`            | element access                     | load/store element, or continue path  |
+| `rec.field`         | field access                       | load/store field, or continue path    |
+| `loop` in `jp loop` | control-flow target label          | branch/call target                    |
+
+Practical rule:
+
+- `ld a, glob_b` loads the byte stored in `glob_b`.
+- `ld glob_b, a` stores into `glob_b`.
+- Bare scalar variables are not pointer values and are not valid for arithmetic.
+- Array/record addressing in this document describes how the compiler lowers aggregate access internally; it does not expose general address semantics to user code.
+- The emitter must never reinterpret a bare scalar variable as an immediate address operand. If lowering needs an address internally, it derives that from the variable's storage location; source semantics stay value-based.
+
 ## 1. Step Library (reusable "words")
 
 ### 1.1 Save / restore
@@ -128,7 +157,7 @@ For each shape:
 - Steps: vertical list of step names with parameters.
 - ASM: exact codegen (one instruction per line).
 
-**Scalar fast path:** If there is no index and the base is a direct symbol, use the step library accessors directly (no template):
+**Scalar fast path:** If there is no index and the operand is a direct scalar variable, use the step library accessors directly (no template):
 
 - Globals: `LOAD_REG_GLOB` / `STORE_REG_GLOB` are scalar-accessor intents. `A` uses the direct Z80 absolute-byte form; non-`A` registers borrow AF internally.
 - Frame vars: `ld reg,fvar` → `LOAD_REG_FVAR` / `ld fvar,reg` → `STORE_REG_FVAR`
@@ -620,15 +649,26 @@ EAW\_\* denotes any word-width EA builder (below).
 
 Non-destructive store of a word in `vpair` to EAW\_\*.
 
-- **SW-DEBC (vpair = DE or BC)** — EA in HL, value in DE/BC. SAVE_DE also preserves the source when vpair=DE; do not drop it.
+- **SW-DE (vpair = DE)** — EA in HL, value in DE. `SAVE_DE` preserves the source value so `EAW_*` may borrow DE and the value can be restored before the store.
 
   ```
+  SAVE_HL
   SAVE_DE
+  EAW_*                ; EA in HL
+  RESTORE_DE           ; restore value to DE
+  STORE_RP_EA DE
+  RESTORE_HL           ; restore caller HL
+  ```
+
+- **SW-BC (vpair = BC)** — EA in HL, value in BC. `STORE_RP_EA BC` uses DE as scratch, so caller DE must be restored after the store.
+
+  ```
+  SAVE_DE              ; preserve caller DE (scratch)
   SAVE_HL
   EAW_*                ; EA in HL
+  STORE_RP_EA BC       ; uses DE scratch
   RESTORE_HL           ; restore caller HL
   RESTORE_DE           ; restore caller DE
-  STORE_RP_EA vpair    ; vpair = DE or BC
   ```
 
 - **SW-HL (vpair = HL)** — EA in HL, value on stack (from SAVE_HL)
@@ -875,7 +915,7 @@ add hl,de
 - Choose an EA/EAW builder based on the base and index source. If the index is a constant, fold it into the frame displacement (`fvar+const`) when that keeps the EA simple.
 - Choose a load/store template based on the destination (for loads) or source register (for stores):
   - Byte: L-ABC, L-HL, L-DE, S-ANY, S-HL
-  - Word: LW-HL, LW-DE, LW-BC, SW-HL, SW-DEBC
+  - Word: LW-HL, LW-DE, LW-BC, SW-HL, SW-DE, SW-BC
 - EA/EAW builders may borrow HL/DE internally; the templates already save/restore HL/DE to protect caller state. Do not add extra saves outside the templates.
 - Per-instruction preservation: the only registers allowed to change are the destination register (load) or the value register/pair (store). All other registers must be restored by the end of the pipeline.
 - IX is the frame pointer. Never repurpose IX as a scratch register; keep all scratch and EA work to HL/DE with proper saves/restores.
