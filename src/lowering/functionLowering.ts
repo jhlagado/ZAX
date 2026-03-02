@@ -475,7 +475,6 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     pushEaAddress,
     pushMemValue,
     evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
-    env,
     reg8,
     generatedLabelCounterRef,
     formatAsmOperandForOpDiag,

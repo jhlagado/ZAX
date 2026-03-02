@@ -1,6 +1,12 @@
 import { DiagnosticIds } from '../diagnostics/types.js';
 import type { Diagnostic, DiagnosticId } from '../diagnostics/types.js';
-import type { AsmInstructionNode, AsmOperandNode, SourceSpan } from '../frontend/ast.js';
+import type {
+  AsmInstructionNode,
+  AsmOperandNode,
+  EaExprNode,
+  ImmExprNode,
+  SourceSpan,
+} from '../frontend/ast.js';
 import type { EmittedSourceSegment } from '../formats/types.js';
 
 type SourceSegmentTag = Omit<EmittedSourceSegment, 'start' | 'end'>;
@@ -56,20 +62,42 @@ type Context = {
   emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
   emitRawCodeBytes: (bytes: Uint8Array, file: string, asmText: string) => void;
   loadImm16ToHL: (value: number, span: SourceSpan) => boolean;
-  pushEaAddress: (ea: AsmOperandNode extends never ? never : any, span: SourceSpan) => boolean;
+  pushEaAddress: (ea: EaExprNode, span: SourceSpan) => boolean;
   pushMemValue: (
-    ea: AsmOperandNode extends never ? never : any,
+    ea: EaExprNode,
     want: 'byte' | 'word',
     span: SourceSpan,
   ) => boolean;
-  evalImmExpr: (expr: any) => number | undefined;
-  env: unknown;
+  evalImmExpr: (expr: ImmExprNode) => number | undefined;
   reg8: Set<string>;
   generatedLabelCounterRef: { current: number };
   formatAsmOperandForOpDiag: (op: AsmOperandNode) => string;
 };
 
-export function createFunctionBodySetupHelpers(ctx: Context) {
+export function createFunctionBodySetupHelpers({
+  diagnostics,
+  diagAt,
+  diagAtWithId,
+  getCurrentCodeSegmentTag,
+  setCurrentCodeSegmentTag,
+  taken,
+  traceLabel,
+  pending,
+  getCodeOffset,
+  emitAbs16Fixup,
+  conditionNameFromOpcode,
+  inverseConditionName,
+  conditionOpcodeFromName,
+  emitInstr,
+  emitRawCodeBytes,
+  loadImm16ToHL,
+  pushEaAddress,
+  pushMemValue,
+  evalImmExpr,
+  reg8,
+  generatedLabelCounterRef,
+  formatAsmOperandForOpDiag,
+}: Context) {
   const currentOpExpansionFrame = (
     opExpansionStack: OpExpansionFrame[],
   ): OpExpansionFrame | undefined =>
@@ -82,7 +110,7 @@ export function createFunctionBodySetupHelpers(ctx: Context) {
     rootOpExpansionFrame(opExpansionStack)?.callSiteSpan;
 
   const formatInstructionForOpExpansionDiag = (inst: AsmInstructionNode): string => {
-    const ops = inst.operands.map(ctx.formatAsmOperandForOpDiag).join(', ');
+    const ops = inst.operands.map(formatAsmOperandForOpDiag).join(', ');
     return ops.length > 0 ? `${inst.head} ${ops}` : inst.head;
   };
 
@@ -94,7 +122,7 @@ export function createFunctionBodySetupHelpers(ctx: Context) {
     const frame = currentOpExpansionFrame(opExpansionStack);
     if (!frame) return;
     const rootFrame = rootOpExpansionFrame(opExpansionStack);
-    const newDiagnostics = ctx.diagnostics.slice(diagnosticsStart);
+    const newDiagnostics = diagnostics.slice(diagnosticsStart);
     const hasConcreteInstructionFailure = newDiagnostics.some(
       (d) =>
         d.severity === 'error' &&
@@ -116,8 +144,8 @@ export function createFunctionBodySetupHelpers(ctx: Context) {
     const expansionChain = opExpansionStack
       .map((entry) => `${entry.name} (${entry.declSpan.file}:${entry.declSpan.start.line})`)
       .join(' -> ');
-    ctx.diagAtWithId(
-      ctx.diagnostics,
+    diagAtWithId(
+      diagnostics,
       rootFrame?.callSiteSpan ?? frame.callSiteSpan,
       DiagnosticIds.OpInvalidExpansion,
       `Invalid op expansion in "${frame.name}" at call site.\n` +
@@ -140,12 +168,12 @@ export function createFunctionBodySetupHelpers(ctx: Context) {
   };
 
   const withCodeSourceTag = <T>(tag: SourceSegmentTag, fn: () => T): T => {
-    const prev = ctx.getCurrentCodeSegmentTag();
-    ctx.setCurrentCodeSegmentTag(tag);
+    const prev = getCurrentCodeSegmentTag();
+    setCurrentCodeSegmentTag(tag);
     try {
       return fn();
     } finally {
-      ctx.setCurrentCodeSegmentTag(prev);
+      setCurrentCodeSegmentTag(prev);
     }
   };
 
@@ -173,25 +201,25 @@ export function createFunctionBodySetupHelpers(ctx: Context) {
   };
 
   const newHiddenLabel = (prefix: string): string => {
-    let n = `${prefix}_${ctx.generatedLabelCounterRef.current++}`;
-    while (ctx.taken.has(n)) {
-      n = `${prefix}_${ctx.generatedLabelCounterRef.current++}`;
+    let n = `${prefix}_${generatedLabelCounterRef.current++}`;
+    while (taken.has(n)) {
+      n = `${prefix}_${generatedLabelCounterRef.current++}`;
     }
     return n;
   };
 
   const defineCodeLabel = (name: string, span: SourceSpan, scope: 'global' | 'local'): void => {
-    if (ctx.taken.has(name)) {
-      ctx.diagAt(ctx.diagnostics, span, `Duplicate symbol name "${name}".`);
+    if (taken.has(name)) {
+      diagAt(diagnostics, span, `Duplicate symbol name "${name}".`);
       return;
     }
-    ctx.taken.add(name);
-    ctx.traceLabel(ctx.getCodeOffset(), name);
-    ctx.pending.push({
+    taken.add(name);
+    traceLabel(getCodeOffset(), name);
+    pending.push({
       kind: 'label',
       name,
       section: 'code',
-      offset: ctx.getCodeOffset(),
+      offset: getCodeOffset(),
       file: span.file,
       line: span.start.line,
       scope,
@@ -199,24 +227,24 @@ export function createFunctionBodySetupHelpers(ctx: Context) {
   };
 
   const emitJumpTo = (label: string, span: SourceSpan): void => {
-    ctx.emitAbs16Fixup(0xc3, label.toLowerCase(), 0, span, `jp ${label}`);
+    emitAbs16Fixup(0xc3, label.toLowerCase(), 0, span, `jp ${label}`);
   };
 
   const emitJumpCondTo = (op: number, label: string, span: SourceSpan): void => {
-    const ccName = ctx.conditionNameFromOpcode(op) ?? 'cc';
-    ctx.emitAbs16Fixup(op, label.toLowerCase(), 0, span, `jp ${ccName.toLowerCase()}, ${label}`);
+    const ccName = conditionNameFromOpcode(op) ?? 'cc';
+    emitAbs16Fixup(op, label.toLowerCase(), 0, span, `jp ${ccName.toLowerCase()}, ${label}`);
   };
 
   const emitJumpIfFalse = (cc: string, label: string, span: SourceSpan): boolean => {
     if (cc === '__missing__') return false;
-    const inv = ctx.inverseConditionName(cc);
+    const inv = inverseConditionName(cc);
     if (!inv) {
-      ctx.diagAt(ctx.diagnostics, span, `Unsupported condition code "${cc}".`);
+      diagAt(diagnostics, span, `Unsupported condition code "${cc}".`);
       return false;
     }
-    const op = ctx.conditionOpcodeFromName(inv);
+    const op = conditionOpcodeFromName(inv);
     if (op === undefined) {
-      ctx.diagAt(ctx.diagnostics, span, `Unsupported condition code "${cc}".`);
+      diagAt(diagnostics, span, `Unsupported condition code "${cc}".`);
       return false;
     }
     emitJumpCondTo(op, label, span);
@@ -234,8 +262,8 @@ export function createFunctionBodySetupHelpers(ctx: Context) {
     if (!supported.has(dst) || !supported.has(src) || dst === src) return false;
     const hi = (reg16: string): 'B' | 'D' | 'H' => (reg16 === 'BC' ? 'B' : reg16 === 'DE' ? 'D' : 'H');
     const lo = (reg16: string): 'C' | 'E' | 'L' => (reg16 === 'BC' ? 'C' : reg16 === 'DE' ? 'E' : 'L');
-    ctx.emitInstr('ld', [{ kind: 'Reg', span: asmItem.span, name: hi(dst) }, { kind: 'Reg', span: asmItem.span, name: hi(src) }], asmItem.span);
-    ctx.emitInstr('ld', [{ kind: 'Reg', span: asmItem.span, name: lo(dst) }, { kind: 'Reg', span: asmItem.span, name: lo(src) }], asmItem.span);
+    emitInstr('ld', [{ kind: 'Reg', span: asmItem.span, name: hi(dst) }, { kind: 'Reg', span: asmItem.span, name: hi(src) }], asmItem.span);
+    emitInstr('ld', [{ kind: 'Reg', span: asmItem.span, name: lo(dst) }, { kind: 'Reg', span: asmItem.span, name: lo(src) }], asmItem.span);
     return true;
   };
 
@@ -253,13 +281,13 @@ export function createFunctionBodySetupHelpers(ctx: Context) {
     if (!right.reachable) return { ...left };
     let mismatch = false;
     if ((!left.spValid || !right.spValid) && (left.spInvalidDueToMutation || right.spInvalidDueToMutation)) {
-      ctx.diagAt(ctx.diagnostics, span, `Cannot verify stack depth at ${contextName} join due to untracked SP mutation.`);
+      diagAt(diagnostics, span, `Cannot verify stack depth at ${contextName} join due to untracked SP mutation.`);
     } else if ((!left.spValid || !right.spValid) && hasStackSlots) {
-      ctx.diagAt(ctx.diagnostics, span, `Cannot verify stack depth at ${contextName} join due to unknown stack state.`);
+      diagAt(diagnostics, span, `Cannot verify stack depth at ${contextName} join due to unknown stack state.`);
     }
     if (left.spValid && right.spValid && left.spDelta !== right.spDelta) {
       mismatch = true;
-      ctx.diagAt(ctx.diagnostics, span, `Stack depth mismatch at ${contextName} join (${left.spDelta} vs ${right.spDelta}).`);
+      diagAt(diagnostics, span, `Stack depth mismatch at ${contextName} join (${left.spDelta} vs ${right.spDelta}).`);
     }
     return {
       reachable: true,
@@ -270,16 +298,16 @@ export function createFunctionBodySetupHelpers(ctx: Context) {
   };
 
   const emitSelectCompareToImm16 = (value: number, mismatchLabel: string, span: SourceSpan): void => {
-    ctx.emitRawCodeBytes(Uint8Array.of(0x7d), span.file, 'ld a, l');
-    ctx.emitRawCodeBytes(Uint8Array.of(0xfe, value & 0xff), span.file, 'cp imm8');
+    emitRawCodeBytes(Uint8Array.of(0x7d), span.file, 'ld a, l');
+    emitRawCodeBytes(Uint8Array.of(0xfe, value & 0xff), span.file, 'cp imm8');
     emitJumpCondTo(0xc2, mismatchLabel, span);
-    ctx.emitRawCodeBytes(Uint8Array.of(0x7c), span.file, 'ld a, h');
-    ctx.emitRawCodeBytes(Uint8Array.of(0xfe, (value >> 8) & 0xff), span.file, 'cp imm8');
+    emitRawCodeBytes(Uint8Array.of(0x7c), span.file, 'ld a, h');
+    emitRawCodeBytes(Uint8Array.of(0xfe, (value >> 8) & 0xff), span.file, 'cp imm8');
     emitJumpCondTo(0xc2, mismatchLabel, span);
   };
 
   const emitSelectCompareReg8ToImm8 = (value: number, mismatchLabel: string, span: SourceSpan): void => {
-    ctx.emitRawCodeBytes(Uint8Array.of(0xfe, value & 0xff), span.file, 'cp imm8');
+    emitRawCodeBytes(Uint8Array.of(0xfe, value & 0xff), span.file, 'cp imm8');
     emitJumpCondTo(0xc2, mismatchLabel, span);
   };
 
@@ -287,37 +315,37 @@ export function createFunctionBodySetupHelpers(ctx: Context) {
     if (selector.kind === 'Reg') {
       const r = selector.name.toUpperCase();
       if (r === 'BC' || r === 'DE' || r === 'HL') {
-        if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: r }], span)) return false;
-        return ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span);
+        if (!emitInstr('push', [{ kind: 'Reg', span, name: r }], span)) return false;
+        return emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span);
       }
       if (r === 'SP') {
-        if (!ctx.loadImm16ToHL(0, span)) return false;
-        return ctx.emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'SP' }], span);
+        if (!loadImm16ToHL(0, span)) return false;
+        return emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'SP' }], span);
       }
-      if (ctx.reg8.has(r)) {
-        if (!ctx.emitInstr('ld', [{ kind: 'Reg', span, name: 'H' }, { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }], span)) {
+      if (reg8.has(r)) {
+        if (!emitInstr('ld', [{ kind: 'Reg', span, name: 'H' }, { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }], span)) {
           return false;
         }
-        return ctx.emitInstr('ld', [{ kind: 'Reg', span, name: 'L' }, { kind: 'Reg', span, name: r }], span);
+        return emitInstr('ld', [{ kind: 'Reg', span, name: 'L' }, { kind: 'Reg', span, name: r }], span);
       }
     }
     if (selector.kind === 'Imm') {
-      const v = ctx.evalImmExpr(selector.expr);
+      const v = evalImmExpr(selector.expr);
       if (v === undefined) {
-        ctx.diagAt(ctx.diagnostics, span, `Failed to evaluate select selector.`);
+        diagAt(diagnostics, span, `Failed to evaluate select selector.`);
         return false;
       }
-      return ctx.loadImm16ToHL(v & 0xffff, span);
+      return loadImm16ToHL(v & 0xffff, span);
     }
     if (selector.kind === 'Ea') {
-      if (!ctx.pushEaAddress(selector.expr, span)) return false;
-      return ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span);
+      if (!pushEaAddress(selector.expr, span)) return false;
+      return emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span);
     }
     if (selector.kind === 'Mem') {
-      if (!ctx.pushMemValue(selector.expr, 'word', span)) return false;
-      return ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span);
+      if (!pushMemValue(selector.expr, 'word', span)) return false;
+      return emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span);
     }
-    ctx.diagAt(ctx.diagnostics, span, `Unsupported selector form in select.`);
+    diagAt(diagnostics, span, `Unsupported selector form in select.`);
     return false;
   };
 
