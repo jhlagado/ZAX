@@ -10,6 +10,7 @@ import type {
   SourceSpan,
 } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
+import type { OpStackSummary } from './opStackAnalysis.js';
 import { createOpExpansionExecutionHelpers } from './opExpansionExecution.js';
 import { createOpSubstitutionHelpers } from './opSubstitution.js';
 
@@ -19,10 +20,6 @@ type OpExpansionStackEntry = {
   declSpan: SourceSpan;
   callSiteSpan: SourceSpan;
 };
-
-type OpStackSummary =
-  | { kind: 'known'; delta: number; hasUntrackedSpMutation: boolean }
-  | { kind: 'complex' };
 
 type CloneHelper<T> = (value: T) => T;
 
