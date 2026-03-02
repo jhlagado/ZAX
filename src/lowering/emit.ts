@@ -213,9 +213,7 @@ export function emitProgram(
   const stackSlotTypes = new Map<string, TypeExprNode>();
   const stackSlotOffsets = new Map<string, number>();
   const localAliasTargets = new Map<string, EaExprNode>();
-  let spDeltaTracked = 0;
-  let spTrackingValid = true;
-  let spTrackingInvalidatedByMutation = false;
+  let trackedSpState = { delta: 0, valid: true, invalid: false };
   let generatedLabelCounter = 0;
 
   const sameSourceTag = (x: SourceSegmentTag, y: SourceSegmentTag): boolean =>
@@ -266,22 +264,22 @@ export function emitProgram(
       operands[0].name.toUpperCase() === 'SP'
     ) {
       if (operands[1]?.kind === 'Reg' && operands[1].name.toUpperCase() === 'IX') {
-        spDeltaTracked = -2;
-        spTrackingValid = true;
-        spTrackingInvalidatedByMutation = false;
+        trackedSpState.delta = -2;
+        trackedSpState.valid = true;
+        trackedSpState.invalid = false;
       } else {
-        spTrackingValid = false;
-        spTrackingInvalidatedByMutation = true;
+        trackedSpState.valid = false;
+        trackedSpState.invalid = true;
       }
       return;
     }
-    if (!spTrackingValid) return;
+    if (!trackedSpState.valid) return;
     if (head === 'push' && operands.length === 1) {
-      spDeltaTracked -= 2;
+      trackedSpState.delta -= 2;
       return;
     }
     if (head === 'pop' && operands.length === 1) {
-      spDeltaTracked += 2;
+      trackedSpState.delta += 2;
       return;
     }
     if (
@@ -290,7 +288,7 @@ export function emitProgram(
       operands[0]?.kind === 'Reg' &&
       operands[0].name.toUpperCase() === 'SP'
     ) {
-      spDeltaTracked += 1;
+      trackedSpState.delta += 1;
       return;
     }
     if (
@@ -299,7 +297,7 @@ export function emitProgram(
       operands[0]?.kind === 'Reg' &&
       operands[0].name.toUpperCase() === 'SP'
     ) {
-      spDeltaTracked -= 1;
+      trackedSpState.delta -= 1;
       return;
     }
   };
@@ -596,8 +594,8 @@ export function emitProgram(
     resolveScalarTypeForLd,
     resolvedScalarKind,
     setSpTrackingInvalid: () => {
-      spTrackingValid = false;
-      spTrackingInvalidatedByMutation = true;
+      trackedSpState.valid = false;
+      trackedSpState.invalid = true;
     },
     stackSlotOffsets,
     storageTypes,
@@ -693,25 +691,9 @@ export function emitProgram(
         currentCodeSegmentTag = value;
       },
     },
-    trackedSpRef: {
-      get delta() {
-        return spDeltaTracked;
-      },
-      set delta(value: number) {
-        spDeltaTracked = value;
-      },
-      get valid() {
-        return spTrackingValid;
-      },
-      set valid(value: boolean) {
-        spTrackingValid = value;
-      },
-      get invalid() {
-        return spTrackingInvalidatedByMutation;
-      },
-      set invalid(value: boolean) {
-        spTrackingInvalidatedByMutation = value;
-      },
+    getTrackedSpState: () => trackedSpState,
+    setTrackedSpState: (state: { delta: number; valid: boolean; invalid: boolean }) => {
+      trackedSpState = state;
     },
     getCodeOffset: () => codeOffsetRef.current,
     emitInstr,
