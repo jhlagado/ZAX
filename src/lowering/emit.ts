@@ -690,7 +690,7 @@ export function emitProgram(
     emitStoreSavedHlToEa,
     emitStoreWordToHlAddress,
     env,
-    evalImmExpr: (expr: any) => evalImmExpr(expr, env, diagnostics),
+    evalImmExpr: (expr: ImmExprNode) => evalImmExpr(expr, env, diagnostics),
     formatIxDisp,
     isWordCompatibleScalarKind,
     loadImm16ToHL,
