@@ -90,6 +90,7 @@ import { createRuntimeImmediateHelpers } from './runtimeImmediates.js';
 import { createRuntimeAtomBudgetHelpers } from './runtimeAtomBudget.js';
 import { createScalarWordAccessorHelpers } from './scalarWordAccessors.js';
 import { createLdLoweringHelpers } from './ldLowering.js';
+import { createOpSubstitutionHelpers } from './opSubstitution.js';
 import {
   alignTo,
   computeWrittenRange,
@@ -3649,80 +3650,24 @@ export function emitProgram(
               for (let idx = 0; idx < opDecl.params.length; idx++) {
                 bindings.set(opDecl.params[idx]!.name.toLowerCase(), asmItem.operands[idx]!);
               }
-
-              const bindingAsImmExpr = (
-                bound: AsmOperandNode | undefined,
-                span: SourceSpan,
-              ): ImmExprNode | undefined => {
-                if (!bound) return undefined;
-                if (bound.kind === 'Imm') return cloneImmExpr(bound.expr);
-                if (bound.kind !== 'Ea') return undefined;
-                const name = flattenEaDottedName(bound.expr);
-                if (!name || !env.enums.has(name)) return undefined;
-                return { kind: 'ImmName', span, name };
-              };
-
-              const substituteImm = (expr: ImmExprNode): ImmExprNode => {
-                const substituteOffsetofPath = (path: any): any => ({
-                  ...path,
-                  steps: path.steps.map((step: any) =>
-                    step.kind === 'OffsetofIndex'
-                      ? { ...step, expr: substituteImm(step.expr) }
-                      : { ...step },
-                  ),
-                });
-                if (expr.kind === 'ImmName') {
-                  const bound = bindings.get(expr.name.toLowerCase());
-                  const immBound = bindingAsImmExpr(bound, expr.span);
-                  if (immBound) return immBound;
-                  return { ...expr };
-                }
-                if (expr.kind === 'ImmOffsetof') {
-                  return { ...expr, path: substituteOffsetofPath(expr.path) as typeof expr.path };
-                }
-                if (expr.kind === 'ImmUnary') return { ...expr, expr: substituteImm(expr.expr) };
-                if (expr.kind === 'ImmBinary') {
-                  return {
-                    ...expr,
-                    left: substituteImm(expr.left),
-                    right: substituteImm(expr.right),
-                  };
-                }
-                return { ...expr };
-              };
-
-              const substituteOperand = (operand: AsmOperandNode): AsmOperandNode => {
-                if (operand.kind === 'Imm' && operand.expr.kind === 'ImmName') {
-                  const bound = bindings.get(operand.expr.name.toLowerCase());
-                  const immBound = bindingAsImmExpr(bound, operand.span);
-                  if (immBound) return { kind: 'Imm', span: operand.span, expr: immBound };
-                  if (bound) return cloneOperand(bound);
-                  return { ...operand, expr: substituteImm(operand.expr) };
-                }
-                if (operand.kind === 'Imm')
-                  return { ...operand, expr: substituteImm(operand.expr) };
-                if (
-                  (operand.kind === 'Ea' || operand.kind === 'Mem') &&
-                  operand.expr.kind === 'EaName'
-                ) {
-                  const bound = bindings.get(operand.expr.name.toLowerCase());
-                  if (bound?.kind === 'Ea') return cloneOperand(bound);
-                  if (bound?.kind === 'Reg') {
-                    return {
-                      ...operand,
-                      expr: { kind: 'EaName', span: operand.expr.span, name: bound.name },
-                    };
-                  }
-                  if (bound?.kind === 'Imm' && bound.expr.kind === 'ImmName') {
-                    return {
-                      ...operand,
-                      expr: { kind: 'EaName', span: operand.expr.span, name: bound.expr.name },
-                    };
-                  }
-                  return cloneOperand(operand);
-                }
-                return cloneOperand(operand);
-              };
+              const {
+                substituteImm,
+                substituteOperand,
+                substituteImmWithOpLabels,
+                substituteOperandWithOpLabels,
+                substituteConditionWithOpLabels,
+              } = createOpSubstitutionHelpers({
+                bindings,
+                env,
+                diagnostics,
+                diagAt,
+                cloneImmExpr,
+                cloneEaExpr,
+                cloneOperand,
+                flattenEaDottedName,
+                normalizeFixedToken,
+                inverseConditionName,
+              });
 
               opExpansionStack.push({
                 key: opKey,
@@ -3743,121 +3688,15 @@ export function emitProgram(
                   }
                 }
 
-                const substituteImmWithOpLabels = (expr: ImmExprNode): ImmExprNode => {
-                  const substituteOffsetofPath = (path: any): any => ({
-                    ...path,
-                    steps: path.steps.map((step: any) =>
-                      step.kind === 'OffsetofIndex'
-                        ? { ...step, expr: substituteImmWithOpLabels(step.expr) }
-                        : { ...step },
-                    ),
-                  });
-                  if (expr.kind === 'ImmName') {
-                    const bound = bindings.get(expr.name.toLowerCase());
-                    const immBound = bindingAsImmExpr(bound, expr.span);
-                    if (immBound) return immBound;
-                    const mapped = localLabelMap.get(expr.name.toLowerCase());
-                    if (mapped) return { kind: 'ImmName', span: expr.span, name: mapped };
-                    return { ...expr };
-                  }
-                  if (expr.kind === 'ImmOffsetof') {
-                    return { ...expr, path: substituteOffsetofPath(expr.path) as typeof expr.path };
-                  }
-                  if (expr.kind === 'ImmUnary') {
-                    return { ...expr, expr: substituteImmWithOpLabels(expr.expr) };
-                  }
-                  if (expr.kind === 'ImmBinary') {
-                    return {
-                      ...expr,
-                      left: substituteImmWithOpLabels(expr.left),
-                      right: substituteImmWithOpLabels(expr.right),
-                    };
-                  }
-                  return { ...expr };
-                };
-
-                const substituteOperandWithOpLabels = (operand: AsmOperandNode): AsmOperandNode => {
-                  const substituteEaWithOpLabels = (ea: EaExprNode): EaExprNode => {
-                    if (ea.kind === 'EaName') {
-                      const bound = bindings.get(ea.name.toLowerCase());
-                      if (bound?.kind === 'Ea') return cloneEaExpr(bound.expr);
-                      if (bound?.kind === 'Reg') {
-                        return { kind: 'EaName', span: ea.span, name: bound.name };
-                      }
-                      if (bound?.kind === 'Imm' && bound.expr.kind === 'ImmName') {
-                        return { kind: 'EaName', span: ea.span, name: bound.expr.name };
-                      }
-                      const mapped = localLabelMap.get(ea.name.toLowerCase());
-                      if (mapped) return { kind: 'EaName', span: ea.span, name: mapped };
-                      return { ...ea };
-                    }
-                    if (ea.kind === 'EaField') {
-                      return { ...ea, base: substituteEaWithOpLabels(ea.base) };
-                    }
-                    if (ea.kind === 'EaIndex') {
-                      const index =
-                        ea.index.kind === 'IndexEa'
-                          ? { ...ea.index, expr: substituteEaWithOpLabels(ea.index.expr) }
-                          : ea.index.kind === 'IndexImm'
-                            ? { ...ea.index, value: substituteImmWithOpLabels(ea.index.value) }
-                            : ea.index.kind === 'IndexMemIxIy' && ea.index.disp
-                              ? { ...ea.index, disp: substituteImmWithOpLabels(ea.index.disp) }
-                              : { ...ea.index };
-                      return { ...ea, base: substituteEaWithOpLabels(ea.base), index };
-                    }
-                    if (ea.kind === 'EaAdd' || ea.kind === 'EaSub') {
-                      return {
-                        ...ea,
-                        base: substituteEaWithOpLabels(ea.base),
-                        offset: substituteImmWithOpLabels(ea.offset),
-                      };
-                    }
-                    return cloneEaExpr(ea);
-                  };
-
-                  if (operand.kind === 'Imm') {
-                    if (operand.expr.kind === 'ImmName') {
-                      const bound = bindings.get(operand.expr.name.toLowerCase());
-                      const immBound = bindingAsImmExpr(bound, operand.span);
-                      if (immBound) return { kind: 'Imm', span: operand.span, expr: immBound };
-                      if (bound) return cloneOperand(bound);
-                    }
-                    return { ...operand, expr: substituteImmWithOpLabels(operand.expr) };
-                  }
-                  if (operand.kind === 'Ea' || operand.kind === 'Mem') {
-                    return {
-                      ...operand,
-                      expr: substituteEaWithOpLabels(operand.expr),
-                    };
-                  }
-                  return substituteOperand(operand);
-                };
-
-                const substituteConditionWithOpLabels = (
-                  condition: string,
-                  span: SourceSpan,
-                ): string => {
-                  const bound = bindings.get(condition.toLowerCase());
-                  if (!bound) return condition;
-                  const token = normalizeFixedToken(bound);
-                  if (!token || inverseConditionName(token) === undefined) {
-                    diagAt(
-                      diagnostics,
-                      span,
-                      `op "${opDecl.name}" condition parameter "${condition}" must bind to a condition token (NZ/Z/NC/C/PO/PE/P/M).`,
-                    );
-                    return condition;
-                  }
-                  return token;
-                };
-
                 const expandedItems: AsmItemNode[] = opDecl.body.items.map((bodyItem) => {
                   if (bodyItem.kind === 'AsmInstruction') {
                     return {
                       kind: 'AsmInstruction',
                       span: bodyItem.span,
                       head: bodyItem.head,
-                      operands: bodyItem.operands.map((o) => substituteOperandWithOpLabels(o)),
+                      operands: bodyItem.operands.map((o) =>
+                        substituteOperandWithOpLabels(o, localLabelMap),
+                      ),
                     };
                   }
                   if (bodyItem.kind === 'AsmLabel') {
@@ -3871,14 +3710,14 @@ export function emitProgram(
                     return {
                       kind: 'Select',
                       span: bodyItem.span,
-                      selector: substituteOperandWithOpLabels(bodyItem.selector),
+                      selector: substituteOperandWithOpLabels(bodyItem.selector, localLabelMap),
                     };
                   }
                   if (bodyItem.kind === 'Case') {
                     return {
                       kind: 'Case',
                       span: bodyItem.span,
-                      value: substituteImmWithOpLabels(bodyItem.value),
+                      value: substituteImmWithOpLabels(bodyItem.value, localLabelMap),
                     };
                   }
                   if (
@@ -3888,7 +3727,7 @@ export function emitProgram(
                   ) {
                     return {
                       ...bodyItem,
-                      cc: substituteConditionWithOpLabels(bodyItem.cc, bodyItem.span),
+                      cc: substituteConditionWithOpLabels(bodyItem.cc, bodyItem.span, opDecl.name),
                     };
                   }
                   return { ...bodyItem };
