@@ -83,6 +83,7 @@ import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { encodeInstruction } from '../z80/encode.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import { loadBinInput, loadHexInput } from './inputAssets.js';
+import { createEaResolutionHelpers, type EaResolution } from './eaResolution.js';
 import { createRuntimeAtomBudgetHelpers } from './runtimeAtomBudget.js';
 import {
   alignTo,
@@ -350,10 +351,6 @@ export function emitProgram(
   let spTrackingValid = true;
   let spTrackingInvalidatedByMutation = false;
   let generatedLabelCounter = 0;
-
-  type EaResolution =
-    | { kind: 'abs'; baseLower: string; addend: number; typeExpr?: TypeExprNode }
-    | { kind: 'stack'; ixDisp: number; typeExpr?: TypeExprNode };
 
   const sameSourceTag = (x: SourceSegmentTag, y: SourceSegmentTag): boolean =>
     x.file === y.file &&
@@ -1464,8 +1461,21 @@ export function emitProgram(
     getLocalAliasTargets: () => localAliasTargets,
   });
 
-  const resolveAliasTarget = (nameLower: string): EaExprNode | undefined =>
-    localAliasTargets.get(nameLower) ?? moduleAliasTargets.get(nameLower);
+  const { resolveEa } = createEaResolutionHelpers({
+    env,
+    diagnostics,
+    diagAt,
+    stackSlotOffsets,
+    stackSlotTypes,
+    storageTypes,
+    moduleAliasTargets,
+    getLocalAliasTargets: () => localAliasTargets,
+    evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
+    evalImmNoDiag,
+    resolveAggregateType,
+    resolveEaTypeExpr,
+    sizeOfTypeExpr: (te) => sizeOfTypeExpr(te, env, diagnostics),
+  });
 
   for (const [aliasLower, aliasTarget] of moduleAliasTargets) {
     if (storageTypes.has(aliasLower)) continue;
@@ -1502,130 +1512,6 @@ export function emitProgram(
     stackSlotTypes,
     storageTypes,
   });
-
-  const resolveEa = (ea: EaExprNode, span: SourceSpan): EaResolution | undefined => {
-    const go = (expr: EaExprNode, visitingAliases: Set<string>): EaResolution | undefined => {
-      switch (expr.kind) {
-        case 'EaName': {
-          const baseLower = expr.name.toLowerCase();
-          const slotOff = stackSlotOffsets.get(baseLower);
-          if (slotOff !== undefined) {
-            const slotType = stackSlotTypes.get(baseLower);
-            return {
-              kind: 'stack',
-              ixDisp: slotOff,
-              ...(slotType ? { typeExpr: slotType } : {}),
-            };
-          }
-          const aliasTarget = resolveAliasTarget(baseLower);
-          if (aliasTarget) {
-            if (visitingAliases.has(baseLower)) return undefined;
-            visitingAliases.add(baseLower);
-            try {
-              return go(aliasTarget, visitingAliases);
-            } finally {
-              visitingAliases.delete(baseLower);
-            }
-          }
-          const typeExpr = storageTypes.get(baseLower);
-          return { kind: 'abs', baseLower, addend: 0, ...(typeExpr ? { typeExpr } : {}) };
-        }
-        case 'EaAdd':
-        case 'EaSub': {
-          const base = go(expr.base, visitingAliases);
-          if (!base) return undefined;
-          const v = evalImmNoDiag(expr.offset);
-          if (v === undefined) return undefined;
-          const delta = expr.kind === 'EaAdd' ? v : -v;
-          if (base.kind === 'abs') return { ...base, addend: base.addend + delta };
-          return { ...base, ixDisp: base.ixDisp + delta };
-        }
-        case 'EaField': {
-          const base = go(expr.base, visitingAliases);
-          if (!base) return undefined;
-          if (!base.typeExpr) {
-            diagAt(diagnostics, span, `Cannot resolve field "${expr.field}" without a typed base.`);
-            return undefined;
-          }
-          const agg = resolveAggregateType(base.typeExpr);
-          if (!agg) {
-            diagAt(
-              diagnostics,
-              span,
-              `Field access ".${expr.field}" requires a record or union type.`,
-            );
-            return undefined;
-          }
-
-          let off = 0;
-          for (const f of agg.fields) {
-            if (f.name === expr.field) {
-              if (base.kind === 'abs') {
-                return {
-                  kind: 'abs',
-                  baseLower: base.baseLower,
-                  addend: base.addend + off,
-                  typeExpr: f.typeExpr,
-                };
-              }
-              return {
-                kind: 'stack',
-                ixDisp: base.ixDisp + off,
-                typeExpr: f.typeExpr,
-              };
-            }
-            if (agg.kind === 'record') {
-              const sz = sizeOfTypeExpr(f.typeExpr, env, diagnostics);
-              if (sz === undefined) return undefined;
-              off += sz;
-            }
-          }
-          const kind = agg.kind === 'union' ? 'union' : 'record';
-          diagAt(diagnostics, span, `Unknown ${kind} field "${expr.field}".`);
-          return undefined;
-        }
-        case 'EaIndex': {
-          const base = go(expr.base, visitingAliases);
-          if (!base) return undefined;
-          if (!base.typeExpr) {
-            diagAt(diagnostics, span, `Cannot resolve indexing without a typed base.`);
-            return undefined;
-          }
-          if (base.typeExpr.kind !== 'ArrayType') {
-            diagAt(diagnostics, span, `Indexing requires an array type.`);
-            return undefined;
-          }
-          const elemSize = sizeOfTypeExpr(base.typeExpr.element, env, diagnostics);
-          if (elemSize === undefined) return undefined;
-
-          // Constant index: fold into displacement.
-          if (expr.index.kind === 'IndexImm') {
-            const idx = evalImmExpr(expr.index.value, env, diagnostics);
-            if (idx === undefined) return undefined;
-            const delta = idx * elemSize;
-            if (base.kind === 'abs') {
-              return {
-                kind: 'abs',
-                baseLower: base.baseLower,
-                addend: base.addend + delta,
-                typeExpr: base.typeExpr.element,
-              };
-            }
-            return {
-              kind: 'stack',
-              ixDisp: base.ixDisp + delta,
-              typeExpr: base.typeExpr.element,
-            };
-          }
-
-          // Runtime index: defer to runtime EA construction; resolved EA not available.
-          return undefined;
-        }
-      }
-    };
-
-    return go(ea, new Set<string>());
-  };
 
   const pushEaAddress = (ea: EaExprNode, span: SourceSpan): boolean => {
     const r = resolveEa(ea, span);
