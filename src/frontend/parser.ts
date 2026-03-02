@@ -1,46 +1,7 @@
-import type {
-  AlignDirectiveNode,
-  ImportNode,
-  AsmBlockNode,
-  AsmItemNode,
-  AsmLabelNode,
-  BinDeclNode,
-  ConstDeclNode,
-  EnumDeclNode,
-  HexDeclNode,
-  ImmExprNode,
-  ModuleFileNode,
-  ModuleItemNode,
-  OpDeclNode,
-  OpMatcherNode,
-  OpParamNode,
-  OffsetofPathNode,
-  ParamNode,
-  ProgramNode,
-  SectionDirectiveNode,
-  SourceSpan,
-  TypeDeclNode,
-  TypeExprNode,
-  VarBlockNode,
-  VarDeclNode,
-  VarDeclInitializerNode,
-} from './ast.js';
+import type { ModuleFileNode, ModuleItemNode, ProgramNode } from './ast.js';
 import { makeSourceFile, span } from './source.js';
 import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
-import {
-  diagIfInferredArrayLengthNotAllowed,
-  parseImmExprFromText,
-  parseTypeExprFromText,
-} from './parseImm.js';
-import { parseEaExprFromText } from './parseOperands.js';
-import {
-  appendParsedAsmStatement,
-  isRecoverOnlyControlFrame,
-  parseAsmStatement,
-  type AsmControlFrame,
-  type ParsedAsmStatement,
-} from './parseAsmStatements.js';
 import {
   TOP_LEVEL_KEYWORDS,
   consumeKeywordPrefix,
@@ -51,8 +12,6 @@ import {
   isTopLevelStart,
   looksLikeKeywordBodyDeclLine,
   malformedTopLevelHeaderExpectations,
-  parseReturnRegsFromText,
-  parseVarDeclLine,
   topLevelStartKeyword,
   unsupportedExportTargetKind,
 } from './parseModuleCommon.js';
@@ -60,6 +19,7 @@ import { parseTopLevelExternDecl } from './parseExternBlock.js';
 import { parseEnumDecl } from './parseEnum.js';
 import { parseTopLevelFuncDecl } from './parseFunc.js';
 import { parseGlobalsBlock } from './parseGlobals.js';
+import { parseTopLevelOpDecl } from './parseOp.js';
 import { parseOpParamsFromText, parseParamsFromText } from './parseParams.js';
 import { parseTypeDecl, parseUnionDecl } from './parseTypes.js';
 import {
@@ -112,10 +72,6 @@ function diag(
 function stripComment(line: string): string {
   const semi = line.indexOf(';');
   return semi >= 0 ? line.slice(0, semi) : line;
-}
-
-function canonicalConditionToken(token: string): string {
-  return token.toLowerCase();
 }
 
 /**
@@ -332,170 +288,29 @@ export function parseModuleFile(
 
     const opTail = consumeTopKeyword(rest, 'op');
     if (opTail !== undefined) {
-      const exported = hasExportPrefix;
-      const header = opTail;
-      const openParen = header.indexOf('(');
-      const closeParen = header.lastIndexOf(')');
-      if (openParen < 0 || closeParen < openParen) {
-        diagInvalidHeaderLine(diagnostics, modulePath, 'op header', text, '<name>(...)', lineNo);
-        i++;
-        continue;
-      }
-
-      const name = header.slice(0, openParen).trim();
-      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        diag(
+      const parsedOp = parseTopLevelOpDecl(
+        opTail,
+        text,
+        span(file, lineStartOffset, lineEndOffset),
+        lineNo,
+        i,
+        hasExportPrefix,
+        {
+          file,
+          lineCount,
           diagnostics,
           modulePath,
-          `Invalid op name ${formatIdentifierToken(name)}: expected <identifier>.`,
-          { line: lineNo, column: 1 },
-        );
+          getRawLine,
+          isReservedTopLevelName,
+          parseOpParamsFromText,
+        },
+      );
+      if (!parsedOp) {
         i++;
         continue;
       }
-      if (isReservedTopLevelName(name)) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid op name "${name}": collides with a top-level keyword.`,
-          { line: lineNo, column: 1 },
-        );
-        i++;
-        continue;
-      }
-
-      const trailing = header.slice(closeParen + 1).trim();
-      if (trailing.length > 0) {
-        diag(diagnostics, modulePath, `Invalid op header: unexpected trailing tokens`, {
-          line: lineNo,
-          column: 1,
-        });
-        i++;
-        continue;
-      }
-
-      const opStartOffset = lineStartOffset;
-      const headerSpan = span(file, lineStartOffset, lineEndOffset);
-      const paramsText = header.slice(openParen + 1, closeParen);
-      const params = parseOpParamsFromText(modulePath, paramsText, headerSpan, diagnostics, {
-        isReservedTopLevelName,
-      });
-      if (!params) {
-        i++;
-        continue;
-      }
-      i++;
-
-      const bodyItems: AsmItemNode[] = [];
-      const controlStack: AsmControlFrame[] = [];
-      let terminated = false;
-      let interruptedByKeyword: string | undefined;
-      let interruptedByLine: number | undefined;
-      let opEndOffset = file.text.length;
-      while (i < lineCount) {
-        const { raw: rawLine, startOffset: so, endOffset: eo } = getRawLine(i);
-        const content = stripComment(rawLine).trim();
-        const contentLower = content.toLowerCase();
-        if (content.length === 0) {
-          i++;
-          continue;
-        }
-        if (bodyItems.length === 0 && controlStack.length === 0 && contentLower === 'asm') {
-          diag(diagnostics, modulePath, `Unexpected "asm" in op body (op bodies are implicit)`, {
-            line: i + 1,
-            column: 1,
-          });
-          i++;
-          continue;
-        }
-        if (contentLower === 'end' && controlStack.length === 0) {
-          terminated = true;
-          opEndOffset = eo;
-          i++;
-          break;
-        }
-        const topKeyword = topLevelStartKeyword(content);
-        if (topKeyword !== undefined) {
-          interruptedByKeyword = topKeyword;
-          interruptedByLine = i + 1;
-          break;
-        }
-
-        const fullSpan = span(file, so, eo);
-        const contentStart = stripComment(rawLine).indexOf(content);
-        const contentSpan =
-          contentStart >= 0
-            ? span(file, so + contentStart, so + stripComment(rawLine).length)
-            : fullSpan;
-        const labelMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$/.exec(content);
-        if (labelMatch) {
-          const label = labelMatch[1]!;
-          const remainder = labelMatch[2] ?? '';
-          bodyItems.push({ kind: 'AsmLabel', span: fullSpan, name: label });
-          if (remainder.trim().length > 0) {
-            const stmt = parseAsmStatement(
-              modulePath,
-              remainder,
-              contentSpan,
-              diagnostics,
-              controlStack,
-            );
-            appendParsedAsmStatement(bodyItems, stmt);
-          }
-          i++;
-          continue;
-        }
-
-        const stmt = parseAsmStatement(modulePath, content, contentSpan, diagnostics, controlStack);
-        appendParsedAsmStatement(bodyItems, stmt);
-        i++;
-      }
-
-      if (!terminated) {
-        if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
-          for (const frame of controlStack) {
-            if (isRecoverOnlyControlFrame(frame)) continue;
-            const frameSpan = frame.openSpan;
-            const msg =
-              frame.kind === 'Repeat'
-                ? `"repeat" without matching "until <cc>"`
-                : `"${frame.kind.toLowerCase()}" without matching "end"`;
-            diag(diagnostics, modulePath, msg, {
-              line: frameSpan.start.line,
-              column: frameSpan.start.column,
-            });
-          }
-          diag(
-            diagnostics,
-            modulePath,
-            `Unterminated op "${name}": expected "end" before "${interruptedByKeyword}"`,
-            { line: interruptedByLine, column: 1 },
-          );
-          continue;
-        }
-        for (const frame of controlStack) {
-          if (isRecoverOnlyControlFrame(frame)) continue;
-          const span = frame.openSpan;
-          const msg =
-            frame.kind === 'Repeat'
-              ? `"repeat" without matching "until <cc>"`
-              : `"${frame.kind.toLowerCase()}" without matching "end"`;
-          diag(diagnostics, modulePath, msg, { line: span.start.line, column: span.start.column });
-        }
-        diag(diagnostics, modulePath, `Unterminated op "${name}": missing "end"`, {
-          line: lineNo,
-          column: 1,
-        });
-      }
-
-      items.push({
-        kind: 'OpDecl',
-        span: span(file, opStartOffset, opEndOffset),
-        name,
-        exported,
-        params,
-        body: { kind: 'AsmBlock', span: span(file, opStartOffset, opEndOffset), items: bodyItems },
-      } as OpDeclNode);
+      items.push(parsedOp.node);
+      i = parsedOp.nextIndex;
       continue;
     }
 
