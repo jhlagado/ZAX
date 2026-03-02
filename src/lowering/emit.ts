@@ -84,6 +84,7 @@ import { encodeInstruction } from '../z80/encode.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import { loadBinInput, loadHexInput } from './inputAssets.js';
 import { createEaResolutionHelpers, type EaResolution } from './eaResolution.js';
+import { createAddressingPipelineBuilders } from './addressingPipelines.js';
 import { createRuntimeImmediateHelpers } from './runtimeImmediates.js';
 import { createRuntimeAtomBudgetHelpers } from './runtimeAtomBudget.js';
 import {
@@ -2098,168 +2099,17 @@ export function emitProgram(
     return emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span); // restore DE
   };
 
-  const buildEaBytePipeline = (ea: EaExprNode, span: SourceSpan): StepPipeline | null => {
-    // Runtime indexed arrays (byte elements only) use the EA_* matrix.
-    if (ea.kind === 'EaIndex') {
-      const baseResolved = resolveEa(ea.base, span);
-      const baseType = resolveEaTypeExpr(ea.base);
-      if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return null;
-      const elemSize = sizeOfTypeExpr(baseType.element, env, diagnostics);
-      if (elemSize !== 1) return null; // byte elements only
-
-      switch (ea.index.kind) {
-        case 'IndexReg8': {
-          const reg = (ea.index as any).reg;
-          const regLower = typeof reg === 'string' ? reg.toLowerCase() : undefined;
-          if (!regLower || !reg8.has(regLower.toUpperCase())) return null;
-          return baseResolved.kind === 'abs'
-            ? EA_GLOB_REG(baseResolved.baseLower, regLower)
-            : EA_FVAR_REG(baseResolved.ixDisp, regLower);
-        }
-        case 'IndexReg16': {
-          const rp = (ea.index as any).reg?.toUpperCase();
-          if (!rp || (rp !== 'HL' && rp !== 'DE' && rp !== 'BC')) {
-            diagAt(diagnostics, span, `Invalid reg16 index "${(ea.index as any).reg}".`);
-            return null;
-          }
-          if (rp === 'HL') {
-            return baseResolved.kind === 'abs'
-              ? [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA()]
-              : [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA()];
-          }
-          return baseResolved.kind === 'abs'
-            ? EA_GLOB_RP(baseResolved.baseLower, rp)
-            : EA_FVAR_RP(baseResolved.ixDisp, rp);
-        }
-        case 'IndexEa': {
-          const idxResolved = resolveEa(ea.index.expr, span);
-          if (!idxResolved) return null;
-          if (idxResolved.kind === 'abs') {
-            return baseResolved.kind === 'abs'
-              ? EA_GLOB_GLOB(baseResolved.baseLower, idxResolved.baseLower)
-              : EA_FVAR_GLOB(baseResolved.ixDisp, idxResolved.baseLower);
-          }
-          if (idxResolved.kind === 'stack') {
-            return baseResolved.kind === 'abs'
-              ? EA_GLOB_FVAR(baseResolved.baseLower, idxResolved.ixDisp)
-              : EA_FVAR_FVAR(baseResolved.ixDisp, idxResolved.ixDisp);
-          }
-          return null;
-        }
-        default:
-          return null;
-      }
-    }
-
-    // Folded/scalar path: resolveEa already folded const indexes.
-    const r = resolveEa(ea, span);
-    if (!r) return null;
-    if (r.kind === 'abs') return EA_GLOB_CONST(r.baseLower, r.addend);
-    if (r.kind === 'stack') return EA_FVAR_CONST(r.ixDisp, 0);
-    return null;
-  };
-
-  const buildEaWordPipeline = (ea: EaExprNode, span: SourceSpan): StepPipeline | null => {
-    const hasIndex = (expr: EaExprNode): boolean => {
-      switch (expr.kind) {
-        case 'EaIndex':
-          return true;
-        case 'EaAdd':
-        case 'EaSub':
-        case 'EaField':
-          return hasIndex(expr.base);
-        default:
-          return false;
-      }
-    };
-    if (!hasIndex(ea)) return null; // only indexed shapes use EAW
-
-    // Runtime index with reg8/reg16 or Ea → EAW builders
-    if (ea.kind === 'EaIndex') {
-      const baseResolved = resolveEa(ea.base, span);
-      const baseType = resolveEaTypeExpr(ea.base);
-      if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return null;
-      const elemSize = sizeOfTypeExpr(baseType.element, env, diagnostics);
-      if (elemSize !== 2) return null; // scale-by-2 only
-
-      if (ea.index.kind === 'IndexImm') {
-        const imm = evalImmExpr(ea.index.value, env, diagnostics);
-        if (imm !== undefined) {
-          return baseResolved.kind === 'abs'
-            ? EAW_GLOB_CONST(baseResolved.baseLower, imm)
-            : EAW_FVAR_CONST(baseResolved.ixDisp, imm);
-        }
-
-        if (ea.index.value.kind === 'ImmName') {
-          const idxScalar = resolveScalarBinding(ea.index.value.name);
-          if (idxScalar !== 'word' && idxScalar !== 'addr') return null;
-          const idxNameEa: EaExprNode = { kind: 'EaName', span, name: ea.index.value.name };
-          const idxResolved = resolveEa(idxNameEa, span);
-          if (!idxResolved) return null;
-          if (idxResolved.kind === 'abs') {
-            return baseResolved.kind === 'abs'
-              ? EAW_GLOB_GLOB(baseResolved.baseLower, idxResolved.baseLower)
-              : EAW_FVAR_GLOB(baseResolved.ixDisp, idxResolved.baseLower);
-          }
-          if (idxResolved.kind === 'stack') {
-            return baseResolved.kind === 'abs'
-              ? EAW_GLOB_FVAR(baseResolved.baseLower, idxResolved.ixDisp)
-              : EAW_FVAR_FVAR(baseResolved.ixDisp, idxResolved.ixDisp);
-          }
-        }
-        return null;
-      }
-
-      if (ea.index.kind === 'IndexReg8' || ea.index.kind === 'IndexReg16') {
-        const idxReg = (ea.index as any).reg;
-        if (!idxReg || typeof idxReg !== 'string') return null;
-        const idxUpper = idxReg.toUpperCase();
-
-        if (baseResolved.kind === 'abs') {
-          if (ea.index.kind === 'IndexReg8') {
-            return EAW_GLOB_REG(baseResolved.baseLower, idxReg.toLowerCase());
-          }
-          if (idxUpper === 'HL') return [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA_2()];
-          return EAW_GLOB_RP(baseResolved.baseLower, idxUpper);
-        }
-        if (baseResolved.kind === 'stack') {
-          if (ea.index.kind === 'IndexReg8') {
-            return EAW_FVAR_REG(baseResolved.ixDisp, idxReg.toLowerCase());
-          }
-          if (idxUpper === 'HL') return [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA_2()];
-          return EAW_FVAR_RP(baseResolved.ixDisp, idxUpper);
-        }
-        return null;
-      }
-
-      if (ea.index.kind === 'IndexEa') {
-        const idxResolved = resolveEa(ea.index.expr, span);
-        if (!idxResolved) return null;
-        if (idxResolved.kind === 'abs') {
-          return baseResolved.kind === 'abs'
-            ? EAW_GLOB_GLOB(baseResolved.baseLower, idxResolved.baseLower)
-            : EAW_FVAR_GLOB(baseResolved.ixDisp, idxResolved.baseLower);
-        }
-        if (idxResolved.kind === 'stack') {
-          return baseResolved.kind === 'abs'
-            ? EAW_GLOB_FVAR(baseResolved.baseLower, idxResolved.ixDisp)
-            : EAW_FVAR_FVAR(baseResolved.ixDisp, idxResolved.ixDisp);
-        }
-        return null;
-      }
-    }
-
-    // Folded/scalar path: resolveEa may already include addends.
-    const r = resolveEa(ea, span);
-    if (!r) return null;
-    const scalarKind = r.typeExpr ? resolveScalarKind(r.typeExpr) : undefined;
-    const elemSize: number | undefined = (r as any).elemSize ?? 2;
-    if (scalarKind !== 'word' && scalarKind !== 'addr') return null;
-    if (elemSize !== 2) return null;
-    if (r.kind === 'abs') return EAW_GLOB_CONST(r.baseLower, r.addend);
-    if (r.kind === 'stack') return EAW_FVAR_CONST(r.ixDisp, 0);
-    return null;
-  };
+  const { buildEaBytePipeline, buildEaWordPipeline } = createAddressingPipelineBuilders({
+    diagnostics,
+    diagAt,
+    reg8,
+    resolveEa,
+    resolveEaTypeExpr,
+    resolveScalarBinding,
+    resolveScalarKind,
+    sizeOfTypeExpr: (typeExpr) => sizeOfTypeExpr(typeExpr, env, diagnostics),
+    evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
+  });
 
   const emitScalarWordLoad = (
     target: 'HL' | 'DE' | 'BC',
