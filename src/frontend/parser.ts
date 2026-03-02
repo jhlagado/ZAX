@@ -23,7 +23,6 @@ import type {
   OffsetofPathNode,
   ParamNode,
   ProgramNode,
-  RecordFieldNode,
   SectionDirectiveNode,
   SourceSpan,
   TypeDeclNode,
@@ -67,6 +66,7 @@ import { parseExternFuncFromTail } from './parseExtern.js';
 import { parseEnumDecl } from './parseEnum.js';
 import { parseGlobalsBlock } from './parseGlobals.js';
 import { parseOpParamsFromText, parseParamsFromText } from './parseParams.js';
+import { parseTypeDecl, parseUnionDecl } from './parseTypes.js';
 import {
   parseAlignDirectiveDecl,
   parseBinDecl,
@@ -340,417 +340,53 @@ export function parseModuleFile(
 
     const typeTail = consumeTopKeyword(rest, 'type');
     if (typeTail !== undefined) {
-      const afterType = typeTail.trim();
-      const parts = afterType.split(/\s+/, 2);
-      const name = parts[0] ?? '';
-      const tail = afterType.slice(name.length).trimStart();
-      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        if (name.length > 0) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid type name ${formatIdentifierToken(name)}: expected <identifier>.`,
-            { line: lineNo, column: 1 },
-          );
-        } else {
-          diagInvalidHeaderLine(
-            diagnostics,
-            modulePath,
-            'type declaration',
-            text,
-            '<name> [<typeExpr>]',
-            lineNo,
-          );
-        }
-        i++;
-        continue;
-      }
-      if (isReservedTopLevelName(name)) {
-        diag(
+      const parsedType = parseTypeDecl(
+        typeTail,
+        text,
+        span(file, lineStartOffset, lineEndOffset),
+        lineNo,
+        i,
+        {
+          file,
+          lineCount,
           diagnostics,
           modulePath,
-          `Invalid type name "${name}": collides with a top-level keyword.`,
-          { line: lineNo, column: 1 },
-        );
+          getRawLine,
+          isReservedTopLevelName,
+        },
+      );
+      if (!parsedType) {
         i++;
         continue;
       }
-
-      // Alias form: `type Name <typeExpr>`
-      if (tail.length > 0) {
-        const stmtSpan = span(file, lineStartOffset, lineEndOffset);
-        const typeExpr = parseTypeExprFromText(tail, stmtSpan, { allowInferredArrayLength: false });
-        if (!typeExpr) {
-          if (
-            diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, tail, {
-              line: lineNo,
-              column: 1,
-            })
-          ) {
-            i++;
-            continue;
-          }
-          diagInvalidHeaderLine(
-            diagnostics,
-            modulePath,
-            'type declaration',
-            text,
-            '<name> [<typeExpr>]',
-            lineNo,
-          );
-          i++;
-          continue;
-        }
-        items.push({ kind: 'TypeDecl', span: stmtSpan, name, typeExpr });
-        i++;
-        continue;
-      }
-
-      // Record form:
-      // type Name
-      //   field: type
-      // end
-      const typeStart = lineStartOffset;
-      const fields: RecordFieldNode[] = [];
-      const fieldNamesLower = new Set<string>();
-      let terminated = false;
-      let interruptedByKeyword: string | undefined;
-      let interruptedByLine: number | undefined;
-      let typeEndOffset = file.text.length;
-      i++;
-
-      while (i < lineCount) {
-        const { raw: rawField, startOffset: so, endOffset: eo } = getRawLine(i);
-        const t = stripComment(rawField).trim();
-        const tLower = t.toLowerCase();
-        if (t.length === 0) {
-          i++;
-          continue;
-        }
-        if (tLower === 'end') {
-          terminated = true;
-          typeEndOffset = eo;
-          i++;
-          break;
-        }
-        const topKeyword = topLevelStartKeyword(t);
-        if (topKeyword !== undefined) {
-          if (looksLikeKeywordBodyDeclLine(t)) {
-            diagInvalidBlockLine(
-              diagnostics,
-              modulePath,
-              'record field declaration',
-              t,
-              '<name>: <type>',
-              i + 1,
-            );
-            i++;
-            continue;
-          }
-          interruptedByKeyword = topKeyword;
-          interruptedByLine = i + 1;
-          break;
-        }
-
-        const m = /^([^:]+)\s*:\s*(.+)$/.exec(t);
-        if (!m) {
-          diagInvalidBlockLine(
-            diagnostics,
-            modulePath,
-            'record field declaration',
-            t,
-            '<name>: <type>',
-            i + 1,
-          );
-          i++;
-          continue;
-        }
-
-        const fieldName = m[1]!.trim();
-        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(fieldName)) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid record field name ${formatIdentifierToken(fieldName)}: expected <identifier>.`,
-            { line: i + 1, column: 1 },
-          );
-          i++;
-          continue;
-        }
-        if (isReservedTopLevelName(fieldName)) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid record field name "${fieldName}": collides with a top-level keyword.`,
-            { line: i + 1, column: 1 },
-          );
-          i++;
-          continue;
-        }
-        const fieldNameLower = fieldName.toLowerCase();
-        if (fieldNamesLower.has(fieldNameLower)) {
-          diag(diagnostics, modulePath, `Duplicate record field name "${fieldName}".`, {
-            line: i + 1,
-            column: 1,
-          });
-          i++;
-          continue;
-        }
-        fieldNamesLower.add(fieldNameLower);
-        const typeText = m[2]!.trim();
-        const fieldSpan = span(file, so, eo);
-        const typeExpr = parseTypeExprFromText(typeText, fieldSpan, {
-          allowInferredArrayLength: false,
-        });
-        if (!typeExpr) {
-          if (
-            diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, typeText, {
-              line: i + 1,
-              column: 1,
-            })
-          ) {
-            i++;
-            continue;
-          }
-          diagInvalidBlockLine(
-            diagnostics,
-            modulePath,
-            'record field declaration',
-            t,
-            '<name>: <type>',
-            i + 1,
-          );
-          i++;
-          continue;
-        }
-
-        fields.push({
-          kind: 'RecordField',
-          span: fieldSpan,
-          name: fieldName,
-          typeExpr,
-        });
-        i++;
-      }
-
-      if (!terminated) {
-        if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Unterminated type "${name}": expected "end" before "${interruptedByKeyword}"`,
-            { line: interruptedByLine, column: 1 },
-          );
-        } else {
-          diag(diagnostics, modulePath, `Unterminated type "${name}": missing "end"`, {
-            line: lineNo,
-            column: 1,
-          });
-        }
-      }
-
-      if (fields.length === 0) {
-        diag(diagnostics, modulePath, `Type "${name}" must contain at least one field`, {
-          line: lineNo,
-          column: 1,
-        });
-      }
-
-      const typeEnd = terminated ? typeEndOffset : file.text.length;
-      const typeSpan = span(file, typeStart, typeEnd);
-      items.push({
-        kind: 'TypeDecl',
-        span: typeSpan,
-        name,
-        typeExpr: { kind: 'RecordType', span: typeSpan, fields },
-      });
+      items.push(parsedType.node);
+      i = parsedType.nextIndex;
       continue;
     }
 
     const unionTail = consumeTopKeyword(rest, 'union');
     if (unionTail !== undefined) {
-      const name = unionTail.trim();
-      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        if (name.length > 0) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid union name ${formatIdentifierToken(name)}: expected <identifier>.`,
-            { line: lineNo, column: 1 },
-          );
-        } else {
-          diagInvalidHeaderLine(
-            diagnostics,
-            modulePath,
-            'union declaration',
-            text,
-            '<name>',
-            lineNo,
-          );
-        }
-        i++;
-        continue;
-      }
-      if (isReservedTopLevelName(name)) {
-        diag(
+      const parsedUnion = parseUnionDecl(
+        unionTail,
+        text,
+        span(file, lineStartOffset, lineEndOffset),
+        lineNo,
+        i,
+        {
+          file,
+          lineCount,
           diagnostics,
           modulePath,
-          `Invalid union name "${name}": collides with a top-level keyword.`,
-          { line: lineNo, column: 1 },
-        );
+          getRawLine,
+          isReservedTopLevelName,
+        },
+      );
+      if (!parsedUnion) {
         i++;
         continue;
       }
-
-      const unionStart = lineStartOffset;
-      const fields: RecordFieldNode[] = [];
-      const fieldNamesLower = new Set<string>();
-      let terminated = false;
-      let interruptedByKeyword: string | undefined;
-      let interruptedByLine: number | undefined;
-      let unionEndOffset = file.text.length;
-      i++;
-
-      while (i < lineCount) {
-        const { raw: rawField, startOffset: so, endOffset: eo } = getRawLine(i);
-        const t = stripComment(rawField).trim();
-        const tLower = t.toLowerCase();
-        if (t.length === 0) {
-          i++;
-          continue;
-        }
-        if (tLower === 'end') {
-          terminated = true;
-          unionEndOffset = eo;
-          i++;
-          break;
-        }
-        const topKeyword = topLevelStartKeyword(t);
-        if (topKeyword !== undefined && consumeKeywordPrefix(t, 'func') === undefined) {
-          if (looksLikeKeywordBodyDeclLine(t)) {
-            diagInvalidBlockLine(
-              diagnostics,
-              modulePath,
-              'union field declaration',
-              t,
-              '<name>: <type>',
-              i + 1,
-            );
-            i++;
-            continue;
-          }
-          interruptedByKeyword = topKeyword;
-          interruptedByLine = i + 1;
-          break;
-        }
-
-        const m = /^([^:]+)\s*:\s*(.+)$/.exec(t);
-        if (!m) {
-          diagInvalidBlockLine(
-            diagnostics,
-            modulePath,
-            'union field declaration',
-            t,
-            '<name>: <type>',
-            i + 1,
-          );
-          i++;
-          continue;
-        }
-
-        const fieldName = m[1]!.trim();
-        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(fieldName)) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid union field name ${formatIdentifierToken(fieldName)}: expected <identifier>.`,
-            { line: i + 1, column: 1 },
-          );
-          i++;
-          continue;
-        }
-        if (isReservedTopLevelName(fieldName)) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid union field name "${fieldName}": collides with a top-level keyword.`,
-            { line: i + 1, column: 1 },
-          );
-          i++;
-          continue;
-        }
-        const fieldNameLower = fieldName.toLowerCase();
-        if (fieldNamesLower.has(fieldNameLower)) {
-          diag(diagnostics, modulePath, `Duplicate union field name "${fieldName}".`, {
-            line: i + 1,
-            column: 1,
-          });
-          i++;
-          continue;
-        }
-        fieldNamesLower.add(fieldNameLower);
-        const typeText = m[2]!.trim();
-        const fieldSpan = span(file, so, eo);
-        const typeExpr = parseTypeExprFromText(typeText, fieldSpan, {
-          allowInferredArrayLength: false,
-        });
-        if (!typeExpr) {
-          if (
-            diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, typeText, {
-              line: i + 1,
-              column: 1,
-            })
-          ) {
-            i++;
-            continue;
-          }
-          diagInvalidBlockLine(
-            diagnostics,
-            modulePath,
-            'union field declaration',
-            t,
-            '<name>: <type>',
-            i + 1,
-          );
-          i++;
-          continue;
-        }
-
-        fields.push({
-          kind: 'RecordField',
-          span: fieldSpan,
-          name: fieldName,
-          typeExpr,
-        });
-        i++;
-      }
-
-      if (!terminated) {
-        if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Unterminated union "${name}": expected "end" before "${interruptedByKeyword}"`,
-            { line: interruptedByLine, column: 1 },
-          );
-        } else {
-          diag(diagnostics, modulePath, `Unterminated union "${name}": missing "end"`, {
-            line: lineNo,
-            column: 1,
-          });
-        }
-      }
-
-      if (fields.length === 0) {
-        diag(diagnostics, modulePath, `Union "${name}" must contain at least one field`, {
-          line: lineNo,
-          column: 1,
-        });
-      }
-
-      const unionEnd = terminated ? unionEndOffset : file.text.length;
-      const unionSpan = span(file, unionStart, unionEnd);
-      items.push({ kind: 'UnionDecl', span: unionSpan, name, fields });
+      items.push(parsedUnion.node);
+      i = parsedUnion.nextIndex;
       continue;
     }
 
