@@ -29,6 +29,8 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `virtual-reg16-transfer-patterns.md` — supported `rp -> rp` virtual transfer patterns for the current low-level convenience slice.
 - `github-backlog-workflow.md` — GitHub issue/label/milestone workflow used as the project backlog system.
 - `source-overview.md` — version-neutral source tree and subsystem map for reading the implementation.
+- `quality-report.md` — code quality analysis: 19 specific issues rated by severity, with locations, fix directions, and resolution status.
+- `refactor-plan.md` — phased improvement plan: completed-work table, 17 active tickets with effort estimates, and per-file size map.
 
 ## Content Ownership
 
@@ -38,6 +40,8 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `return-register-policy.md`: preservation matrix and HL-preserve swap guidance.
 - `zax-dev-playbook.md`: contributor workflow only; must not duplicate planning history, semantic policy, or version-status tracking.
 - `source-overview.md`: non-normative architecture map of the current code layout and subsystem boundaries.
+- `quality-report.md`: lowering-subsystem quality issues only; update in place as issues are resolved.
+- `refactor-plan.md`: lowering-subsystem refactor tickets only; move completed work to the completed table, do not delete.
 
 ## Consolidation Rules
 
