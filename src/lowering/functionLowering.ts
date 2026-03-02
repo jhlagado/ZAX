@@ -57,7 +57,14 @@ export type FunctionLoweringContext = {
   traceComment: (offset: number, text: string) => void;
   traceLabel: (offset: number, name: string) => void;
   currentCodeSegmentTagRef: { current: SourceSegmentTag | undefined };
-  trackedSpRef: { delta: number; valid: boolean; invalid: boolean };
+  bindSpTracking: (
+    callbacks?:
+      | {
+          applySpTracking: (headRaw: string, operands: AsmOperandNode[]) => void;
+          invalidateSpTracking: () => void;
+        }
+      | undefined,
+  ) => void;
   getCodeOffset: () => number;
   emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
   emitRawCodeBytes: (bs: Uint8Array, file: string, traceText: string) => void;
@@ -148,7 +155,15 @@ export type FunctionLoweringContext = {
 
 export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const { item, diagnostics, diag, diagAt, diagAtWithId, diagAtWithSeverityAndId, warnAt } = ctx;
-  const { taken, pending, traceComment, traceLabel, currentCodeSegmentTagRef, trackedSpRef, getCodeOffset } = ctx;
+  const {
+    taken,
+    pending,
+    traceComment,
+    traceLabel,
+    currentCodeSegmentTagRef,
+    bindSpTracking,
+    getCodeOffset,
+  } = ctx;
   const {
     emitInstr: emitInstrBase,
     emitRawCodeBytes,
@@ -387,9 +402,64 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   }
 
   // Track SP deltas relative to the start of user asm, after prologue reservation.
-  trackedSpRef.delta = 0;
-  trackedSpRef.valid = true;
-  trackedSpRef.invalid = false;
+  const trackedSp = {
+    delta: 0,
+    valid: true,
+    invalid: false,
+  };
+  const applySpTracking = (headRaw: string, operands: AsmOperandNode[]) => {
+    const head = headRaw.toLowerCase();
+    if (
+      head === 'ld' &&
+      operands.length === 2 &&
+      operands[0]?.kind === 'Reg' &&
+      operands[0].name.toUpperCase() === 'SP'
+    ) {
+      if (operands[1]?.kind === 'Reg' && operands[1].name.toUpperCase() === 'IX') {
+        trackedSp.delta = -2;
+        trackedSp.valid = true;
+        trackedSp.invalid = false;
+      } else {
+        trackedSp.valid = false;
+        trackedSp.invalid = true;
+      }
+      return;
+    }
+    if (!trackedSp.valid) return;
+    if (head === 'push' && operands.length === 1) {
+      trackedSp.delta -= 2;
+      return;
+    }
+    if (head === 'pop' && operands.length === 1) {
+      trackedSp.delta += 2;
+      return;
+    }
+    if (
+      head === 'inc' &&
+      operands.length === 1 &&
+      operands[0]?.kind === 'Reg' &&
+      operands[0].name.toUpperCase() === 'SP'
+    ) {
+      trackedSp.delta += 1;
+      return;
+    }
+    if (
+      head === 'dec' &&
+      operands.length === 1 &&
+      operands[0]?.kind === 'Reg' &&
+      operands[0].name.toUpperCase() === 'SP'
+    ) {
+      trackedSp.delta -= 1;
+      return;
+    }
+  };
+  bindSpTracking({
+    applySpTracking,
+    invalidateSpTracking: () => {
+      trackedSp.valid = false;
+      trackedSp.invalid = true;
+    },
+  });
 
   let flow: FlowState = {
     reachable: true,
@@ -403,26 +473,6 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     },
   };
   const opExpansionStack: OpExpansionFrame[] = [];
-  const trackedSp = {
-    get delta() {
-      return trackedSpRef.delta;
-    },
-    set delta(value: number) {
-      trackedSpRef.delta = value;
-    },
-    get valid() {
-      return trackedSpRef.valid;
-    },
-    set valid(value: boolean) {
-      trackedSpRef.valid = value;
-    },
-    get invalid() {
-      return trackedSpRef.invalid;
-    },
-    set invalid(value: boolean) {
-      trackedSpRef.invalid = value;
-    },
-  };
   const {
     appendInvalidOpExpansionDiagnostic,
     sourceTagForSpan,
@@ -504,15 +554,15 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     resolveScalarBinding,
     diagIfRetStackImbalanced: (span, mnemonic) => {
       if (emitSyntheticEpilogue) return;
-      if (trackedSpRef.valid && trackedSpRef.delta !== 0) {
+      if (trackedSp.valid && trackedSp.delta !== 0) {
         diagAt(
           diagnostics,
           span,
-          `${mnemonic ?? 'ret'} with non-zero tracked stack delta (${trackedSpRef.delta}); function stack is imbalanced.`,
+          `${mnemonic ?? 'ret'} with non-zero tracked stack delta (${trackedSp.delta}); function stack is imbalanced.`,
         );
         return;
       }
-      if (!trackedSpRef.valid && trackedSpRef.invalid && hasStackSlots) {
+      if (!trackedSp.valid && trackedSp.invalid && hasStackSlots) {
         diagAt(
           diagnostics,
           span,
@@ -520,7 +570,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
         );
         return;
       }
-      if (!trackedSpRef.valid && hasStackSlots) {
+      if (!trackedSp.valid && hasStackSlots) {
         diagAt(
           diagnostics,
           span,
@@ -534,15 +584,15 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       const contractKind = options.contractKind ?? 'callee';
       const contractNoun =
         contractKind === 'typed-call' ? 'typed-call boundary contract' : 'callee stack contract';
-      if (hasStackSlots && trackedSpRef.valid && trackedSpRef.delta > 0) {
+      if (hasStackSlots && trackedSp.valid && trackedSp.delta > 0) {
         diagAt(
           diagnostics,
           span,
-          `${mnemonic} reached with positive tracked stack delta (${trackedSpRef.delta}); cannot verify ${contractNoun}.`,
+          `${mnemonic} reached with positive tracked stack delta (${trackedSp.delta}); cannot verify ${contractNoun}.`,
         );
         return;
       }
-      if (hasStackSlots && !trackedSpRef.valid && trackedSpRef.invalid) {
+      if (hasStackSlots && !trackedSp.valid && trackedSp.invalid) {
         diagAt(
           diagnostics,
           span,
@@ -550,7 +600,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
         );
         return;
       }
-      if (hasStackSlots && !trackedSpRef.valid) {
+      if (hasStackSlots && !trackedSp.valid) {
         diagAt(
           diagnostics,
           span,
@@ -590,17 +640,17 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     enforceEaRuntimeAtomBudget,
     hasStackSlots,
     emitSyntheticEpilogue,
-    getTrackedSpDelta: () => trackedSpRef.delta,
+    getTrackedSpDelta: () => trackedSp.delta,
     setTrackedSpDelta: (value) => {
-      trackedSpRef.delta = value;
+      trackedSp.delta = value;
     },
-    getTrackedSpValid: () => trackedSpRef.valid,
+    getTrackedSpValid: () => trackedSp.valid,
     setTrackedSpValid: (value) => {
-      trackedSpRef.valid = value;
+      trackedSp.valid = value;
     },
-    getTrackedSpInvalid: () => trackedSpRef.invalid,
+    getTrackedSpInvalid: () => trackedSp.invalid,
     setTrackedSpInvalid: (value) => {
-      trackedSpRef.invalid = value;
+      trackedSp.invalid = value;
     },
     rawTypedCallWarningsEnabled,
     callables,
@@ -717,6 +767,6 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     },
   });
   lowerAndFinalizeFunctionBody();
-
+  bindSpTracking(undefined);
   setCurrentCodeSegmentTag(currentCodeSegmentTag);
 }
