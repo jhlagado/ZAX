@@ -50,6 +50,8 @@ export const DiagnosticIds = {
 
   /** Generic emission/lowering error (layout/packing/symbol collisions, etc.). */
   EmitError: 'ZAX300',
+  /** Generic emission/lowering warning. */
+  EmitWarning: 'ZAX301',
 
   /** Op invocation arity mismatch against available overload set. */
   OpArityMismatch: 'ZAX310',
