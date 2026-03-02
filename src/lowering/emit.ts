@@ -83,6 +83,7 @@ import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { encodeInstruction } from '../z80/encode.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import { loadBinInput, loadHexInput } from './inputAssets.js';
+import { createRuntimeAtomBudgetHelpers } from './runtimeAtomBudget.js';
 import {
   alignTo,
   computeWrittenRange,
@@ -238,29 +239,6 @@ export function emitProgram(
 
   const reg8 = new Set(['A', 'B', 'C', 'D', 'E', 'H', 'L']);
   const reg16 = new Set(['BC', 'DE', 'HL']);
-  const runtimeAtomRegisterNames = new Set([
-    'A',
-    'B',
-    'C',
-    'D',
-    'E',
-    'H',
-    'L',
-    'HL',
-    'DE',
-    'BC',
-    'SP',
-    'IX',
-    'IY',
-    'IXH',
-    'IXL',
-    'IYH',
-    'IYL',
-    'AF',
-    "AF'",
-    'I',
-    'R',
-  ]);
   const reg8Code = new Map([
     ['B', 0],
     ['C', 1],
@@ -1513,113 +1491,17 @@ export function emitProgram(
     storageTypes.set(aliasLower, inferred);
   }
 
-  const countRuntimeAtomsInImmExpr = (expr: ImmExprNode): number => {
-    switch (expr.kind) {
-      case 'ImmLiteral':
-      case 'ImmSizeof':
-        return 0;
-      case 'ImmOffsetof':
-        return expr.path.steps.reduce(
-          (acc, step) =>
-            acc + (step.kind === 'OffsetofIndex' ? countRuntimeAtomsInImmExpr(step.expr) : 0),
-          0,
-        );
-      case 'ImmName':
-        return resolveScalarBinding(expr.name) ? 1 : 0;
-      case 'ImmUnary':
-        return countRuntimeAtomsInImmExpr(expr.expr);
-      case 'ImmBinary':
-        return countRuntimeAtomsInImmExpr(expr.left) + countRuntimeAtomsInImmExpr(expr.right);
-    }
-  };
-
-  const countRuntimeAtomsInEaExpr = (ea: EaExprNode): number => {
-    switch (ea.kind) {
-      case 'EaName':
-        return resolveScalarBinding(ea.name) || runtimeAtomRegisterNames.has(ea.name.toUpperCase())
-          ? 1
-          : 0;
-      case 'EaField':
-        return countRuntimeAtomsInEaExpr(ea.base);
-      case 'EaAdd':
-      case 'EaSub':
-        return countRuntimeAtomsInEaExpr(ea.base) + countRuntimeAtomsInImmExpr(ea.offset);
-      case 'EaIndex': {
-        const baseAtoms = countRuntimeAtomsInEaExpr(ea.base);
-        switch (ea.index.kind) {
-          case 'IndexImm':
-            return baseAtoms + countRuntimeAtomsInImmExpr(ea.index.value);
-          case 'IndexReg8':
-          case 'IndexReg16':
-          case 'IndexMemHL':
-            return baseAtoms + 1;
-          case 'IndexMemIxIy':
-            return baseAtoms + 1 + (ea.index.disp ? countRuntimeAtomsInImmExpr(ea.index.disp) : 0);
-          case 'IndexEa':
-            return baseAtoms + Math.max(1, countRuntimeAtomsInEaExpr(ea.index.expr));
-        }
-      }
-    }
-  };
-
-  const enforceEaRuntimeAtomBudget = (operand: AsmOperandNode, context: string): boolean => {
-    if (operand.kind !== 'Ea' && operand.kind !== 'Mem') return true;
-    const atoms = countRuntimeAtomsInEaExpr(operand.expr);
-    if (atoms <= 1) return true;
-    diagAt(
-      diagnostics,
-      operand.span,
-      `${context} exceeds runtime-atom budget (max 1; found ${atoms}).`,
-    );
-    return false;
-  };
-
-  const countRuntimeAtomsForDirectCallSiteEa = (ea: EaExprNode): number => {
-    switch (ea.kind) {
-      case 'EaName': {
-        const lower = ea.name.toLowerCase();
-        const isBoundStorageName =
-          stackSlotOffsets.has(lower) || stackSlotTypes.has(lower) || storageTypes.has(lower);
-        if (isBoundStorageName) return 0;
-        return runtimeAtomRegisterNames.has(ea.name.toUpperCase()) ? 1 : 0;
-      }
-      case 'EaField':
-        return countRuntimeAtomsForDirectCallSiteEa(ea.base);
-      case 'EaAdd':
-      case 'EaSub':
-        return (
-          countRuntimeAtomsForDirectCallSiteEa(ea.base) + countRuntimeAtomsInImmExpr(ea.offset)
-        );
-      case 'EaIndex': {
-        const baseAtoms = countRuntimeAtomsForDirectCallSiteEa(ea.base);
-        switch (ea.index.kind) {
-          case 'IndexImm':
-            return baseAtoms + countRuntimeAtomsInImmExpr(ea.index.value);
-          case 'IndexReg8':
-          case 'IndexReg16':
-          case 'IndexMemHL':
-            return baseAtoms + 1;
-          case 'IndexMemIxIy':
-            return baseAtoms + 1 + (ea.index.disp ? countRuntimeAtomsInImmExpr(ea.index.disp) : 0);
-          case 'IndexEa':
-            return baseAtoms + Math.max(1, countRuntimeAtomsForDirectCallSiteEa(ea.index.expr));
-        }
-      }
-    }
-  };
-
-  const enforceDirectCallSiteEaBudget = (operand: AsmOperandNode, calleeName: string): boolean => {
-    if (operand.kind !== 'Ea' && operand.kind !== 'Mem') return true;
-    const atoms = countRuntimeAtomsForDirectCallSiteEa(operand.expr);
-    if (atoms === 0) return true;
-    const form = operand.kind === 'Mem' ? '(ea)' : 'ea';
-    diagAt(
-      diagnostics,
-      operand.span,
-      `Direct call-site ${form} argument for "${calleeName}" must be runtime-atom-free in v0.2 (found ${atoms}). Stage dynamic addressing in prior instructions and pass a register or precomputed slot value.`,
-    );
-    return false;
-  };
+  const {
+    enforceDirectCallSiteEaBudget,
+    enforceEaRuntimeAtomBudget,
+  } = createRuntimeAtomBudgetHelpers({
+    diagnostics,
+    diagAt,
+    resolveScalarBinding,
+    stackSlotOffsets,
+    stackSlotTypes,
+    storageTypes,
+  });
 
   const resolveEa = (ea: EaExprNode, span: SourceSpan): EaResolution | undefined => {
     const go = (expr: EaExprNode, visitingAliases: Set<string>): EaResolution | undefined => {
