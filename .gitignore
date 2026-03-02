@@ -8,6 +8,7 @@ coverage/
 .vitest/
 .yarn-cache/
 .codex/
+.claude/
 .tmp/
 
 out/
