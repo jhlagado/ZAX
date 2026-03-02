@@ -6,7 +6,6 @@ import type {
   EnumDeclNode,
   EaExprNode,
   ExternDeclNode,
-  ExternFuncNode,
   FuncDeclNode,
   HexDeclNode,
   ImmExprNode,
@@ -28,24 +27,12 @@ import type {
 } from '../formats/types.js';
 import type { CompileEnv } from '../semantics/env.js';
 import type { FunctionLoweringContext } from './functionLowering.js';
+import type {
+  Callable,
+  PendingSymbol,
+  SectionKind,
+} from './loweringTypes.js';
 import type { AggregateType, ScalarKind } from './typeResolution.js';
-
-type PendingSymbol = {
-  kind: 'label' | 'data' | 'var';
-  name: string;
-  section: 'code' | 'data' | 'var';
-  offset: number;
-  file?: string;
-  line?: number;
-  scope?: 'global' | 'local';
-  size?: number;
-};
-
-type SectionKind = 'code' | 'data' | 'var';
-
-type Callable =
-  | { kind: 'func'; node: FuncDeclNode }
-  | { kind: 'extern'; node: ExternFuncNode; targetLower: string };
 
 type Context = Omit<FunctionLoweringContext, 'item'> & {
   program: ProgramNode;

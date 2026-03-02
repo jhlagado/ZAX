@@ -7,9 +7,7 @@ import type {
   ImmExprNode,
   SourceSpan,
 } from '../frontend/ast.js';
-import type { EmittedSourceSegment } from '../formats/types.js';
-
-type SourceSegmentTag = Omit<EmittedSourceSegment, 'start' | 'end'>;
+import type { SourceSegmentTag } from './loweringTypes.js';
 
 export type FlowState = {
   reachable: boolean;
