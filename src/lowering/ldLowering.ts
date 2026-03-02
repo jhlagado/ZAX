@@ -1,55 +1,137 @@
 import type { StepPipeline } from '../addressing/steps.js';
+import type { Diagnostic } from '../diagnostics/types.js';
 import type { AsmInstructionNode, AsmOperandNode, EaExprNode } from '../frontend/ast.js';
+import type { ImmExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';
+import type { CompileEnv } from '../semantics/env.js';
+import type { EaResolution } from './eaResolution.js';
+import type { ScalarKind } from './typeResolution.js';
 
-export function createLdLoweringHelpers(ctx: any) {
-  const {
-    LOAD_RP_FVAR,
-    LOAD_RP_GLOB,
-    STORE_RP_FVAR,
-    STORE_RP_GLOB,
-    TEMPLATE_L_ABC,
-    TEMPLATE_L_DE,
-    TEMPLATE_L_HL,
-    TEMPLATE_LW_BC,
-    TEMPLATE_LW_DE,
-    TEMPLATE_LW_HL,
-    TEMPLATE_S_ANY,
-    TEMPLATE_S_HL,
-    TEMPLATE_SW_DEBC,
-    TEMPLATE_SW_HL,
-    buildEaBytePipeline,
-    buildEaWordPipeline,
-    canUseScalarWordAccessor,
-    diagAt,
-    diagnostics,
-    emitAbs16Fixup,
-    emitAbs16FixupEd,
-    emitAbs16FixupPrefixed,
-    emitInstr,
-    emitLoadWordFromHlAddress,
-    emitRawCodeBytes,
-    emitScalarWordLoad,
-    emitScalarWordStore,
-    emitStepPipeline,
-    emitStoreSavedHlToEa,
-    emitStoreWordToHlAddress,
-    env,
-    evalImmExpr,
-    formatIxDisp,
-    isWordCompatibleScalarKind,
-    loadImm16ToHL,
-    materializeEaAddressToHL,
-    reg8Code,
-    resolveEa,
-    resolveScalarBinding,
-    resolveScalarKind,
-    resolveScalarTypeForEa,
-    resolveScalarTypeForLd,
-    resolvedScalarKind,
-    setSpTrackingInvalid,
-    stackSlotOffsets,
-    storageTypes,
-  } = ctx;
+type LdLoweringContext = {
+  LOAD_RP_FVAR: (rp: 'HL' | 'DE' | 'BC', ixDisp: number) => StepPipeline;
+  LOAD_RP_GLOB: (rp: 'HL' | 'DE' | 'BC', baseLower: string) => StepPipeline;
+  STORE_RP_FVAR: (rp: 'HL' | 'DE' | 'BC', ixDisp: number) => StepPipeline;
+  STORE_RP_GLOB: (rp: 'HL' | 'DE' | 'BC', baseLower: string) => StepPipeline;
+  TEMPLATE_L_ABC: (dest: string, ea: StepPipeline) => StepPipeline;
+  TEMPLATE_L_DE: (dest: 'D' | 'E', ea: StepPipeline) => StepPipeline;
+  TEMPLATE_L_HL: (dest: 'H' | 'L', ea: StepPipeline) => StepPipeline;
+  TEMPLATE_LW_BC: (ea: StepPipeline) => StepPipeline;
+  TEMPLATE_LW_DE: (ea: StepPipeline) => StepPipeline;
+  TEMPLATE_LW_HL: (ea: StepPipeline) => StepPipeline;
+  TEMPLATE_S_ANY: (src: string, ea: StepPipeline) => StepPipeline;
+  TEMPLATE_S_HL: (src: 'H' | 'L', ea: StepPipeline) => StepPipeline;
+  TEMPLATE_SW_DEBC: (src: 'DE' | 'BC', ea: StepPipeline) => StepPipeline;
+  TEMPLATE_SW_HL: (ea: StepPipeline) => StepPipeline;
+  buildEaBytePipeline: (ea: EaExprNode, span: SourceSpan) => StepPipeline | null;
+  buildEaWordPipeline: (ea: EaExprNode, span: SourceSpan) => StepPipeline | null;
+  canUseScalarWordAccessor: (resolved: EaResolution | undefined) => boolean;
+  diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
+  diagnostics: Diagnostic[];
+  emitAbs16Fixup: (
+    opcode: number,
+    target: string,
+    addend: number,
+    span: SourceSpan,
+    asmText?: string,
+  ) => void;
+  emitAbs16FixupEd: (
+    opcode: number,
+    target: string,
+    addend: number,
+    span: SourceSpan,
+    asmText?: string,
+  ) => void;
+  emitAbs16FixupPrefixed: (
+    prefix: number,
+    opcode: number,
+    target: string,
+    addend: number,
+    span: SourceSpan,
+    asmText?: string,
+  ) => void;
+  emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
+  emitLoadWordFromHlAddress: (target: 'HL' | 'DE' | 'BC', span: SourceSpan) => boolean;
+  emitRawCodeBytes: (bytes: Uint8Array, file: string, asmText: string) => void;
+  emitScalarWordLoad: (
+    target: 'HL' | 'DE' | 'BC',
+    resolved: EaResolution | undefined,
+    span: SourceSpan,
+  ) => boolean;
+  emitScalarWordStore: (
+    source: 'HL' | 'DE' | 'BC',
+    resolved: EaResolution | undefined,
+    span: SourceSpan,
+  ) => boolean;
+  emitStepPipeline: (pipeline: StepPipeline, span: SourceSpan) => boolean;
+  emitStoreSavedHlToEa: (ea: EaExprNode, span: SourceSpan) => boolean;
+  emitStoreWordToHlAddress: (source: 'DE' | 'BC', span: SourceSpan) => boolean;
+  env: CompileEnv;
+  evalImmExpr: (expr: ImmExprNode) => number | undefined;
+  formatIxDisp: (disp: number) => string;
+  isWordCompatibleScalarKind: (
+    scalar: ScalarKind | undefined,
+  ) => scalar is 'word' | 'addr';
+  loadImm16ToHL: (value: number, span: SourceSpan) => boolean;
+  materializeEaAddressToHL: (ea: EaExprNode, span: SourceSpan) => boolean;
+  reg8Code: ReadonlyMap<string, number>;
+  resolveEa: (ea: EaExprNode, span: SourceSpan) => EaResolution | undefined;
+  resolveScalarBinding: (name: string) => ScalarKind | undefined;
+  resolveScalarKind: (typeExpr: TypeExprNode, seen?: Set<string>) => ScalarKind | undefined;
+  resolveScalarTypeForEa: (ea: EaExprNode) => ScalarKind | undefined;
+  resolveScalarTypeForLd: (ea: EaExprNode) => ScalarKind | undefined;
+  resolvedScalarKind: (resolved: EaResolution | undefined) => ScalarKind | undefined;
+  setSpTrackingInvalid: () => void;
+  stackSlotOffsets: ReadonlyMap<string, number>;
+  storageTypes: ReadonlyMap<string, TypeExprNode>;
+};
+
+export function createLdLoweringHelpers({
+  LOAD_RP_FVAR,
+  LOAD_RP_GLOB,
+  STORE_RP_FVAR,
+  STORE_RP_GLOB,
+  TEMPLATE_L_ABC,
+  TEMPLATE_L_DE,
+  TEMPLATE_L_HL,
+  TEMPLATE_LW_BC,
+  TEMPLATE_LW_DE,
+  TEMPLATE_LW_HL,
+  TEMPLATE_S_ANY,
+  TEMPLATE_S_HL,
+  TEMPLATE_SW_DEBC,
+  TEMPLATE_SW_HL,
+  buildEaBytePipeline,
+  buildEaWordPipeline,
+  canUseScalarWordAccessor,
+  diagAt,
+  diagnostics,
+  emitAbs16Fixup,
+  emitAbs16FixupEd,
+  emitAbs16FixupPrefixed,
+  emitInstr,
+  emitLoadWordFromHlAddress,
+  emitRawCodeBytes,
+  emitScalarWordLoad,
+  emitScalarWordStore,
+  emitStepPipeline,
+  emitStoreSavedHlToEa,
+  emitStoreWordToHlAddress,
+  env,
+  evalImmExpr,
+  formatIxDisp,
+  isWordCompatibleScalarKind,
+  loadImm16ToHL,
+  materializeEaAddressToHL,
+  reg8Code,
+  resolveEa,
+  resolveScalarBinding,
+  resolveScalarKind,
+  resolveScalarTypeForEa,
+  resolveScalarTypeForLd,
+  resolvedScalarKind,
+  setSpTrackingInvalid,
+  stackSlotOffsets,
+  storageTypes,
+}: LdLoweringContext) {
 
   const lowerLdWithEa = (inst: AsmInstructionNode): boolean => {
     if (inst.head.toLowerCase() !== 'ld' || inst.operands.length !== 2) return false;
@@ -706,7 +788,7 @@ export function createLdLoweringHelpers(ctx: any) {
         resolved?.typeExpr !== undefined
           ? resolveScalarKind(resolved.typeExpr, new Set())
           : undefined;
-      const v = evalImmExpr(src.expr, env, diagnostics);
+      const v = evalImmExpr(src.expr);
       if (v === undefined) {
         diagAt(diagnostics, inst.span, `ld (ea), imm expects a constant imm expression.`);
         return true;
