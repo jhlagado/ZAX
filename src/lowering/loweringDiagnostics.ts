@@ -52,7 +52,7 @@ export function diagAtWithSeverityAndId(
 
 export function warnAt(diagnostics: Diagnostic[], span: SourceSpan, message: string): void {
   diagnostics.push({
-    id: DiagnosticIds.EmitError,
+    id: DiagnosticIds.EmitWarning,
     severity: 'warning',
     message,
     file: span.file,
