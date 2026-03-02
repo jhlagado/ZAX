@@ -101,6 +101,7 @@ import {
   type FlowState,
   type OpExpansionFrame,
 } from './functionBodySetup.js';
+import { lowerFunctionDecl } from './functionLowering.js';
 import {
   cloneEaExpr,
   cloneImmExpr,
@@ -366,7 +367,7 @@ export function emitProgram(
   const rawAddressSymbols = new Set<string>();
   const stackSlotTypes = new Map<string, TypeExprNode>();
   const stackSlotOffsets = new Map<string, number>();
-  let localAliasTargets = new Map<string, EaExprNode>();
+  const localAliasTargets = new Map<string, EaExprNode>();
   let spDeltaTracked = 0;
   let spTrackingValid = true;
   let spTrackingInvalidatedByMutation = false;
@@ -1097,332 +1098,47 @@ export function emitProgram(
       }
 
       if (item.kind === 'FuncDecl') {
-        stackSlotOffsets.clear();
-        stackSlotTypes.clear();
-        localAliasTargets = new Map<string, EaExprNode>();
-        spDeltaTracked = 0;
-        spTrackingValid = true;
-        spTrackingInvalidatedByMutation = false;
-
-        const localDecls = item.locals?.decls ?? [];
-        const returnRegs = (item.returnRegs ?? []).map((r) => r.toUpperCase());
-        const basePreserveOrder: string[] = ['AF', 'BC', 'DE', 'HL'];
-        let preserveSet = basePreserveOrder.filter((r) => !returnRegs.includes(r));
-        const preserveBytes = preserveSet.length * 2;
-        const shouldPreserveTypedBoundary = preserveSet.length > 0;
-        const hlPreserved = preserveSet.includes('HL');
-        let localSlotCount = 0;
-        const localScalarInitializers: Array<{
-          name: string;
-          expr?: ImmExprNode;
-          span: SourceSpan;
-          scalarKind: 'byte' | 'word' | 'addr';
-        }> = [];
-        for (let li = 0; li < localDecls.length; li++) {
-          const decl = localDecls[li]!;
-          const declLower = decl.name.toLowerCase();
-          if (decl.typeExpr) {
-            const scalarKind = resolveScalarKind(decl.typeExpr);
-            if (!scalarKind) {
-              diagAt(
-                diagnostics,
-                decl.span,
-                `Non-scalar local storage declaration "${decl.name}" requires alias form ("${decl.name} = rhs").`,
-              );
-              continue;
-            }
-            // Locals are packed tightly starting at IX-2, independent of preserve bytes.
-            const localIxDisp = -(2 * (localSlotCount + 1));
-            stackSlotOffsets.set(declLower, localIxDisp);
-            stackSlotTypes.set(declLower, decl.typeExpr);
-            localSlotCount++;
-            const init = decl.initializer;
-            if (init && init.kind !== 'VarInitValue') {
-              diagAt(
-                diagnostics,
-                decl.span,
-                `Unsupported typed alias form for "${decl.name}": use "${decl.name} = rhs" for alias initialization.`,
-              );
-              continue;
-            }
-            localScalarInitializers.push({
-              name: decl.name,
-              ...(init ? { expr: init.expr } : {}),
-              span: decl.span,
-              scalarKind,
-            });
-            continue;
-          }
-          const init = decl.initializer;
-          if (init?.kind !== 'VarInitAlias') {
-            diagAt(
-              diagnostics,
-              decl.span,
-              `Invalid local declaration "${decl.name}": expected typed storage or alias initializer.`,
-            );
-            continue;
-          }
-          localAliasTargets.set(declLower, init.expr);
-          const inferred = resolveEaTypeExpr(init.expr);
-          if (!inferred) {
-            diagAt(
-              diagnostics,
-              decl.span,
-              `Incompatible inferred alias binding for "${decl.name}": unable to infer type from alias source.`,
-            );
-            continue;
-          }
-          stackSlotTypes.set(declLower, inferred);
-        }
-        const localBytes = localSlotCount * 2;
-        const frameSize = localBytes + preserveBytes;
-        const argc = item.params.length;
-        const hasStackSlots = frameSize > 0 || argc > 0 || preserveBytes > 0;
-        for (let paramIndex = 0; paramIndex < argc; paramIndex++) {
-          const p = item.params[paramIndex]!;
-          const base = 4 + 2 * paramIndex;
-          stackSlotOffsets.set(p.name.toLowerCase(), base);
-          stackSlotTypes.set(p.name.toLowerCase(), p.typeExpr);
-        }
-
-        let epilogueLabel = `__zax_epilogue_${generatedLabelCounter++}`;
-        while (taken.has(epilogueLabel)) {
-          epilogueLabel = `__zax_epilogue_${generatedLabelCounter++}`;
-        }
-        const emitSyntheticEpilogue =
-          preserveSet.length > 0 || hasStackSlots || localScalarInitializers.length > 0;
-
-        // Function entry label.
-        traceComment(codeOffset, `func ${item.name} begin`);
-        if (taken.has(item.name)) {
-          diag(diagnostics, item.span.file, `Duplicate symbol name "${item.name}".`);
-        } else {
-          taken.add(item.name);
-          traceLabel(codeOffset, item.name);
-          pending.push({
-            kind: 'label',
-            name: item.name,
-            section: 'code',
-            offset: codeOffset,
-            file: item.span.file,
-            line: item.span.start.line,
-            scope: 'global',
-          });
-        }
-
-        if (hasStackSlots) {
-          const prevTag = currentCodeSegmentTag;
-          currentCodeSegmentTag = {
-            file: item.span.file,
-            line: item.span.start.line,
-            column: item.span.start.column,
-            kind: 'code',
-            confidence: 'high',
-          };
-          try {
-            emitInstr('push', [{ kind: 'Reg', span: item.span, name: 'IX' }], item.span);
-            emitInstr(
-              'ld',
-              [
-                { kind: 'Reg', span: item.span, name: 'IX' },
-                {
-                  kind: 'Imm',
-                  span: item.span,
-                  expr: { kind: 'ImmLiteral', span: item.span, value: 0 },
-                },
-              ],
-              item.span,
-            );
-            emitInstr(
-              'add',
-              [
-                { kind: 'Reg', span: item.span, name: 'IX' },
-                { kind: 'Reg', span: item.span, name: 'SP' },
-              ],
-              item.span,
-            );
-          } finally {
-            currentCodeSegmentTag = prevTag;
-          }
-        }
-
-        for (const init of localScalarInitializers) {
-          const prevTag = currentCodeSegmentTag;
-          currentCodeSegmentTag = {
-            file: init.span.file,
-            line: init.span.start.line,
-            column: init.span.start.column,
-            kind: 'code',
-            confidence: 'high',
-          };
-          try {
-            const initValue =
-              init.expr !== undefined ? evalImmExpr(init.expr, env, diagnostics) : 0;
-            if (init.expr !== undefined && initValue === undefined) {
-              diagAt(
-                diagnostics,
-                init.span,
-                `Failed to evaluate local initializer for "${init.name}".`,
-              );
-              continue;
-            }
-            const narrowed = init.scalarKind === 'byte' ? initValue! & 0xff : initValue! & 0xffff;
-            if (hlPreserved) {
-              // Swap pattern: save incoming HL, load initializer, swap to stack, restore HL.
-              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
-              if (!loadImm16ToHL(narrowed, init.span)) continue;
-              emitInstr(
-                'ex',
-                [
-                  {
-                    kind: 'Mem',
-                    span: init.span,
-                    expr: { kind: 'EaName', span: init.span, name: 'SP' },
-                  },
-                  { kind: 'Reg', span: init.span, name: 'HL' },
-                ],
-                init.span,
-              );
-            } else {
-              if (!loadImm16ToHL(narrowed, init.span)) continue;
-              emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
-            }
-          } finally {
-            currentCodeSegmentTag = prevTag;
-          }
-        }
-
-        if (shouldPreserveTypedBoundary) {
-          const prevTag = currentCodeSegmentTag;
-          currentCodeSegmentTag = {
-            file: item.span.file,
-            line: item.span.start.line,
-            column: item.span.start.column,
-            kind: 'code',
-            confidence: 'high',
-          };
-          try {
-            for (const reg of preserveSet) {
-              emitInstr('push', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
-            }
-          } finally {
-            currentCodeSegmentTag = prevTag;
-          }
-        }
-
-        // Track SP deltas relative to the start of user asm, after prologue reservation.
-        spDeltaTracked = 0;
-        spTrackingValid = true;
-        spTrackingInvalidatedByMutation = false;
-
-        let flow: FlowState = {
-          reachable: true,
-          spDelta: 0,
-          spValid: true,
-          spInvalidDueToMutation: false,
-        };
-        const flowRef: { readonly current: FlowState } = {
-          get current() {
-            return flow;
-          },
-        };
-        const opExpansionStack: OpExpansionFrame[] = [];
-        const trackedSp = {
-          get delta() {
-            return spDeltaTracked;
-          },
-          set delta(value: number) {
-            spDeltaTracked = value;
-          },
-          get valid() {
-            return spTrackingValid;
-          },
-          set valid(value: boolean) {
-            spTrackingValid = value;
-          },
-          get invalid() {
-            return spTrackingInvalidatedByMutation;
-          },
-          set invalid(value: boolean) {
-            spTrackingInvalidatedByMutation = value;
-          },
-        };
-        const {
-          appendInvalidOpExpansionDiagnostic,
-          sourceTagForSpan,
-          withCodeSourceTag,
-          syncFromFlow: syncFromFlowBase,
-          syncToFlow: syncToFlowBase,
-          snapshotFlow,
-          restoreFlow: restoreFlowBase,
-          newHiddenLabel,
-          defineCodeLabel,
-          emitJumpTo,
-          emitJumpCondTo,
-          emitJumpIfFalse,
-          emitVirtualReg16Transfer,
-          joinFlows,
-          emitSelectCompareToImm16,
-          emitSelectCompareReg8ToImm8,
-          loadSelectorIntoHL,
-        } = createFunctionBodySetupHelpers({
+        lowerFunctionDecl({
+          item,
           diagnostics,
+          diag,
           diagAt,
           diagAtWithId,
-          getCurrentCodeSegmentTag: () => currentCodeSegmentTag,
-          setCurrentCodeSegmentTag: (tag) => {
-            currentCodeSegmentTag = tag;
-          },
+          diagAtWithSeverityAndId,
+          warnAt,
           taken,
-          traceLabel,
           pending,
-          getCodeOffset: () => codeOffset,
-          emitAbs16Fixup,
-          conditionNameFromOpcode,
-          inverseConditionName,
-          conditionOpcodeFromName,
-          emitInstr,
-          emitRawCodeBytes,
-          loadImm16ToHL,
-          pushEaAddress,
-          pushMemValue,
-          evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
-          env,
-          reg8,
-          generatedLabelCounterRef: {
+          traceComment,
+          traceLabel,
+          currentCodeSegmentTagRef: {
             get current() {
-              return generatedLabelCounter;
+              return currentCodeSegmentTag;
             },
-            set current(value: number) {
-              generatedLabelCounter = value;
+            set current(value: SourceSegmentTag | undefined) {
+              currentCodeSegmentTag = value;
             },
           },
-          formatAsmOperandForOpDiag,
-        });
-        const syncFromFlow = (): void => {
-          syncFromFlowBase(flow, trackedSp);
-        };
-        const syncToFlow = (): void => {
-          syncToFlowBase(flow, trackedSp);
-        };
-        const restoreFlow = (state: FlowState): void => {
-          restoreFlowBase(
-            {
-              get current() {
-                return flow;
-              },
-              set current(value: FlowState) {
-                flow = value;
-              },
+          trackedSpRef: {
+            get delta() {
+              return spDeltaTracked;
             },
-            state,
-            trackedSp,
-          );
-        };
-
-        const { lowerAsmInstructionDispatcher } = createAsmInstructionLoweringHelpers({
-          diagnostics,
-          diagAt,
+            set delta(value: number) {
+              spDeltaTracked = value;
+            },
+            get valid() {
+              return spTrackingValid;
+            },
+            set valid(value: boolean) {
+              spTrackingValid = value;
+            },
+            get invalid() {
+              return spTrackingInvalidatedByMutation;
+            },
+            set invalid(value: boolean) {
+              spTrackingInvalidatedByMutation = value;
+            },
+          },
+          getCodeOffset: () => codeOffset,
           emitInstr,
           emitRawCodeBytes,
           emitAbs16Fixup,
@@ -1433,610 +1149,58 @@ export function emitProgram(
           callConditionOpcodeFromName,
           jrConditionOpcodeFromName,
           conditionOpcode,
+          inverseConditionName,
           symbolicTargetFromExpr,
-          evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
+          evalImmExpr,
+          env,
           resolveScalarBinding,
-          diagIfRetStackImbalanced: (span, mnemonic) => {
-            if (emitSyntheticEpilogue) return;
-            if (spTrackingValid && spDeltaTracked !== 0) {
-              diagAt(
-                diagnostics,
-                span,
-                `${mnemonic ?? 'ret'} with non-zero tracked stack delta (${spDeltaTracked}); function stack is imbalanced.`,
-              );
-              return;
-            }
-            if (!spTrackingValid && spTrackingInvalidatedByMutation && hasStackSlots) {
-              diagAt(
-                diagnostics,
-                span,
-                `${mnemonic ?? 'ret'} reached after untracked SP mutation; cannot verify function stack balance.`,
-              );
-              return;
-            }
-            if (!spTrackingValid && hasStackSlots) {
-              diagAt(
-                diagnostics,
-                span,
-                `${mnemonic ?? 'ret'} reached with unknown stack depth; cannot verify function stack balance.`,
-              );
-            }
-          },
-          diagIfCallStackUnverifiable: (options) => {
-            const span = options.span;
-            const mnemonic = options.mnemonic ?? 'call';
-            const contractKind = options.contractKind ?? 'callee';
-            const contractNoun =
-              contractKind === 'typed-call' ? 'typed-call boundary contract' : 'callee stack contract';
-            if (hasStackSlots && spTrackingValid && spDeltaTracked > 0) {
-              diagAt(
-                diagnostics,
-                span,
-                `${mnemonic} reached with positive tracked stack delta (${spDeltaTracked}); cannot verify ${contractNoun}.`,
-              );
-              return;
-            }
-            if (hasStackSlots && !spTrackingValid && spTrackingInvalidatedByMutation) {
-              diagAt(
-                diagnostics,
-                span,
-                `${mnemonic} reached after untracked SP mutation; cannot verify ${contractNoun}.`,
-              );
-              return;
-            }
-            if (hasStackSlots && !spTrackingValid) {
-              diagAt(
-                diagnostics,
-                span,
-                `${mnemonic} reached with unknown stack depth; cannot verify ${contractNoun}.`,
-              );
-            }
-          },
-          warnIfRawCallTargetsTypedCallable: (span, symbolicTarget) => {
-            if (!rawTypedCallWarningsEnabled || !symbolicTarget || symbolicTarget.addend !== 0) return;
-            const callable = callables.get(symbolicTarget.baseLower);
-            if (!callable) return;
-            const typedName = callable.node.name;
-            diagAtWithSeverityAndId(
-              diagnostics,
-              span,
-              DiagnosticIds.RawCallTypedTargetWarning,
-              'warning',
-              `Raw call targets typed callable \"${typedName}\" and bypasses typed-call argument/preservation semantics; use typed call syntax unless raw ABI is intentional.`,
-            );
-          },
+          resolveScalarKind,
+          resolveEaTypeExpr,
+          resolveScalarTypeForEa,
+          resolveArrayType,
+          buildEaWordPipeline,
+          enforceEaRuntimeAtomBudget,
+          enforceDirectCallSiteEaBudget,
+          pushEaAddress,
+          pushMemValue,
+          pushImm16,
+          pushZeroExtendedReg8,
+          loadImm16ToHL,
+          stackSlotOffsets,
+          stackSlotTypes,
+          localAliasTargets,
+          storageTypes,
+          rawTypedCallWarningsEnabled,
+          callables,
+          opsByName,
+          opStackPolicyMode,
+          matcherMatchesOperand,
+          formatOpSignature,
+          formatAsmOperandForOpDiag,
+          firstOpOverloadMismatchReason,
+          formatOpDefinitionForDiag,
+          selectMostSpecificOpOverload,
+          summarizeOpStackEffect,
+          cloneImmExpr,
+          cloneEaExpr,
+          cloneOperand,
+          flattenEaDottedName,
+          normalizeFixedToken,
+          typeDisplay,
+          sameTypeShape,
+          emitStepPipeline,
           lowerLdWithEa,
-          emitVirtualReg16Transfer,
-          emitSyntheticEpilogue,
-          epilogueLabel,
-          emitJumpTo,
-          emitJumpCondTo,
-          syncToFlow,
-          flow,
-        });
-
-        const emitAsmInstruction = (asmItem: AsmInstructionNode): void => {
-          const prevTag = currentCodeSegmentTag;
-          const diagnosticsStart = diagnostics.length;
-          currentCodeSegmentTag = sourceTagForSpan(asmItem.span, opExpansionStack);
-          try {
-            for (const operand of asmItem.operands) {
-              if (!enforceEaRuntimeAtomBudget(operand, 'Source ea expression')) return;
-            }
-
-            const diagIfRetStackImbalanced = (mnemonic = 'ret'): void => {
-              if (emitSyntheticEpilogue) return;
-              if (spTrackingValid && spDeltaTracked !== 0) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `${mnemonic} with non-zero tracked stack delta (${spDeltaTracked}); function stack is imbalanced.`,
-                );
-                return;
-              }
-              if (!spTrackingValid && spTrackingInvalidatedByMutation && hasStackSlots) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `${mnemonic} reached after untracked SP mutation; cannot verify function stack balance.`,
-                );
-                return;
-              }
-              if (!spTrackingValid && hasStackSlots) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `${mnemonic} reached with unknown stack depth; cannot verify function stack balance.`,
-                );
-              }
-            };
-            const diagIfCallStackUnverifiable = (options?: {
-              mnemonic?: string;
-              contractKind?: 'callee' | 'typed-call';
-            }): void => {
-              const mnemonic = options?.mnemonic ?? 'call';
-              const contractKind = options?.contractKind ?? 'callee';
-              const contractNoun =
-                contractKind === 'typed-call'
-                  ? 'typed-call boundary contract'
-                  : 'callee stack contract';
-              if (hasStackSlots && spTrackingValid && spDeltaTracked > 0) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `${mnemonic} reached with positive tracked stack delta (${spDeltaTracked}); cannot verify ${contractNoun}.`,
-                );
-                return;
-              }
-              if (hasStackSlots && !spTrackingValid && spTrackingInvalidatedByMutation) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `${mnemonic} reached after untracked SP mutation; cannot verify ${contractNoun}.`,
-                );
-                return;
-              }
-              if (hasStackSlots && !spTrackingValid) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `${mnemonic} reached with unknown stack depth; cannot verify ${contractNoun}.`,
-                );
-              }
-            };
-            const warnIfRawCallTargetsTypedCallable = (
-              symbolicTarget: { baseLower: string; addend: number } | undefined,
-            ): void => {
-              if (!rawTypedCallWarningsEnabled || !symbolicTarget || symbolicTarget.addend !== 0) {
-                return;
-              }
-              const callable = callables.get(symbolicTarget.baseLower);
-              if (!callable) return;
-              const typedName = callable.node.name;
-              diagAtWithSeverityAndId(
-                diagnostics,
-                asmItem.span,
-                DiagnosticIds.RawCallTypedTargetWarning,
-                'warning',
-                `Raw call targets typed callable "${typedName}" and bypasses typed-call argument/preservation semantics; use typed call syntax unless raw ABI is intentional.`,
-              );
-            };
-            const callable = callables.get(asmItem.head.toLowerCase());
-            if (callable) {
-              const args = asmItem.operands;
-              const params = callable.kind === 'func' ? callable.node.params : callable.node.params;
-              const calleeName = callable.node.name;
-              // Caller-side preservation is never injected for typed calls (extern or internal);
-              // preservation is handled at the callee boundary.
-              const restorePreservedRegs = (): boolean => true;
-              if (args.length !== params.length) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `Call to "${asmItem.head}" has ${args.length} argument(s) but expects ${params.length}.`,
-                );
-                return;
-              }
-              const requiresDirectCallSiteEaBudget = (arg: AsmOperandNode): boolean => {
-                if (arg.kind === 'Mem') return true;
-                if (arg.kind !== 'Ea') return false;
-                // Scalar-typed ea values in typed call-arg position are value-semantic and
-                // are lowered like loads, so they follow the general source ea atom budget.
-                // Address-style call-site ea arguments stay runtime-atom-free in v0.2.
-                return resolveScalarTypeForEa(arg.expr) === undefined;
-              };
-              for (const arg of args) {
-                if (!requiresDirectCallSiteEaBudget(arg)) continue;
-                if (!enforceDirectCallSiteEaBudget(arg, calleeName)) return;
-              }
-
-              const typeForName = (name: string): TypeExprNode | undefined => {
-                const lower = name.toLowerCase();
-                return stackSlotTypes.get(lower) ?? storageTypes.get(lower);
-              };
-              const typeForArg = (arg: AsmOperandNode): TypeExprNode | undefined => {
-                if (arg.kind === 'Ea') return resolveEaTypeExpr(arg.expr);
-                if (arg.kind === 'Imm' && arg.expr.kind === 'ImmName')
-                  return typeForName(arg.expr.name);
-                return undefined;
-              };
-              const pushArgAddressFromName = (name: string): boolean =>
-                pushEaAddress({ kind: 'EaName', span: asmItem.span, name } as any, asmItem.span);
-              const pushArgAddressFromOperand = (arg: AsmOperandNode): boolean => {
-                if (arg.kind === 'Ea') return pushEaAddress(arg.expr, asmItem.span);
-                if (arg.kind === 'Imm' && arg.expr.kind === 'ImmName') {
-                  return pushArgAddressFromName(arg.expr.name);
-                }
-                return false;
-              };
-              const checkNonScalarParamCompatibility = (
-                param: ParamNode,
-                argType: TypeExprNode,
-              ): string | undefined => {
-                const paramArray = resolveArrayType(param.typeExpr);
-                const argArray = resolveArrayType(argType);
-                if (paramArray) {
-                  if (!argArray) {
-                    return `Incompatible non-scalar argument for parameter "${param.name}": expected ${typeDisplay(
-                      param.typeExpr,
-                    )}, got ${typeDisplay(argType)}.`;
-                  }
-                  if (!sameTypeShape(paramArray.element, argArray.element)) {
-                    return `Incompatible non-scalar argument for parameter "${param.name}": expected element type ${typeDisplay(
-                      paramArray.element,
-                    )}, got ${typeDisplay(argArray.element)}.`;
-                  }
-                  if (paramArray.length !== undefined) {
-                    if (argArray.length === undefined) {
-                      return `Incompatible non-scalar argument for parameter "${param.name}": expected ${typeDisplay(
-                        param.typeExpr,
-                      )}, got ${typeDisplay(argType)} (exact length proof required).`;
-                    }
-                    if (argArray.length !== paramArray.length) {
-                      return `Incompatible non-scalar argument for parameter "${param.name}": expected ${typeDisplay(
-                        param.typeExpr,
-                      )}, got ${typeDisplay(argType)}.`;
-                    }
-                  }
-                  return undefined;
-                }
-
-                if (!sameTypeShape(param.typeExpr, argType)) {
-                  return `Incompatible non-scalar argument for parameter "${param.name}": expected ${typeDisplay(
-                    param.typeExpr,
-                  )}, got ${typeDisplay(argType)}.`;
-                }
-                return undefined;
-              };
-
-              const pushArgValueFromName = (name: string, want: 'byte' | 'word'): boolean => {
-                const scalar = resolveScalarBinding(name);
-                if (scalar) {
-                  return pushMemValue(
-                    { kind: 'EaName', span: asmItem.span, name } as any,
-                    want,
-                    asmItem.span,
-                  );
-                }
-                return pushEaAddress(
-                  { kind: 'EaName', span: asmItem.span, name } as any,
-                  asmItem.span,
-                );
-              };
-              const pushArgValueFromEa = (ea: EaExprNode, want: 'byte' | 'word'): boolean => {
-                const scalar = resolveScalarTypeForEa(ea);
-                if (scalar) return pushMemValue(ea, want, asmItem.span);
-                return pushEaAddress(ea, asmItem.span);
-              };
-              const enumValueFromEa = (ea: EaExprNode): number | undefined => {
-                const name = flattenEaDottedName(ea);
-                if (!name) return undefined;
-                return env.enums.get(name);
-              };
-              let ok = true;
-              let pushedArgWords = 0;
-              for (let ai = args.length - 1; ai >= 0; ai--) {
-                const arg = args[ai]!;
-                const param = params[ai]!;
-                const scalarKind = resolveScalarKind(param.typeExpr);
-                if (!scalarKind) {
-                  const argType = typeForArg(arg);
-                  if (!argType) {
-                    diagAt(
-                      diagnostics,
-                      asmItem.span,
-                      `Incompatible non-scalar argument for parameter "${param.name}": expected address-style operand bound to non-scalar storage.`,
-                    );
-                    ok = false;
-                    break;
-                  }
-                  const compat = checkNonScalarParamCompatibility(param, argType);
-                  if (compat) {
-                    diagAt(diagnostics, asmItem.span, compat);
-                    ok = false;
-                    break;
-                  }
-                  if (!pushArgAddressFromOperand(arg)) {
-                    diagAt(
-                      diagnostics,
-                      asmItem.span,
-                      `Unsupported non-scalar argument form for "${param.name}" in call to "${asmItem.head}".`,
-                    );
-                    ok = false;
-                    break;
-                  }
-                  pushedArgWords++;
-                  continue;
-                }
-                const isByte = scalarKind === 'byte';
-
-                if (isByte) {
-                  if (arg.kind === 'Reg' && reg8.has(arg.name.toUpperCase())) {
-                    ok = pushZeroExtendedReg8(arg.name.toUpperCase(), asmItem.span);
-                    if (!ok) break;
-                    pushedArgWords++;
-                    continue;
-                  }
-                  if (arg.kind === 'Imm') {
-                    const v = evalImmExpr(arg.expr, env, diagnostics);
-                    if (v === undefined) {
-                      if (arg.expr.kind === 'ImmName') {
-                        ok = pushArgValueFromName(arg.expr.name, 'byte');
-                        if (!ok) break;
-                        pushedArgWords++;
-                        continue;
-                      }
-                      diagAt(
-                        diagnostics,
-                        asmItem.span,
-                        `Failed to evaluate argument "${param.name}".`,
-                      );
-                      ok = false;
-                      break;
-                    }
-                    ok = pushImm16(v & 0xff, asmItem.span);
-                    if (!ok) break;
-                    pushedArgWords++;
-                    continue;
-                  }
-                  if (arg.kind === 'Ea') {
-                    const enumVal = enumValueFromEa(arg.expr);
-                    if (enumVal !== undefined) {
-                      ok = pushImm16(enumVal & 0xff, asmItem.span);
-                      if (!ok) break;
-                      pushedArgWords++;
-                      continue;
-                    }
-                    ok = arg.explicitAddressOf
-                      ? pushEaAddress(arg.expr, asmItem.span)
-                      : pushArgValueFromEa(arg.expr, 'byte');
-                    if (!ok) break;
-                    pushedArgWords++;
-                    continue;
-                  }
-                  if (arg.kind === 'Mem') {
-                    ok = pushMemValue(arg.expr, 'byte', asmItem.span);
-                    if (!ok) break;
-                    pushedArgWords++;
-                    continue;
-                  }
-                  diagAt(
-                    diagnostics,
-                    asmItem.span,
-                    `Unsupported byte argument form for "${param.name}" in call to "${asmItem.head}".`,
-                  );
-                  ok = false;
-                  break;
-                } else {
-                  if (arg.kind === 'Reg' && reg16.has(arg.name.toUpperCase())) {
-                    const regUp = arg.name.toUpperCase();
-                    // Prefer templated store when EA is resolvable.
-                    const pipe = buildEaWordPipeline(
-                      { kind: 'EaName', span: asmItem.span, name: param.name },
-                      asmItem.span,
-                    );
-                    if (pipe) {
-                      const templated = TEMPLATE_SW_DEBC(regUp as 'DE' | 'BC', pipe);
-                      if (emitStepPipeline(templated, asmItem.span)) {
-                        pushedArgWords++;
-                        continue;
-                      }
-                    }
-                    ok = emitInstr(
-                      'push',
-                      [{ kind: 'Reg', span: asmItem.span, name: regUp }],
-                      asmItem.span,
-                    );
-                    if (!ok) break;
-                    pushedArgWords++;
-                    continue;
-                  }
-                  if (arg.kind === 'Reg' && reg8.has(arg.name.toUpperCase())) {
-                    ok = pushZeroExtendedReg8(arg.name.toUpperCase(), asmItem.span);
-                    if (!ok) break;
-                    pushedArgWords++;
-                    continue;
-                  }
-                  if (arg.kind === 'Imm') {
-                    const v = evalImmExpr(arg.expr, env, diagnostics);
-                    if (v === undefined) {
-                      if (arg.expr.kind === 'ImmName') {
-                        ok = pushArgValueFromName(arg.expr.name, 'word');
-                        if (!ok) break;
-                        pushedArgWords++;
-                        continue;
-                      }
-                      diagAt(
-                        diagnostics,
-                        asmItem.span,
-                        `Failed to evaluate argument "${param.name}".`,
-                      );
-                      ok = false;
-                      break;
-                    }
-                    ok = pushImm16(v & 0xffff, asmItem.span);
-                    if (!ok) break;
-                    pushedArgWords++;
-                    continue;
-                  }
-                  if (arg.kind === 'Ea') {
-                    const enumVal = enumValueFromEa(arg.expr);
-                    if (enumVal !== undefined) {
-                      ok = pushImm16(enumVal & 0xffff, asmItem.span);
-                      if (!ok) break;
-                      pushedArgWords++;
-                      continue;
-                    }
-                    ok = arg.explicitAddressOf
-                      ? pushEaAddress(arg.expr, asmItem.span)
-                      : pushArgValueFromEa(arg.expr, 'word');
-                    if (!ok) break;
-                    pushedArgWords++;
-                    continue;
-                  }
-                  if (arg.kind === 'Mem') {
-                    ok = pushMemValue(arg.expr, 'word', asmItem.span);
-                    if (!ok) break;
-                    pushedArgWords++;
-                    continue;
-                  }
-                  diagAt(
-                    diagnostics,
-                    asmItem.span,
-                    `Unsupported word argument form for "${param.name}" in call to "${asmItem.head}".`,
-                  );
-                  ok = false;
-                  break;
-                }
-              }
-
-              if (!ok) {
-                for (let k = 0; k < pushedArgWords; k++) {
-                  emitInstr('inc', [{ kind: 'Reg', span: asmItem.span, name: 'SP' }], asmItem.span);
-                  emitInstr('inc', [{ kind: 'Reg', span: asmItem.span, name: 'SP' }], asmItem.span);
-                }
-                restorePreservedRegs();
-                return;
-              }
-
-              diagIfCallStackUnverifiable({
-                mnemonic: `typed call "${calleeName}"`,
-                contractKind: 'typed-call',
-              });
-              if (callable.kind === 'extern') {
-                emitAbs16Fixup(0xcd, callable.targetLower, 0, asmItem.span);
-              } else {
-                emitAbs16Fixup(0xcd, callable.node.name.toLowerCase(), 0, asmItem.span);
-              }
-              for (let k = 0; k < args.length; k++) {
-                emitInstr('inc', [{ kind: 'Reg', span: asmItem.span, name: 'SP' }], asmItem.span);
-                emitInstr('inc', [{ kind: 'Reg', span: asmItem.span, name: 'SP' }], asmItem.span);
-              }
-              if (!restorePreservedRegs()) return;
-              syncToFlow();
-              return;
-            }
-
-            const { tryHandleOpExpansion } = createOpExpansionOrchestrationHelpers({
-              opsByName,
-              diagnostics,
-              env,
-              hasStackSlots,
-              opStackPolicyMode,
-              opExpansionStack,
-              diagAt,
-              diagAtWithId,
-              diagAtWithSeverityAndId,
-              matcherMatchesOperand,
-              formatOpSignature,
-              formatAsmOperandForOpDiag,
-              firstOpOverloadMismatchReason,
-              formatOpDefinitionForDiag,
-              selectMostSpecificOpOverload,
-              summarizeOpStackEffect,
-              cloneImmExpr,
-              cloneEaExpr,
-              cloneOperand,
-              flattenEaDottedName,
-              normalizeFixedToken,
-              inverseConditionName,
-              newHiddenLabel,
-              lowerAsmRange,
-              syncToFlow,
-            });
-            if (tryHandleOpExpansion(asmItem)) {
-              return;
-            }
-
-            lowerAsmInstructionDispatcher(asmItem);
-          } finally {
-            appendInvalidOpExpansionDiagnostic(asmItem, diagnosticsStart, opExpansionStack);
-            currentCodeSegmentTag = prevTag;
-          }
-        };
-
-        const { lowerAsmRange } = createAsmRangeLoweringHelpers({
-          sourceTagForSpan: (span) => sourceTagForSpan(span, opExpansionStack),
-          getCurrentCodeSegmentTag: () => currentCodeSegmentTag,
-          setCurrentCodeSegmentTag: (tag) => {
-            currentCodeSegmentTag = tag;
-          },
-          defineCodeLabel,
-          emitAsmInstruction,
-          flowRef,
-          syncFromFlow,
-          snapshotFlow: () => snapshotFlow(flow),
-          restoreFlow,
-          newHiddenLabel,
-          emitJumpIfFalse,
-          emitJumpTo,
-          diagAt: (span, message) => diagAt(diagnostics, span, message),
-          warnAt: (span, message) => warnAt(diagnostics, span, message),
-          joinFlows: (left, right, span, contextName) =>
-            joinFlows(left, right, span, contextName, hasStackSlots),
-          hasStackSlots,
           reg8,
-          evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
-          loadSelectorIntoHL,
-          emitRawCodeBytes,
-          emitSelectCompareReg8ToImm8,
-          emitSelectCompareToImm16,
-          emitInstr,
-        });
-
-        const { lowerAndFinalizeFunctionBody } = createAsmBodyOrchestrationHelpers({
-          asmItems: item.asm.items,
-          itemName: item.name,
-          itemSpan: item.span,
-          emitSyntheticEpilogue,
-          hasStackSlots,
-          lowerAsmRange,
-          syncToFlow,
-          getFlow: () => flow,
-          setFlow: (state) => {
-            flow = state;
-          },
-          diagAt: (span, message) => diagAt(diagnostics, span, message),
-          emitImplicitRet: () => {
-            withCodeSourceTag(sourceTagForSpan(item.span, opExpansionStack), () => {
-              emitInstr('ret', [], item.span);
-            });
-          },
-          emitSyntheticEpilogueBody: () => {
-            withCodeSourceTag(sourceTagForSpan(item.span, opExpansionStack), () => {
-              pending.push({
-                kind: 'label',
-                name: epilogueLabel,
-                section: 'code',
-                offset: codeOffset,
-                file: item.span.file,
-                line: item.span.start.line,
-                scope: 'local',
-              });
-              traceLabel(codeOffset, epilogueLabel);
-              const popOrder = preserveSet.slice().reverse();
-              for (const reg of popOrder) {
-                emitInstr('pop', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
-              }
-              if (hasStackSlots) {
-                emitInstr(
-                  'ld',
-                  [
-                    { kind: 'Reg', span: item.span, name: 'SP' },
-                    { kind: 'Reg', span: item.span, name: 'IX' },
-                  ],
-                  item.span,
-                );
-                emitInstr('pop', [{ kind: 'Reg', span: item.span, name: 'IX' }], item.span);
-              }
-              emitInstr('ret', [], item.span);
-            });
-          },
-          traceFunctionEnd: () => {
-            traceComment(codeOffset, `func ${item.name} end`);
+          reg16,
+          generatedLabelCounterRef: {
+            get current() {
+              return generatedLabelCounter;
+            },
+            set current(value: number) {
+              generatedLabelCounter = value;
+            },
           },
         });
-        lowerAndFinalizeFunctionBody();
         continue;
       }
 
