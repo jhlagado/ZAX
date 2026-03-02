@@ -71,6 +71,7 @@ type FunctionLoweringContext = {
   traceComment: (offset: number, text: string) => void;
   traceLabel: (offset: number, name: string) => void;
   currentCodeSegmentTagRef: { current: SourceSegmentTag | undefined };
+  trackedSpRef: { delta: number; valid: boolean; invalid: boolean };
   getCodeOffset: () => number;
   emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
   emitRawCodeBytes: (bs: Uint8Array, file: string, traceText: string) => void;
@@ -161,8 +162,14 @@ type FunctionLoweringContext = {
 
 export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const { item, diagnostics, diag, diagAt, diagAtWithId, diagAtWithSeverityAndId, warnAt } = ctx;
-  const { taken, pending, traceComment, traceLabel, currentCodeSegmentTagRef, getCodeOffset } = ctx;
-  const { emitInstr, emitRawCodeBytes, emitAbs16Fixup, emitAbs16FixupPrefixed, emitRel8Fixup } = ctx;
+  const { taken, pending, traceComment, traceLabel, currentCodeSegmentTagRef, trackedSpRef, getCodeOffset } = ctx;
+  const {
+    emitInstr: emitInstrBase,
+    emitRawCodeBytes,
+    emitAbs16Fixup,
+    emitAbs16FixupPrefixed,
+    emitRel8Fixup,
+  } = ctx;
   const { conditionOpcodeFromName, conditionNameFromOpcode, callConditionOpcodeFromName } = ctx;
   const { jrConditionOpcodeFromName, conditionOpcode, inverseConditionName, symbolicTargetFromExpr } = ctx;
   const { evalImmExpr, env, resolveScalarBinding, resolveScalarKind, resolveEaTypeExpr } = ctx;
@@ -177,9 +184,11 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const { flattenEaDottedName, normalizeFixedToken, reg8, reg16, generatedLabelCounterRef } = ctx;
   const { typeDisplay, sameTypeShape, emitStepPipeline, lowerLdWithEa } = ctx;
   let currentCodeSegmentTag = currentCodeSegmentTagRef.current;
-  let spDeltaTracked = 0;
-  let spTrackingValid = true;
-  let spTrackingInvalidatedByMutation = false;
+  const setCurrentCodeSegmentTag = (tag: SourceSegmentTag | undefined): void => {
+    currentCodeSegmentTag = tag;
+    currentCodeSegmentTagRef.current = tag;
+  };
+  const emitInstr = emitInstrBase;
 
   stackSlotOffsets.clear();
   stackSlotTypes.clear();
@@ -293,13 +302,13 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
 
   if (hasStackSlots) {
     const prevTag = currentCodeSegmentTag;
-    currentCodeSegmentTag = {
+    setCurrentCodeSegmentTag({
       file: item.span.file,
       line: item.span.start.line,
       column: item.span.start.column,
       kind: 'code',
       confidence: 'high',
-    };
+    });
     try {
       emitInstr('push', [{ kind: 'Reg', span: item.span, name: 'IX' }], item.span);
       emitInstr(
@@ -323,19 +332,19 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
         item.span,
       );
     } finally {
-      currentCodeSegmentTag = prevTag;
+      setCurrentCodeSegmentTag(prevTag);
     }
   }
 
   for (const init of localScalarInitializers) {
     const prevTag = currentCodeSegmentTag;
-    currentCodeSegmentTag = {
+    setCurrentCodeSegmentTag({
       file: init.span.file,
       line: init.span.start.line,
       column: init.span.start.column,
       kind: 'code',
       confidence: 'high',
-    };
+    });
     try {
       const initValue =
         init.expr !== undefined ? evalImmExpr(init.expr, env, diagnostics) : 0;
@@ -369,32 +378,32 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
         emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
       }
     } finally {
-      currentCodeSegmentTag = prevTag;
+      setCurrentCodeSegmentTag(prevTag);
     }
   }
 
   if (shouldPreserveTypedBoundary) {
     const prevTag = currentCodeSegmentTag;
-    currentCodeSegmentTag = {
+    setCurrentCodeSegmentTag({
       file: item.span.file,
       line: item.span.start.line,
       column: item.span.start.column,
       kind: 'code',
       confidence: 'high',
-    };
+    });
     try {
       for (const reg of preserveSet) {
         emitInstr('push', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
       }
     } finally {
-      currentCodeSegmentTag = prevTag;
+      setCurrentCodeSegmentTag(prevTag);
     }
   }
 
   // Track SP deltas relative to the start of user asm, after prologue reservation.
-  spDeltaTracked = 0;
-  spTrackingValid = true;
-  spTrackingInvalidatedByMutation = false;
+  trackedSpRef.delta = 0;
+  trackedSpRef.valid = true;
+  trackedSpRef.invalid = false;
 
   let flow: FlowState = {
     reachable: true,
@@ -410,22 +419,22 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const opExpansionStack: OpExpansionFrame[] = [];
   const trackedSp = {
     get delta() {
-      return spDeltaTracked;
+      return trackedSpRef.delta;
     },
     set delta(value: number) {
-      spDeltaTracked = value;
+      trackedSpRef.delta = value;
     },
     get valid() {
-      return spTrackingValid;
+      return trackedSpRef.valid;
     },
     set valid(value: boolean) {
-      spTrackingValid = value;
+      trackedSpRef.valid = value;
     },
     get invalid() {
-      return spTrackingInvalidatedByMutation;
+      return trackedSpRef.invalid;
     },
     set invalid(value: boolean) {
-      spTrackingInvalidatedByMutation = value;
+      trackedSpRef.invalid = value;
     },
   };
   const {
@@ -451,9 +460,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     diagAt,
     diagAtWithId,
     getCurrentCodeSegmentTag: () => currentCodeSegmentTag,
-    setCurrentCodeSegmentTag: (tag) => {
-      currentCodeSegmentTag = tag;
-    },
+    setCurrentCodeSegmentTag,
     taken,
     traceLabel,
     pending,
@@ -512,15 +519,15 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     resolveScalarBinding,
     diagIfRetStackImbalanced: (span, mnemonic) => {
       if (emitSyntheticEpilogue) return;
-      if (spTrackingValid && spDeltaTracked !== 0) {
+      if (trackedSpRef.valid && trackedSpRef.delta !== 0) {
         diagAt(
           diagnostics,
           span,
-          `${mnemonic ?? 'ret'} with non-zero tracked stack delta (${spDeltaTracked}); function stack is imbalanced.`,
+          `${mnemonic ?? 'ret'} with non-zero tracked stack delta (${trackedSpRef.delta}); function stack is imbalanced.`,
         );
         return;
       }
-      if (!spTrackingValid && spTrackingInvalidatedByMutation && hasStackSlots) {
+      if (!trackedSpRef.valid && trackedSpRef.invalid && hasStackSlots) {
         diagAt(
           diagnostics,
           span,
@@ -528,7 +535,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
         );
         return;
       }
-      if (!spTrackingValid && hasStackSlots) {
+      if (!trackedSpRef.valid && hasStackSlots) {
         diagAt(
           diagnostics,
           span,
@@ -542,15 +549,15 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       const contractKind = options.contractKind ?? 'callee';
       const contractNoun =
         contractKind === 'typed-call' ? 'typed-call boundary contract' : 'callee stack contract';
-      if (hasStackSlots && spTrackingValid && spDeltaTracked > 0) {
+      if (hasStackSlots && trackedSpRef.valid && trackedSpRef.delta > 0) {
         diagAt(
           diagnostics,
           span,
-          `${mnemonic} reached with positive tracked stack delta (${spDeltaTracked}); cannot verify ${contractNoun}.`,
+          `${mnemonic} reached with positive tracked stack delta (${trackedSpRef.delta}); cannot verify ${contractNoun}.`,
         );
         return;
       }
-      if (hasStackSlots && !spTrackingValid && spTrackingInvalidatedByMutation) {
+      if (hasStackSlots && !trackedSpRef.valid && trackedSpRef.invalid) {
         diagAt(
           diagnostics,
           span,
@@ -558,7 +565,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
         );
         return;
       }
-      if (hasStackSlots && !spTrackingValid) {
+      if (hasStackSlots && !trackedSpRef.valid) {
         diagAt(
           diagnostics,
           span,
@@ -586,31 +593,29 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     emitJumpTo,
     emitJumpCondTo,
     syncToFlow,
-    flow,
+    flowRef,
   });
 
   const { emitAsmInstruction, lowerAsmRange } = createFunctionCallLoweringHelpers({
     diagnostics,
     asmItemSpanSourceTag: (span) => sourceTagForSpan(span, opExpansionStack),
     getCurrentCodeSegmentTag: () => currentCodeSegmentTag,
-    setCurrentCodeSegmentTag: (tag) => {
-      currentCodeSegmentTag = tag;
-    },
+    setCurrentCodeSegmentTag,
     appendInvalidOpExpansionDiagnostic,
     enforceEaRuntimeAtomBudget,
     hasStackSlots,
     emitSyntheticEpilogue,
-    getTrackedSpDelta: () => spDeltaTracked,
+    getTrackedSpDelta: () => trackedSpRef.delta,
     setTrackedSpDelta: (value) => {
-      spDeltaTracked = value;
+      trackedSpRef.delta = value;
     },
-    getTrackedSpValid: () => spTrackingValid,
+    getTrackedSpValid: () => trackedSpRef.valid,
     setTrackedSpValid: (value) => {
-      spTrackingValid = value;
+      trackedSpRef.valid = value;
     },
-    getTrackedSpInvalid: () => spTrackingInvalidatedByMutation,
+    getTrackedSpInvalid: () => trackedSpRef.invalid,
     setTrackedSpInvalid: (value) => {
-      spTrackingInvalidatedByMutation = value;
+      trackedSpRef.invalid = value;
     },
     rawTypedCallWarningsEnabled,
     callables,
@@ -728,5 +733,5 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   });
   lowerAndFinalizeFunctionBody();
 
-  currentCodeSegmentTagRef.current = currentCodeSegmentTag;
+  setCurrentCodeSegmentTag(currentCodeSegmentTag);
 }

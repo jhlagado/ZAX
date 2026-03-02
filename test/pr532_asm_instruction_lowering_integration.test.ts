@@ -68,7 +68,7 @@ describe('PR532 asm instruction lowering integration', () => {
       syncToFlow: () => {
         events.push(`sync:${flow.reachable ? 'reach' : 'dead'}`);
       },
-      flow,
+      flowRef: { current: flow },
     });
 
     const jrItem: AsmInstructionNode = {

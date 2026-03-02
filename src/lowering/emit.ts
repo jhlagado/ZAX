@@ -1118,6 +1118,26 @@ export function emitProgram(
               currentCodeSegmentTag = value;
             },
           },
+          trackedSpRef: {
+            get delta() {
+              return spDeltaTracked;
+            },
+            set delta(value: number) {
+              spDeltaTracked = value;
+            },
+            get valid() {
+              return spTrackingValid;
+            },
+            set valid(value: boolean) {
+              spTrackingValid = value;
+            },
+            get invalid() {
+              return spTrackingInvalidatedByMutation;
+            },
+            set invalid(value: boolean) {
+              spTrackingInvalidatedByMutation = value;
+            },
+          },
           getCodeOffset: () => codeOffset,
           emitInstr,
           emitRawCodeBytes,

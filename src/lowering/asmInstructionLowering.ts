@@ -58,7 +58,7 @@ type Context = {
   emitJumpTo: (label: string, span: AsmInstructionNode['span']) => void;
   emitJumpCondTo: (opcode: number, label: string, span: AsmInstructionNode['span']) => void;
   syncToFlow: () => void;
-  flow: { reachable: boolean };
+  flowRef: { current: { reachable: boolean } };
 };
 
 export function createAsmInstructionLoweringHelpers(ctx: Context) {
@@ -130,7 +130,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
           return;
         }
         if (!emitRel8FromOperand(asmItem, single, 0x18, 'jr')) return;
-        ctx.flow.reachable = false;
+        ctx.flowRef.current.reachable = false;
         ctx.syncToFlow();
         return;
       }
@@ -203,7 +203,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
         } else {
           ctx.emitInstr('ret', [], asmItem.span);
         }
-        ctx.flow.reachable = false;
+        ctx.flowRef.current.reachable = false;
         ctx.syncToFlow();
         return;
       }
@@ -234,7 +234,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
         );
       }
       ctx.emitInstr(head, [], asmItem.span);
-      ctx.flow.reachable = false;
+      ctx.flowRef.current.reachable = false;
       ctx.syncToFlow();
       return;
     }
@@ -249,7 +249,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
         }
         if (symbolicTarget) {
           ctx.emitAbs16Fixup(0xc3, symbolicTarget.baseLower, symbolicTarget.addend, asmItem.span);
-          ctx.flow.reachable = false;
+          ctx.flowRef.current.reachable = false;
           ctx.syncToFlow();
           return;
         }
@@ -369,9 +369,9 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     if (!ctx.emitInstr(asmItem.head, asmItem.operands, asmItem.span)) return;
 
     if ((head === 'jp' || head === 'jr') && asmItem.operands.length === 1) {
-      ctx.flow.reachable = false;
+      ctx.flowRef.current.reachable = false;
     } else if ((head === 'ret' || head === 'retn' || head === 'reti') && asmItem.operands.length === 0) {
-      ctx.flow.reachable = false;
+      ctx.flowRef.current.reachable = false;
     }
     ctx.syncToFlow();
   };
