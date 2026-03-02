@@ -29,6 +29,7 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `virtual-reg16-transfer-patterns.md` — supported `rp -> rp` virtual transfer patterns for the current low-level convenience slice.
 - `github-backlog-workflow.md` — GitHub issue/label/milestone workflow used as the project backlog system.
 - `source-overview.md` — version-neutral source tree and subsystem map for reading the implementation.
+- `sections-modules-design.md` — future-direction design note for named sections, import placement, and module/export semantics.
 
 ## Content Ownership
 
@@ -38,6 +39,7 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `return-register-policy.md`: preservation matrix and HL-preserve swap guidance.
 - `zax-dev-playbook.md`: contributor workflow only; must not duplicate planning history, semantic policy, or version-status tracking.
 - `source-overview.md`: non-normative architecture map of the current code layout and subsystem boundaries.
+- `sections-modules-design.md`: non-normative future-direction design work for the planned section/module model.
 
 ## Consolidation Rules
 
