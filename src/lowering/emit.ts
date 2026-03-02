@@ -42,8 +42,7 @@ import {
   TEMPLATE_S_HL,
   type StepPipeline,
 } from '../addressing/steps.js';
-import type { Diagnostic, DiagnosticId } from '../diagnostics/types.js';
-import { DiagnosticIds } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnostics/types.js';
 import type {
   EmittedAsmTraceEntry,
   EmittedByteMap,
@@ -103,6 +102,18 @@ import {
 } from './functionBodySetup.js';
 import { lowerFunctionDecl } from './functionLowering.js';
 import {
+  finalizeProgramEmission,
+  lowerProgramDeclarations,
+  preScanProgramDeclarations,
+} from './programLowering.js';
+import {
+  diag,
+  diagAt,
+  diagAtWithId,
+  diagAtWithSeverityAndId,
+  warnAt,
+} from './loweringDiagnostics.js';
+import {
   cloneEaExpr,
   cloneImmExpr,
   cloneOperand,
@@ -123,65 +134,6 @@ import {
   toHexWord,
 } from './traceFormat.js';
 import { createTypeResolutionHelpers } from './typeResolution.js';
-
-function diag(diagnostics: Diagnostic[], file: string, message: string): void {
-  diagnostics.push({ id: DiagnosticIds.EmitError, severity: 'error', message, file });
-}
-
-function diagAt(diagnostics: Diagnostic[], span: SourceSpan, message: string): void {
-  diagnostics.push({
-    id: DiagnosticIds.EmitError,
-    severity: 'error',
-    message,
-    file: span.file,
-    line: span.start.line,
-    column: span.start.column,
-  });
-}
-
-function diagAtWithId(
-  diagnostics: Diagnostic[],
-  span: SourceSpan,
-  id: DiagnosticId,
-  message: string,
-): void {
-  diagnostics.push({
-    id,
-    severity: 'error',
-    message,
-    file: span.file,
-    line: span.start.line,
-    column: span.start.column,
-  });
-}
-
-function diagAtWithSeverityAndId(
-  diagnostics: Diagnostic[],
-  span: SourceSpan,
-  id: DiagnosticId,
-  severity: 'error' | 'warning',
-  message: string,
-): void {
-  diagnostics.push({
-    id,
-    severity,
-    message,
-    file: span.file,
-    line: span.start.line,
-    column: span.start.column,
-  });
-}
-
-function warnAt(diagnostics: Diagnostic[], span: SourceSpan, message: string): void {
-  diagnostics.push({
-    id: DiagnosticIds.EmitError,
-    severity: 'warning',
-    message,
-    file: span.file,
-    line: span.start.line,
-    column: span.start.column,
-  });
-}
 
 /**
  * Emit machine-code bytes for a parsed program into an address->byte map.
@@ -767,65 +719,6 @@ export function emitProgram(
   const primaryFile = firstModule.span.file ?? program.entryFile;
   const includeDirs = (options?.includeDirs ?? []).map((p) => resolve(p));
 
-  // Pre-scan callables for resolution (forward references allowed).
-  for (const module of program.files) {
-    for (const item of module.items) {
-      if (item.kind === 'FuncDecl') {
-        const f = item as FuncDeclNode;
-        callables.set(f.name.toLowerCase(), { kind: 'func', node: f });
-      } else if (item.kind === 'OpDecl') {
-        const op = item as OpDeclNode;
-        const key = op.name.toLowerCase();
-        const existing = opsByName.get(key);
-        if (existing) existing.push(op);
-        else opsByName.set(key, [op]);
-      } else if (item.kind === 'ExternDecl') {
-        const ex = item as ExternDeclNode;
-        for (const fn of ex.funcs) {
-          callables.set(fn.name.toLowerCase(), {
-            kind: 'extern',
-            node: fn,
-            targetLower: fn.name.toLowerCase(),
-          });
-        }
-      } else if (item.kind === 'VarBlock' && item.scope === 'module') {
-        const vb = item as VarBlockNode;
-        for (const decl of vb.decls) {
-          const lower = decl.name.toLowerCase();
-          if (decl.typeExpr) {
-            storageTypes.set(lower, decl.typeExpr);
-            continue;
-          }
-          if (decl.initializer?.kind === 'VarInitAlias') {
-            moduleAliasTargets.set(lower, decl.initializer.expr);
-            moduleAliasDecls.set(lower, decl);
-          }
-        }
-      } else if (item.kind === 'BinDecl') {
-        const bd = item as BinDeclNode;
-        declaredBinNames.add(bd.name.toLowerCase());
-        rawAddressSymbols.add(bd.name.toLowerCase());
-        storageTypes.set(bd.name.toLowerCase(), { kind: 'TypeName', span: bd.span, name: 'addr' });
-      } else if (item.kind === 'HexDecl') {
-        const hd = item as HexDeclNode;
-        rawAddressSymbols.add(hd.name.toLowerCase());
-        storageTypes.set(hd.name.toLowerCase(), { kind: 'TypeName', span: hd.span, name: 'addr' });
-      } else if (item.kind === 'DataBlock') {
-        const db = item as DataBlockNode;
-        for (const decl of db.decls) {
-          const lower = decl.name.toLowerCase();
-          storageTypes.set(lower, decl.typeExpr);
-          // Only add non-scalar data symbols to rawAddressSymbols.
-          // Scalar data symbols (byte, word, addr) use value semantics like globals.
-          const scalar = resolveScalarKind(decl.typeExpr);
-          if (!scalar) {
-            rawAddressSymbols.add(lower);
-          }
-        }
-      }
-    }
-  }
-
   let activeSection: SectionKind = 'code';
   let codeOffset = 0;
   let dataOffset = 0;
@@ -855,811 +748,201 @@ export function emitProgram(
     }
   };
 
-  for (const module of program.files) {
-    activeSection = 'code';
-
-    for (const item of module.items) {
-      if (item.kind === 'ConstDecl') {
-        const v = env.consts.get(item.name);
-        if (v !== undefined) {
-          if (taken.has(item.name)) {
-            diag(diagnostics, item.span.file, `Duplicate symbol name "${item.name}".`);
-            continue;
-          }
-          taken.add(item.name);
-          symbols.push({
-            kind: 'constant',
-            name: item.name,
-            value: v,
-            address: v & 0xffff,
-            file: item.span.file,
-            line: item.span.start.line,
-            scope: 'global',
-          });
-        }
-        continue;
-      }
-
-      if (item.kind === 'EnumDecl') {
-        const e = item as EnumDeclNode;
-        for (let idx = 0; idx < e.members.length; idx++) {
-          const member = e.members[idx]!;
-          const name = `${e.name}.${member}`;
-          if (env.enums.get(name) !== idx) continue;
-          if (taken.has(name)) {
-            diag(diagnostics, e.span.file, `Duplicate symbol name "${name}".`);
-            continue;
-          }
-          taken.add(name);
-          symbols.push({
-            kind: 'constant',
-            name,
-            value: idx,
-            address: idx & 0xffff,
-            file: e.span.file,
-            line: e.span.start.line,
-            scope: 'global',
-          });
-        }
-        continue;
-      }
-
-      if (item.kind === 'Section') {
-        const s = item as SectionDirectiveNode;
-        activeSection = s.section;
-        if (s.at) setBaseExpr(s.section, s.at, s.span.file);
-        continue;
-      }
-
-      if (item.kind === 'Align') {
-        const a = item as AlignDirectiveNode;
-        const v = evalImmExpr(a.value, env, diagnostics);
-        if (v === undefined) {
-          diag(diagnostics, a.span.file, `Failed to evaluate align value.`);
-          continue;
-        }
-        if (v <= 0) {
-          diag(diagnostics, a.span.file, `align value must be > 0.`);
-          continue;
-        }
-        advanceAlign(v);
-        continue;
-      }
-
-      if (item.kind === 'ExternDecl') {
-        const ex = item as ExternDeclNode;
-        const baseLower = ex.base?.toLowerCase();
-        if (baseLower !== undefined && !declaredBinNames.has(baseLower)) {
-          diag(
-            diagnostics,
-            ex.span.file,
-            `extern base "${ex.base}" does not reference a declared bin symbol.`,
-          );
-          continue;
-        }
-        for (const fn of ex.funcs) {
-          if (taken.has(fn.name)) {
-            diag(diagnostics, fn.span.file, `Duplicate symbol name "${fn.name}".`);
-            continue;
-          }
-          taken.add(fn.name);
-          if (baseLower !== undefined) {
-            const offset = evalImmExpr(fn.at, env, diagnostics);
-            if (offset === undefined) {
-              diag(
-                diagnostics,
-                fn.span.file,
-                `Failed to evaluate extern func offset for "${fn.name}".`,
-              );
-              continue;
-            }
-            if (offset < 0 || offset > 0xffff) {
-              diag(
-                diagnostics,
-                fn.span.file,
-                `extern func "${fn.name}" offset out of range (0..65535).`,
-              );
-              continue;
-            }
-            deferredExterns.push({
-              name: fn.name,
-              baseLower,
-              addend: offset,
-              file: fn.span.file,
-              line: fn.span.start.line,
-            });
-            continue;
-          }
-
-          const addr = evalImmExpr(fn.at, env, diagnostics);
-          if (addr === undefined) {
-            diag(
-              diagnostics,
-              fn.span.file,
-              `Failed to evaluate extern func address for "${fn.name}".`,
-            );
-            continue;
-          }
-          if (addr < 0 || addr > 0xffff) {
-            diag(
-              diagnostics,
-              fn.span.file,
-              `extern func "${fn.name}" address out of range (0..65535).`,
-            );
-            continue;
-          }
-          symbols.push({
-            kind: 'label',
-            name: fn.name,
-            address: addr,
-            file: fn.span.file,
-            line: fn.span.start.line,
-            scope: 'global',
-          });
-        }
-        continue;
-      }
-
-      if (item.kind === 'BinDecl') {
-        const binDecl = item as BinDeclNode;
-        if (taken.has(binDecl.name)) {
-          diag(diagnostics, binDecl.span.file, `Duplicate symbol name "${binDecl.name}".`);
-          continue;
-        }
-        taken.add(binDecl.name);
-
-        const blob = loadBinInput(
-          binDecl.span.file,
-          binDecl.fromPath,
-          includeDirs,
-          (file, message) => diag(diagnostics, file, message),
-        );
-        if (!blob) continue;
-
-        if (binDecl.section === 'var') {
-          diag(
-            diagnostics,
-            binDecl.span.file,
-            `bin declarations cannot target section "var" in v0.2.`,
-          );
-          continue;
-        }
-
-        if (binDecl.section === 'code') {
-          pending.push({
-            kind: 'data',
-            name: binDecl.name,
-            section: 'code',
-            offset: codeOffset,
-            file: binDecl.span.file,
-            line: binDecl.span.start.line,
-            scope: 'global',
-          });
-          for (const b of blob) codeBytes.set(codeOffset++, b & 0xff);
-        } else {
-          pending.push({
-            kind: 'data',
-            name: binDecl.name,
-            section: 'data',
-            offset: dataOffset,
-            file: binDecl.span.file,
-            line: binDecl.span.start.line,
-            scope: 'global',
-          });
-          for (const b of blob) dataBytes.set(dataOffset++, b & 0xff);
-        }
-        continue;
-      }
-
-      if (item.kind === 'HexDecl') {
-        const hexDecl = item as HexDeclNode;
-        if (taken.has(hexDecl.name)) {
-          diag(diagnostics, hexDecl.span.file, `Duplicate symbol name "${hexDecl.name}".`);
-          continue;
-        }
-        taken.add(hexDecl.name);
-
-        const parsed = loadHexInput(
-          hexDecl.span.file,
-          hexDecl.fromPath,
-          includeDirs,
-          (file, message) => diag(diagnostics, file, message),
-        );
-        if (!parsed) continue;
-
-        for (const [addr, b] of parsed.bytes) {
-          if (hexBytes.has(addr)) {
-            diag(diagnostics, hexDecl.span.file, `HEX overlap at address ${addr}.`);
-            continue;
-          }
-          hexBytes.set(addr, b);
-        }
-        absoluteSymbols.push({
-          kind: 'data',
-          name: hexDecl.name,
-          address: parsed.minAddress,
-          file: hexDecl.span.file,
-          line: hexDecl.span.start.line,
-          scope: 'global',
-        });
-        continue;
-      }
-
-      if (item.kind === 'OpDecl') {
-        const op = item as OpDeclNode;
-        const key = op.name.toLowerCase();
-        if (taken.has(op.name) && !declaredOpNames.has(key)) {
-          diag(diagnostics, op.span.file, `Duplicate symbol name "${op.name}".`);
-        } else {
-          taken.add(op.name);
-          declaredOpNames.add(key);
-        }
-        continue;
-      }
-
-      if (item.kind === 'FuncDecl') {
-        lowerFunctionDecl({
-          item,
-          diagnostics,
-          diag,
-          diagAt,
-          diagAtWithId,
-          diagAtWithSeverityAndId,
-          warnAt,
-          taken,
-          pending,
-          traceComment,
-          traceLabel,
-          currentCodeSegmentTagRef: {
-            get current() {
-              return currentCodeSegmentTag;
-            },
-            set current(value: SourceSegmentTag | undefined) {
-              currentCodeSegmentTag = value;
-            },
-          },
-          trackedSpRef: {
-            get delta() {
-              return spDeltaTracked;
-            },
-            set delta(value: number) {
-              spDeltaTracked = value;
-            },
-            get valid() {
-              return spTrackingValid;
-            },
-            set valid(value: boolean) {
-              spTrackingValid = value;
-            },
-            get invalid() {
-              return spTrackingInvalidatedByMutation;
-            },
-            set invalid(value: boolean) {
-              spTrackingInvalidatedByMutation = value;
-            },
-          },
-          getCodeOffset: () => codeOffset,
-          emitInstr,
-          emitRawCodeBytes,
-          emitAbs16Fixup,
-          emitAbs16FixupPrefixed,
-          emitRel8Fixup,
-          conditionOpcodeFromName,
-          conditionNameFromOpcode,
-          callConditionOpcodeFromName,
-          jrConditionOpcodeFromName,
-          conditionOpcode,
-          inverseConditionName,
-          symbolicTargetFromExpr,
-          evalImmExpr,
-          env,
-          resolveScalarBinding,
-          resolveScalarKind,
-          resolveEaTypeExpr,
-          resolveScalarTypeForEa,
-          resolveArrayType,
-          buildEaWordPipeline,
-          enforceEaRuntimeAtomBudget,
-          enforceDirectCallSiteEaBudget,
-          pushEaAddress,
-          pushMemValue,
-          pushImm16,
-          pushZeroExtendedReg8,
-          loadImm16ToHL,
-          stackSlotOffsets,
-          stackSlotTypes,
-          localAliasTargets,
-          storageTypes,
-          rawTypedCallWarningsEnabled,
-          callables,
-          opsByName,
-          opStackPolicyMode,
-          matcherMatchesOperand,
-          formatOpSignature,
-          formatAsmOperandForOpDiag,
-          firstOpOverloadMismatchReason,
-          formatOpDefinitionForDiag,
-          selectMostSpecificOpOverload,
-          summarizeOpStackEffect,
-          cloneImmExpr,
-          cloneEaExpr,
-          cloneOperand,
-          flattenEaDottedName,
-          normalizeFixedToken,
-          typeDisplay,
-          sameTypeShape,
-          emitStepPipeline,
-          lowerLdWithEa,
-          reg8,
-          reg16,
-          generatedLabelCounterRef: {
-            get current() {
-              return generatedLabelCounter;
-            },
-            set current(value: number) {
-              generatedLabelCounter = value;
-            },
-          },
-        });
-        continue;
-      }
-
-      if (item.kind === 'DataBlock') {
-        const dataBlock = item as DataBlockNode;
-        for (const decl of dataBlock.decls) {
-          const okToDeclareSymbol = !taken.has(decl.name);
-          if (!okToDeclareSymbol) {
-            diag(diagnostics, decl.span.file, `Duplicate symbol name "${decl.name}".`);
-          } else {
-            taken.add(decl.name);
-            pending.push({
-              kind: 'data',
-              name: decl.name,
-              section: 'data',
-              offset: dataOffset,
-              file: decl.span.file,
-              line: decl.span.start.line,
-              scope: 'global',
-            });
-          }
-
-          const type = decl.typeExpr;
-          const init = decl.initializer;
-
-          const emitByte = (b: number) => {
-            dataBytes.set(dataOffset, b & 0xff);
-            dataOffset++;
-          };
-          const emitWord = (w: number) => {
-            emitByte(w & 0xff);
-            emitByte((w >> 8) & 0xff);
-          };
-          const nextPow2 = (value: number): number => {
-            if (value <= 1) return value;
-            let pow = 1;
-            while (pow < value) pow <<= 1;
-            return pow;
-          };
-
-          const recordType = resolveAggregateType(type);
-          if (recordType?.kind === 'record') {
-            if (init.kind === 'InitString') {
-              diag(
-                diagnostics,
-                decl.span.file,
-                `Record initializer for "${decl.name}" must use aggregate form.`,
-              );
-              continue;
-            }
-
-            const valuesByField = new Map<string, ImmExprNode>();
-            let recordInitFailed = false;
-            if (init.kind === 'InitRecordNamed') {
-              for (const fieldInit of init.fields) {
-                const field = recordType.fields.find((f) => f.name === fieldInit.name);
-                if (!field) {
-                  diag(
-                    diagnostics,
-                    decl.span.file,
-                    `Unknown record field "${fieldInit.name}" in initializer for "${decl.name}".`,
-                  );
-                  recordInitFailed = true;
-                  continue;
-                }
-                if (valuesByField.has(field.name)) {
-                  diag(
-                    diagnostics,
-                    decl.span.file,
-                    `Duplicate record field "${field.name}" in initializer for "${decl.name}".`,
-                  );
-                  recordInitFailed = true;
-                  continue;
-                }
-                valuesByField.set(field.name, fieldInit.value);
-              }
-              for (const field of recordType.fields) {
-                if (valuesByField.has(field.name)) continue;
-                diag(
-                  diagnostics,
-                  decl.span.file,
-                  `Missing record field "${field.name}" in initializer for "${decl.name}".`,
-                );
-                recordInitFailed = true;
-              }
-            } else {
-              if (init.elements.length !== recordType.fields.length) {
-                diag(
-                  diagnostics,
-                  decl.span.file,
-                  `Record initializer field count mismatch for "${decl.name}".`,
-                );
-                continue;
-              }
-              for (let index = 0; index < recordType.fields.length; index++) {
-                const field = recordType.fields[index]!;
-                const element = init.elements[index]!;
-                valuesByField.set(field.name, element);
-              }
-            }
-            if (recordInitFailed) continue;
-
-            const encodedFields: Array<{ width: 1 | 2; value: number }> = [];
-            for (const field of recordType.fields) {
-              const fieldValueExpr = valuesByField.get(field.name);
-              if (!fieldValueExpr) continue;
-              const scalar = resolveScalarKind(field.typeExpr);
-              if (!scalar) {
-                diag(
-                  diagnostics,
-                  decl.span.file,
-                  `Unsupported record field type "${field.name}" in initializer for "${decl.name}" (expected byte/word/addr/ptr).`,
-                );
-                recordInitFailed = true;
-                continue;
-              }
-              const value = evalImmExpr(fieldValueExpr, env, diagnostics);
-              if (value === undefined) {
-                diag(
-                  diagnostics,
-                  decl.span.file,
-                  `Failed to evaluate data initializer for "${decl.name}".`,
-                );
-                recordInitFailed = true;
-                continue;
-              }
-              encodedFields.push({
-                width: scalar === 'byte' ? 1 : 2,
-                value,
-              });
-            }
-            if (recordInitFailed) continue;
-
-            let emitted = 0;
-            for (const encoded of encodedFields) {
-              if (encoded.width === 1) {
-                emitByte(encoded.value);
-                emitted += 1;
-              } else {
-                emitWord(encoded.value);
-                emitted += 2;
-              }
-            }
-            const storageBytes = sizeOfTypeExpr(type, env, diagnostics);
-            if (storageBytes === undefined) continue;
-            for (let pad = emitted; pad < storageBytes; pad++) emitByte(0);
-            continue;
-          }
-
-          if (init.kind === 'InitRecordNamed') {
-            diag(
-              diagnostics,
-              decl.span.file,
-              `Named-field aggregate initializer requires a record type for "${decl.name}".`,
-            );
-            continue;
-          }
-
-          const elementScalar =
-            type.kind === 'ArrayType' ? resolveScalarKind(type.element) : resolveScalarKind(type);
-          const elementSize =
-            elementScalar === 'word' || elementScalar === 'addr'
-              ? 2
-              : elementScalar === 'byte'
-                ? 1
-                : undefined;
-          if (!elementSize) {
-            diag(
-              diagnostics,
-              decl.span.file,
-              `Unsupported data type for "${decl.name}" (expected byte/word/addr/ptr or fixed-length arrays of those).`,
-            );
-            continue;
-          }
-
-          const declaredLength = type.kind === 'ArrayType' ? type.length : 1;
-          let actualLength = declaredLength ?? 0;
-
-          if (init.kind === 'InitString') {
-            if (elementSize !== 1) {
-              diag(
-                diagnostics,
-                decl.span.file,
-                `String initializer requires byte element type for "${decl.name}".`,
-              );
-              continue;
-            }
-            if (declaredLength !== undefined && init.value.length !== declaredLength) {
-              diag(diagnostics, decl.span.file, `String length mismatch for "${decl.name}".`);
-              continue;
-            }
-            for (let idx = 0; idx < init.value.length; idx++) {
-              emitByte(init.value.charCodeAt(idx));
-            }
-            actualLength = init.value.length;
-            if (type.kind === 'ArrayType') {
-              const emittedBytes = actualLength * elementSize;
-              const storageBytes = nextPow2(emittedBytes);
-              for (let pad = emittedBytes; pad < storageBytes; pad++) emitByte(0);
-            }
-            continue;
-          }
-
-          const values: number[] = [];
-          for (const e of init.elements) {
-            const v = evalImmExpr(e, env, diagnostics);
-            if (v === undefined) {
-              diag(
-                diagnostics,
-                decl.span.file,
-                `Failed to evaluate data initializer for "${decl.name}".`,
-              );
-              break;
-            }
-            values.push(v);
-          }
-
-          if (declaredLength !== undefined && values.length !== declaredLength) {
-            diag(diagnostics, decl.span.file, `Initializer length mismatch for "${decl.name}".`);
-            continue;
-          }
-
-          for (const v of values) {
-            if (elementSize === 1) emitByte(v);
-            else emitWord(v);
-          }
-          actualLength = type.kind === 'ArrayType' ? values.length : 1;
-          if (type.kind === 'ArrayType') {
-            const emittedBytes = actualLength * elementSize;
-            const storageBytes = nextPow2(emittedBytes);
-            for (let pad = emittedBytes; pad < storageBytes; pad++) emitByte(0);
-          }
-        }
-        continue;
-      }
-
-      if (item.kind === 'VarBlock' && item.scope === 'module') {
-        const varBlock = item as VarBlockNode;
-        for (const decl of varBlock.decls) {
-          if (!decl.typeExpr) continue;
-          const size = sizeOfTypeExpr(decl.typeExpr, env, diagnostics);
-          if (size === undefined) continue;
-          if (env.consts.has(decl.name)) {
-            diag(diagnostics, decl.span.file, `Var name "${decl.name}" collides with a const.`);
-            varOffset += size;
-            continue;
-          }
-          if (env.enums.has(decl.name)) {
-            diag(
-              diagnostics,
-              decl.span.file,
-              `Var name "${decl.name}" collides with an enum member.`,
-            );
-            varOffset += size;
-            continue;
-          }
-          if (env.types.has(decl.name)) {
-            diag(diagnostics, decl.span.file, `Var name "${decl.name}" collides with a type name.`);
-            varOffset += size;
-            continue;
-          }
-          if (taken.has(decl.name)) {
-            diag(
-              diagnostics,
-              decl.span.file,
-              `Duplicate symbol name "${decl.name}" for var declaration.`,
-            );
-            varOffset += size;
-            continue;
-          }
-          taken.add(decl.name);
-          pending.push({
-            kind: 'var',
-            name: decl.name,
-            section: 'var',
-            offset: varOffset,
-            file: decl.span.file,
-            line: decl.span.start.line,
-            scope: 'global',
-            size,
-          });
-          varOffset += size;
-        }
-      }
-    }
-  }
-
-  const evalBase = (kind: SectionKind): number | undefined => {
-    const at = baseExprs[kind];
-    if (!at) return undefined;
-    const v = evalImmExpr(at, env, diagnostics);
-    if (v === undefined) {
-      diag(diagnostics, at.span.file, `Failed to evaluate section "${kind}" base address.`);
-      return undefined;
-    }
-    if (v < 0 || v > 0xffff) {
-      diag(diagnostics, at.span.file, `Section "${kind}" base address out of range (0..65535).`);
-      return undefined;
-    }
-    return v;
+  const activeSectionRef = {
+    get current() {
+      return activeSection;
+    },
+    set current(value: SectionKind) {
+      activeSection = value;
+    },
+  };
+  const codeOffsetRef = {
+    get current() {
+      return codeOffset;
+    },
+    set current(value: number) {
+      codeOffset = value;
+    },
+  };
+  const dataOffsetRef = {
+    get current() {
+      return dataOffset;
+    },
+    set current(value: number) {
+      dataOffset = value;
+    },
+  };
+  const varOffsetRef = {
+    get current() {
+      return varOffset;
+    },
+    set current(value: number) {
+      varOffset = value;
+    },
   };
 
-  const explicitCodeBase = evalBase('code');
-  const explicitDataBase = evalBase('data');
-  const explicitVarBase = evalBase('var');
+  const programLoweringContext = {
+    diagnostics,
+    diag,
+    diagAt,
+    diagAtWithId,
+    diagAtWithSeverityAndId,
+    warnAt,
+    taken,
+    pending,
+    traceComment,
+    traceLabel,
+    currentCodeSegmentTagRef: {
+      get current() {
+        return currentCodeSegmentTag;
+      },
+      set current(value: SourceSegmentTag | undefined) {
+        currentCodeSegmentTag = value;
+      },
+    },
+    trackedSpRef: {
+      get delta() {
+        return spDeltaTracked;
+      },
+      set delta(value: number) {
+        spDeltaTracked = value;
+      },
+      get valid() {
+        return spTrackingValid;
+      },
+      set valid(value: boolean) {
+        spTrackingValid = value;
+      },
+      get invalid() {
+        return spTrackingInvalidatedByMutation;
+      },
+      set invalid(value: boolean) {
+        spTrackingInvalidatedByMutation = value;
+      },
+    },
+    getCodeOffset: () => codeOffsetRef.current,
+    emitInstr,
+    emitRawCodeBytes,
+    emitAbs16Fixup,
+    emitAbs16FixupPrefixed,
+    emitRel8Fixup,
+    conditionOpcodeFromName,
+    conditionNameFromOpcode,
+    callConditionOpcodeFromName,
+    jrConditionOpcodeFromName,
+    conditionOpcode,
+    inverseConditionName,
+    symbolicTargetFromExpr,
+    evalImmExpr,
+    env,
+    resolveScalarBinding,
+    resolveScalarKind,
+    resolveEaTypeExpr,
+    resolveScalarTypeForEa,
+    resolveArrayType,
+    buildEaWordPipeline,
+    enforceEaRuntimeAtomBudget,
+    enforceDirectCallSiteEaBudget,
+    pushEaAddress,
+    pushMemValue,
+    pushImm16,
+    pushZeroExtendedReg8,
+    loadImm16ToHL,
+    stackSlotOffsets,
+    stackSlotTypes,
+    localAliasTargets,
+    storageTypes,
+    rawTypedCallWarningsEnabled,
+    callables,
+    opsByName,
+    declaredOpNames,
+    deferredExterns,
+    opStackPolicyMode,
+    matcherMatchesOperand,
+    formatOpSignature,
+    formatAsmOperandForOpDiag,
+    firstOpOverloadMismatchReason,
+    formatOpDefinitionForDiag,
+    selectMostSpecificOpOverload,
+    summarizeOpStackEffect,
+    cloneImmExpr,
+    cloneEaExpr,
+    cloneOperand,
+    flattenEaDottedName,
+    normalizeFixedToken,
+    typeDisplay,
+    sameTypeShape,
+    emitStepPipeline,
+    lowerLdWithEa,
+    reg8,
+    reg16,
+    generatedLabelCounterRef: {
+      get current() {
+        return generatedLabelCounter;
+      },
+      set current(value: number) {
+        generatedLabelCounter = value;
+      },
+    },
+    program,
+    includeDirs,
+    declaredBinNames,
+    rawAddressSymbols,
+    moduleAliasTargets,
+    moduleAliasDecls,
+    absoluteSymbols,
+    symbols,
+    dataBytes,
+    codeBytes,
+    hexBytes,
+    activeSectionRef,
+    codeOffsetRef,
+    dataOffsetRef,
+    varOffsetRef,
+    baseExprs,
+    setBaseExpr,
+    advanceAlign,
+    loadBinInput,
+    loadHexInput,
+    resolveAggregateType,
+    sizeOfTypeExpr,
+    lowerFunctionDecl,
+  };
 
-  const codeOk = explicitCodeBase !== undefined || !baseExprs.code;
-  const fallbackCodeBase = options?.defaultCodeBase ?? 0;
-  const codeBase = explicitCodeBase ?? fallbackCodeBase;
+  preScanProgramDeclarations(programLoweringContext);
+  lowerProgramDeclarations(programLoweringContext);
 
-  const dataBase =
-    explicitDataBase ??
-    (codeOk
-      ? alignTo(codeBase + codeOffset, 2)
-      : (diag(
-          diagnostics,
-          primaryFile,
-          `Cannot compute default data base address because code base address is invalid.`,
-        ),
-        0));
-  const dataOk = explicitDataBase !== undefined || (baseExprs.data === undefined && codeOk);
-
-  const varBase =
-    explicitVarBase ??
-    (dataOk
-      ? alignTo(dataBase + dataOffset, 2)
-      : (diag(
-          diagnostics,
-          primaryFile,
-          `Cannot compute default var base address because data base address is invalid.`,
-        ),
-        0));
-  const varOk = explicitVarBase !== undefined || (baseExprs.var === undefined && dataOk);
-
-  // Resolve symbol addresses for fixups (functions/labels/etc).
-  const addrByNameLower = new Map<string, number>();
-  for (const ps of pending) {
-    const base = ps.section === 'code' ? codeBase : ps.section === 'data' ? dataBase : varBase;
-    const ok = ps.section === 'code' ? codeOk : ps.section === 'data' ? dataOk : varOk;
-    if (!ok) continue;
-    addrByNameLower.set(ps.name.toLowerCase(), base + ps.offset);
-  }
-  for (const sym of symbols) {
-    if (sym.kind === 'constant') continue;
-    addrByNameLower.set(sym.name.toLowerCase(), sym.address);
-  }
-  for (const sym of absoluteSymbols) {
-    if (sym.kind === 'constant') continue;
-    addrByNameLower.set(sym.name.toLowerCase(), sym.address);
-  }
-  for (const ex of deferredExterns) {
-    const base = addrByNameLower.get(ex.baseLower);
-    if (base === undefined) {
-      diag(
-        diagnostics,
-        ex.file,
-        `Failed to resolve extern base symbol "${ex.baseLower}" for "${ex.name}".`,
-      );
-      continue;
-    }
-    const addr = base + ex.addend;
-    if (addr < 0 || addr > 0xffff) {
-      diag(
-        diagnostics,
-        ex.file,
-        `extern func "${ex.name}" resolved address out of range (0..65535).`,
-      );
-      continue;
-    }
-    addrByNameLower.set(ex.name.toLowerCase(), addr);
-    symbols.push({
-      kind: 'label',
-      name: ex.name,
-      address: addr,
-      file: ex.file,
-      line: ex.line,
-      scope: 'global',
-    });
-  }
-
-  for (const fx of fixups) {
-    const base = addrByNameLower.get(fx.baseLower);
-    const addr = base === undefined ? undefined : base + fx.addend;
-    if (addr === undefined) {
-      diag(diagnostics, fx.file, `Unresolved symbol "${fx.baseLower}" in 16-bit fixup.`);
-      continue;
-    }
-    if (addr < 0 || addr > 0xffff) {
-      diag(
-        diagnostics,
-        fx.file,
-        `16-bit fixup address out of range for "${fx.baseLower}" with addend ${fx.addend}: ${addr}.`,
-      );
-      continue;
-    }
-    codeBytes.set(fx.offset, addr & 0xff);
-    codeBytes.set(fx.offset + 1, (addr >> 8) & 0xff);
-  }
-  for (const fx of rel8Fixups) {
-    const base = addrByNameLower.get(fx.baseLower);
-    const target = base === undefined ? undefined : base + fx.addend;
-    if (target === undefined) {
-      diag(
-        diagnostics,
-        fx.file,
-        `Unresolved symbol "${fx.baseLower}" in rel8 ${fx.mnemonic} fixup.`,
-      );
-      continue;
-    }
-    const origin = codeBase + fx.origin;
-    const disp = target - origin;
-    if (disp < -128 || disp > 127) {
-      diag(
-        diagnostics,
-        fx.file,
-        `${fx.mnemonic} target out of range for rel8 branch (${disp}, expected -128..127).`,
-      );
-      continue;
-    }
-    codeBytes.set(fx.offset, disp & 0xff);
-  }
-
-  for (const [addr, b] of hexBytes) {
-    if (addr < 0 || addr > 0xffff) {
-      diag(diagnostics, primaryFile, `HEX byte address out of range: ${addr}.`);
-      continue;
-    }
-    if (bytes.has(addr)) {
-      diag(diagnostics, primaryFile, `HEX data overlaps emitted bytes at address ${addr}.`);
-      continue;
-    }
-    bytes.set(addr, b);
-  }
-
-  if (codeOk)
-    writeSection(codeBase, codeBytes, bytes, (message) => diag(diagnostics, primaryFile, message));
-  if (dataOk)
-    writeSection(dataBase, dataBytes, bytes, (message) => diag(diagnostics, primaryFile, message));
-
-  for (const ps of pending) {
-    const base = ps.section === 'code' ? codeBase : ps.section === 'data' ? dataBase : varBase;
-    const ok = ps.section === 'code' ? codeOk : ps.section === 'data' ? dataOk : varOk;
-    if (!ok) continue;
-    const sym: SymbolEntry = {
-      kind: ps.kind,
-      name: ps.name,
-      address: base + ps.offset,
-      ...(ps.file !== undefined ? { file: ps.file } : {}),
-      ...(ps.line !== undefined ? { line: ps.line } : {}),
-      ...(ps.scope !== undefined ? { scope: ps.scope } : {}),
-      ...(ps.size !== undefined ? { size: ps.size } : {}),
-    };
-    symbols.push(sym);
-  }
-  symbols.push(...absoluteSymbols);
-
-  const writtenRange = computeWrittenRange(bytes);
-  const sourceSegments = codeOk ? rebaseCodeSourceSegments(codeBase, codeSourceSegments) : [];
-  const asmTrace = codeOk ? rebaseAsmTrace(codeBase, codeAsmTrace) : [];
+  const { writtenRange, sourceSegments, asmTrace } = finalizeProgramEmission({
+    diagnostics,
+    diag,
+    primaryFile,
+    baseExprs,
+    evalImmExpr,
+    env,
+    codeOffset,
+    dataOffset,
+    varOffset,
+    pending,
+    symbols,
+    absoluteSymbols,
+    deferredExterns,
+    fixups,
+    rel8Fixups,
+    codeBytes,
+    dataBytes,
+    hexBytes,
+    bytes,
+    codeSourceSegments,
+    codeAsmTrace,
+    alignTo,
+    writeSection,
+    computeWrittenRange,
+    rebaseCodeSourceSegments,
+    rebaseAsmTrace,
+    ...(options?.defaultCodeBase !== undefined
+      ? { defaultCodeBase: options.defaultCodeBase }
+      : {}),
+  });
 
   return {
     map: {
