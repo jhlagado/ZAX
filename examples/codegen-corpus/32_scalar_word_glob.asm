@@ -9,7 +9,7 @@ add IX, SP                     ; 0106: DD 39
 push AF                        ; 0108: F5
 push BC                        ; 0109: C5
 push DE                        ; 010A: D5
-ld HL, (glob_w)                ; 010B: 2A 00 00
+ld hl, (glob_w)                ; 010B: 2A 00 00
 ld (glob_w), HL                ; 010E: 22 00 00
 __zax_epilogue_0:
 pop DE                         ; 0111: D1
