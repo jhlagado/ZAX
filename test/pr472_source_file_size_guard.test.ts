@@ -41,11 +41,20 @@ describe('PR472: source file size guard', () => {
     }
   });
 
-  it('fails in enforce mode while current hard-cap breaches remain', async () => {
-    await expect(
-      execFileAsync('node', ['scripts/check-source-file-sizes.mjs', '--enforce-hard-cap'], {
-        cwd: process.cwd(),
-      }),
-    ).rejects.toMatchObject({ code: 1 });
+  it('enforce mode only fails when a hard-cap breach remains', async () => {
+    const emitLines = await currentLineCount('src/lowering/emit.ts');
+    const parserLines = await currentLineCount('src/frontend/parser.ts');
+    const encodeLines = await currentLineCount('src/z80/encode.ts');
+    const hasHardCapBreach = [emitLines, parserLines, encodeLines].some((count) => count > 1000);
+
+    const run = execFileAsync('node', ['scripts/check-source-file-sizes.mjs', '--enforce-hard-cap'], {
+      cwd: process.cwd(),
+    });
+
+    if (hasHardCapBreach) {
+      await expect(run).rejects.toMatchObject({ code: 1 });
+    } else {
+      await expect(run).resolves.toMatchObject({ stderr: '' });
+    }
   });
 });

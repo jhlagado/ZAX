@@ -47,7 +47,7 @@ type OpStackSummary =
   | { kind: 'known'; delta: number; hasUntrackedSpMutation: boolean }
   | { kind: 'complex' };
 
-type FunctionLoweringContext = {
+export type FunctionLoweringContext = {
   item: FuncDeclNode;
   diagnostics: Diagnostic[];
   diag: (diagnostics: Diagnostic[], file: string, message: string) => void;

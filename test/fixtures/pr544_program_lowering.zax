@@ -1,0 +1,20 @@
+const K = 3
+enum Mode Read, Write
+
+section data
+align 2
+
+data
+  arr: byte[3] = { 1, 2, 3 }
+
+section code
+
+func helper(): HL
+  ld a, arr[K - 2]
+  ld l, a
+  ld h, 0
+end
+
+export func main()
+  helper
+end
