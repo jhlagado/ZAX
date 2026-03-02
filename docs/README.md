@@ -28,6 +28,9 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `codegen-corpus-workflow.md` — supported workflow and ownership rules for the curated codegen corpus.
 - `virtual-reg16-transfer-patterns.md` — supported `rp -> rp` virtual transfer patterns for the current low-level convenience slice.
 - `github-backlog-workflow.md` — GitHub issue/label/milestone workflow used as the project backlog system.
+- `source-overview.md` — description of the current source tree: modules, pipeline, subsystems, state lifetimes.
+- `quality-report.md` — code quality analysis: specific issues rated by severity, with locations and fix directions.
+- `refactor-plan.md` — phased improvement plan: ordered phases, per-ticket descriptions, success criteria.
 
 ## Content Ownership
 
