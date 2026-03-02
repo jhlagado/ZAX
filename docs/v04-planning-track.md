@@ -41,28 +41,28 @@ shape and the existing implementation is better understood.
 
 ## 3. Active workstreams
 
-### Track A. Codebase audit and understanding
+### Track A. Remaining emitter decomposition
 
-The first job is to understand what the compiler is actually doing now:
+The original audit and broad refactor pass have been completed, but one major
+structural failure remains:
 
-- identify stale lowering paths
-- identify duplicated logic
-- identify paths that no longer match the current spec
-- identify areas where behavior is poorly explained by the current structure
+- `src/lowering/emit.ts` is still above the hard cap
+- it remains the only unacceptable source-file-size violation in `src/`
+- v0.4 is not complete until it is reduced below 1000 lines
 
-This is especially important in:
+The current active work is therefore a strict decomposition sequence for the
+remaining `emit.ts` clusters:
 
-- `src/lowering/emit.ts`
-- encoding / parsing boundaries where old and new behavior may overlap
-
-Primary issue:
-
-- `#465` — audit current lowering behavior in `src/lowering/emit.ts`
+- `#528`
+- `#529`
+- `#530`
+- `#531`
+- `#532`
+- `#533`
 
 ### Track B. Refactoring and modularization
 
-Once the current behavior is understood, refactor for structure without changing
-intended semantics:
+The guiding rule for the active refactor sequence is still the same:
 
 - break oversized files into clearer modules
 - isolate reusable lowering helpers
@@ -70,26 +70,23 @@ intended semantics:
 - keep behavior-preserving refactors separate from functional changes wherever
   possible
 
-Primary issue:
+Current hard acceptance criteria:
 
-- `#466` — refactor the lowering emitter into smaller modules without semantic drift
+- `src/lowering/emit.ts` must end below 1000 lines
+- preferred end state is below 750 lines
+- no newly extracted file may exceed 1000 lines
 
 ### Track C. Documentation consolidation
 
-The current docs set has accumulated over time. v0.4 should reduce sprawl:
+The first consolidation pass is complete. The remaining rule is simple:
 
-- merge overlapping guidance into fewer, clearer docs
-- keep one authoritative place per topic
-- remove or archive stale supporting notes when their content is absorbed
-- keep normative vs non-normative boundaries explicit
-
-Primary issue:
-
-- `#467` — consolidate documentation and reduce overlapping support docs
+- keep the docs set small
+- delete stale planning/support notes rather than preserving them
+- keep one active planning layer for the current release line
 
 ### Track D. Coverage and regression hardening
 
-v0.4 should increase confidence in the current compiler before new feature work:
+Coverage work remains active, but it is not the current blocker:
 
 - identify low-coverage areas
 - add focused regression tests around poorly covered lowering paths
