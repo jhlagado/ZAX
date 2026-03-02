@@ -6,9 +6,6 @@ import type {
   AsmLabelNode,
   BinDeclNode,
   ConstDeclNode,
-  DataBlockNode,
-  DataDeclNode,
-  DataRecordFieldInitNode,
   EnumDeclNode,
   ExternDeclNode,
   ExternFuncNode,
@@ -75,6 +72,7 @@ import {
   parseImportDecl,
   parseSectionDirectiveDecl,
 } from './parseTopLevelSimple.js';
+import { parseDataBlock } from './parseData.js';
 
 const RESERVED_TOP_LEVEL_KEYWORDS = new Set([
   'func',
@@ -120,60 +118,6 @@ function stripComment(line: string): string {
 
 function canonicalConditionToken(token: string): string {
   return token.toLowerCase();
-}
-
-function splitTopLevelComma(text: string): string[] {
-  const parts: string[] = [];
-  let start = 0;
-  let parenDepth = 0;
-  let bracketDepth = 0;
-  let braceDepth = 0;
-  let inChar = false;
-  let escaped = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i]!;
-    if (inChar) {
-      if (escaped) escaped = false;
-      else if (ch === '\\') escaped = true;
-      else if (ch === "'") inChar = false;
-      continue;
-    }
-    if (ch === "'") {
-      inChar = true;
-      continue;
-    }
-    if (ch === '(') {
-      parenDepth++;
-      continue;
-    }
-    if (ch === ')') {
-      if (parenDepth > 0) parenDepth--;
-      continue;
-    }
-    if (ch === '[') {
-      bracketDepth++;
-      continue;
-    }
-    if (ch === ']') {
-      if (bracketDepth > 0) bracketDepth--;
-      continue;
-    }
-    if (ch === '{') {
-      braceDepth++;
-      continue;
-    }
-    if (ch === '}') {
-      if (braceDepth > 0) braceDepth--;
-      continue;
-    }
-    if (ch === ',' && parenDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
-      parts.push(text.slice(start, i));
-      start = i + 1;
-    }
-  }
-  parts.push(text.slice(start));
-  return parts;
 }
 
 /**
@@ -1240,210 +1184,15 @@ export function parseModuleFile(
     }
 
     if (rest.toLowerCase() === 'data') {
-      const blockStart = lineStartOffset;
-      i++;
-      const decls: DataDeclNode[] = [];
-      const declNamesLower = new Set<string>();
-
-      while (i < lineCount) {
-        const { raw: rawDecl, startOffset: so, endOffset: eo } = getRawLine(i);
-        const t = stripComment(rawDecl).trim();
-        if (t.length === 0) {
-          i++;
-          continue;
-        }
-        if (isTopLevelStart(t)) {
-          const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^=]+?)\s*=\s*(.+)$/.exec(t);
-          if (m && TOP_LEVEL_KEYWORDS.has(m[1]!.toLowerCase())) {
-            diag(
-              diagnostics,
-              modulePath,
-              `Invalid data declaration name "${m[1]!}": collides with a top-level keyword.`,
-              { line: i + 1, column: 1 },
-            );
-            i++;
-            continue;
-          }
-          if (looksLikeKeywordBodyDeclLine(t)) {
-            diagInvalidBlockLine(
-              diagnostics,
-              modulePath,
-              'data declaration',
-              t,
-              '<name>: <type> = <initializer>',
-              i + 1,
-            );
-            i++;
-            continue;
-          }
-          break;
-        }
-
-        const m = /^([^:]+)\s*:\s*([^=]+?)\s*=\s*(.+)$/.exec(t);
-        if (!m) {
-          diagInvalidBlockLine(
-            diagnostics,
-            modulePath,
-            'data declaration',
-            t,
-            '<name>: <type> = <initializer>',
-            i + 1,
-          );
-          i++;
-          continue;
-        }
-
-        const name = m[1]!.trim();
-        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid data declaration name ${formatIdentifierToken(name)}: expected <identifier>.`,
-            { line: i + 1, column: 1 },
-          );
-          i++;
-          continue;
-        }
-        if (TOP_LEVEL_KEYWORDS.has(name.toLowerCase())) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid data declaration name "${name}": collides with a top-level keyword.`,
-            { line: i + 1, column: 1 },
-          );
-          i++;
-          continue;
-        }
-        const nameLower = name.toLowerCase();
-        if (declNamesLower.has(nameLower)) {
-          diag(diagnostics, modulePath, `Duplicate data declaration name "${name}".`, {
-            line: i + 1,
-            column: 1,
-          });
-          i++;
-          continue;
-        }
-        declNamesLower.add(nameLower);
-        const typeText = m[2]!.trim();
-        const initText = m[3]!.trim();
-
-        const lineSpan = span(file, so, eo);
-        const typeExpr = parseTypeExprFromText(typeText, lineSpan, {
-          allowInferredArrayLength: true,
-        });
-
-        if (!typeExpr) {
-          diagInvalidBlockLine(
-            diagnostics,
-            modulePath,
-            'data declaration',
-            t,
-            '<name>: <type> = <initializer>',
-            i + 1,
-          );
-          i++;
-          continue;
-        }
-
-        let initializer: DataDeclNode['initializer'] | undefined;
-        if (initText.startsWith('"') && initText.endsWith('"') && initText.length >= 2) {
-          initializer = { kind: 'InitString', span: lineSpan, value: initText.slice(1, -1) };
-        } else if (initText.startsWith('{') && initText.endsWith('}')) {
-          const inner = initText.slice(1, -1).trim();
-          const parts = inner.length === 0 ? [] : splitTopLevelComma(inner).map((p) => p.trim());
-          const namedFields: DataRecordFieldInitNode[] = [];
-          const positionalElements: ImmExprNode[] = [];
-          let sawNamed = false;
-          let sawPositional = false;
-          let parseFailed = false;
-
-          for (const part of parts) {
-            if (part.length === 0) {
-              parseFailed = true;
-              break;
-            }
-            const namedMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(part);
-            if (namedMatch) {
-              sawNamed = true;
-              const value = parseImmExprFromText(
-                modulePath,
-                namedMatch[2]!.trim(),
-                lineSpan,
-                diagnostics,
-              );
-              if (!value) {
-                parseFailed = true;
-                continue;
-              }
-              namedFields.push({
-                kind: 'DataRecordFieldInit',
-                span: lineSpan,
-                name: namedMatch[1]!,
-                value,
-              });
-              continue;
-            }
-            sawPositional = true;
-            const e = parseImmExprFromText(modulePath, part, lineSpan, diagnostics);
-            if (!e) {
-              parseFailed = true;
-              continue;
-            }
-            positionalElements.push(e);
-          }
-
-          if (sawNamed && sawPositional) {
-            diag(
-              diagnostics,
-              modulePath,
-              `Mixed positional and named aggregate initializer entries are not allowed for "${name}".`,
-              { line: i + 1, column: 1 },
-            );
-            parseFailed = true;
-          }
-
-          if (!parseFailed) {
-            initializer = sawNamed
-              ? { kind: 'InitRecordNamed', span: lineSpan, fields: namedFields }
-              : { kind: 'InitArray', span: lineSpan, elements: positionalElements };
-          }
-        } else if (initText.startsWith('[') && initText.endsWith(']')) {
-          const inner = initText.slice(1, -1).trim();
-          const parts = inner.length === 0 ? [] : splitTopLevelComma(inner).map((p) => p.trim());
-          const elements: ImmExprNode[] = [];
-          for (const part of parts) {
-            const e = parseImmExprFromText(modulePath, part, lineSpan, diagnostics);
-            if (e) elements.push(e);
-          }
-          initializer = { kind: 'InitArray', span: lineSpan, elements };
-        } else {
-          const e = parseImmExprFromText(modulePath, initText, lineSpan, diagnostics);
-          if (e) initializer = { kind: 'InitArray', span: lineSpan, elements: [e] };
-        }
-
-        if (!initializer) {
-          i++;
-          continue;
-        }
-
-        const declNode: DataDeclNode = {
-          kind: 'DataDecl',
-          span: lineSpan,
-          name,
-          typeExpr,
-          initializer,
-        };
-        decls.push(declNode);
-        i++;
-      }
-
-      const blockEnd = i < lineCount ? (getRawLine(i).startOffset ?? blockStart) : file.text.length;
-      const dataBlock: DataBlockNode = {
-        kind: 'DataBlock',
-        span: span(file, blockStart, blockEnd),
-        decls,
-      };
-      items.push(dataBlock);
+      const parsedData = parseDataBlock(i, {
+        file,
+        lineCount,
+        diagnostics,
+        modulePath,
+        getRawLine,
+      });
+      items.push(parsedData.node);
+      i = parsedData.nextIndex;
       continue;
     }
 
