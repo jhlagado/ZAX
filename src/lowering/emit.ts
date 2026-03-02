@@ -95,6 +95,13 @@ import { createOpMatchingHelpers } from './opMatching.js';
 import { createEmissionCoreHelpers } from './emissionCore.js';
 import { createFixupEmissionHelpers } from './fixupEmission.js';
 import {
+  cloneEaExpr,
+  cloneImmExpr,
+  cloneOperand,
+  createAsmUtilityHelpers,
+  flattenEaDottedName,
+} from './asmUtils.js';
+import {
   alignTo,
   computeWrittenRange,
   rebaseAsmTrace,
@@ -515,38 +522,9 @@ export function emitProgram(
     emitAbs16FixupEd,
   }));
 
-  const flattenEaDottedName = (ea: EaExprNode): string | undefined => {
-    if (ea.kind === 'EaName') return ea.name;
-    if (ea.kind === 'EaField') {
-      const base = flattenEaDottedName(ea.base);
-      return base ? `${base}.${ea.field}` : undefined;
-    }
-    return undefined;
-  };
-
-  const enumImmExprFromOperand = (op: AsmOperandNode): ImmExprNode | undefined => {
-    if (op.kind === 'Imm') return op.expr;
-    if (op.kind !== 'Ea') return undefined;
-    const name = flattenEaDottedName(op.expr);
-    if (!name || !env.enums.has(name)) return undefined;
-    return { kind: 'ImmName', span: op.span, name };
-  };
-
-  const normalizeFixedToken = (op: AsmOperandNode): string | undefined => {
-    switch (op.kind) {
-      case 'Reg':
-        return op.name.toUpperCase();
-      case 'Imm':
-        if (op.expr.kind === 'ImmName') return op.expr.name.toUpperCase();
-        return undefined;
-      case 'Ea': {
-        const enumExpr = enumImmExprFromOperand(op);
-        return enumExpr?.kind === 'ImmName' ? enumExpr.name.toUpperCase() : undefined;
-      }
-      default:
-        return undefined;
-    }
-  };
+  const { normalizeFixedToken } = createAsmUtilityHelpers({
+    isEnumName: (name) => env.enums.has(name),
+  });
 
   const evalImmNoDiag = (expr: ImmExprNode): number | undefined => {
     const scratch: Diagnostic[] = [];
@@ -582,61 +560,6 @@ export function emitProgram(
     evalImmNoDiag,
     inferMemWidth,
   });
-
-  const cloneImmExpr = (expr: ImmExprNode): ImmExprNode => {
-    const cloneOffsetofPath = (path: any): any => ({
-      ...path,
-      steps: path.steps.map((step: any) =>
-        step.kind === 'OffsetofIndex' ? { ...step, expr: cloneImmExpr(step.expr) } : { ...step },
-      ),
-    });
-    if (expr.kind === 'ImmLiteral') return { ...expr };
-    if (expr.kind === 'ImmName') return { ...expr };
-    if (expr.kind === 'ImmSizeof') return { ...expr };
-    if (expr.kind === 'ImmOffsetof')
-      return { ...expr, path: cloneOffsetofPath(expr.path) as typeof expr.path };
-    if (expr.kind === 'ImmUnary') return { ...expr, expr: cloneImmExpr(expr.expr) };
-    return { ...expr, left: cloneImmExpr(expr.left), right: cloneImmExpr(expr.right) };
-  };
-
-  const cloneEaExpr = (ea: EaExprNode): EaExprNode => {
-    switch (ea.kind) {
-      case 'EaName':
-        return { ...ea };
-      case 'EaField':
-        return { ...ea, base: cloneEaExpr(ea.base) };
-      case 'EaIndex':
-        return {
-          ...ea,
-          base: cloneEaExpr(ea.base),
-          index:
-            ea.index.kind === 'IndexEa'
-              ? { ...ea.index, expr: cloneEaExpr(ea.index.expr) }
-              : ea.index.kind === 'IndexImm'
-                ? { ...ea.index, value: cloneImmExpr(ea.index.value) }
-                : ea.index.kind === 'IndexMemIxIy' && ea.index.disp
-                  ? { ...ea.index, disp: cloneImmExpr(ea.index.disp) }
-                  : { ...ea.index },
-        };
-      case 'EaAdd':
-      case 'EaSub':
-        return { ...ea, base: cloneEaExpr(ea.base), offset: cloneImmExpr(ea.offset) };
-    }
-  };
-
-  const cloneOperand = (op: AsmOperandNode): AsmOperandNode => {
-    switch (op.kind) {
-      case 'Reg':
-      case 'PortC':
-        return { ...op };
-      case 'Imm':
-      case 'PortImm8':
-        return { ...op, expr: cloneImmExpr(op.expr) } as AsmOperandNode;
-      case 'Ea':
-      case 'Mem':
-        return { ...op, expr: cloneEaExpr(op.expr) } as AsmOperandNode;
-    }
-  };
 
   const {
     resolveAggregateType,
