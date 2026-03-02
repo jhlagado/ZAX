@@ -71,7 +71,6 @@ import type {
   OpMatcherNode,
   ParamNode,
   ProgramNode,
-  RecordFieldNode,
   SectionDirectiveNode,
   SourceSpan,
   TypeExprNode,
@@ -100,6 +99,7 @@ import {
   toHexByte,
   toHexWord,
 } from './traceFormat.js';
+import { createTypeResolutionHelpers } from './typeResolution.js';
 
 function diag(diagnostics: Diagnostic[], file: string, message: string): void {
   diagnostics.push({ id: DiagnosticIds.EmitError, severity: 'error', message, file });
@@ -359,22 +359,6 @@ export function emitProgram(
       : { kind: 'known', delta, hasUntrackedSpMutation };
     opStackSummaryCache.set(decl, out);
     return out;
-  };
-
-  const resolveScalarKind = (
-    typeExpr: TypeExprNode,
-    seen: Set<string> = new Set(),
-  ): 'byte' | 'word' | 'addr' | undefined => {
-    if (typeExpr.kind !== 'TypeName') return undefined;
-    const lower = typeExpr.name.toLowerCase();
-    if (lower === 'byte' || lower === 'word' || lower === 'addr') return lower;
-    if (lower === 'ptr') return 'addr';
-    if (seen.has(lower)) return undefined;
-    seen.add(lower);
-    const decl = env.types.get(typeExpr.name);
-    if (!decl) return undefined;
-    if (decl.kind !== 'TypeDecl') return undefined;
-    return resolveScalarKind(decl.typeExpr, seen);
   };
 
   const storageTypes = new Map<string, TypeExprNode>();
@@ -1483,187 +1467,27 @@ export function emitProgram(
     }
   };
 
-  type AggregateType = { kind: 'record' | 'union'; fields: RecordFieldNode[] };
-
-  const resolveAggregateType = (te: TypeExprNode): AggregateType | undefined => {
-    if (te.kind === 'RecordType') return { kind: 'record', fields: te.fields };
-    if (te.kind === 'TypeName') {
-      const decl = env.types.get(te.name);
-      if (!decl) return undefined;
-      if (decl.kind === 'UnionDecl') return { kind: 'union', fields: decl.fields };
-      if (decl.typeExpr.kind === 'RecordType')
-        return { kind: 'record', fields: decl.typeExpr.fields };
-    }
-    return undefined;
-  };
-
-  const resolveArrayElementType = (te: TypeExprNode): TypeExprNode | undefined => {
-    if (te.kind === 'ArrayType') return te.element;
-    if (te.kind === 'TypeName') {
-      const decl = env.types.get(te.name);
-      if (decl?.kind === 'TypeDecl' && decl.typeExpr.kind === 'ArrayType') {
-        return decl.typeExpr.element;
-      }
-    }
-    return undefined;
-  };
-
-  const unwrapTypeAlias = (
-    te: TypeExprNode,
-    seen = new Set<string>(),
-  ): TypeExprNode | undefined => {
-    if (te.kind !== 'TypeName') return te;
-    const scalar = resolveScalarKind(te);
-    if (scalar)
-      return { kind: 'TypeName', span: te.span, name: scalar === 'addr' ? 'addr' : scalar };
-    const lower = te.name.toLowerCase();
-    if (seen.has(lower)) return undefined;
-    seen.add(lower);
-    const decl = env.types.get(te.name);
-    if (!decl || decl.kind !== 'TypeDecl') return te;
-    return unwrapTypeAlias(decl.typeExpr, seen);
-  };
-
-  const resolveArrayType = (
-    te: TypeExprNode,
-  ): { element: TypeExprNode; length?: number } | undefined => {
-    const resolved = unwrapTypeAlias(te);
-    if (!resolved || resolved.kind !== 'ArrayType') return undefined;
-    return resolved.length === undefined
-      ? { element: resolved.element }
-      : { element: resolved.element, length: resolved.length };
-  };
-
-  const typeDisplay = (te: TypeExprNode): string => {
-    const render = (x: TypeExprNode): string => {
-      if (x.kind === 'TypeName') return x.name;
-      if (x.kind === 'ArrayType') {
-        const inner = render(x.element);
-        return `${inner}[${x.length === undefined ? '' : x.length}]`;
-      }
-      if (x.kind === 'RecordType') {
-        return `record{${x.fields.map((f) => `${f.name}:${render(f.typeExpr)}`).join(',')}}`;
-      }
-      return 'type';
-    };
-    return render(te);
-  };
-
-  const sameTypeShape = (left: TypeExprNode, right: TypeExprNode): boolean => {
-    const l = unwrapTypeAlias(left);
-    const r = unwrapTypeAlias(right);
-    if (!l || !r) return false;
-    if (l.kind !== r.kind) return false;
-    switch (l.kind) {
-      case 'TypeName':
-        return r.kind === 'TypeName' && l.name.toLowerCase() === r.name.toLowerCase();
-      case 'ArrayType':
-        if (r.kind !== 'ArrayType') return false;
-        if (l.length !== r.length) return false;
-        return sameTypeShape(l.element, r.element);
-      case 'RecordType':
-        if (r.kind !== 'RecordType') return false;
-        if (l.fields.length !== r.fields.length) return false;
-        for (let i = 0; i < l.fields.length; i++) {
-          const lf = l.fields[i]!;
-          const rf = r.fields[i]!;
-          if (lf.name !== rf.name || !sameTypeShape(lf.typeExpr, rf.typeExpr)) return false;
-        }
-        return true;
-    }
-  };
-
-  const resolveEaBaseName = (ea: EaExprNode): string | undefined => {
-    switch (ea.kind) {
-      case 'EaName':
-        return ea.name;
-      case 'EaField':
-      case 'EaIndex':
-      case 'EaAdd':
-      case 'EaSub':
-        return resolveEaBaseName(ea.base);
-    }
-  };
+  const {
+    resolveAggregateType,
+    resolveArrayType,
+    resolveEaTypeExpr,
+    resolveScalarBinding,
+    resolveScalarKind,
+    resolveScalarTypeForEa,
+    resolveScalarTypeForLd,
+    sameTypeShape,
+    typeDisplay,
+  } = createTypeResolutionHelpers({
+    env,
+    storageTypes,
+    stackSlotTypes,
+    rawAddressSymbols,
+    moduleAliasTargets,
+    getLocalAliasTargets: () => localAliasTargets,
+  });
 
   const resolveAliasTarget = (nameLower: string): EaExprNode | undefined =>
     localAliasTargets.get(nameLower) ?? moduleAliasTargets.get(nameLower);
-
-  const resolveEaTypeExprInternal = (
-    ea: EaExprNode,
-    visitingAliases: Set<string>,
-  ): TypeExprNode | undefined => {
-    switch (ea.kind) {
-      case 'EaName': {
-        const lower = ea.name.toLowerCase();
-        const direct = stackSlotTypes.get(lower) ?? storageTypes.get(lower);
-        if (direct) return direct;
-        const aliasTarget = resolveAliasTarget(lower);
-        if (!aliasTarget) return undefined;
-        if (visitingAliases.has(lower)) return undefined;
-        visitingAliases.add(lower);
-        try {
-          return resolveEaTypeExprInternal(aliasTarget, visitingAliases);
-        } finally {
-          visitingAliases.delete(lower);
-        }
-      }
-      case 'EaAdd':
-      case 'EaSub':
-        return resolveEaTypeExprInternal(ea.base, visitingAliases);
-      case 'EaField': {
-        const baseType = resolveEaTypeExprInternal(ea.base, visitingAliases);
-        if (!baseType) return undefined;
-        const agg = resolveAggregateType(baseType);
-        if (!agg) return undefined;
-        for (const f of agg.fields) {
-          if (f.name === ea.field) return f.typeExpr;
-        }
-        return undefined;
-      }
-      case 'EaIndex': {
-        const baseType = resolveEaTypeExprInternal(ea.base, visitingAliases);
-        if (!baseType) return undefined;
-        return resolveArrayElementType(baseType);
-      }
-    }
-  };
-
-  const resolveEaTypeExpr = (ea: EaExprNode): TypeExprNode | undefined =>
-    resolveEaTypeExprInternal(ea, new Set<string>());
-
-  const resolveScalarBinding = (name: string): 'byte' | 'word' | 'addr' | undefined => {
-    const lower = name.toLowerCase();
-    if (rawAddressSymbols.has(lower)) return undefined;
-    const typeExpr =
-      stackSlotTypes.get(lower) ??
-      storageTypes.get(lower) ??
-      (() => {
-        const aliasTarget = resolveAliasTarget(lower);
-        if (!aliasTarget) return undefined;
-        return resolveEaTypeExpr(aliasTarget);
-      })();
-    if (!typeExpr) return undefined;
-    return resolveScalarKind(typeExpr);
-  };
-
-  const resolveScalarTypeForEa = (ea: EaExprNode): 'byte' | 'word' | 'addr' | undefined => {
-    const base = resolveEaBaseName(ea);
-    if (base && rawAddressSymbols.has(base.toLowerCase())) return undefined;
-    const typeExpr = resolveEaTypeExpr(ea);
-    if (!typeExpr) return undefined;
-    return resolveScalarKind(typeExpr);
-  };
-
-  // Version for ld/st lowering that allows indexed/field access to data arrays.
-  // For ld instructions, indexed access to data arrays should use value semantics.
-  const resolveScalarTypeForLd = (ea: EaExprNode): 'byte' | 'word' | 'addr' | undefined => {
-    // Only reject scalar resolution for direct name access to rawAddressSymbols.
-    // Indexed/field access (even to data arrays) should resolve to scalar element types.
-    if (ea.kind === 'EaName' && rawAddressSymbols.has(ea.name.toLowerCase())) return undefined;
-    const typeExpr = resolveEaTypeExpr(ea);
-    if (!typeExpr) return undefined;
-    return resolveScalarKind(typeExpr);
-  };
 
   for (const [aliasLower, aliasTarget] of moduleAliasTargets) {
     if (storageTypes.has(aliasLower)) continue;
