@@ -74,5 +74,5 @@ Why last:
 
 ## Boundary
 
-- v0.3 is complete and closed out in `docs/v03-closeout-and-followups.md`.
+- v0.3 is treated as complete.
 - v0.4 starts as a code-quality cycle, not a feature-expansion cycle.

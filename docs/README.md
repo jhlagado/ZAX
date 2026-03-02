@@ -18,27 +18,16 @@ This directory is intentionally constrained. Every file below has a unique purpo
 
 ## 3. Core Supporting References (Non-normative)
 
-- `zax-dev-playbook.md` — implementation/workflow guidance for contributors.
+- `zax-dev-playbook.md` — contributor workflow only (branching, review, refactor, merge hygiene); no roadmap history or semantic policy.
 - `v02-codegen-reference.md` — single-stop v0.2 codegen reference (what to read, invariants).
 - `v02-codegen-worked-examples.md` — worked `.zax` → `.asm` examples for frame/call behavior.
-- `v02-closeout-and-followups.md` — records v0.2 closeout state and pushes future capability work into post-v0.2 tickets.
-- `v03-closeout-and-followups.md` — records v0.3 closeout and the transition boundary into v0.4 planning.
 - `v04-planning-track.md` — active v0.4 planning view.
 - `v04-priority-queue.md` — active short-form v0.4 queue.
 - `return-register-policy.md` — preservation/return matrix detail.
 - `arrays.md` — IX + DE/HL lowering guidance and runtime-atom cues.
 - `codegen-corpus-workflow.md` — supported workflow and ownership rules for the curated codegen corpus.
 - `virtual-reg16-transfer-patterns.md` — supported `rp -> rp` virtual transfer patterns for the current low-level convenience slice.
-- `v03-planning-track.md` — historical v0.3 planning record.
-- `v03-priority-queue.md` — historical v0.3 short-form queue.
 - `github-backlog-workflow.md` — GitHub issue/label/milestone workflow used as the project backlog system.
-
-## Definitive v0.2 Baseline Set
-
-1. `zax-spec.md` (normative)
-2. `v02-codegen-reference.md` (consolidated v0.2 codegen entry point)
-3. `v02-codegen-worked-examples.md` (worked shapes)
-4. `examples/language-tour/00_call_with_arg_and_local_baseline.codegen-notes.md` + `.expected-v02.asm` (hand-crafted lowering reference)
 
 ## Content Ownership
 
@@ -46,14 +35,11 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `v02-codegen-reference.md`: consolidated codegen pointers and invariants.
 - `v02-codegen-worked-examples.md`: executable worked examples and expected lowering shapes only.
 - `return-register-policy.md`: preservation matrix and HL-preserve swap guidance.
-- `zax-dev-playbook.md`: contributor process/workflow only; must not define v0.2 semantic policy or gate criteria.
-
-## 4. Legacy Pointer (Archived)
-
-- `v01-scope-decisions.md` — forwarding stub retained only for compatibility links.
+- `zax-dev-playbook.md`: contributor workflow only; must not duplicate planning history, semantic policy, or version-status tracking.
 
 ## Consolidation Rules
 
 - Do not add one-off status/checklist docs when the information belongs in an existing reference.
 - Before creating a new doc, justify why existing docs cannot absorb the content; prefer updating `v02-codegen-reference.md`.
-- v0.2 supporting docs must point back to `zax-spec.md` for language authority.
+- Supporting docs must point back to `zax-spec.md` for language authority.
+- Delete stale planning/history/scratch docs rather than keeping archival clutter.
