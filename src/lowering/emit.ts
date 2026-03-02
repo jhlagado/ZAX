@@ -88,6 +88,7 @@ import { createEaMaterializationHelpers } from './eaMaterialization.js';
 import { createAddressingPipelineBuilders } from './addressingPipelines.js';
 import { createRuntimeImmediateHelpers } from './runtimeImmediates.js';
 import { createRuntimeAtomBudgetHelpers } from './runtimeAtomBudget.js';
+import { createScalarWordAccessorHelpers } from './scalarWordAccessors.js';
 import {
   alignTo,
   computeWrittenRange,
@@ -2112,49 +2113,16 @@ export function emitProgram(
     evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
   });
 
-  const emitScalarWordLoad = (
-    target: 'HL' | 'DE' | 'BC',
-    resolved: ReturnType<typeof resolveEa>,
-    span: SourceSpan,
-  ): boolean => {
-    if (!resolved) return false;
-    if (resolved.kind === 'abs' && resolved.addend === 0) {
-      return emitStepPipeline(LOAD_RP_GLOB(target, resolved.baseLower), span);
-    }
-    if (resolved.kind === 'stack') {
-      return emitStepPipeline(LOAD_RP_FVAR(target, resolved.ixDisp), span);
-    }
-    return false;
-  };
-
-  const resolvedScalarKind = (
-    resolved: ReturnType<typeof resolveEa>,
-  ): 'byte' | 'word' | 'addr' | undefined =>
-    resolved?.typeExpr ? resolveScalarKind(resolved.typeExpr) : undefined;
-
-  const isWordCompatibleScalarKind = (
-    scalar: 'byte' | 'word' | 'addr' | undefined,
-  ): scalar is 'word' | 'addr' => scalar === 'word' || scalar === 'addr';
-
-  const canUseScalarWordAccessor = (resolved: ReturnType<typeof resolveEa>): boolean =>
-    !!resolved &&
-    isWordCompatibleScalarKind(resolvedScalarKind(resolved)) &&
-    ((resolved.kind === 'abs' && resolved.addend === 0) || resolved.kind === 'stack');
-
-  const emitScalarWordStore = (
-    source: 'HL' | 'DE' | 'BC',
-    resolved: ReturnType<typeof resolveEa>,
-    span: SourceSpan,
-  ): boolean => {
-    if (!resolved) return false;
-    if (resolved.kind === 'abs' && resolved.addend === 0) {
-      return emitStepPipeline(STORE_RP_GLOB(source, resolved.baseLower), span);
-    }
-    if (resolved.kind === 'stack') {
-      return emitStepPipeline(STORE_RP_FVAR(source, resolved.ixDisp), span);
-    }
-    return false;
-  };
+  const {
+    emitScalarWordLoad,
+    emitScalarWordStore,
+    resolvedScalarKind,
+    isWordCompatibleScalarKind,
+    canUseScalarWordAccessor,
+  } = createScalarWordAccessorHelpers({
+    emitStepPipeline,
+    resolveScalarKind,
+  });
 
   const emitLoadWordFromHlAddress = (target: 'HL' | 'DE' | 'BC', span: SourceSpan): boolean => {
     if (target === 'DE') {
