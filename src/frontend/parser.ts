@@ -7,8 +7,6 @@ import type {
   BinDeclNode,
   ConstDeclNode,
   EnumDeclNode,
-  ExternDeclNode,
-  ExternFuncNode,
   FuncDeclNode,
   HexDeclNode,
   ImmExprNode,
@@ -59,7 +57,7 @@ import {
   topLevelStartKeyword,
   unsupportedExportTargetKind,
 } from './parseModuleCommon.js';
-import { parseExternFuncFromTail } from './parseExtern.js';
+import { parseTopLevelExternDecl } from './parseExternBlock.js';
 import { parseEnumDecl } from './parseEnum.js';
 import { parseGlobalsBlock } from './parseGlobals.js';
 import { parseOpParamsFromText, parseParamsFromText } from './parseParams.js';
@@ -148,47 +146,6 @@ export function parseModuleFile(
 
   function isReservedTopLevelName(name: string): boolean {
     return isReservedTopLevelDeclName(name);
-  }
-
-  function consumeInvalidExternBlock(startIndex: number): number {
-    let previewIndex = startIndex + 1;
-    while (previewIndex < lineCount) {
-      const { raw } = getRawLine(previewIndex);
-      const t = stripComment(raw).trim();
-      if (t.length === 0) {
-        previewIndex++;
-        continue;
-      }
-      const looksLikeBodyStart =
-        t.toLowerCase() === 'end' ||
-        consumeKeywordPrefix(t, 'func') !== undefined ||
-        looksLikeKeywordBodyDeclLine(t);
-      if (!looksLikeBodyStart) return startIndex + 1;
-      break;
-    }
-    if (previewIndex >= lineCount) return startIndex + 1;
-
-    let index = previewIndex;
-    while (index < lineCount) {
-      const { raw } = getRawLine(index);
-      const t = stripComment(raw).trim();
-      const tLower = t.toLowerCase();
-      if (t.length === 0) {
-        index++;
-        continue;
-      }
-      if (tLower === 'end') return index + 1;
-      const topKeyword = topLevelStartKeyword(t);
-      if (
-        topKeyword !== undefined &&
-        consumeKeywordPrefix(t, 'func') === undefined &&
-        !looksLikeKeywordBodyDeclLine(t)
-      ) {
-        return index;
-      }
-      index++;
-    }
-    return lineCount;
   }
 
   let i = 0;
@@ -885,188 +842,24 @@ export function parseModuleFile(
 
     const externTail = consumeTopKeyword(rest, 'extern');
     if (externTail !== undefined) {
-      const decl = externTail.trim();
-      const stmtSpan = span(file, lineStartOffset, lineEndOffset);
-      const externFuncTail = consumeKeywordPrefix(decl, 'func');
-      if (externFuncTail !== undefined) {
-        const externFunc = parseExternFuncFromTail(externFuncTail, stmtSpan, lineNo, {
+      const parsedExtern = parseTopLevelExternDecl(
+        externTail,
+        text,
+        span(file, lineStartOffset, lineEndOffset),
+        lineNo,
+        i,
+        {
+          file,
+          lineCount,
           diagnostics,
           modulePath,
+          getRawLine,
           isReservedTopLevelName,
           parseParamsFromText,
-        });
-        if (externFunc) {
-          const externDecl: ExternDeclNode = {
-            kind: 'ExternDecl',
-            span: stmtSpan,
-            funcs: [externFunc],
-          };
-          items.push(externDecl);
-        }
-        i++;
-        continue;
-      }
-
-      if (decl.length > 0) {
-        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(decl)) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid extern base name ${formatIdentifierToken(decl)}: expected <identifier>.`,
-            { line: lineNo, column: 1 },
-          );
-          i = consumeInvalidExternBlock(i);
-          continue;
-        }
-        if (isReservedTopLevelName(decl)) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid extern base name "${decl}": collides with a top-level keyword.`,
-            { line: lineNo, column: 1 },
-          );
-          i = consumeInvalidExternBlock(i);
-          continue;
-        }
-      }
-
-      // Block form:
-      // extern [baseName]
-      //   func ...
-      // end
-      //
-      // To avoid swallowing unrelated malformed top-level declarations, require that
-      // the first non-empty line after `extern` looks like `func ...` or `end`.
-      let preview = i + 1;
-      let previewText: string | undefined;
-      while (preview < lineCount) {
-        const { raw: rawPreview } = getRawLine(preview);
-        const t = stripComment(rawPreview).trim();
-        if (t.length === 0) {
-          preview++;
-          continue;
-        }
-        previewText = t;
-        break;
-      }
-      const previewKeyword = previewText ? topLevelStartKeyword(previewText) : undefined;
-      const previewLooksLikeExternBodyDecl =
-        previewText !== undefined &&
-        previewKeyword !== undefined &&
-        looksLikeKeywordBodyDeclLine(previewText);
-      if (
-        previewText === undefined ||
-        (previewText.toLowerCase() !== 'end' &&
-          consumeKeywordPrefix(previewText, 'func') === undefined &&
-          !previewLooksLikeExternBodyDecl)
-      ) {
-        diagInvalidHeaderLine(
-          diagnostics,
-          modulePath,
-          'extern declaration',
-          text,
-          '[<baseName>] or func <name>(...): <retType> at <imm16>',
-          lineNo,
-        );
-        i++;
-        continue;
-      }
-
-      const blockStart = lineStartOffset;
-      const funcs: ExternFuncNode[] = [];
-      const base = decl.length > 0 ? decl : undefined;
-      let terminated = false;
-      let interruptedByKeyword: string | undefined;
-      let interruptedByLine: number | undefined;
-      let blockEndOffset = file.text.length;
-      i++;
-
-      while (i < lineCount) {
-        const { raw: rawDecl, startOffset: so, endOffset: eo } = getRawLine(i);
-        const t = stripComment(rawDecl).trim();
-        const tLower = t.toLowerCase();
-        if (t.length === 0) {
-          i++;
-          continue;
-        }
-        if (tLower === 'end') {
-          terminated = true;
-          blockEndOffset = eo;
-          i++;
-          break;
-        }
-        const topKeyword = topLevelStartKeyword(t);
-        if (topKeyword !== undefined && consumeKeywordPrefix(t, 'func') === undefined) {
-          if (looksLikeKeywordBodyDeclLine(t)) {
-            diagInvalidBlockLine(
-              diagnostics,
-              modulePath,
-              'extern func declaration',
-              t,
-              'func <name>(...): <retType> at <imm16>',
-              i + 1,
-            );
-            i++;
-            continue;
-          }
-          interruptedByKeyword = topKeyword;
-          interruptedByLine = i + 1;
-          break;
-        }
-
-        const funcTail = consumeKeywordPrefix(t, 'func');
-        if (funcTail === undefined) {
-          diagInvalidBlockLine(
-            diagnostics,
-            modulePath,
-            'extern func declaration',
-            t,
-            'func <name>(...): <retType> at <imm16>',
-            i + 1,
-          );
-          i++;
-          continue;
-        }
-
-        const fn = parseExternFuncFromTail(funcTail, span(file, so, eo), i + 1, {
-          diagnostics,
-          modulePath,
-          isReservedTopLevelName,
-          parseParamsFromText,
-        });
-        if (fn) funcs.push(fn);
-        i++;
-      }
-
-      if (!terminated) {
-        const namePart = base ? ` "${base}"` : '';
-        if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Unterminated extern${namePart}: expected "end" before "${interruptedByKeyword}"`,
-            { line: interruptedByLine, column: 1 },
-          );
-        } else {
-          diag(diagnostics, modulePath, `Unterminated extern${namePart}: missing "end"`, {
-            line: lineNo,
-            column: 1,
-          });
-        }
-      }
-      if (funcs.length === 0) {
-        diag(diagnostics, modulePath, `extern block must contain at least one func declaration`, {
-          line: lineNo,
-          column: 1,
-        });
-      }
-
-      items.push({
-        kind: 'ExternDecl',
-        span: span(file, blockStart, terminated ? blockEndOffset : file.text.length),
-        ...(base ? { base } : {}),
-        funcs,
-      });
+        },
+      );
+      if (parsedExtern.node) items.push(parsedExtern.node);
+      i = parsedExtern.nextIndex;
       continue;
     }
 
