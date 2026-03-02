@@ -454,7 +454,7 @@ export function emitProgram(
   const {
     emitScalarWordLoad,
     emitScalarWordStore,
-    resolvedScalarKind,
+    scalarKindOfResolution,
     isWordCompatibleScalarKind,
     canUseScalarWordAccessor,
   } = createScalarWordAccessorHelpers({
@@ -548,7 +548,7 @@ export function emitProgram(
     resolveScalarKind,
     resolveScalarTypeForEa,
     resolveScalarTypeForLd,
-    resolvedScalarKind,
+    scalarKindOfResolution,
     setSpTrackingInvalid: () => {
       invalidateSpTracking?.();
     },
