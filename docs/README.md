@@ -31,6 +31,7 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `source-overview.md` — version-neutral source tree and subsystem map for reading the implementation.
 - `quality-report.md` — code quality analysis: 19 specific issues rated by severity, with locations, fix directions, and resolution status.
 - `refactor-plan.md` — phased improvement plan: completed-work table, 17 active tickets with effort estimates, and per-file size map.
+- `sections-modules-design.md` — design proposal for section declarations, unified variable syntax, import placement, and export model. Not yet normative; feeds into `zax-spec.md` when accepted.
 
 ## Content Ownership
 
@@ -42,6 +43,7 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `source-overview.md`: non-normative architecture map of the current code layout and subsystem boundaries.
 - `quality-report.md`: lowering-subsystem quality issues only; update in place as issues are resolved.
 - `refactor-plan.md`: lowering-subsystem refactor tickets only; move completed work to the completed table, do not delete.
+- `sections-modules-design.md`: design proposal only; do not add implementation detail or resolved questions here — move accepted decisions into `zax-spec.md`.
 
 ## Consolidation Rules
 
