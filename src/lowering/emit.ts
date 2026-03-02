@@ -94,6 +94,7 @@ import { createAsmBodyOrchestrationHelpers } from './asmBodyOrchestration.js';
 import { createOpMatchingHelpers } from './opMatching.js';
 import { createEmissionCoreHelpers } from './emissionCore.js';
 import { createValueMaterializationHelpers } from './valueMaterialization.js';
+import { createAsmInstructionLoweringHelpers } from './asmInstructionLowering.js';
 import { createFixupEmissionHelpers } from './fixupEmission.js';
 import {
   cloneEaExpr,
@@ -1632,6 +1633,101 @@ export function emitProgram(
           return false;
         };
 
+        const { lowerAsmInstructionDispatcher } = createAsmInstructionLoweringHelpers({
+          diagnostics,
+          diagAt,
+          emitInstr,
+          emitRawCodeBytes,
+          emitAbs16Fixup,
+          emitAbs16FixupPrefixed,
+          emitRel8Fixup,
+          conditionOpcodeFromName,
+          conditionNameFromOpcode,
+          callConditionOpcodeFromName,
+          jrConditionOpcodeFromName,
+          conditionOpcode,
+          symbolicTargetFromExpr,
+          evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
+          resolveScalarBinding,
+          diagIfRetStackImbalanced: (span, mnemonic) => {
+            if (emitSyntheticEpilogue) return;
+            if (spTrackingValid && spDeltaTracked !== 0) {
+              diagAt(
+                diagnostics,
+                span,
+                `${mnemonic ?? 'ret'} with non-zero tracked stack delta (${spDeltaTracked}); function stack is imbalanced.`,
+              );
+              return;
+            }
+            if (!spTrackingValid && spTrackingInvalidatedByMutation && hasStackSlots) {
+              diagAt(
+                diagnostics,
+                span,
+                `${mnemonic ?? 'ret'} reached after untracked SP mutation; cannot verify function stack balance.`,
+              );
+              return;
+            }
+            if (!spTrackingValid && hasStackSlots) {
+              diagAt(
+                diagnostics,
+                span,
+                `${mnemonic ?? 'ret'} reached with unknown stack depth; cannot verify function stack balance.`,
+              );
+            }
+          },
+          diagIfCallStackUnverifiable: (options) => {
+            const span = options.span;
+            const mnemonic = options.mnemonic ?? 'call';
+            const contractKind = options.contractKind ?? 'callee';
+            const contractNoun =
+              contractKind === 'typed-call' ? 'typed-call boundary contract' : 'callee stack contract';
+            if (hasStackSlots && spTrackingValid && spDeltaTracked > 0) {
+              diagAt(
+                diagnostics,
+                span,
+                `${mnemonic} reached with positive tracked stack delta (${spDeltaTracked}); cannot verify ${contractNoun}.`,
+              );
+              return;
+            }
+            if (hasStackSlots && !spTrackingValid && spTrackingInvalidatedByMutation) {
+              diagAt(
+                diagnostics,
+                span,
+                `${mnemonic} reached after untracked SP mutation; cannot verify ${contractNoun}.`,
+              );
+              return;
+            }
+            if (hasStackSlots && !spTrackingValid) {
+              diagAt(
+                diagnostics,
+                span,
+                `${mnemonic} reached with unknown stack depth; cannot verify ${contractNoun}.`,
+              );
+            }
+          },
+          warnIfRawCallTargetsTypedCallable: (span, symbolicTarget) => {
+            if (!rawTypedCallWarningsEnabled || !symbolicTarget || symbolicTarget.addend !== 0) return;
+            const callable = callables.get(symbolicTarget.baseLower);
+            if (!callable) return;
+            const typedName = callable.node.name;
+            diagAtWithSeverityAndId(
+              diagnostics,
+              span,
+              DiagnosticIds.RawCallTypedTargetWarning,
+              'warning',
+              `Raw call targets typed callable \"${typedName}\" and bypasses typed-call argument/preservation semantics; use typed call syntax unless raw ABI is intentional.`,
+            );
+          },
+          lowerLdWithEa,
+          emitVirtualReg16Transfer,
+          emitSyntheticEpilogue,
+          epilogueLabel,
+          emitJumpTo,
+          emitJumpCondTo,
+          syncToFlow,
+          flow,
+        });
+
         const emitAsmInstruction = (asmItem: AsmInstructionNode): void => {
           const prevTag = currentCodeSegmentTag;
           const diagnosticsStart = diagnostics.length;
@@ -2065,385 +2161,7 @@ export function emitProgram(
               return;
             }
 
-            const head = asmItem.head.toLowerCase();
-
-            const emitRel8FromOperand = (
-              operand: AsmOperandNode,
-              opcode: number,
-              mnemonic: string,
-            ): boolean => {
-              if (operand.kind !== 'Imm') {
-                if (mnemonic === 'djnz' || mnemonic.startsWith('jr')) {
-                  diagAt(diagnostics, asmItem.span, `${mnemonic} expects disp8`);
-                } else {
-                  diagAt(diagnostics, asmItem.span, `${mnemonic} expects an immediate target.`);
-                }
-                return false;
-              }
-              const symbolicTarget = symbolicTargetFromExpr(operand.expr);
-              if (symbolicTarget) {
-                emitRel8Fixup(
-                  opcode,
-                  symbolicTarget.baseLower,
-                  symbolicTarget.addend,
-                  asmItem.span,
-                  mnemonic,
-                );
-                return true;
-              }
-              const value = evalImmExpr(operand.expr, env, diagnostics);
-              if (value === undefined) {
-                diagAt(diagnostics, asmItem.span, `Failed to evaluate ${mnemonic} target.`);
-                return false;
-              }
-              if (value < -128 || value > 127) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `${mnemonic} relative branch displacement out of range (-128..127): ${value}.`,
-                );
-                return false;
-              }
-              emitRawCodeBytes(
-                Uint8Array.of(opcode, value & 0xff),
-                asmItem.span.file,
-                `${mnemonic} ${value}`,
-              );
-              return true;
-            };
-            if (head === 'jr') {
-              if (asmItem.operands.length === 1) {
-                if (asmItem.operands[0]!.kind === 'Mem') {
-                  diagAt(
-                    diagnostics,
-                    asmItem.span,
-                    `jr does not support indirect targets; expects disp8`,
-                  );
-                  return;
-                }
-                const single = asmItem.operands[0]!;
-                const ccSingle =
-                  single.kind === 'Imm' && single.expr.kind === 'ImmName'
-                    ? single.expr.name
-                    : single.kind === 'Reg'
-                      ? single.name
-                      : undefined;
-                if (ccSingle && jrConditionOpcodeFromName(ccSingle) !== undefined) {
-                  diagAt(diagnostics, asmItem.span, `jr cc, disp expects two operands (cc, disp8)`);
-                  return;
-                }
-                if (single.kind === 'Imm') {
-                  const symbolicTarget = symbolicTargetFromExpr(single.expr);
-                  if (
-                    symbolicTarget &&
-                    jrConditionOpcodeFromName(symbolicTarget.baseLower) !== undefined
-                  ) {
-                    diagAt(
-                      diagnostics,
-                      asmItem.span,
-                      `jr cc, disp expects two operands (cc, disp8)`,
-                    );
-                    return;
-                  }
-                }
-                if (single.kind === 'Reg') {
-                  diagAt(
-                    diagnostics,
-                    asmItem.span,
-                    `jr does not support register targets; expects disp8`,
-                  );
-                  return;
-                }
-                if (!emitRel8FromOperand(asmItem.operands[0]!, 0x18, 'jr')) return;
-                flow.reachable = false;
-                syncToFlow();
-                return;
-              }
-              if (asmItem.operands.length === 2) {
-                const ccOp = asmItem.operands[0]!;
-                const ccName =
-                  ccOp.kind === 'Imm' && ccOp.expr.kind === 'ImmName'
-                    ? ccOp.expr.name
-                    : ccOp.kind === 'Reg'
-                      ? ccOp.name
-                      : undefined;
-                const opcode = ccName ? jrConditionOpcodeFromName(ccName) : undefined;
-                if (opcode === undefined) {
-                  diagAt(diagnostics, asmItem.span, `jr cc expects valid condition code NZ/Z/NC/C`);
-                  return;
-                }
-                const target = asmItem.operands[1]!;
-                if (target.kind === 'Mem') {
-                  diagAt(
-                    diagnostics,
-                    asmItem.span,
-                    `jr cc, disp does not support indirect targets`,
-                  );
-                  return;
-                }
-                if (target.kind === 'Reg') {
-                  diagAt(
-                    diagnostics,
-                    asmItem.span,
-                    `jr cc, disp does not support register targets; expects disp8`,
-                  );
-                  return;
-                }
-                if (target.kind !== 'Imm') {
-                  diagAt(diagnostics, asmItem.span, `jr cc, disp expects disp8`);
-                  return;
-                }
-                if (!emitRel8FromOperand(target, opcode, `jr ${ccName!.toLowerCase()}`)) return;
-                syncToFlow();
-                return;
-              }
-            }
-            if (head === 'djnz') {
-              if (asmItem.operands.length !== 1) {
-                diagAt(diagnostics, asmItem.span, `djnz expects one operand (disp8)`);
-                return;
-              }
-              const target = asmItem.operands[0]!;
-              if (target.kind === 'Mem') {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `djnz does not support indirect targets; expects disp8`,
-                );
-                return;
-              }
-              if (target.kind === 'Reg') {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `djnz does not support register targets; expects disp8`,
-                );
-                return;
-              }
-              if (target.kind !== 'Imm') {
-                diagAt(diagnostics, asmItem.span, `djnz expects disp8`);
-                return;
-              }
-              if (!emitRel8FromOperand(target, 0x10, 'djnz')) return;
-              syncToFlow();
-              return;
-            }
-            if (head === 'call') {
-              diagIfCallStackUnverifiable();
-            }
-            if (head === 'rst' && asmItem.operands.length === 1) {
-              diagIfCallStackUnverifiable({ mnemonic: 'rst' });
-            }
-            if (head === 'ret') {
-              if (asmItem.operands.length === 0) {
-                diagIfRetStackImbalanced();
-                if (emitSyntheticEpilogue) {
-                  emitJumpTo(epilogueLabel, asmItem.span);
-                } else {
-                  emitInstr('ret', [], asmItem.span);
-                }
-                flow.reachable = false;
-                syncToFlow();
-                return;
-              }
-              if (asmItem.operands.length === 1) {
-                const op = conditionOpcode(asmItem.operands[0]!);
-                if (op === undefined) {
-                  diagAt(diagnostics, asmItem.span, `ret cc expects a valid condition code`);
-                  return;
-                }
-                diagIfRetStackImbalanced();
-                if (emitSyntheticEpilogue) {
-                  emitJumpCondTo(op, epilogueLabel, asmItem.span);
-                } else {
-                  emitInstr('ret', [asmItem.operands[0]!], asmItem.span);
-                }
-                syncToFlow();
-                return;
-              }
-            }
-            if ((head === 'retn' || head === 'reti') && asmItem.operands.length === 0) {
-              diagIfRetStackImbalanced(head);
-              if (emitSyntheticEpilogue) {
-                diagAt(
-                  diagnostics,
-                  asmItem.span,
-                  `${head} is not supported in functions that require cleanup; use ret/ret cc so cleanup epilogue can run.`,
-                );
-              }
-              emitInstr(head, [], asmItem.span);
-              flow.reachable = false;
-              syncToFlow();
-              return;
-            }
-
-            if (head === 'jp' && asmItem.operands.length === 1) {
-              const target = asmItem.operands[0]!;
-              if (target.kind === 'Imm') {
-                const symbolicTarget = symbolicTargetFromExpr(target.expr);
-                if (
-                  symbolicTarget &&
-                  conditionOpcodeFromName(symbolicTarget.baseLower) !== undefined
-                ) {
-                  diagAt(diagnostics, asmItem.span, `jp cc, nn expects two operands (cc, nn)`);
-                  return;
-                }
-                if (symbolicTarget) {
-                  emitAbs16Fixup(
-                    0xc3,
-                    symbolicTarget.baseLower,
-                    symbolicTarget.addend,
-                    asmItem.span,
-                  );
-                  flow.reachable = false;
-                  syncToFlow();
-                  return;
-                }
-              }
-            }
-            if (head === 'jp' && asmItem.operands.length === 2) {
-              const ccOp = asmItem.operands[0]!;
-              const ccName =
-                ccOp.kind === 'Imm' && ccOp.expr.kind === 'ImmName'
-                  ? ccOp.expr.name
-                  : ccOp.kind === 'Reg'
-                    ? ccOp.name
-                    : undefined;
-              const opcode = ccName ? conditionOpcodeFromName(ccName) : undefined;
-              const target = asmItem.operands[1]!;
-              if (opcode !== undefined && target.kind === 'Imm') {
-                const symbolicTarget = symbolicTargetFromExpr(target.expr);
-                if (symbolicTarget) {
-                  emitAbs16Fixup(
-                    opcode,
-                    symbolicTarget.baseLower,
-                    symbolicTarget.addend,
-                    asmItem.span,
-                  );
-                  syncToFlow();
-                  return;
-                }
-              }
-            }
-            if (head === 'call' && asmItem.operands.length === 1) {
-              const target = asmItem.operands[0]!;
-              if (target.kind === 'Imm') {
-                const symbolicTarget = symbolicTargetFromExpr(target.expr);
-                if (
-                  symbolicTarget &&
-                  callConditionOpcodeFromName(symbolicTarget.baseLower) !== undefined
-                ) {
-                  diagAt(diagnostics, asmItem.span, `call cc, nn expects two operands (cc, nn)`);
-                  return;
-                }
-                if (symbolicTarget) {
-                  warnIfRawCallTargetsTypedCallable(symbolicTarget);
-                  emitAbs16Fixup(
-                    0xcd,
-                    symbolicTarget.baseLower,
-                    symbolicTarget.addend,
-                    asmItem.span,
-                  );
-                  syncToFlow();
-                  return;
-                }
-              }
-            }
-            if (head === 'call' && asmItem.operands.length === 2) {
-              const ccOp = asmItem.operands[0]!;
-              const ccName =
-                ccOp.kind === 'Imm' && ccOp.expr.kind === 'ImmName'
-                  ? ccOp.expr.name
-                  : ccOp.kind === 'Reg'
-                    ? ccOp.name
-                    : undefined;
-              const opcode = ccName ? callConditionOpcodeFromName(ccName) : undefined;
-              const target = asmItem.operands[1]!;
-              if (opcode !== undefined && target.kind === 'Imm') {
-                const symbolicTarget = symbolicTargetFromExpr(target.expr);
-                if (symbolicTarget) {
-                  warnIfRawCallTargetsTypedCallable(symbolicTarget);
-                  emitAbs16Fixup(
-                    opcode,
-                    symbolicTarget.baseLower,
-                    symbolicTarget.addend,
-                    asmItem.span,
-                  );
-                  syncToFlow();
-                  return;
-                }
-              }
-            }
-
-            if (head === 'ld' && asmItem.operands.length === 2) {
-              const dstOp = asmItem.operands[0]!;
-              const srcOp = asmItem.operands[1]!;
-              const dst = dstOp.kind === 'Reg' ? dstOp.name.toUpperCase() : undefined;
-              const opcode =
-                dst === 'BC'
-                  ? 0x01
-                  : dst === 'DE'
-                    ? 0x11
-                    : dst === 'HL'
-                      ? 0x21
-                      : dst === 'SP'
-                        ? 0x31
-                        : undefined;
-              if (
-                opcode !== undefined &&
-                srcOp.kind === 'Imm' &&
-                srcOp.expr.kind === 'ImmName' &&
-                !resolveScalarBinding(srcOp.expr.name)
-              ) {
-                const v = evalImmExpr(srcOp.expr, env, diagnostics);
-                if (v === undefined) {
-                  emitAbs16Fixup(opcode, srcOp.expr.name.toLowerCase(), 0, asmItem.span);
-                  syncToFlow();
-                  return;
-                }
-              }
-              if (
-                (dst === 'IX' || dst === 'IY') &&
-                srcOp.kind === 'Imm' &&
-                srcOp.expr.kind === 'ImmName' &&
-                !resolveScalarBinding(srcOp.expr.name)
-              ) {
-                const v = evalImmExpr(srcOp.expr, env, diagnostics);
-                if (v === undefined) {
-                  emitAbs16FixupPrefixed(
-                    dst === 'IX' ? 0xdd : 0xfd,
-                    0x21,
-                    srcOp.expr.name.toLowerCase(),
-                    0,
-                    asmItem.span,
-                  );
-                  syncToFlow();
-                  return;
-                }
-              }
-            }
-
-            if (lowerLdWithEa(asmItem)) {
-              syncToFlow();
-              return;
-            }
-
-            if (emitVirtualReg16Transfer(asmItem)) {
-              syncToFlow();
-              return;
-            }
-
-            if (!emitInstr(asmItem.head, asmItem.operands, asmItem.span)) return;
-
-            if ((head === 'jp' || head === 'jr') && asmItem.operands.length === 1) {
-              flow.reachable = false;
-            } else if (
-              (head === 'ret' || head === 'retn' || head === 'reti') &&
-              asmItem.operands.length === 0
-            ) {
-              flow.reachable = false;
-            }
-            syncToFlow();
+            lowerAsmInstructionDispatcher(asmItem);
           } finally {
             appendInvalidOpExpansionDiagnostic(asmItem, diagnosticsStart);
             currentCodeSegmentTag = prevTag;
