@@ -57,8 +57,14 @@ export type FunctionLoweringContext = {
   traceComment: (offset: number, text: string) => void;
   traceLabel: (offset: number, name: string) => void;
   currentCodeSegmentTagRef: { current: SourceSegmentTag | undefined };
-  getTrackedSpState: () => { delta: number; valid: boolean; invalid: boolean };
-  setTrackedSpState: (state: { delta: number; valid: boolean; invalid: boolean }) => void;
+  bindSpTracking: (
+    callbacks?:
+      | {
+          applySpTracking: (headRaw: string, operands: AsmOperandNode[]) => void;
+          invalidateSpTracking: () => void;
+        }
+      | undefined,
+  ) => void;
   getCodeOffset: () => number;
   emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
   emitRawCodeBytes: (bs: Uint8Array, file: string, traceText: string) => void;
@@ -155,8 +161,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     traceComment,
     traceLabel,
     currentCodeSegmentTagRef,
-    getTrackedSpState,
-    setTrackedSpState,
+    bindSpTracking,
     getCodeOffset,
   } = ctx;
   const {
@@ -185,7 +190,6 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     currentCodeSegmentTagRef.current = tag;
   };
   const emitInstr = emitInstrBase;
-  const previousTrackedSpState = getTrackedSpState();
 
   stackSlotOffsets.clear();
   stackSlotTypes.clear();
@@ -403,7 +407,59 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     valid: true,
     invalid: false,
   };
-  setTrackedSpState(trackedSp);
+  const applySpTracking = (headRaw: string, operands: AsmOperandNode[]) => {
+    const head = headRaw.toLowerCase();
+    if (
+      head === 'ld' &&
+      operands.length === 2 &&
+      operands[0]?.kind === 'Reg' &&
+      operands[0].name.toUpperCase() === 'SP'
+    ) {
+      if (operands[1]?.kind === 'Reg' && operands[1].name.toUpperCase() === 'IX') {
+        trackedSp.delta = -2;
+        trackedSp.valid = true;
+        trackedSp.invalid = false;
+      } else {
+        trackedSp.valid = false;
+        trackedSp.invalid = true;
+      }
+      return;
+    }
+    if (!trackedSp.valid) return;
+    if (head === 'push' && operands.length === 1) {
+      trackedSp.delta -= 2;
+      return;
+    }
+    if (head === 'pop' && operands.length === 1) {
+      trackedSp.delta += 2;
+      return;
+    }
+    if (
+      head === 'inc' &&
+      operands.length === 1 &&
+      operands[0]?.kind === 'Reg' &&
+      operands[0].name.toUpperCase() === 'SP'
+    ) {
+      trackedSp.delta += 1;
+      return;
+    }
+    if (
+      head === 'dec' &&
+      operands.length === 1 &&
+      operands[0]?.kind === 'Reg' &&
+      operands[0].name.toUpperCase() === 'SP'
+    ) {
+      trackedSp.delta -= 1;
+      return;
+    }
+  };
+  bindSpTracking({
+    applySpTracking,
+    invalidateSpTracking: () => {
+      trackedSp.valid = false;
+      trackedSp.invalid = true;
+    },
+  });
 
   let flow: FlowState = {
     reachable: true,
@@ -711,7 +767,6 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     },
   });
   lowerAndFinalizeFunctionBody();
-
-  setTrackedSpState(previousTrackedSpState);
+  bindSpTracking(undefined);
   setCurrentCodeSegmentTag(currentCodeSegmentTag);
 }

@@ -213,7 +213,10 @@ export function emitProgram(
   const stackSlotTypes = new Map<string, TypeExprNode>();
   const stackSlotOffsets = new Map<string, number>();
   const localAliasTargets = new Map<string, EaExprNode>();
-  let trackedSpState = { delta: 0, valid: true, invalid: false };
+  let applySpTracking:
+    | ((headRaw: string, operands: AsmOperandNode[]) => void)
+    | undefined;
+  let invalidateSpTracking: (() => void) | undefined;
   let generatedLabelCounter = 0;
 
   const sameSourceTag = (x: SourceSegmentTag, y: SourceSegmentTag): boolean =>
@@ -255,53 +258,6 @@ export function emitProgram(
   let emitRawCodeBytes: (bs: Uint8Array, file: string, traceText: string) => void;
   let emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
 
-  const applySpTracking = (headRaw: string, operands: AsmOperandNode[]) => {
-    const head = headRaw.toLowerCase();
-    if (
-      head === 'ld' &&
-      operands.length === 2 &&
-      operands[0]?.kind === 'Reg' &&
-      operands[0].name.toUpperCase() === 'SP'
-    ) {
-      if (operands[1]?.kind === 'Reg' && operands[1].name.toUpperCase() === 'IX') {
-        trackedSpState.delta = -2;
-        trackedSpState.valid = true;
-        trackedSpState.invalid = false;
-      } else {
-        trackedSpState.valid = false;
-        trackedSpState.invalid = true;
-      }
-      return;
-    }
-    if (!trackedSpState.valid) return;
-    if (head === 'push' && operands.length === 1) {
-      trackedSpState.delta -= 2;
-      return;
-    }
-    if (head === 'pop' && operands.length === 1) {
-      trackedSpState.delta += 2;
-      return;
-    }
-    if (
-      head === 'inc' &&
-      operands.length === 1 &&
-      operands[0]?.kind === 'Reg' &&
-      operands[0].name.toUpperCase() === 'SP'
-    ) {
-      trackedSpState.delta += 1;
-      return;
-    }
-    if (
-      head === 'dec' &&
-      operands.length === 1 &&
-      operands[0]?.kind === 'Reg' &&
-      operands[0].name.toUpperCase() === 'SP'
-    ) {
-      trackedSpState.delta -= 1;
-      return;
-    }
-  };
-
   const emitInstr = (head: string, operands: AsmOperandNode[], span: SourceSpan) => {
     const start = codeOffset;
     const encoded = encodeInstruction(
@@ -312,7 +268,7 @@ export function emitProgram(
     if (!encoded) return false;
     emitCodeBytes(encoded, span.file);
     traceInstruction(start, encoded, formatAsmInstrForTrace(head, operands));
-    applySpTracking(head, operands);
+    applySpTracking?.(head, operands);
     return true;
   };
 
@@ -594,8 +550,7 @@ export function emitProgram(
     resolveScalarTypeForLd,
     resolvedScalarKind,
     setSpTrackingInvalid: () => {
-      trackedSpState.valid = false;
-      trackedSpState.invalid = true;
+      invalidateSpTracking?.();
     },
     stackSlotOffsets,
     storageTypes,
@@ -691,9 +646,16 @@ export function emitProgram(
         currentCodeSegmentTag = value;
       },
     },
-    getTrackedSpState: () => trackedSpState,
-    setTrackedSpState: (state: { delta: number; valid: boolean; invalid: boolean }) => {
-      trackedSpState = state;
+    bindSpTracking: (
+      callbacks?:
+        | {
+            applySpTracking: (headRaw: string, operands: AsmOperandNode[]) => void;
+            invalidateSpTracking: () => void;
+          }
+        | undefined,
+    ) => {
+      applySpTracking = callbacks?.applySpTracking;
+      invalidateSpTracking = callbacks?.invalidateSpTracking;
     },
     getCodeOffset: () => codeOffsetRef.current,
     emitInstr,
