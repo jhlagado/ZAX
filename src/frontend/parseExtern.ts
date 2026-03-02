@@ -7,6 +7,7 @@ import {
   formatIdentifierToken,
   parseReturnRegsFromText,
 } from './parseModuleCommon.js';
+import type { ParseParamsContext } from './parseParams.js';
 
 function diag(
   diagnostics: Diagnostic[],
@@ -26,14 +27,14 @@ function diag(
 type ParseExternFuncContext = {
   diagnostics: Diagnostic[];
   modulePath: string;
-  isReservedTopLevelName: (name: string) => boolean;
   parseParamsFromText: (
     filePath: string,
     paramsText: string,
     paramsSpan: SourceSpan,
     diagnostics: Diagnostic[],
+    ctx: ParseParamsContext,
   ) => ParamNode[] | undefined;
-};
+} & ParseParamsContext;
 
 export function parseExternFuncFromTail(
   tail: string,
@@ -116,7 +117,9 @@ export function parseExternFuncFromTail(
   }
 
   const paramsText = header.slice(openParen + 1, closeParen);
-  const params = parseParamsFromText(modulePath, paramsText, stmtSpan, diagnostics);
+  const params = parseParamsFromText(modulePath, paramsText, stmtSpan, diagnostics, {
+    isReservedTopLevelName,
+  });
   if (!params) return undefined;
 
   const at = parseImmExprFromText(modulePath, atText, stmtSpan, diagnostics);
