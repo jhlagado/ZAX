@@ -25,6 +25,7 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
     if (typeExpr.kind !== 'TypeName') return undefined;
     const lower = typeExpr.name.toLowerCase();
     if (lower === 'byte' || lower === 'word' || lower === 'addr') return lower;
+    // `ptr` is a source-language alias for address-sized scalar storage.
     if (lower === 'ptr') return 'addr';
     if (seen.has(lower)) return undefined;
     seen.add(lower);
@@ -196,6 +197,11 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
     return resolveScalarKind(typeExpr);
   };
 
+  /**
+   * Resolve the scalar kind for a general EA value access. Raw-address symbols
+   * intentionally stay non-scalar here so address-only declarations are not
+   * mistaken for loadable/storable values.
+   */
   const resolveScalarTypeForEa = (ea: EaExprNode): ScalarKind | undefined => {
     const base = resolveEaBaseName(ea);
     if (base && ctx.rawAddressSymbols.has(base.toLowerCase())) return undefined;
@@ -204,6 +210,11 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
     return resolveScalarKind(typeExpr);
   };
 
+  /**
+   * Resolve the scalar kind for ld-specific coercion. This is slightly broader
+   * than resolveScalarTypeForEa because indexed data-array accesses still count
+   * as value loads/stores even when their base declaration is address-only.
+   */
   const resolveScalarTypeForLd = (ea: EaExprNode): ScalarKind | undefined => {
     if (ea.kind === 'EaName' && ctx.rawAddressSymbols.has(ea.name.toLowerCase())) return undefined;
     const typeExpr = resolveEaTypeExpr(ea);

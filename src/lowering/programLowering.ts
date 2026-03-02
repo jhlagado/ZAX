@@ -721,6 +721,8 @@ export function finalizeProgramEmission(ctx: FinalizationContext): {
     });
   }
 
+  // Absolute fixups are resolved in a dedicated second pass after all labels,
+  // data bases, and deferred extern addresses are known.
   for (const fx of ctx.fixups) {
     const base = addrByNameLower.get(fx.baseLower);
     const addr = base === undefined ? undefined : base + fx.addend;
@@ -740,6 +742,8 @@ export function finalizeProgramEmission(ctx: FinalizationContext): {
     ctx.codeBytes.set(fx.offset + 1, (addr >> 8) & 0xff);
   }
 
+  // rel8 fixups must also wait until code base + label addresses are finalized
+  // so branch displacements are computed from final absolute origins.
   for (const fx of ctx.rel8Fixups) {
     const base = addrByNameLower.get(fx.baseLower);
     const target = base === undefined ? undefined : base + fx.addend;
