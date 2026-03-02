@@ -79,6 +79,7 @@ import { evalImmExpr } from '../semantics/env.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { encodeInstruction } from '../z80/encode.js';
 import type { Callable, PendingSymbol, SectionKind, SourceSegmentTag } from './loweringTypes.js';
+import { createOpStackAnalysisHelpers } from './opStackAnalysis.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import { loadBinInput, loadHexInput } from './inputAssets.js';
 import { createEaResolutionHelpers, type EaResolution } from './eaResolution.js';
@@ -187,10 +188,6 @@ export function emitProgram(
 
   const callables = new Map<string, Callable>();
   const opsByName = new Map<string, OpDeclNode[]>();
-  type OpStackSummary =
-    | { kind: 'known'; delta: number; hasUntrackedSpMutation: boolean }
-    | { kind: 'complex' };
-  const opStackSummaryCache = new Map<OpDeclNode, OpStackSummary>();
   const opStackPolicyMode = options?.opStackPolicy ?? 'off';
   const rawTypedCallWarningsEnabled = options?.rawTypedCallWarnings === true;
   const declaredOpNames = new Set<string>();
@@ -207,96 +204,7 @@ export function emitProgram(
     ['L', 5],
     ['A', 7],
   ]);
-  const opStackSummaryKey = (decl: OpDeclNode): string =>
-    `${decl.name.toLowerCase()}@${decl.span.file}:${decl.span.start.line}`;
-  const summarizeOpStackEffect = (
-    decl: OpDeclNode,
-    visiting: Set<string> = new Set(),
-  ): OpStackSummary => {
-    const cached = opStackSummaryCache.get(decl);
-    if (cached) return cached;
-    const key = opStackSummaryKey(decl);
-    if (visiting.has(key)) return { kind: 'complex' };
-    visiting.add(key);
-    let delta = 0;
-    let hasUntrackedSpMutation = false;
-    let complex = false;
-    for (const item of decl.body.items) {
-      if (item.kind === 'AsmLabel') continue;
-      if (item.kind !== 'AsmInstruction') {
-        complex = true;
-        break;
-      }
-      const head = item.head.toLowerCase();
-      const operands = item.operands;
-      if (head === 'push' && operands.length === 1) {
-        delta -= 2;
-        continue;
-      }
-      if (head === 'pop' && operands.length === 1) {
-        delta += 2;
-        continue;
-      }
-      if (
-        head === 'inc' &&
-        operands.length === 1 &&
-        operands[0]?.kind === 'Reg' &&
-        operands[0].name.toUpperCase() === 'SP'
-      ) {
-        delta += 1;
-        continue;
-      }
-      if (
-        head === 'dec' &&
-        operands.length === 1 &&
-        operands[0]?.kind === 'Reg' &&
-        operands[0].name.toUpperCase() === 'SP'
-      ) {
-        delta -= 1;
-        continue;
-      }
-      if (
-        head === 'ld' &&
-        operands.length === 2 &&
-        operands[0]?.kind === 'Reg' &&
-        operands[0].name.toUpperCase() === 'SP'
-      ) {
-        hasUntrackedSpMutation = true;
-        continue;
-      }
-      if (
-        head === 'ret' ||
-        head === 'retn' ||
-        head === 'reti' ||
-        head === 'jp' ||
-        head === 'jr' ||
-        head === 'djnz'
-      ) {
-        complex = true;
-        break;
-      }
-      const nestedCandidates = opsByName.get(head);
-      if (nestedCandidates && nestedCandidates.length > 0) {
-        if (nestedCandidates.length !== 1) {
-          complex = true;
-          break;
-        }
-        const nested = summarizeOpStackEffect(nestedCandidates[0]!, visiting);
-        if (nested.kind !== 'known') {
-          complex = true;
-          break;
-        }
-        delta += nested.delta;
-        hasUntrackedSpMutation = hasUntrackedSpMutation || nested.hasUntrackedSpMutation;
-      }
-    }
-    visiting.delete(key);
-    const out: OpStackSummary = complex
-      ? { kind: 'complex' }
-      : { kind: 'known', delta, hasUntrackedSpMutation };
-    opStackSummaryCache.set(decl, out);
-    return out;
-  };
+  const { summarizeOpStackEffect } = createOpStackAnalysisHelpers({ opsByName });
 
   const storageTypes = new Map<string, TypeExprNode>();
   const moduleAliasTargets = new Map<string, EaExprNode>();

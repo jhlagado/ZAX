@@ -15,16 +15,13 @@ import type { CompileEnv } from '../semantics/env.js';
 import type { StepPipeline } from '../addressing/steps.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import type { Callable, SourceSegmentTag } from './loweringTypes.js';
+import type { OpStackSummary } from './opStackAnalysis.js';
 import type { ScalarKind } from './typeResolution.js';
 import type { FlowState, OpExpansionFrame } from './functionBodySetup.js';
 import { createAsmRangeLoweringHelpers } from './asmRangeLowering.js';
 import { createOpExpansionOrchestrationHelpers } from './opExpansionOrchestration.js';
 
 type ResolvedArrayType = { element: TypeExprNode; length?: number };
-type OpStackSummary =
-  | { kind: 'known'; delta: number; hasUntrackedSpMutation: boolean }
-  | { kind: 'complex' };
-
 type Context = {
   diagnostics: Diagnostic[];
   asmItemSpanSourceTag: (span: SourceSpan) => SourceSegmentTag;
