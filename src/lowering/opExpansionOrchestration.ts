@@ -1,5 +1,14 @@
 import { DiagnosticIds, type Diagnostic } from '../diagnostics/types.js';
-import type { AsmInstructionNode, AsmOperandNode, OpDeclNode, OpMatcherNode, SourceSpan } from '../frontend/ast.js';
+import type {
+  AsmInstructionNode,
+  AsmItemNode,
+  AsmOperandNode,
+  EaExprNode,
+  ImmExprNode,
+  OpDeclNode,
+  OpMatcherNode,
+  SourceSpan,
+} from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import { createOpExpansionExecutionHelpers } from './opExpansionExecution.js';
 import { createOpSubstitutionHelpers } from './opSubstitution.js';
@@ -14,6 +23,8 @@ type OpExpansionStackEntry = {
 type OpStackSummary =
   | { kind: 'known'; delta: number; hasUntrackedSpMutation: boolean }
   | { kind: 'complex' };
+
+type CloneHelper<T> = (value: T) => T;
 
 type Context = {
   opsByName: Map<string, OpDeclNode[]>;
@@ -43,18 +54,16 @@ type Context = {
   formatOpDefinitionForDiag: (opDecl: OpDeclNode) => string;
   selectMostSpecificOpOverload: (matches: OpDeclNode[], operands: AsmOperandNode[]) => OpDeclNode | undefined;
   summarizeOpStackEffect: (opDecl: OpDeclNode) => OpStackSummary;
-  cloneImmExpr: Contextless<any>;
-  cloneEaExpr: Contextless<any>;
-  cloneOperand: Contextless<any>;
-  flattenEaDottedName: (ea: any) => string | undefined;
+  cloneImmExpr: CloneHelper<ImmExprNode>;
+  cloneEaExpr: CloneHelper<EaExprNode>;
+  cloneOperand: CloneHelper<AsmOperandNode>;
+  flattenEaDottedName: (ea: EaExprNode) => string | undefined;
   normalizeFixedToken: (operand: AsmOperandNode) => string | undefined;
   inverseConditionName: (name: string) => string | undefined;
   newHiddenLabel: (prefix: string) => string;
-  lowerAsmRange: (items: any[], startIndex: number, stopKinds: Set<any>) => number;
+  lowerAsmRange: (items: readonly AsmItemNode[], startIndex: number, stopKinds: Set<string>) => number;
   syncToFlow: () => void;
 };
-
-type Contextless<T> = (value: T) => T;
 
 export function createOpExpansionOrchestrationHelpers(ctx: Context) {
   const tryHandleOpExpansion = (asmItem: AsmInstructionNode): boolean => {
