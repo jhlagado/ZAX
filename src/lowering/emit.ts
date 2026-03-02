@@ -84,6 +84,7 @@ import { encodeInstruction } from '../z80/encode.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import { loadBinInput, loadHexInput } from './inputAssets.js';
 import { createEaResolutionHelpers, type EaResolution } from './eaResolution.js';
+import { createEaMaterializationHelpers } from './eaMaterialization.js';
 import { createAddressingPipelineBuilders } from './addressingPipelines.js';
 import { createRuntimeImmediateHelpers } from './runtimeImmediates.js';
 import { createRuntimeAtomBudgetHelpers } from './runtimeAtomBudget.js';
@@ -2229,39 +2230,13 @@ export function emitProgram(
     return emitStepPipeline(templated, span) && pushZeroExtendedReg8('A', span);
   };
 
-  const materializeEaAddressToHL = (ea: EaExprNode, span: SourceSpan): boolean => {
-    const r = resolveEa(ea, span);
-    if (!r) {
-      if (!pushEaAddress(ea, span)) return false;
-      return emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span);
-    }
-    if (r.kind === 'abs') {
-      emitAbs16Fixup(0x21, r.baseLower, r.addend, span); // ld hl, nn
-      return true;
-    }
-    // Stack slot: use DE shuttle, avoid mutating IX or using HL address math.
-    const disp = r.ixDisp & 0xffff;
-    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false; // save DE
-    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span)) return false; // IX -> stack
-    if (!emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false; // HL = IX
-    if (disp !== 0) {
-      if (!loadImm16ToDE(disp, span)) return false;
-      if (
-        !emitInstr(
-          'add',
-          [
-            { kind: 'Reg', span, name: 'HL' },
-            { kind: 'Reg', span, name: 'DE' },
-          ],
-          span,
-        )
-      ) {
-        return false;
-      }
-    }
-    if (!emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span)) return false; // address -> stack
-    return emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span); // restore DE
-  };
+  const { materializeEaAddressToHL } = createEaMaterializationHelpers({
+    resolveEa,
+    pushEaAddress,
+    emitInstr,
+    emitAbs16Fixup,
+    loadImm16ToDE,
+  });
 
   const lowerLdWithEa = (inst: AsmInstructionNode): boolean => {
     if (inst.head.toLowerCase() !== 'ld' || inst.operands.length !== 2) return false;

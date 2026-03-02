@@ -1,0 +1,51 @@
+import type { AsmOperandNode, EaExprNode, SourceSpan } from '../frontend/ast.js';
+import type { EaResolution } from './eaResolution.js';
+
+type EaMaterializationContext = {
+  resolveEa: (ea: EaExprNode, span: SourceSpan) => EaResolution | undefined;
+  pushEaAddress: (ea: EaExprNode, span: SourceSpan) => boolean;
+  emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
+  emitAbs16Fixup: (opcode: number, target: string, addend: number, span: SourceSpan) => void;
+  loadImm16ToDE: (value: number, span: SourceSpan) => boolean;
+};
+
+export function createEaMaterializationHelpers(ctx: EaMaterializationContext) {
+  const materializeEaAddressToHL = (ea: EaExprNode, span: SourceSpan): boolean => {
+    const resolved = ctx.resolveEa(ea, span);
+    if (!resolved) {
+      if (!ctx.pushEaAddress(ea, span)) return false;
+      return ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span);
+    }
+
+    if (resolved.kind === 'abs') {
+      ctx.emitAbs16Fixup(0x21, resolved.baseLower, resolved.addend, span);
+      return true;
+    }
+
+    const disp = resolved.ixDisp & 0xffff;
+    if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
+    if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span)) return false;
+    if (!ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
+    if (disp !== 0) {
+      if (!ctx.loadImm16ToDE(disp, span)) return false;
+      if (
+        !ctx.emitInstr(
+          'add',
+          [
+            { kind: 'Reg', span, name: 'HL' },
+            { kind: 'Reg', span, name: 'DE' },
+          ],
+          span,
+        )
+      ) {
+        return false;
+      }
+    }
+    if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
+    return ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span);
+  };
+
+  return {
+    materializeEaAddressToHL,
+  };
+}
