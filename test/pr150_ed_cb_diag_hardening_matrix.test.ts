@@ -18,6 +18,7 @@ describe('PR150: ED/CB diagnostics hardening matrix', () => {
     expect(messages).toContain('in (c) is the only one-operand in form');
     expect(messages).toContain('in expects a port operand (c) or (imm8)');
     expect(messages).toContain('in a,(n) expects an imm8 port number');
+    expect(messages).toContain('in a,(n) immediate port form requires destination A');
     expect(messages).toContain('out expects two operands');
     expect(messages).toContain('out expects a reg8 source');
     expect(messages).toContain('out (n),a immediate port form requires source A');

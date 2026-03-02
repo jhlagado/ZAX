@@ -24,8 +24,16 @@ describe('PR472: source file size guard', () => {
 
     expect(stdout).toContain('source-file-size-guard: soft>750, hard>1000');
     expect(stdout).toContain(`- src/lowering/emit.ts: ${emitLines}`);
-    expect(stdout).toContain(`- src/frontend/parser.ts: ${parserLines}`);
-    expect(stdout).toContain(`- src/z80/encode.ts: ${encodeLines}`);
+    if (parserLines > 750) {
+      expect(stdout).toContain(`- src/frontend/parser.ts: ${parserLines}`);
+    } else {
+      expect(stdout).not.toContain(`- src/frontend/parser.ts: ${parserLines}`);
+    }
+    if (encodeLines > 750) {
+      expect(stdout).toContain(`- src/z80/encode.ts: ${encodeLines}`);
+    } else {
+      expect(stdout).not.toContain(`- src/z80/encode.ts: ${encodeLines}`);
+    }
   });
 
   it('fails in enforce mode while current hard-cap breaches remain', async () => {

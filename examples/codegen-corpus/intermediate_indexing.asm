@@ -22,7 +22,7 @@ add HL, DE                     ; 0019: 19
 push HL                        ; 001A: E5
 pop HL                         ; 001B: E1
 ld A, (hl)                     ; 001C: 7E
-ld HL, (idxw)                  ; 001D: 2A 00 00
+ld hl, (idxw)                  ; 001D: 2A 00 00
 push HL                        ; 0020: E5
 pop HL                         ; 0021: E1
 push HL                        ; 0022: E5
