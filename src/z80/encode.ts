@@ -647,7 +647,21 @@ export function encodeInstruction(
       memIndexed,
     });
     if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2 || ops.length === 3) return undefined;
+    if (
+      (head === 'bit' && ops.length === 2) ||
+      ((head === 'res' || head === 'set') && (ops.length === 2 || ops.length === 3)) ||
+      ((head === 'rl' ||
+        head === 'rr' ||
+        head === 'sla' ||
+        head === 'sra' ||
+        head === 'srl' ||
+        head === 'sll' ||
+        head === 'rlc' ||
+        head === 'rrc') &&
+        (ops.length === 1 || ops.length === 2))
+    ) {
+      return undefined;
+    }
   }
 
   if (isKnownInstructionHead(head) && diagnostics.length > diagnosticsBefore) {
