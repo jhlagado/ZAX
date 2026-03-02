@@ -21,6 +21,7 @@ import type {
   PendingSymbol,
   SourceSegmentTag,
 } from './loweringTypes.js';
+import type { OpStackSummary } from './opStackAnalysis.js';
 import type { ScalarKind } from './typeResolution.js';
 import { createAsmInstructionLoweringHelpers } from './asmInstructionLowering.js';
 import { createAsmBodyOrchestrationHelpers } from './asmBodyOrchestration.js';
@@ -32,10 +33,6 @@ import {
 import { createFunctionCallLoweringHelpers } from './functionCallLowering.js';
 
 type ResolvedArrayType = { element: TypeExprNode; length?: number };
-type OpStackSummary =
-  | { kind: 'known'; delta: number; hasUntrackedSpMutation: boolean }
-  | { kind: 'complex' };
-
 export type FunctionLoweringContext = {
   item: FuncDeclNode;
   diagnostics: Diagnostic[];
