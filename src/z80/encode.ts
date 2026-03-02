@@ -10,6 +10,7 @@ import type { CompileEnv } from '../semantics/env.js';
 import { evalImmExpr } from '../semantics/env.js';
 import { encodeAluInstruction } from './encodeAlu.js';
 import { encodeControlInstruction } from './encodeControl.js';
+import { encodeCoreOpsInstruction } from './encodeCoreOps.js';
 import { encodeLdInstruction } from './encodeLd.js';
 
 function diag(
@@ -728,187 +729,16 @@ export function encodeInstruction(
     });
   }
 
-  if (head === 'inc' && ops.length === 1) {
-    const indexed = indexedReg8(ops[0]!);
-    if (indexed) return Uint8Array.of(indexed.prefix, 0x04 + (indexed.code << 3));
-    const r = regName(ops[0]!);
-    if (r) {
-      const r8 = reg8Code(r);
-      if (r8 !== undefined) {
-        // inc r8
-        return Uint8Array.of(0x04 + (r8 << 3));
-      }
-      // inc rr
-      switch (r) {
-        case 'BC':
-          return Uint8Array.of(0x03);
-        case 'DE':
-          return Uint8Array.of(0x13);
-        case 'HL':
-          return Uint8Array.of(0x23);
-        case 'SP':
-          return Uint8Array.of(0x33);
-        case 'IX':
-          return Uint8Array.of(0xdd, 0x23);
-        case 'IY':
-          return Uint8Array.of(0xfd, 0x23);
-      }
-    }
-    // inc (hl)
-    if (isMemHL(ops[0]!)) return Uint8Array.of(0x34);
-    // inc (ix/iy+disp)
-    const idx = memIndexed(ops[0]!, env);
-    if (idx) {
-      const disp = idx.disp;
-      if (disp < -128 || disp > 127) {
-        diag(diagnostics, node, `inc (ix/iy+disp) expects disp8`);
-        return undefined;
-      }
-      return Uint8Array.of(idx.prefix, 0x34, disp & 0xff);
-    }
-    diag(diagnostics, node, `inc expects r8/rr/(hl) operand`);
-    return undefined;
-  }
-
-  if (head === 'dec' && ops.length === 1) {
-    const indexed = indexedReg8(ops[0]!);
-    if (indexed) return Uint8Array.of(indexed.prefix, 0x05 + (indexed.code << 3));
-    const r = regName(ops[0]!);
-    if (r) {
-      const r8 = reg8Code(r);
-      if (r8 !== undefined) {
-        // dec r8
-        return Uint8Array.of(0x05 + (r8 << 3));
-      }
-      // dec rr
-      switch (r) {
-        case 'BC':
-          return Uint8Array.of(0x0b);
-        case 'DE':
-          return Uint8Array.of(0x1b);
-        case 'HL':
-          return Uint8Array.of(0x2b);
-        case 'SP':
-          return Uint8Array.of(0x3b);
-        case 'IX':
-          return Uint8Array.of(0xdd, 0x2b);
-        case 'IY':
-          return Uint8Array.of(0xfd, 0x2b);
-      }
-    }
-    // dec (hl)
-    if (isMemHL(ops[0]!)) return Uint8Array.of(0x35);
-    // dec (ix/iy+disp)
-    const idx = memIndexed(ops[0]!, env);
-    if (idx) {
-      const disp = idx.disp;
-      if (disp < -128 || disp > 127) {
-        diag(diagnostics, node, `dec (ix/iy+disp) expects disp8`);
-        return undefined;
-      }
-      return Uint8Array.of(idx.prefix, 0x35, disp & 0xff);
-    }
-    diag(diagnostics, node, `dec expects r8/rr/(hl) operand`);
-    return undefined;
-  }
-
-  if (head === 'push' && ops.length === 1) {
-    const r16 = regName(ops[0]!);
-    if (!r16) {
-      diag(diagnostics, node, `push expects reg16`);
-      return undefined;
-    }
-    switch (r16) {
-      case 'BC':
-        return Uint8Array.of(0xc5);
-      case 'DE':
-        return Uint8Array.of(0xd5);
-      case 'HL':
-        return Uint8Array.of(0xe5);
-      case 'AF':
-        return Uint8Array.of(0xf5);
-      case 'IX':
-        return Uint8Array.of(0xdd, 0xe5);
-      case 'IY':
-        return Uint8Array.of(0xfd, 0xe5);
-      default:
-        diag(diagnostics, node, `push supports BC/DE/HL/AF/IX/IY only`);
-        return undefined;
-    }
-  }
-
-  if (head === 'pop' && ops.length === 1) {
-    const r16 = regName(ops[0]!);
-    if (!r16) {
-      diag(diagnostics, node, `pop expects reg16`);
-      return undefined;
-    }
-    switch (r16) {
-      case 'BC':
-        return Uint8Array.of(0xc1);
-      case 'DE':
-        return Uint8Array.of(0xd1);
-      case 'HL':
-        return Uint8Array.of(0xe1);
-      case 'AF':
-        return Uint8Array.of(0xf1);
-      case 'IX':
-        return Uint8Array.of(0xdd, 0xe1);
-      case 'IY':
-        return Uint8Array.of(0xfd, 0xe1);
-      default:
-        diag(diagnostics, node, `pop supports BC/DE/HL/AF/IX/IY only`);
-        return undefined;
-    }
-  }
-
-  if (head === 'ex' && ops.length === 2) {
-    const a = regName(ops[0]!);
-    const b = regName(ops[1]!);
-    if ((a === "AF'" && b === 'AF') || (a === 'AF' && b === "AF'")) return Uint8Array.of(0x08); // ex af,af'
-    if ((a === 'DE' && b === 'HL') || (a === 'HL' && b === 'DE')) return Uint8Array.of(0xeb); // ex de,hl
-    if (
-      (ops[0]!.kind === 'Mem' &&
-        ops[0]!.expr.kind === 'EaName' &&
-        ops[0]!.expr.name.toUpperCase() === 'SP' &&
-        b === 'HL') ||
-      (ops[1]!.kind === 'Mem' &&
-        ops[1]!.expr.kind === 'EaName' &&
-        ops[1]!.expr.name.toUpperCase() === 'SP' &&
-        a === 'HL')
-    ) {
-      return Uint8Array.of(0xe3); // ex (sp),hl
-    }
-    if (
-      (ops[0]!.kind === 'Mem' &&
-        ops[0]!.expr.kind === 'EaName' &&
-        ops[0]!.expr.name.toUpperCase() === 'SP' &&
-        b === 'IX') ||
-      (ops[1]!.kind === 'Mem' &&
-        ops[1]!.expr.kind === 'EaName' &&
-        ops[1]!.expr.name.toUpperCase() === 'SP' &&
-        a === 'IX')
-    ) {
-      return Uint8Array.of(0xdd, 0xe3); // ex (sp),ix
-    }
-    if (
-      (ops[0]!.kind === 'Mem' &&
-        ops[0]!.expr.kind === 'EaName' &&
-        ops[0]!.expr.name.toUpperCase() === 'SP' &&
-        b === 'IY') ||
-      (ops[1]!.kind === 'Mem' &&
-        ops[1]!.expr.kind === 'EaName' &&
-        ops[1]!.expr.name.toUpperCase() === 'SP' &&
-        a === 'IY')
-    ) {
-      return Uint8Array.of(0xfd, 0xe3); // ex (sp),iy
-    }
-    diag(
-      diagnostics,
-      node,
-      `ex supports "AF, AF'", "DE, HL", "(SP), HL", "(SP), IX", and "(SP), IY" only`,
-    );
-    return undefined;
+  if (head === 'inc' || head === 'dec' || head === 'push' || head === 'pop' || head === 'ex') {
+    const encoded = encodeCoreOpsInstruction(node, env, diagnostics, {
+      diag,
+      regName,
+      indexedReg8,
+      reg8Code,
+      isMemHL,
+      memIndexed,
+    });
+    if (encoded) return encoded;
   }
 
   const encodeBitLike = (
