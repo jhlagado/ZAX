@@ -64,6 +64,7 @@ import {
   unsupportedExportTargetKind,
 } from './parseModuleCommon.js';
 import { parseExternFuncFromTail } from './parseExtern.js';
+import { parseEnumDecl } from './parseEnum.js';
 import { parseOpParamsFromText, parseParamsFromText } from './parseParams.js';
 import {
   parseAlignDirectiveDecl,
@@ -1581,104 +1582,15 @@ export function parseModuleFile(
 
     const enumTail = consumeTopKeyword(rest, 'enum');
     if (enumTail !== undefined) {
-      const decl = enumTail;
-      const nameMatch = /^([A-Za-z_][A-Za-z0-9_]*)(?:\s+(.*))?$/.exec(decl);
-      if (!nameMatch) {
-        const invalidName = decl.split(/\s+/, 1)[0] ?? '';
-        if (invalidName.length > 0) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid enum name ${formatIdentifierToken(invalidName)}: expected <identifier>.`,
-            { line: lineNo, column: 1 },
-          );
-        } else {
-          diagInvalidHeaderLine(
-            diagnostics,
-            modulePath,
-            'enum declaration',
-            text,
-            '<name> <member>[, ...]',
-            lineNo,
-          );
-        }
-        i++;
-        continue;
-      }
-
-      const name = nameMatch[1]!;
-      if (isReservedTopLevelName(name)) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid enum name "${name}": collides with a top-level keyword.`,
-          { line: lineNo, column: 1 },
-        );
-        i++;
-        continue;
-      }
-      const membersText = (nameMatch[2] ?? '').trim();
-      if (membersText.length === 0) {
-        diag(diagnostics, modulePath, `Enum "${name}" must declare at least one member`, {
-          line: lineNo,
-          column: 1,
-        });
-        i++;
-        continue;
-      }
-
-      const rawParts = membersText.split(',').map((p) => p.trim());
-      if (rawParts.some((p) => p.length === 0)) {
-        diag(diagnostics, modulePath, `Trailing commas are not permitted in enum member lists`, {
-          line: lineNo,
-          column: 1,
-        });
-        i++;
-        continue;
-      }
-
-      const members: string[] = [];
-      const membersLower = new Set<string>();
-      for (const m of rawParts) {
-        if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(m)) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid enum member name ${formatIdentifierToken(m)}: expected <identifier>.`,
-            {
-              line: lineNo,
-              column: 1,
-            },
-          );
-          continue;
-        }
-        if (isReservedTopLevelName(m)) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid enum member name "${m}": collides with a top-level keyword.`,
-            {
-              line: lineNo,
-              column: 1,
-            },
-          );
-          continue;
-        }
-        const memberLower = m.toLowerCase();
-        if (membersLower.has(memberLower)) {
-          diag(diagnostics, modulePath, `Duplicate enum member name "${m}".`, {
-            line: lineNo,
-            column: 1,
-          });
-          continue;
-        }
-        membersLower.add(memberLower);
-        members.push(m);
-      }
-
-      const enumSpan = span(file, lineStartOffset, lineEndOffset);
-      const enumNode: EnumDeclNode = { kind: 'EnumDecl', span: enumSpan, name, members };
-      items.push(enumNode);
+      const enumNode = parseEnumDecl(enumTail, {
+        diagnostics,
+        modulePath,
+        lineNo,
+        text,
+        span: span(file, lineStartOffset, lineEndOffset),
+        isReservedTopLevelName,
+      });
+      if (enumNode) items.push(enumNode);
       i++;
       continue;
     }
