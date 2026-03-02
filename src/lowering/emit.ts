@@ -90,8 +90,7 @@ import { createRuntimeImmediateHelpers } from './runtimeImmediates.js';
 import { createRuntimeAtomBudgetHelpers } from './runtimeAtomBudget.js';
 import { createScalarWordAccessorHelpers } from './scalarWordAccessors.js';
 import { createLdLoweringHelpers } from './ldLowering.js';
-import { createOpSubstitutionHelpers } from './opSubstitution.js';
-import { createOpExpansionExecutionHelpers } from './opExpansionExecution.js';
+import { createOpExpansionOrchestrationHelpers } from './opExpansionOrchestration.js';
 import {
   alignTo,
   computeWrittenRange,
@@ -3539,160 +3538,34 @@ export function emitProgram(
               return;
             }
 
-            const opCandidates = opsByName.get(asmItem.head.toLowerCase());
-            if (opCandidates && opCandidates.length > 0) {
-              const arityMatches = opCandidates.filter(
-                (candidate) => candidate.params.length === asmItem.operands.length,
-              );
-              if (arityMatches.length === 0) {
-                const available = opCandidates
-                  .map((candidate) => `  - ${formatOpSignature(candidate)}`)
-                  .join('\n');
-                diagAtWithId(
-                  diagnostics,
-                  asmItem.span,
-                  DiagnosticIds.OpArityMismatch,
-                  `No op overload of "${asmItem.head}" accepts ${asmItem.operands.length} operand(s).\n` +
-                    `available overloads:\n${available}`,
-                );
-                return;
-              }
-
-              const matches = arityMatches.filter((candidate) => {
-                if (candidate.params.length !== asmItem.operands.length) return false;
-                for (let idx = 0; idx < candidate.params.length; idx++) {
-                  const param = candidate.params[idx]!;
-                  const arg = asmItem.operands[idx]!;
-                  if (!matcherMatchesOperand(param.matcher, arg)) return false;
-                }
-                return true;
-              });
-              if (matches.length === 0) {
-                const operandSummary = asmItem.operands.map(formatAsmOperandForOpDiag).join(', ');
-                const available = arityMatches
-                  .map((candidate) => {
-                    const reason = firstOpOverloadMismatchReason(candidate, asmItem.operands);
-                    return `  - ${formatOpDefinitionForDiag(candidate)}${reason ? ` ; ${reason}` : ''}`;
-                  })
-                  .join('\n');
-                diagAtWithId(
-                  diagnostics,
-                  asmItem.span,
-                  DiagnosticIds.OpNoMatchingOverload,
-                  `No matching op overload for "${asmItem.head}" with provided operands.\n` +
-                    `call-site operands: (${operandSummary})\n` +
-                    `available overloads:\n${available}`,
-                );
-                return;
-              }
-              const selected = selectMostSpecificOpOverload(matches, asmItem.operands);
-              if (!selected) {
-                const operandSummary = asmItem.operands.map(formatAsmOperandForOpDiag).join(', ');
-                const equallySpecific = matches
-                  .map((candidate) => `  - ${formatOpDefinitionForDiag(candidate)}`)
-                  .join('\n');
-                diagAtWithId(
-                  diagnostics,
-                  asmItem.span,
-                  DiagnosticIds.OpAmbiguousOverload,
-                  `Ambiguous op overload for "${asmItem.head}" (${matches.length} matches).\n` +
-                    `call-site operands: (${operandSummary})\n` +
-                    `equally specific candidates:\n${equallySpecific}`,
-                );
-                return;
-              }
-              const opDecl = selected;
-              if (opStackPolicyMode !== 'off' && hasStackSlots) {
-                const summary = summarizeOpStackEffect(opDecl);
-                const severity = opStackPolicyMode === 'error' ? 'error' : 'warning';
-                if (summary.kind === 'known') {
-                  if (summary.hasUntrackedSpMutation) {
-                    diagAtWithSeverityAndId(
-                      diagnostics,
-                      asmItem.span,
-                      DiagnosticIds.OpStackPolicyRisk,
-                      severity,
-                      `op "${opDecl.name}" may mutate SP in an untracked way (static body analysis); invocation inside stack-slot function may invalidate stack verification.`,
-                    );
-                  }
-                  if (summary.delta !== 0) {
-                    diagAtWithSeverityAndId(
-                      diagnostics,
-                      asmItem.span,
-                      DiagnosticIds.OpStackPolicyRisk,
-                      severity,
-                      `op "${opDecl.name}" has non-zero static stack delta (${summary.delta}) and is invoked inside a stack-slot function.`,
-                    );
-                  }
-                }
-              }
-              const opKey = opDecl.name.toLowerCase();
-              const cycleStart = opExpansionStack.findIndex((entry) => entry.key === opKey);
-              if (cycleStart !== -1) {
-                const cycleChain = [
-                  ...opExpansionStack
-                    .slice(cycleStart)
-                    .map(
-                      (entry) =>
-                        `${entry.name} (${entry.declSpan.file}:${entry.declSpan.start.line})`,
-                    ),
-                  `${opDecl.name} (${opDecl.span.file}:${opDecl.span.start.line})`,
-                ].join(' -> ');
-                diagAtWithId(
-                  diagnostics,
-                  asmItem.span,
-                  DiagnosticIds.OpExpansionCycle,
-                  `Cyclic op expansion detected for "${opDecl.name}".\n` +
-                    `expansion chain: ${cycleChain}`,
-                );
-                return;
-              }
-              const bindings = new Map<string, AsmOperandNode>();
-              for (let idx = 0; idx < opDecl.params.length; idx++) {
-                bindings.set(opDecl.params[idx]!.name.toLowerCase(), asmItem.operands[idx]!);
-              }
-              const {
-                substituteImm,
-                substituteOperand,
-                substituteImmWithOpLabels,
-                substituteOperandWithOpLabels,
-                substituteConditionWithOpLabels,
-              } = createOpSubstitutionHelpers({
-                bindings,
-                env,
-                diagnostics,
-                diagAt,
-                cloneImmExpr,
-                cloneEaExpr,
-                cloneOperand,
-                flattenEaDottedName,
-                normalizeFixedToken,
-                inverseConditionName,
-              });
-
-              opExpansionStack.push({
-                key: opKey,
-                name: opDecl.name,
-                declSpan: opDecl.span,
-                callSiteSpan: asmItem.span,
-              });
-              try {
-                const { expandAndLowerOpBody } = createOpExpansionExecutionHelpers({
-                  diagnostics,
-                  diagAt,
-                  newHiddenLabel,
-                  lowerAsmRange,
-                });
-                expandAndLowerOpBody({
-                  opDecl,
-                  substituteOperandWithOpLabels,
-                  substituteImmWithOpLabels,
-                  substituteConditionWithOpLabels,
-                });
-              } finally {
-                opExpansionStack.pop();
-              }
-              syncToFlow();
+            const { tryHandleOpExpansion } = createOpExpansionOrchestrationHelpers({
+              opsByName,
+              diagnostics,
+              env,
+              hasStackSlots,
+              opStackPolicyMode,
+              opExpansionStack,
+              diagAt,
+              diagAtWithId,
+              diagAtWithSeverityAndId,
+              matcherMatchesOperand,
+              formatOpSignature,
+              formatAsmOperandForOpDiag,
+              firstOpOverloadMismatchReason,
+              formatOpDefinitionForDiag,
+              selectMostSpecificOpOverload,
+              summarizeOpStackEffect,
+              cloneImmExpr,
+              cloneEaExpr,
+              cloneOperand,
+              flattenEaDottedName,
+              normalizeFixedToken,
+              inverseConditionName,
+              newHiddenLabel,
+              lowerAsmRange,
+              syncToFlow,
+            });
+            if (tryHandleOpExpansion(asmItem)) {
               return;
             }
 
