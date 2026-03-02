@@ -12,6 +12,7 @@ import { encodeAluInstruction } from './encodeAlu.js';
 import { encodeBitOpsInstruction } from './encodeBitOps.js';
 import { encodeControlInstruction } from './encodeControl.js';
 import { encodeCoreOpsInstruction } from './encodeCoreOps.js';
+import { encodeIoInstruction } from './encodeIo.js';
 import { encodeLdInstruction } from './encodeLd.js';
 
 function diag(
@@ -580,136 +581,17 @@ export function encodeInstruction(
     if (encoded) return encoded;
   }
 
-  if (head === 'rst' && ops.length === 1) {
-    const n = immValue(ops[0]!, env);
-    if (n === undefined || n < 0 || n > 0x38 || (n & 0x07) !== 0) {
-      diag(diagnostics, node, `rst expects an imm8 multiple of 8 (0..56)`);
-      return undefined;
-    }
-    return Uint8Array.of(0xc7 + n);
-  }
-  if (head === 'rst') {
-    diag(diagnostics, node, `rst expects one operand`);
-    return undefined;
-  }
-
-  if (head === 'im' && ops.length === 1) {
-    const n = immValue(ops[0]!, env);
-    if (n === 0) return Uint8Array.of(0xed, 0x46);
-    if (n === 1) return Uint8Array.of(0xed, 0x56);
-    if (n === 2) return Uint8Array.of(0xed, 0x5e);
-    diag(diagnostics, node, `im expects 0, 1, or 2`);
-    return undefined;
-  }
-  if (head === 'im') {
-    diag(diagnostics, node, `im expects one operand`);
-    return undefined;
-  }
-
-  if (head === 'in' && ops.length === 1) {
-    if (ops[0]!.kind === 'PortC') {
-      // in (c) => ED 70
-      return Uint8Array.of(0xed, 0x70);
-    }
-    diag(diagnostics, node, `in (c) is the only one-operand in form`);
-    return undefined;
-  }
-
-  if (head === 'in' && ops.length === 2) {
-    const dst = regName(ops[0]!);
-    const dst8 = dst ? reg8Code(dst) : undefined;
-
-    if (dst8 === undefined) {
-      if (indexedReg8(ops[0]!)) {
-        diag(diagnostics, node, `in destination must use legacy reg8 B/C/D/E/H/L/A`);
-        return undefined;
-      }
-      diag(diagnostics, node, `in expects a reg8 destination`);
-      return undefined;
-    }
-
-    const port = ops[1]!;
-    if (port.kind === 'PortC') {
-      // in r,(c) => ED 40 + r*8
-      return Uint8Array.of(0xed, 0x40 + (dst8 << 3));
-    }
-    if (port.kind === 'PortImm8') {
-      // in a,(n) => DB n
-      if (dst !== 'A') {
-        diag(diagnostics, node, `in a,(n) immediate port form requires destination A`);
-        return undefined;
-      }
-      const n = portImmValue(port, env);
-      if (n === undefined || !fitsImm8(n)) {
-        diag(diagnostics, node, `in a,(n) expects an imm8 port number`);
-        return undefined;
-      }
-      return Uint8Array.of(0xdb, n & 0xff);
-    }
-
-    diag(diagnostics, node, `in expects a port operand (c) or (imm8)`);
-    return undefined;
-  }
-  if (head === 'in') {
-    diag(diagnostics, node, `in expects one or two operands`);
-    return undefined;
-  }
-
-  if (head === 'out' && ops.length === 2) {
-    const port = ops[0]!;
-    const src = regName(ops[1]!);
-    const src8 = src ? reg8Code(src) : undefined;
-    const srcIndexed = indexedReg8(ops[1]!);
-
-    if (port.kind === 'PortC') {
-      if (ops[1]!.kind === 'Imm') {
-        const n = evalImmExpr(ops[1]!.expr, env);
-        if (n === 0) {
-          // out (c),0 => ED 71
-          return Uint8Array.of(0xed, 0x71);
-        }
-        diag(diagnostics, node, `out (c), n immediate form supports n=0 only`);
-        return undefined;
-      }
-      if (src8 === undefined) {
-        if (srcIndexed) {
-          diag(diagnostics, node, `out source must use legacy reg8 B/C/D/E/H/L/A`);
-          return undefined;
-        }
-        diag(diagnostics, node, `out expects a reg8 source`);
-        return undefined;
-      }
-      // out (c),r => ED 41 + r*8
-      return Uint8Array.of(0xed, 0x41 + (src8 << 3));
-    }
-    if (port.kind === 'PortImm8') {
-      // out (n),a => D3 n
-      if (src8 === undefined) {
-        if (srcIndexed) {
-          diag(diagnostics, node, `out source must use legacy reg8 B/C/D/E/H/L/A`);
-          return undefined;
-        }
-        diag(diagnostics, node, `out expects a reg8 source`);
-        return undefined;
-      }
-      if (src !== 'A') {
-        diag(diagnostics, node, `out (n),a immediate port form requires source A`);
-        return undefined;
-      }
-      const n = portImmValue(port, env);
-      if (n === undefined || !fitsImm8(n)) {
-        diag(diagnostics, node, `out (n),a expects an imm8 port number`);
-        return undefined;
-      }
-      return Uint8Array.of(0xd3, n & 0xff);
-    }
-
-    diag(diagnostics, node, `out expects a port operand (c) or (imm8)`);
-    return undefined;
-  }
-  if (head === 'out') {
-    diag(diagnostics, node, `out expects two operands`);
-    return undefined;
+  if (head === 'rst' || head === 'im' || head === 'in' || head === 'out') {
+    const encoded = encodeIoInstruction(node, env, diagnostics, {
+      diag,
+      regName,
+      immValue,
+      portImmValue,
+      indexedReg8,
+      reg8Code,
+      fitsImm8,
+    });
+    if (encoded) return encoded;
   }
 
   if (head === 'ld') {
