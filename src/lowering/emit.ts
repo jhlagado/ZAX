@@ -40,8 +40,6 @@ import {
   TEMPLATE_SW_HL,
   TEMPLATE_S_ANY,
   TEMPLATE_S_HL,
-  renderStepInstr,
-  type StepInstr,
   type StepPipeline,
 } from '../addressing/steps.js';
 import type { Diagnostic, DiagnosticId } from '../diagnostics/types.js';
@@ -94,6 +92,7 @@ import { createOpExpansionOrchestrationHelpers } from './opExpansionOrchestratio
 import { createAsmRangeLoweringHelpers } from './asmRangeLowering.js';
 import { createAsmBodyOrchestrationHelpers } from './asmBodyOrchestration.js';
 import { createOpMatchingHelpers } from './opMatching.js';
+import { createEmissionCoreHelpers } from './emissionCore.js';
 import {
   alignTo,
   computeWrittenRange,
@@ -396,20 +395,9 @@ export function emitProgram(
     codeAsmTrace.push({ kind: 'comment', offset, text });
   };
 
-  const emitCodeBytes = (bs: Uint8Array, file: string) => {
-    const start = codeOffset;
-    for (const b of bs) {
-      codeBytes.set(codeOffset, b);
-      codeOffset++;
-    }
-    recordCodeSourceRange(start, codeOffset);
-  };
-
-  const emitRawCodeBytes = (bs: Uint8Array, file: string, traceText: string): void => {
-    const start = codeOffset;
-    emitCodeBytes(bs, file);
-    traceInstruction(start, bs, traceText);
-  };
+  let emitCodeBytes: (bs: Uint8Array, file: string) => void;
+  let emitRawCodeBytes: (bs: Uint8Array, file: string, traceText: string) => void;
+  let emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
 
   const applySpTracking = (headRaw: string, operands: AsmOperandNode[]) => {
     const head = headRaw.toLowerCase();
@@ -477,179 +465,6 @@ export function emitProgram(
       emitInstr,
     });
 
-  const emitStepPipeline = (pipe: StepPipeline, span: SourceSpan): boolean => {
-    const rpByte = (rp: string, which: 'lo' | 'hi'): string | undefined => {
-      const up = rp.toUpperCase();
-      if (up === 'HL') return which === 'lo' ? 'L' : 'H';
-      if (up === 'DE') return which === 'lo' ? 'E' : 'D';
-      if (up === 'BC') return which === 'lo' ? 'C' : 'B';
-      return undefined;
-    };
-
-    const mkReg = (name: string): AsmOperandNode => ({ kind: 'Reg', span, name });
-    const mkStepReg = (name: string): AsmOperandNode => mkReg(name.toUpperCase());
-    const mkMemHl = (): AsmOperandNode => ({
-      kind: 'Mem',
-      span,
-      expr: { kind: 'EaName', span, name: 'HL' },
-    });
-    const mkMemIxDisp = (disp: number): AsmOperandNode => {
-      if (disp === 0) {
-        return { kind: 'Mem', span, expr: { kind: 'EaName', span, name: 'IX' } };
-      }
-      const offsetImm: ImmExprNode = {
-        kind: 'ImmLiteral',
-        span,
-        value: Math.abs(disp),
-      };
-      return {
-        kind: 'Mem',
-        span,
-        expr:
-          disp >= 0
-            ? { kind: 'EaAdd', span, base: { kind: 'EaName', span, name: 'IX' }, offset: offsetImm }
-            : {
-                kind: 'EaSub',
-                span,
-                base: { kind: 'EaName', span, name: 'IX' },
-                offset: offsetImm,
-              },
-      };
-    };
-
-    const emitStepInstr = (step: StepInstr): boolean => {
-      switch (step.kind) {
-        case 'push':
-          return emitInstr('push', [mkReg(step.reg)], span);
-        case 'pop':
-          return emitInstr('pop', [mkReg(step.reg)], span);
-        case 'exDeHl':
-          return emitInstr('ex', [mkReg('DE'), mkReg('HL')], span);
-        case 'exSpHl':
-          return emitInstr(
-            'ex',
-            [{ kind: 'Mem', span, expr: { kind: 'EaName', span, name: 'SP' } }, mkReg('HL')],
-            span,
-          );
-        case 'addHlDe':
-          return emitInstr('add', [mkReg('HL'), mkReg('DE')], span);
-        case 'addHlHl':
-          return emitInstr('add', [mkReg('HL'), mkReg('HL')], span);
-        case 'incHl':
-          return emitInstr('inc', [mkReg('HL')], span);
-        case 'ldHZero':
-          return emitInstr(
-            'ld',
-            [mkReg('H'), { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }],
-            span,
-          );
-        case 'ldRegReg':
-          return emitInstr('ld', [mkStepReg(step.dst), mkStepReg(step.src)], span);
-        case 'ldRegMemHl':
-          return emitInstr('ld', [mkStepReg(step.reg), mkMemHl()], span);
-        case 'ldMemHlReg':
-          return emitInstr('ld', [mkMemHl(), mkStepReg(step.reg)], span);
-        case 'ldRegIxDisp':
-          return emitInstr('ld', [mkStepReg(step.reg), mkMemIxDisp(step.disp)], span);
-        case 'ldIxDispReg':
-          return emitInstr('ld', [mkMemIxDisp(step.disp), mkStepReg(step.reg)], span);
-        case 'ldRpByteFromIx': {
-          const regName = rpByte(step.rp, step.part);
-          if (!regName) return false;
-          return emitInstr('ld', [mkReg(regName), mkMemIxDisp(step.disp)], span);
-        }
-        case 'ldIxDispFromRpByte': {
-          const regName = rpByte(step.rp, step.part);
-          if (!regName) return false;
-          return emitInstr('ld', [mkMemIxDisp(step.disp), mkReg(regName)], span);
-        }
-        case 'ldRpImm':
-          return step.rp === 'DE'
-            ? loadImm16ToDE(step.value, span)
-            : loadImm16ToHL(step.value, span);
-        case 'ldRpGlob':
-          emitAbs16Fixup(
-            step.rp === 'DE' ? 0x11 : 0x21,
-            step.glob.toLowerCase(),
-            0,
-            span,
-            renderStepInstr(step),
-          );
-          return true;
-        case 'ldHlPtrGlob':
-          emitAbs16Fixup(0x2a, step.glob.toLowerCase(), 0, span, renderStepInstr(step));
-          return true;
-        case 'ldRpPtrGlob':
-          emitAbs16FixupEd(
-            step.rp === 'BC' ? 0x4b : 0x5b,
-            step.glob.toLowerCase(),
-            0,
-            span,
-            renderStepInstr(step),
-          );
-          return true;
-        case 'ldPtrGlobRp':
-          if (step.rp === 'HL') {
-            emitAbs16Fixup(0x22, step.glob.toLowerCase(), 0, span, renderStepInstr(step));
-          } else {
-            emitAbs16FixupEd(
-              step.rp === 'BC' ? 0x43 : 0x53,
-              step.glob.toLowerCase(),
-              0,
-              span,
-              renderStepInstr(step),
-            );
-          }
-          return true;
-        case 'ldHlRp':
-          if (step.rp === 'HL') return true;
-          if (step.rp === 'DE') {
-            return (
-              emitInstr('ld', [mkReg('H'), mkReg('D')], span) &&
-              emitInstr('ld', [mkReg('L'), mkReg('E')], span)
-            );
-          }
-          return (
-            emitInstr('ld', [mkReg('H'), mkReg('B')], span) &&
-            emitInstr('ld', [mkReg('L'), mkReg('C')], span)
-          );
-        case 'ldRegGlob':
-          return emitInstr(
-            'ld',
-            [
-              mkStepReg(step.reg),
-              { kind: 'Mem', span, expr: { kind: 'EaName', span, name: step.glob } },
-            ],
-            span,
-          );
-        case 'ldGlobReg':
-          return emitInstr(
-            'ld',
-            [
-              { kind: 'Mem', span, expr: { kind: 'EaName', span, name: step.glob } },
-              mkStepReg(step.reg),
-            ],
-            span,
-          );
-        case 'ldRpByteFromReg': {
-          const regName = rpByte(step.rp, step.part);
-          if (!regName) return false;
-          return emitInstr('ld', [mkReg(regName), mkStepReg(step.reg)], span);
-        }
-        case 'ldRegFromRpByte': {
-          const src = rpByte(step.rp, step.part);
-          if (!src) return false;
-          return emitInstr('ld', [mkStepReg(step.reg), mkReg(src)], span);
-        }
-      }
-    };
-
-    for (const step of pipe) {
-      if (!emitStepInstr(step)) return false;
-    }
-    return true;
-  };
-
   const emitAbs16Fixup = (
     opcode: number,
     baseLower: string,
@@ -690,6 +505,27 @@ export function emitProgram(
       asmText ?? formatAbs16FixupEdAsm(opcode2, baseLower, addend),
     );
   };
+
+  ({
+    emitCodeBytes,
+    emitRawCodeBytes,
+    emitStepPipeline,
+  } = createEmissionCoreHelpers({
+    getCodeOffset: () => codeOffset,
+    setCodeOffset: (value) => {
+      codeOffset = value;
+    },
+    setCodeByte: (offset, value) => {
+      codeBytes.set(offset, value);
+    },
+    recordCodeSourceRange,
+    traceInstruction,
+    emitInstr: (head, operands, span) => emitInstr(head, operands, span),
+    loadImm16ToDE: (value, span) => loadImm16ToDE(value, span),
+    loadImm16ToHL: (value, span) => loadImm16ToHL(value, span),
+    emitAbs16Fixup,
+    emitAbs16FixupEd,
+  }));
 
   const emitAbs16FixupPrefixed = (
     prefix: number,
