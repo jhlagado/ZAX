@@ -14,9 +14,13 @@ import type {
   SourceSpan,
   TypeExprNode,
 } from '../frontend/ast.js';
-import type { EmittedSourceSegment } from '../formats/types.js';
 import type { CompileEnv } from '../semantics/env.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
+import type {
+  Callable,
+  PendingSymbol,
+  SourceSegmentTag,
+} from './loweringTypes.js';
 import type { ScalarKind } from './typeResolution.js';
 import { createAsmInstructionLoweringHelpers } from './asmInstructionLowering.js';
 import { createAsmBodyOrchestrationHelpers } from './asmBodyOrchestration.js';
@@ -27,22 +31,7 @@ import {
 } from './functionBodySetup.js';
 import { createFunctionCallLoweringHelpers } from './functionCallLowering.js';
 
-type PendingSymbol = {
-  kind: 'label' | 'data' | 'var';
-  name: string;
-  section: 'code' | 'data' | 'var';
-  offset: number;
-  file?: string;
-  line?: number;
-  scope?: 'global' | 'local';
-  size?: number;
-};
-
-type SourceSegmentTag = Omit<EmittedSourceSegment, 'start' | 'end'>;
 type ResolvedArrayType = { element: TypeExprNode; length?: number };
-type Callable =
-  | { kind: 'func'; node: FuncDeclNode }
-  | { kind: 'extern'; node: { name: string; params: ParamNode[] }; targetLower: string };
 type OpStackSummary =
   | { kind: 'known'; delta: number; hasUntrackedSpMutation: boolean }
   | { kind: 'complex' };
