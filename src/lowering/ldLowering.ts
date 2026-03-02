@@ -6,6 +6,9 @@ import type { CompileEnv } from '../semantics/env.js';
 import type { EaResolution } from './eaResolution.js';
 import type { ScalarKind } from './typeResolution.js';
 
+// ld lowering keeps the special-case routing for native Z80 encodings in one
+// place, then falls back to the extracted addressing helpers for complex EA
+// cases.
 type LdLoweringContext = {
   LOAD_RP_FVAR: (rp: 'HL' | 'DE' | 'BC', ixDisp: number) => StepPipeline;
   LOAD_RP_GLOB: (rp: 'HL' | 'DE' | 'BC', baseLower: string) => StepPipeline;

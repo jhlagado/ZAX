@@ -34,6 +34,8 @@ import type {
 } from './loweringTypes.js';
 import type { AggregateType, ScalarKind } from './typeResolution.js';
 
+// Program lowering owns module-wide declaration traversal and the final
+// emission/fixup passes after all symbols and section bases are known.
 type Context = Omit<FunctionLoweringContext, 'item'> & {
   program: ProgramNode;
   includeDirs: string[];
