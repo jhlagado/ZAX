@@ -63,6 +63,8 @@ import {
   topLevelStartKeyword,
   unsupportedExportTargetKind,
 } from './parseModuleCommon.js';
+import { parseExternFuncFromTail } from './parseExtern.js';
+import { parseOpParamsFromText, parseParamsFromText } from './parseParams.js';
 
 const RESERVED_TOP_LEVEL_KEYWORDS = new Set([
   'func',
@@ -164,180 +166,6 @@ function splitTopLevelComma(text: string): string[] {
   return parts;
 }
 
-function parseParamsFromText(
-  filePath: string,
-  paramsText: string,
-  paramsSpan: SourceSpan,
-  diagnostics: Diagnostic[],
-): ParamNode[] | undefined {
-  const trimmed = paramsText.trim();
-  if (trimmed.length === 0) return [];
-
-  const parts = trimmed.split(',').map((p) => p.trim());
-  if (parts.some((p) => p.length === 0)) {
-    diag(
-      diagnostics,
-      filePath,
-      `Invalid parameter list: trailing or empty entries are not permitted.`,
-      {
-        line: paramsSpan.start.line,
-        column: paramsSpan.start.column,
-      },
-    );
-    return undefined;
-  }
-  const out: ParamNode[] = [];
-  const seen = new Set<string>();
-  for (const part of parts) {
-    const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(part);
-    if (!m) {
-      diag(diagnostics, filePath, `Invalid parameter declaration: expected <name>: <type>`, {
-        line: paramsSpan.start.line,
-        column: paramsSpan.start.column,
-      });
-      return undefined;
-    }
-
-    const name = m[1]!;
-    if (isReservedTopLevelDeclName(name)) {
-      diag(
-        diagnostics,
-        filePath,
-        `Invalid parameter name "${name}": collides with a top-level keyword.`,
-        {
-          line: paramsSpan.start.line,
-          column: paramsSpan.start.column,
-        },
-      );
-      return undefined;
-    }
-    const lower = name.toLowerCase();
-    if (seen.has(lower)) {
-      diag(diagnostics, filePath, `Duplicate parameter name "${name}".`, {
-        line: paramsSpan.start.line,
-        column: paramsSpan.start.column,
-      });
-      return undefined;
-    }
-    seen.add(lower);
-    const typeText = m[2]!.trim();
-    const typeExpr = parseTypeExprFromText(typeText, paramsSpan, {
-      allowInferredArrayLength: true,
-    });
-    if (!typeExpr) {
-      diag(diagnostics, filePath, `Invalid parameter type "${typeText}": expected <type>`, {
-        line: paramsSpan.start.line,
-        column: paramsSpan.start.column,
-      });
-      return undefined;
-    }
-    if (typeExpr.kind === 'TypeName' && typeExpr.name === 'void') {
-      diag(diagnostics, filePath, `Parameter "${name}" may not have type void`, {
-        line: paramsSpan.start.line,
-        column: paramsSpan.start.column,
-      });
-      return undefined;
-    }
-
-    out.push({ kind: 'Param', span: paramsSpan, name, typeExpr });
-  }
-  return out;
-}
-
-function parseOpMatcherFromText(matcherText: string, matcherSpan: SourceSpan): OpMatcherNode {
-  const t = matcherText.trim();
-  const lower = t.toLowerCase();
-  switch (lower) {
-    case 'reg8':
-      return { kind: 'MatcherReg8', span: matcherSpan };
-    case 'reg16':
-      return { kind: 'MatcherReg16', span: matcherSpan };
-    case 'idx16':
-      return { kind: 'MatcherIdx16', span: matcherSpan };
-    case 'cc':
-      return { kind: 'MatcherCc', span: matcherSpan };
-    case 'imm8':
-      return { kind: 'MatcherImm8', span: matcherSpan };
-    case 'imm16':
-      return { kind: 'MatcherImm16', span: matcherSpan };
-    case 'ea':
-      return { kind: 'MatcherEa', span: matcherSpan };
-    case 'mem8':
-      return { kind: 'MatcherMem8', span: matcherSpan };
-    case 'mem16':
-      return { kind: 'MatcherMem16', span: matcherSpan };
-    default:
-      return { kind: 'MatcherFixed', span: matcherSpan, token: t };
-  }
-}
-
-function parseOpParamsFromText(
-  filePath: string,
-  paramsText: string,
-  paramsSpan: SourceSpan,
-  diagnostics: Diagnostic[],
-): OpParamNode[] | undefined {
-  const trimmed = paramsText.trim();
-  if (trimmed.length === 0) return [];
-
-  const parts = trimmed.split(',').map((p) => p.trim());
-  if (parts.some((p) => p.length === 0)) {
-    diag(
-      diagnostics,
-      filePath,
-      `Invalid op parameter list: trailing or empty entries are not permitted.`,
-      {
-        line: paramsSpan.start.line,
-        column: paramsSpan.start.column,
-      },
-    );
-    return undefined;
-  }
-  const out: OpParamNode[] = [];
-  const seen = new Set<string>();
-  for (const part of parts) {
-    const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(part);
-    if (!m) {
-      diag(diagnostics, filePath, `Invalid op parameter declaration: expected <name>: <matcher>`, {
-        line: paramsSpan.start.line,
-        column: paramsSpan.start.column,
-      });
-      return undefined;
-    }
-
-    const name = m[1]!;
-    if (isReservedTopLevelDeclName(name)) {
-      diag(
-        diagnostics,
-        filePath,
-        `Invalid op parameter name "${name}": collides with a top-level keyword.`,
-        {
-          line: paramsSpan.start.line,
-          column: paramsSpan.start.column,
-        },
-      );
-      return undefined;
-    }
-    const lower = name.toLowerCase();
-    if (seen.has(lower)) {
-      diag(diagnostics, filePath, `Duplicate op parameter name "${name}".`, {
-        line: paramsSpan.start.line,
-        column: paramsSpan.start.column,
-      });
-      return undefined;
-    }
-    seen.add(lower);
-    const matcherText = m[2]!.trim();
-    out.push({
-      kind: 'OpParam',
-      span: paramsSpan,
-      name,
-      matcher: parseOpMatcherFromText(matcherText, paramsSpan),
-    });
-  }
-  return out;
-}
-
 /**
  * Parse a single `.zax` module file from an in-memory source string.
  *
@@ -407,101 +235,6 @@ export function parseModuleFile(
       index++;
     }
     return lineCount;
-  }
-
-  function parseExternFuncFromTail(
-    tail: string,
-    stmtSpan: SourceSpan,
-    lineNo: number,
-  ): ExternFuncNode | undefined {
-    const header = tail;
-    const openParen = header.indexOf('(');
-    const closeParen = header.lastIndexOf(')');
-    if (openParen < 0 || closeParen < openParen) {
-      diagInvalidHeaderLine(
-        diagnostics,
-        modulePath,
-        'extern func declaration',
-        `func ${header}`,
-        '<name>(...)[ : <retRegs> ] at <imm16>',
-        lineNo,
-      );
-      return undefined;
-    }
-
-    const name = header.slice(0, openParen).trim();
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-      diag(
-        diagnostics,
-        modulePath,
-        `Invalid extern func name ${formatIdentifierToken(name)}: expected <identifier>.`,
-        { line: lineNo, column: 1 },
-      );
-      return undefined;
-    }
-    if (isReservedTopLevelName(name)) {
-      diag(
-        diagnostics,
-        modulePath,
-        `Invalid extern func name "${name}": collides with a top-level keyword.`,
-        { line: lineNo, column: 1 },
-      );
-      return undefined;
-    }
-
-    const afterClose = header.slice(closeParen + 1).trimStart();
-    const atIdx = afterClose.toLowerCase().lastIndexOf(' at ');
-    if (atIdx < 0) {
-      diagInvalidHeaderLine(
-        diagnostics,
-        modulePath,
-        'extern func declaration',
-        `func ${header}`,
-        '<name>(...)[ : <retRegs> ] at <imm16>',
-        lineNo,
-      );
-      return undefined;
-    }
-
-    const retTextRaw = afterClose.slice(0, atIdx).trim();
-    const atText = afterClose.slice(atIdx + 4).trim();
-
-    let returnRegs: string[] | undefined;
-    if (retTextRaw.length === 0) {
-      returnRegs = [];
-    } else {
-      if (!retTextRaw.startsWith(':')) {
-        diagInvalidHeaderLine(
-          diagnostics,
-          modulePath,
-          'extern func declaration',
-          `func ${header}`,
-          '<name>(...)[ : <retRegs> ] at <imm16>',
-          lineNo,
-        );
-        return undefined;
-      }
-      const regText = retTextRaw.slice(1).trim();
-      const parsed = parseReturnRegsFromText(regText, stmtSpan, lineNo, diagnostics, modulePath);
-      if (!parsed) return undefined;
-      returnRegs = parsed.regs;
-    }
-
-    const paramsText = header.slice(openParen + 1, closeParen);
-    const params = parseParamsFromText(modulePath, paramsText, stmtSpan, diagnostics);
-    if (!params) return undefined;
-
-    const at = parseImmExprFromText(modulePath, atText, stmtSpan, diagnostics);
-    if (!at) return undefined;
-
-    return {
-      kind: 'ExternFunc',
-      span: stmtSpan,
-      name,
-      params,
-      returnRegs,
-      at,
-    };
   }
 
   let i = 0;
@@ -1211,7 +944,9 @@ export function parseModuleFile(
       }
 
       const paramsText = header.slice(openParen + 1, closeParen);
-      const params = parseParamsFromText(modulePath, paramsText, headerSpan, diagnostics);
+      const params = parseParamsFromText(modulePath, paramsText, headerSpan, diagnostics, {
+        isReservedTopLevelName,
+      });
       if (!params) {
         i++;
         continue;
@@ -1549,7 +1284,9 @@ export function parseModuleFile(
       const opStartOffset = lineStartOffset;
       const headerSpan = span(file, lineStartOffset, lineEndOffset);
       const paramsText = header.slice(openParen + 1, closeParen);
-      const params = parseOpParamsFromText(modulePath, paramsText, headerSpan, diagnostics);
+      const params = parseOpParamsFromText(modulePath, paramsText, headerSpan, diagnostics, {
+        isReservedTopLevelName,
+      });
       if (!params) {
         i++;
         continue;
@@ -1675,7 +1412,12 @@ export function parseModuleFile(
       const stmtSpan = span(file, lineStartOffset, lineEndOffset);
       const externFuncTail = consumeKeywordPrefix(decl, 'func');
       if (externFuncTail !== undefined) {
-        const externFunc = parseExternFuncFromTail(externFuncTail, stmtSpan, lineNo);
+        const externFunc = parseExternFuncFromTail(externFuncTail, stmtSpan, lineNo, {
+          diagnostics,
+          modulePath,
+          isReservedTopLevelName,
+          parseParamsFromText,
+        });
         if (externFunc) {
           const externDecl: ExternDeclNode = {
             kind: 'ExternDecl',
@@ -1809,7 +1551,12 @@ export function parseModuleFile(
           continue;
         }
 
-        const fn = parseExternFuncFromTail(funcTail, span(file, so, eo), i + 1);
+        const fn = parseExternFuncFromTail(funcTail, span(file, so, eo), i + 1, {
+          diagnostics,
+          modulePath,
+          isReservedTopLevelName,
+          parseParamsFromText,
+        });
         if (fn) funcs.push(fn);
         i++;
       }
