@@ -8,7 +8,11 @@ import type {
 } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import { evalImmExpr } from '../semantics/env.js';
+import { encodeAluInstruction } from './encodeAlu.js';
+import { encodeBitOpsInstruction } from './encodeBitOps.js';
 import { encodeControlInstruction } from './encodeControl.js';
+import { encodeCoreOpsInstruction } from './encodeCoreOps.js';
+import { encodeIoInstruction } from './encodeIo.js';
 import { encodeLdInstruction } from './encodeLd.js';
 
 function diag(
@@ -554,216 +558,40 @@ export function encodeInstruction(
     return undefined;
   }
 
-  if (head === 'add' && ops.length === 2) {
-    const dst = regName(ops[0]!);
-    const src = regName(ops[1]!);
-
-    if (dst === 'A') {
-      const indexedSrc = indexedReg8(ops[1]!);
-      if (indexedSrc) return Uint8Array.of(indexedSrc.prefix, 0x80 + indexedSrc.code);
-      if (src) {
-        const s = reg8Code(src);
-        if (s !== undefined) return Uint8Array.of(0x80 + s);
-      }
-      if (isMemHL(ops[1]!)) return Uint8Array.of(0x86);
-      const idx = memIndexed(ops[1]!, env);
-      if (idx) {
-        const disp = idx.disp;
-        if (disp < -128 || disp > 127) {
-          diag(diagnostics, node, `add A, (ix/iy+disp) expects disp8`);
-          return undefined;
-        }
-        return Uint8Array.of(idx.prefix, 0x86, disp & 0xff);
-      }
-      const n = immValue(ops[1]!, env);
-      if (n !== undefined) {
-        if (!fitsImm8(n)) {
-          diag(diagnostics, node, `add A, n expects imm8`);
-          return undefined;
-        }
-        return Uint8Array.of(0xc6, n & 0xff);
-      }
-      diag(diagnostics, node, `add A, src expects reg8/imm8/(hl)/(ix/iy+disp)`);
-      return undefined;
-    }
-
-    if (dst === 'HL' && src) {
-      switch (src) {
-        case 'BC':
-          return Uint8Array.of(0x09);
-        case 'DE':
-          return Uint8Array.of(0x19);
-        case 'HL':
-          return Uint8Array.of(0x29);
-        case 'SP':
-          return Uint8Array.of(0x39);
-      }
-      diag(diagnostics, node, `add HL, rr expects BC/DE/HL/SP`);
-      return undefined;
-    }
-    if (dst === 'HL') {
-      diag(diagnostics, node, `add HL, rr expects BC/DE/HL/SP`);
-      return undefined;
-    }
-
-    if ((dst === 'IX' || dst === 'IY') && src) {
-      const prefix = dst === 'IX' ? 0xdd : 0xfd;
-      switch (src) {
-        case 'BC':
-          return Uint8Array.of(prefix, 0x09);
-        case 'DE':
-          return Uint8Array.of(prefix, 0x19);
-        case 'SP':
-          return Uint8Array.of(prefix, 0x39);
-        case 'IX':
-          if (dst === 'IX') return Uint8Array.of(0xdd, 0x29);
-          break;
-        case 'IY':
-          if (dst === 'IY') return Uint8Array.of(0xfd, 0x29);
-          break;
-      }
-      diag(diagnostics, node, `add ${dst}, rr supports BC/DE/SP and same-index pair only`);
-      return undefined;
-    }
-    if (dst === 'IX' || dst === 'IY') {
-      diag(diagnostics, node, `add ${dst}, rr supports BC/DE/SP and same-index pair only`);
-      return undefined;
-    }
-
-    diag(diagnostics, node, `add expects destination A, HL, IX, or IY`);
-    return undefined;
+  if (
+    head === 'add' ||
+    head === 'sub' ||
+    head === 'cp' ||
+    head === 'and' ||
+    head === 'or' ||
+    head === 'xor' ||
+    head === 'adc' ||
+    head === 'sbc'
+  ) {
+    const encoded = encodeAluInstruction(node, env, diagnostics, {
+      diag,
+      regName,
+      immValue,
+      indexedReg8,
+      reg8Code,
+      fitsImm8,
+      isMemHL,
+      memIndexed,
+    });
+    if (encoded) return encoded;
   }
 
-  if (head === 'rst' && ops.length === 1) {
-    const n = immValue(ops[0]!, env);
-    if (n === undefined || n < 0 || n > 0x38 || (n & 0x07) !== 0) {
-      diag(diagnostics, node, `rst expects an imm8 multiple of 8 (0..56)`);
-      return undefined;
-    }
-    return Uint8Array.of(0xc7 + n);
-  }
-  if (head === 'rst') {
-    diag(diagnostics, node, `rst expects one operand`);
-    return undefined;
-  }
-
-  if (head === 'im' && ops.length === 1) {
-    const n = immValue(ops[0]!, env);
-    if (n === 0) return Uint8Array.of(0xed, 0x46);
-    if (n === 1) return Uint8Array.of(0xed, 0x56);
-    if (n === 2) return Uint8Array.of(0xed, 0x5e);
-    diag(diagnostics, node, `im expects 0, 1, or 2`);
-    return undefined;
-  }
-  if (head === 'im') {
-    diag(diagnostics, node, `im expects one operand`);
-    return undefined;
-  }
-
-  if (head === 'in' && ops.length === 1) {
-    if (ops[0]!.kind === 'PortC') {
-      // in (c) => ED 70
-      return Uint8Array.of(0xed, 0x70);
-    }
-    diag(diagnostics, node, `in (c) is the only one-operand in form`);
-    return undefined;
-  }
-
-  if (head === 'in' && ops.length === 2) {
-    const dst = regName(ops[0]!);
-    const dst8 = dst ? reg8Code(dst) : undefined;
-
-    if (dst8 === undefined) {
-      if (indexedReg8(ops[0]!)) {
-        diag(diagnostics, node, `in destination must use legacy reg8 B/C/D/E/H/L/A`);
-        return undefined;
-      }
-      diag(diagnostics, node, `in expects a reg8 destination`);
-      return undefined;
-    }
-
-    const port = ops[1]!;
-    if (port.kind === 'PortC') {
-      // in r,(c) => ED 40 + r*8
-      return Uint8Array.of(0xed, 0x40 + (dst8 << 3));
-    }
-    if (port.kind === 'PortImm8') {
-      // in a,(n) => DB n
-      if (dst !== 'A') {
-        diag(diagnostics, node, `in a,(n) immediate port form requires destination A`);
-        return undefined;
-      }
-      const n = portImmValue(port, env);
-      if (n === undefined || !fitsImm8(n)) {
-        diag(diagnostics, node, `in a,(n) expects an imm8 port number`);
-        return undefined;
-      }
-      return Uint8Array.of(0xdb, n & 0xff);
-    }
-
-    diag(diagnostics, node, `in expects a port operand (c) or (imm8)`);
-    return undefined;
-  }
-  if (head === 'in') {
-    diag(diagnostics, node, `in expects one or two operands`);
-    return undefined;
-  }
-
-  if (head === 'out' && ops.length === 2) {
-    const port = ops[0]!;
-    const src = regName(ops[1]!);
-    const src8 = src ? reg8Code(src) : undefined;
-    const srcIndexed = indexedReg8(ops[1]!);
-
-    if (port.kind === 'PortC') {
-      if (ops[1]!.kind === 'Imm') {
-        const n = evalImmExpr(ops[1]!.expr, env);
-        if (n === 0) {
-          // out (c),0 => ED 71
-          return Uint8Array.of(0xed, 0x71);
-        }
-        diag(diagnostics, node, `out (c), n immediate form supports n=0 only`);
-        return undefined;
-      }
-      if (src8 === undefined) {
-        if (srcIndexed) {
-          diag(diagnostics, node, `out source must use legacy reg8 B/C/D/E/H/L/A`);
-          return undefined;
-        }
-        diag(diagnostics, node, `out expects a reg8 source`);
-        return undefined;
-      }
-      // out (c),r => ED 41 + r*8
-      return Uint8Array.of(0xed, 0x41 + (src8 << 3));
-    }
-    if (port.kind === 'PortImm8') {
-      // out (n),a => D3 n
-      if (src8 === undefined) {
-        if (srcIndexed) {
-          diag(diagnostics, node, `out source must use legacy reg8 B/C/D/E/H/L/A`);
-          return undefined;
-        }
-        diag(diagnostics, node, `out expects a reg8 source`);
-        return undefined;
-      }
-      if (src !== 'A') {
-        diag(diagnostics, node, `out (n),a immediate port form requires source A`);
-        return undefined;
-      }
-      const n = portImmValue(port, env);
-      if (n === undefined || !fitsImm8(n)) {
-        diag(diagnostics, node, `out (n),a expects an imm8 port number`);
-        return undefined;
-      }
-      return Uint8Array.of(0xd3, n & 0xff);
-    }
-
-    diag(diagnostics, node, `out expects a port operand (c) or (imm8)`);
-    return undefined;
-  }
-  if (head === 'out') {
-    diag(diagnostics, node, `out expects two operands`);
-    return undefined;
+  if (head === 'rst' || head === 'im' || head === 'in' || head === 'out') {
+    const encoded = encodeIoInstruction(node, env, diagnostics, {
+      diag,
+      regName,
+      immValue,
+      portImmValue,
+      indexedReg8,
+      reg8Code,
+      fitsImm8,
+    });
+    if (encoded) return encoded;
   }
 
   if (head === 'ld') {
@@ -784,501 +612,42 @@ export function encodeInstruction(
     });
   }
 
-  if (head === 'inc' && ops.length === 1) {
-    const indexed = indexedReg8(ops[0]!);
-    if (indexed) return Uint8Array.of(indexed.prefix, 0x04 + (indexed.code << 3));
-    const r = regName(ops[0]!);
-    if (r) {
-      const r8 = reg8Code(r);
-      if (r8 !== undefined) {
-        // inc r8
-        return Uint8Array.of(0x04 + (r8 << 3));
-      }
-      // inc rr
-      switch (r) {
-        case 'BC':
-          return Uint8Array.of(0x03);
-        case 'DE':
-          return Uint8Array.of(0x13);
-        case 'HL':
-          return Uint8Array.of(0x23);
-        case 'SP':
-          return Uint8Array.of(0x33);
-        case 'IX':
-          return Uint8Array.of(0xdd, 0x23);
-        case 'IY':
-          return Uint8Array.of(0xfd, 0x23);
-      }
-    }
-    // inc (hl)
-    if (isMemHL(ops[0]!)) return Uint8Array.of(0x34);
-    // inc (ix/iy+disp)
-    const idx = memIndexed(ops[0]!, env);
-    if (idx) {
-      const disp = idx.disp;
-      if (disp < -128 || disp > 127) {
-        diag(diagnostics, node, `inc (ix/iy+disp) expects disp8`);
-        return undefined;
-      }
-      return Uint8Array.of(idx.prefix, 0x34, disp & 0xff);
-    }
-    diag(diagnostics, node, `inc expects r8/rr/(hl) operand`);
-    return undefined;
-  }
-
-  if (head === 'dec' && ops.length === 1) {
-    const indexed = indexedReg8(ops[0]!);
-    if (indexed) return Uint8Array.of(indexed.prefix, 0x05 + (indexed.code << 3));
-    const r = regName(ops[0]!);
-    if (r) {
-      const r8 = reg8Code(r);
-      if (r8 !== undefined) {
-        // dec r8
-        return Uint8Array.of(0x05 + (r8 << 3));
-      }
-      // dec rr
-      switch (r) {
-        case 'BC':
-          return Uint8Array.of(0x0b);
-        case 'DE':
-          return Uint8Array.of(0x1b);
-        case 'HL':
-          return Uint8Array.of(0x2b);
-        case 'SP':
-          return Uint8Array.of(0x3b);
-        case 'IX':
-          return Uint8Array.of(0xdd, 0x2b);
-        case 'IY':
-          return Uint8Array.of(0xfd, 0x2b);
-      }
-    }
-    // dec (hl)
-    if (isMemHL(ops[0]!)) return Uint8Array.of(0x35);
-    // dec (ix/iy+disp)
-    const idx = memIndexed(ops[0]!, env);
-    if (idx) {
-      const disp = idx.disp;
-      if (disp < -128 || disp > 127) {
-        diag(diagnostics, node, `dec (ix/iy+disp) expects disp8`);
-        return undefined;
-      }
-      return Uint8Array.of(idx.prefix, 0x35, disp & 0xff);
-    }
-    diag(diagnostics, node, `dec expects r8/rr/(hl) operand`);
-    return undefined;
-  }
-
-  if (head === 'push' && ops.length === 1) {
-    const r16 = regName(ops[0]!);
-    if (!r16) {
-      diag(diagnostics, node, `push expects reg16`);
-      return undefined;
-    }
-    switch (r16) {
-      case 'BC':
-        return Uint8Array.of(0xc5);
-      case 'DE':
-        return Uint8Array.of(0xd5);
-      case 'HL':
-        return Uint8Array.of(0xe5);
-      case 'AF':
-        return Uint8Array.of(0xf5);
-      case 'IX':
-        return Uint8Array.of(0xdd, 0xe5);
-      case 'IY':
-        return Uint8Array.of(0xfd, 0xe5);
-      default:
-        diag(diagnostics, node, `push supports BC/DE/HL/AF/IX/IY only`);
-        return undefined;
-    }
-  }
-
-  if (head === 'pop' && ops.length === 1) {
-    const r16 = regName(ops[0]!);
-    if (!r16) {
-      diag(diagnostics, node, `pop expects reg16`);
-      return undefined;
-    }
-    switch (r16) {
-      case 'BC':
-        return Uint8Array.of(0xc1);
-      case 'DE':
-        return Uint8Array.of(0xd1);
-      case 'HL':
-        return Uint8Array.of(0xe1);
-      case 'AF':
-        return Uint8Array.of(0xf1);
-      case 'IX':
-        return Uint8Array.of(0xdd, 0xe1);
-      case 'IY':
-        return Uint8Array.of(0xfd, 0xe1);
-      default:
-        diag(diagnostics, node, `pop supports BC/DE/HL/AF/IX/IY only`);
-        return undefined;
-    }
-  }
-
-  if (head === 'ex' && ops.length === 2) {
-    const a = regName(ops[0]!);
-    const b = regName(ops[1]!);
-    if ((a === "AF'" && b === 'AF') || (a === 'AF' && b === "AF'")) return Uint8Array.of(0x08); // ex af,af'
-    if ((a === 'DE' && b === 'HL') || (a === 'HL' && b === 'DE')) return Uint8Array.of(0xeb); // ex de,hl
-    if (
-      (ops[0]!.kind === 'Mem' &&
-        ops[0]!.expr.kind === 'EaName' &&
-        ops[0]!.expr.name.toUpperCase() === 'SP' &&
-        b === 'HL') ||
-      (ops[1]!.kind === 'Mem' &&
-        ops[1]!.expr.kind === 'EaName' &&
-        ops[1]!.expr.name.toUpperCase() === 'SP' &&
-        a === 'HL')
-    ) {
-      return Uint8Array.of(0xe3); // ex (sp),hl
-    }
-    if (
-      (ops[0]!.kind === 'Mem' &&
-        ops[0]!.expr.kind === 'EaName' &&
-        ops[0]!.expr.name.toUpperCase() === 'SP' &&
-        b === 'IX') ||
-      (ops[1]!.kind === 'Mem' &&
-        ops[1]!.expr.kind === 'EaName' &&
-        ops[1]!.expr.name.toUpperCase() === 'SP' &&
-        a === 'IX')
-    ) {
-      return Uint8Array.of(0xdd, 0xe3); // ex (sp),ix
-    }
-    if (
-      (ops[0]!.kind === 'Mem' &&
-        ops[0]!.expr.kind === 'EaName' &&
-        ops[0]!.expr.name.toUpperCase() === 'SP' &&
-        b === 'IY') ||
-      (ops[1]!.kind === 'Mem' &&
-        ops[1]!.expr.kind === 'EaName' &&
-        ops[1]!.expr.name.toUpperCase() === 'SP' &&
-        a === 'IY')
-    ) {
-      return Uint8Array.of(0xfd, 0xe3); // ex (sp),iy
-    }
-    diag(
-      diagnostics,
-      node,
-      `ex supports "AF, AF'", "DE, HL", "(SP), HL", "(SP), IX", and "(SP), IY" only`,
-    );
-    return undefined;
-  }
-
-  const encodeAluAOrImm8OrMemHL = (
-    rBase: number,
-    immOpcode: number,
-    memOpcode: number,
-    mnemonic: string,
-    allowExplicitA = false,
-  ): Uint8Array | undefined => {
-    let src: AsmOperandNode | undefined;
-    if (ops.length === 1) src = ops[0]!;
-    else if (ops.length === 2) {
-      if (allowExplicitA) {
-        if (regName(ops[0]!) === 'A') src = ops[1]!;
-        else {
-          diag(diagnostics, node, `${mnemonic} two-operand form requires destination A`);
-          return undefined;
-        }
-      }
-    }
-    if (!src) return undefined;
-
-    const reg = regName(src);
-    const indexed = indexedReg8(src);
-    if (indexed) return Uint8Array.of(indexed.prefix, rBase + indexed.code);
-    if (reg) {
-      const code = reg8Code(reg);
-      if (code === undefined) {
-        diag(diagnostics, node, `${mnemonic} expects reg8/imm8/(hl)`);
-        return undefined;
-      }
-      return Uint8Array.of(rBase + code);
-    }
-
-    if (isMemHL(src)) return Uint8Array.of(memOpcode);
-    const idx = memIndexed(src, env);
-    if (idx) {
-      const disp = idx.disp;
-      if (disp < -128 || disp > 127) {
-        diag(diagnostics, node, `${mnemonic} (ix/iy+disp) expects disp8`);
-        return undefined;
-      }
-      return Uint8Array.of(idx.prefix, memOpcode, disp & 0xff);
-    }
-
-    const n = immValue(src, env);
-    if (n === undefined || !fitsImm8(n)) {
-      diag(diagnostics, node, `${mnemonic} expects imm8`);
-      return undefined;
-    }
-    return Uint8Array.of(immOpcode, n & 0xff);
-  };
-
-  if (head === 'sub') {
-    const encoded = encodeAluAOrImm8OrMemHL(0x90, 0xd6, 0x96, 'sub', true);
+  if (head === 'inc' || head === 'dec' || head === 'push' || head === 'pop' || head === 'ex') {
+    const encoded = encodeCoreOpsInstruction(node, env, diagnostics, {
+      diag,
+      regName,
+      indexedReg8,
+      reg8Code,
+      isMemHL,
+      memIndexed,
+    });
     if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
   }
 
-  if (head === 'cp') {
-    const encoded = encodeAluAOrImm8OrMemHL(0xb8, 0xfe, 0xbe, 'cp', true);
+  if (
+    head === 'bit' ||
+    head === 'res' ||
+    head === 'set' ||
+    head === 'rl' ||
+    head === 'rr' ||
+    head === 'sla' ||
+    head === 'sra' ||
+    head === 'srl' ||
+    head === 'sll' ||
+    head === 'rlc' ||
+    head === 'rrc'
+  ) {
+    const encoded = encodeBitOpsInstruction(node, env, diagnostics, {
+      diag,
+      regName,
+      immValue,
+      indexedReg8,
+      reg8Code,
+      isMemHL,
+      memIndexed,
+    });
     if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-
-  if (head === 'and') {
-    const encoded = encodeAluAOrImm8OrMemHL(0xa0, 0xe6, 0xa6, 'and', true);
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-
-  if (head === 'or') {
-    const encoded = encodeAluAOrImm8OrMemHL(0xb0, 0xf6, 0xb6, 'or', true);
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-
-  if (head === 'xor') {
-    const encoded = encodeAluAOrImm8OrMemHL(0xa8, 0xee, 0xae, 'xor', true);
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-
-  if (head === 'adc') {
-    if (ops.length === 2) {
-      const dst = regName(ops[0]!);
-      if (dst === 'HL') {
-        const src = regName(ops[1]!);
-        switch (src) {
-          case 'BC':
-            return Uint8Array.of(0xed, 0x4a);
-          case 'DE':
-            return Uint8Array.of(0xed, 0x5a);
-          case 'HL':
-            return Uint8Array.of(0xed, 0x6a);
-          case 'SP':
-            return Uint8Array.of(0xed, 0x7a);
-          default:
-            diag(diagnostics, node, `adc HL, rr expects BC/DE/HL/SP`);
-            return undefined;
-        }
-      }
-      if (dst !== 'A') {
-        diag(diagnostics, node, `adc expects destination A or HL`);
-        return undefined;
-      }
-    }
-    const encoded = encodeAluAOrImm8OrMemHL(0x88, 0xce, 0x8e, 'adc', true);
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-
-  if (head === 'sbc') {
-    if (ops.length === 2) {
-      const dst = regName(ops[0]!);
-      if (dst === 'HL') {
-        const src = regName(ops[1]!);
-        switch (src) {
-          case 'BC':
-            return Uint8Array.of(0xed, 0x42);
-          case 'DE':
-            return Uint8Array.of(0xed, 0x52);
-          case 'HL':
-            return Uint8Array.of(0xed, 0x62);
-          case 'SP':
-            return Uint8Array.of(0xed, 0x72);
-          default:
-            diag(diagnostics, node, `sbc HL, rr expects BC/DE/HL/SP`);
-            return undefined;
-        }
-      }
-      if (dst !== 'A') {
-        diag(diagnostics, node, `sbc expects destination A or HL`);
-        return undefined;
-      }
-    }
-    const encoded = encodeAluAOrImm8OrMemHL(0x98, 0xde, 0x9e, 'sbc', true);
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-
-  const encodeBitLike = (
-    base: number,
-    mnemonic: string,
-    allowIndexedDestination = false,
-  ): Uint8Array | undefined => {
-    if (ops.length !== 2 && !(allowIndexedDestination && ops.length === 3)) return undefined;
-    const bit = immValue(ops[0]!, env);
-    if (bit === undefined || bit < 0 || bit > 7) {
-      diag(diagnostics, node, `${mnemonic} expects bit index 0..7`);
-      return undefined;
-    }
-    const src = ops[1]!;
-    const idx = memIndexed(src, env);
-    if (idx) {
-      const disp = idx.disp;
-      if (disp < -128 || disp > 127) {
-        diag(diagnostics, node, `${mnemonic} (ix/iy+disp) expects disp8`);
-        return undefined;
-      }
-      if (ops.length === 3) {
-        const dstIndexed = indexedReg8(ops[2]!);
-        if (dstIndexed) {
-          if (dstIndexed.prefix !== idx.prefix) {
-            diag(
-              diagnostics,
-              node,
-              `${mnemonic} indexed destination family must match source index base`,
-            );
-          } else {
-            diag(
-              diagnostics,
-              node,
-              `${mnemonic} indexed destination must use legacy reg8 B/C/D/E/H/L/A`,
-            );
-          }
-          return undefined;
-        }
-        const dstReg = regName(ops[2]!);
-        const dstCode = dstReg ? reg8Code(dstReg) : undefined;
-        if (dstCode === undefined) {
-          diag(diagnostics, node, `${mnemonic} b,(ix/iy+disp),r expects reg8 destination`);
-          return undefined;
-        }
-        return Uint8Array.of(idx.prefix, 0xcb, disp & 0xff, base + (bit << 3) + dstCode);
-      }
-      // DD/FD CB disp <op> (where <op> matches the (HL) encoding)
-      return Uint8Array.of(idx.prefix, 0xcb, disp & 0xff, base + (bit << 3) + 0x06);
-    }
-    if (ops.length === 3) {
-      diag(diagnostics, node, `${mnemonic} b,(ix/iy+disp),r requires an indexed memory source`);
-      return undefined;
-    }
-    if (isMemHL(src)) {
-      return Uint8Array.of(0xcb, base + (bit << 3) + 0x06);
-    }
-    const reg = regName(src);
-    const code = reg ? reg8Code(reg) : undefined;
-    if (code === undefined) {
-      diag(diagnostics, node, `${mnemonic} expects reg8 or (hl)`);
-      return undefined;
-    }
-    return Uint8Array.of(0xcb, base + (bit << 3) + code);
-  };
-
-  if (head === 'bit') {
-    const encoded = encodeBitLike(0x40, 'bit');
-    if (encoded) return encoded;
-    if (ops.length === 2) return undefined;
-  }
-  if (head === 'res') {
-    const encoded = encodeBitLike(0x80, 'res', true);
-    if (encoded) return encoded;
-    if (ops.length === 2 || ops.length === 3) return undefined;
-  }
-  if (head === 'set') {
-    const encoded = encodeBitLike(0xc0, 'set', true);
-    if (encoded) return encoded;
-    if (ops.length === 2 || ops.length === 3) return undefined;
-  }
-
-  const encodeCbRotateShift = (base: number, mnemonic: string): Uint8Array | undefined => {
-    if (ops.length !== 1 && ops.length !== 2) return undefined;
-    const operand = ops[0]!;
-    const idx = memIndexed(operand, env);
-    if (idx) {
-      const disp = idx.disp;
-      if (disp < -128 || disp > 127) {
-        diag(diagnostics, node, `${mnemonic} (ix/iy+disp) expects disp8`);
-        return undefined;
-      }
-      if (ops.length === 1) {
-        // DD/FD CB disp <op> (where <op> matches the (HL) encoding)
-        return Uint8Array.of(idx.prefix, 0xcb, disp & 0xff, base + 0x06);
-      }
-      const dstIndexed = indexedReg8(ops[1]!);
-      if (dstIndexed) {
-        if (dstIndexed.prefix !== idx.prefix) {
-          diag(
-            diagnostics,
-            node,
-            `${mnemonic} indexed destination family must match source index base`,
-          );
-        } else {
-          diag(
-            diagnostics,
-            node,
-            `${mnemonic} indexed destination must use legacy reg8 B/C/D/E/H/L/A`,
-          );
-        }
-        return undefined;
-      }
-      const dstReg = regName(ops[1]!);
-      const dstCode = dstReg ? reg8Code(dstReg) : undefined;
-      if (dstCode === undefined) {
-        diag(diagnostics, node, `${mnemonic} (ix/iy+disp),r expects reg8 destination`);
-        return undefined;
-      }
-      // DD/FD CB disp <op+r>
-      return Uint8Array.of(idx.prefix, 0xcb, disp & 0xff, base + dstCode);
-    }
-    if (ops.length === 2) {
-      diag(diagnostics, node, `${mnemonic} two-operand form requires (ix/iy+disp) source`);
-      return undefined;
-    }
-    if (isMemHL(operand)) return Uint8Array.of(0xcb, base + 0x06);
-    const reg = regName(operand);
-    const code = reg ? reg8Code(reg) : undefined;
-    if (code === undefined) {
-      diag(diagnostics, node, `${mnemonic} expects reg8 or (hl)`);
-      return undefined;
-    }
-    return Uint8Array.of(0xcb, base + code);
-  };
-
-  if (head === 'rl') {
-    const encoded = encodeCbRotateShift(0x10, 'rl');
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-  if (head === 'rr') {
-    const encoded = encodeCbRotateShift(0x18, 'rr');
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-  if (head === 'sla') {
-    const encoded = encodeCbRotateShift(0x20, 'sla');
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-  if (head === 'sra') {
-    const encoded = encodeCbRotateShift(0x28, 'sra');
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-  if (head === 'srl') {
-    const encoded = encodeCbRotateShift(0x38, 'srl');
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-  if (head === 'sll') {
-    const encoded = encodeCbRotateShift(0x30, 'sll');
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-  if (head === 'rlc') {
-    const encoded = encodeCbRotateShift(0x00, 'rlc');
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
-  }
-  if (head === 'rrc') {
-    const encoded = encodeCbRotateShift(0x08, 'rrc');
-    if (encoded) return encoded;
-    if (ops.length === 1 || ops.length === 2) return undefined;
+    if (ops.length === 1 || ops.length === 2 || ops.length === 3) return undefined;
   }
 
   if (isKnownInstructionHead(head) && diagnostics.length > diagnosticsBefore) {
