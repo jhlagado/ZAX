@@ -32,6 +32,9 @@ import {
 } from './functionBodySetup.js';
 import { createFunctionCallLoweringHelpers } from './functionCallLowering.js';
 
+// This module owns the per-function lowering coordinator. It assembles the
+// function-local helpers, state, and diagnostics around the extracted
+// body-setup and call-lowering submodules.
 type ResolvedArrayType = { element: TypeExprNode; length?: number };
 export type FunctionLoweringContext = {
   item: FuncDeclNode;
@@ -268,7 +271,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const localBytes = localSlotCount * 2;
   const frameSize = localBytes + preserveBytes;
   const argc = item.params.length;
-  const hasStackSlots = frameSize > 0 || argc > 0 || preserveBytes > 0;
+  const hasStackSlots = frameSize > 0 || argc > 0;
   for (let paramIndex = 0; paramIndex < argc; paramIndex++) {
     const p = item.params[paramIndex]!;
     const base = 4 + 2 * paramIndex;
@@ -359,7 +362,8 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       }
       const narrowed = init.scalarKind === 'byte' ? initValue! & 0xff : initValue! & 0xffff;
       if (hlPreserved) {
-        // Swap pattern: save incoming HL, load initializer, swap to stack, restore HL.
+        // Preserve caller-visible HL by swapping the initialized local word with
+        // the saved HL already at the top of the stack.
         emitInstr('push', [{ kind: 'Reg', span: init.span, name: 'HL' }], init.span);
         if (!loadImm16ToHL(narrowed, init.span)) continue;
         emitInstr(
