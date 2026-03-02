@@ -92,6 +92,7 @@ import { createScalarWordAccessorHelpers } from './scalarWordAccessors.js';
 import { createLdLoweringHelpers } from './ldLowering.js';
 import { createOpExpansionOrchestrationHelpers } from './opExpansionOrchestration.js';
 import { createAsmRangeLoweringHelpers } from './asmRangeLowering.js';
+import { createAsmBodyOrchestrationHelpers } from './asmBodyOrchestration.js';
 import {
   alignTo,
   computeWrittenRange,
@@ -3988,89 +3989,59 @@ export function emitProgram(
           emitInstr,
         });
 
-        const consumed = lowerAsmRange(item.asm.items, 0, new Set());
-        if (consumed < item.asm.items.length) {
-          diagAt(
-            diagnostics,
-            item.asm.items[consumed]!.span,
-            `Internal control-flow lowering error.`,
-          );
-        }
-        syncToFlow();
-        // For framed functions with a synthetic epilogue, we reset the tracked delta here because
-        // the epilogue unconditionally restores SP/IX. This avoids false imbalance reports from
-        // conservative tracking inside the body.
-        if (emitSyntheticEpilogue) {
-          flow.spDelta = 0;
-          flow.spValid = true;
-          flow.spInvalidDueToMutation = false;
-        }
-        if (flow.reachable && flow.spValid && flow.spDelta !== 0) {
-          diagAt(
-            diagnostics,
-            item.span,
-            `Function "${item.name}" has non-zero stack delta at fallthrough (${flow.spDelta}).`,
-          );
-        } else if (
-          flow.reachable &&
-          !flow.spValid &&
-          flow.spInvalidDueToMutation &&
-          hasStackSlots
-        ) {
-          diagAt(
-            diagnostics,
-            item.span,
-            `Function "${item.name}" has untracked SP mutation at fallthrough; cannot verify stack balance.`,
-          );
-        } else if (flow.reachable && !flow.spValid && hasStackSlots) {
-          diagAt(
-            diagnostics,
-            item.span,
-            `Function "${item.name}" has unknown stack depth at fallthrough; cannot verify stack balance.`,
-          );
-        }
-        if (!emitSyntheticEpilogue && flow.reachable) {
-          withCodeSourceTag(sourceTagForSpan(item.span), () => {
-            emitInstr('ret', [], item.span);
-          });
-          flow.reachable = false;
-          syncToFlow();
-        }
-
-        if (emitSyntheticEpilogue) {
-          withCodeSourceTag(sourceTagForSpan(item.span), () => {
-            // When control can fall through to the end of the function body, route it through the
-            // synthetic epilogue. If flow is unreachable here (e.g. a terminal `ret`), avoid emitting
-            // a dead jump before the epilogue label. If flow is reachable, fall through directly.
-            pending.push({
-              kind: 'label',
-              name: epilogueLabel,
-              section: 'code',
-              offset: codeOffset,
-              file: item.span.file,
-              line: item.span.start.line,
-              scope: 'local',
+        const { lowerAndFinalizeFunctionBody } = createAsmBodyOrchestrationHelpers({
+          asmItems: item.asm.items,
+          itemName: item.name,
+          itemSpan: item.span,
+          emitSyntheticEpilogue,
+          hasStackSlots,
+          lowerAsmRange,
+          syncToFlow,
+          getFlow: () => flow,
+          setFlow: (state) => {
+            flow = state;
+          },
+          diagAt: (span, message) => diagAt(diagnostics, span, message),
+          emitImplicitRet: () => {
+            withCodeSourceTag(sourceTagForSpan(item.span), () => {
+              emitInstr('ret', [], item.span);
             });
-            traceLabel(codeOffset, epilogueLabel);
-            const popOrder = preserveSet.slice().reverse();
-            for (const reg of popOrder) {
-              emitInstr('pop', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
-            }
-            if (hasStackSlots) {
-              emitInstr(
-                'ld',
-                [
-                  { kind: 'Reg', span: item.span, name: 'SP' },
-                  { kind: 'Reg', span: item.span, name: 'IX' },
-                ],
-                item.span,
-              );
-              emitInstr('pop', [{ kind: 'Reg', span: item.span, name: 'IX' }], item.span);
-            }
-            emitInstr('ret', [], item.span);
-          });
-        }
-        traceComment(codeOffset, `func ${item.name} end`);
+          },
+          emitSyntheticEpilogueBody: () => {
+            withCodeSourceTag(sourceTagForSpan(item.span), () => {
+              pending.push({
+                kind: 'label',
+                name: epilogueLabel,
+                section: 'code',
+                offset: codeOffset,
+                file: item.span.file,
+                line: item.span.start.line,
+                scope: 'local',
+              });
+              traceLabel(codeOffset, epilogueLabel);
+              const popOrder = preserveSet.slice().reverse();
+              for (const reg of popOrder) {
+                emitInstr('pop', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
+              }
+              if (hasStackSlots) {
+                emitInstr(
+                  'ld',
+                  [
+                    { kind: 'Reg', span: item.span, name: 'SP' },
+                    { kind: 'Reg', span: item.span, name: 'IX' },
+                  ],
+                  item.span,
+                );
+                emitInstr('pop', [{ kind: 'Reg', span: item.span, name: 'IX' }], item.span);
+              }
+              emitInstr('ret', [], item.span);
+            });
+          },
+          traceFunctionEnd: () => {
+            traceComment(codeOffset, `func ${item.name} end`);
+          },
+        });
+        lowerAndFinalizeFunctionBody();
         continue;
       }
 
