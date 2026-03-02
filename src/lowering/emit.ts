@@ -97,6 +97,11 @@ import { createValueMaterializationHelpers } from './valueMaterialization.js';
 import { createAsmInstructionLoweringHelpers } from './asmInstructionLowering.js';
 import { createFixupEmissionHelpers } from './fixupEmission.js';
 import {
+  createFunctionBodySetupHelpers,
+  type FlowState,
+  type OpExpansionFrame,
+} from './functionBodySetup.js';
+import {
   cloneEaExpr,
   cloneImmExpr,
   cloneOperand,
@@ -1310,12 +1315,6 @@ export function emitProgram(
         spTrackingValid = true;
         spTrackingInvalidatedByMutation = false;
 
-        type FlowState = {
-          reachable: boolean;
-          spDelta: number;
-          spValid: boolean;
-          spInvalidDueToMutation: boolean;
-        };
         let flow: FlowState = {
           reachable: true,
           spDelta: 0,
@@ -1327,310 +1326,98 @@ export function emitProgram(
             return flow;
           },
         };
-        type OpExpansionFrame = {
-          key: string;
-          name: string;
-          declSpan: SourceSpan;
-          callSiteSpan: SourceSpan;
-        };
         const opExpansionStack: OpExpansionFrame[] = [];
-        const currentOpExpansionFrame = (): OpExpansionFrame | undefined =>
-          opExpansionStack.length > 0 ? opExpansionStack[opExpansionStack.length - 1] : undefined;
-        const rootOpExpansionFrame = (): OpExpansionFrame | undefined =>
-          opExpansionStack.length > 0 ? opExpansionStack[0] : undefined;
-        const currentMacroCallSiteSpan = (): SourceSpan | undefined =>
-          rootOpExpansionFrame()?.callSiteSpan;
-        const formatInstructionForOpExpansionDiag = (inst: AsmInstructionNode): string => {
-          const ops = inst.operands.map(formatAsmOperandForOpDiag).join(', ');
-          return ops.length > 0 ? `${inst.head} ${ops}` : inst.head;
+        const trackedSp = {
+          get delta() {
+            return spDeltaTracked;
+          },
+          set delta(value: number) {
+            spDeltaTracked = value;
+          },
+          get valid() {
+            return spTrackingValid;
+          },
+          set valid(value: boolean) {
+            spTrackingValid = value;
+          },
+          get invalid() {
+            return spTrackingInvalidatedByMutation;
+          },
+          set invalid(value: boolean) {
+            spTrackingInvalidatedByMutation = value;
+          },
         };
-        const appendInvalidOpExpansionDiagnostic = (
-          inst: AsmInstructionNode,
-          diagnosticsStart: number,
-        ): void => {
-          const frame = currentOpExpansionFrame();
-          if (!frame) return;
-          const rootFrame = rootOpExpansionFrame();
-          const newDiagnostics = diagnostics.slice(diagnosticsStart);
-          const hasConcreteInstructionFailure = newDiagnostics.some(
-            (d) =>
-              d.severity === 'error' &&
-              (d.id === DiagnosticIds.EncodeError || d.id === DiagnosticIds.EmitError),
-          );
-          if (!hasConcreteInstructionFailure) return;
-          if (
-            newDiagnostics.some(
-              (d) =>
-                d.id === DiagnosticIds.OpInvalidExpansion ||
-                d.id === DiagnosticIds.OpArityMismatch ||
-                d.id === DiagnosticIds.OpNoMatchingOverload ||
-                d.id === DiagnosticIds.OpAmbiguousOverload ||
-                d.id === DiagnosticIds.OpExpansionCycle,
-            )
-          ) {
-            return;
-          }
-          const expansionChain = opExpansionStack
-            .map((entry) => `${entry.name} (${entry.declSpan.file}:${entry.declSpan.start.line})`)
-            .join(' -> ');
-          diagAtWithId(
-            diagnostics,
-            rootFrame?.callSiteSpan ?? frame.callSiteSpan,
-            DiagnosticIds.OpInvalidExpansion,
-            `Invalid op expansion in "${frame.name}" at call site.\n` +
-              `expanded instruction: ${formatInstructionForOpExpansionDiag(inst)}\n` +
-              `op definition: ${frame.declSpan.file}:${frame.declSpan.start.line}\n` +
-              `expansion chain: ${expansionChain}`,
-          );
-        };
-        const sourceTagForSpan = (span: SourceSpan): SourceSegmentTag => {
-          const macroCallSite = currentMacroCallSiteSpan();
-          const taggedSpan = macroCallSite ?? span;
-          return {
-            file: taggedSpan.file,
-            line: taggedSpan.start.line,
-            column: taggedSpan.start.column,
-            kind: macroCallSite ? 'macro' : 'code',
-            confidence: 'high',
-          };
-        };
-        const withCodeSourceTag = <T>(tag: SourceSegmentTag, fn: () => T): T => {
-          const prev = currentCodeSegmentTag;
-          currentCodeSegmentTag = tag;
-          try {
-            return fn();
-          } finally {
-            currentCodeSegmentTag = prev;
-          }
-        };
-
+        const {
+          appendInvalidOpExpansionDiagnostic,
+          sourceTagForSpan,
+          withCodeSourceTag,
+          syncFromFlow: syncFromFlowBase,
+          syncToFlow: syncToFlowBase,
+          snapshotFlow,
+          restoreFlow: restoreFlowBase,
+          newHiddenLabel,
+          defineCodeLabel,
+          emitJumpTo,
+          emitJumpCondTo,
+          emitJumpIfFalse,
+          emitVirtualReg16Transfer,
+          joinFlows,
+          emitSelectCompareToImm16,
+          emitSelectCompareReg8ToImm8,
+          loadSelectorIntoHL,
+        } = createFunctionBodySetupHelpers({
+          diagnostics,
+          diagAt,
+          diagAtWithId,
+          getCurrentCodeSegmentTag: () => currentCodeSegmentTag,
+          setCurrentCodeSegmentTag: (tag) => {
+            currentCodeSegmentTag = tag;
+          },
+          taken,
+          traceLabel,
+          pending,
+          getCodeOffset: () => codeOffset,
+          emitAbs16Fixup,
+          conditionNameFromOpcode,
+          inverseConditionName,
+          conditionOpcodeFromName,
+          emitInstr,
+          emitRawCodeBytes,
+          loadImm16ToHL,
+          pushEaAddress,
+          pushMemValue,
+          evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
+          env,
+          reg8,
+          generatedLabelCounterRef: {
+            get current() {
+              return generatedLabelCounter;
+            },
+            set current(value: number) {
+              generatedLabelCounter = value;
+            },
+          },
+          formatAsmOperandForOpDiag,
+        });
         const syncFromFlow = (): void => {
-          spDeltaTracked = flow.spDelta;
-          spTrackingValid = flow.spValid;
-          spTrackingInvalidatedByMutation = flow.spInvalidDueToMutation;
+          syncFromFlowBase(flow, trackedSp);
         };
         const syncToFlow = (): void => {
-          flow.spDelta = spDeltaTracked;
-          flow.spValid = spTrackingValid;
-          flow.spInvalidDueToMutation = spTrackingInvalidatedByMutation;
+          syncToFlowBase(flow, trackedSp);
         };
-        const snapshotFlow = (): FlowState => ({ ...flow });
         const restoreFlow = (state: FlowState): void => {
-          flow = { ...state };
-          syncFromFlow();
-        };
-
-        const newHiddenLabel = (prefix: string): string => {
-          let n = `${prefix}_${generatedLabelCounter++}`;
-          while (taken.has(n)) {
-            n = `${prefix}_${generatedLabelCounter++}`;
-          }
-          return n;
-        };
-        const defineCodeLabel = (
-          name: string,
-          span: SourceSpan,
-          scope: 'global' | 'local',
-        ): void => {
-          if (taken.has(name)) {
-            diag(diagnostics, span.file, `Duplicate symbol name "${name}".`);
-            return;
-          }
-          taken.add(name);
-          traceLabel(codeOffset, name);
-          pending.push({
-            kind: 'label',
-            name,
-            section: 'code',
-            offset: codeOffset,
-            file: span.file,
-            line: span.start.line,
-            scope,
-          });
-        };
-        const emitJumpTo = (label: string, span: SourceSpan): void => {
-          emitAbs16Fixup(0xc3, label.toLowerCase(), 0, span, `jp ${label}`);
-        };
-        const emitJumpCondTo = (op: number, label: string, span: SourceSpan): void => {
-          const ccName = conditionNameFromOpcode(op) ?? 'cc';
-          emitAbs16Fixup(op, label.toLowerCase(), 0, span, `jp ${ccName.toLowerCase()}, ${label}`);
-        };
-        const emitJumpIfFalse = (cc: string, label: string, span: SourceSpan): boolean => {
-          if (cc === '__missing__') return false;
-          const inv = inverseConditionName(cc);
-          if (!inv) {
-            diagAt(diagnostics, span, `Unsupported condition code "${cc}".`);
-            return false;
-          }
-          const op = conditionOpcodeFromName(inv);
-          if (op === undefined) {
-            diagAt(diagnostics, span, `Unsupported condition code "${cc}".`);
-            return false;
-          }
-          emitJumpCondTo(op, label, span);
-          return true;
-        };
-        const emitVirtualReg16Transfer = (asmItem: AsmInstructionNode): boolean => {
-          if (asmItem.head.toLowerCase() !== 'ld' || asmItem.operands.length !== 2) return false;
-          const dstOp = asmItem.operands[0]!;
-          const srcOp = asmItem.operands[1]!;
-          if (dstOp.kind !== 'Reg' || srcOp.kind !== 'Reg') return false;
-
-          const dst = dstOp.name.toUpperCase();
-          const src = srcOp.name.toUpperCase();
-          const supported = new Set(['BC', 'DE', 'HL']);
-          if (!supported.has(dst) || !supported.has(src) || dst === src) return false;
-
-          const hi = (reg16: string): 'B' | 'D' | 'H' =>
-            reg16 === 'BC' ? 'B' : reg16 === 'DE' ? 'D' : 'H';
-          const lo = (reg16: string): 'C' | 'E' | 'L' =>
-            reg16 === 'BC' ? 'C' : reg16 === 'DE' ? 'E' : 'L';
-
-          emitInstr(
-            'ld',
-            [
-              { kind: 'Reg', span: asmItem.span, name: hi(dst) },
-              { kind: 'Reg', span: asmItem.span, name: hi(src) },
-            ],
-            asmItem.span,
+          restoreFlowBase(
+            {
+              get current() {
+                return flow;
+              },
+              set current(value: FlowState) {
+                flow = value;
+              },
+            },
+            state,
+            trackedSp,
           );
-          emitInstr(
-            'ld',
-            [
-              { kind: 'Reg', span: asmItem.span, name: lo(dst) },
-              { kind: 'Reg', span: asmItem.span, name: lo(src) },
-            ],
-            asmItem.span,
-          );
-          return true;
-        };
-        const joinFlows = (
-          left: FlowState,
-          right: FlowState,
-          span: SourceSpan,
-          contextName: string,
-        ): FlowState => {
-          if (!left.reachable && !right.reachable)
-            return {
-              reachable: false,
-              spDelta: 0,
-              spValid: true,
-              spInvalidDueToMutation: false,
-            };
-          if (!left.reachable) return { ...right };
-          if (!right.reachable) return { ...left };
-          let mismatch = false;
-          if (
-            (!left.spValid || !right.spValid) &&
-            (left.spInvalidDueToMutation || right.spInvalidDueToMutation)
-          ) {
-            diagAt(
-              diagnostics,
-              span,
-              `Cannot verify stack depth at ${contextName} join due to untracked SP mutation.`,
-            );
-          } else if ((!left.spValid || !right.spValid) && hasStackSlots) {
-            diagAt(
-              diagnostics,
-              span,
-              `Cannot verify stack depth at ${contextName} join due to unknown stack state.`,
-            );
-          }
-          if (left.spValid && right.spValid && left.spDelta !== right.spDelta) {
-            mismatch = true;
-            diagAt(
-              diagnostics,
-              span,
-              `Stack depth mismatch at ${contextName} join (${left.spDelta} vs ${right.spDelta}).`,
-            );
-          }
-          return {
-            reachable: true,
-            spDelta: left.spDelta,
-            spValid: left.spValid && right.spValid && !mismatch,
-            spInvalidDueToMutation: left.spInvalidDueToMutation || right.spInvalidDueToMutation,
-          };
-        };
-        const emitSelectCompareToImm16 = (
-          value: number,
-          mismatchLabel: string,
-          span: SourceSpan,
-        ): void => {
-          emitRawCodeBytes(Uint8Array.of(0x7d), span.file, 'ld a, l');
-          emitRawCodeBytes(Uint8Array.of(0xfe, value & 0xff), span.file, 'cp imm8');
-          emitJumpCondTo(0xc2, mismatchLabel, span); // jp nz, mismatch
-          emitRawCodeBytes(Uint8Array.of(0x7c), span.file, 'ld a, h');
-          emitRawCodeBytes(Uint8Array.of(0xfe, (value >> 8) & 0xff), span.file, 'cp imm8');
-          emitJumpCondTo(0xc2, mismatchLabel, span); // jp nz, mismatch
-        };
-        const emitSelectCompareReg8ToImm8 = (
-          value: number,
-          mismatchLabel: string,
-          span: SourceSpan,
-        ): void => {
-          emitRawCodeBytes(Uint8Array.of(0xfe, value & 0xff), span.file, 'cp imm8');
-          emitJumpCondTo(0xc2, mismatchLabel, span); // jp nz, mismatch
-        };
-        const loadSelectorIntoHL = (selector: AsmOperandNode, span: SourceSpan): boolean => {
-          // Select dispatch computes selector value once and keeps it in HL for comparisons.
-          if (selector.kind === 'Reg') {
-            const r = selector.name.toUpperCase();
-            if (r === 'BC' || r === 'DE' || r === 'HL') {
-              if (!emitInstr('push', [{ kind: 'Reg', span, name: r }], span)) return false;
-              return emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span);
-            }
-            if (r === 'SP') {
-              if (!loadImm16ToHL(0, span)) return false;
-              return emitInstr(
-                'add',
-                [
-                  { kind: 'Reg', span, name: 'HL' },
-                  { kind: 'Reg', span, name: 'SP' },
-                ],
-                span,
-              );
-            }
-            if (reg8.has(r)) {
-              if (
-                !emitInstr(
-                  'ld',
-                  [
-                    { kind: 'Reg', span, name: 'H' },
-                    { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } },
-                  ],
-                  span,
-                )
-              ) {
-                return false;
-              }
-              return emitInstr(
-                'ld',
-                [
-                  { kind: 'Reg', span, name: 'L' },
-                  { kind: 'Reg', span, name: r },
-                ],
-                span,
-              );
-            }
-          }
-          if (selector.kind === 'Imm') {
-            const v = evalImmExpr(selector.expr, env, diagnostics);
-            if (v === undefined) {
-              diagAt(diagnostics, span, `Failed to evaluate select selector.`);
-              return false;
-            }
-            return loadImm16ToHL(v & 0xffff, span);
-          }
-          if (selector.kind === 'Ea') {
-            if (!pushEaAddress(selector.expr, span)) return false;
-            return emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span);
-          }
-          if (selector.kind === 'Mem') {
-            if (!pushMemValue(selector.expr, 'word', span)) return false;
-            return emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span);
-          }
-          diagAt(diagnostics, span, `Unsupported selector form in select.`);
-          return false;
         };
 
         const { lowerAsmInstructionDispatcher } = createAsmInstructionLoweringHelpers({
@@ -1731,7 +1518,7 @@ export function emitProgram(
         const emitAsmInstruction = (asmItem: AsmInstructionNode): void => {
           const prevTag = currentCodeSegmentTag;
           const diagnosticsStart = diagnostics.length;
-          currentCodeSegmentTag = sourceTagForSpan(asmItem.span);
+          currentCodeSegmentTag = sourceTagForSpan(asmItem.span, opExpansionStack);
           try {
             for (const operand of asmItem.operands) {
               if (!enforceEaRuntimeAtomBudget(operand, 'Source ea expression')) return;
@@ -2163,13 +1950,13 @@ export function emitProgram(
 
             lowerAsmInstructionDispatcher(asmItem);
           } finally {
-            appendInvalidOpExpansionDiagnostic(asmItem, diagnosticsStart);
+            appendInvalidOpExpansionDiagnostic(asmItem, diagnosticsStart, opExpansionStack);
             currentCodeSegmentTag = prevTag;
           }
         };
 
         const { lowerAsmRange } = createAsmRangeLoweringHelpers({
-          sourceTagForSpan,
+          sourceTagForSpan: (span) => sourceTagForSpan(span, opExpansionStack),
           getCurrentCodeSegmentTag: () => currentCodeSegmentTag,
           setCurrentCodeSegmentTag: (tag) => {
             currentCodeSegmentTag = tag;
@@ -2178,14 +1965,15 @@ export function emitProgram(
           emitAsmInstruction,
           flowRef,
           syncFromFlow,
-          snapshotFlow,
+          snapshotFlow: () => snapshotFlow(flow),
           restoreFlow,
           newHiddenLabel,
           emitJumpIfFalse,
           emitJumpTo,
           diagAt: (span, message) => diagAt(diagnostics, span, message),
           warnAt: (span, message) => warnAt(diagnostics, span, message),
-          joinFlows,
+          joinFlows: (left, right, span, contextName) =>
+            joinFlows(left, right, span, contextName, hasStackSlots),
           hasStackSlots,
           reg8,
           evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
@@ -2210,12 +1998,12 @@ export function emitProgram(
           },
           diagAt: (span, message) => diagAt(diagnostics, span, message),
           emitImplicitRet: () => {
-            withCodeSourceTag(sourceTagForSpan(item.span), () => {
+            withCodeSourceTag(sourceTagForSpan(item.span, opExpansionStack), () => {
               emitInstr('ret', [], item.span);
             });
           },
           emitSyntheticEpilogueBody: () => {
-            withCodeSourceTag(sourceTagForSpan(item.span), () => {
+            withCodeSourceTag(sourceTagForSpan(item.span, opExpansionStack), () => {
               pending.push({
                 kind: 'label',
                 name: epilogueLabel,
