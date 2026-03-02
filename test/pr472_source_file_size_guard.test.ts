@@ -13,6 +13,10 @@ async function currentLineCount(file: string): Promise<number> {
   return normalized.split('\n').length;
 }
 
+function normalizeGuardOutput(text: string): string {
+  return text.replaceAll('\\', '/');
+}
+
 describe('PR472: source file size guard', () => {
   it('reports current oversized files deterministically in warn-only mode', async () => {
     const { stdout } = await execFileAsync('node', ['scripts/check-source-file-sizes.mjs'], {
@@ -21,18 +25,19 @@ describe('PR472: source file size guard', () => {
     const emitLines = await currentLineCount('src/lowering/emit.ts');
     const parserLines = await currentLineCount('src/frontend/parser.ts');
     const encodeLines = await currentLineCount('src/z80/encode.ts');
+    const normalizedStdout = normalizeGuardOutput(stdout);
 
-    expect(stdout).toContain('source-file-size-guard: soft>750, hard>1000');
-    expect(stdout).toContain(`- src/lowering/emit.ts: ${emitLines}`);
+    expect(normalizedStdout).toContain('source-file-size-guard: soft>750, hard>1000');
+    expect(normalizedStdout).toContain(`src/lowering/emit.ts: ${emitLines}`);
     if (parserLines > 750) {
-      expect(stdout).toContain(`- src/frontend/parser.ts: ${parserLines}`);
+      expect(normalizedStdout).toContain(`src/frontend/parser.ts: ${parserLines}`);
     } else {
-      expect(stdout).not.toContain(`- src/frontend/parser.ts: ${parserLines}`);
+      expect(normalizedStdout).not.toContain(`src/frontend/parser.ts: ${parserLines}`);
     }
     if (encodeLines > 750) {
-      expect(stdout).toContain(`- src/z80/encode.ts: ${encodeLines}`);
+      expect(normalizedStdout).toContain(`src/z80/encode.ts: ${encodeLines}`);
     } else {
-      expect(stdout).not.toContain(`- src/z80/encode.ts: ${encodeLines}`);
+      expect(normalizedStdout).not.toContain(`src/z80/encode.ts: ${encodeLines}`);
     }
   });
 
