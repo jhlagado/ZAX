@@ -93,6 +93,7 @@ import { createAsmRangeLoweringHelpers } from './asmRangeLowering.js';
 import { createAsmBodyOrchestrationHelpers } from './asmBodyOrchestration.js';
 import { createOpMatchingHelpers } from './opMatching.js';
 import { createEmissionCoreHelpers } from './emissionCore.js';
+import { createFixupEmissionHelpers } from './fixupEmission.js';
 import {
   alignTo,
   computeWrittenRange,
@@ -101,9 +102,6 @@ import {
   writeSection,
 } from './sectionLayout.js';
 import {
-  formatAbs16FixupAsm,
-  formatAbs16FixupEdAsm,
-  formatAbs16FixupPrefixedAsm,
   formatAsmInstrForTrace,
   formatIxDisp,
   toHexByte,
@@ -465,46 +463,36 @@ export function emitProgram(
       emitInstr,
     });
 
-  const emitAbs16Fixup = (
-    opcode: number,
-    baseLower: string,
-    addend: number,
-    span: SourceSpan,
-    asmText?: string,
-  ): void => {
-    const start = codeOffset;
-    codeBytes.set(codeOffset++, opcode);
-    codeBytes.set(codeOffset++, 0x00);
-    codeBytes.set(codeOffset++, 0x00);
-    recordCodeSourceRange(start, codeOffset);
-    fixups.push({ offset: start + 1, baseLower, addend, file: span.file });
-    traceInstruction(
-      start,
-      Uint8Array.of(opcode, 0x00, 0x00),
-      asmText ?? formatAbs16FixupAsm(opcode, baseLower, addend),
-    );
-  };
-
-  const emitAbs16FixupEd = (
-    opcode2: number,
-    baseLower: string,
-    addend: number,
-    span: SourceSpan,
-    asmText?: string,
-  ): void => {
-    const start = codeOffset;
-    codeBytes.set(codeOffset++, 0xed);
-    codeBytes.set(codeOffset++, opcode2);
-    codeBytes.set(codeOffset++, 0x00);
-    codeBytes.set(codeOffset++, 0x00);
-    recordCodeSourceRange(start, codeOffset);
-    fixups.push({ offset: start + 2, baseLower, addend, file: span.file });
-    traceInstruction(
-      start,
-      Uint8Array.of(0xed, opcode2, 0x00, 0x00),
-      asmText ?? formatAbs16FixupEdAsm(opcode2, baseLower, addend),
-    );
-  };
+  const {
+    callConditionOpcodeFromName,
+    conditionNameFromOpcode,
+    conditionOpcode,
+    conditionOpcodeFromName,
+    emitAbs16Fixup,
+    emitAbs16FixupEd,
+    emitAbs16FixupPrefixed,
+    emitRel8Fixup,
+    inverseConditionName,
+    jrConditionOpcodeFromName,
+    symbolicTargetFromExpr,
+  } = createFixupEmissionHelpers({
+    getCodeOffset: () => codeOffset,
+    setCodeOffset: (value) => {
+      codeOffset = value;
+    },
+    setCodeByte: (offset, value) => {
+      codeBytes.set(offset, value);
+    },
+    recordCodeSourceRange,
+    pushFixup: (fixup) => {
+      fixups.push(fixup);
+    },
+    pushRel8Fixup: (fixup) => {
+      rel8Fixups.push(fixup);
+    },
+    traceInstruction,
+    evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
+  });
 
   ({
     emitCodeBytes,
@@ -526,194 +514,6 @@ export function emitProgram(
     emitAbs16Fixup,
     emitAbs16FixupEd,
   }));
-
-  const emitAbs16FixupPrefixed = (
-    prefix: number,
-    opcode2: number,
-    baseLower: string,
-    addend: number,
-    span: SourceSpan,
-    asmText?: string,
-  ): void => {
-    const start = codeOffset;
-    codeBytes.set(codeOffset++, prefix);
-    codeBytes.set(codeOffset++, opcode2);
-    codeBytes.set(codeOffset++, 0x00);
-    codeBytes.set(codeOffset++, 0x00);
-    recordCodeSourceRange(start, codeOffset);
-    fixups.push({ offset: start + 2, baseLower, addend, file: span.file });
-    traceInstruction(
-      start,
-      Uint8Array.of(prefix, opcode2, 0x00, 0x00),
-      asmText ?? formatAbs16FixupPrefixedAsm(prefix, opcode2, baseLower, addend),
-    );
-  };
-
-  const emitRel8Fixup = (
-    opcode: number,
-    baseLower: string,
-    addend: number,
-    span: SourceSpan,
-    mnemonic: string,
-    asmText?: string,
-  ): void => {
-    const start = codeOffset;
-    codeBytes.set(codeOffset++, opcode);
-    codeBytes.set(codeOffset++, 0x00);
-    recordCodeSourceRange(start, codeOffset);
-    rel8Fixups.push({
-      offset: start + 1,
-      origin: start + 2,
-      baseLower,
-      addend,
-      file: span.file,
-      mnemonic,
-    });
-    traceInstruction(start, Uint8Array.of(opcode, 0x00), asmText ?? `${mnemonic} ${baseLower}`);
-  };
-
-  const conditionOpcodeFromName = (nameRaw: string): number | undefined => {
-    const asName = nameRaw.toUpperCase();
-    switch (asName) {
-      case 'NZ':
-        return 0xc2;
-      case 'Z':
-        return 0xca;
-      case 'NC':
-        return 0xd2;
-      case 'C':
-        return 0xda;
-      case 'PO':
-        return 0xe2;
-      case 'PE':
-        return 0xea;
-      case 'P':
-        return 0xf2;
-      case 'M':
-        return 0xfa;
-      default:
-        return undefined;
-    }
-  };
-  const conditionNameFromOpcode = (opcode: number): string | undefined => {
-    switch (opcode) {
-      case 0xc2:
-        return 'NZ';
-      case 0xca:
-        return 'Z';
-      case 0xd2:
-        return 'NC';
-      case 0xda:
-        return 'C';
-      case 0xe2:
-        return 'PO';
-      case 0xea:
-        return 'PE';
-      case 0xf2:
-        return 'P';
-      case 0xfa:
-        return 'M';
-      default:
-        return undefined;
-    }
-  };
-  const callConditionOpcodeFromName = (nameRaw: string): number | undefined => {
-    switch (nameRaw.toUpperCase()) {
-      case 'NZ':
-        return 0xc4;
-      case 'Z':
-        return 0xcc;
-      case 'NC':
-        return 0xd4;
-      case 'C':
-        return 0xdc;
-      case 'PO':
-        return 0xe4;
-      case 'PE':
-        return 0xec;
-      case 'P':
-        return 0xf4;
-      case 'M':
-        return 0xfc;
-      default:
-        return undefined;
-    }
-  };
-
-  const symbolicTargetFromExpr = (
-    expr: ImmExprNode,
-  ): { baseLower: string; addend: number } | undefined => {
-    if (expr.kind === 'ImmName') return { baseLower: expr.name.toLowerCase(), addend: 0 };
-
-    if (expr.kind !== 'ImmBinary') return undefined;
-    if (expr.op !== '+' && expr.op !== '-') return undefined;
-
-    const leftName = expr.left.kind === 'ImmName' ? expr.left.name.toLowerCase() : undefined;
-    const rightName = expr.right.kind === 'ImmName' ? expr.right.name.toLowerCase() : undefined;
-
-    if (leftName) {
-      const right = evalImmExpr(expr.right, env, diagnostics);
-      if (right === undefined) return undefined;
-      const addend = expr.op === '+' ? right : -right;
-      return { baseLower: leftName, addend };
-    }
-
-    if (expr.op === '+' && rightName) {
-      const left = evalImmExpr(expr.left, env, diagnostics);
-      if (left === undefined) return undefined;
-      return { baseLower: rightName, addend: left };
-    }
-
-    return undefined;
-  };
-  const jrConditionOpcodeFromName = (nameRaw: string): number | undefined => {
-    switch (nameRaw.toUpperCase()) {
-      case 'NZ':
-        return 0x20;
-      case 'Z':
-        return 0x28;
-      case 'NC':
-        return 0x30;
-      case 'C':
-        return 0x38;
-      default:
-        return undefined;
-    }
-  };
-
-  const conditionOpcode = (op: AsmOperandNode): number | undefined => {
-    const asName =
-      op.kind === 'Imm' && op.expr.kind === 'ImmName'
-        ? op.expr.name
-        : op.kind === 'Reg'
-          ? op.name
-          : undefined;
-    return asName ? conditionOpcodeFromName(asName) : undefined;
-  };
-
-  const inverseConditionName = (nameRaw: string): string | undefined => {
-    const name = nameRaw.toUpperCase();
-    switch (name) {
-      case 'NZ':
-        return 'Z';
-      case 'Z':
-        return 'NZ';
-      case 'NC':
-        return 'C';
-      case 'C':
-        return 'NC';
-      case 'PO':
-        return 'PE';
-      case 'PE':
-        return 'PO';
-      case 'P':
-        return 'M';
-      case 'M':
-        return 'P';
-      default:
-        return undefined;
-    }
-  };
 
   const flattenEaDottedName = (ea: EaExprNode): string | undefined => {
     if (ea.kind === 'EaName') return ea.name;
