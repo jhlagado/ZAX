@@ -91,6 +91,7 @@ import { createRuntimeAtomBudgetHelpers } from './runtimeAtomBudget.js';
 import { createScalarWordAccessorHelpers } from './scalarWordAccessors.js';
 import { createLdLoweringHelpers } from './ldLowering.js';
 import { createOpSubstitutionHelpers } from './opSubstitution.js';
+import { createOpExpansionExecutionHelpers } from './opExpansionExecution.js';
 import {
   alignTo,
   computeWrittenRange,
@@ -3676,71 +3677,18 @@ export function emitProgram(
                 callSiteSpan: asmItem.span,
               });
               try {
-                const localLabelMap = new Map<string, string>();
-                for (const bodyItem of opDecl.body.items) {
-                  if (bodyItem.kind !== 'AsmLabel') continue;
-                  const key = bodyItem.name.toLowerCase();
-                  if (!localLabelMap.has(key)) {
-                    localLabelMap.set(
-                      key,
-                      newHiddenLabel(`__zax_op_${opDecl.name.toLowerCase()}_lbl`),
-                    );
-                  }
-                }
-
-                const expandedItems: AsmItemNode[] = opDecl.body.items.map((bodyItem) => {
-                  if (bodyItem.kind === 'AsmInstruction') {
-                    return {
-                      kind: 'AsmInstruction',
-                      span: bodyItem.span,
-                      head: bodyItem.head,
-                      operands: bodyItem.operands.map((o) =>
-                        substituteOperandWithOpLabels(o, localLabelMap),
-                      ),
-                    };
-                  }
-                  if (bodyItem.kind === 'AsmLabel') {
-                    return {
-                      kind: 'AsmLabel',
-                      span: bodyItem.span,
-                      name: localLabelMap.get(bodyItem.name.toLowerCase()) ?? bodyItem.name,
-                    };
-                  }
-                  if (bodyItem.kind === 'Select') {
-                    return {
-                      kind: 'Select',
-                      span: bodyItem.span,
-                      selector: substituteOperandWithOpLabels(bodyItem.selector, localLabelMap),
-                    };
-                  }
-                  if (bodyItem.kind === 'Case') {
-                    return {
-                      kind: 'Case',
-                      span: bodyItem.span,
-                      value: substituteImmWithOpLabels(bodyItem.value, localLabelMap),
-                    };
-                  }
-                  if (
-                    bodyItem.kind === 'If' ||
-                    bodyItem.kind === 'While' ||
-                    bodyItem.kind === 'Until'
-                  ) {
-                    return {
-                      ...bodyItem,
-                      cc: substituteConditionWithOpLabels(bodyItem.cc, bodyItem.span, opDecl.name),
-                    };
-                  }
-                  return { ...bodyItem };
+                const { expandAndLowerOpBody } = createOpExpansionExecutionHelpers({
+                  diagnostics,
+                  diagAt,
+                  newHiddenLabel,
+                  lowerAsmRange,
                 });
-
-                const consumed = lowerAsmRange(expandedItems, 0, new Set());
-                if (consumed < expandedItems.length) {
-                  diagAt(
-                    diagnostics,
-                    expandedItems[consumed]!.span,
-                    `Internal control-flow lowering error.`,
-                  );
-                }
+                expandAndLowerOpBody({
+                  opDecl,
+                  substituteOperandWithOpLabels,
+                  substituteImmWithOpLabels,
+                  substituteConditionWithOpLabels,
+                });
               } finally {
                 opExpansionStack.pop();
               }
