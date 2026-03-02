@@ -65,6 +65,7 @@ import {
 } from './parseModuleCommon.js';
 import { parseExternFuncFromTail } from './parseExtern.js';
 import { parseEnumDecl } from './parseEnum.js';
+import { parseGlobalsBlock } from './parseGlobals.js';
 import { parseOpParamsFromText, parseParamsFromText } from './parseParams.js';
 import {
   parseAlignDirectiveDecl,
@@ -755,107 +756,16 @@ export function parseModuleFile(
 
     const storageHeader = rest.toLowerCase();
     if (storageHeader === 'var' || storageHeader === 'globals') {
-      if (storageHeader === 'var') {
-        diag(diagnostics, modulePath, `Top-level "var" block has been renamed to "globals".`, {
-          line: lineNo,
-          column: 1,
-        });
-      }
-      const blockDeclKind = 'globals declaration';
-      const blockHeaderExpected = 'globals';
-      const blockStart = lineStartOffset;
-      i++;
-      const decls: VarDeclNode[] = [];
-      const declNamesLower = new Set<string>();
-
-      while (i < lineCount) {
-        const { raw: rawDecl, startOffset: so, endOffset: eo } = getRawLine(i);
-        const t = stripComment(rawDecl).trim();
-        if (t.length === 0) {
-          i++;
-          continue;
-        }
-        if (isTopLevelStart(t)) {
-          const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*[:=]\s*(.+)$/.exec(t);
-          if (m && TOP_LEVEL_KEYWORDS.has(m[1]!)) {
-            diag(
-              diagnostics,
-              modulePath,
-              `Invalid globals declaration name "${m[1]!}": collides with a top-level keyword.`,
-              { line: i + 1, column: 1 },
-            );
-            i++;
-            continue;
-          }
-          if (looksLikeKeywordBodyDeclLine(t)) {
-            diagInvalidBlockLine(
-              diagnostics,
-              modulePath,
-              blockDeclKind,
-              t,
-              '<name>: <type>',
-              i + 1,
-            );
-            i++;
-            continue;
-          }
-          break;
-        }
-        const declSpan = span(file, so, eo);
-        const parsed = parseVarDeclLine(t, declSpan, i + 1, 'globals', {
-          diagnostics,
-          modulePath,
-          isReservedTopLevelName,
-        });
-        if (!parsed) {
-          if (/^globals\b/i.test(t)) {
-            diagInvalidBlockLine(
-              diagnostics,
-              modulePath,
-              blockDeclKind,
-              t,
-              blockHeaderExpected,
-              i + 1,
-            );
-          }
-          i++;
-          continue;
-        }
-        const nameLower = parsed.name.toLowerCase();
-        if (declNamesLower.has(nameLower)) {
-          diag(diagnostics, modulePath, `Duplicate globals declaration name "${parsed.name}".`, {
-            line: i + 1,
-            column: 1,
-          });
-          i++;
-          continue;
-        }
-        if (nameLower === 'globals') {
-          diag(
-            diagnostics,
-            modulePath,
-            `Invalid globals declaration name "${parsed.name}": collides with a top-level keyword.`,
-            {
-              line: i + 1,
-              column: 1,
-            },
-          );
-          i++;
-          continue;
-        }
-        declNamesLower.add(nameLower);
-        decls.push(parsed);
-        i++;
-      }
-
-      const blockEnd = i < lineCount ? (getRawLine(i).startOffset ?? blockStart) : file.text.length;
-      const varBlock: VarBlockNode = {
-        kind: 'VarBlock',
-        span: span(file, blockStart, blockEnd),
-        scope: 'module',
-        decls,
-      };
-      items.push(varBlock);
+      const parsedGlobals = parseGlobalsBlock(storageHeader, i, lineNo, {
+        file,
+        lineCount,
+        diagnostics,
+        modulePath,
+        getRawLine,
+        isReservedTopLevelName,
+      });
+      items.push(parsedGlobals.varBlock);
+      i = parsedGlobals.nextIndex;
       continue;
     }
 
