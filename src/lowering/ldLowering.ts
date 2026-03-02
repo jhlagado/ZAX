@@ -78,7 +78,7 @@ type LdLoweringContext = {
   resolveScalarKind: (typeExpr: TypeExprNode, seen?: Set<string>) => ScalarKind | undefined;
   resolveScalarTypeForEa: (ea: EaExprNode) => ScalarKind | undefined;
   resolveScalarTypeForLd: (ea: EaExprNode) => ScalarKind | undefined;
-  resolvedScalarKind: (resolved: EaResolution | undefined) => ScalarKind | undefined;
+  scalarKindOfResolution: (resolved: EaResolution | undefined) => ScalarKind | undefined;
   setSpTrackingInvalid: () => void;
   stackSlotOffsets: ReadonlyMap<string, number>;
   storageTypes: ReadonlyMap<string, TypeExprNode>;
@@ -127,7 +127,7 @@ export function createLdLoweringHelpers({
   resolveScalarKind,
   resolveScalarTypeForEa,
   resolveScalarTypeForLd,
-  resolvedScalarKind,
+  scalarKindOfResolution,
   setSpTrackingInvalid,
   stackSlotOffsets,
   storageTypes,
@@ -135,6 +135,11 @@ export function createLdLoweringHelpers({
 
   const lowerLdWithEa = (inst: AsmInstructionNode): boolean => {
     if (inst.head.toLowerCase() !== 'ld' || inst.operands.length !== 2) return false;
+    /**
+     * Normalize value-like operands into Mem/EA form when lowering should treat
+     * them as storage, while leaving true address-of forms and raw register-like
+     * bases alone for the encoder.
+     */
     const coerceValueOperand = (op: AsmOperandNode): AsmOperandNode => {
       if (op.kind === 'Imm' && op.expr.kind === 'ImmName') {
         const scalar = resolveScalarBinding(op.expr.name);
@@ -166,6 +171,8 @@ export function createLdLoweringHelpers({
     };
     const dst = coerceValueOperand(inst.operands[0]!);
     const src = coerceValueOperand(inst.operands[1]!);
+    // Register-like EA bases are not value storage and should stay on the native
+    // encoder path instead of being reinterpreted as named variables.
     const isRegisterToken = (name: string): boolean => {
       const token = name.toUpperCase();
       return (
@@ -307,6 +314,8 @@ export function createLdLoweringHelpers({
             );
           }
   
+          // Keep the textual mnemonic alongside the raw DD-prefixed bytes so
+          // trace output stays readable even when we bypass emitInstr.
           emitRawCodeBytes(
             Uint8Array.of(0xdd, 0x46 + (d << 3), srcResolved.ixDisp & 0xff),
             inst.span.file,
@@ -336,7 +345,7 @@ export function createLdLoweringHelpers({
   
       const r16 = dst.name.toUpperCase();
       if (r16 === 'HL') {
-        if (resolvedScalarKind(srcResolved) === 'byte') {
+        if (scalarKindOfResolution(srcResolved) === 'byte') {
           diagAt(diagnostics, inst.span, `Word register load requires a word-typed source.`);
           return true;
         }
@@ -357,7 +366,7 @@ export function createLdLoweringHelpers({
         return emitLoadWordFromHlAddress('HL', inst.span);
       }
       if (r16 === 'DE') {
-        if (resolvedScalarKind(srcResolved) === 'byte') {
+        if (scalarKindOfResolution(srcResolved) === 'byte') {
           diagAt(diagnostics, inst.span, `Word register load requires a word-typed source.`);
           return true;
         }
@@ -378,7 +387,7 @@ export function createLdLoweringHelpers({
         return emitLoadWordFromHlAddress('DE', inst.span);
       }
       if (r16 === 'BC') {
-        if (resolvedScalarKind(srcResolved) === 'byte') {
+        if (scalarKindOfResolution(srcResolved) === 'byte') {
           diagAt(diagnostics, inst.span, `Word register load requires a word-typed source.`);
           return true;
         }
@@ -502,6 +511,8 @@ export function createLdLoweringHelpers({
               inst.span,
             );
           }
+          // Keep the textual mnemonic alongside the raw DD-prefixed bytes so
+          // trace output stays readable even when we bypass emitInstr.
           emitRawCodeBytes(
             Uint8Array.of(0xdd, 0x70 + s8, dstResolved.ixDisp & 0xff),
             inst.span.file,
@@ -548,7 +559,7 @@ export function createLdLoweringHelpers({
   
       const r16 = src.name.toUpperCase();
       if (r16 === 'HL') {
-        if (resolvedScalarKind(dstResolved) === 'byte') {
+        if (scalarKindOfResolution(dstResolved) === 'byte') {
           diagAt(diagnostics, inst.span, `Word register store requires a word-typed destination.`);
           return true;
         }
@@ -568,7 +579,7 @@ export function createLdLoweringHelpers({
         return emitStoreSavedHlToEa(dst.expr, inst.span);
       }
       if (r16 === 'DE') {
-        if (resolvedScalarKind(dstResolved) === 'byte') {
+        if (scalarKindOfResolution(dstResolved) === 'byte') {
           diagAt(diagnostics, inst.span, `Word register store requires a word-typed destination.`);
           return true;
         }
@@ -592,7 +603,7 @@ export function createLdLoweringHelpers({
         return emitStoreWordToHlAddress('DE', inst.span);
       }
       if (r16 === 'BC') {
-        if (resolvedScalarKind(dstResolved) === 'byte') {
+        if (scalarKindOfResolution(dstResolved) === 'byte') {
           diagAt(diagnostics, inst.span, `Word register store requires a word-typed destination.`);
           return true;
         }
@@ -651,8 +662,8 @@ export function createLdLoweringHelpers({
         resolveScalarTypeForEa(dst.expr) ?? resolveScalarTypeForEa(src.expr) ?? undefined;
       const dstResolved = resolveEa(dst.expr, inst.span);
       const srcResolved = resolveEa(src.expr, inst.span);
-      const dstScalarExact = resolvedScalarKind(dstResolved);
-      const srcScalarExact = resolvedScalarKind(srcResolved);
+      const dstScalarExact = scalarKindOfResolution(dstResolved);
+      const srcScalarExact = scalarKindOfResolution(srcResolved);
       if (
         (srcScalarExact === 'byte' && isWordCompatibleScalarKind(dstScalarExact)) ||
         (dstScalarExact === 'byte' && isWordCompatibleScalarKind(srcScalarExact))

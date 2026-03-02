@@ -72,8 +72,8 @@ describe('#509 scalar word accessor routing', () => {
   });
 
   it('keeps exact scalar-kind gating stable', () => {
-    expect(helpers.resolvedScalarKind(absWord())).toBe('word');
-    expect(helpers.resolvedScalarKind(absByte())).toBe('byte');
+    expect(helpers.scalarKindOfResolution(absWord())).toBe('word');
+    expect(helpers.scalarKindOfResolution(absByte())).toBe('byte');
     expect(helpers.isWordCompatibleScalarKind('word')).toBe(true);
     expect(helpers.isWordCompatibleScalarKind('addr')).toBe(true);
     expect(helpers.isWordCompatibleScalarKind('byte')).toBe(false);

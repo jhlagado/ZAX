@@ -15,7 +15,7 @@ type ScalarWordAccessorContext = {
 };
 
 export function createScalarWordAccessorHelpers(ctx: ScalarWordAccessorContext) {
-  const resolvedScalarKind = (resolved: EaResolution | undefined): ScalarKind | undefined =>
+  const scalarKindOfResolution = (resolved: EaResolution | undefined): ScalarKind | undefined =>
     resolved?.typeExpr ? ctx.resolveScalarKind(resolved.typeExpr) : undefined;
 
   const isWordCompatibleScalarKind = (
@@ -24,7 +24,7 @@ export function createScalarWordAccessorHelpers(ctx: ScalarWordAccessorContext) 
 
   const canUseScalarWordAccessor = (resolved: EaResolution | undefined): boolean =>
     !!resolved &&
-    isWordCompatibleScalarKind(resolvedScalarKind(resolved)) &&
+    isWordCompatibleScalarKind(scalarKindOfResolution(resolved)) &&
     ((resolved.kind === 'abs' && resolved.addend === 0) || resolved.kind === 'stack');
 
   const emitScalarWordLoad = (
@@ -58,7 +58,7 @@ export function createScalarWordAccessorHelpers(ctx: ScalarWordAccessorContext) 
   };
 
   return {
-    resolvedScalarKind,
+    scalarKindOfResolution,
     isWordCompatibleScalarKind,
     canUseScalarWordAccessor,
     emitScalarWordLoad,
