@@ -78,6 +78,7 @@ import type { CompileEnv } from '../semantics/env.js';
 import { evalImmExpr } from '../semantics/env.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { encodeInstruction } from '../z80/encode.js';
+import type { Callable, PendingSymbol, SectionKind, SourceSegmentTag } from './loweringTypes.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import { loadBinInput, loadHexInput } from './inputAssets.js';
 import { createEaResolutionHelpers, type EaResolution } from './eaResolution.js';
@@ -156,23 +157,10 @@ export function emitProgram(
     defaultCodeBase?: number;
   },
 ): { map: EmittedByteMap; symbols: SymbolEntry[] } {
-  type SectionKind = 'code' | 'data' | 'var';
-  type PendingSymbol = {
-    kind: 'label' | 'data' | 'var';
-    name: string;
-    section: SectionKind;
-    offset: number;
-    file?: string;
-    line?: number;
-    scope?: 'global' | 'local';
-    size?: number;
-  };
-
   const bytes = new Map<number, number>();
   const codeBytes = new Map<number, number>();
   const dataBytes = new Map<number, number>();
   const hexBytes = new Map<number, number>();
-  type SourceSegmentTag = Omit<EmittedSourceSegment, 'start' | 'end'>;
   const codeSourceSegments: EmittedSourceSegment[] = [];
   const codeAsmTrace: EmittedAsmTraceEntry[] = [];
   let currentCodeSegmentTag: SourceSegmentTag | undefined;
@@ -197,9 +185,6 @@ export function emitProgram(
     line: number;
   }[] = [];
 
-  type Callable =
-    | { kind: 'func'; node: FuncDeclNode }
-    | { kind: 'extern'; node: ExternFuncNode; targetLower: string };
   const callables = new Map<string, Callable>();
   const opsByName = new Map<string, OpDeclNode[]>();
   type OpStackSummary =
