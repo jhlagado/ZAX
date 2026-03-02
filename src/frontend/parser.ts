@@ -65,6 +65,14 @@ import {
 } from './parseModuleCommon.js';
 import { parseExternFuncFromTail } from './parseExtern.js';
 import { parseOpParamsFromText, parseParamsFromText } from './parseParams.js';
+import {
+  parseAlignDirectiveDecl,
+  parseBinDecl,
+  parseConstDecl,
+  parseHexDecl,
+  parseImportDecl,
+  parseSectionDirectiveDecl,
+} from './parseTopLevelSimple.js';
 
 const RESERVED_TOP_LEVEL_KEYWORDS = new Set([
   'func',
@@ -314,38 +322,16 @@ export function parseModuleFile(
 
     const importTail = consumeTopKeyword(rest, 'import');
     if (importTail !== undefined) {
-      const spec = importTail.trim();
       const stmtSpan = span(file, lineStartOffset, lineEndOffset);
-      if (spec.startsWith('"') && spec.endsWith('"') && spec.length >= 2) {
-        const importNode: ImportNode = {
-          kind: 'Import',
-          span: stmtSpan,
-          specifier: spec.slice(1, -1),
-          form: 'path',
-        };
-        items.push(importNode);
-        i++;
-        continue;
-      }
-      if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(spec)) {
-        const importNode: ImportNode = {
-          kind: 'Import',
-          span: stmtSpan,
-          specifier: spec,
-          form: 'moduleId',
-        };
-        items.push(importNode);
-        i++;
-        continue;
-      }
-      diagInvalidHeaderLine(
+      const importNode = parseImportDecl(importTail, {
         diagnostics,
         modulePath,
-        'import statement',
-        text,
-        '"<path>.zax" or <moduleId>',
         lineNo,
-      );
+        text,
+        span: stmtSpan,
+        isReservedTopLevelName,
+      });
+      if (importNode) items.push(importNode);
       i++;
       continue;
     }
@@ -1699,34 +1685,19 @@ export function parseModuleFile(
 
     const sectionTail = consumeTopKeyword(rest, 'section');
     if (rest.toLowerCase() === 'section' || sectionTail !== undefined) {
-      const decl = rest === 'section' ? '' : (sectionTail ?? '');
-      const m = /^(code|data|var)(?:\s+at\s+(.+))?$/.exec(decl);
-      if (!m) {
-        diagInvalidHeaderLine(
-          diagnostics,
-          modulePath,
-          'section directive',
-          text,
-          '<code|data|var> [at <imm16>]',
-          lineNo,
-        );
+      const dirSpan = span(file, lineStartOffset, lineEndOffset);
+      const sectionNode = parseSectionDirectiveDecl(rest, sectionTail, {
+        diagnostics,
+        modulePath,
+        lineNo,
+        text,
+        span: dirSpan,
+        isReservedTopLevelName,
+      });
+      if (!sectionNode) {
         i++;
         continue;
       }
-
-      const section = m[1]! as SectionDirectiveNode['section'];
-      const atText = m[2]?.trim();
-      const dirSpan = span(file, lineStartOffset, lineEndOffset);
-      const at = atText
-        ? parseImmExprFromText(modulePath, atText, dirSpan, diagnostics)
-        : undefined;
-
-      const sectionNode: SectionDirectiveNode = {
-        kind: 'Section',
-        span: dirSpan,
-        section,
-        ...(at ? { at } : {}),
-      };
       items.push(sectionNode);
       i++;
       continue;
@@ -1734,19 +1705,19 @@ export function parseModuleFile(
 
     const alignTail = consumeTopKeyword(rest, 'align');
     if (rest.toLowerCase() === 'align' || alignTail !== undefined) {
-      const exprText = rest === 'align' ? '' : (alignTail ?? '');
-      if (exprText.length === 0) {
-        diagInvalidHeaderLine(diagnostics, modulePath, 'align directive', text, '<imm16>', lineNo);
-        i++;
-        continue;
-      }
       const dirSpan = span(file, lineStartOffset, lineEndOffset);
-      const value = parseImmExprFromText(modulePath, exprText, dirSpan, diagnostics);
-      if (!value) {
+      const alignNode = parseAlignDirectiveDecl(rest, alignTail, {
+        diagnostics,
+        modulePath,
+        lineNo,
+        text,
+        span: dirSpan,
+        isReservedTopLevelName,
+      });
+      if (!alignNode) {
         i++;
         continue;
       }
-      const alignNode: AlignDirectiveNode = { kind: 'Align', span: dirSpan, value };
       items.push(alignNode);
       i++;
       continue;
@@ -1754,66 +1725,19 @@ export function parseModuleFile(
 
     const constTail = consumeTopKeyword(rest, 'const');
     if (constTail !== undefined) {
-      const decl = constTail;
-      const eq = decl.indexOf('=');
-      if (eq < 0) {
-        diagInvalidHeaderLine(
-          diagnostics,
-          modulePath,
-          'const declaration',
-          text,
-          '<name> = <imm>',
-          lineNo,
-        );
-        i++;
-        continue;
-      }
-
-      const name = decl.slice(0, eq).trim();
-      const rhs = decl.slice(eq + 1).trim();
-      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid const name ${formatIdentifierToken(name)}: expected <identifier>.`,
-          { line: lineNo, column: 1 },
-        );
-        i++;
-        continue;
-      }
-      if (isReservedTopLevelName(name)) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid const name "${name}": collides with a top-level keyword.`,
-          { line: lineNo, column: 1 },
-        );
-        i++;
-        continue;
-      }
-      if (rhs.length === 0) {
-        diag(diagnostics, modulePath, `Invalid const declaration: missing initializer`, {
-          line: lineNo,
-          column: 1,
-        });
-        i++;
-        continue;
-      }
-
       const exprSpan = span(file, lineStartOffset, lineEndOffset);
-      const expr = parseImmExprFromText(modulePath, rhs, exprSpan, diagnostics);
-      if (!expr) {
+      const constNode = parseConstDecl(constTail, hasExportPrefix, {
+        diagnostics,
+        modulePath,
+        lineNo,
+        text,
+        span: exprSpan,
+        isReservedTopLevelName,
+      });
+      if (!constNode) {
         i++;
         continue;
       }
-
-      const constNode: ConstDeclNode = {
-        kind: 'ConstDecl',
-        span: exprSpan,
-        name,
-        exported: hasExportPrefix,
-        value: expr,
-      };
       items.push(constNode);
       i++;
       continue;
@@ -1821,75 +1745,18 @@ export function parseModuleFile(
 
     const binTail = consumeTopKeyword(rest, 'bin');
     if (binTail !== undefined) {
-      const m = /^(\S+)\s+in\s+(\S+)\s+from\s+(.+)$/.exec(binTail.trim());
-      if (!m) {
-        diagInvalidHeaderLine(
-          diagnostics,
-          modulePath,
-          'bin declaration',
-          text,
-          '<name> in <code|data> from "<path>"',
-          lineNo,
-        );
-        i++;
-        continue;
-      }
-      const name = m[1]!;
-      const sectionText = m[2]!.toLowerCase();
-      const pathText = m[3]!.trim();
-      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid bin name ${formatIdentifierToken(name)}: expected <identifier>.`,
-          { line: lineNo, column: 1 },
-        );
-        i++;
-        continue;
-      }
-      if (sectionText === 'var') {
-        diag(diagnostics, modulePath, `bin declarations cannot target section "var"`, {
-          line: lineNo,
-          column: 1,
-        });
-        i++;
-        continue;
-      }
-      if (sectionText !== 'code' && sectionText !== 'data') {
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid bin section "${m[2]!}": expected "code" or "data".`,
-          { line: lineNo, column: 1 },
-        );
-        i++;
-        continue;
-      }
-      if (isReservedTopLevelName(name)) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid bin name "${name}": collides with a top-level keyword.`,
-          { line: lineNo, column: 1 },
-        );
-        i++;
-        continue;
-      }
-      if (!(pathText.startsWith('"') && pathText.endsWith('"') && pathText.length >= 2)) {
-        diag(diagnostics, modulePath, `Invalid bin declaration: expected quoted source path`, {
-          line: lineNo,
-          column: 1,
-        });
-        i++;
-        continue;
-      }
-      const node: BinDeclNode = {
-        kind: 'BinDecl',
+      const node = parseBinDecl(binTail, {
+        diagnostics,
+        modulePath,
+        lineNo,
+        text,
         span: span(file, lineStartOffset, lineEndOffset),
-        name,
-        section: sectionText as BinDeclNode['section'],
-        fromPath: pathText.slice(1, -1),
-      };
+        isReservedTopLevelName,
+      });
+      if (!node) {
+        i++;
+        continue;
+      }
       items.push(node);
       i++;
       continue;
@@ -1897,55 +1764,18 @@ export function parseModuleFile(
 
     const hexTail = consumeTopKeyword(rest, 'hex');
     if (hexTail !== undefined) {
-      const m = /^(\S+)\s+from\s+(.+)$/.exec(hexTail.trim());
-      if (!m) {
-        diagInvalidHeaderLine(
-          diagnostics,
-          modulePath,
-          'hex declaration',
-          text,
-          '<name> from "<path>"',
-          lineNo,
-        );
-        i++;
-        continue;
-      }
-      const name = m[1]!;
-      const pathText = m[2]!.trim();
-      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid hex name ${formatIdentifierToken(name)}: expected <identifier>.`,
-          { line: lineNo, column: 1 },
-        );
-        i++;
-        continue;
-      }
-      if (isReservedTopLevelName(name)) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Invalid hex name "${name}": collides with a top-level keyword.`,
-          { line: lineNo, column: 1 },
-        );
-        i++;
-        continue;
-      }
-      if (!(pathText.startsWith('"') && pathText.endsWith('"') && pathText.length >= 2)) {
-        diag(diagnostics, modulePath, `Invalid hex declaration: expected quoted source path`, {
-          line: lineNo,
-          column: 1,
-        });
-        i++;
-        continue;
-      }
-      const node: HexDeclNode = {
-        kind: 'HexDecl',
+      const node = parseHexDecl(hexTail, {
+        diagnostics,
+        modulePath,
+        lineNo,
+        text,
         span: span(file, lineStartOffset, lineEndOffset),
-        name,
-        fromPath: pathText.slice(1, -1),
-      };
+        isReservedTopLevelName,
+      });
+      if (!node) {
+        i++;
+        continue;
+      }
       items.push(node);
       i++;
       continue;
