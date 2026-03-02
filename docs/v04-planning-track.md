@@ -8,7 +8,6 @@ future-work planning layer only.
 ## 1. Starting point after v0.3
 
 - v0.3 implementation is treated as complete.
-- v0.3 closeout note: `docs/v03-closeout-and-followups.md`
 - v0.3 workflow additions now part of the established project surface:
   - `docs/codegen-corpus-workflow.md`
   - `docs/virtual-reg16-transfer-patterns.md`

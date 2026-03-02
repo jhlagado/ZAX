@@ -1617,7 +1617,7 @@ This appendix tracks migration-coverage status against the normative language ru
 ### C.3 Transition-Record Retirement Criteria
 
 - [x] Every C.1 item is covered by normative language in this file.
-- [x] `docs/v01-scope-decisions.md` is explicitly marked archival-only.
+- [x] Prior transition-only planning notes have been retired from the active docs set.
 - [x] `docs/README.md` continues to identify this file as the sole canonical source.
 ````
 
