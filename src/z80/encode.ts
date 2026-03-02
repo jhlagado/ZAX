@@ -8,6 +8,7 @@ import type {
 } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import { evalImmExpr } from '../semantics/env.js';
+import { encodeControlInstruction } from './encodeControl.js';
 import { encodeLdInstruction } from './encodeLd.js';
 
 function diag(
@@ -531,19 +532,20 @@ export function encodeInstruction(
   const head = node.head.toLowerCase();
   const ops = node.operands;
 
-  if (head === 'ret' && ops.length === 0) return Uint8Array.of(0xc9);
-  if (head === 'ret' && ops.length === 1) {
-    const cc = conditionName(ops[0]!);
-    const opcode = cc ? retConditionOpcode(cc) : undefined;
-    if (opcode === undefined) {
-      diag(diagnostics, node, `ret cc expects a valid condition code`);
-      return undefined;
-    }
-    return Uint8Array.of(opcode);
-  }
-  if (head === 'ret') {
-    diag(diagnostics, node, `ret expects no operands or one condition code`);
-    return undefined;
+  if (head === 'ret' || head === 'call' || head === 'djnz' || head === 'jp' || head === 'jr') {
+    return encodeControlInstruction(node, env, diagnostics, {
+      diag,
+      immValue,
+      registerTokenName,
+      conditionName,
+      symbolicImmBaseName,
+      fitsImm16,
+      isMemRegName,
+      retConditionOpcode,
+      callConditionOpcode,
+      jpConditionOpcode,
+      jrConditionOpcode,
+    });
   }
   const zeroOpcode = zeroOperandOpcode(head);
   if (zeroOpcode) {
@@ -629,71 +631,6 @@ export function encodeInstruction(
     }
 
     diag(diagnostics, node, `add expects destination A, HL, IX, or IY`);
-    return undefined;
-  }
-
-  if (head === 'call' && ops.length === 1) {
-    if (ops[0]!.kind === 'Mem') {
-      diag(diagnostics, node, `call does not support indirect targets; use imm16`);
-      return undefined;
-    }
-    if (registerTokenName(ops[0]!) !== undefined && immValue(ops[0]!, env) === undefined) {
-      diag(diagnostics, node, `call does not support register targets; use imm16`);
-      return undefined;
-    }
-    const cc = conditionName(ops[0]!) ?? symbolicImmBaseName(ops[0]!, env);
-    if (cc && callConditionOpcode(cc) !== undefined) {
-      diag(diagnostics, node, `call cc, nn expects two operands (cc, nn)`);
-      return undefined;
-    }
-    const n = immValue(ops[0]!, env);
-    if (n === undefined || !fitsImm16(n)) {
-      diag(diagnostics, node, `call expects imm16`);
-      return undefined;
-    }
-    return Uint8Array.of(0xcd, n & 0xff, (n >> 8) & 0xff);
-  }
-  if (head === 'call' && ops.length === 2) {
-    const cc = conditionName(ops[0]!);
-    const opcode = cc ? callConditionOpcode(cc) : undefined;
-    if (opcode === undefined) {
-      diag(diagnostics, node, `call cc expects valid condition code NZ/Z/NC/C/PO/PE/P/M`);
-      return undefined;
-    }
-    if (ops[1]!.kind === 'Mem') {
-      diag(diagnostics, node, `call cc, nn does not support indirect targets`);
-      return undefined;
-    }
-    const n = immValue(ops[1]!, env);
-    if (n === undefined || !fitsImm16(n)) {
-      diag(diagnostics, node, `call cc, nn expects imm16`);
-      return undefined;
-    }
-    return Uint8Array.of(opcode, n & 0xff, (n >> 8) & 0xff);
-  }
-  if (head === 'call') {
-    diag(diagnostics, node, `call expects one operand (nn) or two operands (cc, nn)`);
-    return undefined;
-  }
-
-  if (head === 'djnz' && ops.length === 1) {
-    if (ops[0]!.kind === 'Mem') {
-      diag(diagnostics, node, `djnz does not support indirect targets; expects disp8`);
-      return undefined;
-    }
-    if (registerTokenName(ops[0]!) !== undefined && immValue(ops[0]!, env) === undefined) {
-      diag(diagnostics, node, `djnz does not support register targets; expects disp8`);
-      return undefined;
-    }
-    const n = immValue(ops[0]!, env);
-    if (n === undefined || n < -128 || n > 127) {
-      diag(diagnostics, node, `djnz expects disp8`);
-      return undefined;
-    }
-    return Uint8Array.of(0x10, n & 0xff);
-  }
-  if (head === 'djnz') {
-    diag(diagnostics, node, `djnz expects one operand (disp8)`);
     return undefined;
   }
 
@@ -826,105 +763,6 @@ export function encodeInstruction(
   }
   if (head === 'out') {
     diag(diagnostics, node, `out expects two operands`);
-    return undefined;
-  }
-
-  if (head === 'jp' && ops.length === 1) {
-    // jp (hl) / jp (ix) / jp (iy)
-    if (ops[0]!.kind === 'Mem') {
-      if (isMemRegName(ops[0]!, 'HL')) return Uint8Array.of(0xe9);
-      if (isMemRegName(ops[0]!, 'IX')) return Uint8Array.of(0xdd, 0xe9);
-      if (isMemRegName(ops[0]!, 'IY')) return Uint8Array.of(0xfd, 0xe9);
-      diag(diagnostics, node, `jp indirect form supports (hl), (ix), or (iy) only`);
-      return undefined;
-    }
-    const jpReg = registerTokenName(ops[0]!);
-    const jpImm = immValue(ops[0]!, env);
-    if (jpReg !== undefined && jpImm === undefined) {
-      if (jpReg === 'HL' || jpReg === 'IX' || jpReg === 'IY') {
-        diag(diagnostics, node, `jp indirect form requires parentheses; use (hl), (ix), or (iy)`);
-        return undefined;
-      }
-      diag(diagnostics, node, `jp does not support register targets; use imm16`);
-      return undefined;
-    }
-
-    const cc = conditionName(ops[0]!) ?? symbolicImmBaseName(ops[0]!, env);
-    if (cc && jpConditionOpcode(cc) !== undefined) {
-      diag(diagnostics, node, `jp cc, nn expects two operands (cc, nn)`);
-      return undefined;
-    }
-    const n = jpImm;
-    if (n === undefined || !fitsImm16(n)) {
-      diag(diagnostics, node, `jp expects imm16`);
-      return undefined;
-    }
-    return Uint8Array.of(0xc3, n & 0xff, (n >> 8) & 0xff);
-  }
-  if (head === 'jp' && ops.length === 2) {
-    const cc = conditionName(ops[0]!);
-    const opcode = cc ? jpConditionOpcode(cc) : undefined;
-    if (opcode === undefined) {
-      diag(diagnostics, node, `jp cc expects valid condition code NZ/Z/NC/C/PO/PE/P/M`);
-      return undefined;
-    }
-    if (ops[1]!.kind === 'Mem') {
-      diag(diagnostics, node, `jp cc, nn does not support indirect targets`);
-      return undefined;
-    }
-    const n = immValue(ops[1]!, env);
-    if (n === undefined || !fitsImm16(n)) {
-      diag(diagnostics, node, `jp cc, nn expects imm16`);
-      return undefined;
-    }
-    return Uint8Array.of(opcode, n & 0xff, (n >> 8) & 0xff);
-  }
-  if (head === 'jp') {
-    diag(diagnostics, node, `jp expects one operand (nn/(hl)/(ix)/(iy)) or two operands (cc, nn)`);
-    return undefined;
-  }
-
-  if (head === 'jr' && ops.length === 1) {
-    if (ops[0]!.kind === 'Mem') {
-      diag(diagnostics, node, `jr does not support indirect targets; expects disp8`);
-      return undefined;
-    }
-    if (registerTokenName(ops[0]!) !== undefined && immValue(ops[0]!, env) === undefined) {
-      diag(diagnostics, node, `jr does not support register targets; expects disp8`);
-      return undefined;
-    }
-    const cc = conditionName(ops[0]!) ?? symbolicImmBaseName(ops[0]!, env);
-    if (cc && jrConditionOpcode(cc) !== undefined) {
-      diag(diagnostics, node, `jr cc, disp expects two operands (cc, disp8)`);
-      return undefined;
-    }
-    const n = immValue(ops[0]!, env);
-    if (n === undefined || n < -128 || n > 127) {
-      diag(diagnostics, node, `jr expects disp8`);
-      return undefined;
-    }
-    return Uint8Array.of(0x18, n & 0xff);
-  }
-  if (head === 'jr' && ops.length === 2) {
-    const cc = conditionName(ops[0]!);
-    const opcode = cc ? jrConditionOpcode(cc) : undefined;
-    if (opcode === undefined) {
-      diag(diagnostics, node, `jr cc expects valid condition code NZ/Z/NC/C`);
-      return undefined;
-    }
-    if (ops[1]!.kind === 'Mem') {
-      diag(diagnostics, node, `jr cc, disp does not support indirect targets`);
-      return undefined;
-    }
-    const n = immValue(ops[1]!, env);
-    if (n === undefined || n < -128 || n > 127) {
-      diag(diagnostics, node, `jr cc, disp expects disp8`);
-      return undefined;
-    }
-    return Uint8Array.of(opcode, n & 0xff);
-  }
-  if (head === 'jr') {
-    diag(diagnostics, node, `jr expects one operand (disp8) or two operands (cc, disp8)`);
     return undefined;
   }
 
