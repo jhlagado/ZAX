@@ -84,6 +84,7 @@ import { encodeInstruction } from '../z80/encode.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import { loadBinInput, loadHexInput } from './inputAssets.js';
 import { createEaResolutionHelpers, type EaResolution } from './eaResolution.js';
+import { createRuntimeImmediateHelpers } from './runtimeImmediates.js';
 import { createRuntimeAtomBudgetHelpers } from './runtimeAtomBudget.js';
 import {
   alignTo,
@@ -463,114 +464,10 @@ export function emitProgram(
     return true;
   };
 
-  const pushImm16 = (n: number, span: any): boolean => {
-    if (!loadImm16ToHL(n, span)) return false;
-    return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
-  };
-
-  const loadImm16ToHL = (n: number, span: any): boolean => {
-    return emitInstr(
-      'ld',
-      [
-        { kind: 'Reg', span, name: 'HL' },
-        { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: n } },
-      ],
-      span,
-    );
-  };
-
-  const loadImm16ToDE = (n: number, span: any): boolean => {
-    return emitInstr(
-      'ld',
-      [
-        { kind: 'Reg', span, name: 'DE' },
-        { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: n } },
-      ],
-      span,
-    );
-  };
-
-  const negateHL = (span: SourceSpan): boolean => {
-    if (
-      !emitInstr(
-        'ld',
-        [
-          { kind: 'Reg', span, name: 'A' },
-          { kind: 'Reg', span, name: 'H' },
-        ],
-        span,
-      )
-    ) {
-      return false;
-    }
-    if (!emitInstr('cpl', [], span)) return false;
-    if (
-      !emitInstr(
-        'ld',
-        [
-          { kind: 'Reg', span, name: 'H' },
-          { kind: 'Reg', span, name: 'A' },
-        ],
-        span,
-      )
-    ) {
-      return false;
-    }
-    if (
-      !emitInstr(
-        'ld',
-        [
-          { kind: 'Reg', span, name: 'A' },
-          { kind: 'Reg', span, name: 'L' },
-        ],
-        span,
-      )
-    ) {
-      return false;
-    }
-    if (!emitInstr('cpl', [], span)) return false;
-    if (
-      !emitInstr(
-        'ld',
-        [
-          { kind: 'Reg', span, name: 'L' },
-          { kind: 'Reg', span, name: 'A' },
-        ],
-        span,
-      )
-    ) {
-      return false;
-    }
-    return emitInstr('inc', [{ kind: 'Reg', span, name: 'HL' }], span);
-  };
-
-  const pushZeroExtendedReg8 = (r: string, span: any): boolean => {
-    if (
-      !emitInstr(
-        'ld',
-        [
-          { kind: 'Reg', span, name: 'H' },
-          { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } },
-        ],
-        span,
-      )
-    ) {
-      return false;
-    }
-    if (
-      !emitInstr(
-        'ld',
-        [
-          { kind: 'Reg', span, name: 'L' },
-          { kind: 'Reg', span, name: r },
-        ],
-        span,
-      )
-    ) {
-      return false;
-    }
-    return emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
-  };
+  const { loadImm16ToDE, loadImm16ToHL, negateHL, pushImm16, pushZeroExtendedReg8 } =
+    createRuntimeImmediateHelpers({
+      emitInstr,
+    });
 
   const emitStepPipeline = (pipe: StepPipeline, span: SourceSpan): boolean => {
     const rpByte = (rp: string, which: 'lo' | 'hi'): string | undefined => {
