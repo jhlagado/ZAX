@@ -54,6 +54,7 @@ export interface ModuleFileNode extends BaseNode {
  */
 export type ModuleItemNode =
   | ImportNode
+  | NamedSectionNode
   | ConstDeclNode
   | EnumDeclNode
   | DataBlockNode
@@ -66,6 +67,26 @@ export type ModuleItemNode =
   | HexDeclNode
   | OpDeclNode
   | SectionDirectiveNode
+  | AlignDirectiveNode
+  | UnimplementedNode;
+
+/**
+ * Declarations permitted inside a named section block.
+ *
+ * Imports remain module-scope only in the initial v0.5 model.
+ */
+export type SectionItemNode =
+  | ConstDeclNode
+  | EnumDeclNode
+  | DataBlockNode
+  | VarBlockNode
+  | FuncDeclNode
+  | UnionDeclNode
+  | TypeDeclNode
+  | ExternDeclNode
+  | BinDeclNode
+  | HexDeclNode
+  | OpDeclNode
   | AlignDirectiveNode
   | UnimplementedNode;
 
@@ -95,6 +116,27 @@ export interface SectionDirectiveNode extends BaseNode {
   kind: 'Section';
   section: 'code' | 'data' | 'var';
   at?: ImmExprNode;
+}
+
+/**
+ * Optional anchor attached to a named section declaration.
+ */
+export interface SectionAnchorNode extends BaseNode {
+  kind: 'SectionAnchor';
+  at: ImmExprNode;
+  size?: ImmExprNode;
+  end?: ImmExprNode;
+}
+
+/**
+ * Named section contribution block for the v0.5 section model.
+ */
+export interface NamedSectionNode extends BaseNode {
+  kind: 'NamedSection';
+  section: 'code' | 'data';
+  name: string;
+  anchor?: SectionAnchorNode;
+  items: SectionItemNode[];
 }
 
 /**

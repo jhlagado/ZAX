@@ -98,6 +98,7 @@ type ParseDataContext = {
   diagnostics: Diagnostic[];
   modulePath: string;
   getRawLine: (lineIndex: number) => RawLine;
+  stopOnEnd?: boolean;
 };
 
 type ParsedDataBlock = {
@@ -106,7 +107,7 @@ type ParsedDataBlock = {
 };
 
 export function parseDataBlock(startIndex: number, ctx: ParseDataContext): ParsedDataBlock {
-  const { file, lineCount, diagnostics, modulePath, getRawLine } = ctx;
+  const { file, lineCount, diagnostics, modulePath, getRawLine, stopOnEnd = false } = ctx;
   const blockStart = getRawLine(startIndex).startOffset;
   let index = startIndex + 1;
   const decls: DataDeclNode[] = [];
@@ -119,6 +120,7 @@ export function parseDataBlock(startIndex: number, ctx: ParseDataContext): Parse
       index++;
       continue;
     }
+    if (stopOnEnd && t.toLowerCase() === 'end') break;
     if (isTopLevelStart(t)) {
       const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^=]+?)\s*=\s*(.+)$/.exec(t);
       if (m && TOP_LEVEL_KEYWORDS.has(m[1]!.toLowerCase())) {
