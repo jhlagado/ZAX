@@ -312,7 +312,7 @@ export const compile: CompileFn = async (
     return { diagnostics, artifacts: [] };
   }
 
-  collectNonBankedSectionKeys(program, diagnostics, moduleTraversal);
+  const nonBankedSectionKeys = collectNonBankedSectionKeys(program, diagnostics, moduleTraversal);
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };
   }
@@ -362,6 +362,7 @@ export const compile: CompileFn = async (
       ? { rawTypedCallWarnings: options.rawTypedCallWarnings }
       : {}),
     ...(options.defaultCodeBase !== undefined ? { defaultCodeBase: options.defaultCodeBase } : {}),
+    namedSectionKeys: nonBankedSectionKeys,
   });
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };

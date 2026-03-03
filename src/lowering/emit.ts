@@ -78,6 +78,7 @@ import type { CompileEnv } from '../semantics/env.js';
 import { evalImmExpr } from '../semantics/env.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { encodeInstruction } from '../z80/encode.js';
+import type { NonBankedSectionKeyCollection } from '../sectionKeys.js';
 import type { Callable, PendingSymbol, SectionKind, SourceSegmentTag } from './loweringTypes.js';
 import { createOpStackAnalysisHelpers } from './opStackAnalysis.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
@@ -103,6 +104,10 @@ import {
   type OpExpansionFrame,
 } from './functionBodySetup.js';
 import { lowerFunctionDecl } from './functionLowering.js';
+import {
+  createNamedSectionContributionSinks,
+  type NamedSectionContributionSink,
+} from './sectionContributions.js';
 import {
   finalizeProgramEmission,
   lowerProgramDeclarations,
@@ -156,6 +161,7 @@ export function emitProgram(
     opStackPolicy?: OpStackPolicyMode;
     rawTypedCallWarnings?: boolean;
     defaultCodeBase?: number;
+    namedSectionKeys?: NonBankedSectionKeyCollection;
   },
 ): { map: EmittedByteMap; symbols: SymbolEntry[] } {
   const bytes = new Map<number, number>();
@@ -218,6 +224,14 @@ export function emitProgram(
     | undefined;
   let invalidateSpTracking: (() => void) | undefined;
   let generatedLabelCounter = 0;
+  let currentNamedSectionSink: NamedSectionContributionSink | undefined;
+
+  const namedSectionSinks = options?.namedSectionKeys
+    ? createNamedSectionContributionSinks(options.namedSectionKeys)
+    : [];
+  const namedSectionSinksByNode = new Map(
+    namedSectionSinks.map((sink) => [sink.contribution.node, sink] as const),
+  );
 
   const sameSourceTag = (x: SourceSegmentTag, y: SourceSegmentTag): boolean =>
     x.file === y.file &&
@@ -228,17 +242,19 @@ export function emitProgram(
 
   const recordCodeSourceRange = (start: number, end: number): void => {
     if (!currentCodeSegmentTag || end <= start) return;
-    const last = codeSourceSegments[codeSourceSegments.length - 1];
+    const segments = currentNamedSectionSink?.sourceSegments ?? codeSourceSegments;
+    const last = segments[segments.length - 1];
     if (last && last.end === start && sameSourceTag(last, currentCodeSegmentTag)) {
       last.end = end;
       return;
     }
-    codeSourceSegments.push({ ...currentCodeSegmentTag, start, end });
+    segments.push({ ...currentCodeSegmentTag, start, end });
   };
 
   const traceInstruction = (offset: number, bytesOut: Uint8Array, text: string): void => {
     if (bytesOut.length === 0) return;
-    codeAsmTrace.push({
+    const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
+    trace.push({
       kind: 'instruction',
       offset,
       text,
@@ -247,11 +263,43 @@ export function emitProgram(
   };
 
   const traceLabel = (offset: number, name: string): void => {
-    codeAsmTrace.push({ kind: 'label', offset, name });
+    const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
+    trace.push({ kind: 'label', offset, name });
   };
 
   const traceComment = (offset: number, text: string): void => {
-    codeAsmTrace.push({ kind: 'comment', offset, text });
+    const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
+    trace.push({ kind: 'comment', offset, text });
+  };
+
+  const getCurrentCodeOffset = (): number => currentNamedSectionSink?.offset ?? codeOffset;
+  const setCurrentCodeOffset = (value: number): void => {
+    if (currentNamedSectionSink) currentNamedSectionSink.offset = value;
+    else codeOffset = value;
+  };
+  const setCurrentCodeByte = (offset: number, value: number): void => {
+    const bytesOut = currentNamedSectionSink?.bytes ?? codeBytes;
+    bytesOut.set(offset, value);
+  };
+  const pushCurrentFixup = (fixup: {
+    offset: number;
+    baseLower: string;
+    addend: number;
+    file: string;
+  }): void => {
+    if (currentNamedSectionSink) currentNamedSectionSink.fixups.push(fixup);
+    else fixups.push(fixup);
+  };
+  const pushCurrentRel8Fixup = (fixup: {
+    offset: number;
+    origin: number;
+    baseLower: string;
+    addend: number;
+    file: string;
+    mnemonic: string;
+  }): void => {
+    if (currentNamedSectionSink) currentNamedSectionSink.rel8Fixups.push(fixup);
+    else rel8Fixups.push(fixup);
   };
 
   let emitCodeBytes: (bs: Uint8Array, file: string) => void;
@@ -259,7 +307,7 @@ export function emitProgram(
   let emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
 
   const emitInstr = (head: string, operands: AsmOperandNode[], span: SourceSpan) => {
-    const start = codeOffset;
+    const start = getCurrentCodeOffset();
     const encoded = encodeInstruction(
       { kind: 'AsmInstruction', span, head, operands } as any,
       env,
@@ -290,20 +338,12 @@ export function emitProgram(
     jrConditionOpcodeFromName,
     symbolicTargetFromExpr,
   } = createFixupEmissionHelpers({
-    getCodeOffset: () => codeOffset,
-    setCodeOffset: (value) => {
-      codeOffset = value;
-    },
-    setCodeByte: (offset, value) => {
-      codeBytes.set(offset, value);
-    },
+    getCodeOffset: getCurrentCodeOffset,
+    setCodeOffset: setCurrentCodeOffset,
+    setCodeByte: setCurrentCodeByte,
     recordCodeSourceRange,
-    pushFixup: (fixup) => {
-      fixups.push(fixup);
-    },
-    pushRel8Fixup: (fixup) => {
-      rel8Fixups.push(fixup);
-    },
+    pushFixup: pushCurrentFixup,
+    pushRel8Fixup: pushCurrentRel8Fixup,
     traceInstruction,
     evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
   });
@@ -313,13 +353,9 @@ export function emitProgram(
     emitRawCodeBytes,
     emitStepPipeline,
   } = createEmissionCoreHelpers({
-    getCodeOffset: () => codeOffset,
-    setCodeOffset: (value) => {
-      codeOffset = value;
-    },
-    setCodeByte: (offset, value) => {
-      codeBytes.set(offset, value);
-    },
+    getCodeOffset: getCurrentCodeOffset,
+    setCodeOffset: setCurrentCodeOffset,
+    setCodeByte: setCurrentCodeByte,
     recordCodeSourceRange,
     traceInstruction,
     emitInstr: (head, operands, span) => emitInstr(head, operands, span),
@@ -644,6 +680,7 @@ export function emitProgram(
       },
       set current(value: SourceSegmentTag | undefined) {
         currentCodeSegmentTag = value;
+        if (currentNamedSectionSink) currentNamedSectionSink.currentSourceTag = value;
       },
     },
     bindSpTracking: (
@@ -657,7 +694,7 @@ export function emitProgram(
       applySpTracking = callbacks?.applySpTracking;
       invalidateSpTracking = callbacks?.invalidateSpTracking;
     },
-    getCodeOffset: () => codeOffsetRef.current,
+    getCodeOffset: getCurrentCodeOffset,
     emitInstr,
     emitRawCodeBytes,
     emitAbs16Fixup,
@@ -739,11 +776,23 @@ export function emitProgram(
     baseExprs,
     setBaseExpr,
     advanceAlign,
+    alignTo,
     loadBinInput,
     loadHexInput,
     resolveAggregateType,
     sizeOfTypeExpr,
     lowerFunctionDecl,
+    namedSectionSinksByNode,
+    withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T): T => {
+      const prevSink = currentNamedSectionSink;
+      currentNamedSectionSink = sink;
+      sink.currentSourceTag = currentCodeSegmentTag;
+      try {
+        return fn();
+      } finally {
+        currentNamedSectionSink = prevSink;
+      }
+    },
   };
 
   preScanProgramDeclarations(programLoweringContext);
