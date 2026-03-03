@@ -206,6 +206,42 @@ export function parseModuleFile(
         continue;
       }
 
+      if (hasExportPrefix) {
+        const allowed =
+          consumeKeywordPrefix(rest, 'const') !== undefined ||
+          consumeKeywordPrefix(rest, 'func') !== undefined ||
+          consumeKeywordPrefix(rest, 'op') !== undefined;
+        if (!allowed) {
+          const targetKeyword = topLevelStartKeyword(rest);
+          if (targetKeyword !== undefined) {
+            const targetKind = unsupportedExportTargetKind[targetKeyword];
+            if (targetKind !== undefined) {
+              diag(diagnostics, modulePath, `export not supported on ${targetKind}`, {
+                line: lineNo,
+                column: 1,
+              });
+            } else {
+              diag(
+                diagnostics,
+                modulePath,
+                `export is only permitted on const/func/op declarations`,
+                {
+                  line: lineNo,
+                  column: 1,
+                },
+              );
+            }
+          } else {
+            diag(diagnostics, modulePath, `export is only permitted on const/func/op declarations`, {
+              line: lineNo,
+              column: 1,
+            });
+          }
+          index++;
+          continue;
+        }
+      }
+
       if (consumeTopKeyword(rest, 'import') !== undefined) {
         diag(diagnostics, modulePath, `import is only permitted at module scope`, {
           line: lineNo,

@@ -77,4 +77,24 @@ describe('PR572 named section parser scaffolding', () => {
       column: 1,
     });
   });
+
+  it('applies top-level export target rules inside named sections', () => {
+    const diagnostics: Diagnostic[] = [];
+    parseProgram(
+      'pr572_section_exports.zax',
+      [
+        'section data buffers',
+        '  export bin blob in data from "blob.bin"',
+        'end',
+      ].join('\n'),
+      diagnostics,
+    );
+
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({
+      message: 'export not supported on bin declarations',
+      line: 2,
+      column: 1,
+    });
+  });
 });
