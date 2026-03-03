@@ -2,149 +2,102 @@
 
 ## 0. Status, Scope, and Definitions
 
-0.1 Status (design / draft / normative level)
-0.2 Scope
-
-- Sections
-- Anchors
-- Imports and exports
-- Merge semantics
-- Banking
-- Collision and overflow rules
-  0.3 Non-goals
-- ZAX has no linker stage
-- No location-based inclusion semantics
-  0.4 Terminology
-- compilation unit
-- module
-- root program
-- section contribution
-- section key
-- anchor
-- region
-- bank
-- overflow
-- overlap
+- 0.1 Status
+- 0.2 Scope
+- 0.3 Non-goals
+- 0.4 Terminology
 
 ---
 
 ## 1. Design Goals and Rationale
 
-1.1 Deterministic output without a linker
-1.2 Separation of concerns
-
-- Symbol visibility vs placement
-- Module roles vs hardware mapping
-  1.3 Module-scope imports
-- Imports occur only at module scope
-- No section-local imports
-- Import does not imply textual inclusion
-  1.4 Named merging as the core primitive
-  1.5 Strict anchoring and error discipline
+- 1.1 Deterministic output without a linker
+- 1.2 Separation of concerns
+- 1.3 Module-scope imports
+- 1.4 Named merging as the core primitive
+- 1.5 Strict anchoring and error discipline
 
 ---
 
 ## 2. Section Model
 
-2.1 Section declaration syntax
-2.2 Section kinds (`code`, `data`)
-2.3 Section names as user-defined roles
-2.4 Section keys
-
-- `(kind, name)`
-- Extended key including bank (design decision to formalize)
-  2.5 Multiple sections per module
-  2.6 Sections and scope (explicit non-relationship)
+- 2.1 Section declaration syntax
+- 2.2 Section kinds (`code`, `data`)
+- 2.3 Section names as user-defined roles
+- 2.4 Section keys
+- 2.5 Multiple sections per module
+- 2.6 Sections and scope (explicit non-relationship)
 
 ---
 
 ## 3. Anchors and Regions
 
-3.1 Anchor syntax
-
-```
-section <kind> <name> at <address> [bank <n>] [size <n> | end <address>]
-```
-
-3.2 Anchor uniqueness rule
-3.3 Missing anchor rule
-3.4 Banked anchors
-3.5 Region capacity and overflow checking
-3.6 Overlap detection rules
-3.7 Required diagnostics
+- 3.1 Anchor syntax
+- 3.2 Anchor uniqueness rule
+- 3.3 Missing anchor rule
+- 3.4 Banked anchors
+- 3.5 Region capacity and overflow checking
+- 3.6 Overlap detection rules
+- 3.7 Required diagnostics
 
 ---
 
 ## 4. Imports, Exports, and Visibility
 
-4.1 Module-scope import syntax
-4.2 Import semantics
-
-- Symbol visibility
-- Registration of section contributions
-  4.3 Export semantics
-- Functions
-- Variables
-- Types, enums, constants
-  4.4 Sectionless symbols (types, enums, constants)
-  4.5 Qualified name resolution
-  4.6 Library-internal imports
+- 4.1 Module-scope import syntax
+- 4.2 Import semantics
+- 4.3 Export semantics
+- 4.4 Sectionless symbols (types, enums, constants)
+- 4.5 Qualified name resolution
+- 4.6 Library-internal imports
 
 ---
 
 ## 5. Merge and Concatenation Semantics
 
-5.1 Contribution collection phase
-5.2 Deterministic ordering rule
-
-- Import graph traversal order
-- Duplicate import suppression
-  5.3 Per-section merge algorithm
-  5.4 Address assignment within merged sections
-  5.5 Fixups and cross-section references
+- 5.1 Contribution collection phase
+- 5.2 Deterministic ordering rule
+- 5.3 Per-section merge algorithm
+- 5.4 Address assignment within merged sections
+- 5.5 Fixups and cross-section references
 
 ---
 
 ## 6. Data Initialization Semantics
 
-6.1 Unified declaration syntax
-6.2 Zero-initialization rule
-6.3 ROM-resident initialized data
-6.4 Compiler-emitted startup routine
-6.5 Placement of initializer bytes in output
-6.6 Banked initialization considerations
+- 6.1 Unified declaration syntax
+- 6.2 Zero-initialization rule
+- 6.3 ROM-resident initialized data
+- 6.4 Compiler-emitted startup routine
+- 6.5 Placement of initializer bytes in output
+- 6.6 Banked initialization considerations
 
 ---
 
 ## 7. Worked Examples
 
-7.1 Simple ROM + RAM
-7.2 Split ROM layout
-7.3 Banked ROM window
-7.4 Error cases
-
-- Duplicate anchor
-- Missing anchor
-- Overflow
-- Overlap
+- 7.1 Simple ROM + RAM
+- 7.2 Split ROM layout
+- 7.3 Banked ROM window
+- 7.4 Error cases
 
 ---
 
 ## 8. Error Model and Determinism Guarantees
 
-8.1 Complete error condition list
-8.2 Required error messages
-8.3 Determinism guarantees
+- 8.1 Complete error condition list
+- 8.2 Required error messages
+- 8.3 Determinism guarantees
 
 ---
 
 ## 9. Future Extension Points
 
-9.1 Banking key formalization
-9.2 Multiple address spaces
-9.3 Optional sections
-9.4 Explicit ordering directives
-9.5 Debug-map integration
+- 9.1 Banking key formalization
+- 9.2 Multiple address spaces
+- 9.3 Optional sections
+- 9.4 Explicit ordering directives
+- 9.5 Debug-map integration
 
 # 0. Status, Scope, and Definitions
 
@@ -565,7 +518,7 @@ A section becomes an anchor when it specifies a physical placement using `at`.
 
 The syntax for an anchored section is:
 
-```id="g2zq3k"
+```
 section <kind> <name> at <address> [bank <n>] [size <n> | end <address>]
   ...
 end
@@ -595,8 +548,6 @@ The effective section key is:
 
 If more than one anchor exists for the same section key, this is a fatal error.
 
-If no anchor exists for a section key that has contributions, this is a fatal error.
-
 ZAX does not infer anchors and does not auto-create them.
 
 ---
@@ -609,6 +560,8 @@ If a section key has contributions but no anchor, assembly fails.
 
 If an anchor exists for a section key with no contributions, this is permitted and results in an empty region.
 
+Assemblers should emit a warning for an empty anchored region, since it often indicates a misspelled section name or an unused reservation.
+
 ---
 
 ## 3.4 Banking Semantics
@@ -617,6 +570,8 @@ Banking is **not** part of the initial v0.5 implementation scope.
 
 This section records the intended future model so the non-banked design does not
 paint the language into a corner.
+
+In v0.5, section contributions are always unbanked.
 
 If `bank <n>` is specified on an anchor, the bank identifier becomes part of the section key.
 
@@ -646,6 +601,8 @@ If `end <address>` is specified, the region capacity is:
 end - base_address + 1
 ```
 
+`end` must be greater than or equal to the base address. Otherwise assembly fails.
+
 All merged content for the section key must fit within the region capacity.
 
 If the total size of merged content exceeds the declared capacity, assembly fails with an overflow error.
@@ -662,6 +619,12 @@ Two anchored regions overlap if their address ranges intersect and:
 
 - They share the same bank identifier, or
 - Neither declares a bank (unbanked space).
+
+The ranges compared for intersection are:
+
+- `[base, base + size - 1]` when `size` is specified
+- `[base, end]` when `end` is specified
+- implementation-defined unbounded ranges when neither `size` nor `end` is specified
 
 If two anchored regions overlap under these conditions, assembly fails.
 
@@ -717,7 +680,7 @@ Imports are permitted only at module scope.
 
 The syntax is:
 
-```id="u2sq6a"
+```
 import <module_name>
 ```
 
@@ -788,13 +751,13 @@ Imported symbols must be accessed using qualified names unless otherwise specifi
 
 Given:
 
-```id="9v2j7k"
+```
 import foo
 ```
 
 An exported symbol `bar` from module `foo` is referenced as:
 
-```id="r4n03e"
+```
 foo.bar
 ```
 
@@ -818,6 +781,8 @@ Section contributions from transitively imported modules are merged according to
 Duplicate imports of the same module must not result in duplicate section contributions.
 
 The assembler must ensure that each module contributes at most once to each section key in a build.
+
+Module identity for duplicate suppression is the canonical resolved module path after import resolution.
 
 # 5. Merge and Concatenation Semantics
 
@@ -851,6 +816,8 @@ The traversal order is defined as:
 2. Modules imported by the root program, in the lexical order of their `import` statements.
 3. For each imported module, its dependencies are processed in lexical import order.
 4. Each module is processed at most once.
+
+Root-program section contributions participate in merge order first because the root program is processed first.
 
 If a module is imported multiple times (directly or transitively), it contributes only once.
 
@@ -939,13 +906,15 @@ ZAX guarantees that section layout is a pure function of:
 
 Variables are declared using:
 
-```id="p7l2xm"
+```
 <name>: <type> [= <initializer>]
 ```
 
 Variable declarations must appear inside a `data` section.
 
 If a variable declaration appears outside a section, this is an error.
+
+Variable declarations inside a `code` section are a compile error in v0.5.
 
 A variable declaration contributes bytes to the section in which it appears.
 
@@ -955,7 +924,7 @@ A variable declaration contributes bytes to the section in which it appears.
 
 If a variable declaration omits an initializer:
 
-```id="a3k9zt"
+```
 counter: byte
 ```
 
@@ -971,7 +940,7 @@ The absence of an initializer is semantically equivalent to initialization to ze
 
 If a variable declaration includes an initializer:
 
-```id="m4d8qy"
+```
 value: byte = 42
 buffer: byte[4] = { 1, 2, 3, 4 }
 ```
@@ -991,6 +960,8 @@ A size mismatch is an error.
 The placement of a `data` section determines whether its storage resides in ROM, RAM, or another memory region.
 
 The assembler does not infer memory type from section kind.
+
+Writable-versus-read-only region classification is a required design dependency for startup initialization, but the exact source-level mechanism is deferred and must be defined before Phase 6 implementation.
 
 If a data section is anchored to a read-only region, its bytes are emitted directly into that region and no runtime copy is required.
 
@@ -1165,7 +1136,7 @@ Each `(code, banked_code, bank)` forms a distinct section key.
 
 If `levels` does not specify banking in its section declaration, it contributes to the unbanked key.
 
-If banking is used, contributions must match the anchored key.
+Because v0.5 contributions are unbanked, this example is an error unless there is also an unbanked anchor for `(code, banked_code)`.
 
 If two anchors exist for the same `(kind, name, bank)` tuple, assembly fails.
 
@@ -1326,52 +1297,3 @@ Future revisions may define:
 - Debug metadata mapping sections to address ranges
 - Per-section symbol tables
 - Bank-aware debug output
-
-# END OF DOCUMENT
-
-Suggested edits only:
-
-1. Outline formatting
-
-- Fix indentation so 0.3 / 0.4 / 1.3 etc are not visually nested under bullets. It currently reads like those headings are part of the previous list.
-
-2. Code fences
-
-- Remove `id="..."` from fenced blocks in the final doc. They’re not valid Markdown fences and will confuse readers/tooling.
-
-3. Banking semantics consistency
-
-- In 3.4 you now define that non-banked contributions do not match banked anchors.
-- Update the Worked Example 7.3 “Result” text to explicitly say: **this is an error unless there is also an unbanked anchor** (or unless the module can declare banked contributions, which it currently cannot). Right now 7.3 still reads a bit like it might work.
-
-4. Banking key definition location
-
-- You define `(kind,name,bank)` in 0.4 and 2.4, but in 3.4 you effectively say only anchors can be banked.
-  Add one sentence in 0.4 Section Key: “In this version, banking is expressed only on anchors; module contributions are unbanked.”
-
-5. Anchor capacity wording
-
-- In 3.1 you say `end` is “inclusive upper bound”.
-- Keep that, but in 3.5 add: “`end` must be >= base address; otherwise error.”
-
-6. Overlap detection precision
-
-- In 3.6, define the exact range: `[base, base+size-1]` or `[base, end]`. Right now it’s described but not stated as the formal range used for intersection testing.
-
-7. Imports and duplicate suppression
-
-- In 4.6 and 5.6 you state suppression. Add one clarifying line: module identity is canonical module path (or whatever your module naming rule is), otherwise “same name different path” ambiguity appears later.
-
-8. Data declarations outside sections
-
-- In 6.1 you forbid vars outside `data` sections. Good.
-- Add parallel rule (somewhere in 2.2 or 6.1): variables declared in `code` sections are either forbidden or treated as inline bytes (pick one). Right now it’s implied but not explicit.
-
-9. Startup mechanism wording
-
-- In 6.5 you say “mechanism… is defined elsewhere” and also “startup routine” later in same section. Pick one term and use it consistently (either “startup routine” or “runtime initialization mechanism”).
-
-10. Small contradiction to remove
-
-- 3.2 says “If no anchor exists for a section key that has contributions, fatal error.”
-- 3.3 repeats the same. You can delete one of those paragraphs to reduce duplication.
