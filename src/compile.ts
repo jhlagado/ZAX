@@ -11,6 +11,7 @@ import { parseModuleFile } from './frontend/parser.js';
 import { lintCaseStyle } from './lint/case_style.js';
 import { emitProgram } from './lowering/emit.js';
 import type { Artifact } from './formats/types.js';
+import { collectNonBankedSectionKeys } from './sectionKeys.js';
 import { buildEnv } from './semantics/env.js';
 
 function hasErrors(diagnostics: Diagnostic[]): boolean {
@@ -88,6 +89,7 @@ function isIgnorableImportProbeError(err: unknown): boolean {
 type LoadedProgram = {
   program: ProgramNode;
   sourceTexts: Map<string, string>;
+  moduleTraversal: string[];
 };
 
 async function loadProgram(
@@ -268,9 +270,22 @@ async function loadProgram(
   const entryModule = modules.get(entryPath);
   if (!entryModule) return undefined;
 
+  const traversalVisited = new Set<string>();
+  const moduleTraversal: string[] = [];
+  const walkTraversal = (modulePath: string) => {
+    if (traversalVisited.has(modulePath)) return;
+    traversalVisited.add(modulePath);
+    moduleTraversal.push(modulePath);
+    for (const dep of (edges.get(modulePath) ?? new Map()).keys()) {
+      walkTraversal(dep);
+    }
+  };
+  walkTraversal(entryPath);
+
   return {
     program: { kind: 'Program', span: entryModule.span, entryFile: entryPath, files: moduleFiles },
     sourceTexts,
+    moduleTraversal,
   };
 }
 
@@ -291,8 +306,13 @@ export const compile: CompileFn = async (
   const diagnostics: Diagnostic[] = [];
   const loaded = await loadProgram(entryPath, diagnostics, options);
   if (!loaded) return { diagnostics, artifacts: [] };
-  const { program, sourceTexts } = loaded;
+  const { program, sourceTexts, moduleTraversal } = loaded;
 
+  if (hasErrors(diagnostics)) {
+    return { diagnostics, artifacts: [] };
+  }
+
+  collectNonBankedSectionKeys(program, diagnostics, moduleTraversal);
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };
   }
