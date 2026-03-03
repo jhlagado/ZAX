@@ -33,21 +33,22 @@ describe('PR573 non-banked section key collection', () => {
         kind: 'Program',
         span: root.span,
         entryFile: root.entryFile,
-        files: [root.files[0]!, dep.files[0]!],
+        files: [dep.files[0]!, root.files[0]!],
       },
       diagnostics,
+      ['root.zax', 'dep.zax'],
     );
 
     expect(
       collected.orderedContributions.map((entry) => [
         entry.key.section,
         entry.key.name,
-        entry.moduleIndex,
-        entry.itemIndex,
+        entry.node.span.file,
+        entry.order,
       ]),
     ).toEqual([
-      ['code', 'shared', 0, 0],
-      ['code', 'shared', 1, 0],
+      ['code', 'shared', 'root.zax', 0],
+      ['code', 'shared', 'dep.zax', 1],
     ]);
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]).toMatchObject({
