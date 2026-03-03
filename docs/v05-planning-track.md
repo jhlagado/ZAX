@@ -1,11 +1,9 @@
 # ZAX v0.5 Planning Track
 
-This document converts `/Users/johnhardy/.codex/worktrees/7e4e/ZAX/docs/modules.md`
-into an implementation plan.
+This document converts `docs/modules.md` into an implementation plan.
 
-`/Users/johnhardy/.codex/worktrees/7e4e/ZAX/docs/modules.md` is the design
-anchor. This file defines execution order, staging rules, and explicit
-non-goals.
+`docs/modules.md` is the design anchor. This file defines execution order,
+staging rules, and explicit non-goals.
 
 ## 1. v0.5 Scope
 
@@ -178,8 +176,7 @@ Each phase should land with focused tests before the next one starts.
 
 ## 7. Relationship to Other Docs
 
-- `/Users/johnhardy/.codex/worktrees/7e4e/ZAX/docs/zax-spec.md` remains
-  normative until v0.5 work is implemented and adopted.
-- `/Users/johnhardy/.codex/worktrees/7e4e/ZAX/docs/modules.md` is the design
-  anchor for this topic.
+- `docs/zax-spec.md` remains normative until v0.5 work is implemented and
+  adopted.
+- `docs/modules.md` is the design anchor for this topic.
 - This file is the implementation planning layer for that design.
