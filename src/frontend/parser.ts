@@ -1,4 +1,11 @@
-import type { ModuleFileNode, ModuleItemNode, ProgramNode } from './ast.js';
+import type {
+  ModuleFileNode,
+  ModuleItemNode,
+  NamedSectionNode,
+  ProgramNode,
+  SectionAnchorNode,
+  SectionItemNode,
+} from './ast.js';
 import { makeSourceFile, span } from './source.js';
 import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
@@ -99,6 +106,367 @@ export function parseModuleFile(
   }
 
   const items: ModuleItemNode[] = [];
+
+  function parseNamedSectionHeader(
+    sectionText: string,
+    sectionSpan: NamedSectionNode['span'],
+    lineNo: number,
+    originalText: string,
+  ): { section: 'code' | 'data'; name: string; anchor?: SectionAnchorNode } | undefined {
+    const m = /^(code|data)\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s+at\s+(.+?)(?:\s+(size|end)\s+(.+))?)?$/i.exec(
+      sectionText.trim(),
+    );
+    if (!m) {
+      diagInvalidHeaderLine(
+        diagnostics,
+        modulePath,
+        'named section declaration',
+        originalText,
+        '<code|data> <name> [at <imm16> [size <n> | end <addr>]]',
+        lineNo,
+      );
+      return undefined;
+    }
+
+    const section = m[1]!.toLowerCase() as 'code' | 'data';
+    const name = m[2]!;
+    const atText = m[3]?.trim();
+    const rangeKeyword = m[4]?.toLowerCase();
+    const rangeExprText = m[5]?.trim();
+    let anchor: SectionAnchorNode | undefined;
+    if (atText) {
+      const at = parseSectionDirectiveDecl(
+        `section ${section} at ${atText}`,
+        `${section} at ${atText}`,
+        {
+          diagnostics,
+          modulePath,
+          lineNo,
+          text: originalText,
+          span: sectionSpan,
+          isReservedTopLevelName,
+        },
+      )?.at;
+      if (!at) return undefined;
+      anchor = {
+        kind: 'SectionAnchor',
+        span: sectionSpan,
+        at,
+      };
+      if (rangeKeyword && rangeExprText) {
+        const rangeExpr = parseAlignDirectiveDecl(
+          `align ${rangeExprText}`,
+          rangeExprText,
+          {
+            diagnostics,
+            modulePath,
+            lineNo,
+            text: originalText,
+            span: sectionSpan,
+            isReservedTopLevelName,
+          },
+        )?.value;
+        if (!rangeExpr) return undefined;
+        if (rangeKeyword === 'size') anchor.size = rangeExpr;
+        else anchor.end = rangeExpr;
+      }
+    }
+
+    return { section, name, ...(anchor ? { anchor } : {}) };
+  }
+
+  function parseSectionItems(startIndex: number): {
+    items: SectionItemNode[];
+    nextIndex: number;
+    closed: boolean;
+  } {
+    const sectionItems: SectionItemNode[] = [];
+    let index = startIndex;
+
+    while (index < lineCount) {
+      const { raw, startOffset, endOffset } = getRawLine(index);
+      const text = stripComment(raw).trim();
+      const lineNo = index + 1;
+      if (text.length === 0) {
+        index++;
+        continue;
+      }
+      if (text.toLowerCase() === 'end') {
+        return { items: sectionItems, nextIndex: index + 1, closed: true };
+      }
+
+      const exportTail = consumeKeywordPrefix(text, 'export');
+      const hasExportPrefix = exportTail !== undefined;
+      const rest = hasExportPrefix ? exportTail : text;
+      const sectionSpan = span(file, startOffset, endOffset);
+
+      if (hasExportPrefix && rest.length === 0) {
+        diag(diagnostics, modulePath, `Invalid export statement`, { line: lineNo, column: 1 });
+        index++;
+        continue;
+      }
+
+      if (consumeTopKeyword(rest, 'import') !== undefined) {
+        diag(diagnostics, modulePath, `import is only permitted at module scope`, {
+          line: lineNo,
+          column: 1,
+        });
+        index++;
+        continue;
+      }
+
+      const typeTail = consumeTopKeyword(rest, 'type');
+      if (typeTail !== undefined) {
+        const parsedType = parseTypeDecl(typeTail, text, sectionSpan, lineNo, index, {
+          file,
+          lineCount,
+          diagnostics,
+          modulePath,
+          getRawLine,
+          isReservedTopLevelName,
+        });
+        if (parsedType) {
+          sectionItems.push(parsedType.node);
+          index = parsedType.nextIndex;
+          continue;
+        }
+        index++;
+        continue;
+      }
+
+      const unionTail = consumeTopKeyword(rest, 'union');
+      if (unionTail !== undefined) {
+        const parsedUnion = parseUnionDecl(unionTail, text, sectionSpan, lineNo, index, {
+          file,
+          lineCount,
+          diagnostics,
+          modulePath,
+          getRawLine,
+          isReservedTopLevelName,
+        });
+        if (parsedUnion) {
+          sectionItems.push(parsedUnion.node);
+          index = parsedUnion.nextIndex;
+          continue;
+        }
+        index++;
+        continue;
+      }
+
+      const storageHeader = rest.toLowerCase();
+      if (storageHeader === 'var' || storageHeader === 'globals') {
+        const parsedGlobals = parseGlobalsBlock(storageHeader, index, lineNo, {
+          file,
+          lineCount,
+          diagnostics,
+          modulePath,
+          getRawLine,
+          isReservedTopLevelName,
+        });
+        sectionItems.push(parsedGlobals.varBlock);
+        index = parsedGlobals.nextIndex;
+        continue;
+      }
+
+      const funcTail = consumeTopKeyword(rest, 'func');
+      if (funcTail !== undefined) {
+        const parsedFunc = parseTopLevelFuncDecl(
+          funcTail,
+          text,
+          sectionSpan,
+          lineNo,
+          index,
+          hasExportPrefix,
+          {
+            file,
+            lineCount,
+            diagnostics,
+            modulePath,
+            getRawLine,
+            isReservedTopLevelName,
+            parseParamsFromText,
+          },
+        );
+        if (parsedFunc.node) sectionItems.push(parsedFunc.node);
+        index = parsedFunc.nextIndex;
+        continue;
+      }
+
+      const opTail = consumeTopKeyword(rest, 'op');
+      if (opTail !== undefined) {
+        const parsedOp = parseTopLevelOpDecl(
+          opTail,
+          text,
+          sectionSpan,
+          lineNo,
+          index,
+          hasExportPrefix,
+          {
+            file,
+            lineCount,
+            diagnostics,
+            modulePath,
+            getRawLine,
+            isReservedTopLevelName,
+            parseOpParamsFromText,
+          },
+        );
+        if (parsedOp) {
+          sectionItems.push(parsedOp.node);
+          index = parsedOp.nextIndex;
+          continue;
+        }
+        index++;
+        continue;
+      }
+
+      const externTail = consumeTopKeyword(rest, 'extern');
+      if (externTail !== undefined) {
+        const parsedExtern = parseTopLevelExternDecl(
+          externTail,
+          text,
+          sectionSpan,
+          lineNo,
+          index,
+          {
+            file,
+            lineCount,
+            diagnostics,
+            modulePath,
+            getRawLine,
+            isReservedTopLevelName,
+            parseParamsFromText,
+          },
+        );
+        if (parsedExtern.node) sectionItems.push(parsedExtern.node);
+        index = parsedExtern.nextIndex;
+        continue;
+      }
+
+      const enumTail = consumeTopKeyword(rest, 'enum');
+      if (enumTail !== undefined) {
+        const enumNode = parseEnumDecl(enumTail, {
+          diagnostics,
+          modulePath,
+          lineNo,
+          text,
+          span: sectionSpan,
+          isReservedTopLevelName,
+        });
+        if (enumNode) sectionItems.push(enumNode);
+        index++;
+        continue;
+      }
+
+      const sectionTail = consumeTopKeyword(rest, 'section');
+      if (rest.toLowerCase() === 'section' || sectionTail !== undefined) {
+        diag(diagnostics, modulePath, `nested section blocks are not supported`, {
+          line: lineNo,
+          column: 1,
+        });
+        index++;
+        continue;
+      }
+
+      const alignTail = consumeTopKeyword(rest, 'align');
+      if (rest.toLowerCase() === 'align' || alignTail !== undefined) {
+        const alignNode = parseAlignDirectiveDecl(rest, alignTail, {
+          diagnostics,
+          modulePath,
+          lineNo,
+          text,
+          span: sectionSpan,
+          isReservedTopLevelName,
+        });
+        if (alignNode) sectionItems.push(alignNode);
+        index++;
+        continue;
+      }
+
+      const constTail = consumeTopKeyword(rest, 'const');
+      if (constTail !== undefined) {
+        const constNode = parseConstDecl(constTail, hasExportPrefix, {
+          diagnostics,
+          modulePath,
+          lineNo,
+          text,
+          span: sectionSpan,
+          isReservedTopLevelName,
+        });
+        if (constNode) sectionItems.push(constNode);
+        index++;
+        continue;
+      }
+
+      const binTail = consumeTopKeyword(rest, 'bin');
+      if (binTail !== undefined) {
+        const node = parseBinDecl(binTail, {
+          diagnostics,
+          modulePath,
+          lineNo,
+          text,
+          span: sectionSpan,
+          isReservedTopLevelName,
+        });
+        if (node) sectionItems.push(node);
+        index++;
+        continue;
+      }
+
+      const hexTail = consumeTopKeyword(rest, 'hex');
+      if (hexTail !== undefined) {
+        const node = parseHexDecl(hexTail, {
+          diagnostics,
+          modulePath,
+          lineNo,
+          text,
+          span: sectionSpan,
+          isReservedTopLevelName,
+        });
+        if (node) sectionItems.push(node);
+        index++;
+        continue;
+      }
+
+      if (rest.toLowerCase() === 'data') {
+        const parsedData = parseDataBlock(index, {
+          file,
+          lineCount,
+          diagnostics,
+          modulePath,
+          getRawLine,
+          stopOnEnd: true,
+        });
+        sectionItems.push(parsedData.node);
+        index = parsedData.nextIndex;
+        continue;
+      }
+
+      const asmTail = consumeKeywordPrefix(text, 'asm');
+      const asmAfterExportTail = hasExportPrefix ? consumeKeywordPrefix(rest, 'asm') : undefined;
+      if (asmTail !== undefined || asmAfterExportTail !== undefined) {
+        diag(
+          diagnostics,
+          modulePath,
+          `"asm" is not a top-level construct (function and op bodies are implicit instruction streams)`,
+          {
+            line: lineNo,
+            column: 1,
+          },
+        );
+        index++;
+        continue;
+      }
+
+      diag(diagnostics, modulePath, `Unsupported section-contained construct: ${text}`, {
+        line: lineNo,
+        column: 1,
+      });
+      index++;
+    }
+
+    return { items: sectionItems, nextIndex: index, closed: false };
+  }
 
   function isReservedTopLevelName(name: string): boolean {
     return isReservedTopLevelDeclName(name);
@@ -355,6 +723,43 @@ export function parseModuleFile(
     const sectionTail = consumeTopKeyword(rest, 'section');
     if (rest.toLowerCase() === 'section' || sectionTail !== undefined) {
       const dirSpan = span(file, lineStartOffset, lineEndOffset);
+      const sectionDecl = rest === 'section' ? '' : (sectionTail ?? '');
+      const namedTokens = sectionDecl.trim().split(/\s+/).filter((token) => token.length > 0);
+      const namedPrefix =
+        namedTokens.length >= 2 &&
+        /^(code|data)$/i.test(namedTokens[0] ?? '') &&
+        /^[A-Za-z_][A-Za-z0-9_]*$/.test(namedTokens[1] ?? '') &&
+        !/^(at|size|end)$/i.test(namedTokens[1] ?? '');
+      if (namedPrefix) {
+        const header = parseNamedSectionHeader(sectionDecl, dirSpan, lineNo, text);
+        if (!header) {
+          i++;
+          continue;
+        }
+        const parsedSection = parseSectionItems(i + 1);
+        const sectionEndIndex = Math.max(parsedSection.nextIndex - 1, i);
+        const sectionEnd = getRawLine(sectionEndIndex);
+        const sectionNode: NamedSectionNode = {
+          kind: 'NamedSection',
+          span: span(file, lineStartOffset, sectionEnd.endOffset),
+          section: header.section,
+          name: header.name,
+          items: parsedSection.items,
+          ...(header.anchor ? { anchor: header.anchor } : {}),
+        };
+        if (!parsedSection.closed) {
+          diag(
+            diagnostics,
+            modulePath,
+            `Missing end for section "${header.name}"`,
+            { line: lineNo, column: 1 },
+          );
+        }
+        items.push(sectionNode);
+        i = parsedSection.nextIndex;
+        continue;
+      }
+
       const sectionNode = parseSectionDirectiveDecl(rest, sectionTail, {
         diagnostics,
         modulePath,
