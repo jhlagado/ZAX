@@ -11,6 +11,7 @@ import { parseModuleFile } from './frontend/parser.js';
 import { lintCaseStyle } from './lint/case_style.js';
 import { emitProgram } from './lowering/emit.js';
 import type { Artifact } from './formats/types.js';
+import { collectNonBankedSectionKeys } from './sectionKeys.js';
 import { buildEnv } from './semantics/env.js';
 
 function hasErrors(diagnostics: Diagnostic[]): boolean {
@@ -293,6 +294,11 @@ export const compile: CompileFn = async (
   if (!loaded) return { diagnostics, artifacts: [] };
   const { program, sourceTexts } = loaded;
 
+  if (hasErrors(diagnostics)) {
+    return { diagnostics, artifacts: [] };
+  }
+
+  collectNonBankedSectionKeys(program, diagnostics);
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };
   }
