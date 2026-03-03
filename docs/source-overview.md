@@ -196,12 +196,14 @@ then ZAX bindings), mirroring the spec but implemented ad hoc.
 ### 4.3 Semantics
 
 `semantics/env.ts` builds the `CompileEnv` in one pass over the program:
+
 - Registers all type/union declarations (name → node map)
 - Registers func/extern names (for duplicate detection only — not used in lowering)
 - Assigns sequential ordinal values to enum members (`EnumName.MemberName → index`)
 - Evaluates `const` expressions using `evalImmExpr`
 
 `semantics/layout.ts` implements:
+
 - `sizeOfTypeExpr` — returns the power-of-2 padded storage size
 - `storageInfoForTypeExpr` — returns `{ preRoundSize, storageSize }` pair
 - `offsetOfPathInTypeExpr` — resolves `offsetof(T, a.b[2])` paths to byte offsets
@@ -245,6 +247,7 @@ via the frame mechanism. All `ret` / `ret cc` within the body are rewritten to `
 __zax_epilogue_N` when any cleanup is needed.
 
 Stack slot layout (relative to IX):
+
 - Locals: `IX-2`, `IX-4`, `IX-6`, … (in declaration order; all word-sized slots)
 - Parameters: `IX+4`, `IX+6`, `IX+8`, … (first param at IX+4; two words above return address)
 
@@ -277,6 +280,7 @@ into HL.
 - `ld (ea), imm` — store immediate to EA
 
 Each case tries multiple paths in priority order:
+
 1. Direct IX+d form (for stack slots within ±128 byte range)
 2. Step-pipeline template (for EAs that can be resolved to a step sequence)
 3. Absolute fixup (for global symbols with zero addend)
@@ -292,6 +296,7 @@ of `AddressingStep` values. Steps are combined by templates (e.g., `TEMPLATE_L_A
 `TEMPLATE_LW_HL`) and then executed by `emitStepPipeline` in `emissionCore.ts`.
 
 Steps encode operations like:
+
 - `LOAD_BASE_GLOB` / `LOAD_BASE_FVAR` — load base address into DE
 - `LOAD_RP_EA` / `LOAD_RP_GLOB` / `LOAD_RP_FVAR` — load register pair from EA
 - `STORE_RP_EA` / `STORE_RP_GLOB` / `STORE_RP_FVAR` — store register pair to EA
@@ -345,6 +350,7 @@ Each helper module exports a `createXxxHelpers(ctx)` factory that takes a contex
 returns a set of closures. The closures close over the context properties they need.
 
 **Typed context** (correct pattern):
+
 ```typescript
 // eaResolution.ts
 type EaResolutionContext = { env, diagnostics, diagAt, stackSlotOffsets, ... };
@@ -352,6 +358,7 @@ export function createEaResolutionHelpers(ctx: EaResolutionContext) { ... }
 ```
 
 **Untyped context** (problem area):
+
 ```typescript
 // ldLowering.ts
 export function createLdLoweringHelpers(ctx: any) {
@@ -361,6 +368,7 @@ export function createLdLoweringHelpers(ctx: any) {
 ```
 
 As of the current codebase:
+
 - `ldLowering.ts` still uses `ctx: any` (QR-2) — the only untyped module.
 - `functionBodySetup.ts` uses `AsmOperandNode extends never ? never : any` as a
   linting-bypass technique for `pushEaAddress`, `pushMemValue`, and `evalImmExpr` (QR-18).
@@ -376,6 +384,7 @@ These two typing gaps are the primary remaining items in the v0.4 type-safety tr
 `emitProgram` maintains state at two lifetimes:
 
 **Program lifetime** (allocated once, lives for entire compilation):
+
 - `bytes`, `codeBytes`, `dataBytes`, `hexBytes` — section byte maps
 - `codeSourceSegments`, `codeAsmTrace` — source mapping / trace data
 - `symbols`, `pending`, `taken` — symbol table
@@ -386,6 +395,7 @@ These two typing gaps are the primary remaining items in the v0.4 type-safety tr
 - `opStackSummaryCache` — memoized op stack-effect analysis
 
 **Function lifetime** (reset at the start of each `FuncDecl`):
+
 - `stackSlotOffsets`, `stackSlotTypes` — local/param IX-displacement maps
 - `localAliasTargets` — function-local alias bindings
 - `spDeltaTracked`, `spTrackingValid`, `spTrackingInvalidatedByMutation` — SP tracking state
@@ -410,6 +420,7 @@ The IDs are defined as constants in `diagnostics/types.ts`. There are roughly 20
 plus the catch-all `ZAX000` (Unknown).
 
 Within `emit.ts`, there are five diagnostic helper functions at file scope:
+
 - `diag(diagnostics, file, message)` — generic file-level error
 - `diagAt(diagnostics, span, message)` — span-precise error
 - `diagAtWithId(diagnostics, span, id, message)` — span-precise with specific ID
