@@ -68,13 +68,32 @@ function startOf(node: NamedSectionNode): { file: string; line: number; column: 
 export function collectNonBankedSectionKeys(
   program: ProgramNode,
   diagnostics: Diagnostic[],
+  moduleTraversal?: readonly string[],
 ): NonBankedSectionKeyCollection {
   const orderedContributions: SectionContributionRecord[] = [];
   const orderedAnchors: SectionAnchorRecord[] = [];
   const contributionsByKey = new Map<string, SectionContributionRecord[]>();
   const anchorsByKey = new Map<string, SectionAnchorRecord>();
 
-  for (const [moduleIndex, moduleFile] of program.files.entries()) {
+  const traversalIndexByFile = new Map<string, number>();
+  if (moduleTraversal) {
+    for (const [index, file] of moduleTraversal.entries()) {
+      traversalIndexByFile.set(file, index);
+    }
+  }
+
+  const orderedModules = [...program.files]
+    .map((moduleFile, moduleIndex) => ({
+      moduleFile,
+      moduleIndex,
+      traversalIndex: traversalIndexByFile.get(moduleFile.span.file) ?? Number.MAX_SAFE_INTEGER,
+    }))
+    .sort((a, b) => {
+      if (a.traversalIndex !== b.traversalIndex) return a.traversalIndex - b.traversalIndex;
+      return a.moduleIndex - b.moduleIndex;
+    });
+
+  for (const { moduleFile, moduleIndex } of orderedModules) {
     for (const [itemIndex, item] of moduleFile.items.entries()) {
       if (item.kind !== 'NamedSection') continue;
       const node = item;
