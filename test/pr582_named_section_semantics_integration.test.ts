@@ -19,7 +19,7 @@ describe('PR582 named section semantics integration', () => {
     expect(res.diagnostics).toEqual([
       expect.objectContaining({
         severity: 'error',
-        message: 'Named section placement is not implemented yet for section "code boot".',
+        message: 'Named section symbol and fixup resolution is not implemented yet for section "code boot".',
       }),
     ]);
     expect(res.diagnostics.some((d) => d.message.includes('Program must define a callable "main"'))).toBe(false);
