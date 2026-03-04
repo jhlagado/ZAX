@@ -299,7 +299,6 @@ export function buildEnv(
           const moduleId = moduleIds.get(e.span.file) ?? canonicalModuleId(e.span.file);
           const exportedName = `${moduleId}.${qualifiedName}`;
           visibleEnums.set(exportedName, idx);
-          enums.set(exportedName, idx);
         }
       }
     }
