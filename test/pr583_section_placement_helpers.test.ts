@@ -61,8 +61,9 @@ function makeSink(
     rel8Fixups: [],
     sourceSegments: [],
     asmTrace: [],
-      currentSourceTag: undefined,
-    };
+    currentSourceTag: undefined,
+    startupInitActions: [],
+  };
 }
 
 describe('PR583 section placement helpers', () => {

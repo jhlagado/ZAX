@@ -114,6 +114,7 @@ import {
   placeNonBankedSectionContributions,
   resolvePlacedNamedSectionFixups,
 } from './sectionPlacement.js';
+import { appendStartupInitRegion, buildStartupInitRegion } from './startupInit.js';
 import {
   finalizeProgramEmission,
   lowerProgramDeclarations,
@@ -943,10 +944,17 @@ export function emitProgram(
     a.offset === b.offset ? a.kind.localeCompare(b.kind) : a.offset - b.offset,
   );
 
+  const startupInitRegion = buildStartupInitRegion(placedContributions);
+  appendStartupInitRegion(bytes, diagnostics, primaryFile, startupInitRegion);
+  const finalWrittenRange =
+    startupInitRegion.encoded.length > 0
+      ? { start: writtenRange.start, end: writtenRange.end + startupInitRegion.encoded.length }
+      : writtenRange;
+
   return {
     map: {
       bytes,
-      writtenRange,
+      writtenRange: finalWrittenRange,
       ...(mergedSourceSegments.length > 0 ? { sourceSegments: mergedSourceSegments } : {}),
       ...(mergedAsmTrace.length > 0 ? { asmTrace: mergedAsmTrace } : {}),
     },
