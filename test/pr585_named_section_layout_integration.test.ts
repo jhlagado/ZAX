@@ -56,7 +56,7 @@ describe('PR585 named section layout integration', () => {
     expect(bin?.bytes[0]).toBe(0xc9);
   });
 
-  it('supports legacy section directives alongside named sections', async () => {
+  it('supports top-level code alongside named sections during transition', async () => {
     const res = await compile(join(__dirname, 'fixtures', 'pr585_legacy_named_coexistence.zax'), {}, { formats: defaultFormatWriters });
 
     expect(res.diagnostics).toEqual([]);

@@ -3,8 +3,10 @@ type Point
   y: byte
 end
 
-data
-  p: Point[1] = [0]
+section data vars at $1000
+  data
+    p: Point[1] = [0]
+end
 
 export func main()
 end

@@ -1,18 +1,17 @@
-section code at $0000
-section var at $1000
-
-globals
+section data vars at $1000
   idx: byte
   idxw: word
   arr: byte[16]
   grid: byte[4][8]
-
-export func main()
-  ld a, arr[idx]
-  ld a, arr[idxw]
-  ld a, arr[hl]
-  ld a, arr[(hl)]
-  ld a, grid[idx][0]
-  ret
 end
 
+section code main at $0000
+  export func main()
+    ld a, arr[idx]
+    ld a, arr[idxw]
+    ld a, arr[hl]
+    ld a, arr[(hl)]
+    ld a, grid[idx][0]
+    ret
+  end
+end

@@ -1,10 +1,10 @@
-section var at $1000
-
-globals
-  src_b: byte
-  dst_b: byte
-  src_w: word
-  dst_w: word
+section data vars at $1000
+  data
+    src_b: byte = 0
+    dst_b: byte = 0
+    src_w: word = 0
+    dst_w: word = 0
+end
 
 export func main(): AF, BC, DE, HL
   ld de, src_b

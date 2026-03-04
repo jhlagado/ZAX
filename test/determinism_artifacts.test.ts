@@ -47,7 +47,7 @@ async function compileSnapshot(entry: string): Promise<Array<{ kind: string; dat
 
 describe('determinism', () => {
   it('produces identical artifacts across repeated compiles (single module)', async () => {
-    const entry = join(__dirname, '..', 'examples', 'hello.zax');
+    const entry = join(__dirname, 'fixtures', 'pr603_determinism_single_module.zax');
     const snap0 = await compileSnapshot(entry);
     for (let i = 0; i < 5; i++) {
       expect(await compileSnapshot(entry)).toEqual(snap0);

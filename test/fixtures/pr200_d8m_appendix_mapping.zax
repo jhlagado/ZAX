@@ -1,6 +1,5 @@
 const Big = 70000
 enum Mode Idle, Run
-section code at $8000
 
 export func main()
   var

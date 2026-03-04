@@ -1,18 +1,16 @@
-section code at $0000
-section var at $1000
-
-globals
-  base: word
-  count: word = 7
-  global_ref = base
+section data vars at $1000
+  data
+    base: word = 0
+    count: word = 7
+end
 
 export func main()
   var
     tmp: word = 1
-    local_ref = global_ref
+    local_ref = base
   end
   ld hl, local_ref
   ld (base), hl
-  ld hl, global_ref
+  ld hl, base
   ret
 end
