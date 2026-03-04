@@ -10,8 +10,11 @@ import type {
   HexDeclNode,
   ImmExprNode,
   ModuleFileNode,
+  ModuleItemNode,
+  NamedSectionNode,
   OpDeclNode,
   ProgramNode,
+  SectionItemNode,
   SectionDirectiveNode,
   SourceSpan,
   TypeExprNode,
@@ -27,6 +30,7 @@ import type {
 } from '../formats/types.js';
 import type { CompileEnv } from '../semantics/env.js';
 import type { FunctionLoweringContext } from './functionLowering.js';
+import type { NamedSectionContributionSink } from './sectionContributions.js';
 import type {
   Callable,
   PendingSymbol,
@@ -66,6 +70,7 @@ type Context = Omit<FunctionLoweringContext, 'item'> & {
   baseExprs: Partial<Record<SectionKind, SectionDirectiveNode['at']>>;
   setBaseExpr: (kind: SectionKind, at: SectionDirectiveNode['at'], file: string) => void;
   advanceAlign: (a: number) => void;
+  alignTo: (n: number, alignment: number) => number;
   loadBinInput: (
     file: string,
     fromPath: string,
@@ -85,6 +90,8 @@ type Context = Omit<FunctionLoweringContext, 'item'> & {
     diagnostics: Diagnostic[],
   ) => number | undefined;
   lowerFunctionDecl: (ctx: FunctionLoweringContext) => void;
+  namedSectionSinksByNode: Map<NamedSectionNode, NamedSectionContributionSink>;
+  withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T) => T;
 };
 
 type FinalizationContext = {
@@ -137,329 +144,446 @@ type FinalizationContext = {
 };
 
 export function preScanProgramDeclarations(ctx: Context): void {
-  for (const module of ctx.program.files) {
-    for (const item of module.items) {
-      if (item.kind === 'FuncDecl') {
-        const f = item as FuncDeclNode;
-        ctx.callables.set(f.name.toLowerCase(), { kind: 'func', node: f });
-      } else if (item.kind === 'OpDecl') {
-        const op = item as OpDeclNode;
-        const key = op.name.toLowerCase();
-        const existing = ctx.opsByName.get(key);
-        if (existing) existing.push(op);
-        else ctx.opsByName.set(key, [op]);
-      } else if (item.kind === 'ExternDecl') {
-        const ex = item as ExternDeclNode;
-        for (const fn of ex.funcs) {
-          ctx.callables.set(fn.name.toLowerCase(), {
-            kind: 'extern',
-            node: fn,
-            targetLower: fn.name.toLowerCase(),
-          });
-        }
-      } else if (item.kind === 'VarBlock' && item.scope === 'module') {
-        const vb = item as VarBlockNode;
-        for (const decl of vb.decls) {
-          const lower = decl.name.toLowerCase();
-          if (decl.typeExpr) {
-            ctx.storageTypes.set(lower, decl.typeExpr);
-            continue;
-          }
-          if (decl.initializer?.kind === 'VarInitAlias') {
-            ctx.moduleAliasTargets.set(lower, decl.initializer.expr);
-            ctx.moduleAliasDecls.set(lower, decl);
-          }
-        }
-      } else if (item.kind === 'BinDecl') {
-        const bd = item as BinDeclNode;
-        ctx.declaredBinNames.add(bd.name.toLowerCase());
-        ctx.rawAddressSymbols.add(bd.name.toLowerCase());
-        ctx.storageTypes.set(bd.name.toLowerCase(), { kind: 'TypeName', span: bd.span, name: 'addr' });
-      } else if (item.kind === 'HexDecl') {
-        const hd = item as HexDeclNode;
-        ctx.rawAddressSymbols.add(hd.name.toLowerCase());
-        ctx.storageTypes.set(hd.name.toLowerCase(), { kind: 'TypeName', span: hd.span, name: 'addr' });
-      } else if (item.kind === 'DataBlock') {
-        const db = item as DataBlockNode;
-        for (const decl of db.decls) {
-          const lower = decl.name.toLowerCase();
+  const preScanItem = (
+    item: ModuleItemNode | SectionItemNode,
+    namedSection?: NamedSectionNode,
+  ): void => {
+    if (item.kind === 'NamedSection') {
+      for (const sectionItem of item.items) preScanItem(sectionItem, item);
+      return;
+    }
+
+    if (item.kind === 'FuncDecl') {
+      const f = item as FuncDeclNode;
+      ctx.callables.set(f.name.toLowerCase(), { kind: 'func', node: f });
+    } else if (item.kind === 'OpDecl') {
+      const op = item as OpDeclNode;
+      const key = op.name.toLowerCase();
+      const existing = ctx.opsByName.get(key);
+      if (existing) existing.push(op);
+      else ctx.opsByName.set(key, [op]);
+    } else if (item.kind === 'ExternDecl') {
+      const ex = item as ExternDeclNode;
+      for (const fn of ex.funcs) {
+        ctx.callables.set(fn.name.toLowerCase(), {
+          kind: 'extern',
+          node: fn,
+          targetLower: fn.name.toLowerCase(),
+        });
+      }
+    } else if (item.kind === 'VarBlock' && item.scope === 'module') {
+      if (namedSection) return;
+      const vb = item as VarBlockNode;
+      for (const decl of vb.decls) {
+        const lower = decl.name.toLowerCase();
+        if (decl.typeExpr) {
           ctx.storageTypes.set(lower, decl.typeExpr);
-          const scalar = ctx.resolveScalarKind(decl.typeExpr);
-          if (!scalar) ctx.rawAddressSymbols.add(lower);
+          continue;
+        }
+        if (decl.initializer?.kind === 'VarInitAlias') {
+          ctx.moduleAliasTargets.set(lower, decl.initializer.expr);
+          ctx.moduleAliasDecls.set(lower, decl);
         }
       }
+    } else if (item.kind === 'BinDecl') {
+      const bd = item as BinDeclNode;
+      if (namedSection && bd.section !== namedSection.section) return;
+      ctx.declaredBinNames.add(bd.name.toLowerCase());
+      ctx.rawAddressSymbols.add(bd.name.toLowerCase());
+      ctx.storageTypes.set(bd.name.toLowerCase(), { kind: 'TypeName', span: bd.span, name: 'addr' });
+    } else if (item.kind === 'HexDecl') {
+      const hd = item as HexDeclNode;
+      ctx.rawAddressSymbols.add(hd.name.toLowerCase());
+      ctx.storageTypes.set(hd.name.toLowerCase(), { kind: 'TypeName', span: hd.span, name: 'addr' });
+    } else if (item.kind === 'DataBlock') {
+      const db = item as DataBlockNode;
+      for (const decl of db.decls) {
+        const lower = decl.name.toLowerCase();
+        ctx.storageTypes.set(lower, decl.typeExpr);
+        const scalar = ctx.resolveScalarKind(decl.typeExpr);
+        if (!scalar) ctx.rawAddressSymbols.add(lower);
+      }
     }
+  };
+
+  for (const module of ctx.program.files) {
+    for (const item of module.items) preScanItem(item);
   }
 }
 
 export function lowerProgramDeclarations(ctx: Context): void {
-  for (const module of ctx.program.files) {
-    ctx.activeSectionRef.current = 'code';
-
-    for (const item of module.items) {
-      if (item.kind === 'ConstDecl') {
-        const constItem = item as ConstDeclNode;
-        const v = ctx.env.consts.get(constItem.name);
-        if (v !== undefined) {
-          if (ctx.taken.has(constItem.name)) {
-            ctx.diag(ctx.diagnostics, constItem.span.file, `Duplicate symbol name "${constItem.name}".`);
-            continue;
-          }
-          ctx.taken.add(constItem.name);
-          ctx.symbols.push({
-            kind: 'constant',
-            name: constItem.name,
-            value: v,
-            address: v & 0xffff,
-            file: constItem.span.file,
-            line: constItem.span.start.line,
-            scope: 'global',
-          });
-        }
+  const sinkOffsetRef = (sink: NamedSectionContributionSink) => ({
+    get current() {
+      return sink.offset;
+    },
+    set current(value: number) {
+      sink.offset = value;
+    },
+  });
+  const alignNamedSection = (sink: NamedSectionContributionSink, value: number): void => {
+    sink.offset = ctx.alignTo(sink.offset, value);
+  };
+  const lowerVarBlock = (varBlock: VarBlockNode): void => {
+    for (const decl of varBlock.decls) {
+      if (!decl.typeExpr) continue;
+      const size = ctx.sizeOfTypeExpr(decl.typeExpr, ctx.env, ctx.diagnostics);
+      if (size === undefined) continue;
+      if (ctx.env.consts.has(decl.name)) {
+        ctx.diag(ctx.diagnostics, decl.span.file, `Var name "${decl.name}" collides with a const.`);
+        ctx.varOffsetRef.current += size;
         continue;
       }
-
-      if (item.kind === 'EnumDecl') {
-        const e = item as EnumDeclNode;
-        for (let idx = 0; idx < e.members.length; idx++) {
-          const member = e.members[idx]!;
-          const name = `${e.name}.${member}`;
-          if (ctx.env.enums.get(name) !== idx) continue;
-          if (ctx.taken.has(name)) {
-            ctx.diag(ctx.diagnostics, e.span.file, `Duplicate symbol name "${name}".`);
-            continue;
-          }
-          ctx.taken.add(name);
-          ctx.symbols.push({
-            kind: 'constant',
-            name,
-            value: idx,
-            address: idx & 0xffff,
-            file: e.span.file,
-            line: e.span.start.line,
-            scope: 'global',
-          });
-        }
+      if (ctx.env.enums.has(decl.name)) {
+        ctx.diag(ctx.diagnostics, decl.span.file, `Var name "${decl.name}" collides with an enum member.`);
+        ctx.varOffsetRef.current += size;
         continue;
       }
-
-      if (item.kind === 'Section') {
-        const s = item as SectionDirectiveNode;
-        ctx.activeSectionRef.current = s.section;
-        if (s.at) ctx.setBaseExpr(s.section, s.at, s.span.file);
+      if (ctx.env.types.has(decl.name)) {
+        ctx.diag(ctx.diagnostics, decl.span.file, `Var name "${decl.name}" collides with a type name.`);
+        ctx.varOffsetRef.current += size;
         continue;
       }
-
-      if (item.kind === 'Align') {
-        const a = item as AlignDirectiveNode;
-        const v = ctx.evalImmExpr(a.value, ctx.env, ctx.diagnostics);
-        if (v === undefined) {
-          ctx.diag(ctx.diagnostics, a.span.file, `Failed to evaluate align value.`);
-          continue;
-        }
-        if (v <= 0) {
-          ctx.diag(ctx.diagnostics, a.span.file, `align value must be > 0.`);
-          continue;
-        }
-        ctx.advanceAlign(v);
+      if (ctx.taken.has(decl.name)) {
+        ctx.diag(ctx.diagnostics, decl.span.file, `Duplicate symbol name "${decl.name}" for var declaration.`);
+        ctx.varOffsetRef.current += size;
         continue;
       }
-
-      if (item.kind === 'ExternDecl') {
-        const ex = item as ExternDeclNode;
-        const baseLower = ex.base?.toLowerCase();
-        if (baseLower !== undefined && !ctx.declaredBinNames.has(baseLower)) {
-          ctx.diag(
-            ctx.diagnostics,
-            ex.span.file,
-            `extern base "${ex.base}" does not reference a declared bin symbol.`,
-          );
-          continue;
-        }
-        for (const fn of ex.funcs) {
-          if (ctx.taken.has(fn.name)) {
-            ctx.diag(ctx.diagnostics, fn.span.file, `Duplicate symbol name "${fn.name}".`);
-            continue;
-          }
-          ctx.taken.add(fn.name);
-          if (baseLower !== undefined) {
-            const offset = ctx.evalImmExpr(fn.at, ctx.env, ctx.diagnostics);
-            if (offset === undefined) {
-              ctx.diag(ctx.diagnostics, fn.span.file, `Failed to evaluate extern func offset for "${fn.name}".`);
-              continue;
-            }
-            if (offset < 0 || offset > 0xffff) {
-              ctx.diag(ctx.diagnostics, fn.span.file, `extern func "${fn.name}" offset out of range (0..65535).`);
-              continue;
-            }
-            ctx.deferredExterns.push({
-              name: fn.name,
-              baseLower,
-              addend: offset,
-              file: fn.span.file,
-              line: fn.span.start.line,
-            });
-            continue;
-          }
-          const addr = ctx.evalImmExpr(fn.at, ctx.env, ctx.diagnostics);
-          if (addr === undefined) {
-            ctx.diag(ctx.diagnostics, fn.span.file, `Failed to evaluate extern func address for "${fn.name}".`);
-            continue;
-          }
-          if (addr < 0 || addr > 0xffff) {
-            ctx.diag(ctx.diagnostics, fn.span.file, `extern func "${fn.name}" address out of range (0..65535).`);
-            continue;
-          }
-          ctx.symbols.push({
-            kind: 'label',
-            name: fn.name,
-            address: addr,
-            file: fn.span.file,
-            line: fn.span.start.line,
-            scope: 'global',
-          });
-        }
+      ctx.taken.add(decl.name);
+      ctx.pending.push({
+        kind: 'var',
+        name: decl.name,
+        section: 'var',
+        offset: ctx.varOffsetRef.current,
+        file: decl.span.file,
+        line: decl.span.start.line,
+        scope: 'global',
+        size,
+      });
+      ctx.varOffsetRef.current += size;
+    }
+  };
+  const lowerExternDecl = (ex: ExternDeclNode): void => {
+    const baseLower = ex.base?.toLowerCase();
+    if (baseLower !== undefined && !ctx.declaredBinNames.has(baseLower)) {
+      ctx.diag(
+        ctx.diagnostics,
+        ex.span.file,
+        `extern base "${ex.base}" does not reference a declared bin symbol.`,
+      );
+      return;
+    }
+    for (const fn of ex.funcs) {
+      if (ctx.taken.has(fn.name)) {
+        ctx.diag(ctx.diagnostics, fn.span.file, `Duplicate symbol name "${fn.name}".`);
         continue;
       }
-
-      if (item.kind === 'BinDecl') {
-        const binDecl = item as BinDeclNode;
-        if (ctx.taken.has(binDecl.name)) {
-          ctx.diag(ctx.diagnostics, binDecl.span.file, `Duplicate symbol name "${binDecl.name}".`);
+      ctx.taken.add(fn.name);
+      if (baseLower !== undefined) {
+        const offset = ctx.evalImmExpr(fn.at, ctx.env, ctx.diagnostics);
+        if (offset === undefined) {
+          ctx.diag(ctx.diagnostics, fn.span.file, `Failed to evaluate extern func offset for "${fn.name}".`);
           continue;
         }
-        ctx.taken.add(binDecl.name);
-        const blob = ctx.loadBinInput(
-          binDecl.span.file,
-          binDecl.fromPath,
-          ctx.includeDirs,
-          (file, message) => ctx.diag(ctx.diagnostics, file, message),
-        );
-        if (!blob) continue;
-        if (binDecl.section === 'var') {
-          ctx.diag(ctx.diagnostics, binDecl.span.file, `bin declarations cannot target section "var" in v0.2.`);
+        if (offset < 0 || offset > 0xffff) {
+          ctx.diag(ctx.diagnostics, fn.span.file, `extern func "${fn.name}" offset out of range (0..65535).`);
           continue;
         }
-        if (binDecl.section === 'code') {
-          ctx.pending.push({ kind: 'data', name: binDecl.name, section: 'code', offset: ctx.codeOffsetRef.current, file: binDecl.span.file, line: binDecl.span.start.line, scope: 'global' });
-          for (const b of blob) ctx.codeBytes.set(ctx.codeOffsetRef.current++, b & 0xff);
-        } else {
-          ctx.pending.push({ kind: 'data', name: binDecl.name, section: 'data', offset: ctx.dataOffsetRef.current, file: binDecl.span.file, line: binDecl.span.start.line, scope: 'global' });
-          for (const b of blob) ctx.dataBytes.set(ctx.dataOffsetRef.current++, b & 0xff);
-        }
-        continue;
-      }
-
-      if (item.kind === 'HexDecl') {
-        const hexDecl = item as HexDeclNode;
-        if (ctx.taken.has(hexDecl.name)) {
-          ctx.diag(ctx.diagnostics, hexDecl.span.file, `Duplicate symbol name "${hexDecl.name}".`);
-          continue;
-        }
-        ctx.taken.add(hexDecl.name);
-        const parsed = ctx.loadHexInput(
-          hexDecl.span.file,
-          hexDecl.fromPath,
-          ctx.includeDirs,
-          (file, message) => ctx.diag(ctx.diagnostics, file, message),
-        );
-        if (!parsed) continue;
-        for (const [addr, b] of parsed.bytes) {
-          if (ctx.hexBytes.has(addr)) {
-            ctx.diag(ctx.diagnostics, hexDecl.span.file, `HEX overlap at address ${addr}.`);
-            continue;
-          }
-          ctx.hexBytes.set(addr, b);
-        }
-        ctx.absoluteSymbols.push({
-          kind: 'data',
-          name: hexDecl.name,
-          address: parsed.minAddress,
-          file: hexDecl.span.file,
-          line: hexDecl.span.start.line,
-          scope: 'global',
+        ctx.deferredExterns.push({
+          name: fn.name,
+          baseLower,
+          addend: offset,
+          file: fn.span.file,
+          line: fn.span.start.line,
         });
         continue;
       }
-
-      if (item.kind === 'OpDecl') {
-        const op = item as OpDeclNode;
-        const key = op.name.toLowerCase();
-        if (ctx.taken.has(op.name) && !ctx.declaredOpNames.has(key)) {
-          ctx.diag(ctx.diagnostics, op.span.file, `Duplicate symbol name "${op.name}".`);
-        } else {
-          ctx.taken.add(op.name);
-          ctx.declaredOpNames.add(key);
-        }
+      const addr = ctx.evalImmExpr(fn.at, ctx.env, ctx.diagnostics);
+      if (addr === undefined) {
+        ctx.diag(ctx.diagnostics, fn.span.file, `Failed to evaluate extern func address for "${fn.name}".`);
         continue;
       }
-
-      if (item.kind === 'FuncDecl') {
-        ctx.lowerFunctionDecl({ ...ctx, item });
+      if (addr < 0 || addr > 0xffff) {
+        ctx.diag(ctx.diagnostics, fn.span.file, `extern func "${fn.name}" address out of range (0..65535).`);
         continue;
       }
-
-      if (item.kind === 'DataBlock') {
-        lowerDataBlock(ctx, item as DataBlockNode);
-        continue;
-      }
-
-      if (item.kind === 'VarBlock' && item.scope === 'module') {
-        const varBlock = item as VarBlockNode;
-        for (const decl of varBlock.decls) {
-          if (!decl.typeExpr) continue;
-          const size = ctx.sizeOfTypeExpr(decl.typeExpr, ctx.env, ctx.diagnostics);
-          if (size === undefined) continue;
-          if (ctx.env.consts.has(decl.name)) {
-            ctx.diag(ctx.diagnostics, decl.span.file, `Var name "${decl.name}" collides with a const.`);
-            ctx.varOffsetRef.current += size;
-            continue;
-          }
-          if (ctx.env.enums.has(decl.name)) {
-            ctx.diag(ctx.diagnostics, decl.span.file, `Var name "${decl.name}" collides with an enum member.`);
-            ctx.varOffsetRef.current += size;
-            continue;
-          }
-          if (ctx.env.types.has(decl.name)) {
-            ctx.diag(ctx.diagnostics, decl.span.file, `Var name "${decl.name}" collides with a type name.`);
-            ctx.varOffsetRef.current += size;
-            continue;
-          }
-          if (ctx.taken.has(decl.name)) {
-            ctx.diag(ctx.diagnostics, decl.span.file, `Duplicate symbol name "${decl.name}" for var declaration.`);
-            ctx.varOffsetRef.current += size;
-            continue;
-          }
-          ctx.taken.add(decl.name);
-          ctx.pending.push({
-            kind: 'var',
-            name: decl.name,
-            section: 'var',
-            offset: ctx.varOffsetRef.current,
-            file: decl.span.file,
-            line: decl.span.start.line,
-            scope: 'global',
-            size,
-          });
-          ctx.varOffsetRef.current += size;
-        }
-      }
+      ctx.symbols.push({
+        kind: 'label',
+        name: fn.name,
+        address: addr,
+        file: fn.span.file,
+        line: fn.span.start.line,
+        scope: 'global',
+      });
     }
+  };
+  const lowerBinDecl = (
+    binDecl: BinDeclNode,
+    namedSection?: { node: NamedSectionNode; sink: NamedSectionContributionSink },
+  ): void => {
+    if (ctx.taken.has(binDecl.name)) {
+      ctx.diag(ctx.diagnostics, binDecl.span.file, `Duplicate symbol name "${binDecl.name}".`);
+      return;
+    }
+    ctx.taken.add(binDecl.name);
+    const blob = ctx.loadBinInput(
+      binDecl.span.file,
+      binDecl.fromPath,
+      ctx.includeDirs,
+      (file, message) => ctx.diag(ctx.diagnostics, file, message),
+    );
+    if (!blob) return;
+    if (binDecl.section === 'var') {
+      ctx.diag(ctx.diagnostics, binDecl.span.file, `bin declarations cannot target section "var" in v0.2.`);
+      return;
+    }
+    if (namedSection) {
+      const targetSection = namedSection.node.section;
+      if (binDecl.section !== targetSection) {
+        ctx.diag(
+          ctx.diagnostics,
+          binDecl.span.file,
+          `bin declaration "${binDecl.name}" section "${binDecl.section}" does not match enclosing named section "${targetSection} ${namedSection.node.name}".`,
+        );
+        return;
+      }
+      namedSection.sink.pendingSymbols.push({
+        kind: 'data',
+        name: binDecl.name,
+        section: targetSection,
+        offset: namedSection.sink.offset,
+        file: binDecl.span.file,
+        line: binDecl.span.start.line,
+        scope: 'global',
+      });
+      for (const b of blob) namedSection.sink.bytes.set(namedSection.sink.offset++, b & 0xff);
+      return;
+    }
+    if (binDecl.section === 'code') {
+      ctx.pending.push({ kind: 'data', name: binDecl.name, section: 'code', offset: ctx.codeOffsetRef.current, file: binDecl.span.file, line: binDecl.span.start.line, scope: 'global' });
+      for (const b of blob) ctx.codeBytes.set(ctx.codeOffsetRef.current++, b & 0xff);
+      return;
+    }
+    ctx.pending.push({ kind: 'data', name: binDecl.name, section: 'data', offset: ctx.dataOffsetRef.current, file: binDecl.span.file, line: binDecl.span.start.line, scope: 'global' });
+    for (const b of blob) ctx.dataBytes.set(ctx.dataOffsetRef.current++, b & 0xff);
+  };
+  const lowerItem = (
+    item: ModuleItemNode | SectionItemNode,
+    namedSection?: { node: NamedSectionNode; sink: NamedSectionContributionSink },
+  ): void => {
+    if (item.kind === 'NamedSection') {
+      const sectionNode = item as NamedSectionNode;
+      const sink = ctx.namedSectionSinksByNode.get(sectionNode);
+      if (!sink) return;
+      const prevSection = ctx.activeSectionRef.current;
+      ctx.activeSectionRef.current = sectionNode.section;
+      ctx.withNamedSectionSink(sink, () => {
+        for (const sectionItem of sectionNode.items) {
+          lowerItem(sectionItem, { node: sectionNode, sink });
+        }
+      });
+      ctx.activeSectionRef.current = prevSection;
+      return;
+    }
+
+    if (item.kind === 'ConstDecl') {
+      const constItem = item as ConstDeclNode;
+      const v = ctx.env.consts.get(constItem.name);
+      if (v !== undefined) {
+        if (ctx.taken.has(constItem.name)) {
+          ctx.diag(ctx.diagnostics, constItem.span.file, `Duplicate symbol name "${constItem.name}".`);
+          return;
+        }
+        ctx.taken.add(constItem.name);
+        ctx.symbols.push({
+          kind: 'constant',
+          name: constItem.name,
+          value: v,
+          address: v & 0xffff,
+          file: constItem.span.file,
+          line: constItem.span.start.line,
+          scope: 'global',
+        });
+      }
+      return;
+    }
+
+    if (item.kind === 'EnumDecl') {
+      const e = item as EnumDeclNode;
+      for (let idx = 0; idx < e.members.length; idx++) {
+        const member = e.members[idx]!;
+        const name = `${e.name}.${member}`;
+        if (ctx.env.enums.get(name) !== idx) continue;
+        if (ctx.taken.has(name)) {
+          ctx.diag(ctx.diagnostics, e.span.file, `Duplicate symbol name "${name}".`);
+          continue;
+        }
+        ctx.taken.add(name);
+        ctx.symbols.push({
+          kind: 'constant',
+          name,
+          value: idx,
+          address: idx & 0xffff,
+          file: e.span.file,
+          line: e.span.start.line,
+          scope: 'global',
+        });
+      }
+      return;
+    }
+
+    if (item.kind === 'Section') {
+      const s = item as SectionDirectiveNode;
+      ctx.activeSectionRef.current = s.section;
+      if (s.at) ctx.setBaseExpr(s.section, s.at, s.span.file);
+      return;
+    }
+
+    if (item.kind === 'Align') {
+      const a = item as AlignDirectiveNode;
+      const v = ctx.evalImmExpr(a.value, ctx.env, ctx.diagnostics);
+      if (v === undefined) {
+        ctx.diag(ctx.diagnostics, a.span.file, `Failed to evaluate align value.`);
+        return;
+      }
+      if (v <= 0) {
+        ctx.diag(ctx.diagnostics, a.span.file, `align value must be > 0.`);
+        return;
+      }
+      if (namedSection) alignNamedSection(namedSection.sink, v);
+      else ctx.advanceAlign(v);
+      return;
+    }
+
+    if (item.kind === 'ExternDecl') {
+      lowerExternDecl(item as ExternDeclNode);
+      return;
+    }
+
+    if (item.kind === 'BinDecl') {
+      lowerBinDecl(item as BinDeclNode, namedSection);
+      return;
+    }
+
+    if (item.kind === 'HexDecl') {
+      const hexDecl = item as HexDeclNode;
+      if (ctx.taken.has(hexDecl.name)) {
+        ctx.diag(ctx.diagnostics, hexDecl.span.file, `Duplicate symbol name "${hexDecl.name}".`);
+        return;
+      }
+      ctx.taken.add(hexDecl.name);
+      const parsed = ctx.loadHexInput(
+        hexDecl.span.file,
+        hexDecl.fromPath,
+        ctx.includeDirs,
+        (file, message) => ctx.diag(ctx.diagnostics, file, message),
+      );
+      if (!parsed) return;
+      for (const [addr, b] of parsed.bytes) {
+        if (ctx.hexBytes.has(addr)) {
+          ctx.diag(ctx.diagnostics, hexDecl.span.file, `HEX overlap at address ${addr}.`);
+          continue;
+        }
+        ctx.hexBytes.set(addr, b);
+      }
+      ctx.absoluteSymbols.push({
+        kind: 'data',
+        name: hexDecl.name,
+        address: parsed.minAddress,
+        file: hexDecl.span.file,
+        line: hexDecl.span.start.line,
+        scope: 'global',
+      });
+      return;
+    }
+
+    if (item.kind === 'OpDecl') {
+      const op = item as OpDeclNode;
+      const key = op.name.toLowerCase();
+      if (ctx.taken.has(op.name) && !ctx.declaredOpNames.has(key)) {
+        ctx.diag(ctx.diagnostics, op.span.file, `Duplicate symbol name "${op.name}".`);
+      } else {
+        ctx.taken.add(op.name);
+        ctx.declaredOpNames.add(key);
+      }
+      return;
+    }
+
+    if (item.kind === 'FuncDecl') {
+      if (namedSection && namedSection.node.section !== 'code') {
+        ctx.diag(
+          ctx.diagnostics,
+          item.span.file,
+          `Function "${item.name}" is not allowed inside data section "${namedSection.node.name}".`,
+        );
+        return;
+      }
+      ctx.lowerFunctionDecl({
+        ...ctx,
+        item,
+        ...(namedSection ? { pending: namedSection.sink.pendingSymbols } : {}),
+      });
+      return;
+    }
+
+    if (item.kind === 'DataBlock') {
+      if (namedSection) {
+        lowerDataBlock(ctx, item as DataBlockNode, {
+          section: namedSection.node.section,
+          bytes: namedSection.sink.bytes,
+          offsetRef: sinkOffsetRef(namedSection.sink),
+          pending: namedSection.sink.pendingSymbols,
+        });
+      } else {
+        lowerDataBlock(ctx, item as DataBlockNode);
+      }
+      return;
+    }
+
+    if (item.kind === 'VarBlock' && item.scope === 'module') {
+      if (namedSection) {
+        ctx.diag(
+          ctx.diagnostics,
+          item.span.file,
+          `Module-scope var blocks are not allowed inside named section "${namedSection.node.name}".`,
+        );
+        return;
+      }
+      lowerVarBlock(item as VarBlockNode);
+    }
+  };
+
+  for (const module of ctx.program.files) {
+    ctx.activeSectionRef.current = 'code';
+    for (const item of module.items) lowerItem(item);
   }
 }
 
-function lowerDataBlock(ctx: Context, dataBlock: DataBlockNode): void {
+function lowerDataBlock(
+  ctx: Context,
+  dataBlock: DataBlockNode,
+  target: {
+    section: 'code' | 'data';
+    bytes: Map<number, number>;
+    offsetRef: { current: number };
+    pending: PendingSymbol[];
+  } = {
+    section: 'data',
+    bytes: ctx.dataBytes,
+    offsetRef: ctx.dataOffsetRef,
+    pending: ctx.pending,
+  },
+): void {
   for (const decl of dataBlock.decls) {
     const okToDeclareSymbol = !ctx.taken.has(decl.name);
     if (!okToDeclareSymbol) {
       ctx.diag(ctx.diagnostics, decl.span.file, `Duplicate symbol name "${decl.name}".`);
     } else {
       ctx.taken.add(decl.name);
-      ctx.pending.push({
+      target.pending.push({
         kind: 'data',
         name: decl.name,
-        section: 'data',
-        offset: ctx.dataOffsetRef.current,
+        section: target.section,
+        offset: target.offsetRef.current,
         file: decl.span.file,
         line: decl.span.start.line,
         scope: 'global',
@@ -470,8 +594,8 @@ function lowerDataBlock(ctx: Context, dataBlock: DataBlockNode): void {
     const init = decl.initializer;
 
     const emitByte = (b: number) => {
-      ctx.dataBytes.set(ctx.dataOffsetRef.current, b & 0xff);
-      ctx.dataOffsetRef.current++;
+      target.bytes.set(target.offsetRef.current, b & 0xff);
+      target.offsetRef.current++;
     };
     const emitWord = (w: number) => {
       emitByte(w & 0xff);

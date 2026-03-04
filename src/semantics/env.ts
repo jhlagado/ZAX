@@ -8,6 +8,7 @@ import type {
   ImmExprNode,
   ModuleItemNode,
   ProgramNode,
+  SectionItemNode,
   TypeDeclNode,
   UnionDeclNode,
 } from '../frontend/ast.js';
@@ -170,7 +171,30 @@ export function evalImmExpr(
 }
 
 function collectEnumMembers(items: ModuleItemNode[]): EnumDeclNode[] {
-  return items.filter((i): i is EnumDeclNode => i.kind === 'EnumDecl');
+  const enums: EnumDeclNode[] = [];
+  const visit = (entry: ModuleItemNode | SectionItemNode): void => {
+    if (entry.kind === 'NamedSection') {
+      for (const item of entry.items) visit(item);
+      return;
+    }
+    if (entry.kind === 'EnumDecl') enums.push(entry);
+  };
+  for (const item of items) visit(item);
+  return enums;
+}
+
+function forEachDeclItem(
+  items: ModuleItemNode[],
+  visit: (item: ModuleItemNode | SectionItemNode) => void,
+): void {
+  const walk = (entry: ModuleItemNode | SectionItemNode): void => {
+    if (entry.kind === 'NamedSection') {
+      for (const item of entry.items) walk(item);
+      return;
+    }
+    visit(entry);
+  };
+  for (const item of items) walk(item);
 }
 
 /**
@@ -207,17 +231,17 @@ export function buildEnv(
   };
 
   for (const mf of program.files) {
-    for (const item of mf.items) {
-      if (item.kind !== 'TypeDecl' && item.kind !== 'UnionDecl') continue;
+    forEachDeclItem(mf.items, (item) => {
+      if (item.kind !== 'TypeDecl' && item.kind !== 'UnionDecl') return;
       const kind = item.kind === 'TypeDecl' ? 'type' : 'union';
       const name = item.name;
-      if (!claim(kind, name, item.span.file)) continue;
+      if (!claim(kind, name, item.span.file)) return;
       types.set(name, item);
-    }
+    });
   }
 
   for (const mf of program.files) {
-    for (const item of mf.items) {
+    forEachDeclItem(mf.items, (item) => {
       if (item.kind === 'FuncDecl') {
         const f = item as FuncDeclNode;
         claim('func', f.name, f.span.file);
@@ -227,7 +251,7 @@ export function buildEnv(
           claim('extern func', fn.name, fn.span.file);
         }
       }
-    }
+    });
   }
 
   for (const mf of program.files) {
@@ -248,11 +272,11 @@ export function buildEnv(
 
   if (options?.typePaddingWarnings === true) {
     for (const mf of program.files) {
-      for (const item of mf.items) {
-        if (item.kind !== 'TypeDecl' && item.kind !== 'UnionDecl') continue;
+      forEachDeclItem(mf.items, (item) => {
+        if (item.kind !== 'TypeDecl' && item.kind !== 'UnionDecl') return;
         const info = storageInfoForTypeDecl(item, env, diagnostics);
-        if (!info) continue;
-        if (info.storageSize <= info.preRoundSize) continue;
+        if (!info) return;
+        if (info.storageSize <= info.preRoundSize) return;
         const padding = info.storageSize - info.preRoundSize;
         diagnostics.push({
           id: DiagnosticIds.TypePaddingWarning,
@@ -265,26 +289,26 @@ export function buildEnv(
           line: item.span.start.line,
           column: item.span.start.column,
         });
-      }
+      });
     }
   }
 
   for (const mf of program.files) {
-    for (const item of mf.items) {
-      if (item.kind !== 'ConstDecl') continue;
+    forEachDeclItem(mf.items, (item) => {
+      if (item.kind !== 'ConstDecl') return;
       if (types.has(item.name)) {
         diag(diagnostics, item.span.file, `Const name "${item.name}" collides with a type name.`);
-        continue;
+        return;
       }
-      if (!claim('const', item.name, item.span.file)) continue;
+      if (!claim('const', item.name, item.span.file)) return;
 
       const v = evalImmExpr(item.value, env, diagnostics);
       if (v === undefined) {
         diag(diagnostics, item.span.file, `Failed to evaluate const "${item.name}".`);
-        continue;
+        return;
       }
       consts.set(item.name, v);
-    }
+    });
   }
 
   return env;
