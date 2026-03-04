@@ -3,14 +3,24 @@ import { DiagnosticIds } from '../diagnostics/types.js';
 
 import type { PlacedNamedSectionContribution } from './sectionPlacement.js';
 
-export type StartupInitEntry = {
+export type StartupInitCopyEntry = {
+  kind: 'copy';
   destination: number;
   sourceOffset: number;
   length: number;
 };
 
+export type StartupInitZeroEntry = {
+  kind: 'zero';
+  destination: number;
+  length: number;
+};
+
+export type StartupInitEntry = StartupInitCopyEntry | StartupInitZeroEntry;
+
 export type StartupInitRegion = {
-  entries: StartupInitEntry[];
+  copyEntries: StartupInitCopyEntry[];
+  zeroEntries: StartupInitZeroEntry[];
   blob: number[];
   encoded: number[];
 };
@@ -19,53 +29,62 @@ function encodeWord(value: number): [number, number] {
   return [value & 0xff, (value >> 8) & 0xff];
 }
 
+function isProvisionallyWritableNamedDataContribution(
+  placed: PlacedNamedSectionContribution,
+): boolean {
+  // v0.5 initial implementation rule: treat anchored named data sections as writable
+  // until the root-program classification rule is formalized in a later slice.
+  return placed.sink.anchor.key.section === 'data';
+}
+
 export function buildStartupInitRegion(
   placedContributions: PlacedNamedSectionContribution[],
 ): StartupInitRegion {
-  const entries: StartupInitEntry[] = [];
+  const copyEntries: StartupInitCopyEntry[] = [];
+  const zeroEntries: StartupInitZeroEntry[] = [];
   const blob: number[] = [];
 
   for (const placed of placedContributions) {
-    if (placed.sink.anchor.key.section !== 'data') continue;
-    const ordered = [...placed.sink.bytes.entries()].sort((a, b) => a[0] - b[0]);
-    if (ordered.length === 0) continue;
-
-    let runStartOffset = ordered[0]![0];
-    let runValues: number[] = [ordered[0]![1]];
-    for (let i = 1; i < ordered.length; i++) {
-      const [offset, value] = ordered[i]!;
-      const expectedNext = runStartOffset + runValues.length;
-      if (offset === expectedNext) {
-        runValues.push(value);
+    if (!isProvisionallyWritableNamedDataContribution(placed)) continue;
+    for (const action of placed.sink.startupInitActions) {
+      if (action.kind === 'zero') {
+        zeroEntries.push({
+          kind: 'zero',
+          destination: placed.baseAddress + action.offset,
+          length: action.length,
+        });
         continue;
       }
-      entries.push({
-        destination: placed.baseAddress + runStartOffset,
+      const chunk: number[] = [];
+      for (let i = 0; i < action.length; i++) {
+        const value = placed.sink.bytes.get(action.offset + i) ?? 0;
+        chunk.push(value);
+      }
+      copyEntries.push({
+        kind: 'copy',
+        destination: placed.baseAddress + action.offset,
         sourceOffset: blob.length,
-        length: runValues.length,
+        length: action.length,
       });
-      blob.push(...runValues);
-      runStartOffset = offset;
-      runValues = [value];
+      blob.push(...chunk);
     }
-    entries.push({
-      destination: placed.baseAddress + runStartOffset,
-      sourceOffset: blob.length,
-      length: runValues.length,
-    });
-    blob.push(...runValues);
   }
 
   const encoded: number[] = [];
-  encoded.push(...encodeWord(entries.length));
-  for (const entry of entries) {
+  encoded.push(...encodeWord(copyEntries.length));
+  for (const entry of copyEntries) {
     encoded.push(...encodeWord(entry.destination));
     encoded.push(...encodeWord(entry.sourceOffset));
     encoded.push(...encodeWord(entry.length));
   }
+  encoded.push(...encodeWord(zeroEntries.length));
+  for (const entry of zeroEntries) {
+    encoded.push(...encodeWord(entry.destination));
+    encoded.push(...encodeWord(entry.length));
+  }
   encoded.push(...blob);
 
-  return { entries, blob, encoded };
+  return { copyEntries, zeroEntries, blob, encoded };
 }
 
 export function appendStartupInitRegion(

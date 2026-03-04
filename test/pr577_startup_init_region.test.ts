@@ -16,6 +16,7 @@ function fakeSink(
   section: 'code' | 'data',
   name: string,
   bytes: Array<[number, number]>,
+  startupInitActions: NamedSectionContributionSink['startupInitActions'] = [],
 ): NamedSectionContributionSink {
   const node = {
     kind: 'NamedSection' as const,
@@ -49,26 +50,44 @@ function fakeSink(
     sourceSegments: [],
     asmTrace: [],
     currentSourceTag: undefined,
+    startupInitActions,
   };
 }
 
 describe('PR577 startup init region', () => {
   it('builds deterministic copy entries and blob bytes for writable data sections', () => {
     const placed: PlacedNamedSectionContribution[] = [
-      { sink: fakeSink('data', 'vars', [[0, 1], [1, 2], [3, 4]]), baseAddress: 0x4000 },
+      {
+        sink: fakeSink(
+          'data',
+          'vars',
+          [[0, 1], [1, 2], [3, 4]],
+          [
+            { kind: 'copy', offset: 0, length: 2 },
+            { kind: 'zero', offset: 2, length: 1 },
+            { kind: 'copy', offset: 3, length: 1 },
+          ],
+        ),
+        baseAddress: 0x4000,
+      },
       { sink: fakeSink('code', 'boot', [[0, 0xc9]]), baseAddress: 0x1000 },
     ];
 
     const region = buildStartupInitRegion(placed);
-    expect(region.entries).toEqual([
-      { destination: 0x4000, sourceOffset: 0, length: 2 },
-      { destination: 0x4003, sourceOffset: 2, length: 1 },
+    expect(region.copyEntries).toEqual([
+      { kind: 'copy', destination: 0x4000, sourceOffset: 0, length: 2 },
+      { kind: 'copy', destination: 0x4003, sourceOffset: 2, length: 1 },
+    ]);
+    expect(region.zeroEntries).toEqual([
+      { kind: 'zero', destination: 0x4002, length: 1 },
     ]);
     expect(region.blob).toEqual([1, 2, 4]);
     expect(region.encoded).toEqual([
       0x02, 0x00,
       0x00, 0x40, 0x00, 0x00, 0x02, 0x00,
       0x03, 0x40, 0x02, 0x00, 0x01, 0x00,
+      0x01, 0x00,
+      0x02, 0x40, 0x01, 0x00,
       0x01, 0x02, 0x04,
     ]);
   });
@@ -83,9 +102,13 @@ describe('PR577 startup init region', () => {
     const bytes = Array.from(bin!.bytes);
     expect(bytes.slice(0, 7)).toEqual([0x00, 0x61, 0x62, 0x63, 0x00, 0x01, 0x00]);
     expect(bytes.slice(7)).toEqual([
-      0x01, 0x00,
-      0x00, 0x40, 0x00, 0x00, 0x07, 0x00,
-      0x00, 0x61, 0x62, 0x63, 0x00, 0x01, 0x00,
+      0x02, 0x00,
+      0x01, 0x40, 0x00, 0x00, 0x03, 0x00,
+      0x05, 0x40, 0x03, 0x00, 0x02, 0x00,
+      0x02, 0x00,
+      0x00, 0x40, 0x01, 0x00,
+      0x04, 0x40, 0x01, 0x00,
+      0x61, 0x62, 0x63, 0x01, 0x00,
     ]);
   });
 });

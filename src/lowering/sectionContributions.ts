@@ -22,6 +22,18 @@ export type Rel8FixupRecord = {
   mnemonic: string;
 };
 
+export type StartupInitAction =
+  | {
+      kind: 'copy';
+      offset: number;
+      length: number;
+    }
+  | {
+      kind: 'zero';
+      offset: number;
+      length: number;
+    };
+
 export type NamedSectionContributionSink = {
   contribution: SectionContributionRecord;
   anchor: SectionAnchorRecord;
@@ -33,6 +45,7 @@ export type NamedSectionContributionSink = {
   sourceSegments: EmittedSourceSegment[];
   asmTrace: EmittedAsmTraceEntry[];
   currentSourceTag: SourceSegmentTag | undefined;
+  startupInitActions: StartupInitAction[];
 };
 
 export function createNamedSectionContributionSinks(
@@ -54,6 +67,7 @@ export function createNamedSectionContributionSinks(
       sourceSegments: [],
       asmTrace: [],
       currentSourceTag: undefined,
+      startupInitActions: [],
     });
   }
 

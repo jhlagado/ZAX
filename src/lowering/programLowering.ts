@@ -31,7 +31,7 @@ import type {
 } from '../formats/types.js';
 import type { CompileEnv } from '../semantics/env.js';
 import type { FunctionLoweringContext } from './functionLowering.js';
-import type { NamedSectionContributionSink } from './sectionContributions.js';
+import type { NamedSectionContributionSink, StartupInitAction } from './sectionContributions.js';
 import type {
   Callable,
   PendingSymbol,
@@ -575,6 +575,7 @@ export function lowerProgramDeclarations(ctx: Context): void {
           bytes: namedSection.sink.bytes,
           offsetRef: sinkOffsetRef(namedSection.sink),
           pending: namedSection.sink.pendingSymbols,
+          startupInitActions: namedSection.sink.startupInitActions,
         });
       } else {
         lowerDataBlock(ctx, item as DataBlockNode);
@@ -604,6 +605,7 @@ export function lowerProgramDeclarations(ctx: Context): void {
           bytes: namedSection.sink.bytes,
           offsetRef: sinkOffsetRef(namedSection.sink),
           pending: namedSection.sink.pendingSymbols,
+          startupInitActions: namedSection.sink.startupInitActions,
         },
       );
       return;
@@ -636,6 +638,7 @@ function lowerDataBlock(
     bytes: Map<number, number>;
     offsetRef: { current: number };
     pending: PendingSymbol[];
+    startupInitActions?: StartupInitAction[];
   } = {
     section: 'data',
     bytes: ctx.dataBytes,
@@ -677,13 +680,28 @@ function lowerDataBlock(
       while (pow < value) pow <<= 1;
       return pow;
     };
+    const recordStartupInit = (
+      kind: 'copy' | 'zero',
+      offset: number,
+      length: number,
+    ) => {
+      if (!target.startupInitActions) return;
+      if (length <= 0) return;
+      target.startupInitActions.push({
+        kind,
+        offset,
+        length,
+      });
+    };
 
     const recordType = ctx.resolveAggregateType(type);
     if (recordType?.kind === 'record') {
       if (init.kind === 'InitZero') {
+        const zeroStart = target.offsetRef.current;
         const storageBytes = ctx.sizeOfTypeExpr(type, ctx.env, ctx.diagnostics);
         if (storageBytes === undefined) continue;
         for (let pad = 0; pad < storageBytes; pad++) emitByte(0);
+        recordStartupInit('zero', zeroStart, storageBytes);
         continue;
       }
       if (init.kind === 'InitString') {
@@ -747,6 +765,7 @@ function lowerDataBlock(
       if (recordInitFailed) continue;
 
       let emitted = 0;
+      const copyStart = target.offsetRef.current;
       for (const encoded of encodedFields) {
         if (encoded.width === 1) {
           emitByte(encoded.value);
@@ -758,7 +777,10 @@ function lowerDataBlock(
       }
       const storageBytes = ctx.sizeOfTypeExpr(type, ctx.env, ctx.diagnostics);
       if (storageBytes === undefined) continue;
+      recordStartupInit('copy', copyStart, emitted);
+      const zeroStart = target.offsetRef.current;
       for (let pad = emitted; pad < storageBytes; pad++) emitByte(0);
+      recordStartupInit('zero', zeroStart, storageBytes - emitted);
       continue;
     }
 
@@ -768,9 +790,11 @@ function lowerDataBlock(
     }
 
     if (init.kind === 'InitZero') {
+      const zeroStart = target.offsetRef.current;
       const storageBytes = ctx.sizeOfTypeExpr(type, ctx.env, ctx.diagnostics);
       if (storageBytes === undefined) continue;
       for (let pad = 0; pad < storageBytes; pad++) emitByte(0);
+      recordStartupInit('zero', zeroStart, storageBytes);
       continue;
     }
 
@@ -793,12 +817,16 @@ function lowerDataBlock(
         ctx.diag(ctx.diagnostics, decl.span.file, `String length mismatch for "${decl.name}".`);
         continue;
       }
+      const copyStart = target.offsetRef.current;
       for (let idx = 0; idx < init.value.length; idx++) emitByte(init.value.charCodeAt(idx));
       actualLength = init.value.length;
+      recordStartupInit('copy', copyStart, actualLength);
       if (type.kind === 'ArrayType') {
         const emittedBytes = actualLength * elementSize;
         const storageBytes = nextPow2(emittedBytes);
+        const zeroStart = target.offsetRef.current;
         for (let pad = emittedBytes; pad < storageBytes; pad++) emitByte(0);
+        recordStartupInit('zero', zeroStart, storageBytes - emittedBytes);
       }
       continue;
     }
@@ -818,15 +846,19 @@ function lowerDataBlock(
       continue;
     }
 
+    const copyStart = target.offsetRef.current;
     for (const v of values) {
       if (elementSize === 1) emitByte(v);
       else emitWord(v);
     }
     actualLength = type.kind === 'ArrayType' ? values.length : 1;
+    recordStartupInit('copy', copyStart, actualLength * elementSize);
     if (type.kind === 'ArrayType') {
       const emittedBytes = actualLength * elementSize;
       const storageBytes = nextPow2(emittedBytes);
+      const zeroStart = target.offsetRef.current;
       for (let pad = emittedBytes; pad < storageBytes; pad++) emitByte(0);
+      recordStartupInit('zero', zeroStart, storageBytes - emittedBytes);
     }
   }
 }
