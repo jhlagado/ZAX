@@ -126,8 +126,8 @@ export type FunctionLoweringContext = {
   localAliasTargets: Map<string, EaExprNode>;
   storageTypes: Map<string, TypeExprNode>;
   rawTypedCallWarningsEnabled: boolean;
-  callables: Map<string, Callable>;
-  opsByName: Map<string, OpDeclNode[]>;
+  resolveCallable: (name: string, file: string) => Callable | undefined;
+  resolveOpCandidates: (name: string, file: string) => OpDeclNode[] | undefined;
   opStackPolicyMode: OpStackPolicyMode;
   matcherMatchesOperand: (matcher: OpMatcherNode, operand: AsmOperandNode) => boolean;
   formatOpSignature: (op: OpDeclNode) => string;
@@ -181,7 +181,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const { enforceEaRuntimeAtomBudget, enforceDirectCallSiteEaBudget } = ctx;
   const { pushEaAddress, pushMemValue, pushImm16, pushZeroExtendedReg8, loadImm16ToHL } = ctx;
   const { stackSlotOffsets, stackSlotTypes, localAliasTargets, storageTypes } = ctx;
-  const { rawTypedCallWarningsEnabled, callables, opsByName, opStackPolicyMode } = ctx;
+  const { rawTypedCallWarningsEnabled, resolveCallable, resolveOpCandidates, opStackPolicyMode } = ctx;
   const { matcherMatchesOperand, formatOpSignature, formatAsmOperandForOpDiag } = ctx;
   const { firstOpOverloadMismatchReason, formatOpDefinitionForDiag, selectMostSpecificOpOverload } = ctx;
   const { summarizeOpStackEffect, cloneImmExpr, cloneEaExpr, cloneOperand } = ctx;
@@ -614,7 +614,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     },
     warnIfRawCallTargetsTypedCallable: (span, symbolicTarget) => {
       if (!rawTypedCallWarningsEnabled || !symbolicTarget || symbolicTarget.addend !== 0) return;
-      const callable = callables.get(symbolicTarget.baseLower);
+      const callable = resolveCallable(symbolicTarget.baseLower, span.file);
       if (!callable) return;
       const typedName = callable.node.name;
       diagAtWithSeverityAndId(
@@ -657,7 +657,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       trackedSp.invalid = value;
     },
     rawTypedCallWarningsEnabled,
-    callables,
+    resolveCallable,
     diagAt,
     diagAtWithSeverityAndId,
     resolveScalarTypeForEa,
@@ -684,7 +684,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     pushZeroExtendedReg8,
     pushImm16,
     syncToFlow,
-    opsByName,
+    resolveOpCandidates,
     opStackPolicyMode,
     opExpansionStack,
     diagAtWithId,

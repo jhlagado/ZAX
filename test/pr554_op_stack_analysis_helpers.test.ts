@@ -45,7 +45,7 @@ describe('PR554: extracted op stack analysis helpers', () => {
     ]);
 
     const { summarizeOpStackEffect } = createOpStackAnalysisHelpers({
-      opsByName: new Map([['leaf', [leaf]]]),
+      resolveOpCandidates: (name: string) => (name.toLowerCase() === 'leaf' ? [leaf] : undefined),
     });
 
     expect(summarizeOpStackEffect(leaf)).toEqual({
@@ -66,7 +66,7 @@ describe('PR554: extracted op stack analysis helpers', () => {
     ]);
 
     const { summarizeOpStackEffect } = createOpStackAnalysisHelpers({
-      opsByName: new Map([['recur', [recur]]]),
+      resolveOpCandidates: (name: string) => (name.toLowerCase() === 'recur' ? [recur] : undefined),
     });
 
     expect(summarizeOpStackEffect(recur)).toEqual({ kind: 'complex' });
