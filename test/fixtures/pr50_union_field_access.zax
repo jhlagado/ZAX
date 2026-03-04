@@ -3,11 +3,14 @@ union Value
   w: word
 end
 
-globals
-  v: Value
-
-export func main()
-    ld a, (v.b)
-    ld hl, (v.w)
+section data vars at $2000
+  data
+  v: Value = 0
 end
 
+section code boot at $0100
+  export func main()
+    ld a, (v.b)
+    ld hl, (v.w)
+  end
+end

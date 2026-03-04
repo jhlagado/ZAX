@@ -1,7 +1,7 @@
-section var at $1000
-
-globals
-  glob_b: byte
+section data vars at $1000
+  data
+    glob_b: byte = 0
+end
 
 export func main(): AF, BC, DE, HL
   ld a, glob_b

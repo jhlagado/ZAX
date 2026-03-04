@@ -1,15 +1,14 @@
-section code at $0000
-section var at $1000
-
-globals
-  i: byte
-  j: byte
-  arr: byte[16]
-  grid: byte[4][8]
+section data vars at $1000
+  data
+    i: byte = 0
+    j: byte = 0
+    arr: byte[16] = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+    grid: byte[32] = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+end
 
 export func main()
   ld a, arr[i + j]
-  ld a, grid[i][j]
+  ld a, grid[(i << 3) + j]
 
   ret
 end

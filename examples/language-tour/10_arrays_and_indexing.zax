@@ -1,6 +1,8 @@
-data
+section data vars at $1000
+  data
   bytes10: byte[10] = { 1,2,3,4,5,6,7,8,9,10 }
   words4: word[4] = { 100, 200, 300, 400 }
+end
 
 func first_byte(): HL
   ld a, bytes10[0]

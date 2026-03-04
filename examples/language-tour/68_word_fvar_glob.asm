@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$2012 (end exclusive)
+; range: $0100..$207B (end exclusive)
 
 ; func word_fvar_glob begin
 word_fvar_glob:
@@ -72,3 +72,4 @@ ret                            ; 0154: C9
 ; label __zax_epilogue_1 = $014C
 ; data glob_words = $2000
 ; data glob_idx_word = $2010
+; label __zax_startup = $2012

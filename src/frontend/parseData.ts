@@ -27,21 +27,6 @@ function diag(
   });
 }
 
-function warnLegacy(
-  diagnostics: Diagnostic[],
-  file: string,
-  message: string,
-  where?: { line: number; column: number },
-): void {
-  diagnostics.push({
-    id: DiagnosticIds.LegacySyntaxWarning,
-    severity: 'warning',
-    message,
-    file,
-    ...(where ? { line: where.line, column: where.column } : {}),
-  });
-}
-
 function stripComment(line: string): string {
   const semi = line.indexOf(';');
   return semi >= 0 ? line.slice(0, semi) : line;
@@ -113,7 +98,6 @@ type ParseDataContext = {
   diagnostics: Diagnostic[];
   modulePath: string;
   getRawLine: (lineIndex: number) => RawLine;
-  emitLegacyWarnings?: boolean;
   stopOnEnd?: boolean;
 };
 
@@ -292,11 +276,11 @@ export function parseDataDeclLine(opts: ParseDataDeclOptions): DataDeclNode | un
 
 export function parseDataBlock(startIndex: number, ctx: ParseDataContext): ParsedDataBlock {
   const { file, lineCount, diagnostics, modulePath, getRawLine, stopOnEnd = false } = ctx;
-  if (!stopOnEnd && ctx.emitLegacyWarnings) {
-    warnLegacy(
+  if (!stopOnEnd) {
+    diag(
       diagnostics,
       modulePath,
-      'Legacy "data ... end" blocks are deprecated; prefer direct declarations inside named data sections.',
+      'Legacy top-level "data ... end" blocks are removed; use direct declarations inside named data sections.',
       { line: startIndex + 1, column: 1 },
     );
   }

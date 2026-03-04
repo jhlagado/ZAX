@@ -28,15 +28,12 @@ newline         = "\n" ;
 module          = { module_item } ;
 
 module_item     = import_decl
-                | section_directive
                 | named_section_decl
                 | align_decl
                 | const_decl
                 | enum_decl
                 | type_decl
                 | union_decl
-                | globals_block
-                | data_block
                 | bin_decl
                 | hex_decl
                 | extern_block
@@ -44,7 +41,6 @@ module_item     = import_decl
                 | op_decl ;
 
 import_decl     = "import" , ( identifier | string_lit ) ;
-section_directive = "section" , section_kind , [ "at" , imm_expr ] ;
 named_section_decl = "section" , section_kind , identifier ,
                      [ "at" , imm_expr , [ ( "size" , imm_expr ) | ( "end" , imm_expr ) ] ] ,
                      newline , { section_item } , "end" ;
@@ -52,14 +48,14 @@ section_item    = const_decl
                 | enum_decl
                 | type_decl
                 | union_decl
-                | globals_block
-                | data_block
+                | data_section_block
+                | data_decl
                 | bin_decl
                 | hex_decl
                 | extern_block
                 | func_decl
                 | op_decl ;
-section_kind    = "code" | "data" | "var" ;
+section_kind    = "code" | "data" ;
 align_decl      = "align" , imm_expr ;
 ```
 
@@ -89,18 +85,11 @@ type_name       = identifier , { "." , identifier } ;
 scalar_type     = "byte" | "word" | "addr" | "ptr" ;
 ```
 
-## 4. Storage Blocks
+## 4. Storage Declarations
 
 ```ebnf
-globals_block   = "globals" , newline , globals_decl , { newline , globals_decl } ;
-
-globals_decl    = identifier , ":" , type_expr                              (* storage decl *)
-                | identifier , ":" , type_expr , "=" , value_init_expr      (* typed value-init *)
-                | identifier , "=" , rhs_alias_expr ;                        (* alias-init, inferred *)
-
-data_block      = "data" , newline , data_decl , { newline , data_decl } ;
-
-data_decl       = identifier , ":" , type_expr , "=" , data_init_expr ;
+data_section_block = "data" , newline , data_decl , { newline , data_decl } ;
+data_decl          = identifier , ":" , type_expr , [ "=" , data_init_expr ] ;
 
 bin_decl        = "bin" , identifier , "in" , section_kind , "from" , string_lit ;
 hex_decl        = "hex" , identifier , "from" , string_lit ;
@@ -200,18 +189,17 @@ aggregate_init  = "{" , [ init_item , { "," , init_item } ] , "}" ;
 init_item       = imm_expr | aggregate_init ;
 ```
 
-## 8. Known v0.2 Constraints (Semantic)
+## 8. Known Current Constraints (Semantic)
 
 These are semantic constraints enforced beyond pure grammar:
 
-- Typed alias form is invalid in both globals and local `var`:
+- Typed alias form is invalid in function-local `var`:
   - `name: Type = rhsAlias`
 - `import` remains module-scope only. It is not valid inside a named section.
-- In the current v0.5 transition surface, variable declarations inside a `code` named section are a compile error.
+- Variable declarations inside a `code` named section are a compile error.
 - Local non-scalar value-init declarations are invalid.
 - Local non-scalar declarations are alias-only (`name = rhs`).
 - `@place` explicit address-of syntax is not part of the normative v0.2 surface.
-- `globals` composite aggregate initializer forms may be subset-constrained by current implementation; check `docs/zax-spec.md` and implementation issues for current support.
 
 ## 9. Maintenance Rule
 

@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$017B (end exclusive)
+; range: $0100..$1053 (end exclusive)
 
 ; func run_once begin
 run_once:
@@ -103,4 +103,5 @@ ret                            ; 017A: C9
 ; label __zax_epilogue_0 = $015A
 ; label main = $0163
 ; label __zax_epilogue_13 = $0172
-; var mode_value = $017C
+; data mode_value = $1000
+; label __zax_startup = $1001
