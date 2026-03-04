@@ -27,28 +27,12 @@ function diag(
   });
 }
 
-function warnLegacy(
-  diagnostics: Diagnostic[],
-  file: string,
-  message: string,
-  where?: { line: number; column: number },
-): void {
-  diagnostics.push({
-    id: DiagnosticIds.LegacySyntaxWarning,
-    severity: 'warning',
-    message,
-    file,
-    ...(where ? { line: where.line, column: where.column } : {}),
-  });
-}
-
 type SimpleTopLevelContext = {
   diagnostics: Diagnostic[];
   modulePath: string;
   lineNo: number;
   text: string;
   span: SourceSpan;
-  emitLegacyWarnings?: boolean;
   isReservedTopLevelName: (name: string) => boolean;
 };
 
@@ -107,23 +91,13 @@ export function parseSectionDirectiveDecl(
 
   const section = m[1]! as SectionDirectiveNode['section'];
   const atText = m[2]?.trim();
-  const at = atText ? parseImmExprFromText(modulePath, atText, span, diagnostics) : undefined;
-
-  if (ctx.emitLegacyWarnings) {
-    warnLegacy(
-      diagnostics,
-      modulePath,
-      `Legacy active-counter section directive "section ${section}${atText ? ' at ...' : ''}" is deprecated; use named sections instead.`,
-      { line: lineNo, column: 1 },
-    );
-  }
-
-  return {
-    kind: 'Section',
-    span,
-    section,
-    ...(at ? { at } : {}),
-  };
+  diag(
+    diagnostics,
+    modulePath,
+    `Legacy active-counter section directive "section ${section}${atText ? ' at ...' : ''}" is removed; use a named section like "section ${section === 'var' ? 'data' : section} <name>${atText ? ' at ...' : ''}" instead.`,
+    { line: lineNo, column: 1 },
+  );
+  return undefined;
 }
 
 export function parseAlignDirectiveDecl(

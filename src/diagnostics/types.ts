@@ -45,9 +45,6 @@ export const DiagnosticIds = {
   /** Generic parse error (syntax / unsupported in current PR subset). */
   ParseError: 'ZAX100',
 
-  /** Legacy syntax is accepted but scheduled for migration/removal. */
-  LegacySyntaxWarning: 'ZAX101',
-
   /** Generic instruction encoding error (unsupported mnemonic/operands, out-of-range imm, etc.). */
   EncodeError: 'ZAX200',
 

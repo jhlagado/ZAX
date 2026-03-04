@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Diagnostic } from '../src/diagnostics/types.js';
-import { DiagnosticIds } from '../src/diagnostics/types.js';
 import { parseModuleFile } from '../src/frontend/parser.js';
 
-describe('PR578 legacy syntax warnings', () => {
-  it('warns for legacy globals/data blocks and active-counter section directives', () => {
+describe('PR578 legacy syntax removal', () => {
+  it('rejects legacy globals/data blocks and active-counter section directives', () => {
     const file = 'legacy.zax';
     const source = [
       'section code at $1000',
@@ -19,11 +18,25 @@ describe('PR578 legacy syntax warnings', () => {
     ].join('\n');
 
     const diagnostics: Diagnostic[] = [];
-    parseModuleFile(file, source, diagnostics, { emitLegacyWarnings: true });
+    parseModuleFile(file, source, diagnostics);
 
-    const warnings = diagnostics.filter((d) => d.id === DiagnosticIds.LegacySyntaxWarning);
-    expect(warnings).toHaveLength(3);
-    expect(warnings.map((d) => d.line)).toEqual([1, 2, 5]);
-    expect(warnings.every((d) => d.severity === 'warning')).toBe(true);
+    const messagesByLine = diagnostics.map((d) => ({ line: d.line, message: d.message }));
+    expect(messagesByLine).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          line: 1,
+          message: expect.stringContaining('Legacy active-counter section directive'),
+        }),
+        expect.objectContaining({
+          line: 2,
+          message: expect.stringContaining('Legacy "globals ... end"'),
+        }),
+        expect.objectContaining({
+          line: 5,
+          message: expect.stringContaining('Legacy top-level "data ... end"'),
+        }),
+      ]),
+    );
+    expect(diagnostics.every((d) => d.severity === 'error')).toBe(true);
   });
 });
