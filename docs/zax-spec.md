@@ -637,8 +637,10 @@ topLeft: Point
 bottomRight: Point
 end
 
-data
-r: Rect = { 0, 0, 100, 100 } ; tl.x, tl.y, br.x, br.y
+section data vars at $8000
+  data
+  r: Rect = { 0, 0, 100, 100 } ; tl.x, tl.y, br.x, br.y
+end
 
 ```
 
