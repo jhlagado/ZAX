@@ -234,7 +234,20 @@ export function emitProgram(
   const resolveVisibleCallable = (name: string, file: string): Callable | undefined => {
     const lower = name.toLowerCase();
     const qualifier = moduleQualifierOf(lower);
-    if (!qualifier) return localCallablesByFile.get(file)?.get(lower);
+    if (!qualifier) {
+      const local = localCallablesByFile.get(file)?.get(lower);
+      if (local) return local;
+      const imported = env.importedModuleIds?.get(file);
+      if (!imported) return undefined;
+      for (const importedId of imported) {
+        for (const [candidateFile, moduleId] of env.moduleIds ?? []) {
+          if (moduleId.toLowerCase() !== importedId.toLowerCase()) continue;
+          const importedCallable = localCallablesByFile.get(candidateFile)?.get(lower);
+          if (importedCallable?.kind === 'extern') return importedCallable;
+        }
+      }
+      return undefined;
+    }
     const currentModuleId = env.moduleIds?.get(file)?.toLowerCase();
     if (currentModuleId === qualifier) {
       const localName = lower.slice(qualifier.length + 1);
