@@ -1,20 +1,20 @@
 const K = 3
 enum Mode Read, Write
 
-section data
-align 2
-
-data
+section data vars at $2000
+  align 2
+  data
   arr: byte[3] = { 1, 2, 3 }
-
-section code
-
-func helper(): HL
-  ld a, arr[K - 2]
-  ld l, a
-  ld h, 0
 end
 
-export func main()
-  helper
+section code boot at $0100
+  func helper(): HL
+    ld a, arr[K - 2]
+    ld l, a
+    ld h, 0
+  end
+
+  export func main()
+    helper
+  end
 end

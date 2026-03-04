@@ -1,12 +1,13 @@
-section code at $0000
-section var at $1000
+section data vars at $1000
+  data
+  arr: byte[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+end
 
-globals
-  arr: byte[16]
-
-export func main()
-  ld a, arr[(3 + 5)]
-  ld a, arr[(HL)]
-  ld a, arr[(IX+1)]
-  ret
+section code boot at $0000
+  export func main()
+    ld a, arr[(3 + 5)]
+    ld a, arr[(HL)]
+    ld a, arr[(IX+1)]
+    ret
+  end
 end
