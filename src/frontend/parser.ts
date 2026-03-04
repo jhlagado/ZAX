@@ -37,7 +37,7 @@ import {
   parseImportDecl,
   parseSectionDirectiveDecl,
 } from './parseTopLevelSimple.js';
-import { parseDataBlock } from './parseData.js';
+import { parseDataBlock, parseDataDeclLine } from './parseData.js';
 import { canonicalModuleId } from '../moduleIdentity.js';
 
 const RESERVED_TOP_LEVEL_KEYWORDS = new Set([
@@ -176,13 +176,14 @@ export function parseModuleFile(
     return { section, name, ...(anchor ? { anchor } : {}) };
   }
 
-  function parseSectionItems(startIndex: number): {
+  function parseSectionItems(startIndex: number, sectionKind: 'code' | 'data'): {
     items: SectionItemNode[];
     nextIndex: number;
     closed: boolean;
   } {
     const sectionItems: SectionItemNode[] = [];
     let index = startIndex;
+    const directDeclNamesLower = new Set<string>();
 
     while (index < lineCount) {
       const { raw, startOffset, endOffset } = getRawLine(index);
@@ -495,6 +496,36 @@ export function parseModuleFile(
         continue;
       }
 
+      if (/^[A-Za-z_][A-Za-z0-9_]*\s*:/.test(rest)) {
+        const sectionDataDecl = parseDataDeclLine({
+          allowOmittedInitializer: true,
+          allowInferredArrayLength: false,
+          modulePath,
+          diagnostics,
+          lineNo,
+          text: rest,
+          span: sectionSpan,
+          seenNames: directDeclNamesLower,
+        });
+        if (sectionDataDecl) {
+          if (sectionKind !== 'data') {
+            diag(
+              diagnostics,
+              modulePath,
+              `Data declarations are only permitted inside data sections.`,
+              {
+                line: lineNo,
+                column: 1,
+              },
+            );
+          } else {
+            sectionItems.push(sectionDataDecl);
+          }
+          index++;
+          continue;
+        }
+      }
+
       const asmTail = consumeKeywordPrefix(text, 'asm');
       const asmAfterExportTail = hasExportPrefix ? consumeKeywordPrefix(rest, 'asm') : undefined;
       if (asmTail !== undefined || asmAfterExportTail !== undefined) {
@@ -799,7 +830,7 @@ export function parseModuleFile(
           i++;
           continue;
         }
-        const parsedSection = parseSectionItems(i + 1);
+        const parsedSection = parseSectionItems(i + 1, header.section);
         const sectionEndIndex = Math.max(parsedSection.nextIndex - 1, i);
         const sectionEnd = getRawLine(sectionEndIndex);
         const sectionNode: NamedSectionNode = {

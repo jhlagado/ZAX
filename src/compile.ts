@@ -5,7 +5,7 @@ import type { Diagnostic } from './diagnostics/types.js';
 import { DiagnosticIds } from './diagnostics/types.js';
 import type { CompileFn, CompilerOptions, CompileResult, PipelineDeps } from './pipeline.js';
 
-import type { ModuleItemNode, ProgramNode } from './frontend/ast.js';
+import type { ModuleItemNode, ProgramNode, SectionItemNode } from './frontend/ast.js';
 import type { ImportNode, ModuleFileNode } from './frontend/ast.js';
 import { parseModuleFile } from './frontend/parser.js';
 import { lintCaseStyle } from './lint/case_style.js';
@@ -43,7 +43,7 @@ function normalizePath(p: string): string {
 }
 
 function hasMainFunction(program: ProgramNode): boolean {
-  const hasMainInItems = (items: ModuleItemNode[]): boolean => {
+  const hasMainInItems = (items: Array<ModuleItemNode | SectionItemNode>): boolean => {
     for (const item of items) {
       if (item.kind === 'FuncDecl' && item.name.toLowerCase() === 'main') return true;
       if (item.kind === 'NamedSection' && item.section === 'code' && hasMainInItems(item.items)) return true;

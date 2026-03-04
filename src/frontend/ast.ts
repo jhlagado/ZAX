@@ -79,6 +79,7 @@ export type ModuleItemNode =
 export type SectionItemNode =
   | ConstDeclNode
   | EnumDeclNode
+  | DataDeclNode
   | DataBlockNode
   | VarBlockNode
   | FuncDeclNode
@@ -233,6 +234,7 @@ export interface DataDeclNode extends BaseNode {
  * Data initializer expression.
  */
 export type DataInitializerNode =
+  | { kind: 'InitZero'; span: SourceSpan }
   | { kind: 'InitArray'; span: SourceSpan; elements: ImmExprNode[] }
   | { kind: 'InitString'; span: SourceSpan; value: string }
   | { kind: 'InitRecordNamed'; span: SourceSpan; fields: DataRecordFieldInitNode[] };
