@@ -93,6 +93,7 @@ export function parseModuleFile(
   modulePath: string,
   sourceText: string,
   diagnostics: Diagnostic[],
+  options: { emitLegacyWarnings?: boolean } = {},
 ): ModuleFileNode {
   const file = makeSourceFile(modulePath, sourceText);
   const lineCount = file.lineStarts.length;
@@ -107,6 +108,7 @@ export function parseModuleFile(
   }
 
   const items: ModuleItemNode[] = [];
+  const emitLegacyWarnings = options.emitLegacyWarnings ?? false;
 
   function parseNamedSectionHeader(
     sectionText: string,
@@ -145,6 +147,7 @@ export function parseModuleFile(
           lineNo,
           text: originalText,
           span: sectionSpan,
+          emitLegacyWarnings: false,
           isReservedTopLevelName,
         },
       )?.at;
@@ -164,6 +167,7 @@ export function parseModuleFile(
             lineNo,
             text: originalText,
             span: sectionSpan,
+            emitLegacyWarnings: false,
             isReservedTopLevelName,
           },
         )?.value;
@@ -315,6 +319,7 @@ export function parseModuleFile(
           diagnostics,
           modulePath,
           getRawLine,
+          emitLegacyWarnings,
           isReservedTopLevelName,
         });
         sectionItems.push(parsedGlobals.varBlock);
@@ -489,6 +494,7 @@ export function parseModuleFile(
           diagnostics,
           modulePath,
           getRawLine,
+          emitLegacyWarnings,
           stopOnEnd: true,
         });
         sectionItems.push(parsedData.node);
@@ -717,6 +723,7 @@ export function parseModuleFile(
         diagnostics,
         modulePath,
         getRawLine,
+        emitLegacyWarnings,
         isReservedTopLevelName,
       });
       items.push(parsedGlobals.varBlock);
@@ -860,6 +867,7 @@ export function parseModuleFile(
         lineNo,
         text,
         span: dirSpan,
+        emitLegacyWarnings,
         isReservedTopLevelName,
       });
       if (!sectionNode) {
@@ -956,6 +964,7 @@ export function parseModuleFile(
         diagnostics,
         modulePath,
         getRawLine,
+        emitLegacyWarnings,
       });
       items.push(parsedData.node);
       i = parsedData.nextIndex;
