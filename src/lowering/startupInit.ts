@@ -70,6 +70,10 @@ export function buildStartupInitRegion(
     }
   }
 
+  if (copyEntries.length === 0 && zeroEntries.length === 0) {
+    return { copyEntries, zeroEntries, blob, encoded: [] };
+  }
+
   const encoded: number[] = [];
   encoded.push(...encodeWord(copyEntries.length));
   for (const entry of copyEntries) {
