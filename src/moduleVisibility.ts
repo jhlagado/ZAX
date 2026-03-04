@@ -26,9 +26,15 @@ export function resolveVisibleConst(name: string, file: string, env: CompileEnv)
 }
 
 export function resolveVisibleEnum(name: string, file: string, env: CompileEnv): number | undefined {
-  if (!canAccessQualifiedName(name, file, env)) return undefined;
+  // Preserve ordinary enum-member lookup (e.g. Mode.Value) before treating a
+  // dotted name as a module-qualified export alias (e.g. dep.Mode.Value).
+  const local = env.enums.get(name);
+  if (local !== undefined) return local;
+
   const qualifier = moduleQualifierOf(name);
-  return qualifier ? env.visibleEnums?.get(name) : env.enums.get(name);
+  if (!qualifier) return undefined;
+  if (!canAccessQualifiedName(name, file, env)) return undefined;
+  return env.visibleEnums?.get(name);
 }
 
 export function resolveVisibleType(
