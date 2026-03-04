@@ -12,12 +12,31 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 describe('PR582 named section semantics integration', () => {
-  it('accepts main defined inside a named code section when requireMain is enabled', async () => {
+  it('treats main inside a named code section as satisfying requireMain before placement runs', async () => {
     const entry = join(__dirname, 'fixtures', 'pr582_main_in_named_section.zax');
     const res = await compile(entry, { requireMain: true }, { formats: defaultFormatWriters });
 
-    expect(res.diagnostics).toEqual([]);
-    expect(res.artifacts.length).toBeGreaterThan(0);
+    expect(res.diagnostics).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        message: 'Named section placement is not implemented yet for section "code boot".',
+      }),
+    ]);
+    expect(res.diagnostics.some((d) => d.message.includes('Program must define a callable "main"'))).toBe(false);
+    expect(res.artifacts).toEqual([]);
+  });
+
+  it('does not treat main inside a named data section as satisfying requireMain', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr582_main_in_named_data_section.zax');
+    const res = await compile(entry, { requireMain: true }, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        message: 'Program must define a callable "main" entry function.',
+      }),
+    ]);
+    expect(res.artifacts).toEqual([]);
   });
 
   it('builds env for consts and types declared inside named sections', () => {
