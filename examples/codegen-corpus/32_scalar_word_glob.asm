@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$2002 (end exclusive)
+; range: $0100..$2055 (end exclusive)
 
 ; func touch_scalar_word_glob begin
 touch_scalar_word_glob:
@@ -45,3 +45,4 @@ ret                            ; 0130: C9
 ; label main = $0119
 ; label __zax_epilogue_1 = $0128
 ; data glob_w = $2000
+; label __zax_startup = $2002

@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$2001 (end exclusive)
+; range: $0100..$2053 (end exclusive)
 
 ; func touch_scalar_byte_frame begin
 touch_scalar_byte_frame:
@@ -51,3 +51,4 @@ ret                            ; 0139: C9
 ; label main = $011C
 ; label __zax_epilogue_1 = $0131
 ; data dummy = $2000
+; label __zax_startup = $2001
