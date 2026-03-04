@@ -3,6 +3,7 @@ import type {
   BinDeclNode,
   ConstDeclNode,
   DataBlockNode,
+  DataDeclNode,
   EnumDeclNode,
   EaExprNode,
   ExternDeclNode,
@@ -560,6 +561,14 @@ export function lowerProgramDeclarations(ctx: Context): void {
     }
 
     if (item.kind === 'DataBlock') {
+      if (namedSection && namedSection.node.section !== 'data') {
+        ctx.diag(
+          ctx.diagnostics,
+          item.span.file,
+          `Data declarations are not allowed inside code section "${namedSection.node.name}".`,
+        );
+        return;
+      }
       if (namedSection) {
         lowerDataBlock(ctx, item as DataBlockNode, {
           section: namedSection.node.section,
@@ -570,6 +579,33 @@ export function lowerProgramDeclarations(ctx: Context): void {
       } else {
         lowerDataBlock(ctx, item as DataBlockNode);
       }
+      return;
+    }
+
+    if (item.kind === 'DataDecl') {
+      if (!namedSection || namedSection.node.section !== 'data') {
+        const sectionName = namedSection?.node.name ?? 'module scope';
+        ctx.diag(
+          ctx.diagnostics,
+          item.span.file,
+          `Data declarations are only allowed inside data sections${namedSection ? ` like "${sectionName}"` : ''}.`,
+        );
+        return;
+      }
+      lowerDataBlock(
+        ctx,
+        {
+          kind: 'DataBlock',
+          span: item.span,
+          decls: [item as DataDeclNode],
+        },
+        {
+          section: namedSection.node.section,
+          bytes: namedSection.sink.bytes,
+          offsetRef: sinkOffsetRef(namedSection.sink),
+          pending: namedSection.sink.pendingSymbols,
+        },
+      );
       return;
     }
 
@@ -644,6 +680,12 @@ function lowerDataBlock(
 
     const recordType = ctx.resolveAggregateType(type);
     if (recordType?.kind === 'record') {
+      if (init.kind === 'InitZero') {
+        const storageBytes = ctx.sizeOfTypeExpr(type, ctx.env, ctx.diagnostics);
+        if (storageBytes === undefined) continue;
+        for (let pad = 0; pad < storageBytes; pad++) emitByte(0);
+        continue;
+      }
       if (init.kind === 'InitString') {
         ctx.diag(ctx.diagnostics, decl.span.file, `Record initializer for "${decl.name}" must use aggregate form.`);
         continue;
@@ -722,6 +764,13 @@ function lowerDataBlock(
 
     if (init.kind === 'InitRecordNamed') {
       ctx.diag(ctx.diagnostics, decl.span.file, `Named-field aggregate initializer requires a record type for "${decl.name}".`);
+      continue;
+    }
+
+    if (init.kind === 'InitZero') {
+      const storageBytes = ctx.sizeOfTypeExpr(type, ctx.env, ctx.diagnostics);
+      if (storageBytes === undefined) continue;
+      for (let pad = 0; pad < storageBytes; pad++) emitByte(0);
       continue;
     }
 
