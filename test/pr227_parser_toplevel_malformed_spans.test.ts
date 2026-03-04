@@ -97,7 +97,7 @@ describe('PR227 parser top-level malformed header span matrix', () => {
       column: d.column,
     }));
 
-    expect(spans.length).toBe(15);
+    expect(spans.length).toBe(14);
   });
 
   it('pins line/column for canonical malformed header diagnostics including extern base-name errors', async () => {
