@@ -28,7 +28,8 @@ newline         = "\n" ;
 module          = { module_item } ;
 
 module_item     = import_decl
-                | section_decl
+                | section_directive
+                | named_section_decl
                 | align_decl
                 | const_decl
                 | enum_decl
@@ -43,7 +44,21 @@ module_item     = import_decl
                 | op_decl ;
 
 import_decl     = "import" , ( identifier | string_lit ) ;
-section_decl    = "section" , section_kind , [ "at" , imm_expr ] ;
+section_directive = "section" , section_kind , [ "at" , imm_expr ] ;
+named_section_decl = "section" , section_kind , identifier ,
+                     [ "at" , imm_expr , [ ( "size" , imm_expr ) | ( "end" , imm_expr ) ] ] ,
+                     newline , { section_item } , "end" ;
+section_item    = const_decl
+                | enum_decl
+                | type_decl
+                | union_decl
+                | globals_block
+                | data_block
+                | bin_decl
+                | hex_decl
+                | extern_block
+                | func_decl
+                | op_decl ;
 section_kind    = "code" | "data" | "var" ;
 align_decl      = "align" , imm_expr ;
 ```
@@ -51,13 +66,13 @@ align_decl      = "align" , imm_expr ;
 ## 3. Types and Declarations
 
 ```ebnf
-const_decl      = "const" , identifier , "=" , imm_expr ;
+const_decl      = [ "export" ] , "const" , identifier , "=" , imm_expr ;
 
-enum_decl       = "enum" , identifier , enum_member , { "," , enum_member } ;
+enum_decl       = [ "export" ] , "enum" , identifier , enum_member , { "," , enum_member } ;
 enum_member     = identifier ;
 
-type_decl       = "type" , identifier , type_body ;
-union_decl      = "union" , identifier , field_block ;
+type_decl       = [ "export" ] , "type" , identifier , type_body ;
+union_decl      = [ "export" ] , "union" , identifier , field_block ;
 
 type_body       = type_expr
                 | field_block ;
@@ -66,8 +81,10 @@ field_block     = newline , field_decl , { newline , field_decl } , newline , "e
 field_decl      = identifier , ":" , type_expr ;
 
 type_expr       = scalar_type
-                | identifier
+                | type_name
                 | type_expr , "[" , [ imm_expr ] , "]" ;
+
+type_name       = identifier , { "." , identifier } ;
 
 scalar_type     = "byte" | "word" | "addr" | "ptr" ;
 ```
@@ -189,6 +206,8 @@ These are semantic constraints enforced beyond pure grammar:
 
 - Typed alias form is invalid in both globals and local `var`:
   - `name: Type = rhsAlias`
+- `import` remains module-scope only. It is not valid inside a named section.
+- In the current v0.5 transition surface, variable declarations inside a `code` named section are a compile error.
 - Local non-scalar value-init declarations are invalid.
 - Local non-scalar declarations are alias-only (`name = rhs`).
 - `@place` explicit address-of syntax is not part of the normative v0.2 surface.
