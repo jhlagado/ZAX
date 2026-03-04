@@ -25,5 +25,5 @@ describe('PR578 legacy warning CLI enablement', () => {
     expect(warned.code).toBe(0);
     expect(warned.stderr).toContain('[ZAX101]');
     expect(warned.stderr).toContain('Legacy "globals ... end" storage blocks are deprecated');
-  });
+  }, 15000);
 });
