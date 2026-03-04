@@ -5,7 +5,7 @@ import type { Diagnostic } from './diagnostics/types.js';
 import { DiagnosticIds } from './diagnostics/types.js';
 import type { CompileFn, CompilerOptions, CompileResult, PipelineDeps } from './pipeline.js';
 
-import type { ProgramNode } from './frontend/ast.js';
+import type { ModuleItemNode, ProgramNode } from './frontend/ast.js';
 import type { ImportNode, ModuleFileNode } from './frontend/ast.js';
 import { parseModuleFile } from './frontend/parser.js';
 import { lintCaseStyle } from './lint/case_style.js';
@@ -42,9 +42,14 @@ function normalizePath(p: string): string {
 }
 
 function hasMainFunction(program: ProgramNode): boolean {
-  return program.files.some((moduleFile) =>
-    moduleFile.items.some((item) => item.kind === 'FuncDecl' && item.name.toLowerCase() === 'main'),
-  );
+  const hasMainInItems = (items: ModuleItemNode[]): boolean => {
+    for (const item of items) {
+      if (item.kind === 'FuncDecl' && item.name.toLowerCase() === 'main') return true;
+      if (item.kind === 'NamedSection' && item.section === 'code' && hasMainInItems(item.items)) return true;
+    }
+    return false;
+  };
+  return program.files.some((moduleFile) => hasMainInItems(moduleFile.items));
 }
 
 function canonicalModuleId(modulePath: string): string {
@@ -312,7 +317,7 @@ export const compile: CompileFn = async (
     return { diagnostics, artifacts: [] };
   }
 
-  collectNonBankedSectionKeys(program, diagnostics, moduleTraversal);
+  const nonBankedSectionKeys = collectNonBankedSectionKeys(program, diagnostics, moduleTraversal);
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };
   }
@@ -362,6 +367,7 @@ export const compile: CompileFn = async (
       ? { rawTypedCallWarnings: options.rawTypedCallWarnings }
       : {}),
     ...(options.defaultCodeBase !== undefined ? { defaultCodeBase: options.defaultCodeBase } : {}),
+    namedSectionKeys: nonBankedSectionKeys,
   });
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };

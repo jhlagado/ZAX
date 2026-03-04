@@ -1,5 +1,5 @@
 import type { EmittedAsmTraceEntry, EmittedSourceSegment } from '../formats/types.js';
-import type { SourceSegmentTag } from './loweringTypes.js';
+import type { PendingSymbol, SourceSegmentTag } from './loweringTypes.js';
 import type {
   NonBankedSectionKeyCollection,
   SectionAnchorRecord,
@@ -27,20 +27,12 @@ export type NamedSectionContributionSink = {
   anchor: SectionAnchorRecord;
   bytes: Map<number, number>;
   offset: number;
-  pendingSymbols: Array<{
-    name: string;
-    kind: 'label' | 'data' | 'var';
-    offset: number;
-    file?: string;
-    line?: number;
-    scope?: 'global' | 'local';
-    size?: number;
-  }>;
+  pendingSymbols: PendingSymbol[];
   fixups: AbsoluteFixupRecord[];
   rel8Fixups: Rel8FixupRecord[];
   sourceSegments: EmittedSourceSegment[];
   asmTrace: EmittedAsmTraceEntry[];
-  currentSourceTag?: SourceSegmentTag;
+  currentSourceTag: SourceSegmentTag | undefined;
 };
 
 export function createNamedSectionContributionSinks(
@@ -61,6 +53,7 @@ export function createNamedSectionContributionSinks(
       rel8Fixups: [],
       sourceSegments: [],
       asmTrace: [],
+      currentSourceTag: undefined,
     });
   }
 
