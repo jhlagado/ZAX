@@ -165,9 +165,17 @@ describe('cli failure contract matrix', () => {
     const base = join(work, 'out');
     await writeFile(
       entry,
-      ['section code at $8000', 'section code at $8100', 'func main()', '  ret', 'end', ''].join(
-        '\n',
-      ),
+      [
+        'section code main at $8000',
+        '  func main()',
+        '    ret',
+        '  end',
+        'end',
+        '',
+        'section code main at $8100',
+        'end',
+        '',
+      ].join('\n'),
       'utf8',
     );
 
@@ -176,7 +184,7 @@ describe('cli failure contract matrix', () => {
     expect(res.code).toBe(1);
     expect(res.stdout).toBe('');
     expect(res.stderr).toContain('[ZAX300]');
-    expect(res.stderr).toContain('Section "code" base address may be set at most once.');
+    expect(res.stderr).toContain('Duplicate anchor for section "code main".');
     expect(res.stderr).not.toContain('zax [options] <entry.zax>');
     await expectNoArtifacts(base);
 

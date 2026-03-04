@@ -1,5 +1,7 @@
-globals
+section data vars at $1000
+  data
   mode_value: byte = 0
+end
 
 func run_once()
   ld a, mode_value

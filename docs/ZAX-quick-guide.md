@@ -56,8 +56,10 @@ This function has no parameters and no `var` block, so no frame is generated. Th
 ```zax
 const MsgLen = 5
 
-data
+section data app_data at $8000
+  data
   msg: byte[5] = "HELLO"
+end
 
 extern func bios_putc(ch: byte): void at $F003
 
@@ -141,22 +143,22 @@ There are no signed storage types in v0.2.
 
 `void` may only appear as a function return type. Using `void` as a variable type, parameter type, record field type, or array element type is a compile error.
 
-### 2.2 `globals` — Module Variable Storage
+### 2.2 Named `data` Sections — Module Storage
 
-`globals` declares named storage in the `var` section. Three declaration forms are supported:
+Module storage is declared inside named `data` sections. Three declaration forms are supported:
 
 ```zax
-globals
+section data vars at $8000
+  data
   count:     word              ; storage declaration — allocates, zero-initialized
   base:      addr = $C000      ; typed value initializer — allocates and initializes
   alias_ptr  = count           ; alias initializer — no storage; new name for an existing symbol
+end
 ```
 
-The **typed alias form** `name: Type = rhs` is always a compile error in both `globals` and function-local `var` blocks. Use `name: Type = valueExpr` for value initialization, or `name = rhs` for aliasing.
+The **typed alias form** `name: Type = rhs` is always a compile error in both named `data` sections and function-local `var` blocks. Use `name: Type = valueExpr` for value initialization, or `name = rhs` for aliasing.
 
-A `globals` block continues until the next module-scope declaration, directive, or end of file. It is not terminated by `end`.
-
-Composite globals can be zero-initialized using scalar zero:
+Composite storage can be zero-initialized using scalar zero:
 
 ```zax
 type Pair
@@ -164,21 +166,25 @@ type Pair
   hi: byte
 end
 
-globals
+section data vars at $8000
+  data
   p: Pair = 0    ; zero-initializes all fields
+end
 ```
 
-Aggregate record initializer syntax for `globals` (positional or named-field) is deferred past v0.2. For initialized composite data, use `data` instead.
+Aggregate record initializer syntax for named `data` sections (positional or named-field) is deferred past v0.2. For initialized composite data, use `data` declarations.
 
 ### 2.3 `data` — Initialized Storage
 
-`data` declares named, initialized storage in the `data` section:
+`data` declarations inside named `data` sections define initialized storage:
 
 ```zax
-data
+section data assets at $8100
+  data
   banner:  byte[]    = "HELLO"           ; inferred length: 5 bytes
   table:   word[4]   = { 1, 2, 3, 4 }   ; fixed-length word array
   palette: byte[3]   = { $00, $7F, $FF }
+end
 ```
 
 For fixed-length arrays (`T[n]`), the initializer element count must match `n` exactly. For inferred-length arrays (`T[]`), the length is determined from the initializer.
@@ -310,12 +316,14 @@ If your code intends to use the byte at the address in `HL` as an index, write `
 
 ### 3.4 Value Semantics in `LD`
 
-Scalar typed storage — `globals`, function-local `var` slots, and scalar record fields — uses **value semantics** in `LD` operands in v0.2. You do not need parentheses to read or write scalar globals:
+Scalar typed storage — module symbols from named `data` sections, function-local `var` slots, and scalar record fields — uses **value semantics** in `LD` operands in v0.2. You do not need parentheses to read or write scalar module symbols:
 
 ```zax
-globals
+section data vars at $8000
+  data
   count: word
   mode:  byte
+end
 
 func example(): void
   ld hl, count       ; load the 16-bit value stored in 'count' into HL
@@ -328,15 +336,17 @@ func example(): void
 end
 ```
 
-Explicit parentheses on scalar globals are still accepted but are redundant. Parentheses continue to mean memory dereference for non-scalar expressions and for explicit indirection where the context demands it.
+Explicit parentheses on scalar symbols are still accepted but are redundant. Parentheses continue to mean memory dereference for non-scalar expressions and for explicit indirection where the context demands it.
 
 ### 3.5 Field and Element Access
 
 `rec.field` and `arr[idx]` are place expressions. In scalar `LD` contexts, the compiler lowers them to the required address calculation and load/store sequence:
 
 ```zax
-globals
+section data vars at $8000
+  data
   player: Sprite
+end
 
 func update(): void
   ld a, player.x         ; read player.x (byte) into A
@@ -356,8 +366,10 @@ For non-scalar fields (arrays, nested records), the place expression remains an 
 Indexed element access and field access compose:
 
 ```zax
-data
+section data sprites_data at $8200
+  data
   sprites: Sprite[16]
+end
 
 func move(idx: byte): void
   ld l, idx              ; put index in L (8-bit register)
@@ -776,8 +788,10 @@ The **typed alias form** `name: Type = rhs` is always a compile error.
 Only scalar types (`byte`, `word`, `addr`, `ptr`, or aliases resolving to those) may have frame slots. Non-scalar locals (arrays, records) are allowed only as alias declarations — they name an existing address but allocate no storage:
 
 ```zax
-globals
+section data vars at $8000
+  data
   table: byte[16]
+end
 
 func process(): void
   var
@@ -853,7 +867,7 @@ Inside operands, identifiers resolve in this order:
 
 1. Local labels (scoped to the enclosing `func` or `op` body)
 2. Locals and arguments (frame-bound names)
-3. Module-scope symbols (globals, constants, enum members, data symbols, function names)
+3. Module-scope symbols (named-section data symbols, constants, enum members, function names)
 
 An identifier that matches none of these is a compile error.
 
@@ -873,8 +887,10 @@ Compatibility at call sites:
 - Element-type mismatch is always rejected
 
 ```zax
-globals
+section data vars at $8000
+  data
   buf: byte[10]
+end
 
 func process_exact(data: byte[10]): void  end
 func process_any  (data: byte[]):   void  end
@@ -1128,8 +1144,10 @@ op store_byte(dst: mem8, val: reg8)
   ld dst, val
 end
 
-globals
+section data vars at $8000
+  data
   hero_hp: byte
+end
 
 func example(): void
   store_byte (hero_hp), A    ; emits: ld (hero_hp), a
@@ -1483,8 +1501,10 @@ Records must contain at least one field — an empty `type ... end` is a compile
 `rec.field` is a **place expression** — a typed field location. In value/store contexts (LD, typed call arguments), the compiler inserts the required load or store automatically:
 
 ```zax
-globals
+section data vars at $8000
+  data
   player: Sprite
+end
 
 func update(): void
   ld a, player.x         ; read player.x byte into A (value semantics)
@@ -1534,15 +1554,19 @@ type Rect
 end
 ; sizeof(Rect) = pow2(8) = 8
 
-data
+section data vars at $8000
+  data
   viewport: Rect = { 0, 0, 320, 200 }   ; tl.x, tl.y, br.x, br.y
+end
 ```
 
 Nested field access uses chained dot notation:
 
 ```zax
-globals
+section data vars at $8000
+  data
   vp: Rect
+end
 
 func clip_right(x: word): word
   ld de, x
@@ -1567,8 +1591,10 @@ When you declare an array of a record type, the element stride is `sizeof(record
 ```zax
 const MaxSprites = 16
 
-globals
+section data vars at $8000
+  data
   sprites: Sprite[MaxSprites]
+end
 
 func move_all(): void
   ld b, MaxSprites
@@ -1635,8 +1661,10 @@ There are no runtime tags, no type narrowing, and no safety checking. A union is
 All union fields share offset 0. Reading or writing any field reads or writes the same underlying bytes:
 
 ```zax
-globals
+section data vars at $8000
+  data
   val: Overlay
+end
 
 func split(): void
   ld hl, $1234
@@ -1682,8 +1710,10 @@ union SplitWord
   pair: BytePair  ; byte-pair view — also offset 0; pair.lo at 0, pair.hi at 1
 end
 
-globals
+section data vars at $8000
+  data
   sw: SplitWord
+end
 
 func example(): void
   ld hl, $ABCD
@@ -1712,7 +1742,7 @@ type MapAddr  addr         ; semantic alias for addr
 type ScanLine byte[40]     ; array type alias — 40-byte row
 ```
 
-Aliases can be used as field types in records, parameter types in functions, and storage types in `globals` and `data`. An alias has the same storage size as its underlying type.
+Aliases can be used as field types in records, parameter types in functions, and storage types in named `data` sections. An alias has the same storage size as its underlying type.
 
 Restrictions:
 
@@ -1830,31 +1860,34 @@ An identifier that matches none of these is a compile error.
 
 ### 11.1 Sections
 
-ZAX uses three section kinds:
+ZAX uses named sections:
 
 | Section | Contains                                             | Default start address                  |
 | ------- | ---------------------------------------------------- | -------------------------------------- |
-| `code`  | function bodies, `op` emission                       | `$8000`                                |
-| `data`  | initialized storage (`data` declarations, `bin`)     | immediately after `code`, aligned to 2 |
-| `var`   | uninitialized / zero-initialized storage (`globals`) | immediately after `data`, aligned to 2 |
+| `code`  | function bodies, `op` emission                       | anchored by root program (`at ...`)    |
+| `data`  | storage declarations and `bin` payloads              | anchored by root program (`at ...`)    |
 
-Each section has an independent location counter. There is no external linker — ZAX resolves everything itself.
+Every contributed section key must be anchored exactly once by the root program. There is no external linker — ZAX resolves everything itself.
 
 ### 11.2 Section Directives
 
 ```zax
-section code at $0000    ; set code section start to $0000
-section data at $8000    ; set data section start to $8000
-section var  at $A000    ; set var section start to $A000
-align 16                 ; advance the current section counter to the next multiple of 16
+section code app at $0000
+  ; code declarations
+end
+
+section data vars at $8000
+  data
+  ; storage declarations
+end
 ```
 
 Rules:
 
-- `section <kind> at <addr>`: sets the starting address for that section. May only be done **once per section** — a second `at` for the same section is a compile error.
-- `section <kind>` (without `at`): switches the active section without moving its counter. May appear any number of times.
-- `align <n>`: advances the current section's location counter to the next multiple of `n`. `n` must be > 0.
-- `section` and `align` are module-scope only. They may not appear inside function or `op` bodies.
+- Use only `section code <name> ... end` and `section data <name> ... end`.
+- Root anchors (`at <addr>`) are required for contributed keys.
+- Duplicate anchors are compile errors.
+- Missing anchors for contributed keys are compile errors.
 
 ### 11.3 What Emits Where
 
@@ -1863,12 +1896,11 @@ Each declaration kind emits to a fixed section regardless of which section is cu
 | Declaration | Always emits to                                                             |
 | ----------- | --------------------------------------------------------------------------- |
 | `func`      | `code`                                                                      |
-| `data`      | `data`                                                                      |
-| `globals`   | `var`                                                                       |
+| `data` declarations | `data`                                                             |
 | `bin`       | the section named in its `in <kind>` clause                                 |
 | `hex`       | absolute addresses in the final image (does not affect any section counter) |
 
-The currently selected section only affects which counter `align` advances and which counter `section <kind> at <addr>` sets. You cannot redirect a `func` into `data` by selecting the `data` section first.
+Variable declarations are valid only in `data` sections. Declaring storage in `code` sections is a compile error.
 
 ### 11.4 The Overlap Rule
 
@@ -1963,10 +1995,19 @@ The `.lst` file is a deterministic byte dump with an ASCII gutter and symbol tab
 ### 11.10 A Complete Layout Example
 
 ```zax
-; Place code in ROM, data in ROM, vars in RAM
-section code at $0000
-section data at $4000
-section var  at $8000
+; Place code in ROM and writable storage in RAM
+section code app at $0000
+end
+
+section data assets at $4000
+end
+
+section data vars at $8000
+  data
+  cursor_x: byte
+  cursor_y: byte
+  frame_count: word = 0
+end
 
 ; BIOS entry points
 extern func bios_cls(): void at $FF00
@@ -1976,14 +2017,10 @@ extern func bios_putc(ch: byte): void at $FF03
 bin font_data in data from "assets/font.bin"
 
 ; Initialized lookup table in ROM
-data
+section data lookup at $4100
+  data
   sin_table: byte[64] = { 0, 12, 25, 37, 49, ... }
-
-; RAM storage
-globals
-  cursor_x: byte
-  cursor_y: byte
-  frame_count: word = 0
+end
 
 export func main(): void
   bios_cls
@@ -1997,7 +2034,7 @@ end
 
 ### 12.1 Introduction
 
-This chapter demonstrates how ZAX's features combine into practical system-level patterns. Each pattern is self-contained and uses v0.2 syntax throughout — value semantics for scalar globals, qualified enum references, and `op` declarations without parentheses for zero-parameter forms.
+This chapter demonstrates how ZAX's features combine into practical system-level patterns. Each pattern is self-contained and uses the v0.5 surface — named sections, value semantics for scalar symbols, qualified enum references, and `op` declarations without parentheses for zero-parameter forms.
 
 ---
 
@@ -2008,8 +2045,10 @@ The combination of `enum` for symbolic states and `select`/`case` for dispatch i
 ```zax
 enum DeviceState Idle, Busy, Error
 
-globals
+section data vars at $8000
+  data
   state: byte = 0    ; initialized to DeviceState.Idle
+end
 
 func tick(): void
   ld a, state        ; value semantics — no parentheses needed
@@ -2033,7 +2072,7 @@ end
 
 Key properties:
 
-- `state` is a scalar global: `ld a, state` and `ld state, a` use value semantics directly — no `(state)` dereference.
+- `state` is a scalar data symbol: `ld a, state` and `ld state, a` use value semantics directly — no `(state)` dereference.
 - Enum qualification (`DeviceState.Idle`) makes every state name unambiguous even after imports.
 - All state transitions are visible at one dispatch site. No hidden transitions elsewhere.
 - `select` lowering is bounded compare/branch — no software multiply or jump table at three cases.
@@ -2053,9 +2092,10 @@ type UartRegs
 end
 ; sizeof(UartRegs) = pow2(4) = 4
 
-section var at $FF80
-globals
+section data io at $FF80
+  data
   uart: UartRegs
+end
 
 ; Bit constants for the status register
 const UART_TX_READY = %00000001
@@ -2154,8 +2194,10 @@ end
 
 const MaxEntities = 16
 
-globals
+section data vars at $8000
+  data
   entities: Entity[MaxEntities]
+end
 
 func update_all(): void
   ld b, MaxEntities     ; loop counter
@@ -2250,9 +2292,11 @@ Key properties:
 A safe interrupt handler that preserves state, does minimal work inline, and delegates to a typed function:
 
 ```zax
-globals
+section data vars at $8000
+  data
   irq_pending: byte
   irq_count:   word
+end
 
 op save_all
   push af

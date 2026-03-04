@@ -96,11 +96,13 @@ Functions that return via `HL` (or include `HL` in the return list) keep `HL` vo
 ### A.1 Source (`.zax`)
 
 ```zax
-section code at $0000
-section var at $1000
+section code app at $0000
+end
 
-globals
+section data vars at $1000
+  data
   out: word
+end
 
 func echo(value_word: word): HL
   LD HL, value_word
@@ -489,9 +491,11 @@ type Person
   name_word: word
 end
 
-globals
+section data vars at $8000
+  data
   persons: Person[] = { ... }      ; value initializer (storage)
   admins = persons                 ; reference initializer (alias, inferred type)
+end
 ```
 
 Local alias example (allowed):
@@ -524,9 +528,11 @@ Type-shape rule:
 ### 11.2 Scalar Initializers and Aliases (Design Target)
 
 ```zax
-globals
+section data vars at $8000
+  data
   glob1: word = 23
   glob2 = glob1
+end
 
 func func1(input_word: word): HL
   var
@@ -556,8 +562,10 @@ type Pair
   hi: byte
 end
 
-globals
+section data vars at $8000
+  data
   p: Pair = 0           ; current compiler-supported composite zero-init form
+end
 
 op touch(addr: ea)
   LD A, (addr)
@@ -595,8 +603,10 @@ Compatibility:
 Example: globals array passed to both flexible and fixed signatures
 
 ```zax
-globals
+section data vars at $8000
+  data
   sample_bytes: byte[10] = { 1,2,3,4,5,6,7,8,9,10 }
+end
 
 func sum_fixed_10(values: byte[10]): HL
   ; fixed contract: exactly 10 bytes expected
@@ -617,8 +627,10 @@ end
 Negative example: narrowing without proof
 
 ```zax
-globals
+section data vars at $8000
+  data
   inferred_view = sample_bytes
+end
 
 func needs_ten(values: byte[10]): HL
   ; ...

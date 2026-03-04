@@ -46,7 +46,7 @@ describe('PR572 named section parser scaffolding', () => {
     expect(section.items[2]).toMatchObject({ kind: 'DataBlock' });
   });
 
-  it('keeps imports module-scoped and preserves legacy section directives', () => {
+  it('keeps imports module-scoped and rejects legacy section directives', () => {
     const diagnostics: Diagnostic[] = [];
     const program = parseProgram(
       'pr572_section_scope.zax',
@@ -65,15 +65,17 @@ describe('PR572 named section parser scaffolding', () => {
       section: 'data',
       name: 'buffers',
     });
-    expect(program.files[0]?.items[1]).toMatchObject({
-      kind: 'Section',
-      section: 'data',
-      at: { kind: 'ImmLiteral', value: 0x2000 },
-    });
-    expect(diagnostics).toHaveLength(1);
+    expect(program.files[0]?.items).toHaveLength(1);
+    expect(diagnostics).toHaveLength(2);
     expect(diagnostics[0]).toMatchObject({
       message: 'import is only permitted at module scope',
       line: 2,
+      column: 1,
+    });
+    expect(diagnostics[1]).toMatchObject({
+      message:
+        'Legacy active-counter section directive "section data at ..." is removed; use a named section like "section data <name> at ..." instead.',
+      line: 5,
       column: 1,
     });
   });

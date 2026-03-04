@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$2001 (end exclusive)
+; range: $0100..$2053 (end exclusive)
 
 ; func touch_scalar_byte_glob begin
 touch_scalar_byte_glob:
@@ -47,3 +47,4 @@ ret                            ; 0133: C9
 ; label main = $011C
 ; label __zax_epilogue_1 = $012B
 ; data glob_b = $2000
+; label __zax_startup = $2001

@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$2008 (end exclusive)
+; range: $0100..$2061 (end exclusive)
 
 ; func byte_fvar_fvar begin
 byte_fvar_fvar:
@@ -91,3 +91,4 @@ ret                            ; 016D: C9
 ; label main = $014A
 ; label __zax_epilogue_1 = $0165
 ; data glob_bytes = $2000
+; label __zax_startup = $2008

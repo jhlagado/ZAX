@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$2002 (end exclusive)
+; range: $0100..$2055 (end exclusive)
 
 ; func touch_scalar_word_frame begin
 touch_scalar_word_frame:
@@ -52,3 +52,4 @@ ret                            ; 013D: C9
 ; label main = $0120
 ; label __zax_epilogue_1 = $0135
 ; data dummy = $2000
+; label __zax_startup = $2002

@@ -35,7 +35,13 @@ describe('PR476 globals parser extraction', () => {
       isReservedTopLevelName: () => false,
     });
 
-    expect(diagnostics).toEqual([]);
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        message:
+          'Legacy "globals ... end" storage blocks are removed; use direct declarations inside named data sections.',
+      }),
+    ]);
     expect(parsed.nextIndex).toBe(3);
     expect(parsed.varBlock).toMatchObject({
       kind: 'VarBlock',
@@ -59,18 +65,14 @@ describe('PR476 globals parser extraction', () => {
       diagnostics,
     );
 
-    expect(diagnostics).toEqual([]);
-    expect(program.files[0]?.items[0]).toMatchObject({
-      kind: 'VarBlock',
-      scope: 'module',
-      decls: [
-        { name: 'foo', typeExpr: { kind: 'TypeName', name: 'byte' } },
-        {
-          name: 'bar',
-          typeExpr: { kind: 'TypeName', name: 'word' },
-        },
-      ],
-    });
-    expect(program.files[0]?.items[1]).toMatchObject({ kind: 'FuncDecl', name: 'main' });
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        message:
+          'Legacy "globals ... end" storage blocks are removed; use direct declarations inside named data sections.',
+      }),
+    ]);
+    expect(program.files[0]?.items).toHaveLength(1);
+    expect(program.files[0]?.items[0]).toMatchObject({ kind: 'FuncDecl', name: 'main' });
   });
 });

@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$2008 (end exclusive)
+; range: $0100..$2061 (end exclusive)
 
 ; func byte_glob_const begin
 byte_glob_const:
@@ -47,3 +47,4 @@ ret                            ; 0133: C9
 ; label main = $011C
 ; label __zax_epilogue_1 = $012B
 ; data glob_bytes = $2000
+; label __zax_startup = $2008

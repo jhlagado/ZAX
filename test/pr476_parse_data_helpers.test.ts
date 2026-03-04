@@ -39,7 +39,13 @@ describe('PR476 data parser extraction', () => {
       getRawLine,
     });
 
-    expect(diagnostics).toEqual([]);
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        message:
+          'Legacy top-level "data ... end" blocks are removed; use direct declarations inside named data sections.',
+      }),
+    ]);
     expect(parsed.nextIndex).toBe(3);
     expect(parsed.node).toMatchObject({
       kind: 'DataBlock',
@@ -74,11 +80,14 @@ describe('PR476 data parser extraction', () => {
       diagnostics,
     );
 
-    expect(diagnostics).toEqual([]);
-    expect(program.files[0]?.items[0]).toMatchObject({
-      kind: 'DataBlock',
-      decls: [{ name: 'greeting' }, { name: 'coords' }],
-    });
-    expect(program.files[0]?.items[1]).toMatchObject({ kind: 'FuncDecl', name: 'main' });
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        message:
+          'Legacy top-level "data ... end" blocks are removed; use direct declarations inside named data sections.',
+      }),
+    ]);
+    expect(program.files[0]?.items).toHaveLength(1);
+    expect(program.files[0]?.items[0]).toMatchObject({ kind: 'FuncDecl', name: 'main' });
   });
 });

@@ -8,5 +8,6 @@ section code boot at $1000
   end
 end
 
-section data at $2000
-bin blob in data from "pr585_blob.bin"
+section data blobs at $2000
+  bin blob in data from "pr585_blob.bin"
+end

@@ -26,6 +26,7 @@ import { parseTopLevelExternDecl } from './parseExternBlock.js';
 import { parseEnumDecl } from './parseEnum.js';
 import { parseTopLevelFuncDecl } from './parseFunc.js';
 import { parseGlobalsBlock } from './parseGlobals.js';
+import { parseImmExprFromText } from './parseImm.js';
 import { parseTopLevelOpDecl } from './parseOp.js';
 import { parseOpParamsFromText, parseParamsFromText } from './parseParams.js';
 import { parseTypeDecl, parseUnionDecl } from './parseTypes.js';
@@ -93,7 +94,6 @@ export function parseModuleFile(
   modulePath: string,
   sourceText: string,
   diagnostics: Diagnostic[],
-  options: { emitLegacyWarnings?: boolean } = {},
 ): ModuleFileNode {
   const file = makeSourceFile(modulePath, sourceText);
   const lineCount = file.lineStarts.length;
@@ -108,7 +108,6 @@ export function parseModuleFile(
   }
 
   const items: ModuleItemNode[] = [];
-  const emitLegacyWarnings = options.emitLegacyWarnings ?? false;
 
   function parseNamedSectionHeader(
     sectionText: string,
@@ -138,19 +137,7 @@ export function parseModuleFile(
     const rangeExprText = m[5]?.trim();
     let anchor: SectionAnchorNode | undefined;
     if (atText) {
-      const at = parseSectionDirectiveDecl(
-        `section ${section} at ${atText}`,
-        `${section} at ${atText}`,
-        {
-          diagnostics,
-          modulePath,
-          lineNo,
-          text: originalText,
-          span: sectionSpan,
-          emitLegacyWarnings: false,
-          isReservedTopLevelName,
-        },
-      )?.at;
+      const at = parseImmExprFromText(modulePath, atText, sectionSpan, diagnostics);
       if (!at) return undefined;
       anchor = {
         kind: 'SectionAnchor',
@@ -167,7 +154,6 @@ export function parseModuleFile(
             lineNo,
             text: originalText,
             span: sectionSpan,
-            emitLegacyWarnings: false,
             isReservedTopLevelName,
           },
         )?.value;
@@ -319,10 +305,8 @@ export function parseModuleFile(
           diagnostics,
           modulePath,
           getRawLine,
-          emitLegacyWarnings,
           isReservedTopLevelName,
         });
-        sectionItems.push(parsedGlobals.varBlock);
         index = parsedGlobals.nextIndex;
         continue;
       }
@@ -494,7 +478,6 @@ export function parseModuleFile(
           diagnostics,
           modulePath,
           getRawLine,
-          emitLegacyWarnings,
           stopOnEnd: true,
         });
         sectionItems.push(parsedData.node);
@@ -723,10 +706,8 @@ export function parseModuleFile(
         diagnostics,
         modulePath,
         getRawLine,
-        emitLegacyWarnings,
         isReservedTopLevelName,
       });
-      items.push(parsedGlobals.varBlock);
       i = parsedGlobals.nextIndex;
       continue;
     }
@@ -867,7 +848,6 @@ export function parseModuleFile(
         lineNo,
         text,
         span: dirSpan,
-        emitLegacyWarnings,
         isReservedTopLevelName,
       });
       if (!sectionNode) {
@@ -964,9 +944,7 @@ export function parseModuleFile(
         diagnostics,
         modulePath,
         getRawLine,
-        emitLegacyWarnings,
       });
-      items.push(parsedData.node);
       i = parsedData.nextIndex;
       continue;
     }

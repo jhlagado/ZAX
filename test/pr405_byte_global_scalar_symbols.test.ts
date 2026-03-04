@@ -24,6 +24,6 @@ describe('PR405: byte global scalar symbols', () => {
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
-    expect(bin!.bytes).toEqual(Uint8Array.of(0x3a, 0x00, 0x10, 0x32, 0x00, 0x10, 0xc9));
+    expect(Array.from(bin!.bytes.slice(0, 7))).toEqual([0x3a, 0x00, 0x10, 0x32, 0x00, 0x10, 0xc9]);
   });
 });

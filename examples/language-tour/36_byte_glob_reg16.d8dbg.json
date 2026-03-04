@@ -86,7 +86,7 @@
         },
         {
           "start": 8192,
-          "end": 8200,
+          "end": 8290,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -125,7 +125,13 @@
           "name": "glob_bytes",
           "kind": "data",
           "address": 8192,
-          "line": 5,
+          "line": 3,
+          "scope": "global"
+        },
+        {
+          "name": "__zax_startup",
+          "kind": "label",
+          "address": 8200,
           "scope": "global"
         }
       ]
@@ -138,7 +144,7 @@
     },
     {
       "start": 8192,
-      "end": 8200
+      "end": 8290
     }
   ],
   "fileList": [
@@ -182,13 +188,20 @@
       "kind": "data",
       "address": 8192,
       "file": "36_byte_glob_reg16.zax",
-      "line": 5,
+      "line": 3,
+      "scope": "global"
+    },
+    {
+      "name": "__zax_startup",
+      "kind": "label",
+      "address": 8200,
+      "file": "36_byte_glob_reg16.zax",
       "scope": "global"
     }
   ],
   "generator": {
     "tool": "zax",
-    "entrySymbol": "main",
-    "entryAddress": 304
+    "entrySymbol": "__zax_startup",
+    "entryAddress": 8200
   }
 }

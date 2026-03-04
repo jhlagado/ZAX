@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$200A (end exclusive)
+; range: $0100..$206B (end exclusive)
 
 ; func byte_fvar_glob begin
 byte_fvar_glob:
@@ -9,7 +9,7 @@ add IX, SP                     ; 0106: DD 39
 push AF                        ; 0108: F5
 push BC                        ; 0109: C5
 push DE                        ; 010A: D5
-ld HL, (glob_idx_word)         ; 010B: 2A 00 00
+ld hl, (glob_idx_word)         ; 010B: 2A 00 00
 push HL                        ; 010E: E5
 pop HL                         ; 010F: E1
 push HL                        ; 0110: E5
@@ -25,7 +25,7 @@ push HL                        ; 011C: E5
 pop HL                         ; 011D: E1
 ld A, (hl)                     ; 011E: 7E
 push AF                        ; 011F: F5
-ld HL, (glob_idx_word)         ; 0120: 2A 00 00
+ld hl, (glob_idx_word)         ; 0120: 2A 00 00
 push HL                        ; 0123: E5
 pop HL                         ; 0124: E1
 push HL                        ; 0125: E5
@@ -82,3 +82,4 @@ ret                            ; 015D: C9
 ; label __zax_epilogue_1 = $0155
 ; data glob_bytes = $2000
 ; data glob_idx_word = $2008
+; label __zax_startup = $200A

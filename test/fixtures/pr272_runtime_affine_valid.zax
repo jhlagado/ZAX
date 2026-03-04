@@ -1,10 +1,9 @@
-section code at $0000
-section var at $1000
-
-globals
-  idx: byte
-  idxw: word
-  arr: byte[64]
+section data vars at $1000
+  data
+    idx: byte = 0
+    idxw: word = 0
+    arr: byte[64] = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ]
+end
 
 export func main()
   ld a, arr[idx + 1]
@@ -12,7 +11,7 @@ export func main()
   ld a, arr[idxw + 2]
   ld a, arr[idx << 1]
   ld a, arr[(idx * 2) + 3]
-  ld a, (arr + idx + 4)
-  ld a, (arr + (idxw << 1) + 6)
+  ld a, arr[idx + 4]
+  ld a, arr[(idxw << 1) + 6]
   ret
 end

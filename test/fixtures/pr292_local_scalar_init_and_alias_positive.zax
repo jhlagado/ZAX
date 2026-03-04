@@ -1,8 +1,7 @@
-section code at $0000
-section var at $1000
-
-globals
-  base: word
+section data vars at $1000
+  data
+    base: word = 0
+end
 
 export func main()
   var
