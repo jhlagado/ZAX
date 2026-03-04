@@ -37,9 +37,9 @@ describe('PR582 named section routing integration', () => {
       }),
       expect.objectContaining({
         severity: 'error',
-        message: 'Named section placement is not implemented yet for section "code boot".',
+        message: 'Named section symbol and fixup resolution is not implemented yet for section "code boot".',
       }),
     ]);
-    expect(map.bytes.size).toBe(0);
+    expect(map.bytes.size).toBeGreaterThan(0);
   });
 });
