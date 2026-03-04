@@ -5,6 +5,7 @@ import type {
   ConstDeclNode,
   ExternDeclNode,
   FuncDeclNode,
+  ImportNode,
   ImmExprNode,
   ModuleItemNode,
   ProgramNode,
@@ -12,6 +13,7 @@ import type {
   TypeDeclNode,
   UnionDeclNode,
 } from '../frontend/ast.js';
+import { canonicalModuleId } from '../moduleIdentity.js';
 import { offsetOfPathInTypeExpr, sizeOfTypeExpr, storageInfoForTypeDecl } from './layout.js';
 
 /**
@@ -38,6 +40,12 @@ export interface CompileEnv {
    * PR3 uses this for layout calculation for module-scope `var` declarations.
    */
   types: Map<string, TypeDeclNode | UnionDeclNode>;
+
+  moduleIds?: Map<string, string>;
+  importedModuleIds?: Map<string, Set<string>>;
+  visibleConsts?: Map<string, number>;
+  visibleEnums?: Map<string, number>;
+  visibleTypes?: Map<string, TypeDeclNode | UnionDeclNode>;
 }
 
 function diag(diagnostics: Diagnostic[], file: string, message: string): void {
@@ -197,6 +205,10 @@ function forEachDeclItem(
   for (const item of items) walk(item);
 }
 
+function directImports(items: ModuleItemNode[]): ImportNode[] {
+  return items.filter((item): item is ImportNode => item.kind === 'Import');
+}
+
 /**
  * Build the PR2 compile environment by resolving module-scope `enum` and `const` declarations.
  *
@@ -212,10 +224,23 @@ export function buildEnv(
   const consts = new Map<string, number>();
   const enums = new Map<string, number>();
   const types = new Map<string, TypeDeclNode | UnionDeclNode>();
+  const moduleIds = new Map<string, string>();
+  const importedModuleIds = new Map<string, Set<string>>();
+  const visibleConsts = new Map<string, number>();
+  const visibleEnums = new Map<string, number>();
+  const visibleTypes = new Map<string, TypeDeclNode | UnionDeclNode>();
 
   if (program.files.length === 0) {
     diag(diagnostics, program.entryFile, 'No module files to compile.');
-    return { consts, enums, types };
+    return { consts, enums, types, moduleIds, importedModuleIds, visibleConsts, visibleEnums, visibleTypes };
+  }
+
+  for (const mf of program.files) {
+    moduleIds.set(mf.path, mf.moduleId || canonicalModuleId(mf.path));
+    importedModuleIds.set(
+      mf.path,
+      new Set(directImports(mf.items).map((item) => canonicalModuleId(item.specifier))),
+    );
   }
 
   const globalLower = new Map<string, { kind: string; name: string; file: string }>();
@@ -237,6 +262,12 @@ export function buildEnv(
       const name = item.name;
       if (!claim(kind, name, item.span.file)) return;
       types.set(name, item);
+      if (item.exported) {
+        const moduleId = moduleIds.get(item.span.file) ?? canonicalModuleId(item.span.file);
+        const qualifiedName = `${moduleId}.${name}`;
+        visibleTypes.set(qualifiedName, item);
+        types.set(qualifiedName, item);
+      }
     });
   }
 
@@ -264,11 +295,25 @@ export function buildEnv(
         const qualifiedName = `${e.name}.${name}`;
         if (!claim('enum member', qualifiedName, e.span.file)) continue;
         enums.set(qualifiedName, idx);
+        if (e.exported) {
+          const moduleId = moduleIds.get(e.span.file) ?? canonicalModuleId(e.span.file);
+          const exportedName = `${moduleId}.${qualifiedName}`;
+          visibleEnums.set(exportedName, idx);
+        }
       }
     }
   }
 
-  const env: CompileEnv = { consts, enums, types };
+  const env: CompileEnv = {
+    consts,
+    enums,
+    types,
+    moduleIds,
+    importedModuleIds,
+    visibleConsts,
+    visibleEnums,
+    visibleTypes,
+  };
 
   if (options?.typePaddingWarnings === true) {
     for (const mf of program.files) {
@@ -308,6 +353,12 @@ export function buildEnv(
         return;
       }
       consts.set(item.name, v);
+      if (item.exported) {
+        const moduleId = moduleIds.get(item.span.file) ?? canonicalModuleId(item.span.file);
+        const qualifiedName = `${moduleId}.${item.name}`;
+        visibleConsts.set(qualifiedName, v);
+        consts.set(qualifiedName, v);
+      }
     });
   }
 

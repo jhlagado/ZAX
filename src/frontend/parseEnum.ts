@@ -27,7 +27,11 @@ type ParseEnumContext = {
   isReservedTopLevelName: (name: string) => boolean;
 };
 
-export function parseEnumDecl(enumTail: string, ctx: ParseEnumContext): EnumDeclNode | undefined {
+export function parseEnumDecl(
+  enumTail: string,
+  ctx: ParseEnumContext,
+  exported = false,
+): EnumDeclNode | undefined {
   const { diagnostics, modulePath, lineNo, text, span, isReservedTopLevelName } = ctx;
   const decl = enumTail;
   const nameMatch = /^([A-Za-z_][A-Za-z0-9_]*)(?:\s+(.*))?$/.exec(decl);
@@ -123,5 +127,5 @@ export function parseEnumDecl(enumTail: string, ctx: ParseEnumContext): EnumDecl
     members.push(m);
   }
 
-  return { kind: 'EnumDecl', span, name, members };
+  return { kind: 'EnumDecl', span, name, exported, members };
 }
