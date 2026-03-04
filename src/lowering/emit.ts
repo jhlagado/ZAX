@@ -798,6 +798,29 @@ export function emitProgram(
   preScanProgramDeclarations(programLoweringContext);
   lowerProgramDeclarations(programLoweringContext);
 
+  const hasNamedSectionOutput = (sink: NamedSectionContributionSink): boolean =>
+    sink.offset > 0 ||
+    sink.bytes.size > 0 ||
+    sink.pendingSymbols.length > 0 ||
+    sink.fixups.length > 0 ||
+    sink.rel8Fixups.length > 0 ||
+    sink.sourceSegments.length > 0 ||
+    sink.asmTrace.length > 0;
+
+  let blockedByUnplacedNamedSection = false;
+  for (const sink of namedSectionSinks) {
+    if (!hasNamedSectionOutput(sink)) continue;
+    blockedByUnplacedNamedSection = true;
+    diagAt(
+      diagnostics,
+      sink.contribution.node.span,
+      `Named section placement is not implemented yet for section "${sink.anchor.key.section} ${sink.anchor.key.name}".`,
+    );
+  }
+  if (blockedByUnplacedNamedSection) {
+    return { map: { bytes }, symbols };
+  }
+
   const { writtenRange, sourceSegments, asmTrace } = finalizeProgramEmission({
     diagnostics,
     diag,

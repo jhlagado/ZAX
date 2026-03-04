@@ -30,8 +30,16 @@ describe('PR582 named section routing integration', () => {
 
     const { map } = emitProgram(program, env, diagnostics, { namedSectionKeys: sectionKeys });
 
-    expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]?.message).toBe('Unsupported instruction: nonsense');
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        message: 'Unsupported instruction: nonsense',
+      }),
+      expect.objectContaining({
+        severity: 'error',
+        message: 'Named section placement is not implemented yet for section "code boot".',
+      }),
+    ]);
     expect(map.bytes.size).toBe(0);
   });
 });
