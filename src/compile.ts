@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { basename, dirname, extname, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 
 import type { Diagnostic } from './diagnostics/types.js';
 import { DiagnosticIds } from './diagnostics/types.js';
@@ -12,6 +12,7 @@ import { lintCaseStyle } from './lint/case_style.js';
 import { emitProgram } from './lowering/emit.js';
 import type { Artifact } from './formats/types.js';
 import { collectNonBankedSectionKeys } from './sectionKeys.js';
+import { canonicalModuleId } from './moduleIdentity.js';
 import { buildEnv } from './semantics/env.js';
 
 function hasErrors(diagnostics: Diagnostic[]): boolean {
@@ -50,12 +51,6 @@ function hasMainFunction(program: ProgramNode): boolean {
     return false;
   };
   return program.files.some((moduleFile) => hasMainInItems(moduleFile.items));
-}
-
-function canonicalModuleId(modulePath: string): string {
-  const base = basename(modulePath);
-  const ext = extname(base);
-  return ext.length > 0 ? base.slice(0, -ext.length) : base;
 }
 
 function importTargets(moduleFile: ModuleFileNode): ImportNode[] {

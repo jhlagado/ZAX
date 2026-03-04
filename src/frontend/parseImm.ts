@@ -31,7 +31,7 @@ export function parseTypeExprFromText(
   opts: { allowInferredArrayLength: boolean },
 ): TypeExprNode | undefined {
   let rest = typeText.trim();
-  const nameMatch = /^([A-Za-z_][A-Za-z0-9_]*)/.exec(rest);
+  const nameMatch = /^([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)/.exec(rest);
   if (!nameMatch) return undefined;
   const name = nameMatch[1]!;
   rest = rest.slice(name.length).trimStart();
@@ -273,9 +273,16 @@ export function parseImmExprFromText(
   function parseBuiltinTypeExprArg(): TypeExprNode | undefined {
     const arg = tokens[idx];
     if (!arg || arg.kind !== 'ident') return undefined;
+    const parts = [arg.text];
     idx++;
+    while (tokens[idx]?.kind === 'dot') {
+      const next = tokens[idx + 1];
+      if (!next || next.kind !== 'ident') return undefined;
+      parts.push(next.text);
+      idx += 2;
+    }
 
-    let typeExpr: TypeExprNode = { kind: 'TypeName', span: exprSpan, name: arg.text };
+    let typeExpr: TypeExprNode = { kind: 'TypeName', span: exprSpan, name: parts.join('.') };
     while (tokens[idx]?.kind === 'lbrack') {
       idx++;
       const lenTok = tokens[idx];
