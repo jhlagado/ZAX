@@ -13,9 +13,23 @@ describe('PR262 nested runtime index lowering for ld forms', () => {
     const entry = join(__dirname, 'fixtures', 'pr262_ld_nested_runtime_index.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
-    const budgetDiagnostics = res.diagnostics.filter(
-      (d) => d.message === 'Source ea expression exceeds runtime-atom budget (max 1; found 2).',
-    );
-    expect(budgetDiagnostics).toHaveLength(2);
+    expect(
+      res.diagnostics.map((d) => ({
+        message: d.message,
+        line: d.line,
+        column: d.column,
+      })),
+    ).toEqual([
+      {
+        message: 'Source ea expression exceeds runtime-atom budget (max 1; found 2).',
+        line: 10,
+        column: 3,
+      },
+      {
+        message: 'Source ea expression exceeds runtime-atom budget (max 1; found 2).',
+        line: 11,
+        column: 3,
+      },
+    ]);
   });
 });
