@@ -147,14 +147,22 @@ After the new model works:
 - migrate examples and guides
 - then remove the old forms
 
-## 5. Required Clarifications Before Phase 6
+## 5. Phase 6 Baseline (Resolved by `docs/modules.md`)
 
-The remaining design clarifications that must be resolved before startup
-initialization is implemented are:
+The startup-initialization phase now has a usable provisional baseline defined in
+`docs/modules.md` §§6.4-6.6.
 
-- writable-versus-read-only region classification for anchored `data` sections
-- startup routine ownership and entry sequencing
-- initializer-byte storage convention in the emitted binary
+Phase 6 implementation should proceed using these v0.5 provisional rules:
+
+- writable-versus-read-only classification is determined by a deterministic,
+  implementation-defined root-program configuration rule
+- startup initialization is compiler-owned and runs before the user-visible
+  entrypoint
+- initializer bytes may be emitted in a compiler-owned initialization region or
+  equivalent compiler-owned metadata area
+
+These rules are sufficient to implement the initial v0.5 startup path without
+introducing final source syntax for memory-region classification.
 
 ## 6. Practical Ticket Shape
 
