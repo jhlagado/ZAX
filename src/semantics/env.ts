@@ -14,6 +14,7 @@ import type {
   UnionDeclNode,
 } from '../frontend/ast.js';
 import { canonicalModuleId } from '../moduleIdentity.js';
+import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
 import { offsetOfPathInTypeExpr, sizeOfTypeExpr, storageInfoForTypeDecl } from './layout.js';
 
 /**
@@ -78,9 +79,9 @@ export function evalImmExpr(
     case 'ImmLiteral':
       return expr.value;
     case 'ImmName': {
-      const fromConst = env.consts.get(expr.name);
+      const fromConst = resolveVisibleConst(expr.name, expr.span.file, env);
       if (fromConst !== undefined) return fromConst;
-      const fromEnum = env.enums.get(expr.name);
+      const fromEnum = resolveVisibleEnum(expr.name, expr.span.file, env);
       if (fromEnum !== undefined) return fromEnum;
       const enumMatches = unqualifiedEnumCandidates(expr.name);
       if (enumMatches.length > 0 && diagnostics) {
@@ -266,7 +267,6 @@ export function buildEnv(
         const moduleId = moduleIds.get(item.span.file) ?? canonicalModuleId(item.span.file);
         const qualifiedName = `${moduleId}.${name}`;
         visibleTypes.set(qualifiedName, item);
-        types.set(qualifiedName, item);
       }
     });
   }
@@ -357,7 +357,6 @@ export function buildEnv(
         const moduleId = moduleIds.get(item.span.file) ?? canonicalModuleId(item.span.file);
         const qualifiedName = `${moduleId}.${item.name}`;
         visibleConsts.set(qualifiedName, v);
-        consts.set(qualifiedName, v);
       }
     });
   }
