@@ -96,7 +96,7 @@ type LoadedProgram = {
 async function loadProgram(
   entryFile: string,
   diagnostics: Diagnostic[],
-  options: Pick<CompilerOptions, 'includeDirs'>,
+  options: Pick<CompilerOptions, 'includeDirs' | 'emitLegacyWarnings'>,
 ): Promise<LoadedProgram | undefined> {
   const entryPath = normalizePath(entryFile);
   const modules = new Map<string, ModuleFileNode>();
@@ -129,7 +129,11 @@ async function loadProgram(
 
     let moduleFile: ModuleFileNode;
     try {
-      moduleFile = parseModuleFile(p, sourceText, diagnostics);
+      moduleFile = parseModuleFile(p, sourceText, diagnostics, {
+        ...(options.emitLegacyWarnings !== undefined
+          ? { emitLegacyWarnings: options.emitLegacyWarnings }
+          : {}),
+      });
     } catch (err) {
       diagnostics.push({
         id: DiagnosticIds.InternalParseError,
