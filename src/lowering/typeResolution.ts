@@ -3,6 +3,7 @@ import type {
   RecordFieldNode,
   TypeExprNode,
 } from '../frontend/ast.js';
+import { resolveVisibleType } from '../moduleVisibility.js';
 import type { CompileEnv } from '../semantics/env.js';
 
 export type ScalarKind = 'byte' | 'word' | 'addr';
@@ -29,7 +30,7 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
     if (lower === 'ptr') return 'addr';
     if (seen.has(lower)) return undefined;
     seen.add(lower);
-    const decl = ctx.env.types.get(typeExpr.name);
+    const decl = resolveVisibleType(typeExpr.name, typeExpr.span.file, ctx.env);
     if (!decl || decl.kind !== 'TypeDecl') return undefined;
     return resolveScalarKind(decl.typeExpr, seen);
   };
@@ -37,7 +38,7 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
   const resolveAggregateType = (te: TypeExprNode): AggregateType | undefined => {
     if (te.kind === 'RecordType') return { kind: 'record', fields: te.fields };
     if (te.kind === 'TypeName') {
-      const decl = ctx.env.types.get(te.name);
+      const decl = resolveVisibleType(te.name, te.span.file, ctx.env);
       if (!decl) return undefined;
       if (decl.kind === 'UnionDecl') return { kind: 'union', fields: decl.fields };
       if (decl.typeExpr.kind === 'RecordType') {
@@ -50,7 +51,7 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
   const resolveArrayElementType = (te: TypeExprNode): TypeExprNode | undefined => {
     if (te.kind === 'ArrayType') return te.element;
     if (te.kind === 'TypeName') {
-      const decl = ctx.env.types.get(te.name);
+      const decl = resolveVisibleType(te.name, te.span.file, ctx.env);
       if (decl?.kind === 'TypeDecl' && decl.typeExpr.kind === 'ArrayType') {
         return decl.typeExpr.element;
       }
@@ -70,7 +71,7 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
     const lower = te.name.toLowerCase();
     if (seen.has(lower)) return undefined;
     seen.add(lower);
-    const decl = ctx.env.types.get(te.name);
+    const decl = resolveVisibleType(te.name, te.span.file, ctx.env);
     if (!decl || decl.kind !== 'TypeDecl') return te;
     return unwrapTypeAlias(decl.typeExpr, seen);
   };
