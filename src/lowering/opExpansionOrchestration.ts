@@ -24,7 +24,7 @@ type OpExpansionStackEntry = {
 type CloneHelper<T> = (value: T) => T;
 
 type Context = {
-  opsByName: Map<string, OpDeclNode[]>;
+  resolveOpCandidates: (name: string, file: string) => OpDeclNode[] | undefined;
   diagnostics: Diagnostic[];
   env: CompileEnv;
   hasStackSlots: boolean;
@@ -64,7 +64,7 @@ type Context = {
 
 export function createOpExpansionOrchestrationHelpers(ctx: Context) {
   const tryHandleOpExpansion = (asmItem: AsmInstructionNode): boolean => {
-    const opCandidates = ctx.opsByName.get(asmItem.head.toLowerCase());
+    const opCandidates = ctx.resolveOpCandidates(asmItem.head, asmItem.span.file);
     if (!opCandidates || opCandidates.length === 0) return false;
 
     const arityMatches = opCandidates.filter(
