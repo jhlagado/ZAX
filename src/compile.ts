@@ -10,6 +10,7 @@ import type { ImportNode, ModuleFileNode } from './frontend/ast.js';
 import { parseModuleFile } from './frontend/parser.js';
 import { lintCaseStyle } from './lint/case_style.js';
 import { emitProgram } from './lowering/emit.js';
+import { STARTUP_ENTRY_LABEL } from './lowering/startupInit.js';
 import type { Artifact } from './formats/types.js';
 import { collectNonBankedSectionKeys } from './sectionKeys.js';
 import { canonicalModuleId } from './moduleIdentity.js';
@@ -378,9 +379,13 @@ export const compile: CompileFn = async (
     artifacts.push(deps.formats.writeHex(map, symbols));
   }
   if (emit.emitD8m) {
-    const mainEntry = symbols.find((s) => s.kind === 'label' && s.name.toLowerCase() === 'main') as
-      | { kind: 'label'; name: string; address: number }
-      | undefined;
+    const mainEntry =
+      (symbols.find((s) => s.kind === 'label' && s.name.toLowerCase() === STARTUP_ENTRY_LABEL) as
+        | { kind: 'label'; name: string; address: number }
+        | undefined) ??
+      (symbols.find((s) => s.kind === 'label' && s.name.toLowerCase() === 'main') as
+        | { kind: 'label'; name: string; address: number }
+        | undefined);
     artifacts.push(
       deps.formats.writeD8m(map, symbols, {
         rootDir: dirname(entryPath),

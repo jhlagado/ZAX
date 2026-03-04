@@ -25,6 +25,8 @@ export type StartupInitRegion = {
   encoded: number[];
 };
 
+export const STARTUP_ENTRY_LABEL = '__zax_startup';
+
 function encodeWord(value: number): [number, number] {
   return [value & 0xff, (value >> 8) & 0xff];
 }
@@ -113,4 +115,91 @@ export function appendStartupInitRegion(
   for (let i = 0; i < region.encoded.length; i++) {
     bytes.set(start + i, region.encoded[i]!);
   }
+}
+
+export function buildStartupInitRoutine(
+  initRegionAddress: number,
+  region: StartupInitRegion,
+  mainAddress: number,
+): number[] {
+  const bytes: number[] = [];
+  const labels = new Map<string, number>();
+  const relPatches: Array<{ index: number; origin: number; label: string }> = [];
+  const blobBase = initRegionAddress + (region.encoded.length - region.blob.length);
+
+  const emit = (...values: number[]) => {
+    bytes.push(...values.map((value) => value & 0xff));
+  };
+  const mark = (label: string) => {
+    labels.set(label, bytes.length);
+  };
+  const emitWord = (value: number) => {
+    emit(value & 0xff, (value >> 8) & 0xff);
+  };
+  const emitLdHlImm = (value: number) => {
+    emit(0x21);
+    emitWord(value);
+  };
+  const emitJr = (opcode: number, label: string) => {
+    emit(opcode, 0x00);
+    relPatches.push({ index: bytes.length - 1, origin: bytes.length, label });
+  };
+
+  emitLdHlImm(initRegionAddress);
+  emit(0x4e, 0x23, 0x46, 0x23); // ld c,(hl) / inc hl / ld b,(hl) / inc hl
+
+  mark('copy_count_test');
+  emit(0x78, 0xb1); // ld a,b / or c
+  emitJr(0x28, 'load_zero_count');
+
+  emit(0xc5); // push bc
+  emit(0x5e, 0x23, 0x56, 0x23); // ld e,(hl) / inc hl / ld d,(hl) / inc hl
+  emit(0x4e, 0x23, 0x46, 0x23); // ld c,(hl) / inc hl / ld b,(hl) / inc hl
+  emit(0xe5); // push hl
+  emitLdHlImm(blobBase);
+  emit(0x09, 0xe3); // add hl,bc / ex (sp),hl
+  emit(0x4e, 0x23, 0x46, 0x23); // ld c,(hl) / inc hl / ld b,(hl) / inc hl
+  emit(0xe3); // ex (sp),hl
+  emit(0xed, 0xb0); // ldir
+  emit(0xe1, 0xc1, 0x0b); // pop hl / pop bc / dec bc
+  emitJr(0x18, 'copy_count_test');
+
+  mark('load_zero_count');
+  emit(0x4e, 0x23, 0x46, 0x23); // ld c,(hl) / inc hl / ld b,(hl) / inc hl
+
+  mark('zero_count_test');
+  emit(0x78, 0xb1); // ld a,b / or c
+  emitJr(0x28, 'jump_main');
+
+  emit(0xc5); // push bc
+  emit(0x5e, 0x23, 0x56, 0x23); // ld e,(hl) / inc hl / ld d,(hl) / inc hl
+  emit(0x4e, 0x23, 0x46, 0x23); // ld c,(hl) / inc hl / ld b,(hl) / inc hl
+
+  mark('zero_bytes_test');
+  emit(0x78, 0xb1); // ld a,b / or c
+  emitJr(0x28, 'zero_done');
+  emit(0xaf, 0x12, 0x13, 0x0b); // xor a / ld (de),a / inc de / dec bc
+  emitJr(0x18, 'zero_bytes_test');
+
+  mark('zero_done');
+  emit(0xc1, 0x0b); // pop bc / dec bc
+  emitJr(0x18, 'zero_count_test');
+
+  mark('jump_main');
+  emit(0xc3);
+  emitWord(mainAddress);
+
+  for (const patch of relPatches) {
+    const target = labels.get(patch.label);
+    if (target === undefined) {
+      throw new Error(`Unknown startup routine label "${patch.label}".`);
+    }
+    const displacement = target - patch.origin;
+    if (displacement < -128 || displacement > 127) {
+      throw new Error(`Startup routine jump out of range for "${patch.label}".`);
+    }
+    bytes[patch.index] = displacement & 0xff;
+  }
+
+  return bytes;
 }

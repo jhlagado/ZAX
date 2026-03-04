@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { buildStartupInitRegion } from '../src/lowering/startupInit.js';
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { BinArtifact } from '../src/formats/types.js';
+import type { BinArtifact, D8mArtifact } from '../src/formats/types.js';
 import type { PlacedNamedSectionContribution } from '../src/lowering/sectionPlacement.js';
 import type { NamedSectionContributionSink } from '../src/lowering/sectionContributions.js';
 
@@ -93,22 +93,31 @@ describe('PR577 startup init region', () => {
   });
 
   it('emits a compiler-owned init region for named data sections', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr576_named_data_decls.zax');
+    const entry = join(__dirname, 'fixtures', 'pr577_startup_init_main.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    const d8m = res.artifacts.find((a): a is D8mArtifact => a.kind === 'd8m');
     expect(bin).toBeDefined();
+    expect(d8m).toBeDefined();
     const bytes = Array.from(bin!.bytes);
     expect(bytes.slice(0, 7)).toEqual([0x00, 0x61, 0x62, 0x63, 0x00, 0x01, 0x00]);
-    expect(bytes.slice(7)).toEqual([
+
+    const generator = d8m!.json.generator as { entrySymbol?: string; entryAddress?: number };
+    expect(generator.entrySymbol).toBe('__zax_startup');
+    expect(generator.entryAddress).toBeGreaterThan(0x4010);
+    const entryOffset = (generator.entryAddress ?? 0) - 0x4000;
+    expect(bytes[entryOffset]).toBe(0x21);
+
+    expect(bytes.slice(-28)).toEqual([
       0x02, 0x00,
       0x01, 0x40, 0x00, 0x00, 0x03, 0x00,
       0x05, 0x40, 0x03, 0x00, 0x02, 0x00,
       0x02, 0x00,
       0x00, 0x40, 0x01, 0x00,
       0x04, 0x40, 0x01, 0x00,
-      0x61, 0x62, 0x63, 0x01, 0x00,
+      0x61, 0x62, 0x63, 0x01,
     ]);
   });
 });
