@@ -26,6 +26,7 @@ type CliOptions = {
   opStackPolicy: OpStackPolicyMode;
   typePaddingWarnings: boolean;
   rawTypedCallWarnings: boolean;
+  emitLegacyWarnings: boolean;
   includeDirs: string[];
 };
 
@@ -45,6 +46,7 @@ function usage(): string {
     '      --op-stack-policy <m> Op stack-policy mode: off|warn|error',
     '      --type-padding-warn Emit warnings for power-of-2 type storage padding',
     '      --raw-typed-call-warn Emit warnings for raw call to typed callable targets',
+    '      --legacy-syntax-warn Emit warnings for accepted legacy syntax scheduled for migration',
     '  -I, --include <dir>   Add import search path (repeatable)',
     '  -V, --version         Print version',
     '  -h, --help            Show help',
@@ -72,6 +74,7 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
   let opStackPolicy: OpStackPolicyMode = 'off';
   let typePaddingWarnings = false;
   let rawTypedCallWarnings = false;
+  let emitLegacyWarnings = false;
   const includeDirs: string[] = [];
   let entryFile: string | undefined;
 
@@ -166,6 +169,10 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
       rawTypedCallWarnings = true;
       continue;
     }
+    if (a === '--legacy-syntax-warn') {
+      emitLegacyWarnings = true;
+      continue;
+    }
     if (a === '-I' || a === '--include' || a.startsWith('--include=')) {
       if (a.startsWith('--include=')) {
         const v = a.slice('--include='.length);
@@ -218,6 +225,7 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
     opStackPolicy,
     typePaddingWarnings,
     rawTypedCallWarnings,
+    emitLegacyWarnings,
     includeDirs,
   };
 }
@@ -334,6 +342,7 @@ export async function runCli(argv: string[]): Promise<number> {
         opStackPolicy: parsed.opStackPolicy,
         typePaddingWarnings: parsed.typePaddingWarnings,
         rawTypedCallWarnings: parsed.rawTypedCallWarnings,
+        emitLegacyWarnings: parsed.emitLegacyWarnings,
         includeDirs: parsed.includeDirs,
         requireMain: true,
         defaultCodeBase: 0x0100,
