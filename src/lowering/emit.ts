@@ -816,7 +816,6 @@ export function emitProgram(
 
   const placedSourceSegments: EmittedSourceSegment[] = [];
   const placedAsmTrace: EmittedAsmTraceEntry[] = [];
-  let blockedByUnresolvedNamedSection = false;
   for (const placed of placedContributions) {
     const sink = placed.sink;
     for (const [offset, value] of sink.bytes) {
@@ -845,23 +844,11 @@ export function emitProgram(
     }
     if (!hasNamedSectionOutput(sink)) continue;
     if (sink.pendingSymbols.length === 0 && sink.fixups.length === 0 && sink.rel8Fixups.length === 0) continue;
-    blockedByUnresolvedNamedSection = true;
     diagAt(
       diagnostics,
       sink.contribution.node.span,
       `Named section symbol and fixup resolution is not implemented yet for section "${sink.anchor.key.section} ${sink.anchor.key.name}".`,
     );
-  }
-  if (blockedByUnresolvedNamedSection) {
-    return {
-      map: {
-        bytes,
-        writtenRange: computeWrittenRange(bytes),
-        ...(placedSourceSegments.length > 0 ? { sourceSegments: placedSourceSegments } : {}),
-        ...(placedAsmTrace.length > 0 ? { asmTrace: placedAsmTrace } : {}),
-      },
-      symbols,
-    };
   }
 
   const { writtenRange, sourceSegments, asmTrace } = finalizeProgramEmission({
