@@ -38,6 +38,7 @@ import {
   parseSectionDirectiveDecl,
 } from './parseTopLevelSimple.js';
 import { parseDataBlock } from './parseData.js';
+import { canonicalModuleId } from '../moduleIdentity.js';
 
 const RESERVED_TOP_LEVEL_KEYWORDS = new Set([
   'func',
@@ -209,6 +210,9 @@ export function parseModuleFile(
       if (hasExportPrefix) {
         const allowed =
           consumeKeywordPrefix(rest, 'const') !== undefined ||
+          consumeKeywordPrefix(rest, 'type') !== undefined ||
+          consumeKeywordPrefix(rest, 'union') !== undefined ||
+          consumeKeywordPrefix(rest, 'enum') !== undefined ||
           consumeKeywordPrefix(rest, 'func') !== undefined ||
           consumeKeywordPrefix(rest, 'op') !== undefined;
         if (!allowed) {
@@ -224,7 +228,7 @@ export function parseModuleFile(
               diag(
                 diagnostics,
                 modulePath,
-                `export is only permitted on const/func/op declarations`,
+                `export is only permitted on const/type/union/enum/func/op declarations`,
                 {
                   line: lineNo,
                   column: 1,
@@ -232,10 +236,15 @@ export function parseModuleFile(
               );
             }
           } else {
-            diag(diagnostics, modulePath, `export is only permitted on const/func/op declarations`, {
-              line: lineNo,
-              column: 1,
-            });
+            diag(
+              diagnostics,
+              modulePath,
+              `export is only permitted on const/type/union/enum/func/op declarations`,
+              {
+                line: lineNo,
+                column: 1,
+              },
+            );
           }
           index++;
           continue;
@@ -260,7 +269,7 @@ export function parseModuleFile(
           modulePath,
           getRawLine,
           isReservedTopLevelName,
-        });
+        }, hasExportPrefix);
         if (parsedType) {
           sectionItems.push(parsedType.node);
           index = parsedType.nextIndex;
@@ -272,14 +281,22 @@ export function parseModuleFile(
 
       const unionTail = consumeTopKeyword(rest, 'union');
       if (unionTail !== undefined) {
-        const parsedUnion = parseUnionDecl(unionTail, text, sectionSpan, lineNo, index, {
-          file,
-          lineCount,
-          diagnostics,
-          modulePath,
-          getRawLine,
-          isReservedTopLevelName,
-        });
+        const parsedUnion = parseUnionDecl(
+          unionTail,
+          text,
+          sectionSpan,
+          lineNo,
+          index,
+          {
+            file,
+            lineCount,
+            diagnostics,
+            modulePath,
+            getRawLine,
+            isReservedTopLevelName,
+          },
+          hasExportPrefix,
+        );
         if (parsedUnion) {
           sectionItems.push(parsedUnion.node);
           index = parsedUnion.nextIndex;
@@ -388,7 +405,7 @@ export function parseModuleFile(
           text,
           span: sectionSpan,
           isReservedTopLevelName,
-        });
+        }, hasExportPrefix);
         if (enumNode) sectionItems.push(enumNode);
         index++;
         continue;
@@ -529,12 +546,15 @@ export function parseModuleFile(
     }
     const hasTopKeyword = (kw: string): boolean => new RegExp(`^${kw}\\b`, 'i').test(rest);
 
-    // In v0.1, `export` is accepted only on `const`, `func`, and `op` declarations.
+    // In v0.5, `export` is accepted on sectionless symbol declarations plus callable declarations.
     // It has no semantic effect today, but we still reject it on all other constructs
     // to keep the surface area explicit and future-proof.
     if (hasExportPrefix) {
       const allowed =
         consumeKeywordPrefix(rest, 'const') !== undefined ||
+        consumeKeywordPrefix(rest, 'type') !== undefined ||
+        consumeKeywordPrefix(rest, 'union') !== undefined ||
+        consumeKeywordPrefix(rest, 'enum') !== undefined ||
         consumeKeywordPrefix(rest, 'func') !== undefined ||
         consumeKeywordPrefix(rest, 'op') !== undefined;
       if (!allowed) {
@@ -565,7 +585,7 @@ export function parseModuleFile(
             diag(
               diagnostics,
               modulePath,
-              `export is only permitted on const/func/op declarations`,
+              `export is only permitted on const/type/union/enum/func/op declarations`,
               {
                 line: lineNo,
                 column: 1,
@@ -573,10 +593,15 @@ export function parseModuleFile(
             );
           }
         } else {
-          diag(diagnostics, modulePath, `export is only permitted on const/func/op declarations`, {
-            line: lineNo,
-            column: 1,
-          });
+          diag(
+            diagnostics,
+            modulePath,
+            `export is only permitted on const/type/union/enum/func/op declarations`,
+            {
+              line: lineNo,
+              column: 1,
+            },
+          );
         }
         i++;
         continue;
@@ -615,6 +640,7 @@ export function parseModuleFile(
           getRawLine,
           isReservedTopLevelName,
         },
+        hasExportPrefix,
       );
       if (!parsedType) {
         i++;
@@ -641,6 +667,7 @@ export function parseModuleFile(
           getRawLine,
           isReservedTopLevelName,
         },
+        hasExportPrefix,
       );
       if (!parsedUnion) {
         i++;
@@ -750,7 +777,7 @@ export function parseModuleFile(
         text,
         span: span(file, lineStartOffset, lineEndOffset),
         isReservedTopLevelName,
-      });
+      }, hasExportPrefix);
       if (enumNode) items.push(enumNode);
       i++;
       continue;
@@ -952,6 +979,7 @@ export function parseModuleFile(
     kind: 'ModuleFile',
     span: moduleSpan,
     path: modulePath,
+    moduleId: canonicalModuleId(modulePath),
     items,
   };
 

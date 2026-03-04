@@ -46,6 +46,7 @@ export interface ProgramNode extends BaseNode {
 export interface ModuleFileNode extends BaseNode {
   kind: 'ModuleFile';
   path: string;
+  moduleId: string;
   items: ModuleItemNode[];
 }
 
@@ -153,6 +154,7 @@ export interface AlignDirectiveNode extends BaseNode {
 export interface TypeDeclNode extends BaseNode {
   kind: 'TypeDecl';
   name: string;
+  exported?: boolean;
   typeExpr: TypeExprNode;
 }
 
@@ -162,6 +164,7 @@ export interface TypeDeclNode extends BaseNode {
 export interface UnionDeclNode extends BaseNode {
   kind: 'UnionDecl';
   name: string;
+  exported?: boolean;
   fields: RecordFieldNode[];
 }
 
@@ -171,6 +174,7 @@ export interface UnionDeclNode extends BaseNode {
 export interface EnumDeclNode extends BaseNode {
   kind: 'EnumDecl';
   name: string;
+  exported?: boolean;
   members: string[];
 }
 
