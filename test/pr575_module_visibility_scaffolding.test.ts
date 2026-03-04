@@ -65,7 +65,8 @@ describe('PR575 module visibility scaffolding', () => {
     expect(env.visibleTypes!.get('dep.Word')).toBeDefined();
     expect(env.types.get('dep.Word')).toBeDefined();
     expect(env.visibleEnums!.get('dep.Mode.Off')).toBe(0);
-    expect(env.enums.get('dep.Mode.On')).toBe(1);
+    expect(env.visibleEnums!.get('dep.Mode.On')).toBe(1);
+    expect(env.enums.has('dep.Mode.On')).toBe(false);
     expect(env.consts.get('LOCAL')).toBe(7);
   });
 });
