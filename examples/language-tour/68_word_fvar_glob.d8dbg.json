@@ -65,7 +65,7 @@
         },
         {
           "start": 8192,
-          "end": 8210,
+          "end": 8316,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -104,14 +104,20 @@
           "name": "glob_words",
           "kind": "data",
           "address": 8192,
-          "line": 5,
+          "line": 3,
           "scope": "global"
         },
         {
           "name": "glob_idx_word",
           "kind": "data",
           "address": 8208,
-          "line": 6,
+          "line": 4,
+          "scope": "global"
+        },
+        {
+          "name": "__zax_startup",
+          "kind": "label",
+          "address": 8210,
           "scope": "global"
         }
       ]
@@ -124,7 +130,7 @@
     },
     {
       "start": 8192,
-      "end": 8210
+      "end": 8316
     }
   ],
   "fileList": [
@@ -168,7 +174,7 @@
       "kind": "data",
       "address": 8192,
       "file": "68_word_fvar_glob.zax",
-      "line": 5,
+      "line": 3,
       "scope": "global"
     },
     {
@@ -176,13 +182,20 @@
       "kind": "data",
       "address": 8208,
       "file": "68_word_fvar_glob.zax",
-      "line": 6,
+      "line": 4,
+      "scope": "global"
+    },
+    {
+      "name": "__zax_startup",
+      "kind": "label",
+      "address": 8210,
+      "file": "68_word_fvar_glob.zax",
       "scope": "global"
     }
   ],
   "generator": {
     "tool": "zax",
-    "entrySymbol": "main",
-    "entryAddress": 311
+    "entrySymbol": "__zax_startup",
+    "entryAddress": 8210
   }
 }

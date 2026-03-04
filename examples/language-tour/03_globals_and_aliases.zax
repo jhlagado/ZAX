@@ -1,6 +1,7 @@
-globals
+section data vars at $1000
+  data
   counter: word = 0
-  mirror_counter = counter
+end
 
 func read_counter(): HL
   ld hl, counter
@@ -12,7 +13,7 @@ end
 
 export func main()
   var
-    local_alias = mirror_counter
+    local_alias = counter
   end
 
   write_counter 123

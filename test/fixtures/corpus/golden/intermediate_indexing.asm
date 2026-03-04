@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0000..$0065 (end exclusive)
+; range: $0000..$10C9 (end exclusive)
 
 ; func main begin
 main:
@@ -49,40 +49,36 @@ add HL, DE                     ; 003D: 19
 push HL                        ; 003E: E5
 pop HL                         ; 003F: E1
 ld A, (hl)                     ; 0040: 7E
-ld HL, $0000                   ; 0041: 21 00 00
-push HL                        ; 0044: E5
-ld A, (idx)                    ; 0045: 3A 00 00
-ld H, $0000                    ; 0048: 26 00
-ld L, A                        ; 004A: 6F
-push HL                        ; 004B: E5
-pop HL                         ; 004C: E1
-add HL, HL                     ; 004D: 29
-add HL, HL                     ; 004E: 29
-push HL                        ; 004F: E5
-ld HL, grid                    ; 0050: 21 00 00
-pop DE                         ; 0053: D1
-add HL, DE                     ; 0054: 19
-push HL                        ; 0055: E5
-pop HL                         ; 0056: E1
-pop DE                         ; 0057: D1
-add HL, DE                     ; 0058: 19
-push HL                        ; 0059: E5
-pop HL                         ; 005A: E1
-ld A, (hl)                     ; 005B: 7E
+ld A, (idx)                    ; 0041: 3A 00 00
+ld H, $0000                    ; 0044: 26 00
+ld L, A                        ; 0046: 6F
+push HL                        ; 0047: E5
+pop HL                         ; 0048: E1
+add HL, HL                     ; 0049: 29
+add HL, HL                     ; 004A: 29
+add HL, HL                     ; 004B: 29
+push HL                        ; 004C: E5
+ld HL, grid                    ; 004D: 21 00 00
+pop DE                         ; 0050: D1
+add HL, DE                     ; 0051: 19
+push HL                        ; 0052: E5
+pop HL                         ; 0053: E1
+ld A, (hl)                     ; 0054: 7E
 __zax_epilogue_0:
-pop HL                         ; 005C: E1
-pop DE                         ; 005D: D1
-pop BC                         ; 005E: C1
-pop AF                         ; 005F: F1
-ld SP, IX                      ; 0060: DD F9
-pop IX                         ; 0062: DD E1
-ret                            ; 0064: C9
+pop HL                         ; 0055: E1
+pop DE                         ; 0056: D1
+pop BC                         ; 0057: C1
+pop AF                         ; 0058: F1
+ld SP, IX                      ; 0059: DD F9
+pop IX                         ; 005B: DD E1
+ret                            ; 005D: C9
 ; func main end
 
 ; symbols:
 ; label main = $0000
-; label __zax_epilogue_0 = $005C
-; var idx = $1000
-; var idxw = $1001
-; var arr = $1003
-; var grid = $1013
+; label __zax_epilogue_0 = $0055
+; data idx = $1000
+; data idxw = $1001
+; data arr = $1003
+; data grid = $1013
+; label __zax_startup = $1033

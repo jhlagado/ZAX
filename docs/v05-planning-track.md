@@ -59,12 +59,6 @@ Add syntax support for:
 - declarations inside sections
 - module-scope imports only
 
-Keep the current syntax working during transition:
-
-- `globals ... end`
-- `data ... end`
-- current `section` / `align` directives
-
 This phase adds representation, not full semantics.
 
 ### Phase 2. Non-banked section-key model
@@ -108,14 +102,12 @@ This phase must explicitly define and implement canonical module identity.
 
 ### Phase 5. Unified declaration semantics
 
-Migrate the useful part of the old `sections-modules-design` direction into the
-new model:
+Use the v0.5 storage model directly:
 
 - variable declarations use direct declaration syntax inside `data` sections
-- old `globals` / `data` blocks become legacy syntax
 - no initializer means zero-initialized storage
 
-This is where the earlier “merge `globals` and `data` semantics” work belongs.
+This is where unified named-section storage semantics are enforced.
 
 One explicit rule must be enforced here:
 
@@ -139,13 +131,13 @@ the implementation work for this phase.
 
 ### Phase 7. Migration and deprecation
 
-After the new model works:
+Hard-cut completion for v0.5:
 
-- deprecate old `globals ... end`
-- deprecate old `data ... end`
-- deprecate old active-counter section usage
+- remove old `globals ... end`
+- remove old top-level `data ... end`
+- remove old active-counter section usage (`section code/data/var [at ...]`)
 - migrate examples and guides
-- then remove the old forms
+- validate and close the removal track
 
 ## 5. Phase 6 Baseline (Resolved by `docs/modules.md`)
 
@@ -174,7 +166,7 @@ Break it into:
 2. non-banked section-key collection
 3. layout engine replacement
 4. import/visibility and qualification
-5. unified declarations and legacy coexistence
+5. unified declarations and hard-cut storage syntax
 6. startup initialization
 7. migration/deprecation
 

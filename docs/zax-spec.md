@@ -1,4 +1,4 @@
-# ZAX Language Specification (Draft v0.2)
+# ZAX Language Specification (Draft v0.5 Surface)
 
 This document is the implementable first draft specification for **ZAX**, a structured assembler for the Z80 family. It is written for humans: it introduces concepts in the same order you’ll use them when writing ZAX.
 
@@ -10,11 +10,11 @@ ZAX aims to make assembly code easier to read and refactor by providing:
 - structured control flow inside function/op instruction streams (`if`/`while`/`repeat`/`select`)
 - `op`: inline “macro-instructions” with operand matching
 
-Normative status for v0.2: this document is the sole normative language source. Historical transition rationale documents have been retired and do not override this specification.
+Normative status for the current language surface: this document is the sole normative language source. Historical transition rationale documents have been retired and do not override this specification.
 
 Grammar companion: `docs/zax-grammar.ebnf.md` provides a single-file syntax reference. If any grammar text diverges from this specification, this specification wins.
 
-Anything not defined here is undefined behavior or a compile error in v0.2.
+Anything not defined here is undefined behavior or a compile error.
 
 ---
 
@@ -22,7 +22,7 @@ Anything not defined here is undefined behavior or a compile error in v0.2.
 
 - `docs/zax-spec.md` is the only normative language authority.
 - Supporting documents (`docs/zax-dev-playbook.md`, `docs/v02-codegen-reference.md`, `docs/return-register-policy.md`, `docs/v02-codegen-worked-examples.md`) are non-normative and must not introduce conflicting language rules.
-- `docs/modules.md` is the active design anchor for the planned v0.5 module-and-layout redesign. It is not yet normative for the current v0.2 language surface, but it defines the accepted future direction that will replace the current section-counter and flat-visibility model.
+- `docs/modules.md` is the design anchor for module/layout behavior and is aligned with this v0.5 parser surface.
 - Historical transition rationale documents are retired; if any surviving text conflicts with this document, this document wins.
 
 ---
@@ -40,7 +40,7 @@ module model:
 The accepted v0.5 direction replaces that model with the design defined in
 `docs/modules.md`.
 
-The planned v0.5 changes are:
+The active v0.5 changes are:
 
 - named section contributions and anchors
 - deterministic merge by section key `(kind, name)` in the non-banked initial
@@ -48,14 +48,15 @@ The planned v0.5 changes are:
 - module-scope imports only, with import visibility separated from placement
 - explicit `export` semantics and qualified imported names (`dep.Symbol`)
 - root-first deterministic contribution order
-- unified direct declarations inside `data` sections in a later migration phase
+- unified direct declarations inside named `data` sections
 
-Banked section behavior is intentionally out of scope for the initial v0.5
+Banked section behavior remains out of scope for the initial v0.5
 implementation. Banking remains future direction only until it is promoted into
 the normative language.
 
-Until the v0.5 work lands and this specification is revised, Sections 2 and 3
-remain the normative rules for current implementations.
+Legacy module-scope storage forms (`globals ... end`, top-level `data ... end`,
+and active-counter `section code/data/var [at ...]`) are removed from the
+current parser surface.
 
 ---
 
@@ -74,8 +75,9 @@ ZAX is not a “high-level language”. It is still assembly: you choose registe
 ```
 const MsgLen = 5
 
-data
+section data vars at $4000
   msg: byte[5] = "HELLO"
+end
 
 extern func bios_putc(ch: byte): void at $F003
 
@@ -101,7 +103,7 @@ end
 
 Key ideas this demonstrates:
 
-- `data` emits bytes; `var` reserves addresses (emits no bytes).
+- Named `data` sections define module storage.
 - `rec.field` and `arr[i]` are typed storage accesses. In normal instruction and call contexts, scalar fields/elements use value semantics; aggregate fields/elements continue as storage bases.
 - Structured control flow exists only inside function/op instruction streams.
 
@@ -181,8 +183,8 @@ ZAX treats the following as **reserved** (case-insensitive):
 - Register names: `A F AF B C D E H L HL DE BC SP IX IY I R`.
 - Condition codes used by structured control flow: `Z NZ C NC PO PE M P`.
 - Structured-control keywords: `if`, `else`, `while`, `repeat`, `until`, `select`, `case`, `end`.
-- Declaration keywords: `import`, `type`, `union`, `enum`, `const`, `globals`, `var`, `data`, `bin`, `hex`, `extern`, `func`, `op`, `export`, `section`, `align`, `at`, `from`, `in`.
-  - `var` is reserved for function-local variable blocks. Module-scope storage uses `globals`.
+- Declaration keywords: `import`, `type`, `union`, `enum`, `const`, `var`, `data`, `bin`, `hex`, `extern`, `func`, `op`, `export`, `section`, `align`, `at`, `from`, `in`.
+  - `var` is reserved for function-local variable blocks.
 
 User-defined identifiers (module-scope symbols, locals/args, and labels) must not collide with any reserved name, ignoring case.
 
@@ -198,7 +200,7 @@ A compilation unit is a module file containing:
 
 - zero or more `import` lines
 - zero or more module-scope directives: `section`, `align`
-- module-scope declarations: `type`, `union`, `enum`, `const`, `globals`, `data`, `bin`, `hex`, `extern`
+- module-scope declarations: `import`, named `section ... end`, `align`, `type`, `union`, `enum`, `const`, `bin`, `hex`, `extern`, `func`, `op`
 - zero or more `func` and `op` declarations
 
 No nested functions are permitted.
@@ -212,66 +214,33 @@ Module identity (v0.1):
 - A module’s canonical ID is the file stem of its source path (basename without `.zax`).
 - If two modules in the same build have the same canonical ID, compilation fails (module ID collision).
 
-### 2.2 Sections and Location Counters
+### 2.2 Named Sections and Anchors
 
-This section defines the current v0.2 active-counter layout model. It remains
-normative today, but it is scheduled to be replaced by the v0.5 named-section
-anchor model summarized above and defined in `docs/modules.md`.
-
-ZAX produces a final image by **packing per-section** across all imported modules (no external linker).
+ZAX v0.5 uses named sections.
 
 Section kinds:
 
 - `code`
 - `data`
-- `var`
 
-Each section has an independent location counter.
+Authoring forms:
 
-Directives:
+- `section <kind> <name> ... end`
+- `section <kind> <name> at <imm16> [size <n> | end <imm16>] ... end`
 
-- `section <kind> at <imm16>`: selects section and sets its starting address.
-- `section <kind>`: selects section without changing its current counter.
-- `align <imm>`: advances the current section counter to the next multiple of `<imm>`. `<imm>` must be > 0.
+Rules:
 
-`<kind>` is one of: `code`, `data`, `var`.
+- Active-counter directives are removed (`section code/data/var [at ...]`).
+- `section` blocks are module-scope only.
+- Nested `section` blocks are invalid.
+- `import` is module-scope only.
 
-Scope rules (v0.1):
+Layout:
 
-- `section` and `align` directives are module-scope only. They may not appear inside function/op instruction streams.
-
-Emission rules (v0.1):
-
-- Declarations emit to fixed section kinds, independent of the currently selected section:
-  - `func` emits into `code`
-  - `data` emits into `data`
-  - `var` emits into `var`
-- `bin` emits into the section specified by its required `in <kind>` clause.
-- `hex` writes bytes to absolute addresses in the final address space and does not affect section counters.
-- The currently selected `section` only affects which location counter is advanced by `align` (and which counter is set by `section <kind> at ...`).
-- If any two emissions would write a byte to the same absolute address in the final address→byte map, it is a compile error (overlap), even if the byte values are identical.
-
-Address rules (v0.1):
-
-- A section’s starting address may be set at most once. A second `section <kind> at <imm16>` for the same section is a compile error.
-- `section <kind>` (without `at`) may be used any number of times to switch the active section.
-
-Packing order:
-
-1. Resolve imports and determine a deterministic module order (topological; ties broken by canonical module ID, then by a compiler-defined normalized module path as a final tiebreaker).
-
-- “Normalized module path” is a deterministic string derived from the resolved module file path and used only for tie-breaking.
-  - It must be stable for a given set of input files and resolved import graph, and must not depend on filesystem enumeration order.
-  - Recommendation (non-normative): use a project-relative path with `/` separators.
-
-2. For each section kind in fixed order `code`, `data`, `var`, concatenate module contributions in module order.
-3. Within a module, preserve source order within each section.
-
-Default placement (if not specified):
-
-- `code at $8000`
-- `data` begins immediately after `code`, aligned to 2
-- `var` begins immediately after `data`, aligned to 2
+- Contributions merge by section key `(kind, name)`.
+- Merge order is deterministic and root-first over the resolved import graph.
+- Exactly one anchor definition is required for each contributed key.
+- Missing anchors, duplicate anchors, overflow, and overlap are compile errors.
 
 ---
 
@@ -309,7 +278,7 @@ explicit export semantics and qualified imported names.
 
 Namespace rule (v0.1):
 
-- `type`, `union`, `enum`, `const`, storage symbols (`globals`/`data`/`bin`), `func`, and `op` names share the same global namespace. Defining a `func` and an `op` with the same name is a compile error.
+- `type`, `union`, `enum`, `const`, storage symbols (`data`/`bin`), `func`, and `op` names share the same global namespace. Defining a `func` and an `op` with the same name is a compile error.
 
 Forward references (v0.1):
 
@@ -532,8 +501,9 @@ Example (informative):
 
 ```
 
-globals
-v: Value
+section data vars at $2000
+  v: Value = { b: 0 }
+end
 
 func read_value_overlay()
   ld a, v.b  ; read low byte
@@ -545,17 +515,17 @@ end
 
 ---
 
-## 6. Storage Declarations: `globals`, `data`, `bin`, `hex`, `extern`
+## 6. Storage Declarations: named-section `data`, `bin`, `hex`, `extern`
 
-ZAX separates **module variable storage** (`globals`) from **data block declarations** (`data`) because they serve different authoring roles:
+Module storage is declared inside named `data` sections.
 
-- `globals` defines module variable symbols in the `var` section (scalars and composites).
-- `data` defines initialized table/blob declarations in the `data` section.
-- Both can contribute bytes to final emitted artifacts depending on declaration form.
+- `globals ... end` is removed.
+- top-level `data ... end` blocks are removed.
+- storage declarations use `name: Type [= initializer]` inside `section data <name> ... end`.
 
 ### 6.1 Storage Semantics and Dereference
 
-- `globals`, function-local `var`, parameters, and `data` declarations are typed storage.
+- Function-local `var`, parameters, and named-section `data` declarations are typed storage.
 - Scalar storage uses **value semantics** in `LD` and call arguments: a bare name means the stored value.
 - Composite storage (arrays, records, unions) is still referred to by name in source, but the compiler transparently passes or lowers it as a storage base when an aggregate operation needs one.
 - `bin` and `hex` names denote storage regions/blobs and are primarily used as storage bases rather than scalar values.
@@ -595,7 +565,7 @@ Lowering guarantees and rejected patterns (v0.1):
 - The compiler guarantees lowering for loads/stores whose memory operand is an `ea` expression of the following forms:
   - `LD r8, (ea)` and `LD (ea), r8`
   - `LD r16, (ea)` and `LD (ea), r16`
-    where `ea` is a local/arg slot, a module-scope storage address (`globals`/`data`/`bin`), `rec.field`, `arr[i]`, or `ea +/- imm`.
+    where `ea` is a local/arg slot, a module-scope storage address (`data`/`bin`), `rec.field`, `arr[i]`, or `ea +/- imm`.
 - The compiler rejects source forms that are not meaningful on Z80 and do not have a well-defined lowering under the preservation constraints, including:
   - memory-to-memory forms (e.g., `LD (ea1), (ea2)`).
   - instructions where both operands require lowering and a correct sequence cannot be produced without clobbering non-destination registers or flags that must be preserved.
@@ -604,69 +574,16 @@ Non-guarantees (v0.1):
 
 - Arithmetic/logical instruction forms that are not directly encodable on Z80 (e.g., `add hl, (ea)`) are not guaranteed to be accepted, even though they may be expressible via a multi-instruction sequence.
 
-### 6.2 `globals` (Module Storage)
+### 6.2 Removed `globals` Surface
 
-Syntax:
+`globals ... end` is removed in v0.5.
 
-```
-
-globals
-total: word
-mode: byte
-boot_count: word = 1
-active_mode = mode
-
-```
-
-- Declares module-scope storage in `var`.
-- Declaration forms:
-  - storage declaration: `name: Type`
-  - typed value initializer: `name: Type = valueExpr`
-  - alias initializer (inferred): `name = rhs`
-- Typed alias form is invalid: `name: Type = rhs` is a compile error.
-- This is **module-scope** storage (addresses in the `var` section). It is distinct from a function-local `var` block, which declares frame-local names (Section 8.1).
-- A `globals` block continues until the next module-scope declaration, directive, or end of file.
-- Legacy module-scope `var` blocks are rejected in v0.1 with a migration diagnostic (`Top-level "var" block has been renamed to "globals".`).
-
-Initialization semantics (v0.2):
-
-- `name: Type` allocates storage and zero-initializes it.
-- `name: Type = valueExpr` allocates storage and initializes from `valueExpr`.
-- `name = rhs` allocates no storage; it aliases an existing symbol/address path.
-- In image output terms, `globals` storage declarations contribute bytes in `var` (zero-filled unless value-initialized).
-
-Alias compatibility (v0.2):
-
-- Alias declarations use inferred type from `rhs`.
-- For arrays, `T[N]` where `T[]` is expected is allowed.
-- `T[]` to `T[N]` requires proof that length is exactly `N`; otherwise compile error.
-- Element-type mismatch is a compile error.
-
-Initializer classification and diagnostics (normative):
-
-- `valueExpr` is an initializer expression compatible with the declared type.
-  - scalar declarations use compile-time immediate expressions (`imm`) valid for declared width.
-  - for `globals` composite declarations in v0.2, zero-init form (`= 0`) is supported; aggregate record initializer syntax is deferred.
-- `rhs` is an address/reference source (symbol or address path expression).
-- `name: Type = valueExpr` is value initialization.
-- `name = rhs` is alias initialization with inferred type.
-- `name: Type = rhs` is always rejected (typed alias form is not allowed in this scope).
-
-Examples (normative classification):
+Use named `data` sections instead:
 
 ```zax
-globals
-  table: byte[4] = { 1, 2, 3, 4 } ; valid value-init
-  table_ref = table                ; valid alias-init
-  bad_table: byte[4] = table       ; invalid typed alias form
-
-type Pair
-  lo: byte
-  hi: byte
+section data vars at $2000
+  counter: word = 0
 end
-
-globals
-  p: Pair = 0                      ; valid composite zero-init form in v0.2
 ```
 
 ### 6.3 `data` (Initialized Storage)
@@ -674,12 +591,11 @@ globals
 Syntax:
 
 ```
-
-data
-table: word[4] = { 1, 2, 3, 4 }
-banner: byte[] = "HELLO"
-bytes: byte[3] = { $00, $01, $FF }
-
+section data vars at $2000
+  table: word[4] = { 1, 2, 3, 4 }
+  banner: byte[] = "HELLO"
+  bytes: byte[3] = { $00, $01, $FF }
+end
 ```
 
 - Declares storage in `data`.
@@ -689,7 +605,6 @@ Initialization:
 - `byte[n] = { imm8, ... }` emits `n` bytes.
 - `word[n] = { imm16, ... }` emits `n` little-endian words.
 - `byte[n] = "TEXT"` emits the ASCII bytes of the string; length must equal `n` (no terminator).
-- A `data` block continues until the next module-scope declaration, directive, or end of file.
 
 Type vs initializer (v0.1):
 
@@ -766,7 +681,7 @@ hex bios from "rom/bios.hex"
   - For disjoint HEX ranges, this remains the minimum written address across all ranges.
 - HEX output is written to absolute addresses in the final address space and does not advance any section’s location counter.
 - If a HEX-written byte overlaps any other emission, it is a compile error (regardless of whether the bytes are equal). This is an instance of the general overlap rule in Section 2.2.
-- The compiler’s output is an address→byte map. When producing a flat binary image, the compiler emits bytes from the lowest written address to the highest written address. Unwritten addresses within this range are filled with the **gap fill byte**, `$00`. `var` may contribute bytes from `globals` storage declarations.
+- The compiler’s output is an address→byte map. When producing a flat binary image, the compiler emits bytes from the lowest written address to the highest written address. Unwritten addresses within this range are filled with the **gap fill byte**, `$00`.
   - When producing Intel HEX output, the compiler emits only written bytes/records; gap fill bytes are not emitted.
 
 ### 6.5 `extern` (Binding Names to Addresses)
@@ -852,7 +767,7 @@ Integer semantics (v0.1):
 
 `ea` is the compiler's storage-location expression class. It identifies an addressable place that lowering can materialize when needed; it is not the primary source-level value model for ordinary variables. Allowed:
 
-- storage symbols: `globals` names, `data` names, `bin` base names
+- storage symbols: named-section `data` names and `bin` base names
 - function-scope symbols: argument names and local `var` names (as frame slots)
 - field access: `rec.field`
 - indexing: `arr[i]` and nested `arr[r][c]` (index forms as defined above)
@@ -920,8 +835,9 @@ Function-local `var` invalid forms and rules:
 Examples (normative classification):
 
 ```zax
-globals
+section data vars at $2000
   table: byte[4] = { 1, 2, 3, 4 }
+end
 
 func sample(): void
   var
@@ -1011,8 +927,9 @@ Calls follow the calling convention in 8.2 (compiler emits the required pushes, 
 Example:
 
 ```zax
-globals
+section data vars at $2000
   sample_bytes: byte[10] = { 1,2,3,4,5,6,7,8,9,10 }
+end
 
 func sum_fixed_10(values: byte[10]): word
   ; fixed-length contract
@@ -1516,7 +1433,7 @@ next_char
 - Compilers must emit an error when index expressions use unsupported forms for v0.2 grammar/semantics.
 - Compilers should emit diagnostics that distinguish typed-call boundary guarantees from raw Z80 `call` behavior.
 - Compilers may emit warnings when composite storage padding materially increases natural packed size.
-- Compilers must emit an error for typed alias forms (`name: Type = rhs`) in both `globals` and function-local `var`.
+- Compilers must emit an error for typed alias forms (`name: Type = rhs`) in function-local `var`.
 - Compilers must emit an error for non-scalar local storage declarations without alias initialization.
 
 ## 12. Examples (Non-normative)
@@ -1980,7 +1897,7 @@ end
 
 ### 3.3 Location and Dereference Matchers
 
-**`ea`** matches a storage-location expression as defined in Section 7.2 of the spec: storage names (`globals`/`data`/`bin` names), function-local names (as frame slots), field access (`rec.field`), array indexing (`arr[i]`), and address arithmetic (`ea + imm`, `ea - imm`). When substituted, the parameter carries the location expression _without_ implicit parentheses, so the op body decides whether to use it as a location or an explicitly dereferenced operand.
+**`ea`** matches a storage-location expression as defined in Section 7.2 of the spec: storage names (`data`/`bin` names), function-local names (as frame slots), field access (`rec.field`), array indexing (`arr[i]`), and address arithmetic (`ea + imm`, `ea - imm`). When substituted, the parameter carries the location expression _without_ implicit parentheses, so the op body decides whether to use it as a location or an explicitly dereferenced operand.
 
 The main spec's runtime-atom expression budget applies to `ea` matching. In v0.2, matcher acceptance does not bypass that budget: if a call-site `ea` contains too many runtime atoms, the invocation is rejected before or during semantic validation.
 
