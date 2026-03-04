@@ -22,7 +22,40 @@ Anything not defined here is undefined behavior or a compile error in v0.2.
 
 - `docs/zax-spec.md` is the only normative language authority.
 - Supporting documents (`docs/zax-dev-playbook.md`, `docs/v02-codegen-reference.md`, `docs/return-register-policy.md`, `docs/v02-codegen-worked-examples.md`) are non-normative and must not introduce conflicting language rules.
+- `docs/modules.md` is the active design anchor for the planned v0.5 module-and-layout redesign. It is not yet normative for the current v0.2 language surface, but it defines the accepted future direction that will replace the current section-counter and flat-visibility model.
 - Historical transition rationale documents are retired; if any surviving text conflicts with this document, this document wins.
+
+---
+
+## Forward Direction: v0.5 Modules and Layout (Non-normative)
+
+The current normative rules in Sections 2 and 3 define the existing v0.2/v0.4
+module model:
+
+- module-scope `import`
+- a flat imported-name visibility model
+- global per-kind section counters (`code`, `data`, `var`)
+- packing by section kind across the full import graph
+
+The accepted v0.5 direction replaces that model with the design defined in
+`docs/modules.md`.
+
+The planned v0.5 changes are:
+
+- named section contributions and anchors
+- deterministic merge by section key `(kind, name)` in the non-banked initial
+  implementation
+- module-scope imports only, with import visibility separated from placement
+- explicit `export` semantics and qualified imported names (`dep.Symbol`)
+- root-first deterministic contribution order
+- unified direct declarations inside `data` sections in a later migration phase
+
+Banked section behavior is intentionally out of scope for the initial v0.5
+implementation. Banking remains future direction only until it is promoted into
+the normative language.
+
+Until the v0.5 work lands and this specification is revised, Sections 2 and 3
+remain the normative rules for current implementations.
 
 ---
 
@@ -181,6 +214,10 @@ Module identity (v0.1):
 
 ### 2.2 Sections and Location Counters
 
+This section defines the current v0.2 active-counter layout model. It remains
+normative today, but it is scheduled to be replaced by the v0.5 named-section
+anchor model summarized above and defined in `docs/modules.md`.
+
 ZAX produces a final image by **packing per-section** across all imported modules (no external linker).
 
 Section kinds:
@@ -242,6 +279,10 @@ Default placement (if not specified):
 
 ### 3.1 Import Syntax
 
+This section defines the current v0.2 import and visibility model. It remains
+normative today, but it is scheduled to be replaced in v0.5 by explicit export
+semantics and qualified imported names.
+
 - `import <ModuleId>`
 - `import "<path>"`
 
@@ -250,6 +291,10 @@ Default placement (if not specified):
 `import "<path>"` loads a module from an explicit path. For v0.1, quoted paths should include the `.zax` extension and are resolved relative to the importing file (then search paths, if not found).
 
 ### 3.2 Visibility and Collisions
+
+This section defines the current v0.2 flat imported-visibility model. It
+remains normative today, but it is scheduled to be replaced in v0.5 by
+explicit export semantics and qualified imported names.
 
 - In v0.1, all module-scope names are public. The `export` keyword is accepted on `const`, `func`, and `op` declarations for clarity and forward compatibility, but has no effect. Using `export` on any other declaration form is a compile error.
 - All names from an imported module are brought into the importing module’s global namespace.
