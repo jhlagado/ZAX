@@ -82,6 +82,7 @@ import type { NonBankedSectionKeyCollection } from '../sectionKeys.js';
 import type { Callable, PendingSymbol, SectionKind, SourceSegmentTag } from './loweringTypes.js';
 import { createOpStackAnalysisHelpers } from './opStackAnalysis.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
+import { moduleQualifierOf } from '../moduleVisibility.js';
 import { loadBinInput, loadHexInput } from './inputAssets.js';
 import { createEaResolutionHelpers, type EaResolution } from './eaResolution.js';
 import { createEaMaterializationHelpers } from './eaMaterialization.js';
@@ -197,8 +198,10 @@ export function emitProgram(
     line: number;
   }[] = [];
 
-  const callables = new Map<string, Callable>();
-  const opsByName = new Map<string, OpDeclNode[]>();
+  const localCallablesByFile = new Map<string, Map<string, Callable>>();
+  const visibleCallables = new Map<string, Callable>();
+  const localOpsByFile = new Map<string, Map<string, OpDeclNode[]>>();
+  const visibleOpsByName = new Map<string, OpDeclNode[]>();
   const opStackPolicyMode = options?.opStackPolicy ?? 'off';
   const rawTypedCallWarningsEnabled = options?.rawTypedCallWarnings === true;
   const declaredOpNames = new Set<string>();
@@ -215,7 +218,36 @@ export function emitProgram(
     ['L', 5],
     ['A', 7],
   ]);
-  const { summarizeOpStackEffect } = createOpStackAnalysisHelpers({ opsByName });
+  const canAccessLoweredQualifiedName = (name: string, file: string): boolean => {
+    const qualifier = moduleQualifierOf(name);
+    if (!qualifier) return true;
+    const currentModuleId = env.moduleIds?.get(file)?.toLowerCase();
+    if (currentModuleId === qualifier) return true;
+    const imported = env.importedModuleIds?.get(file);
+    if (!imported) return true;
+    for (const importedId of imported) {
+      if (importedId.toLowerCase() === qualifier) return true;
+    }
+    return false;
+  };
+
+  const resolveVisibleCallable = (name: string, file: string): Callable | undefined => {
+    const lower = name.toLowerCase();
+    if (!moduleQualifierOf(name)) return localCallablesByFile.get(file)?.get(lower);
+    if (!canAccessLoweredQualifiedName(name, file)) return undefined;
+    return visibleCallables.get(lower);
+  };
+
+  const resolveVisibleOpCandidates = (name: string, file: string): OpDeclNode[] | undefined => {
+    const lower = name.toLowerCase();
+    if (!moduleQualifierOf(name)) return localOpsByFile.get(file)?.get(lower);
+    if (!canAccessLoweredQualifiedName(name, file)) return undefined;
+    return visibleOpsByName.get(lower);
+  };
+
+  const { summarizeOpStackEffect } = createOpStackAnalysisHelpers({
+    resolveOpCandidates: resolveVisibleOpCandidates,
+  });
 
   const storageTypes = new Map<string, TypeExprNode>();
   const moduleAliasTargets = new Map<string, EaExprNode>();
@@ -732,8 +764,10 @@ export function emitProgram(
     localAliasTargets,
     storageTypes,
     rawTypedCallWarningsEnabled,
-    callables,
-    opsByName,
+    localCallablesByFile,
+    visibleCallables,
+    localOpsByFile,
+    visibleOpsByName,
     declaredOpNames,
     deferredExterns,
     opStackPolicyMode,
@@ -787,6 +821,8 @@ export function emitProgram(
     resolveAggregateType,
     sizeOfTypeExpr,
     lowerFunctionDecl,
+    resolveCallable: resolveVisibleCallable,
+    resolveOpCandidates: resolveVisibleOpCandidates,
     namedSectionSinksByNode,
     withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T): T => {
       const prevSink = currentNamedSectionSink;

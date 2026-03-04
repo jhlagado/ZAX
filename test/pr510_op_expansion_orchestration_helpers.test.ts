@@ -30,7 +30,8 @@ describe('#510 op expansion orchestration helpers', () => {
     };
 
     const helpers = createOpExpansionOrchestrationHelpers({
-      opsByName: new Map([[opDecl.name.toLowerCase(), [opDecl]]]),
+      resolveOpCandidates: (name: string) =>
+        name.toLowerCase() === opDecl.name.toLowerCase() ? [opDecl] : undefined,
       diagnostics,
       env: {} as never,
       hasStackSlots: false,

@@ -5,10 +5,10 @@ export type OpStackSummary =
   | { kind: 'complex' };
 
 type Context = {
-  opsByName: Map<string, OpDeclNode[]>;
+  resolveOpCandidates: (name: string, file: string) => OpDeclNode[] | undefined;
 };
 
-export function createOpStackAnalysisHelpers({ opsByName }: Context) {
+export function createOpStackAnalysisHelpers({ resolveOpCandidates }: Context) {
   const opStackSummaryCache = new Map<OpDeclNode, OpStackSummary>();
 
   const opStackSummaryKey = (decl: OpDeclNode): string =>
@@ -80,7 +80,7 @@ export function createOpStackAnalysisHelpers({ opsByName }: Context) {
         complex = true;
         break;
       }
-      const nestedCandidates = opsByName.get(head);
+      const nestedCandidates = resolveOpCandidates(head, decl.span.file);
       if (nestedCandidates && nestedCandidates.length > 0) {
         if (nestedCandidates.length !== 1) {
           complex = true;

@@ -43,8 +43,10 @@ import type { AggregateType, ScalarKind } from './typeResolution.js';
 type Context = Omit<FunctionLoweringContext, 'item'> & {
   program: ProgramNode;
   includeDirs: string[];
-  callables: Map<string, Callable>;
-  opsByName: Map<string, OpDeclNode[]>;
+  localCallablesByFile: Map<string, Map<string, Callable>>;
+  visibleCallables: Map<string, Callable>;
+  localOpsByFile: Map<string, Map<string, OpDeclNode[]>>;
+  visibleOpsByName: Map<string, OpDeclNode[]>;
   declaredOpNames: Set<string>;
   declaredBinNames: Set<string>;
   deferredExterns: Array<{
@@ -155,17 +157,49 @@ export function preScanProgramDeclarations(ctx: Context): void {
 
     if (item.kind === 'FuncDecl') {
       const f = item as FuncDeclNode;
-      ctx.callables.set(f.name.toLowerCase(), { kind: 'func', node: f });
+      const fileCallables =
+        ctx.localCallablesByFile.get(f.span.file) ??
+        (() => {
+          const m = new Map<string, Callable>();
+          ctx.localCallablesByFile.set(f.span.file, m);
+          return m;
+        })();
+      fileCallables.set(f.name.toLowerCase(), { kind: 'func', node: f });
+      if (f.exported) {
+        const moduleId = (ctx.env.moduleIds?.get(f.span.file) ?? f.span.file).toLowerCase();
+        ctx.visibleCallables.set(`${moduleId}.${f.name.toLowerCase()}`, { kind: 'func', node: f });
+      }
     } else if (item.kind === 'OpDecl') {
       const op = item as OpDeclNode;
       const key = op.name.toLowerCase();
-      const existing = ctx.opsByName.get(key);
+      const fileOps =
+        ctx.localOpsByFile.get(op.span.file) ??
+        (() => {
+          const m = new Map<string, OpDeclNode[]>();
+          ctx.localOpsByFile.set(op.span.file, m);
+          return m;
+        })();
+      const existing = fileOps.get(key);
       if (existing) existing.push(op);
-      else ctx.opsByName.set(key, [op]);
+      else fileOps.set(key, [op]);
+      if (op.exported) {
+        const moduleId = (ctx.env.moduleIds?.get(op.span.file) ?? op.span.file).toLowerCase();
+        const qualified = `${moduleId}.${key}`;
+        const visible = ctx.visibleOpsByName.get(qualified);
+        if (visible) visible.push(op);
+        else ctx.visibleOpsByName.set(qualified, [op]);
+      }
     } else if (item.kind === 'ExternDecl') {
       const ex = item as ExternDeclNode;
+      const fileCallables =
+        ctx.localCallablesByFile.get(ex.span.file) ??
+        (() => {
+          const m = new Map<string, Callable>();
+          ctx.localCallablesByFile.set(ex.span.file, m);
+          return m;
+        })();
       for (const fn of ex.funcs) {
-        ctx.callables.set(fn.name.toLowerCase(), {
+        fileCallables.set(fn.name.toLowerCase(), {
           kind: 'extern',
           node: fn,
           targetLower: fn.name.toLowerCase(),

@@ -42,7 +42,7 @@ type Context = {
   getTrackedSpInvalid: () => boolean;
   setTrackedSpInvalid: (value: boolean) => void;
   rawTypedCallWarningsEnabled: boolean;
-  callables: Map<string, Callable>;
+  resolveCallable: (name: string, file: string) => Callable | undefined;
   diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
   diagAtWithSeverityAndId: (
     diagnostics: Diagnostic[],
@@ -81,7 +81,7 @@ type Context = {
   pushZeroExtendedReg8: (regName: string, span: SourceSpan) => boolean;
   pushImm16: (value: number, span: SourceSpan) => boolean;
   syncToFlow: () => void;
-  opsByName: Map<string, OpDeclNode[]>;
+  resolveOpCandidates: (name: string, file: string) => OpDeclNode[] | undefined;
   opStackPolicyMode: OpStackPolicyMode;
   opExpansionStack: OpExpansionFrame[];
   diagAtWithId: (
@@ -191,7 +191,7 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
         symbolicTarget: { baseLower: string; addend: number } | undefined,
       ): void => {
         if (!ctx.rawTypedCallWarningsEnabled || !symbolicTarget || symbolicTarget.addend !== 0) return;
-        const callable = ctx.callables.get(symbolicTarget.baseLower);
+        const callable = ctx.resolveCallable(symbolicTarget.baseLower, asmItem.span.file);
         if (!callable) return;
         ctx.diagAtWithSeverityAndId(
           ctx.diagnostics,
@@ -202,7 +202,7 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
         );
       };
 
-      const callable = ctx.callables.get(asmItem.head.toLowerCase());
+      const callable = ctx.resolveCallable(asmItem.head, asmItem.span.file);
       if (callable) {
         const args = asmItem.operands;
         const params = callable.node.params;
@@ -395,7 +395,7 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
       }
 
       const { tryHandleOpExpansion } = createOpExpansionOrchestrationHelpers({
-        opsByName: ctx.opsByName,
+        resolveOpCandidates: ctx.resolveOpCandidates,
         diagnostics: ctx.diagnostics,
         env: ctx.env,
         hasStackSlots: ctx.hasStackSlots,
