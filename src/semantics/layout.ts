@@ -8,6 +8,7 @@ import type {
   TypeExprNode,
   UnionDeclNode,
 } from '../frontend/ast.js';
+import { resolveVisibleType } from '../moduleVisibility.js';
 import type { CompileEnv } from './env.js';
 
 export interface TypeStorageInfo {
@@ -91,7 +92,7 @@ export function storageInfoForTypeExpr(
         }
         visiting.add(te.name);
         try {
-          const decl = env.types.get(te.name);
+          const decl = resolveVisibleType(te.name, te.span.file, env);
           if (!decl) {
             diag(te.span.file, `Unknown type "${te.name}".`);
             return undefined;
@@ -197,7 +198,7 @@ export function offsetOfPathInTypeExpr(
           diag(te.span.file, `Recursive type definition detected for "${te.name}".`);
           return undefined;
         }
-        const decl = env.types.get(te.name);
+        const decl = resolveVisibleType(te.name, te.span.file, env);
         if (!decl) {
           diag(te.span.file, `Unknown type "${te.name}".`);
           return undefined;
