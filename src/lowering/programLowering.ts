@@ -144,9 +144,12 @@ type FinalizationContext = {
 };
 
 export function preScanProgramDeclarations(ctx: Context): void {
-  const preScanItem = (item: ModuleItemNode | SectionItemNode): void => {
+  const preScanItem = (
+    item: ModuleItemNode | SectionItemNode,
+    namedSection?: NamedSectionNode,
+  ): void => {
     if (item.kind === 'NamedSection') {
-      for (const sectionItem of item.items) preScanItem(sectionItem);
+      for (const sectionItem of item.items) preScanItem(sectionItem, item);
       return;
     }
 
@@ -169,6 +172,7 @@ export function preScanProgramDeclarations(ctx: Context): void {
         });
       }
     } else if (item.kind === 'VarBlock' && item.scope === 'module') {
+      if (namedSection) return;
       const vb = item as VarBlockNode;
       for (const decl of vb.decls) {
         const lower = decl.name.toLowerCase();
@@ -183,6 +187,7 @@ export function preScanProgramDeclarations(ctx: Context): void {
       }
     } else if (item.kind === 'BinDecl') {
       const bd = item as BinDeclNode;
+      if (namedSection && bd.section !== namedSection.section) return;
       ctx.declaredBinNames.add(bd.name.toLowerCase());
       ctx.rawAddressSymbols.add(bd.name.toLowerCase());
       ctx.storageTypes.set(bd.name.toLowerCase(), { kind: 'TypeName', span: bd.span, name: 'addr' });
