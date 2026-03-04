@@ -26,6 +26,21 @@ function diag(
   });
 }
 
+function warnLegacy(
+  diagnostics: Diagnostic[],
+  file: string,
+  message: string,
+  where?: { line: number; column: number },
+): void {
+  diagnostics.push({
+    id: DiagnosticIds.LegacySyntaxWarning,
+    severity: 'warning',
+    message,
+    file,
+    ...(where ? { line: where.line, column: where.column } : {}),
+  });
+}
+
 function stripComment(line: string): string {
   const semi = line.indexOf(';');
   return semi >= 0 ? line.slice(0, semi) : line;
@@ -43,6 +58,7 @@ type ParseGlobalsContext = {
   diagnostics: Diagnostic[];
   modulePath: string;
   getRawLine: (lineIndex: number) => RawLine;
+  emitLegacyWarnings?: boolean;
   isReservedTopLevelName: (name: string) => boolean;
 };
 
@@ -63,6 +79,13 @@ export function parseGlobalsBlock(
       line: lineNo,
       column: 1,
     });
+  } else if (ctx.emitLegacyWarnings) {
+    warnLegacy(
+      diagnostics,
+      modulePath,
+      'Legacy "globals ... end" storage blocks are deprecated; prefer direct declarations inside named data sections.',
+      { line: lineNo, column: 1 },
+    );
   }
 
   const blockDeclKind = 'globals declaration';
