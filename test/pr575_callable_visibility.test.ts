@@ -29,4 +29,9 @@ describe('PR575 callable visibility', () => {
     const res = await compile(fixture('pr575_callable_self_qualified.zax'), {}, { formats: defaultFormatWriters });
     expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
   });
+
+  it('allows same-module qualified private function and op references', async () => {
+    const res = await compile(fixture('pr575_callable_self_private_qualified.zax'), {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+  });
 });
