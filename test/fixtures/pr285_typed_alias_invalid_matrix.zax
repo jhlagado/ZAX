@@ -1,6 +1,7 @@
-globals
-  base: word
-  bad_global: word = base
+section data vars at $1000
+  data
+    base: word = 0
+end
 
 func main()
   var

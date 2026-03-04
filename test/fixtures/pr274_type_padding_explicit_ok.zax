@@ -1,6 +1,3 @@
-section code at $0000
-section var at $1000
-
 type Sprite
   x: byte
   y: byte
@@ -10,8 +7,10 @@ type Sprite
   _pad_byte: byte
 end
 
-globals
-  one: Sprite
+section data vars at $1000
+  data
+    one: Sprite = { x: 0, y: 0, tile: 0, flags: 0, _pad_word: 0, _pad_byte: 0 }
+end
 
 export func main()
   ld a, one.x

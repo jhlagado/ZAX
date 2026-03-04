@@ -1,0 +1,11 @@
+section data vars at $1000
+  data
+    arr: byte[3] = [ 1, 2, 3 ]
+end
+
+section code boot at $0000
+  export func main()
+    ld a, arr[0]
+    ret
+  end
+end

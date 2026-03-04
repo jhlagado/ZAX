@@ -30,16 +30,18 @@ describe('PR476 simple top-level parser extraction', () => {
       specifier: 'mod.zax',
       form: 'path',
     });
-    expect(
-      parseSectionDirectiveDecl('section data at $1000', 'data at $1000', {
-        ...ctx,
-        text: 'section data at $1000',
-      }),
-    ).toMatchObject({
-      kind: 'Section',
-      section: 'data',
-      at: { kind: 'ImmLiteral', value: 0x1000 },
+    const sectionDecl = parseSectionDirectiveDecl('section data at $1000', 'data at $1000', {
+      ...ctx,
+      text: 'section data at $1000',
     });
+    expect(sectionDecl).toBeUndefined();
+    expect(ctx.diagnostics).toContainEqual(
+      expect.objectContaining({
+        severity: 'error',
+        message:
+          'Legacy active-counter section directive "section data at ..." is removed; use a named section like "section data <name> at ..." instead.',
+      }),
+    );
     expect(
       parseAlignDirectiveDecl('align $10', '$10', { ...ctx, text: 'align $10' }),
     ).toMatchObject({
@@ -82,15 +84,20 @@ describe('PR476 simple top-level parser extraction', () => {
       diagnostics,
     );
 
-    expect(diagnostics).toEqual([]);
-    expect(program.files[0]?.items).toHaveLength(4);
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        severity: 'error',
+        message:
+          'Legacy active-counter section directive "section data at ..." is removed; use a named section like "section data <name> at ..." instead.',
+      }),
+    ]);
+    expect(program.files[0]?.items).toHaveLength(3);
     expect(program.files[0]?.items[0]).toMatchObject({ kind: 'Import', specifier: 'mod.zax' });
     expect(program.files[0]?.items[1]).toMatchObject({
       kind: 'ConstDecl',
       name: 'FOO',
       exported: true,
     });
-    expect(program.files[0]?.items[2]).toMatchObject({ kind: 'Section', section: 'data' });
-    expect(program.files[0]?.items[3]).toMatchObject({ kind: 'Align' });
+    expect(program.files[0]?.items[2]).toMatchObject({ kind: 'Align' });
   });
 });

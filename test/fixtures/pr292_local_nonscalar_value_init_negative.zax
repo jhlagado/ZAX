@@ -1,5 +1,3 @@
-section code at $0000
-
 export func main()
   var
     arr: byte[4] = 1
