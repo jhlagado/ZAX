@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
+import type { SymbolEntry } from '../formats/types.js';
 import type { CompileEnv } from '../semantics/env.js';
 import type { ImmExprNode } from '../frontend/ast.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
@@ -246,4 +247,116 @@ export function placeNonBankedSectionContributions(
   }
 
   return { placedRegions, placedContributions };
+}
+
+export function collectPlacedNamedSectionSymbols(
+  placedContributions: PlacedNamedSectionContribution[],
+  diagnostics: Diagnostic[],
+): SymbolEntry[] {
+  const symbols: SymbolEntry[] = [];
+
+  for (const placed of placedContributions) {
+    for (const pending of placed.sink.pendingSymbols) {
+      const address = placed.baseAddress + pending.offset;
+      if (address < 0 || address > 0xffff) {
+        const where = startOf(placed.sink);
+        diagAt(
+          diagnostics,
+          where.file,
+          where.line,
+          where.column,
+          `Named section symbol "${pending.name}" resolves out of range in section "${formatKey(placed.sink)}".`,
+        );
+        continue;
+      }
+      symbols.push({
+        kind: pending.kind,
+        name: pending.name,
+        address,
+        ...(pending.file !== undefined ? { file: pending.file } : {}),
+        ...(pending.line !== undefined ? { line: pending.line } : {}),
+        ...(pending.scope !== undefined ? { scope: pending.scope } : {}),
+        ...(pending.size !== undefined ? { size: pending.size } : {}),
+      });
+    }
+  }
+
+  return symbols;
+}
+
+export function resolvePlacedNamedSectionFixups(
+  placedContributions: PlacedNamedSectionContribution[],
+  diagnostics: Diagnostic[],
+  bytes: Map<number, number>,
+  symbols: SymbolEntry[],
+): void {
+  const addrByNameLower = new Map<string, number>();
+  for (const sym of symbols) {
+    if (sym.kind === 'constant' || sym.address === undefined) continue;
+    addrByNameLower.set(sym.name.toLowerCase(), sym.address);
+  }
+
+  for (const placed of placedContributions) {
+    const sink = placed.sink;
+
+    for (const fx of sink.fixups) {
+      const base = addrByNameLower.get(fx.baseLower);
+      const addr = base === undefined ? undefined : base + fx.addend;
+      if (addr === undefined) {
+        const where = startOf(sink);
+        diagAt(
+          diagnostics,
+          where.file,
+          where.line,
+          where.column,
+          `Unresolved symbol "${fx.baseLower}" in named-section 16-bit fixup.`,
+        );
+        continue;
+      }
+      if (addr < 0 || addr > 0xffff) {
+        const where = startOf(sink);
+        diagAt(
+          diagnostics,
+          where.file,
+          where.line,
+          where.column,
+          `Named-section 16-bit fixup address out of range for "${fx.baseLower}" with addend ${fx.addend}: ${addr}.`,
+        );
+        continue;
+      }
+      const patch = placed.baseAddress + fx.offset;
+      bytes.set(patch, addr & 0xff);
+      bytes.set(patch + 1, (addr >> 8) & 0xff);
+    }
+
+    for (const fx of sink.rel8Fixups) {
+      const base = addrByNameLower.get(fx.baseLower);
+      const target = base === undefined ? undefined : base + fx.addend;
+      if (target === undefined) {
+        const where = startOf(sink);
+        diagAt(
+          diagnostics,
+          where.file,
+          where.line,
+          where.column,
+          `Unresolved symbol "${fx.baseLower}" in named-section rel8 ${fx.mnemonic} fixup.`,
+        );
+        continue;
+      }
+      const origin = placed.baseAddress + fx.origin;
+      const disp = target - origin;
+      if (disp < -128 || disp > 127) {
+        const where = startOf(sink);
+        diagAt(
+          diagnostics,
+          where.file,
+          where.line,
+          where.column,
+          `Named-section ${fx.mnemonic} target out of range for rel8 branch (${disp}, expected -128..127).`,
+        );
+        continue;
+      }
+      bytes.set(placed.baseAddress + fx.offset, disp & 0xff);
+    }
+  }
 }

@@ -35,10 +35,6 @@ describe('PR582 named section routing integration', () => {
         severity: 'error',
         message: 'Unsupported instruction: nonsense',
       }),
-      expect.objectContaining({
-        severity: 'error',
-        message: 'Named section symbol and fixup resolution is not implemented yet for section "code boot".',
-      }),
     ]);
     expect(map.bytes.size).toBeGreaterThan(0);
   });
