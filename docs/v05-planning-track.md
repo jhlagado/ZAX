@@ -147,16 +147,14 @@ After the new model works:
 - migrate examples and guides
 - then remove the old forms
 
-## 5. Required Clarifications Before Coding Deeply
+## 5. Required Clarifications Before Phase 6
 
-These are the remaining design clarifications that should be resolved early in
-v0.5, but they do not block scaffolding work:
+The remaining design clarifications that must be resolved before startup
+initialization is implemented are:
 
-- canonical module identity for duplicate import suppression
-- exact overlap range calculation wording
-- startup routine entry/ownership details
-- final initializer-byte storage convention
-- whether root-program contributions always lead merge order (recommended: yes)
+- writable-versus-read-only region classification for anchored `data` sections
+- startup routine ownership and entry sequencing
+- initializer-byte storage convention in the emitted binary
 
 ## 6. Practical Ticket Shape
 

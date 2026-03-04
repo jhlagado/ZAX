@@ -957,41 +957,64 @@ A size mismatch is an error.
 
 ## 6.4 ROM-Resident and RAM-Resident Data
 
-The placement of a `data` section determines whether its storage resides in ROM, RAM, or another memory region.
+The placement of a `data` section determines where its runtime storage resides.
 
-The assembler does not infer memory type from section kind.
+Section kind alone does not define whether a region is writable or read-only.
 
-Writable-versus-read-only region classification is a required design dependency for startup initialization, but the exact source-level mechanism is deferred and must be defined before Phase 6 implementation.
+In v0.5, writable-versus-read-only classification is not inferred from the
+anchor address and is not yet controlled by source syntax.
 
-If a data section is anchored to a read-only region, its bytes are emitted directly into that region and no runtime copy is required.
+Instead, the initial v0.5 implementation must use an implementation-defined
+root-program configuration rule to classify anchored `data` regions as either:
 
-If a `data` section is anchored to a RAM region, initialization semantics apply as defined below.
+- writable (runtime storage, such as RAM), or
+- read-only (directly emitted storage, such as ROM)
+
+This classification rule must be deterministic for a given build and must be
+applied before startup-initialization planning.
+
+If a `data` section is classified as read-only, its bytes are emitted directly
+into the anchored region and no runtime copy is required.
+
+If a `data` section is classified as writable, initialization semantics apply as
+defined below.
 
 ---
 
 ## 6.5 Compiler-Emitted Startup Initialization
 
-For `data` sections anchored to writable memory (such as RAM), the assembler must generate initialization data sufficient to establish correct runtime state.
+For `data` sections classified as writable, the compiler must emit startup
+initialization sufficient to establish correct runtime state before user code
+begins execution.
 
-The runtime initialization mechanism is responsible for:
+The compiler-owned startup initialization is responsible for:
 
-1. Copying explicitly initialized variables from their stored initializer bytes to their runtime addresses.
+1. Copying explicitly initialized variables from stored initializer bytes to
+   their runtime addresses.
 2. Zeroing variables without explicit initializers.
 
-The mechanism by which the startup routine is invoked is defined elsewhere.
-
-The assembler must ensure that the binary contains all data required to perform initialization.
+In the initial v0.5 implementation, the exact entry handoff sequence is
+implementation-defined, but the compiler-generated startup must execute before
+the user-visible program entrypoint.
 
 ---
 
 ## 6.6 Placement of Initializer Data
 
-For variables with explicit initializers placed in writable memory:
+For writable `data` sections with explicit initializers:
 
-- The initializer bytes must be stored in the output binary.
-- The assembler must associate these bytes with the corresponding runtime address.
+- the initializer bytes must be stored in the output binary
+- the compiler must preserve a deterministic association between those stored
+  bytes and the runtime destination addresses
 
-The format and location of initializer storage within the binary are implementation-defined, but must allow deterministic reconstruction of runtime state.
+In the initial v0.5 implementation, these initializer bytes may be emitted in a
+compiler-owned initialization region or equivalent compiler-owned metadata area.
+
+This region is not source-declarable in v0.5.
+
+The exact binary encoding is implementation-defined, but it must be stable and
+must allow deterministic reconstruction of runtime state for every writable
+initialized declaration.
 
 ---
 
