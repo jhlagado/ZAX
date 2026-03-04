@@ -24,6 +24,7 @@ describe('PR476 enum parser extraction', () => {
       kind: 'EnumDecl',
       span: zeroSpan,
       name: 'Colors',
+      exported: false,
       members: ['Red', 'Green', 'Blue'],
     });
   });

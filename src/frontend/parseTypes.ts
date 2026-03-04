@@ -214,6 +214,7 @@ export function parseTypeDecl(
   lineNo: number,
   startIndex: number,
   ctx: ParseTypeContext,
+  exported = false,
 ): ParsedTypeDecl | undefined {
   const { file, diagnostics, modulePath, isReservedTopLevelName } = ctx;
   const afterType = typeTail.trim();
@@ -272,7 +273,7 @@ export function parseTypeDecl(
       return undefined;
     }
     return {
-      node: { kind: 'TypeDecl', span: stmtSpan, name, typeExpr },
+      node: { kind: 'TypeDecl', span: stmtSpan, name, exported, typeExpr },
       nextIndex: startIndex + 1,
     };
   }
@@ -308,6 +309,7 @@ export function parseTypeDecl(
       kind: 'TypeDecl',
       span: typeSpan,
       name,
+      exported,
       typeExpr: { kind: 'RecordType', span: typeSpan, fields: record.fields },
     },
     nextIndex: record.nextIndex,
@@ -321,6 +323,7 @@ export function parseUnionDecl(
   lineNo: number,
   startIndex: number,
   ctx: ParseTypeContext,
+  exported = false,
 ): ParsedUnionDecl | undefined {
   const { file, diagnostics, modulePath, isReservedTopLevelName } = ctx;
   const name = unionTail.trim();
@@ -385,6 +388,7 @@ export function parseUnionDecl(
       kind: 'UnionDecl',
       span: span(file, stmtSpan.start.offset, unionEnd),
       name,
+      exported,
       fields: record.fields,
     },
     nextIndex: record.nextIndex,
