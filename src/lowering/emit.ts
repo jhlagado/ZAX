@@ -108,6 +108,7 @@ import {
   createNamedSectionContributionSinks,
   type NamedSectionContributionSink,
 } from './sectionContributions.js';
+import { placeNonBankedSectionContributions } from './sectionPlacement.js';
 import {
   finalizeProgramEmission,
   lowerProgramDeclarations,
@@ -807,18 +808,60 @@ export function emitProgram(
     sink.sourceSegments.length > 0 ||
     sink.asmTrace.length > 0;
 
-  let blockedByUnplacedNamedSection = false;
-  for (const sink of namedSectionSinks) {
+  const { placedContributions } = placeNonBankedSectionContributions(namedSectionSinks, {
+    diagnostics,
+    env,
+    evalImmExpr,
+  });
+
+  const placedSourceSegments: EmittedSourceSegment[] = [];
+  const placedAsmTrace: EmittedAsmTraceEntry[] = [];
+  let blockedByUnresolvedNamedSection = false;
+  for (const placed of placedContributions) {
+    const sink = placed.sink;
+    for (const [offset, value] of sink.bytes) {
+      const addr = placed.baseAddress + offset;
+      if (addr < 0 || addr > 0xffff) {
+        diagAt(
+          diagnostics,
+          sink.contribution.node.span,
+          `Named section byte address out of range for section "${sink.anchor.key.section} ${sink.anchor.key.name}": ${addr}.`,
+        );
+        continue;
+      }
+      if (bytes.has(addr)) {
+        diagAt(
+          diagnostics,
+          sink.contribution.node.span,
+          `Named section content overlaps emitted bytes at address ${addr}.`,
+        );
+        continue;
+      }
+      bytes.set(addr, value);
+    }
+    if (sink.anchor.key.section === 'code') {
+      placedSourceSegments.push(...rebaseCodeSourceSegments(placed.baseAddress, sink.sourceSegments));
+      placedAsmTrace.push(...rebaseAsmTrace(placed.baseAddress, sink.asmTrace));
+    }
     if (!hasNamedSectionOutput(sink)) continue;
-    blockedByUnplacedNamedSection = true;
+    if (sink.pendingSymbols.length === 0 && sink.fixups.length === 0 && sink.rel8Fixups.length === 0) continue;
+    blockedByUnresolvedNamedSection = true;
     diagAt(
       diagnostics,
       sink.contribution.node.span,
-      `Named section placement is not implemented yet for section "${sink.anchor.key.section} ${sink.anchor.key.name}".`,
+      `Named section symbol and fixup resolution is not implemented yet for section "${sink.anchor.key.section} ${sink.anchor.key.name}".`,
     );
   }
-  if (blockedByUnplacedNamedSection) {
-    return { map: { bytes }, symbols };
+  if (blockedByUnresolvedNamedSection) {
+    return {
+      map: {
+        bytes,
+        writtenRange: computeWrittenRange(bytes),
+        ...(placedSourceSegments.length > 0 ? { sourceSegments: placedSourceSegments } : {}),
+        ...(placedAsmTrace.length > 0 ? { asmTrace: placedAsmTrace } : {}),
+      },
+      symbols,
+    };
   }
 
   const { writtenRange, sourceSegments, asmTrace } = finalizeProgramEmission({
@@ -853,12 +896,19 @@ export function emitProgram(
       : {}),
   });
 
+  const mergedSourceSegments = [...placedSourceSegments, ...sourceSegments].sort((a, b) =>
+    a.start === b.start ? a.end - b.end : a.start - b.start,
+  );
+  const mergedAsmTrace = [...placedAsmTrace, ...asmTrace].sort((a, b) =>
+    a.offset === b.offset ? a.kind.localeCompare(b.kind) : a.offset - b.offset,
+  );
+
   return {
     map: {
       bytes,
       writtenRange,
-      ...(sourceSegments.length > 0 ? { sourceSegments } : {}),
-      ...(asmTrace.length > 0 ? { asmTrace } : {}),
+      ...(mergedSourceSegments.length > 0 ? { sourceSegments: mergedSourceSegments } : {}),
+      ...(mergedAsmTrace.length > 0 ? { asmTrace: mergedAsmTrace } : {}),
     },
     symbols,
   };
