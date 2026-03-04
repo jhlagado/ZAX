@@ -106,6 +106,174 @@ type ParsedDataBlock = {
   nextIndex: number;
 };
 
+type ParseDataDeclOptions = {
+  allowOmittedInitializer: boolean;
+  allowInferredArrayLength: boolean;
+  modulePath: string;
+  diagnostics: Diagnostic[];
+  lineNo: number;
+  text: string;
+  span: ReturnType<typeof span>;
+  seenNames?: Set<string>;
+};
+
+export function parseDataDeclLine(opts: ParseDataDeclOptions): DataDeclNode | undefined {
+  const {
+    allowOmittedInitializer,
+    allowInferredArrayLength,
+    modulePath,
+    diagnostics,
+    lineNo,
+    text,
+    span: lineSpan,
+    seenNames,
+  } = opts;
+
+  const withInit = /^([^:]+)\s*:\s*([^=]+?)\s*=\s*(.+)$/.exec(text);
+  const withoutInit = allowOmittedInitializer ? /^([^:]+)\s*:\s*(.+)$/.exec(text) : undefined;
+  const match = withInit ?? withoutInit;
+  if (!match) {
+    diagInvalidBlockLine(
+      diagnostics,
+      modulePath,
+      'data declaration',
+      text,
+      allowOmittedInitializer ? '<name>: <type> [= <initializer>]' : '<name>: <type> = <initializer>',
+      lineNo,
+    );
+    return undefined;
+  }
+
+  const name = match[1]!.trim();
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+    diag(
+      diagnostics,
+      modulePath,
+      `Invalid data declaration name ${formatIdentifierToken(name)}: expected <identifier>.`,
+      { line: lineNo, column: 1 },
+    );
+    return undefined;
+  }
+  if (TOP_LEVEL_KEYWORDS.has(name.toLowerCase())) {
+    diag(
+      diagnostics,
+      modulePath,
+      `Invalid data declaration name "${name}": collides with a top-level keyword.`,
+      { line: lineNo, column: 1 },
+    );
+    return undefined;
+  }
+  const nameLower = name.toLowerCase();
+  if (seenNames?.has(nameLower)) {
+    diag(diagnostics, modulePath, `Duplicate data declaration name "${name}".`, {
+      line: lineNo,
+      column: 1,
+    });
+    return undefined;
+  }
+
+  const typeText = (withInit ? withInit[2] : withoutInit?.[2])!.trim();
+  const initText = withInit?.[3]?.trim();
+  const typeExpr = parseTypeExprFromText(typeText, lineSpan, {
+    allowInferredArrayLength,
+  });
+
+  if (!typeExpr) {
+    diagInvalidBlockLine(
+      diagnostics,
+      modulePath,
+      'data declaration',
+      text,
+      allowOmittedInitializer ? '<name>: <type> [= <initializer>]' : '<name>: <type> = <initializer>',
+      lineNo,
+    );
+    return undefined;
+  }
+
+  let initializer: DataDeclNode['initializer'] | undefined;
+  if (!initText) {
+    initializer = { kind: 'InitZero', span: lineSpan };
+  } else if (initText.startsWith('"') && initText.endsWith('"') && initText.length >= 2) {
+    initializer = { kind: 'InitString', span: lineSpan, value: initText.slice(1, -1) };
+  } else if (initText.startsWith('{') && initText.endsWith('}')) {
+    const inner = initText.slice(1, -1).trim();
+    const parts = inner.length === 0 ? [] : splitTopLevelComma(inner).map((p) => p.trim());
+    const namedFields: DataRecordFieldInitNode[] = [];
+    const positionalElements: ImmExprNode[] = [];
+    let sawNamed = false;
+    let sawPositional = false;
+    let parseFailed = false;
+
+    for (const part of parts) {
+      if (part.length === 0) {
+        parseFailed = true;
+        break;
+      }
+      const namedMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(part);
+      if (namedMatch) {
+        sawNamed = true;
+        const value = parseImmExprFromText(modulePath, namedMatch[2]!.trim(), lineSpan, diagnostics);
+        if (!value) {
+          parseFailed = true;
+          continue;
+        }
+        namedFields.push({
+          kind: 'DataRecordFieldInit',
+          span: lineSpan,
+          name: namedMatch[1]!,
+          value,
+        });
+        continue;
+      }
+      sawPositional = true;
+      const e = parseImmExprFromText(modulePath, part, lineSpan, diagnostics);
+      if (!e) {
+        parseFailed = true;
+        continue;
+      }
+      positionalElements.push(e);
+    }
+
+    if (sawNamed && sawPositional) {
+      diag(
+        diagnostics,
+        modulePath,
+        `Mixed positional and named aggregate initializer entries are not allowed for "${name}".`,
+        { line: lineNo, column: 1 },
+      );
+      parseFailed = true;
+    }
+
+    if (!parseFailed) {
+      initializer = sawNamed
+        ? { kind: 'InitRecordNamed', span: lineSpan, fields: namedFields }
+        : { kind: 'InitArray', span: lineSpan, elements: positionalElements };
+    }
+  } else if (initText.startsWith('[') && initText.endsWith(']')) {
+    const inner = initText.slice(1, -1).trim();
+    const parts = inner.length === 0 ? [] : splitTopLevelComma(inner).map((p) => p.trim());
+    const elements: ImmExprNode[] = [];
+    for (const part of parts) {
+      const e = parseImmExprFromText(modulePath, part, lineSpan, diagnostics);
+      if (e) elements.push(e);
+    }
+    initializer = { kind: 'InitArray', span: lineSpan, elements };
+  } else {
+    const e = parseImmExprFromText(modulePath, initText, lineSpan, diagnostics);
+    if (e) initializer = { kind: 'InitArray', span: lineSpan, elements: [e] };
+  }
+
+  if (!initializer) return undefined;
+  seenNames?.add(nameLower);
+  return {
+    kind: 'DataDecl',
+    span: lineSpan,
+    name,
+    typeExpr,
+    initializer,
+  };
+}
+
 export function parseDataBlock(startIndex: number, ctx: ParseDataContext): ParsedDataBlock {
   const { file, lineCount, diagnostics, modulePath, getRawLine, stopOnEnd = false } = ctx;
   const blockStart = getRawLine(startIndex).startOffset;
@@ -148,160 +316,18 @@ export function parseDataBlock(startIndex: number, ctx: ParseDataContext): Parse
       break;
     }
 
-    const m = /^([^:]+)\s*:\s*([^=]+?)\s*=\s*(.+)$/.exec(t);
-    if (!m) {
-      diagInvalidBlockLine(
-        diagnostics,
-        modulePath,
-        'data declaration',
-        t,
-        '<name>: <type> = <initializer>',
-        index + 1,
-      );
-      index++;
-      continue;
-    }
-
-    const name = m[1]!.trim();
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-      diag(
-        diagnostics,
-        modulePath,
-        `Invalid data declaration name ${formatIdentifierToken(name)}: expected <identifier>.`,
-        { line: index + 1, column: 1 },
-      );
-      index++;
-      continue;
-    }
-    if (TOP_LEVEL_KEYWORDS.has(name.toLowerCase())) {
-      diag(
-        diagnostics,
-        modulePath,
-        `Invalid data declaration name "${name}": collides with a top-level keyword.`,
-        { line: index + 1, column: 1 },
-      );
-      index++;
-      continue;
-    }
-    const nameLower = name.toLowerCase();
-    if (declNamesLower.has(nameLower)) {
-      diag(diagnostics, modulePath, `Duplicate data declaration name "${name}".`, {
-        line: index + 1,
-        column: 1,
-      });
-      index++;
-      continue;
-    }
-    declNamesLower.add(nameLower);
-    const typeText = m[2]!.trim();
-    const initText = m[3]!.trim();
-
     const lineSpan = span(file, so, eo);
-    const typeExpr = parseTypeExprFromText(typeText, lineSpan, {
+    const decl = parseDataDeclLine({
+      allowOmittedInitializer: false,
       allowInferredArrayLength: true,
-    });
-
-    if (!typeExpr) {
-      diagInvalidBlockLine(
-        diagnostics,
-        modulePath,
-        'data declaration',
-        t,
-        '<name>: <type> = <initializer>',
-        index + 1,
-      );
-      index++;
-      continue;
-    }
-
-    let initializer: DataDeclNode['initializer'] | undefined;
-    if (initText.startsWith('"') && initText.endsWith('"') && initText.length >= 2) {
-      initializer = { kind: 'InitString', span: lineSpan, value: initText.slice(1, -1) };
-    } else if (initText.startsWith('{') && initText.endsWith('}')) {
-      const inner = initText.slice(1, -1).trim();
-      const parts = inner.length === 0 ? [] : splitTopLevelComma(inner).map((p) => p.trim());
-      const namedFields: DataRecordFieldInitNode[] = [];
-      const positionalElements: ImmExprNode[] = [];
-      let sawNamed = false;
-      let sawPositional = false;
-      let parseFailed = false;
-
-      for (const part of parts) {
-        if (part.length === 0) {
-          parseFailed = true;
-          break;
-        }
-        const namedMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.+)$/.exec(part);
-        if (namedMatch) {
-          sawNamed = true;
-          const value = parseImmExprFromText(
-            modulePath,
-            namedMatch[2]!.trim(),
-            lineSpan,
-            diagnostics,
-          );
-          if (!value) {
-            parseFailed = true;
-            continue;
-          }
-          namedFields.push({
-            kind: 'DataRecordFieldInit',
-            span: lineSpan,
-            name: namedMatch[1]!,
-            value,
-          });
-          continue;
-        }
-        sawPositional = true;
-        const e = parseImmExprFromText(modulePath, part, lineSpan, diagnostics);
-        if (!e) {
-          parseFailed = true;
-          continue;
-        }
-        positionalElements.push(e);
-      }
-
-      if (sawNamed && sawPositional) {
-        diag(
-          diagnostics,
-          modulePath,
-          `Mixed positional and named aggregate initializer entries are not allowed for "${name}".`,
-          { line: index + 1, column: 1 },
-        );
-        parseFailed = true;
-      }
-
-      if (!parseFailed) {
-        initializer = sawNamed
-          ? { kind: 'InitRecordNamed', span: lineSpan, fields: namedFields }
-          : { kind: 'InitArray', span: lineSpan, elements: positionalElements };
-      }
-    } else if (initText.startsWith('[') && initText.endsWith(']')) {
-      const inner = initText.slice(1, -1).trim();
-      const parts = inner.length === 0 ? [] : splitTopLevelComma(inner).map((p) => p.trim());
-      const elements: ImmExprNode[] = [];
-      for (const part of parts) {
-        const e = parseImmExprFromText(modulePath, part, lineSpan, diagnostics);
-        if (e) elements.push(e);
-      }
-      initializer = { kind: 'InitArray', span: lineSpan, elements };
-    } else {
-      const e = parseImmExprFromText(modulePath, initText, lineSpan, diagnostics);
-      if (e) initializer = { kind: 'InitArray', span: lineSpan, elements: [e] };
-    }
-
-    if (!initializer) {
-      index++;
-      continue;
-    }
-
-    decls.push({
-      kind: 'DataDecl',
+      modulePath,
+      diagnostics,
+      lineNo: index + 1,
+      text: t,
       span: lineSpan,
-      name,
-      typeExpr,
-      initializer,
+      seenNames: declNamesLower,
     });
+    if (decl) decls.push(decl);
     index++;
   }
 
