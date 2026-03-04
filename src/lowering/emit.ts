@@ -233,15 +233,27 @@ export function emitProgram(
 
   const resolveVisibleCallable = (name: string, file: string): Callable | undefined => {
     const lower = name.toLowerCase();
-    if (!moduleQualifierOf(name)) return localCallablesByFile.get(file)?.get(lower);
-    if (!canAccessLoweredQualifiedName(name, file)) return undefined;
+    const qualifier = moduleQualifierOf(lower);
+    if (!qualifier) return localCallablesByFile.get(file)?.get(lower);
+    const currentModuleId = env.moduleIds?.get(file)?.toLowerCase();
+    if (currentModuleId === qualifier) {
+      const localName = lower.slice(qualifier.length + 1);
+      return localCallablesByFile.get(file)?.get(localName);
+    }
+    if (!canAccessLoweredQualifiedName(lower, file)) return undefined;
     return visibleCallables.get(lower);
   };
 
   const resolveVisibleOpCandidates = (name: string, file: string): OpDeclNode[] | undefined => {
     const lower = name.toLowerCase();
-    if (!moduleQualifierOf(name)) return localOpsByFile.get(file)?.get(lower);
-    if (!canAccessLoweredQualifiedName(name, file)) return undefined;
+    const qualifier = moduleQualifierOf(lower);
+    if (!qualifier) return localOpsByFile.get(file)?.get(lower);
+    const currentModuleId = env.moduleIds?.get(file)?.toLowerCase();
+    if (currentModuleId === qualifier) {
+      const localName = lower.slice(qualifier.length + 1);
+      return localOpsByFile.get(file)?.get(localName);
+    }
+    if (!canAccessLoweredQualifiedName(lower, file)) return undefined;
     return visibleOpsByName.get(lower);
   };
 
