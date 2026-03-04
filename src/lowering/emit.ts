@@ -108,7 +108,11 @@ import {
   createNamedSectionContributionSinks,
   type NamedSectionContributionSink,
 } from './sectionContributions.js';
-import { placeNonBankedSectionContributions } from './sectionPlacement.js';
+import {
+  collectPlacedNamedSectionSymbols,
+  placeNonBankedSectionContributions,
+  resolvePlacedNamedSectionFixups,
+} from './sectionPlacement.js';
 import {
   finalizeProgramEmission,
   lowerProgramDeclarations,
@@ -799,20 +803,13 @@ export function emitProgram(
   preScanProgramDeclarations(programLoweringContext);
   lowerProgramDeclarations(programLoweringContext);
 
-  const hasNamedSectionOutput = (sink: NamedSectionContributionSink): boolean =>
-    sink.offset > 0 ||
-    sink.bytes.size > 0 ||
-    sink.pendingSymbols.length > 0 ||
-    sink.fixups.length > 0 ||
-    sink.rel8Fixups.length > 0 ||
-    sink.sourceSegments.length > 0 ||
-    sink.asmTrace.length > 0;
-
   const { placedContributions } = placeNonBankedSectionContributions(namedSectionSinks, {
     diagnostics,
     env,
     evalImmExpr,
   });
+  const placedSymbols = collectPlacedNamedSectionSymbols(placedContributions, diagnostics);
+  symbols.push(...placedSymbols);
 
   const placedSourceSegments: EmittedSourceSegment[] = [];
   const placedAsmTrace: EmittedAsmTraceEntry[] = [];
@@ -842,13 +839,6 @@ export function emitProgram(
       placedSourceSegments.push(...rebaseCodeSourceSegments(placed.baseAddress, sink.sourceSegments));
       placedAsmTrace.push(...rebaseAsmTrace(placed.baseAddress, sink.asmTrace));
     }
-    if (!hasNamedSectionOutput(sink)) continue;
-    if (sink.pendingSymbols.length === 0 && sink.fixups.length === 0 && sink.rel8Fixups.length === 0) continue;
-    diagAt(
-      diagnostics,
-      sink.contribution.node.span,
-      `Named section symbol and fixup resolution is not implemented yet for section "${sink.anchor.key.section} ${sink.anchor.key.name}".`,
-    );
   }
 
   const { writtenRange, sourceSegments, asmTrace } = finalizeProgramEmission({
@@ -882,6 +872,8 @@ export function emitProgram(
       ? { defaultCodeBase: options.defaultCodeBase }
       : {}),
   });
+
+  resolvePlacedNamedSectionFixups(placedContributions, diagnostics, bytes, symbols);
 
   const mergedSourceSegments = [...placedSourceSegments, ...sourceSegments].sort((a, b) =>
     a.start === b.start ? a.end - b.end : a.start - b.start,

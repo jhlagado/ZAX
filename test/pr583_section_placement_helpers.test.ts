@@ -87,7 +87,7 @@ describe('PR583 section placement helpers', () => {
     ]);
   });
 
-  it('still finalizes legacy output when named sections have unresolved symbols', () => {
+  it('still finalizes legacy output when named sections are present', () => {
     const diagnostics: Diagnostic[] = [];
     const program = parseProgram(
       'pr583_mixed_sections.zax',
@@ -112,12 +112,7 @@ describe('PR583 section placement helpers', () => {
 
     const { map } = emitProgram(program, env, diagnostics, { namedSectionKeys: sectionKeys });
 
-    expect(diagnostics).toContainEqual(
-      expect.objectContaining({
-        severity: 'error',
-        message: 'Named section symbol and fixup resolution is not implemented yet for section "code boot".',
-      }),
-    );
+    expect(diagnostics).toEqual([]);
     expect(map.bytes.get(0)).toBe(0xc9);
     expect(map.bytes.get(0x1000)).toBe(0xc9);
   });
