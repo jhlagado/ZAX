@@ -68,7 +68,6 @@ import type {
   OpMatcherNode,
   ParamNode,
   ProgramNode,
-  SectionDirectiveNode,
   SourceSpan,
   TypeExprNode,
   VarBlockNode,
@@ -664,15 +663,7 @@ export function emitProgram(
   let dataOffset = 0;
   let varOffset = 0;
 
-  const baseExprs: Partial<Record<SectionKind, SectionDirectiveNode['at']>> = {};
-
-  const setBaseExpr = (kind: SectionKind, at: SectionDirectiveNode['at'], file: string) => {
-    if (baseExprs[kind]) {
-      diag(diagnostics, file, `Section "${kind}" base address may be set at most once.`);
-      return;
-    }
-    baseExprs[kind] = at;
-  };
+  const baseExprs: Partial<Record<SectionKind, ImmExprNode>> = {};
 
   const advanceAlign = (a: number) => {
     switch (activeSection) {
@@ -834,7 +825,6 @@ export function emitProgram(
     dataOffsetRef,
     varOffsetRef,
     baseExprs,
-    setBaseExpr,
     advanceAlign,
     alignTo,
     loadBinInput,
