@@ -54,7 +54,7 @@ src/
     parseExtern.ts        Extern function binding parser (single extern func line)
     parseExternBlock.ts   Extern block parser (extern…end)
     parseFunc.ts          Function declaration parser (header + locals + asm body)
-    parseGlobals.ts       Module-scope var/globals block parser
+    parseGlobals.ts       Legacy module-scope storage-block parser
     parseImm.ts           Immediate expression parser (literals, names, sizeof, binary)
     parseOp.ts            Op declaration parser (header + asm body)
     parseOperands.ts      Operand parser (Reg, Imm, Ea, Mem, PortC, PortImm8)

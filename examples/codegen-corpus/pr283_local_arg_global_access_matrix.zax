@@ -1,7 +1,6 @@
 section data vars at $1000
-  data
-    gword: word = 0
-    gbyte: byte = 0
+  gword: word = 0
+  gbyte: byte = 0
 end
 
 section code boot at $0000

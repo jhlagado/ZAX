@@ -1,118 +1,46 @@
-# v0.5 Migration Cheatsheet
+# v0.5 Syntax Cheatsheet
 
-## Legacy to v0.5 Mapping
+## Core Layout Pattern
 
-### 1) `globals ... end` -> named `data` section
-
-Old:
-
-```zax
-globals
-  count: byte
-  table: byte[3]
-```
-
-New:
-
-```zax
-section data state at $8000
-  count: byte
-  table: byte[3]
-end
-```
-
-### 2) top-level legacy `data ... end` -> named `data` section
-
-Old:
-
-```zax
-data
-  msg: byte[5] = "HELLO"
-```
-
-New:
-
-```zax
-section data assets at $8100
-  msg: byte[5] = "HELLO"
-end
-```
-
-### 3) active-counter `section code/data at ...` -> named sections
-
-Old:
-
-```zax
-section code at $0100
-func main()
-  ret
-end
-```
-
-New:
+Use named section blocks as the structural unit:
 
 ```zax
 section code app at $0100
-  func main()
+  export func main()
     ret
   end
 end
+
+section data state at $8000
+  counter: byte
+  frame_count: word = 0
+end
 ```
 
-### 4) `section var ...` -> removed
+## Data Declaration Rules
 
-Use named `data` sections for storage.
+- Data declarations belong inside `section data <name> ... end`.
+- Direct declarations are the canonical form:
+  - `name: Type`
+  - `name: Type = initializer`
+  - `name = rhs` (alias initializer)
+- Omitted initializer means zero-initialized storage.
 
-### 5) explicit zero boilerplate -> omitted initializer
+## Anchors and Contributions
 
-Old habit:
+- A named section with declarations contributes to key `(kind, name)`.
+- Every contributed key must have exactly one anchor (`at ...`) in the program.
+- Duplicate anchors for the same key are errors.
+- Anchors with no contributions emit warnings.
 
-```zax
-x: byte[3] = {0,0,0}
-```
+## Recommended Naming
 
-Preferred v0.5:
+- Use stable section names (`app`, `boot`, `state`, `assets`, `lookup`).
+- Keep section keys consistent across modules so merge order remains deterministic.
 
-```zax
-x: byte[3]
-```
+## PR Checklist
 
-## Current Data Rules
-
-- Variables belong in `section data <name> ... end`.
-- Variable declarations in `code` sections are compile errors.
-- `name: Type` is valid and means zero-initialized storage.
-- `name: Type = init` is valid and means explicit initialization.
-- Missing anchor for a contributed section key is an error.
-- Duplicate anchor for a section key is an error.
-
-## Team Migration Workflow
-
-1. Stop writing legacy forms immediately:
-   - no `globals`
-   - no top-level legacy `data`
-   - no active-counter `section code/data/var ...`
-
-2. Use named section blocks everywhere:
-   - `section code <name> ... end`
-   - `section data <name> ... end`
-
-3. Root program owns placement:
-   - define anchors (`at ...`) in root for every contributed key
-
-4. Prefer omitted initializers for zero storage:
-   - use `x: T` unless a non-zero initial value is required
-
-5. Keep section names stable across modules:
-   - use canonical names (`app`, `state`, `assets`, etc.)
-
-6. Update tests/examples in the same PR when syntax changes.
-
-7. Do not merge if migration leaves shared suites red.
-
-## PR Review Checklist
-
-- File uses named sections only
-- Data declarations appear only in `data` sections
-- Every contributed section key has exactly one root anchor
-- Uninitialized declarations are not padded with redundant explicit zero initializers unless needed for clarity
+- Files use named sections for module layout.
+- Data declarations appear only in named `data` sections.
+- Every contributed section key is anchored exactly once.
+- Examples compile under current parser and lowering rules.
