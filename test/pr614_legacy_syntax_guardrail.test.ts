@@ -33,4 +33,41 @@ describe('PR614 legacy syntax guardrail', () => {
     const { violations } = scanForbiddenLegacySyntax({ filePaths: [knownLegacyFixture] });
     expect(violations).toEqual([]);
   });
+
+  it('flags forbidden legacy forms inside markdown code fences', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'zax-pr614-md-'));
+    const md = join(dir, 'legacy-example.md');
+    await writeFile(
+      md,
+      ['# Notes', '', '```zax', 'section code at $0100', 'func main()', '  ret', 'end', '```', ''].join('\n'),
+      'utf8',
+    );
+
+    const { violations } = scanForbiddenLegacySyntax({ filePaths: [md] });
+    expect(violations).toHaveLength(1);
+    expect(violations[0]?.ruleId).toBe('legacy-active-counter-section');
+
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it('ignores prose-only mentions in markdown files', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'zax-pr614-md-prose-'));
+    const md = join(dir, 'prose-only.md');
+    await writeFile(
+      md,
+      [
+        '# Migration note',
+        '',
+        'The old `globals ... end` and bare `data` marker forms are removed.',
+        'Use named sections instead.',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const { violations } = scanForbiddenLegacySyntax({ filePaths: [md] });
+    expect(violations).toEqual([]);
+
+    await rm(dir, { recursive: true, force: true });
+  });
 });

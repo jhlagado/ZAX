@@ -19,7 +19,7 @@ export const FORBIDDEN_RULES = [
   },
 ];
 
-export const DEFAULT_SCAN_ROOTS = ['examples', 'test/fixtures'];
+export const DEFAULT_SCAN_ROOTS = ['README.md', 'docs', 'examples', 'test/fixtures'];
 
 export const FIXTURE_ALLOWLIST = new Set([
   'test/fixtures/corpus/invalid_runtime_atom_budget.zax',
@@ -116,11 +116,27 @@ function collectFilesFromRoots(repoRoot, roots) {
       for (const entry of readdirSync(current)) queue.push(resolve(current, entry));
       continue;
     }
-    if (stat.isFile() && current.toLowerCase().endsWith('.zax')) files.push(current);
+    if (stat.isFile() && (current.toLowerCase().endsWith('.zax') || current.toLowerCase().endsWith('.md'))) {
+      files.push(current);
+    }
   }
 
   files.sort();
   return files;
+}
+
+function* iterMarkdownFenceLines(text) {
+  const lines = text.split(/\r?\n/);
+  let inFence = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    const trimmed = line.trimStart();
+    if (trimmed.startsWith('```')) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) yield { line: i + 1, text: line };
+  }
 }
 
 /**
@@ -141,16 +157,20 @@ export function scanForbiddenLegacySyntax(options = {}) {
   for (const file of files) {
     const rel = normalizePath(relative(repoRoot, file));
     const text = readFileSync(file, 'utf8');
-    const lines = text.split(/\r?\n/);
-    for (let i = 0; i < lines.length; i++) {
-      const scanned = stripLineComment(lines[i] ?? '');
+    const isMarkdown = file.toLowerCase().endsWith('.md');
+    const lines = isMarkdown
+      ? Array.from(iterMarkdownFenceLines(text))
+      : text.split(/\r?\n/).map((line, idx) => ({ line: idx + 1, text: line ?? '' }));
+
+    for (const lineEntry of lines) {
+      const scanned = stripLineComment(lineEntry.text);
       for (const rule of FORBIDDEN_RULES) {
         const match = scanned.match(rule.pattern);
         if (!match) continue;
-        if (isAllowlisted(rel)) break;
+        if (!isMarkdown && isAllowlisted(rel)) break;
         violations.push({
           file: rel.startsWith('..') ? normalizePath(file) : rel,
-          line: i + 1,
+          line: lineEntry.line,
           column: (match.index ?? 0) + 1,
           ruleId: rule.id,
           message: rule.message,
