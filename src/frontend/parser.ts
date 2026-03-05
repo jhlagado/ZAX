@@ -202,372 +202,53 @@ export function parseModuleFile(
     return { section, name, ...(anchor ? { anchor } : {}) };
   }
 
-  function parseSectionItems(startIndex: number, sectionKind: 'code' | 'data'): {
-    items: SectionItemNode[];
+  type ParseItemContext =
+    | { scope: 'module' }
+    | { scope: 'section'; sectionKind: 'code' | 'data'; directDeclNamesLower: Set<string> };
+
+  type ParseItemResult = {
     nextIndex: number;
-    closed: boolean;
-  } {
-    const sectionItems: SectionItemNode[] = [];
-    let index = startIndex;
-    const directDeclNamesLower = new Set<string>();
+    node?: ModuleItemNode | SectionItemNode;
+    sectionClosed?: boolean;
+  };
 
-    while (index < lineCount) {
-      const { raw, startOffset, endOffset } = getRawLine(index);
-      const text = stripComment(raw).trim();
-      const lineNo = index + 1;
-      if (text.length === 0) {
-        index++;
-        continue;
-      }
-      if (text.toLowerCase() === 'end') {
-        return { items: sectionItems, nextIndex: index + 1, closed: true };
-      }
-
-      const exportParsed = parseExportModifier(text, lineNo, false);
-      if (!exportParsed) {
-        index++;
-        continue;
-      }
-      const hasExportPrefix = exportParsed.exported;
-      const rest = exportParsed.rest;
-      const sectionSpan = span(file, startOffset, endOffset);
-
-      if (consumeTopKeyword(rest, 'import') !== undefined) {
-        diag(diagnostics, modulePath, `import is only permitted at module scope`, {
-          line: lineNo,
-          column: 1,
-        });
-        index++;
-        continue;
-      }
-
-      const typeTail = consumeTopKeyword(rest, 'type');
-      if (typeTail !== undefined) {
-        const parsedType = parseTypeDecl(typeTail, text, sectionSpan, lineNo, index, {
-          file,
-          lineCount,
-          diagnostics,
-          modulePath,
-          getRawLine,
-          isReservedTopLevelName,
-        }, hasExportPrefix);
-        if (parsedType) {
-          sectionItems.push(parsedType.node);
-          index = parsedType.nextIndex;
-          continue;
-        }
-        index++;
-        continue;
-      }
-
-      const unionTail = consumeTopKeyword(rest, 'union');
-      if (unionTail !== undefined) {
-        const parsedUnion = parseUnionDecl(
-          unionTail,
-          text,
-          sectionSpan,
-          lineNo,
-          index,
-          {
-            file,
-            lineCount,
-            diagnostics,
-            modulePath,
-            getRawLine,
-            isReservedTopLevelName,
-          },
-          hasExportPrefix,
-        );
-        if (parsedUnion) {
-          sectionItems.push(parsedUnion.node);
-          index = parsedUnion.nextIndex;
-          continue;
-        }
-        index++;
-        continue;
-      }
-
-      const storageHeader = rest.toLowerCase();
-      if (storageHeader === 'var' || storageHeader === 'globals') {
-        const parsedGlobals = parseGlobalsBlock(storageHeader, index, lineNo, {
-          file,
-          lineCount,
-          diagnostics,
-          modulePath,
-          getRawLine,
-          isReservedTopLevelName,
-        });
-        index = parsedGlobals.nextIndex;
-        continue;
-      }
-
-      const funcTail = consumeTopKeyword(rest, 'func');
-      if (funcTail !== undefined) {
-        const parsedFunc = parseTopLevelFuncDecl(
-          funcTail,
-          text,
-          sectionSpan,
-          lineNo,
-          index,
-          hasExportPrefix,
-          {
-            file,
-            lineCount,
-            diagnostics,
-            modulePath,
-            getRawLine,
-            isReservedTopLevelName,
-            parseParamsFromText,
-          },
-        );
-        if (parsedFunc.node) sectionItems.push(parsedFunc.node);
-        index = parsedFunc.nextIndex;
-        continue;
-      }
-
-      const opTail = consumeTopKeyword(rest, 'op');
-      if (opTail !== undefined) {
-        const parsedOp = parseTopLevelOpDecl(
-          opTail,
-          text,
-          sectionSpan,
-          lineNo,
-          index,
-          hasExportPrefix,
-          {
-            file,
-            lineCount,
-            diagnostics,
-            modulePath,
-            getRawLine,
-            isReservedTopLevelName,
-            parseOpParamsFromText,
-          },
-        );
-        if (parsedOp) {
-          sectionItems.push(parsedOp.node);
-          index = parsedOp.nextIndex;
-          continue;
-        }
-        index++;
-        continue;
-      }
-
-      const externTail = consumeTopKeyword(rest, 'extern');
-      if (externTail !== undefined) {
-        const parsedExtern = parseTopLevelExternDecl(
-          externTail,
-          text,
-          sectionSpan,
-          lineNo,
-          index,
-          {
-            file,
-            lineCount,
-            diagnostics,
-            modulePath,
-            getRawLine,
-            isReservedTopLevelName,
-            parseParamsFromText,
-          },
-        );
-        if (parsedExtern.node) sectionItems.push(parsedExtern.node);
-        index = parsedExtern.nextIndex;
-        continue;
-      }
-
-      const enumTail = consumeTopKeyword(rest, 'enum');
-      if (enumTail !== undefined) {
-        const enumNode = parseEnumDecl(enumTail, {
-          diagnostics,
-          modulePath,
-          lineNo,
-          text,
-          span: sectionSpan,
-          isReservedTopLevelName,
-        }, hasExportPrefix);
-        if (enumNode) sectionItems.push(enumNode);
-        index++;
-        continue;
-      }
-
-      const sectionTail = consumeTopKeyword(rest, 'section');
-      if (rest.toLowerCase() === 'section' || sectionTail !== undefined) {
-        diag(diagnostics, modulePath, `nested section blocks are not supported`, {
-          line: lineNo,
-          column: 1,
-        });
-        index++;
-        continue;
-      }
-
-      const alignTail = consumeTopKeyword(rest, 'align');
-      if (rest.toLowerCase() === 'align' || alignTail !== undefined) {
-        const alignNode = parseAlignDirectiveDecl(rest, alignTail, {
-          diagnostics,
-          modulePath,
-          lineNo,
-          text,
-          span: sectionSpan,
-          isReservedTopLevelName,
-        });
-        if (alignNode) sectionItems.push(alignNode);
-        index++;
-        continue;
-      }
-
-      const constTail = consumeTopKeyword(rest, 'const');
-      if (constTail !== undefined) {
-        const constNode = parseConstDecl(constTail, hasExportPrefix, {
-          diagnostics,
-          modulePath,
-          lineNo,
-          text,
-          span: sectionSpan,
-          isReservedTopLevelName,
-        });
-        if (constNode) sectionItems.push(constNode);
-        index++;
-        continue;
-      }
-
-      const binTail = consumeTopKeyword(rest, 'bin');
-      if (binTail !== undefined) {
-        const node = parseBinDecl(binTail, {
-          diagnostics,
-          modulePath,
-          lineNo,
-          text,
-          span: sectionSpan,
-          isReservedTopLevelName,
-        });
-        if (node) sectionItems.push(node);
-        index++;
-        continue;
-      }
-
-      const hexTail = consumeTopKeyword(rest, 'hex');
-      if (hexTail !== undefined) {
-        const node = parseHexDecl(hexTail, {
-          diagnostics,
-          modulePath,
-          lineNo,
-          text,
-          span: sectionSpan,
-          isReservedTopLevelName,
-        });
-        if (node) sectionItems.push(node);
-        index++;
-        continue;
-      }
-
-      if (rest.toLowerCase() === 'data') {
-        diag(
-          diagnostics,
-          modulePath,
-          `Bare "data" marker lines are removed; declare symbols directly inside named data sections.`,
-          {
-            line: lineNo,
-            column: 1,
-          },
-        );
-        index++;
-        continue;
-      }
-
-      if (/^[A-Za-z_][A-Za-z0-9_]*\s*:/.test(rest)) {
-        const sectionDataDecl = parseDataDeclLine({
-          allowOmittedInitializer: true,
-          allowInferredArrayLength: false,
-          modulePath,
-          diagnostics,
-          lineNo,
-          text: rest,
-          span: sectionSpan,
-          seenNames: directDeclNamesLower,
-        });
-        if (sectionDataDecl) {
-          if (sectionKind !== 'data') {
-            diag(
-              diagnostics,
-              modulePath,
-              `Data declarations are only permitted inside data sections.`,
-              {
-                line: lineNo,
-                column: 1,
-              },
-            );
-          } else {
-            sectionItems.push(sectionDataDecl);
-          }
-          index++;
-          continue;
-        }
-      }
-
-      const asmTail = consumeKeywordPrefix(text, 'asm');
-      const asmAfterExportTail = hasExportPrefix ? consumeKeywordPrefix(rest, 'asm') : undefined;
-      if (asmTail !== undefined || asmAfterExportTail !== undefined) {
-        diag(
-          diagnostics,
-          modulePath,
-          `"asm" is not a top-level construct (function and op bodies are implicit instruction streams)`,
-          {
-            line: lineNo,
-            column: 1,
-          },
-        );
-        index++;
-        continue;
-      }
-
-      diag(diagnostics, modulePath, `Unsupported section-contained construct: ${text}`, {
-        line: lineNo,
-        column: 1,
-      });
-      index++;
-    }
-
-    return { items: sectionItems, nextIndex: index, closed: false };
-  }
-
-  function isReservedTopLevelName(name: string): boolean {
-    return isReservedTopLevelDeclName(name);
-  }
-
-  let i = 0;
-  while (i < lineCount) {
-    const { raw, startOffset: lineStartOffset, endOffset: lineEndOffset } = getRawLine(i);
+  function parseItemAt(index: number, ctx: ParseItemContext): ParseItemResult {
+    const { raw, startOffset: lineStartOffset, endOffset: lineEndOffset } = getRawLine(index);
     const text = stripComment(raw).trim();
-    const lineNo = i + 1;
+    const lineNo = index + 1;
     if (text.length === 0) {
-      i++;
-      continue;
+      return { nextIndex: index + 1 };
+    }
+    if (ctx.scope === 'section' && text.toLowerCase() === 'end') {
+      return { nextIndex: index + 1, sectionClosed: true };
     }
 
-    const exportParsed = parseExportModifier(text, lineNo, true);
+    const exportParsed = parseExportModifier(text, lineNo, ctx.scope === 'module');
     if (!exportParsed) {
-      i++;
-      continue;
+      return { nextIndex: index + 1 };
     }
     const hasExportPrefix = exportParsed.exported;
     const rest = exportParsed.rest;
-    const hasTopKeyword = (kw: string): boolean => new RegExp(`^${kw}\\b`, 'i').test(rest);
+    const stmtSpan = span(file, lineStartOffset, lineEndOffset);
 
     const importTail = consumeTopKeyword(rest, 'import');
     if (importTail !== undefined) {
-      const stmtSpan = span(file, lineStartOffset, lineEndOffset);
-      const importNode = parseImportDecl(importTail, {
-        diagnostics,
-        modulePath,
-        lineNo,
-        text,
-        span: stmtSpan,
-        isReservedTopLevelName,
+      if (ctx.scope === 'module') {
+        const importNode = parseImportDecl(importTail, {
+          diagnostics,
+          modulePath,
+          lineNo,
+          text,
+          span: stmtSpan,
+          isReservedTopLevelName,
+        });
+        return { nextIndex: index + 1, ...(importNode ? { node: importNode } : {}) };
+      }
+      diag(diagnostics, modulePath, `import is only permitted at module scope`, {
+        line: lineNo,
+        column: 1,
       });
-      if (importNode) items.push(importNode);
-      i++;
-      continue;
+      return { nextIndex: index + 1 };
     }
 
     const typeTail = consumeTopKeyword(rest, 'type');
@@ -575,9 +256,9 @@ export function parseModuleFile(
       const parsedType = parseTypeDecl(
         typeTail,
         text,
-        span(file, lineStartOffset, lineEndOffset),
+        stmtSpan,
         lineNo,
-        i,
+        index,
         {
           file,
           lineCount,
@@ -588,13 +269,8 @@ export function parseModuleFile(
         },
         hasExportPrefix,
       );
-      if (!parsedType) {
-        i++;
-        continue;
-      }
-      items.push(parsedType.node);
-      i = parsedType.nextIndex;
-      continue;
+      if (!parsedType) return { nextIndex: index + 1 };
+      return { nextIndex: parsedType.nextIndex, node: parsedType.node };
     }
 
     const unionTail = consumeTopKeyword(rest, 'union');
@@ -602,9 +278,9 @@ export function parseModuleFile(
       const parsedUnion = parseUnionDecl(
         unionTail,
         text,
-        span(file, lineStartOffset, lineEndOffset),
+        stmtSpan,
         lineNo,
-        i,
+        index,
         {
           file,
           lineCount,
@@ -615,18 +291,13 @@ export function parseModuleFile(
         },
         hasExportPrefix,
       );
-      if (!parsedUnion) {
-        i++;
-        continue;
-      }
-      items.push(parsedUnion.node);
-      i = parsedUnion.nextIndex;
-      continue;
+      if (!parsedUnion) return { nextIndex: index + 1 };
+      return { nextIndex: parsedUnion.nextIndex, node: parsedUnion.node };
     }
 
     const storageHeader = rest.toLowerCase();
     if (storageHeader === 'var' || storageHeader === 'globals') {
-      const parsedGlobals = parseGlobalsBlock(storageHeader, i, lineNo, {
+      const parsedGlobals = parseGlobalsBlock(storageHeader, index, lineNo, {
         file,
         lineCount,
         diagnostics,
@@ -634,8 +305,7 @@ export function parseModuleFile(
         getRawLine,
         isReservedTopLevelName,
       });
-      i = parsedGlobals.nextIndex;
-      continue;
+      return { nextIndex: parsedGlobals.nextIndex };
     }
 
     const funcTail = consumeTopKeyword(rest, 'func');
@@ -643,9 +313,9 @@ export function parseModuleFile(
       const parsedFunc = parseTopLevelFuncDecl(
         funcTail,
         text,
-        span(file, lineStartOffset, lineEndOffset),
+        stmtSpan,
         lineNo,
-        i,
+        index,
         hasExportPrefix,
         {
           file,
@@ -657,9 +327,7 @@ export function parseModuleFile(
           parseParamsFromText,
         },
       );
-      if (parsedFunc.node) items.push(parsedFunc.node);
-      i = parsedFunc.nextIndex;
-      continue;
+      return { nextIndex: parsedFunc.nextIndex, ...(parsedFunc.node ? { node: parsedFunc.node } : {}) };
     }
 
     const opTail = consumeTopKeyword(rest, 'op');
@@ -667,9 +335,9 @@ export function parseModuleFile(
       const parsedOp = parseTopLevelOpDecl(
         opTail,
         text,
-        span(file, lineStartOffset, lineEndOffset),
+        stmtSpan,
         lineNo,
-        i,
+        index,
         hasExportPrefix,
         {
           file,
@@ -681,13 +349,8 @@ export function parseModuleFile(
           parseOpParamsFromText,
         },
       );
-      if (!parsedOp) {
-        i++;
-        continue;
-      }
-      items.push(parsedOp.node);
-      i = parsedOp.nextIndex;
-      continue;
+      if (!parsedOp) return { nextIndex: index + 1 };
+      return { nextIndex: parsedOp.nextIndex, node: parsedOp.node };
     }
 
     const externTail = consumeTopKeyword(rest, 'extern');
@@ -695,9 +358,9 @@ export function parseModuleFile(
       const parsedExtern = parseTopLevelExternDecl(
         externTail,
         text,
-        span(file, lineStartOffset, lineEndOffset),
+        stmtSpan,
         lineNo,
-        i,
+        index,
         {
           file,
           lineCount,
@@ -708,29 +371,35 @@ export function parseModuleFile(
           parseParamsFromText,
         },
       );
-      if (parsedExtern.node) items.push(parsedExtern.node);
-      i = parsedExtern.nextIndex;
-      continue;
+      return { nextIndex: parsedExtern.nextIndex, ...(parsedExtern.node ? { node: parsedExtern.node } : {}) };
     }
 
     const enumTail = consumeTopKeyword(rest, 'enum');
     if (enumTail !== undefined) {
-      const enumNode = parseEnumDecl(enumTail, {
-        diagnostics,
-        modulePath,
-        lineNo,
-        text,
-        span: span(file, lineStartOffset, lineEndOffset),
-        isReservedTopLevelName,
-      }, hasExportPrefix);
-      if (enumNode) items.push(enumNode);
-      i++;
-      continue;
+      const enumNode = parseEnumDecl(
+        enumTail,
+        {
+          diagnostics,
+          modulePath,
+          lineNo,
+          text,
+          span: stmtSpan,
+          isReservedTopLevelName,
+        },
+        hasExportPrefix,
+      );
+      return { nextIndex: index + 1, ...(enumNode ? { node: enumNode } : {}) };
     }
 
     const sectionTail = consumeTopKeyword(rest, 'section');
     if (rest.toLowerCase() === 'section' || sectionTail !== undefined) {
-      const dirSpan = span(file, lineStartOffset, lineEndOffset);
+      if (ctx.scope === 'section') {
+        diag(diagnostics, modulePath, `nested section blocks are not supported`, {
+          line: lineNo,
+          column: 1,
+        });
+        return { nextIndex: index + 1 };
+      }
       const sectionDecl = rest === 'section' ? '' : (sectionTail ?? '');
       const namedTokens = sectionDecl.trim().split(/\s+/).filter((token) => token.length > 0);
       const namedPrefix =
@@ -739,13 +408,10 @@ export function parseModuleFile(
         /^[A-Za-z_][A-Za-z0-9_]*$/.test(namedTokens[1] ?? '') &&
         !/^(at|size|end)$/i.test(namedTokens[1] ?? '');
       if (namedPrefix) {
-        const header = parseNamedSectionHeader(sectionDecl, dirSpan, lineNo, text);
-        if (!header) {
-          i++;
-          continue;
-        }
-        const parsedSection = parseSectionItems(i + 1, header.section);
-        const sectionEndIndex = Math.max(parsedSection.nextIndex - 1, i);
+        const header = parseNamedSectionHeader(sectionDecl, stmtSpan, lineNo, text);
+        if (!header) return { nextIndex: index + 1 };
+        const parsedSection = parseSectionItems(index + 1, header.section);
+        const sectionEndIndex = Math.max(parsedSection.nextIndex - 1, index);
         const sectionEnd = getRawLine(sectionEndIndex);
         const sectionNode: NamedSectionNode = {
           kind: 'NamedSection',
@@ -756,16 +422,12 @@ export function parseModuleFile(
           ...(header.anchor ? { anchor: header.anchor } : {}),
         };
         if (!parsedSection.closed) {
-          diag(
-            diagnostics,
-            modulePath,
-            `Missing end for section "${header.name}"`,
-            { line: lineNo, column: 1 },
-          );
+          diag(diagnostics, modulePath, `Missing end for section "${header.name}"`, {
+            line: lineNo,
+            column: 1,
+          });
         }
-        items.push(sectionNode);
-        i = parsedSection.nextIndex;
-        continue;
+        return { nextIndex: parsedSection.nextIndex, node: sectionNode };
       }
 
       const sectionNode = parseSectionDirectiveDecl(rest, sectionTail, {
@@ -773,56 +435,36 @@ export function parseModuleFile(
         modulePath,
         lineNo,
         text,
-        span: dirSpan,
+        span: stmtSpan,
         isReservedTopLevelName,
       });
-      if (!sectionNode) {
-        i++;
-        continue;
-      }
-      items.push(sectionNode);
-      i++;
-      continue;
+      return { nextIndex: index + 1, ...(sectionNode ? { node: sectionNode } : {}) };
     }
 
     const alignTail = consumeTopKeyword(rest, 'align');
     if (rest.toLowerCase() === 'align' || alignTail !== undefined) {
-      const dirSpan = span(file, lineStartOffset, lineEndOffset);
       const alignNode = parseAlignDirectiveDecl(rest, alignTail, {
         diagnostics,
         modulePath,
         lineNo,
         text,
-        span: dirSpan,
+        span: stmtSpan,
         isReservedTopLevelName,
       });
-      if (!alignNode) {
-        i++;
-        continue;
-      }
-      items.push(alignNode);
-      i++;
-      continue;
+      return { nextIndex: index + 1, ...(alignNode ? { node: alignNode } : {}) };
     }
 
     const constTail = consumeTopKeyword(rest, 'const');
     if (constTail !== undefined) {
-      const exprSpan = span(file, lineStartOffset, lineEndOffset);
       const constNode = parseConstDecl(constTail, hasExportPrefix, {
         diagnostics,
         modulePath,
         lineNo,
         text,
-        span: exprSpan,
+        span: stmtSpan,
         isReservedTopLevelName,
       });
-      if (!constNode) {
-        i++;
-        continue;
-      }
-      items.push(constNode);
-      i++;
-      continue;
+      return { nextIndex: index + 1, ...(constNode ? { node: constNode } : {}) };
     }
 
     const binTail = consumeTopKeyword(rest, 'bin');
@@ -832,16 +474,10 @@ export function parseModuleFile(
         modulePath,
         lineNo,
         text,
-        span: span(file, lineStartOffset, lineEndOffset),
+        span: stmtSpan,
         isReservedTopLevelName,
       });
-      if (!node) {
-        i++;
-        continue;
-      }
-      items.push(node);
-      i++;
-      continue;
+      return { nextIndex: index + 1, ...(node ? { node } : {}) };
     }
 
     const hexTail = consumeTopKeyword(rest, 'hex');
@@ -851,28 +487,55 @@ export function parseModuleFile(
         modulePath,
         lineNo,
         text,
-        span: span(file, lineStartOffset, lineEndOffset),
+        span: stmtSpan,
         isReservedTopLevelName,
       });
-      if (!node) {
-        i++;
-        continue;
-      }
-      items.push(node);
-      i++;
-      continue;
+      return { nextIndex: index + 1, ...(node ? { node } : {}) };
     }
 
     if (rest.toLowerCase() === 'data') {
-      const parsedData = parseDataBlock(i, {
-        file,
-        lineCount,
+      if (ctx.scope === 'module') {
+        const parsedData = parseDataBlock(index, {
+          file,
+          lineCount,
+          diagnostics,
+          modulePath,
+          getRawLine,
+        });
+        return { nextIndex: parsedData.nextIndex };
+      }
+      diag(
         diagnostics,
         modulePath,
-        getRawLine,
+        `Bare "data" marker lines are removed; declare symbols directly inside named data sections.`,
+        {
+          line: lineNo,
+          column: 1,
+        },
+      );
+      return { nextIndex: index + 1 };
+    }
+
+    if (ctx.scope === 'section' && /^[A-Za-z_][A-Za-z0-9_]*\s*:/.test(rest)) {
+      const sectionDataDecl = parseDataDeclLine({
+        allowOmittedInitializer: true,
+        allowInferredArrayLength: false,
+        modulePath,
+        diagnostics,
+        lineNo,
+        text: rest,
+        span: stmtSpan,
+        seenNames: ctx.directDeclNamesLower,
       });
-      i = parsedData.nextIndex;
-      continue;
+      if (!sectionDataDecl) return { nextIndex: index + 1 };
+      if (ctx.sectionKind !== 'data') {
+        diag(diagnostics, modulePath, `Data declarations are only permitted inside data sections.`, {
+          line: lineNo,
+          column: 1,
+        });
+        return { nextIndex: index + 1 };
+      }
+      return { nextIndex: index + 1, node: sectionDataDecl };
     }
 
     const asmTail = consumeKeywordPrefix(text, 'asm');
@@ -887,35 +550,73 @@ export function parseModuleFile(
           column: 1,
         },
       );
-      i++;
-      continue;
+      return { nextIndex: index + 1 };
     }
 
-    let matchedMalformedTopLevelHeader = false;
-    for (const expectation of malformedTopLevelHeaderExpectations) {
-      if (hasTopKeyword(expectation.keyword)) {
-        diagInvalidHeaderLine(
-          diagnostics,
-          modulePath,
-          expectation.kind,
-          text,
-          expectation.expected,
-          lineNo,
-        );
-        i++;
-        matchedMalformedTopLevelHeader = true;
-        break;
+    if (ctx.scope === 'module') {
+      const hasTopKeyword = (kw: string): boolean => new RegExp(`^${kw}\\b`, 'i').test(rest);
+      for (const expectation of malformedTopLevelHeaderExpectations) {
+        if (hasTopKeyword(expectation.keyword)) {
+          diagInvalidHeaderLine(
+            diagnostics,
+            modulePath,
+            expectation.kind,
+            text,
+            expectation.expected,
+            lineNo,
+          );
+          return { nextIndex: index + 1 };
+        }
       }
-    }
-    if (matchedMalformedTopLevelHeader) {
-      continue;
+
+      diag(diagnostics, modulePath, `Unsupported top-level construct: ${text}`, {
+        line: lineNo,
+        column: 1,
+      });
+      return { nextIndex: index + 1 };
     }
 
-    diag(diagnostics, modulePath, `Unsupported top-level construct: ${text}`, {
+    diag(diagnostics, modulePath, `Unsupported section-contained construct: ${text}`, {
       line: lineNo,
       column: 1,
     });
-    i++;
+    return { nextIndex: index + 1 };
+  }
+
+  function parseSectionItems(startIndex: number, sectionKind: 'code' | 'data'): {
+    items: SectionItemNode[];
+    nextIndex: number;
+    closed: boolean;
+  } {
+    const sectionItems: SectionItemNode[] = [];
+    const directDeclNamesLower = new Set<string>();
+    let index = startIndex;
+
+    while (index < lineCount) {
+      const parsed = parseItemAt(index, {
+        scope: 'section',
+        sectionKind,
+        directDeclNamesLower,
+      });
+      if (parsed.sectionClosed) {
+        return { items: sectionItems, nextIndex: parsed.nextIndex, closed: true };
+      }
+      if (parsed.node) sectionItems.push(parsed.node as SectionItemNode);
+      index = parsed.nextIndex;
+    }
+
+    return { items: sectionItems, nextIndex: index, closed: false };
+  }
+
+  function isReservedTopLevelName(name: string): boolean {
+    return isReservedTopLevelDeclName(name);
+  }
+
+  let i = 0;
+  while (i < lineCount) {
+    const parsed = parseItemAt(i, { scope: 'module' });
+    if (parsed.node) items.push(parsed.node as ModuleItemNode);
+    i = parsed.nextIndex;
   }
 
   const moduleSpan = span(file, 0, sourceText.length);
