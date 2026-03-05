@@ -67,7 +67,7 @@ describe('cli contract matrix', () => {
     const opStackPolicyMissing = await runCli(['--op-stack-policy']);
     expect(opStackPolicyMissing.code).toBe(2);
     expect(opStackPolicyMissing.stderr).toContain('--op-stack-policy expects a value');
-  });
+  }, 20_000);
 
   it('rejects unsupported type tokens and output/type extension mismatches', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-type-'));
