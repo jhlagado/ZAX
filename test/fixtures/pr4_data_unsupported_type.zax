@@ -4,7 +4,6 @@ type Point
 end
 
 section data vars at $1000
-  data
     p: Point[1] = [0]
 end
 

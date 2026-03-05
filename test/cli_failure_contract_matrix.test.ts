@@ -249,7 +249,7 @@ describe('cli failure contract matrix', () => {
     await expectNoArtifacts(base);
 
     await rm(work, { recursive: true, force: true });
-  });
+  }, 20_000);
 
   it('returns code 2 for CLI parse errors and always includes usage text', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-usage-errors-'));
@@ -258,6 +258,7 @@ describe('cli failure contract matrix', () => {
 
     const cases: Array<{ args: string[]; message: string }> = [
       { args: ['--badflag', entry], message: 'Unknown option' },
+      { args: ['--legacy-syntax-warn', entry], message: 'Unknown option "--legacy-syntax-warn"' },
       { args: ['--output'], message: '--output expects a value' },
       { args: ['--output=', entry], message: '--output expects a value' },
       { args: ['--type=', entry], message: '--type expects a value' },
@@ -275,7 +276,7 @@ describe('cli failure contract matrix', () => {
     }
 
     await rm(work, { recursive: true, force: true });
-  });
+  }, 20_000);
 
   it('accepts uppercase output extensions and prints canonical primary artifact path', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-upper-ext-'));

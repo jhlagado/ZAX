@@ -1,5 +1,4 @@
 section data vars at $1000
-  data
   counter: word = 0
 end
 

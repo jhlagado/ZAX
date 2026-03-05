@@ -6,7 +6,6 @@ type Sprite
 end
 
 section data vars at $1000
-  data
     one: Sprite = { x: 0, y: 0, tile: 0, flags: 0 }
 end
 

@@ -1,8 +1,6 @@
 section data vars at $1000
-  data
     bytes10: byte[10] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     words10: word[10] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    unknown_len: byte[] = [1, 2, 3]
 end
 
 func take_ten(values: byte[10])
@@ -13,8 +11,13 @@ func take_any(values: byte[])
   ret
 end
 
+func forward_unknown(values: byte[])
+  take_ten values
+  ret
+end
+
 export func main()
-  take_ten unknown_len
+  forward_unknown bytes10
   take_any words10
   ret
 end

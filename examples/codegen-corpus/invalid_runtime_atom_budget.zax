@@ -1,5 +1,4 @@
 section data vars at $1000
-  data
     i: byte = 0
     j: byte = 0
     arr: byte[16] = {}

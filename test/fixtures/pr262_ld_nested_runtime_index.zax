@@ -1,5 +1,4 @@
 section data vars at $1000
-  data
   row: byte = 0
   col: byte = 0
   grid: byte[32] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }

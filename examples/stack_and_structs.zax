@@ -13,7 +13,6 @@ type Sprite
 end
 
 section data vars at $1000
-  data
   sprites: Sprite[4] = {}
 end
 
