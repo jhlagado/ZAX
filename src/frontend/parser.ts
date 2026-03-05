@@ -8,7 +8,6 @@ import type {
 } from './ast.js';
 import { makeSourceFile, span } from './source.js';
 import type { Diagnostic } from '../diagnostics/types.js';
-import { DiagnosticIds } from '../diagnostics/types.js';
 import {
   TOP_LEVEL_KEYWORDS,
   consumeKeywordPrefix,
@@ -40,48 +39,11 @@ import {
 } from './parseTopLevelSimple.js';
 import { parseDataBlock, parseDataDeclLine } from './parseData.js';
 import { canonicalModuleId } from '../moduleIdentity.js';
-
-const RESERVED_TOP_LEVEL_KEYWORDS = new Set([
-  'func',
-  'const',
-  'enum',
-  'data',
-  'import',
-  'type',
-  'union',
-  'globals',
-  'var',
-  'extern',
-  'bin',
-  'hex',
-  'op',
-  'section',
-  'align',
-]);
-
-function isReservedTopLevelDeclName(name: string): boolean {
-  return RESERVED_TOP_LEVEL_KEYWORDS.has(name.toLowerCase());
-}
-
-function diag(
-  diagnostics: Diagnostic[],
-  file: string,
-  message: string,
-  where?: { line: number; column: number },
-): void {
-  diagnostics.push({
-    id: DiagnosticIds.ParseError,
-    severity: 'error',
-    message,
-    file,
-    ...(where ? { line: where.line, column: where.column } : {}),
-  });
-}
-
-function stripComment(line: string): string {
-  const semi = line.indexOf(';');
-  return semi >= 0 ? line.slice(0, semi) : line;
-}
+import {
+  isReservedTopLevelDeclName,
+  pushParseError as diag,
+  stripLineComment as stripComment,
+} from './parseParserShared.js';
 
 /**
  * Parse a single `.zax` module file from an in-memory source string.
