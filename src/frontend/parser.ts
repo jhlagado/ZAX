@@ -101,10 +101,12 @@ export function parseModuleFile(
     if (atText) {
       const at = parseImmExprFromText(modulePath, atText, sectionSpan, diagnostics);
       if (!at) return undefined;
+      let bound: SectionAnchorNode['bound'] = { kind: 'none' };
       anchor = {
         kind: 'SectionAnchor',
         span: sectionSpan,
         at,
+        bound,
       };
       if (rangeKeyword && rangeExprText) {
         const rangeExpr = parseAlignDirectiveDecl(
@@ -120,8 +122,8 @@ export function parseModuleFile(
           },
         )?.value;
         if (!rangeExpr) return undefined;
-        if (rangeKeyword === 'size') anchor.size = rangeExpr;
-        else anchor.end = rangeExpr;
+        bound = rangeKeyword === 'size' ? { kind: 'size', size: rangeExpr } : { kind: 'end', end: rangeExpr };
+        anchor.bound = bound;
       }
     }
 
