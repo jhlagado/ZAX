@@ -167,7 +167,7 @@ describe('PR575 module visibility scaffolding', () => {
   it('uses resolved path-form import edges to determine visibility', () => {
     const diagnostics: any[] = [];
     const dep = parseModuleFile(
-      '/workspace/libs/dep.zax',
+      '/workspace/dep.zax',
       ['export const FOO = 7', 'export type Word word'].join('\n'),
       diagnostics,
     );
@@ -199,7 +199,7 @@ describe('PR575 module visibility scaffolding', () => {
 
   it('uses resolved module-id-form import edges to determine visibility', () => {
     const diagnostics: any[] = [];
-    const dep = parseModuleFile('/workspace/libs/dep.zax', ['export const FOO = 7'].join('\n'), diagnostics);
+    const dep = parseModuleFile('/workspace/dep.zax', ['export const FOO = 7'].join('\n'), diagnostics);
     const root = parseModuleFile(
       '/workspace/root.zax',
       ['import aliasdep', 'const LOCAL = dep.FOO'].join('\n'),

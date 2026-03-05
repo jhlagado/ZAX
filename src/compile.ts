@@ -104,6 +104,7 @@ async function loadProgram(
   const sourceTexts = new Map<string, string>();
   const edges = new Map<string, Map<string, { line: number; column: number }>>();
   const includeDirs = (options.includeDirs ?? []).map(normalizePath);
+  const moduleIdRootDir = dirname(entryPath);
 
   const loadModule = async (
     modulePath: string,
@@ -212,7 +213,7 @@ async function loadProgram(
   // Detect module-ID collisions (case-insensitive).
   const idSeen = new Map<string, string>();
   for (const p of modules.keys()) {
-    const id = canonicalModuleId(p);
+    const id = canonicalModuleId(p, moduleIdRootDir);
     const k = id.toLowerCase();
     const prev = idSeen.get(k);
     if (prev && prev !== p) {
@@ -235,7 +236,7 @@ async function loadProgram(
   const visited = new Set<string>();
   const order: string[] = [];
 
-  const sortKey = (p: string) => `${canonicalModuleId(p).toLowerCase()}\n${p}`;
+  const sortKey = (p: string) => `${canonicalModuleId(p, moduleIdRootDir).toLowerCase()}\n${p}`;
 
   const visit = (p: string, stack: string[], fromModule?: string) => {
     if (visited.has(p)) return;
@@ -308,6 +309,7 @@ export const compile: CompileFn = async (
   deps: PipelineDeps,
 ): Promise<CompileResult> => {
   const entryPath = normalizePath(entryFile);
+  const moduleIdRootDir = dirname(entryPath);
   const diagnostics: Diagnostic[] = [];
   const loaded = await loadProgram(entryPath, diagnostics, options);
   if (!loaded) return { diagnostics, artifacts: [] };
@@ -355,6 +357,7 @@ export const compile: CompileFn = async (
 
   const env = buildEnv(program, diagnostics, {
     typePaddingWarnings: options.typePaddingWarnings ?? false,
+    moduleIdRootDir,
     resolvedImportGraph,
   });
   if (hasErrors(diagnostics)) {
