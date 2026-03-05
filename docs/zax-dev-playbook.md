@@ -144,6 +144,12 @@ Coverage work should be evidence-driven:
 - replace or supplement skipped historical suites with active current-behavior tests
 - avoid vanity coverage growth with no risk reduction
 
+Legacy-syntax guardrail:
+
+- `scripts/ci/legacy-syntax-guardrail.js` is the CI gate for forbidden legacy syntax forms.
+- New legacy syntax is blocked in `examples/` and `test/fixtures/` unless the fixture path is in the script allowlist.
+- Keep that allowlist limited to intentional parser/recovery coverage fixtures.
+
 ## Docs Discipline
 
 One topic should have one clear owner.
