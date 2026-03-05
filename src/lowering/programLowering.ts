@@ -30,7 +30,7 @@ import type {
   SymbolEntry,
 } from '../formats/types.js';
 import type { CompileEnv } from '../semantics/env.js';
-import type { FunctionLoweringContext } from './functionLowering.js';
+import type { FunctionLoweringContext, FunctionLoweringSharedContext } from './functionLowering.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
 import type {
   Callable,
@@ -42,7 +42,7 @@ import { lowerDataBlock } from './programLoweringData.js';
 
 // Program lowering owns module-wide declaration traversal and the final
 // emission/fixup passes after all symbols and section bases are known.
-export type Context = Omit<FunctionLoweringContext, 'item'> & {
+export type Context = FunctionLoweringSharedContext & {
   program: ProgramNode;
   includeDirs: string[];
   localCallablesByFile: Map<string, Map<string, Callable>>;
