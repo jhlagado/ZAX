@@ -41,9 +41,9 @@ import { parseDataBlock, parseDataDeclLine } from './parseData.js';
 import { canonicalModuleId } from '../moduleIdentity.js';
 import {
   isReservedTopLevelDeclName,
-  pushParseError as diag,
   stripLineComment as stripComment,
 } from './parseParserShared.js';
+import { parseDiag as diag } from './parseDiagnostics.js';
 
 /**
  * Parse a single `.zax` module file from an in-memory source string.

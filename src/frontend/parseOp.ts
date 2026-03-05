@@ -2,7 +2,7 @@ import type { AsmBlockNode, AsmItemNode, OpDeclNode, OpParamNode, SourceSpan } f
 import type { SourceFile } from './source.js';
 import { span } from './source.js';
 import type { Diagnostic } from '../diagnostics/types.js';
-import { DiagnosticIds } from '../diagnostics/types.js';
+import { parseDiag as diag } from './parseDiagnostics.js';
 import {
   appendParsedAsmStatement,
   isRecoverOnlyControlFrame,
@@ -16,21 +16,6 @@ import {
   topLevelStartKeyword,
 } from './parseModuleCommon.js';
 import type { ParseParamsContext } from './parseParams.js';
-
-function diag(
-  diagnostics: Diagnostic[],
-  file: string,
-  message: string,
-  where?: { line: number; column: number },
-): void {
-  diagnostics.push({
-    id: DiagnosticIds.ParseError,
-    severity: 'error',
-    message,
-    file,
-    ...(where ? { line: where.line, column: where.column } : {}),
-  });
-}
 
 function stripComment(line: string): string {
   const semi = line.indexOf(';');

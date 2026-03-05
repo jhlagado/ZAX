@@ -8,21 +8,7 @@ import type {
 import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
 import { immLiteral, parseImmExprFromText, parseNumberLiteral } from './parseImm.js';
-
-function diag(
-  diagnostics: Diagnostic[],
-  file: string,
-  message: string,
-  where?: { line: number; column: number },
-): void {
-  diagnostics.push({
-    id: DiagnosticIds.ParseError,
-    severity: 'error',
-    message,
-    file,
-    ...(where ? { line: where.line, column: where.column } : {}),
-  });
-}
+import { parseDiag as diag, parseDiagAtWithId } from './parseDiagnostics.js';
 
 function parseBalancedBracketContent(text: string): { inside: string; rest: string } | undefined {
   if (!text.startsWith('[')) return undefined;
@@ -81,14 +67,14 @@ export function parseEaIndexFromText(
     if (!/[A-Za-z_]/.test(inner)) {
       const grouped = parseImmExprFromText(filePath, inner, indexSpan, diagnostics, false);
       if (grouped) {
-        diagnostics.push({
-          id: DiagnosticIds.IndexParenRedundant,
-          severity: 'warning',
-          message: `Redundant outer parentheses in constant index expression "${t}".`,
-          file: indexSpan.file,
-          line: indexSpan.start.line,
-          column: indexSpan.start.column,
-        });
+        parseDiagAtWithId(
+          diagnostics,
+          indexSpan.file,
+          DiagnosticIds.IndexParenRedundant,
+          'warning',
+          `Redundant outer parentheses in constant index expression "${t}".`,
+          { line: indexSpan.start.line, column: indexSpan.start.column },
+        );
       }
     }
   }

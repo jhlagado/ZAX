@@ -1,6 +1,3 @@
-import type { Diagnostic } from '../diagnostics/types.js';
-import { DiagnosticIds } from '../diagnostics/types.js';
-
 const RESERVED_TOP_LEVEL_KEYWORDS = new Set([
   'func',
   'const',
@@ -21,21 +18,6 @@ const RESERVED_TOP_LEVEL_KEYWORDS = new Set([
 
 export function isReservedTopLevelDeclName(name: string): boolean {
   return RESERVED_TOP_LEVEL_KEYWORDS.has(name.toLowerCase());
-}
-
-export function pushParseError(
-  diagnostics: Diagnostic[],
-  file: string,
-  message: string,
-  where?: { line: number; column: number },
-): void {
-  diagnostics.push({
-    id: DiagnosticIds.ParseError,
-    severity: 'error',
-    message,
-    file,
-    ...(where ? { line: where.line, column: where.column } : {}),
-  });
 }
 
 export function stripLineComment(line: string): string {
