@@ -166,6 +166,14 @@ Historical material should either:
 - live in the version closeout / planning docs, or
 - be removed rather than copied forward into active workflow guides
 
+### Docs formatting workflow
+
+- CI `docs (fast)` checks only docs paths changed by the PR/push (`*.md`, `docs/**`, `.github/ISSUE_TEMPLATE/**`).
+- This keeps docs-only CI strict for touched content while avoiding unrelated baseline drift failures.
+- If baseline drift appears, run one-time normalization in a dedicated docs PR:
+  - `npx prettier -w "**/*.md" ".github/ISSUE_TEMPLATE/*.yml"`
+- After normalization, keep strict changed-path docs checks enabled in CI.
+
 ## Current Focus
 
 The current active workstream is defined in:
