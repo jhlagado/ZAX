@@ -12,7 +12,6 @@ op read_byte(dst: reg8, source_mem: mem8)
 end
 
 section data vars at $1000
-  data
   sample_byte: byte = 7
   sample_word: word = 100
 end

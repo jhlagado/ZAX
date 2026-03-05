@@ -1,6 +1,5 @@
 section data vars at $2000
-  data
-    glob_words: word[8] = { $6001,$6002,$6003,$6004,$6005,$6006,$6007,$6008 }
+  glob_words: word[8] = { $6001,$6002,$6003,$6004,$6005,$6006,$6007,$6008 }
 end
 
 section code boot at $0100

@@ -1,8 +1,7 @@
 section data vars at $1000
-  data
-    idx: byte = 0
-    idxw: word = 0
-    arr: byte[64] = {}
+  idx: byte = 0
+  idxw: word = 0
+  arr: byte[64] = {}
 end
 
 section code boot at $0000
