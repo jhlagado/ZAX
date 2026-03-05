@@ -419,3 +419,162 @@ The refactor is complete when:
 - `lowerFunctionDecl` accepts three narrow typed contexts, not one 68-field object
 - Each compiler phase is a typed function from the previous phase's output type
 - `canonicalModuleId` is root-relative and tested against cross-directory duplicates
+
+---
+
+## Codex Addendum (Second Audit Pass)
+
+This section captures additional findings from an independent audit pass over current `main`. These are implementation issues not fully covered by A-01..A-13 and should be tracked in the same program.
+
+| ID   | Area                | Title                                                                                           | Priority |
+| ---- | ------------------- | ----------------------------------------------------------------------------------------------- | -------- |
+| C-01 | Semantics           | Import visibility graph derives from raw import text, not resolved path graph                   | High     |
+| C-02 | Frontend + Lowering | Legacy section-directive path is still threaded through AST and lowering after hard-cut removal | High     |
+| C-03 | Semantics           | Qualified visibility check fails open when import map is missing                                | Medium   |
+| C-04 | Tooling             | Docs CI can fail on unrelated baseline formatting drift                                         | Medium   |
+| C-05 | Lowering            | `emit.ts` is exactly at hard cap (1000), leaving no safety margin                               | Medium   |
+| C-06 | Lowering            | Startup init runtime is raw-byte encoded with weak semantic scaffolding                         | Medium   |
+
+### C-01 — Import visibility graph must be based on resolved modules
+
+**Files**: `src/compile.ts`, `src/semantics/env.ts`, `src/moduleIdentity.ts`
+
+`buildEnv` currently builds `importedModuleIds` from `ImportNode.specifier` text, not from the resolved module graph produced during compile loading. This can diverge from actual module resolution and produce wrong access decisions for qualified names.
+
+**Fix**:
+
+1. Emit an explicit resolved import edge map from `loadProgram` in `compile.ts`.
+2. Build `importedModuleIds` in `env.ts` from that resolved graph.
+3. Keep `canonicalModuleId` usage consistent with A-12 (root-relative module IDs).
+
+### C-02 — Remove dead legacy section-directive path
+
+**Files**: `src/frontend/ast.ts`, `src/frontend/parseTopLevelSimple.ts`, `src/lowering/programLowering.ts`, `src/lowering/emit.ts`
+
+Legacy section directives are parser-rejected, but `SectionDirectiveNode` and lowering branches still exist. This keeps dead branches alive and increases ambiguity around the supported language surface.
+
+**Fix**:
+
+1. Remove `SectionDirectiveNode` from AST and parser return surface.
+2. Delete legacy section handling branches in `programLowering.ts` and `emit.ts`.
+3. Keep coverage only in explicit negative parser tests.
+
+### C-03 — Fail closed on missing import map
+
+**File**: `src/moduleVisibility.ts`
+
+`canAccessQualifiedName` currently returns `true` when no import map exists for the file. This weakens visibility guarantees in precisely the state where information is incomplete.
+
+**Fix**:
+
+1. Change fallback to deny (`false`) for qualified names when `importedModuleIds` is missing.
+2. Keep local same-module qualification allowed.
+3. Add targeted tests proving no silent permissive fallback remains.
+
+### C-04 — Stabilize docs CI baseline
+
+**File**: `.github/workflows/ci.yml`
+
+Docs-only PRs currently run global markdown format check and can fail on unrelated baseline drift.
+
+**Fix**:
+
+1. Run one-time repo-wide doc format normalization.
+2. Keep strict docs check afterward.
+3. Optionally gate docs-fast to changed docs paths only after baseline is clean.
+
+### C-05 — Keep size cap margin, not just cap compliance
+
+**Files**: `src/lowering/emit.ts` and file-size guard process
+
+`emit.ts` is currently at exactly 1000 lines. This is technically compliant but operationally fragile.
+
+**Fix**:
+
+1. Extract one additional cohesive cluster from `emit.ts` to bring it under ~900.
+2. Track hard cap and soft target in CI and review templates.
+
+### C-06 — Startup init routine needs semantic representation
+
+**File**: `src/lowering/startupInit.ts`
+
+The startup routine is built as raw opcodes with manual label patching. It works, but it is expensive to review and easy to regress.
+
+**Fix**:
+
+1. Model startup routine as a typed pseudo-IR or mnemonic sequence.
+2. Keep one encoder pass to bytes at the end.
+3. Preserve exact output bytes with fixture lock tests.
+
+---
+
+## Team Execution Plan (3-Developer Split)
+
+Primary throughput should go through **Developer A**. Developers B/C get narrow parallel slices with strict boundaries.
+
+### Workstream Ownership
+
+| Stream                                                                    | Owner       | Scope                                                                          |
+| ------------------------------------------------------------------------- | ----------- | ------------------------------------------------------------------------------ |
+| Parser/AST core cleanup (A-01..A-06 + C-02 parser surface)                | Developer A | `src/frontend/*`, AST and parser tests                                         |
+| Semantics/pipeline graph correctness (A-07, A-08, A-12, A-13, C-01, C-03) | Developer B | `src/semantics/*`, `src/compile.ts`, `src/moduleIdentity.ts`, visibility tests |
+| Lowering architecture cleanup (A-09, A-10, C-05, C-06)                    | Developer C | `src/lowering/*`, lowering/integration tests                                   |
+
+### Required Sequence
+
+1. **Developer A first (blocking)**:
+   - A-06 -> A-03 -> A-05 -> A-04 -> A-02 -> A-01
+   - plus parser/AST part of C-02
+2. **Developer B starts after A-03/A-04 land**:
+   - C-01 and C-03 first (correctness)
+   - then A-12
+   - then A-07/A-08/A-13
+3. **Developer C starts after A-04 lands**:
+   - A-09 first (context split)
+   - then C-05 (bring `emit.ts` below safety margin)
+   - then C-06
+   - then A-10 (typed phase handoff)
+
+### PR Boundaries (non-negotiable)
+
+- One issue-sized change per PR.
+- No mixed parser + lowering changes in one PR.
+- No docs-only and code changes in one PR.
+- Every PR includes:
+  - explicit before/after invariants,
+  - targeted tests,
+  - `npm run typecheck`,
+  - relevant focused test list.
+
+### Merge and Coordination Rules
+
+1. Merge blocking A-stream items in order.
+2. B/C rebase only after each upstream dependency lands.
+3. No one merges without explicit approval.
+4. Close issue only when merged to `main`, not when PR opens.
+
+---
+
+## Suggested Ticketization Order
+
+Create issues in this order to keep dependency flow explicit:
+
+1. A-06
+2. A-03
+3. A-05
+4. A-04
+5. A-02
+6. A-01
+7. C-02
+8. C-01
+9. C-03
+10. A-12
+11. A-07
+12. A-08
+13. A-13
+14. A-11
+15. A-09
+16. C-05
+17. C-06
+18. A-10
+19. C-04
