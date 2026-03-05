@@ -210,6 +210,21 @@ function directImports(items: ModuleItemNode[]): ImportNode[] {
   return items.filter((item): item is ImportNode => item.kind === 'Import');
 }
 
+type BuildEnvOptions = {
+  typePaddingWarnings?: boolean;
+  resolvedImportGraph?: ReadonlyMap<string, ReadonlyArray<string>>;
+};
+
+function importedModuleIdsForFile(moduleFile: ProgramNode['files'][number], options?: BuildEnvOptions): Set<string> {
+  const graph = options?.resolvedImportGraph;
+  if (!graph) {
+    return new Set(directImports(moduleFile.items).map((item) => canonicalModuleId(item.specifier)));
+  }
+  const resolvedTargets = graph.get(moduleFile.path);
+  if (!resolvedTargets) return new Set();
+  return new Set(resolvedTargets.map((targetPath) => canonicalModuleId(targetPath)));
+}
+
 /**
  * Build the PR2 compile environment by resolving module-scope `enum` and `const` declarations.
  *
@@ -220,7 +235,7 @@ function directImports(items: ModuleItemNode[]): ImportNode[] {
 export function buildEnv(
   program: ProgramNode,
   diagnostics: Diagnostic[],
-  options?: { typePaddingWarnings?: boolean },
+  options?: BuildEnvOptions,
 ): CompileEnv {
   const consts = new Map<string, number>();
   const enums = new Map<string, number>();
@@ -238,10 +253,7 @@ export function buildEnv(
 
   for (const mf of program.files) {
     moduleIds.set(mf.path, mf.moduleId || canonicalModuleId(mf.path));
-    importedModuleIds.set(
-      mf.path,
-      new Set(directImports(mf.items).map((item) => canonicalModuleId(item.specifier))),
-    );
+    importedModuleIds.set(mf.path, importedModuleIdsForFile(mf, options));
   }
 
   const globalLower = new Map<string, { kind: string; name: string; file: string }>();
