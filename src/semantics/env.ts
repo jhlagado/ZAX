@@ -8,15 +8,14 @@ import type {
   FuncDeclNode,
   ImportNode,
   ImmExprNode,
-  ModuleItemNode,
   ProgramNode,
-  SectionItemNode,
   TypeDeclNode,
   UnionDeclNode,
 } from '../frontend/ast.js';
 import { canonicalModuleId } from '../moduleIdentity.js';
 import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
 import { offsetOfPathInTypeExpr, sizeOfTypeExpr, storageInfoForTypeDecl } from './layout.js';
+import { visitDeclTree } from './declVisitor.js';
 
 /**
  * Immutable compilation environment for PR2: resolved constant and enum member values.
@@ -180,37 +179,6 @@ export function evalImmExpr(
   }
 }
 
-function collectEnumMembers(items: ModuleItemNode[]): EnumDeclNode[] {
-  const enums: EnumDeclNode[] = [];
-  const visit = (entry: ModuleItemNode | SectionItemNode): void => {
-    if (entry.kind === 'NamedSection') {
-      for (const item of entry.items) visit(item);
-      return;
-    }
-    if (entry.kind === 'EnumDecl') enums.push(entry);
-  };
-  for (const item of items) visit(item);
-  return enums;
-}
-
-function forEachDeclItem(
-  items: ModuleItemNode[],
-  visit: (item: ModuleItemNode | SectionItemNode) => void,
-): void {
-  const walk = (entry: ModuleItemNode | SectionItemNode): void => {
-    if (entry.kind === 'NamedSection') {
-      for (const item of entry.items) walk(item);
-      return;
-    }
-    visit(entry);
-  };
-  for (const item of items) walk(item);
-}
-
-function directImports(items: ModuleItemNode[]): ImportNode[] {
-  return items.filter((item): item is ImportNode => item.kind === 'Import');
-}
-
 type BuildEnvOptions = {
   typePaddingWarnings?: boolean;
   moduleIdRootDir?: string;
@@ -228,9 +196,17 @@ function importedModuleIdsForFile(
     if (!resolvedTargets) return new Set();
     return new Set(resolvedTargets.map((targetPath) => canonicalModuleId(targetPath, moduleIdRootDir)));
   }
+  const imports: ImportNode[] = [];
+  visitDeclTree(moduleFile.items, (item, ctx) => {
+    if (ctx.inNamedSection || item.kind !== 'Import') return;
+    imports.push(item);
+  });
   return new Set(
-    directImports(moduleFile.items).map((item) => {
-      const target = item.form === 'path' ? resolve(dirname(moduleFile.path), item.specifier) : item.specifier;
+    imports.map((importNode) => {
+      const target =
+        importNode.form === 'path'
+          ? resolve(dirname(moduleFile.path), importNode.specifier)
+          : importNode.specifier;
       return canonicalModuleId(target, moduleIdRootDir);
     }),
   );
@@ -281,7 +257,7 @@ export function buildEnv(
   };
 
   for (const mf of program.files) {
-    forEachDeclItem(mf.items, (item) => {
+    visitDeclTree(mf.items, (item) => {
       if (item.kind !== 'TypeDecl' && item.kind !== 'UnionDecl') return;
       const kind = item.kind === 'TypeDecl' ? 'type' : 'union';
       const name = item.name;
@@ -297,7 +273,7 @@ export function buildEnv(
   }
 
   for (const mf of program.files) {
-    forEachDeclItem(mf.items, (item) => {
+    visitDeclTree(mf.items, (item) => {
       if (item.kind === 'FuncDecl') {
         const f = item as FuncDeclNode;
         claim('func', f.name, f.span.file);
@@ -311,7 +287,9 @@ export function buildEnv(
   }
 
   for (const mf of program.files) {
-    for (const e of collectEnumMembers(mf.items)) {
+    visitDeclTree(mf.items, (item) => {
+      if (item.kind !== 'EnumDecl') return;
+      const e = item as EnumDeclNode;
       // Note: enum names are tracked for collision purposes even though PR4 does not use them.
       claim('enum', e.name, e.span.file);
 
@@ -326,7 +304,7 @@ export function buildEnv(
           visibleEnums.set(exportedName, idx);
         }
       }
-    }
+    });
   }
 
   const env: CompileEnv = {
@@ -342,7 +320,7 @@ export function buildEnv(
 
   if (options?.typePaddingWarnings === true) {
     for (const mf of program.files) {
-      forEachDeclItem(mf.items, (item) => {
+      visitDeclTree(mf.items, (item) => {
         if (item.kind !== 'TypeDecl' && item.kind !== 'UnionDecl') return;
         const info = storageInfoForTypeDecl(item, env, diagnostics);
         if (!info) return;
@@ -364,7 +342,7 @@ export function buildEnv(
   }
 
   for (const mf of program.files) {
-    forEachDeclItem(mf.items, (item) => {
+    visitDeclTree(mf.items, (item) => {
       if (item.kind !== 'ConstDecl') return;
       if (types.has(item.name)) {
         diag(diagnostics, item.span.file, `Const name "${item.name}" collides with a type name.`);
