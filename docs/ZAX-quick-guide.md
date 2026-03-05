@@ -57,7 +57,6 @@ This function has no parameters and no `var` block, so no frame is generated. Th
 const MsgLen = 5
 
 section data app_data at $8000
-  data
   msg: byte[5] = "HELLO"
 end
 
@@ -149,7 +148,6 @@ Module storage is declared inside named `data` sections. Three declaration forms
 
 ```zax
 section data vars at $8000
-  data
   count:     word              ; storage declaration — allocates, zero-initialized
   base:      addr = $C000      ; typed value initializer — allocates and initializes
   alias_ptr  = count           ; alias initializer — no storage; new name for an existing symbol
@@ -167,7 +165,6 @@ type Pair
 end
 
 section data vars at $8000
-  data
   p: Pair = 0    ; zero-initializes all fields
 end
 ```
@@ -180,7 +177,6 @@ Aggregate record initializer syntax for named `data` sections (positional or nam
 
 ```zax
 section data assets at $8100
-  data
   banner:  byte[]    = "HELLO"           ; inferred length: 5 bytes
   table:   word[4]   = { 1, 2, 3, 4 }   ; fixed-length word array
   palette: byte[3]   = { $00, $7F, $FF }
@@ -320,7 +316,6 @@ Scalar typed storage — module symbols from named `data` sections, function-loc
 
 ```zax
 section data vars at $8000
-  data
   count: word
   mode:  byte
 end
@@ -344,7 +339,6 @@ Explicit parentheses on scalar symbols are still accepted but are redundant. Par
 
 ```zax
 section data vars at $8000
-  data
   player: Sprite
 end
 
@@ -367,7 +361,6 @@ Indexed element access and field access compose:
 
 ```zax
 section data sprites_data at $8200
-  data
   sprites: Sprite[16]
 end
 
@@ -478,7 +471,7 @@ type MapAddr  addr        ; semantic alias for addr
 type Row      byte[32]    ; array type alias
 ```
 
-Aliases can be used as field types in records, parameter types in functions, and storage types in `globals` and `data`. An alias has the same storage size as its underlying type.
+Aliases can be used as field types in records, parameter types in functions, and storage types in named `data` sections. An alias has the same storage size as its underlying type.
 
 Inferred-length array aliases (`type T byte[]`) are **not** permitted. `T[]` is only valid in `data` declarations (with an initializer) and in function parameter position. It is not permitted in type aliases, record fields, local `var` declarations, or return types.
 
@@ -789,7 +782,6 @@ Only scalar types (`byte`, `word`, `addr`, `ptr`, or aliases resolving to those)
 
 ```zax
 section data vars at $8000
-  data
   table: byte[16]
 end
 
@@ -888,7 +880,6 @@ Compatibility at call sites:
 
 ```zax
 section data vars at $8000
-  data
   buf: byte[10]
 end
 
@@ -1145,7 +1136,6 @@ op store_byte(dst: mem8, val: reg8)
 end
 
 section data vars at $8000
-  data
   hero_hp: byte
 end
 
@@ -1502,7 +1492,6 @@ Records must contain at least one field — an empty `type ... end` is a compile
 
 ```zax
 section data vars at $8000
-  data
   player: Sprite
 end
 
@@ -1555,7 +1544,6 @@ end
 ; sizeof(Rect) = pow2(8) = 8
 
 section data vars at $8000
-  data
   viewport: Rect = { 0, 0, 320, 200 }   ; tl.x, tl.y, br.x, br.y
 end
 ```
@@ -1564,7 +1552,6 @@ Nested field access uses chained dot notation:
 
 ```zax
 section data vars at $8000
-  data
   vp: Rect
 end
 
@@ -1592,7 +1579,6 @@ When you declare an array of a record type, the element stride is `sizeof(record
 const MaxSprites = 16
 
 section data vars at $8000
-  data
   sprites: Sprite[MaxSprites]
 end
 
@@ -1662,7 +1648,6 @@ All union fields share offset 0. Reading or writing any field reads or writes th
 
 ```zax
 section data vars at $8000
-  data
   val: Overlay
 end
 
@@ -1711,7 +1696,6 @@ union SplitWord
 end
 
 section data vars at $8000
-  data
   sw: SplitWord
 end
 
@@ -1773,7 +1757,8 @@ A module file may contain, in any order:
 
 - zero or more `import` lines (must be at module scope)
 - section and alignment directives (`section`, `align`)
-- module-scope declarations: `type`, `union`, `enum`, `const`, `globals`, `data`, `bin`, `hex`, `extern`
+- module-scope declarations: `type`, `union`, `enum`, `const`, `bin`, `hex`, `extern`
+- named section blocks: `section code <name> ... end` and `section data <name> ... end` (with optional anchors)
 - `func` and `op` declarations
 
 Nested functions are not permitted. `op` declarations inside function bodies are not permitted.
@@ -1791,25 +1776,15 @@ For quoted paths, the `.zax` extension should be included. Resolution is: first 
 
 Circular imports are a compile error.
 
-### 10.3 Single Global Namespace
+### 10.3 Module Visibility and Qualified Names
 
-All module-scope names — `type`, `union`, `enum`, `const`, `globals`, `data`, `bin`, `func`, `op`, and `extern` names — share **one global namespace** across all modules in the build. There is no module-qualified access syntax in v0.2.
+Names declared in a module are local to that module unless imported visibility makes them accessible from another module. Imported symbols are referenced with qualified names (`dep.Symbol`) under the v0.5 visibility rules.
 
-Every name in that namespace must be unique. Collision detection is **case-insensitive**: you cannot define `Sprite` in one module and `sprite` in another, even if the files are otherwise unrelated.
-
-What counts as a collision:
-
-- two modules declaring the same name (any kind)
-- a `func` and an `op` with the same name (they share the namespace)
-- a `bin` base name clashing with any other symbol
-- an `extern` name clashing with any other symbol
-- a local label or argument name that collides with a reserved keyword (mnemonics, register names, control-flow keywords), ignoring case
-
-Any collision is a compile error. There is no implicit renaming or shadowing.
+Name collisions are still compile errors within a module scope and at qualified-import resolution points. There is no implicit renaming or shadowing.
 
 ### 10.4 The `export` Keyword
 
-`export` is accepted on `const`, `func`, and `op` declarations. In v0.2, it has no runtime effect — all module-scope names are public regardless. Its purpose is forward compatibility: when qualified-name access is introduced (planned for v1.0 or later), `export` will control which symbols are externally accessible. Using `export` on any other declaration form is a compile error.
+`export` is accepted on `const`, `type`, `union`, `enum`, `func`, and `op` declarations. Exported symbols are visible to importing modules through qualified access (`dep.Symbol`). Non-exported symbols remain module-private.
 
 ```zax
 export const ScreenWidth = 320
@@ -1850,7 +1825,7 @@ Inside a function body, identifier resolution proceeds in this order:
 
 1. Local labels (scoped to the enclosing `func` or `op` body)
 2. Locals and arguments (frame-bound names from the `var` block and parameter list)
-3. Module-scope symbols (the global namespace: constants, enums, storage, functions, ops)
+3. Module-visible symbols (module-local declarations plus imported/qualified symbols)
 
 An identifier that matches none of these is a compile error.
 
@@ -1877,7 +1852,6 @@ section code app at $0000
 end
 
 section data vars at $8000
-  data
   ; storage declarations
 end
 ```
@@ -2003,7 +1977,6 @@ section data assets at $4000
 end
 
 section data vars at $8000
-  data
   cursor_x: byte
   cursor_y: byte
   frame_count: word = 0
@@ -2018,7 +1991,6 @@ bin font_data in data from "assets/font.bin"
 
 ; Initialized lookup table in ROM
 section data lookup at $4100
-  data
   sin_table: byte[64] = { 0, 12, 25, 37, 49, ... }
 end
 
@@ -2046,7 +2018,6 @@ The combination of `enum` for symbolic states and `select`/`case` for dispatch i
 enum DeviceState Idle, Busy, Error
 
 section data vars at $8000
-  data
   state: byte = 0    ; initialized to DeviceState.Idle
 end
 
@@ -2093,7 +2064,6 @@ end
 ; sizeof(UartRegs) = pow2(4) = 4
 
 section data io at $FF80
-  data
   uart: UartRegs
 end
 
@@ -2195,7 +2165,6 @@ end
 const MaxEntities = 16
 
 section data vars at $8000
-  data
   entities: Entity[MaxEntities]
 end
 
@@ -2293,7 +2262,6 @@ A safe interrupt handler that preserves state, does minimal work inline, and del
 
 ```zax
 section data vars at $8000
-  data
   irq_pending: byte
   irq_count:   word
 end

@@ -325,7 +325,7 @@ The table above leads to a few rules of thumb that ZAX programmers should intern
 
 **Prefer pointer iteration over indexed access inside loops.** Instead of recomputing `arr[i]` each iteration, load the base address into HL once and `inc hl` (or `add hl, de` for word stride) after each element. For byte arrays this collapses address computation to a single 6 T-state `inc hl`; for word arrays, two `inc hl` are still far cheaper than recomputing via IX.
 
-**Use globals for hot scalar state.** If a value is accessed frequently from multiple functions and doesn't need to be reentrant, a module-scope `var` is cheaper to access than a function-local. The difference is 13 T-states (absolute byte load) versus 19 T-states (IX-relative byte load) per access, and 16 versus 38 T-states for word loads. This adds up in inner loops.
+**Use module-scope data symbols for hot scalar state.** If a value is accessed frequently from multiple functions and doesn't need to be reentrant, a module-scope symbol in a named `data` section is cheaper to access than a function-local. The difference is 13 T-states (absolute byte load) versus 19 T-states (IX-relative byte load) per access, and 16 versus 38 T-states for word loads. This adds up in inner loops.
 
 **Let the compiler handle cold paths.** For code that runs once (initialization, configuration, error handling), the IX overhead doesn't matter. Write clean, structured code using locals and let the compiler emit the straightforward lowering. Save the register-management effort for the paths where cycles actually matter.
 
@@ -400,21 +400,21 @@ This form is useful for table-driven dispatch and indirect indexing patterns com
 
 ---
 
-## 10. The Global Memory Question
+## 10. The Module-Scope Memory Question
 
-The discussion above treats globals and locals as having different access costs, which they do. But the difference goes deeper than just T-states.
+The discussion above treats module-scope symbols and locals as having different access costs, which they do. But the difference goes deeper than just T-states.
 
-**Globals are position-independent of the stack.** A global `var` is at a fixed absolute address throughout program execution. It can be accessed from any function without any frame pointer. There is no stack-depth sensitivity, no SP-tracking interaction, no epilogue concern. An absolute load/store is a single instruction with a fixed cost.
+**Module-scope symbols are position-independent of the stack.** A module-scope symbol is at a fixed absolute address throughout program execution. It can be accessed from any function without any frame pointer. There is no stack-depth sensitivity, no SP-tracking interaction, no epilogue concern. An absolute load/store is a single instruction with a fixed cost.
 
-**Globals cannot be reentrant.** Because they occupy a fixed address, two concurrent invocations of a function that uses a global variable will conflict. This matters less on Z80 (which has no hardware threading) but matters if the programmer uses interrupt handlers. A function that accesses a global and can be called from both mainline code and an ISR must be designed with that sharing in mind.
+**Module-scope mutable symbols are not reentrant.** Because they occupy fixed addresses, two concurrent invocations of a function that updates shared module-scope state will conflict. This matters less on Z80 (which has no hardware threading) but matters if the programmer uses interrupt handlers. A function that accesses shared module-scope state and can be called from both mainline code and an ISR must be designed with that sharing in mind.
 
-**Globals interact with the section system.** Module-scope `var` declarations emit into the `var` section, which is uninitialized storage (typically RAM). Module-scope `data` declarations emit initialized bytes into the `data` section (typically ROM). The programmer must understand which section a storage symbol lands in, because writing to a `data` symbol on a ROM-based system is meaningless. This isn't an address-computation concern but it affects how the programmer thinks about where to put mutable state.
+**Module-scope symbols interact with section placement.** Named `data` sections carry module storage declarations that are later placed/merged by section key and anchors. The programmer must understand which placed region a symbol lands in, because mutability assumptions depend on target memory mapping. This isn't an address-computation concern but it affects how the programmer thinks about where to put mutable state.
 
-**Lowering for global base + register offset** is the same as Section 4.2 (constant base + register offset), since a global symbol's address is a compile-time constant. This is the cheapest non-trivial address computation and is the natural choice for global arrays and tables that are indexed in tight loops.
+**Lowering for module-scope base + register offset** is the same as Section 4.2 (constant base + register offset), since a module-scope symbol's address is a compile-time constant. This is the cheapest non-trivial address computation and is the natural choice for module arrays and tables that are indexed in tight loops.
 
-**Lowering for global offset** (reading an index from a global variable) costs 13 T-states for a byte (`ld a, (nn)`) or 16 T-states for a word (`ld hl, (nn)`), both cheaper than the IX-relative equivalents. For patterns where both the array and the index are global, the all-global computation (52 T-states, from Section 4.7) is significantly cheaper than the all-local version (82 T-states).
+**Lowering for module-scope offset** (reading an index from a module-scope variable) costs 13 T-states for a byte (`ld a, (nn)`) or 16 T-states for a word (`ld hl, (nn)`), both cheaper than the IX-relative equivalents. For patterns where both the array and the index are module-scope, the all-module-scope computation (52 T-states, from Section 4.7) is significantly cheaper than the all-local version (82 T-states).
 
-**The compiler does not need to treat globals specially in the lowering logic.** A global symbol resolves to a compile-time `imm16` address, which means global bases fall into the "constant base" cases automatically. The only compiler concern is ensuring that `ld a, (symbol)` and `ld hl, (symbol)` emit the correct absolute addressing forms rather than attempting IX-relative or HL-indirect access.
+**The compiler does not need to treat module-scope symbols specially in lowering logic.** A module-scope symbol resolves to a compile-time `imm16` address, which means module-scope bases fall into the "constant base" cases automatically. The only compiler concern is ensuring that `ld a, (symbol)` and `ld hl, (symbol)` emit the correct absolute addressing forms rather than attempting IX-relative or HL-indirect access.
 
 ---
 

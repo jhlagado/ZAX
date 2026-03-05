@@ -8,9 +8,9 @@ Goal: express every allowed load/store addressing shape as a short pipeline of r
 
 ZAX uses variable semantics for named storage. A bare variable name means the stored value, not the address of the storage.
 
-> **Key invariant:** Bare variable names (`globals`, frame vars, args, scalar `data`) are value accesses, not address expressions. In load/store contexts, the compiler must lower them as reads/writes of the stored value. Arithmetic on bare scalar variables as if they were addresses is invalid and must be rejected.
+> **Key invariant:** Bare variable names (module-scope `data` declarations, frame vars, args, scalar `data`) are value accesses, not address expressions. In load/store contexts, the compiler must lower them as reads/writes of the stored value. Arithmetic on bare scalar variables as if they were addresses is invalid and must be rejected.
 
-- Scalars (`globals`, frame vars, args, scalar `data`) are used by value.
+- Scalars (module-scope symbols, frame vars, args, scalar `data`) are used by value.
 - Indexable aggregates (arrays, records) are still source-level variables, but the compiler transparently passes their storage reference when an aggregate-typed operation needs a base.
 - Indexed forms such as `arr[i]` and field forms such as `rec.field` mean the stored element/field value.
 - This address materialization is a lowering detail only. It does not change the source-level semantics into raw symbol or pointer arithmetic.

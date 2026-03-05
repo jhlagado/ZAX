@@ -34,7 +34,7 @@ module model:
 
 - module-scope `import`
 - a flat imported-name visibility model
-- global per-kind section counters (`code`, `data`, `var`)
+- historical per-kind section counters
 - packing by section kind across the full import graph
 
 The accepted v0.5 direction replaces that model with the design defined in
@@ -54,9 +54,8 @@ Banked section behavior remains out of scope for the initial v0.5
 implementation. Banking remains future direction only until it is promoted into
 the normative language.
 
-Legacy module-scope storage forms (`globals ... end`, top-level `data ... end`,
-and active-counter `section code/data/var [at ...]`) are removed from the
-current parser surface.
+Legacy module-scope storage blocks and unnamed section-base directives are
+removed from the current parser surface.
 
 ---
 
@@ -230,7 +229,7 @@ Authoring forms:
 
 Rules:
 
-- Active-counter directives are removed (`section code/data/var [at ...]`).
+- Unnamed section-base directives are removed.
 - `section` blocks are module-scope only.
 - Nested `section` blocks are invalid.
 - `import` is module-scope only.
@@ -519,8 +518,8 @@ end
 
 Module storage is declared inside named `data` sections.
 
-- `globals ... end` is removed.
-- top-level `data ... end` blocks are removed.
+- legacy module-scope storage blocks are removed.
+- top-level storage blocks are removed.
 - storage declarations use `name: Type [= initializer]` inside `section data <name> ... end`.
 
 ### 6.1 Storage Semantics and Dereference
@@ -574,9 +573,9 @@ Non-guarantees (v0.1):
 
 - Arithmetic/logical instruction forms that are not directly encodable on Z80 (e.g., `add hl, (ea)`) are not guaranteed to be accepted, even though they may be expressible via a multi-instruction sequence.
 
-### 6.2 Removed `globals` Surface
+### 6.2 Removed Legacy Storage Surface
 
-`globals ... end` is removed in v0.5.
+Legacy module-scope storage blocks are removed in v0.5.
 
 Use named `data` sections instead:
 
@@ -638,7 +637,6 @@ bottomRight: Point
 end
 
 section data vars at $8000
-  data
   r: Rect = { 0, 0, 100, 100 } ; tl.x, tl.y, br.x, br.y
 end
 
