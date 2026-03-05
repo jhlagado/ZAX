@@ -1,6 +1,6 @@
 import type { ExternFuncNode, ParamNode, SourceSpan } from './ast.js';
 import type { Diagnostic } from '../diagnostics/types.js';
-import { DiagnosticIds } from '../diagnostics/types.js';
+import { parseDiag as diag } from './parseDiagnostics.js';
 import { parseImmExprFromText } from './parseImm.js';
 import {
   diagInvalidHeaderLine,
@@ -8,21 +8,6 @@ import {
   parseReturnRegsFromText,
 } from './parseModuleCommon.js';
 import type { ParseParamsContext } from './parseParams.js';
-
-function diag(
-  diagnostics: Diagnostic[],
-  file: string,
-  message: string,
-  where?: { line: number; column: number },
-): void {
-  diagnostics.push({
-    id: DiagnosticIds.ParseError,
-    severity: 'error',
-    message,
-    file,
-    ...(where ? { line: where.line, column: where.column } : {}),
-  });
-}
 
 type ParseExternFuncContext = {
   diagnostics: Diagnostic[];
