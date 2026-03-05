@@ -127,6 +127,8 @@ import {
   lowerProgramDeclarations,
   preScanProgramDeclarations,
   type Context as ProgramLoweringContext,
+  type LoweringResult as ProgramLoweringResult,
+  type PrescanResult as ProgramPrescanResult,
 } from './programLowering.js';
 import { finalizeEmitProgram } from './emitFinalization.js';
 import {
@@ -157,6 +159,19 @@ import {
   toHexWord,
 } from './traceFormat.js';
 import { createTypeResolutionHelpers } from './typeResolution.js';
+
+type ProgramLoweringPhaseResult = {
+  prescan: ProgramPrescanResult;
+  lowered: ProgramLoweringResult;
+};
+
+function runProgramLoweringPhases(
+  programLoweringContext: ProgramLoweringContext,
+): ProgramLoweringPhaseResult {
+  const prescan = preScanProgramDeclarations(programLoweringContext);
+  const lowered = lowerProgramDeclarations(programLoweringContext, prescan);
+  return { prescan, lowered };
+}
 
 /**
  * Emit machine-code bytes for a parsed program into an address->byte map.
@@ -906,8 +921,7 @@ export function emitProgram(
     },
   };
 
-  preScanProgramDeclarations(programLoweringContext);
-  lowerProgramDeclarations(programLoweringContext);
+  const { lowered } = runProgramLoweringPhases(programLoweringContext);
 
   return finalizeEmitProgram({
     namedSectionSinks,
@@ -918,18 +932,18 @@ export function emitProgram(
     baseExprs,
     evalImmExpr,
     env,
-    codeOffset,
-    dataOffset,
-    varOffset,
-    pending,
-    symbols,
-    absoluteSymbols,
-    deferredExterns,
+    codeOffset: lowered.codeOffset,
+    dataOffset: lowered.dataOffset,
+    varOffset: lowered.varOffset,
+    pending: lowered.pending,
+    symbols: lowered.symbols,
+    absoluteSymbols: lowered.absoluteSymbols,
+    deferredExterns: lowered.deferredExterns,
     fixups,
     rel8Fixups,
-    codeBytes,
-    dataBytes,
-    hexBytes,
+    codeBytes: lowered.codeBytes,
+    dataBytes: lowered.dataBytes,
+    hexBytes: lowered.hexBytes,
     bytes,
     codeSourceSegments,
     codeAsmTrace,
