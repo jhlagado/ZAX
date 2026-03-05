@@ -2,6 +2,10 @@ import type { ImmExprNode, OffsetofPathNode, SourceSpan, TypeExprNode } from './
 import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
 
+type ImmUnaryOp = Extract<ImmExprNode, { kind: 'ImmUnary' }>['op'];
+type ImmBinaryOp = Extract<ImmExprNode, { kind: 'ImmBinary' }>['op'];
+type ImmOpToken = ImmUnaryOp | ImmBinaryOp;
+
 function diag(
   diagnostics: Diagnostic[],
   file: string,
@@ -95,13 +99,48 @@ export function parseNumberLiteral(text: string): number | undefined {
 type ImmToken =
   | { kind: 'num'; text: string }
   | { kind: 'ident'; text: string }
-  | { kind: 'op'; text: string }
+  | { kind: 'op'; text: ImmOpToken }
   | { kind: 'comma' }
   | { kind: 'dot' }
   | { kind: 'lparen' }
   | { kind: 'rparen' }
   | { kind: 'lbrack' }
   | { kind: 'rbrack' };
+
+function isImmUnaryOp(op: ImmOpToken): op is ImmUnaryOp {
+  return op === '+' || op === '-' || op === '~';
+}
+
+function isImmBinaryOp(op: ImmOpToken): op is ImmBinaryOp {
+  return (
+    op === '*' ||
+    op === '/' ||
+    op === '%' ||
+    op === '+' ||
+    op === '-' ||
+    op === '&' ||
+    op === '^' ||
+    op === '|' ||
+    op === '<<' ||
+    op === '>>'
+  );
+}
+
+function isImmOpToken(text: string): text is ImmOpToken {
+  return (
+    text === '+' ||
+    text === '-' ||
+    text === '*' ||
+    text === '/' ||
+    text === '%' ||
+    text === '&' ||
+    text === '^' ||
+    text === '|' ||
+    text === '~' ||
+    text === '<<' ||
+    text === '>>'
+  );
+}
 
 function tokenizeImm(text: string): ImmToken[] | undefined {
   const out: ImmToken[] = [];
@@ -210,7 +249,7 @@ function tokenizeImm(text: string): ImmToken[] | undefined {
       i += num[0].length;
       continue;
     }
-    if ('+-*/%&^|~'.includes(ch)) {
+    if (isImmOpToken(ch)) {
       out.push({ kind: 'op', text: ch });
       i++;
       continue;
@@ -226,7 +265,7 @@ function tokenizeImm(text: string): ImmToken[] | undefined {
   return out;
 }
 
-function precedence(op: string): number {
+function precedence(op: ImmOpToken): number {
   switch (op) {
     case '*':
     case '/':
@@ -340,10 +379,11 @@ export function parseImmExprFromText(
       if (!t || t.kind !== 'op') break;
       const prec = precedence(t.text);
       if (prec < minPrec) break;
+      if (!isImmBinaryOp(t.text)) break;
       idx++;
       const right = parseExpr(prec + 1);
       if (!right) return undefined;
-      left = { kind: 'ImmBinary', span: exprSpan, op: t.text as any, left, right };
+      left = { kind: 'ImmBinary', span: exprSpan, op: t.text, left, right };
     }
     return left;
   }
@@ -388,11 +428,11 @@ export function parseImmExprFromText(
       }
       return immName(filePath, exprSpan, parts.join('.'));
     }
-    if (t.kind === 'op' && (t.text === '+' || t.text === '-' || t.text === '~')) {
+    if (t.kind === 'op' && isImmUnaryOp(t.text)) {
       idx++;
       const inner = parsePrimary();
       if (!inner) return undefined;
-      return { kind: 'ImmUnary', span: exprSpan, op: t.text as any, expr: inner };
+      return { kind: 'ImmUnary', span: exprSpan, op: t.text, expr: inner };
     }
     if (t.kind === 'lparen') {
       idx++;
