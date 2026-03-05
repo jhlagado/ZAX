@@ -1,5 +1,4 @@
 section data vars at $1000
-  data
     gw: word[4] = { $1111, $2222, $3333, $4444 }
 end
 

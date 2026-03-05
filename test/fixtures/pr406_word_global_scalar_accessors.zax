@@ -1,5 +1,4 @@
 section data vars at $2000
-  data
     glob_w: word = $1234
 end
 

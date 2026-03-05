@@ -4,7 +4,6 @@ union Value
 end
 
 section data vars at $2000
-  data
   v: Value = 0
 end
 

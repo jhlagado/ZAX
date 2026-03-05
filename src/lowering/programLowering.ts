@@ -238,6 +238,13 @@ export function preScanProgramDeclarations(ctx: Context): void {
         const scalar = ctx.resolveScalarKind(decl.typeExpr);
         if (!scalar) ctx.rawAddressSymbols.add(lower);
       }
+    } else if (item.kind === 'DataDecl') {
+      if (namedSection && namedSection.section !== 'data') return;
+      const decl = item as DataDeclNode;
+      const lower = decl.name.toLowerCase();
+      ctx.storageTypes.set(lower, decl.typeExpr);
+      const scalar = ctx.resolveScalarKind(decl.typeExpr);
+      if (!scalar) ctx.rawAddressSymbols.add(lower);
     }
   };
 

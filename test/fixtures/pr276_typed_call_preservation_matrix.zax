@@ -3,7 +3,6 @@ extern func getw(seed: word): HL at $1240
 extern func ping(seed: byte): HL at $1250
 
 section data vars at $1000
-  data
     out: word = 0
 end
 
