@@ -211,6 +211,31 @@ function directImports(items: ModuleItemNode[]): ImportNode[] {
   return items.filter((item): item is ImportNode => item.kind === 'Import');
 }
 
+type BuildEnvOptions = {
+  typePaddingWarnings?: boolean;
+  moduleIdRootDir?: string;
+  resolvedImportGraph?: ReadonlyMap<string, ReadonlyArray<string>>;
+};
+
+function importedModuleIdsForFile(
+  moduleFile: ProgramNode['files'][number],
+  moduleIdRootDir: string,
+  options?: BuildEnvOptions,
+): Set<string> {
+  const graph = options?.resolvedImportGraph;
+  if (graph) {
+    const resolvedTargets = graph.get(moduleFile.path);
+    if (!resolvedTargets) return new Set();
+    return new Set(resolvedTargets.map((targetPath) => canonicalModuleId(targetPath, moduleIdRootDir)));
+  }
+  return new Set(
+    directImports(moduleFile.items).map((item) => {
+      const target = item.form === 'path' ? resolve(dirname(moduleFile.path), item.specifier) : item.specifier;
+      return canonicalModuleId(target, moduleIdRootDir);
+    }),
+  );
+}
+
 /**
  * Build the PR2 compile environment by resolving module-scope `enum` and `const` declarations.
  *
@@ -221,7 +246,7 @@ function directImports(items: ModuleItemNode[]): ImportNode[] {
 export function buildEnv(
   program: ProgramNode,
   diagnostics: Diagnostic[],
-  options?: { typePaddingWarnings?: boolean; moduleIdRootDir?: string },
+  options?: BuildEnvOptions,
 ): CompileEnv {
   const consts = new Map<string, number>();
   const enums = new Map<string, number>();
@@ -240,16 +265,7 @@ export function buildEnv(
   const moduleIdRootDir = options?.moduleIdRootDir ?? dirname(program.entryFile);
   for (const mf of program.files) {
     moduleIds.set(mf.path, canonicalModuleId(mf.path, moduleIdRootDir));
-    importedModuleIds.set(
-      mf.path,
-      new Set(
-        directImports(mf.items).map((item) => {
-          const target =
-            item.form === 'path' ? resolve(dirname(mf.path), item.specifier) : item.specifier;
-          return canonicalModuleId(target, moduleIdRootDir);
-        }),
-      ),
-    );
+    importedModuleIds.set(mf.path, importedModuleIdsForFile(mf, moduleIdRootDir, options));
   }
 
   const globalLower = new Map<string, { kind: string; name: string; file: string }>();
