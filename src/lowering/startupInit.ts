@@ -1,5 +1,8 @@
 import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
+import type { AsmInstructionNode, AsmOperandNode, ImmExprNode, SourceSpan } from '../frontend/ast.js';
+import type { CompileEnv } from '../semantics/env.js';
+import { encodeInstruction } from '../z80/encode.js';
 
 import type { PlacedNamedSectionContribution } from './sectionPlacement.js';
 
@@ -26,6 +29,214 @@ export type StartupInitRegion = {
 };
 
 export const STARTUP_ENTRY_LABEL = '__zax_startup';
+
+type StartupRoutineLabel =
+  | 'copy_count_test'
+  | 'load_zero_count'
+  | 'zero_count_test'
+  | 'zero_bytes_test'
+  | 'zero_done'
+  | 'jump_main';
+
+type StartupRoutineInstruction = {
+  head: 'ld' | 'inc' | 'jr' | 'push' | 'add' | 'ex' | 'ldir' | 'pop' | 'dec' | 'xor' | 'jp' | 'or';
+  operands: AsmOperandNode[];
+};
+
+type StartupRoutineStep =
+  | { kind: 'label'; name: StartupRoutineLabel }
+  | { kind: 'instruction'; instruction: StartupRoutineInstruction; relTarget?: StartupRoutineLabel };
+
+const STARTUP_SPAN: SourceSpan = {
+  file: '<startup-init>',
+  start: { line: 1, column: 1, offset: 0 },
+  end: { line: 1, column: 1, offset: 0 },
+};
+const STARTUP_ENV: CompileEnv = {
+  consts: new Map(),
+  enums: new Map(),
+  types: new Map(),
+};
+
+function immExpr(value: number): ImmExprNode {
+  return { kind: 'ImmLiteral', span: STARTUP_SPAN, value };
+}
+
+function reg(name: string): AsmOperandNode {
+  return { kind: 'Reg', span: STARTUP_SPAN, name };
+}
+
+function imm(value: number): AsmOperandNode {
+  return { kind: 'Imm', span: STARTUP_SPAN, expr: immExpr(value) };
+}
+
+function mem(name: string): AsmOperandNode {
+  return {
+    kind: 'Mem',
+    span: STARTUP_SPAN,
+    expr: { kind: 'EaName', span: STARTUP_SPAN, name },
+  };
+}
+
+function label(name: StartupRoutineLabel): StartupRoutineStep {
+  return { kind: 'label', name };
+}
+
+function instruction(
+  head: StartupRoutineInstruction['head'],
+  operands: AsmOperandNode[] = [],
+): StartupRoutineStep {
+  return { kind: 'instruction', instruction: { head, operands } };
+}
+
+function jumpRelative(target: StartupRoutineLabel): StartupRoutineStep {
+  return {
+    kind: 'instruction',
+    instruction: { head: 'jr', operands: [imm(0)] },
+    relTarget: target,
+  };
+}
+
+function jumpRelativeIfZero(target: StartupRoutineLabel): StartupRoutineStep {
+  return {
+    kind: 'instruction',
+    instruction: { head: 'jr', operands: [reg('Z'), imm(0)] },
+    relTarget: target,
+  };
+}
+
+function toAsmInstruction(step: StartupRoutineInstruction): AsmInstructionNode {
+  return {
+    kind: 'AsmInstruction',
+    span: STARTUP_SPAN,
+    head: step.head,
+    operands: step.operands,
+  };
+}
+
+function buildStartupRoutineSteps(
+  initRegionAddress: number,
+  blobBase: number,
+  mainAddress: number,
+): StartupRoutineStep[] {
+  return [
+    instruction('ld', [reg('HL'), imm(initRegionAddress)]),
+    instruction('ld', [reg('C'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+    instruction('ld', [reg('B'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+
+    label('copy_count_test'),
+    instruction('ld', [reg('A'), reg('B')]),
+    instruction('or', [reg('C')]),
+    jumpRelativeIfZero('load_zero_count'),
+
+    instruction('push', [reg('BC')]),
+    instruction('ld', [reg('E'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+    instruction('ld', [reg('D'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+    instruction('ld', [reg('C'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+    instruction('ld', [reg('B'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+    instruction('push', [reg('HL')]),
+    instruction('ld', [reg('HL'), imm(blobBase)]),
+    instruction('add', [reg('HL'), reg('BC')]),
+    instruction('ex', [mem('SP'), reg('HL')]),
+    instruction('ld', [reg('C'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+    instruction('ld', [reg('B'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+    instruction('ex', [mem('SP'), reg('HL')]),
+    instruction('ldir'),
+    instruction('pop', [reg('HL')]),
+    instruction('pop', [reg('BC')]),
+    instruction('dec', [reg('BC')]),
+    jumpRelative('copy_count_test'),
+
+    label('load_zero_count'),
+    instruction('ld', [reg('C'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+    instruction('ld', [reg('B'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+
+    label('zero_count_test'),
+    instruction('ld', [reg('A'), reg('B')]),
+    instruction('or', [reg('C')]),
+    jumpRelativeIfZero('jump_main'),
+
+    instruction('push', [reg('BC')]),
+    instruction('ld', [reg('E'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+    instruction('ld', [reg('D'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+    instruction('ld', [reg('C'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+    instruction('ld', [reg('B'), mem('HL')]),
+    instruction('inc', [reg('HL')]),
+
+    label('zero_bytes_test'),
+    instruction('ld', [reg('A'), reg('B')]),
+    instruction('or', [reg('C')]),
+    jumpRelativeIfZero('zero_done'),
+    instruction('xor', [reg('A')]),
+    instruction('ld', [mem('DE'), reg('A')]),
+    instruction('inc', [reg('DE')]),
+    instruction('dec', [reg('BC')]),
+    jumpRelative('zero_bytes_test'),
+
+    label('zero_done'),
+    instruction('pop', [reg('BC')]),
+    instruction('dec', [reg('BC')]),
+    jumpRelative('zero_count_test'),
+
+    label('jump_main'),
+    instruction('jp', [imm(mainAddress)]),
+  ];
+}
+
+function encodeStartupRoutineSteps(steps: StartupRoutineStep[]): number[] {
+  const bytes: number[] = [];
+  const labels = new Map<StartupRoutineLabel, number>();
+  const relPatches: Array<{ index: number; origin: number; label: StartupRoutineLabel }> = [];
+  const diagnostics: Diagnostic[] = [];
+
+  for (const step of steps) {
+    if (step.kind === 'label') {
+      labels.set(step.name, bytes.length);
+      continue;
+    }
+    const encoded = encodeInstruction(toAsmInstruction(step.instruction), STARTUP_ENV, diagnostics);
+    if (!encoded) {
+      const message = diagnostics[diagnostics.length - 1]?.message ?? 'unknown startup encode failure';
+      throw new Error(`Failed to encode startup instruction "${step.instruction.head}": ${message}`);
+    }
+    const start = bytes.length;
+    bytes.push(...encoded);
+    if (step.relTarget) {
+      relPatches.push({
+        index: start + encoded.length - 1,
+        origin: start + encoded.length,
+        label: step.relTarget,
+      });
+    }
+  }
+
+  for (const patch of relPatches) {
+    const target = labels.get(patch.label);
+    if (target === undefined) {
+      throw new Error(`Unknown startup routine label "${patch.label}".`);
+    }
+    const displacement = target - patch.origin;
+    if (displacement < -128 || displacement > 127) {
+      throw new Error(`Startup routine jump out of range for "${patch.label}".`);
+    }
+    bytes[patch.index] = displacement & 0xff;
+  }
+
+  return bytes;
+}
 
 function encodeWord(value: number): [number, number] {
   return [value & 0xff, (value >> 8) & 0xff];
@@ -122,84 +333,6 @@ export function buildStartupInitRoutine(
   region: StartupInitRegion,
   mainAddress: number,
 ): number[] {
-  const bytes: number[] = [];
-  const labels = new Map<string, number>();
-  const relPatches: Array<{ index: number; origin: number; label: string }> = [];
   const blobBase = initRegionAddress + (region.encoded.length - region.blob.length);
-
-  const emit = (...values: number[]) => {
-    bytes.push(...values.map((value) => value & 0xff));
-  };
-  const mark = (label: string) => {
-    labels.set(label, bytes.length);
-  };
-  const emitWord = (value: number) => {
-    emit(value & 0xff, (value >> 8) & 0xff);
-  };
-  const emitLdHlImm = (value: number) => {
-    emit(0x21);
-    emitWord(value);
-  };
-  const emitJr = (opcode: number, label: string) => {
-    emit(opcode, 0x00);
-    relPatches.push({ index: bytes.length - 1, origin: bytes.length, label });
-  };
-
-  emitLdHlImm(initRegionAddress);
-  emit(0x4e, 0x23, 0x46, 0x23); // ld c,(hl) / inc hl / ld b,(hl) / inc hl
-
-  mark('copy_count_test');
-  emit(0x78, 0xb1); // ld a,b / or c
-  emitJr(0x28, 'load_zero_count');
-
-  emit(0xc5); // push bc
-  emit(0x5e, 0x23, 0x56, 0x23); // ld e,(hl) / inc hl / ld d,(hl) / inc hl
-  emit(0x4e, 0x23, 0x46, 0x23); // ld c,(hl) / inc hl / ld b,(hl) / inc hl
-  emit(0xe5); // push hl
-  emitLdHlImm(blobBase);
-  emit(0x09, 0xe3); // add hl,bc / ex (sp),hl
-  emit(0x4e, 0x23, 0x46, 0x23); // ld c,(hl) / inc hl / ld b,(hl) / inc hl
-  emit(0xe3); // ex (sp),hl
-  emit(0xed, 0xb0); // ldir
-  emit(0xe1, 0xc1, 0x0b); // pop hl / pop bc / dec bc
-  emitJr(0x18, 'copy_count_test');
-
-  mark('load_zero_count');
-  emit(0x4e, 0x23, 0x46, 0x23); // ld c,(hl) / inc hl / ld b,(hl) / inc hl
-
-  mark('zero_count_test');
-  emit(0x78, 0xb1); // ld a,b / or c
-  emitJr(0x28, 'jump_main');
-
-  emit(0xc5); // push bc
-  emit(0x5e, 0x23, 0x56, 0x23); // ld e,(hl) / inc hl / ld d,(hl) / inc hl
-  emit(0x4e, 0x23, 0x46, 0x23); // ld c,(hl) / inc hl / ld b,(hl) / inc hl
-
-  mark('zero_bytes_test');
-  emit(0x78, 0xb1); // ld a,b / or c
-  emitJr(0x28, 'zero_done');
-  emit(0xaf, 0x12, 0x13, 0x0b); // xor a / ld (de),a / inc de / dec bc
-  emitJr(0x18, 'zero_bytes_test');
-
-  mark('zero_done');
-  emit(0xc1, 0x0b); // pop bc / dec bc
-  emitJr(0x18, 'zero_count_test');
-
-  mark('jump_main');
-  emit(0xc3);
-  emitWord(mainAddress);
-
-  for (const patch of relPatches) {
-    const target = labels.get(patch.label);
-    if (target === undefined) {
-      throw new Error(`Unknown startup routine label "${patch.label}".`);
-    }
-    const displacement = target - patch.origin;
-    if (displacement < -128 || displacement > 127) {
-      throw new Error(`Startup routine jump out of range for "${patch.label}".`);
-    }
-    bytes[patch.index] = displacement & 0xff;
-  }
-
-  return bytes;
+  return encodeStartupRoutineSteps(buildStartupRoutineSteps(initRegionAddress, blobBase, mainAddress));
 }
