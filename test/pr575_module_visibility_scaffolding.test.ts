@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { ProgramNode } from '../src/frontend/ast.js';
 import { parseModuleFile } from '../src/frontend/parser.js';
+import { canAccessQualifiedName } from '../src/moduleVisibility.js';
 import { buildEnv, evalImmExpr } from '../src/semantics/env.js';
 import { sizeOfTypeExpr } from '../src/semantics/layout.js';
 
@@ -118,6 +119,48 @@ describe('PR575 module visibility scaffolding', () => {
       ),
     ).toBeUndefined();
     expect(sizeOfTypeExpr({ kind: 'TypeName', span: other.items[1]!.span, name: 'dep.Word' }, env, diagnostics)).toBeUndefined();
+    expect(diagnostics.some((d) => d.message === 'Unknown type "dep.Word".')).toBe(true);
+  });
+
+  it('fails closed for qualified access when import entry is unavailable', () => {
+    const diagnostics: any[] = [];
+    const dep = parseModuleFile(
+      'dep.zax',
+      [
+        'export const FOO = 7',
+        'export type Word word',
+      ].join('\n'),
+      diagnostics,
+    );
+    const root = parseModuleFile(
+      'root.zax',
+      [
+        'import "dep.zax"',
+      ].join('\n'),
+      diagnostics,
+    );
+
+    const program = {
+      kind: 'Program',
+      span: root.span,
+      entryFile: root.path,
+      files: [dep, root],
+    } as ProgramNode;
+
+    const env = buildEnv(program, diagnostics, { typePaddingWarnings: false });
+    env.importedModuleIds!.delete(root.path);
+
+    expect(diagnostics).toEqual([]);
+    expect(canAccessQualifiedName('dep.FOO', root.path, env)).toBe(false);
+    expect(canAccessQualifiedName('root.Local', root.path, env)).toBe(true);
+    expect(
+      evalImmExpr(
+        { kind: 'ImmName', span: root.span, name: 'dep.FOO' },
+        env,
+        diagnostics,
+      ),
+    ).toBeUndefined();
+    expect(sizeOfTypeExpr({ kind: 'TypeName', span: root.span, name: 'dep.Word' }, env, diagnostics)).toBeUndefined();
     expect(diagnostics.some((d) => d.message === 'Unknown type "dep.Word".')).toBe(true);
   });
 });
