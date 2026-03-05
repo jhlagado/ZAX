@@ -27,7 +27,7 @@ describe('PR572 named section parser scaffolding', () => {
       anchor: {
         kind: 'SectionAnchor',
         at: { kind: 'ImmLiteral', value: 0x1000 },
-        size: { kind: 'ImmLiteral', value: 0x40 },
+        bound: { kind: 'size', size: { kind: 'ImmLiteral', value: 0x40 } },
       },
     });
     if (!section || section.kind !== 'NamedSection') {
@@ -41,6 +41,27 @@ describe('PR572 named section parser scaffolding', () => {
       exported: true,
     });
     expect(section.items[2]).toMatchObject({ kind: 'DataDecl', name: 'message' });
+  });
+
+  it('parses named-section anchors with end bounds', () => {
+    const diagnostics: Diagnostic[] = [];
+    const program = parseProgram(
+      'pr639_named_section_end_anchor.zax',
+      ['section code boot at $2000 end $20ff', 'end'].join('\n'),
+      diagnostics,
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(program.files[0]?.items[0]).toMatchObject({
+      kind: 'NamedSection',
+      section: 'code',
+      name: 'boot',
+      anchor: {
+        kind: 'SectionAnchor',
+        at: { kind: 'ImmLiteral', value: 0x2000 },
+        bound: { kind: 'end', end: { kind: 'ImmLiteral', value: 0x20ff } },
+      },
+    });
   });
 
   it('keeps imports module-scoped and rejects legacy section directives', () => {

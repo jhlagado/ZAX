@@ -95,70 +95,73 @@ function evaluateCapacity(
 ): number | undefined {
   const anchor = sink.anchor.node.anchor;
   if (!anchor) return undefined;
-  if (anchor.size) {
-    const size = ctx.evalImmExpr(anchor.size, ctx.env, ctx.diagnostics);
-    if (size === undefined) {
-      const where = startOf(sink);
-      diagAt(
-        ctx.diagnostics,
-        where.file,
-        where.line,
-        where.column,
-        `Failed to evaluate anchor size for section "${formatKey(sink)}".`,
-      );
+  switch (anchor.bound.kind) {
+    case 'none':
       return undefined;
+    case 'size': {
+      const size = ctx.evalImmExpr(anchor.bound.size, ctx.env, ctx.diagnostics);
+      if (size === undefined) {
+        const where = startOf(sink);
+        diagAt(
+          ctx.diagnostics,
+          where.file,
+          where.line,
+          where.column,
+          `Failed to evaluate anchor size for section "${formatKey(sink)}".`,
+        );
+        return undefined;
+      }
+      if (size < 0) {
+        const where = startOf(sink);
+        diagAt(
+          ctx.diagnostics,
+          where.file,
+          where.line,
+          where.column,
+          `Anchor size must be non-negative for section "${formatKey(sink)}".`,
+        );
+        return undefined;
+      }
+      return size;
     }
-    if (size < 0) {
-      const where = startOf(sink);
-      diagAt(
-        ctx.diagnostics,
-        where.file,
-        where.line,
-        where.column,
-        `Anchor size must be non-negative for section "${formatKey(sink)}".`,
-      );
-      return undefined;
+    case 'end': {
+      const end = ctx.evalImmExpr(anchor.bound.end, ctx.env, ctx.diagnostics);
+      if (end === undefined) {
+        const where = startOf(sink);
+        diagAt(
+          ctx.diagnostics,
+          where.file,
+          where.line,
+          where.column,
+          `Failed to evaluate anchor end for section "${formatKey(sink)}".`,
+        );
+        return undefined;
+      }
+      if (end < baseAddress) {
+        const where = startOf(sink);
+        diagAt(
+          ctx.diagnostics,
+          where.file,
+          where.line,
+          where.column,
+          `Anchor end must be greater than or equal to the base for section "${formatKey(sink)}".`,
+        );
+        return undefined;
+      }
+      if (end > 0xffff) {
+        const where = startOf(sink);
+        diagAt(
+          ctx.diagnostics,
+          where.file,
+          where.line,
+          where.column,
+          `Anchor end out of range for section "${formatKey(sink)}": ${end}.`,
+        );
+        return undefined;
+      }
+      return end - baseAddress + 1;
     }
-    return size;
   }
-  if (anchor.end) {
-    const end = ctx.evalImmExpr(anchor.end, ctx.env, ctx.diagnostics);
-    if (end === undefined) {
-      const where = startOf(sink);
-      diagAt(
-        ctx.diagnostics,
-        where.file,
-        where.line,
-        where.column,
-        `Failed to evaluate anchor end for section "${formatKey(sink)}".`,
-      );
-      return undefined;
-    }
-    if (end < baseAddress) {
-      const where = startOf(sink);
-      diagAt(
-        ctx.diagnostics,
-        where.file,
-        where.line,
-        where.column,
-        `Anchor end must be greater than or equal to the base for section "${formatKey(sink)}".`,
-      );
-      return undefined;
-    }
-    if (end > 0xffff) {
-      const where = startOf(sink);
-      diagAt(
-        ctx.diagnostics,
-        where.file,
-        where.line,
-        where.column,
-        `Anchor end out of range for section "${formatKey(sink)}": ${end}.`,
-      );
-      return undefined;
-    }
-    return end - baseAddress + 1;
-  }
-  return undefined;
 }
 
 export function placeNonBankedSectionContributions(

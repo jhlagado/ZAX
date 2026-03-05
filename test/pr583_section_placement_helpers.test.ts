@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Diagnostic } from '../src/diagnostics/types.js';
-import type { NamedSectionNode } from '../src/frontend/ast.js';
+import type { AnchorBoundNode, NamedSectionNode } from '../src/frontend/ast.js';
 import { parseProgram } from '../src/frontend/parser.js';
 import { emitProgram } from '../src/lowering/emit.js';
 import { placeNonBankedSectionContributions } from '../src/lowering/sectionPlacement.js';
@@ -14,6 +14,7 @@ function makeSink(
   name: string,
   at: number,
   offset: number,
+  bound: AnchorBoundNode = { kind: 'none' },
 ): NamedSectionContributionSink {
   const span = {
     file: `${name}.zax`,
@@ -32,6 +33,7 @@ function makeSink(
         value: at,
         span,
       },
+      bound,
     },
     items: [],
     span,
@@ -116,5 +118,31 @@ describe('PR583 section placement helpers', () => {
     expect(diagnostics).toEqual([]);
     expect(map.bytes.get(0)).toBe(0xc9);
     expect(map.bytes.get(0x1000)).toBe(0xc9);
+  });
+
+  it('handles end-bounded anchors when computing capacity', () => {
+    const diagnostics: Diagnostic[] = [];
+    const endSpan = {
+      file: 'boot.zax',
+      start: { line: 1, column: 1, offset: 0 },
+      end: { line: 1, column: 1, offset: 0 },
+    };
+    const sinks = [makeSink('code', 'boot', 0x1000, 2, {
+      kind: 'end',
+      end: { kind: 'ImmLiteral', value: 0x1000, span: endSpan },
+    })];
+
+    placeNonBankedSectionContributions(sinks, {
+      diagnostics,
+      env: {} as never,
+      evalImmExpr: (expr) => (expr.kind === 'ImmLiteral' ? expr.value : undefined),
+    });
+
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({
+      id: 'ZAX300',
+      severity: 'error',
+    });
+    expect(diagnostics[0]?.message).toContain('Section "code boot" exceeds its anchored capacity');
   });
 });

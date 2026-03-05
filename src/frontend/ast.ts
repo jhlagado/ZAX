@@ -120,14 +120,18 @@ export interface SectionDirectiveNode extends BaseNode {
   at?: ImmExprNode;
 }
 
+export type AnchorBoundNode =
+  | { kind: 'none' }
+  | { kind: 'size'; size: ImmExprNode }
+  | { kind: 'end'; end: ImmExprNode };
+
 /**
  * Optional anchor attached to a named section declaration.
  */
 export interface SectionAnchorNode extends BaseNode {
   kind: 'SectionAnchor';
   at: ImmExprNode;
-  size?: ImmExprNode;
-  end?: ImmExprNode;
+  bound: AnchorBoundNode;
 }
 
 /**
