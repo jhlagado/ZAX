@@ -36,8 +36,11 @@ import { createFunctionCallLoweringHelpers } from './functionCallLowering.js';
 // function-local helpers, state, and diagnostics around the extracted
 // body-setup and call-lowering submodules.
 type ResolvedArrayType = { element: TypeExprNode; length?: number };
-export type FunctionLoweringContext = {
+export type FunctionLoweringItemContext = {
   item: FuncDeclNode;
+};
+
+export type FunctionLoweringDiagnosticsContext = {
   diagnostics: Diagnostic[];
   diag: (diagnostics: Diagnostic[], file: string, message: string) => void;
   diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
@@ -55,11 +58,18 @@ export type FunctionLoweringContext = {
     message: string,
   ) => void;
   warnAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
+};
+
+export type FunctionLoweringSymbolContext = {
   taken: Set<string>;
   pending: PendingSymbol[];
   traceComment: (offset: number, text: string) => void;
   traceLabel: (offset: number, name: string) => void;
   currentCodeSegmentTagRef: { current: SourceSegmentTag | undefined };
+  generatedLabelCounterRef: { current: number };
+};
+
+export type FunctionLoweringSpTrackingContext = {
   bindSpTracking: (
     callbacks?:
       | {
@@ -68,6 +78,9 @@ export type FunctionLoweringContext = {
         }
       | undefined,
   ) => void;
+};
+
+export type FunctionLoweringEmissionContext = {
   getCodeOffset: () => number;
   emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
   emitRawCodeBytes: (bs: Uint8Array, file: string, traceText: string) => void;
@@ -93,6 +106,9 @@ export type FunctionLoweringContext = {
     span: SourceSpan,
     mnemonic: string,
   ) => void;
+};
+
+export type FunctionLoweringConditionContext = {
   conditionOpcodeFromName: (name: string) => number | undefined;
   conditionNameFromOpcode: (opcode: number) => string | undefined;
   callConditionOpcodeFromName: (name: string) => number | undefined;
@@ -102,6 +118,9 @@ export type FunctionLoweringContext = {
   symbolicTargetFromExpr: (
     expr: ImmExprNode,
   ) => { baseLower: string; addend: number } | undefined;
+};
+
+export type FunctionLoweringTypeContext = {
   evalImmExpr: (
     expr: ImmExprNode,
     env: CompileEnv,
@@ -113,6 +132,11 @@ export type FunctionLoweringContext = {
   resolveEaTypeExpr: (ea: EaExprNode) => TypeExprNode | undefined;
   resolveScalarTypeForEa: (ea: EaExprNode) => ScalarKind | undefined;
   resolveArrayType: (typeExpr: TypeExprNode, env?: CompileEnv) => ResolvedArrayType | undefined;
+  typeDisplay: (typeExpr: TypeExprNode) => string;
+  sameTypeShape: (left: TypeExprNode, right: TypeExprNode) => boolean;
+};
+
+export type FunctionLoweringMaterializationContext = {
   buildEaWordPipeline: (ea: EaExprNode, span: SourceSpan) => StepPipeline | null;
   enforceEaRuntimeAtomBudget: (operand: AsmOperandNode, context: string) => boolean;
   enforceDirectCallSiteEaBudget: (operand: AsmOperandNode, calleeName: string) => boolean;
@@ -121,14 +145,25 @@ export type FunctionLoweringContext = {
   pushImm16: (value: number, span: SourceSpan) => boolean;
   pushZeroExtendedReg8: (regName: string, span: SourceSpan) => boolean;
   loadImm16ToHL: (value: number, span: SourceSpan) => boolean;
+  emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
+  lowerLdWithEa: (asmItem: AsmInstructionNode) => boolean;
+};
+
+export type FunctionLoweringStorageContext = {
   stackSlotOffsets: Map<string, number>;
   stackSlotTypes: Map<string, TypeExprNode>;
   localAliasTargets: Map<string, EaExprNode>;
   storageTypes: Map<string, TypeExprNode>;
   rawTypedCallWarningsEnabled: boolean;
+};
+
+export type FunctionLoweringCallableResolutionContext = {
   resolveCallable: (name: string, file: string) => Callable | undefined;
   resolveOpCandidates: (name: string, file: string) => OpDeclNode[] | undefined;
   opStackPolicyMode: OpStackPolicyMode;
+};
+
+export type FunctionLoweringOpOverloadContext = {
   matcherMatchesOperand: (matcher: OpMatcherNode, operand: AsmOperandNode) => boolean;
   formatOpSignature: (op: OpDeclNode) => string;
   formatAsmOperandForOpDiag: (operand: AsmOperandNode) => string;
@@ -142,19 +177,35 @@ export type FunctionLoweringContext = {
     args: AsmOperandNode[],
   ) => OpDeclNode | undefined;
   summarizeOpStackEffect: (op: OpDeclNode) => OpStackSummary;
+};
+
+export type FunctionLoweringAstUtilityContext = {
   cloneImmExpr: (expr: ImmExprNode) => ImmExprNode;
   cloneEaExpr: (expr: EaExprNode) => EaExprNode;
   cloneOperand: (operand: AsmOperandNode) => AsmOperandNode;
   flattenEaDottedName: (ea: EaExprNode) => string | undefined;
   normalizeFixedToken: (operand: AsmOperandNode) => string | undefined;
-  typeDisplay: (typeExpr: TypeExprNode) => string;
-  sameTypeShape: (left: TypeExprNode, right: TypeExprNode) => boolean;
-  emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
-  lowerLdWithEa: (asmItem: AsmInstructionNode) => boolean;
+};
+
+export type FunctionLoweringRegisterContext = {
   reg8: Set<string>;
   reg16: Set<string>;
-  generatedLabelCounterRef: { current: number };
 };
+
+export type FunctionLoweringSharedContext = FunctionLoweringDiagnosticsContext &
+  FunctionLoweringSymbolContext &
+  FunctionLoweringSpTrackingContext &
+  FunctionLoweringEmissionContext &
+  FunctionLoweringConditionContext &
+  FunctionLoweringTypeContext &
+  FunctionLoweringMaterializationContext &
+  FunctionLoweringStorageContext &
+  FunctionLoweringCallableResolutionContext &
+  FunctionLoweringOpOverloadContext &
+  FunctionLoweringAstUtilityContext &
+  FunctionLoweringRegisterContext;
+
+export type FunctionLoweringContext = FunctionLoweringItemContext & FunctionLoweringSharedContext;
 
 export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const { item, diagnostics, diag, diagAt, diagAtWithId, diagAtWithSeverityAndId, warnAt } = ctx;
