@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
+import { readdir } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const execFileAsync = promisify(execFile);
@@ -15,6 +17,20 @@ async function currentLineCount(file: string): Promise<number> {
 
 function normalizeGuardOutput(text: string): string {
   return text.replaceAll('\\', '/');
+}
+
+async function collectTsFiles(root: string): Promise<string[]> {
+  const entries = await readdir(root, { withFileTypes: true });
+  const out: string[] = [];
+  for (const entry of entries) {
+    const full = join(root, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...(await collectTsFiles(full)));
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith('.ts')) out.push(full);
+  }
+  return out;
 }
 
 describe('PR472: source file size guard', () => {
@@ -42,10 +58,10 @@ describe('PR472: source file size guard', () => {
   });
 
   it('enforce mode only fails when a hard-cap breach remains', async () => {
-    const emitLines = await currentLineCount('src/lowering/emit.ts');
-    const parserLines = await currentLineCount('src/frontend/parser.ts');
-    const encodeLines = await currentLineCount('src/z80/encode.ts');
-    const hasHardCapBreach = [emitLines, parserLines, encodeLines].some((count) => count > 1000);
+    const sourceFiles = await collectTsFiles('src');
+    const hasHardCapBreach = (
+      await Promise.all(sourceFiles.map((file) => currentLineCount(file)))
+    ).some((count) => count > 1000);
 
     const run = execFileAsync('node', ['scripts/check-source-file-sizes.mjs', '--enforce-hard-cap'], {
       cwd: process.cwd(),
