@@ -110,21 +110,10 @@ import {
   type NamedSectionContributionSink,
 } from './sectionContributions.js';
 import {
-  collectPlacedNamedSectionSymbols,
-  placeNonBankedSectionContributions,
-  resolvePlacedNamedSectionFixups,
-} from './sectionPlacement.js';
-import {
-  appendStartupInitRegion,
-  buildStartupInitRegion,
-  buildStartupInitRoutine,
-  STARTUP_ENTRY_LABEL,
-} from './startupInit.js';
-import {
-  finalizeProgramEmission,
   lowerProgramDeclarations,
   preScanProgramDeclarations,
 } from './programLowering.js';
+import { finalizeEmitProgram } from './emitFinalization.js';
 import {
   diag,
   diagAt,
@@ -871,47 +860,11 @@ export function emitProgram(
   preScanProgramDeclarations(programLoweringContext);
   lowerProgramDeclarations(programLoweringContext);
 
-  const { placedContributions } = placeNonBankedSectionContributions(namedSectionSinks, {
-    diagnostics,
-    env,
-    evalImmExpr,
-  });
-  const placedSymbols = collectPlacedNamedSectionSymbols(placedContributions, diagnostics);
-  symbols.push(...placedSymbols);
-
-  const placedSourceSegments: EmittedSourceSegment[] = [];
-  const placedAsmTrace: EmittedAsmTraceEntry[] = [];
-  for (const placed of placedContributions) {
-    const sink = placed.sink;
-    for (const [offset, value] of sink.bytes) {
-      const addr = placed.baseAddress + offset;
-      if (addr < 0 || addr > 0xffff) {
-        diagAt(
-          diagnostics,
-          sink.contribution.node.span,
-          `Named section byte address out of range for section "${sink.anchor.key.section} ${sink.anchor.key.name}": ${addr}.`,
-        );
-        continue;
-      }
-      if (bytes.has(addr)) {
-        diagAt(
-          diagnostics,
-          sink.contribution.node.span,
-          `Named section content overlaps emitted bytes at address ${addr}.`,
-        );
-        continue;
-      }
-      bytes.set(addr, value);
-    }
-    if (sink.anchor.key.section === 'code') {
-      placedSourceSegments.push(...rebaseCodeSourceSegments(placed.baseAddress, sink.sourceSegments));
-      placedAsmTrace.push(...rebaseAsmTrace(placed.baseAddress, sink.asmTrace));
-    }
-  }
-
-  const { writtenRange, sourceSegments, asmTrace } = finalizeProgramEmission({
+  return finalizeEmitProgram({
+    namedSectionSinks,
     diagnostics,
     diag,
+    diagAt,
     primaryFile,
     baseExprs,
     evalImmExpr,
@@ -936,65 +889,6 @@ export function emitProgram(
     computeWrittenRange,
     rebaseCodeSourceSegments,
     rebaseAsmTrace,
-    ...(options?.defaultCodeBase !== undefined
-      ? { defaultCodeBase: options.defaultCodeBase }
-      : {}),
+    ...(options?.defaultCodeBase !== undefined ? { defaultCodeBase: options.defaultCodeBase } : {}),
   });
-
-  resolvePlacedNamedSectionFixups(placedContributions, diagnostics, bytes, symbols);
-
-  const mergedSourceSegments = [...placedSourceSegments, ...sourceSegments].sort((a, b) =>
-    a.start === b.start ? a.end - b.end : a.start - b.start,
-  );
-  const mergedAsmTrace = [...placedAsmTrace, ...asmTrace].sort((a, b) =>
-    a.offset === b.offset ? a.kind.localeCompare(b.kind) : a.offset - b.offset,
-  );
-
-  const startupInitRegion = buildStartupInitRegion(placedContributions);
-  let finalWrittenRange = writtenRange;
-  if (startupInitRegion.encoded.length > 0) {
-    const mainEntry = symbols.find(
-      (symbol): symbol is SymbolEntry & { kind: 'label' } =>
-        symbol.kind === 'label' && symbol.name.toLowerCase() === 'main',
-    );
-    if (!mainEntry) {
-      const highest = [...bytes.keys()].reduce((max, value) => (value > max ? value : max), -1);
-      appendStartupInitRegion(bytes, diagnostics, primaryFile, startupInitRegion);
-      finalWrittenRange = { start: writtenRange.start, end: highest + startupInitRegion.encoded.length };
-    } else {
-      const highest = [...bytes.keys()].reduce((max, value) => (value > max ? value : max), -1);
-      const startupAddress = highest + 1;
-      const startupTemplate = buildStartupInitRoutine(0, startupInitRegion, 0);
-      const initRegionAddress = startupAddress + startupTemplate.length;
-      const startupBytes = buildStartupInitRoutine(initRegionAddress, startupInitRegion, mainEntry.address);
-      const startupEnd = startupAddress + startupBytes.length - 1;
-      const startupRegionEnd = startupEnd + startupInitRegion.encoded.length;
-      if (startupRegionEnd > 0xffff) {
-        diag(diagnostics, primaryFile, 'Compiler-owned startup routine exceeds 16-bit address space.');
-      } else {
-        for (let i = 0; i < startupBytes.length; i++) {
-          bytes.set(startupAddress + i, startupBytes[i]!);
-        }
-        appendStartupInitRegion(bytes, diagnostics, primaryFile, startupInitRegion);
-        symbols.push({
-          kind: 'label',
-          name: STARTUP_ENTRY_LABEL,
-          address: startupAddress,
-          file: primaryFile,
-          scope: 'global',
-        });
-        finalWrittenRange = { start: writtenRange.start, end: startupRegionEnd };
-      }
-    }
-  }
-
-  return {
-    map: {
-      bytes,
-      writtenRange: finalWrittenRange,
-      ...(mergedSourceSegments.length > 0 ? { sourceSegments: mergedSourceSegments } : {}),
-      ...(mergedAsmTrace.length > 0 ? { asmTrace: mergedAsmTrace } : {}),
-    },
-    symbols,
-  };
 }
