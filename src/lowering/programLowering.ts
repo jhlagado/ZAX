@@ -96,6 +96,32 @@ export type Context = FunctionLoweringSharedContext & {
   withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T) => T;
 };
 
+export type PrescanResult = {
+  localCallablesByFile: Context['localCallablesByFile'];
+  visibleCallables: Context['visibleCallables'];
+  localOpsByFile: Context['localOpsByFile'];
+  visibleOpsByName: Context['visibleOpsByName'];
+  declaredOpNames: Context['declaredOpNames'];
+  declaredBinNames: Context['declaredBinNames'];
+  storageTypes: Context['storageTypes'];
+  moduleAliasTargets: Context['moduleAliasTargets'];
+  moduleAliasDecls: Context['moduleAliasDecls'];
+  rawAddressSymbols: Context['rawAddressSymbols'];
+};
+
+export type LoweringResult = {
+  codeOffset: number;
+  dataOffset: number;
+  varOffset: number;
+  pending: Context['pending'];
+  symbols: Context['symbols'];
+  absoluteSymbols: Context['absoluteSymbols'];
+  deferredExterns: Context['deferredExterns'];
+  codeBytes: Context['codeBytes'];
+  dataBytes: Context['dataBytes'];
+  hexBytes: Context['hexBytes'];
+};
+
 export type FinalizationContext = {
   diagnostics: Diagnostic[];
   diag: (diagnostics: Diagnostic[], file: string, message: string) => void;
@@ -145,7 +171,7 @@ export type FinalizationContext = {
   rebaseAsmTrace: (codeBase: number, trace: EmittedAsmTraceEntry[]) => EmittedAsmTraceEntry[];
 };
 
-export function preScanProgramDeclarations(ctx: Context): void {
+export function preScanProgramDeclarations(ctx: Context): PrescanResult {
   const preScanItem = (
     item: ModuleItemNode | SectionItemNode,
     namedSection?: NamedSectionNode,
@@ -250,9 +276,22 @@ export function preScanProgramDeclarations(ctx: Context): void {
   for (const module of ctx.program.files) {
     for (const item of module.items) preScanItem(item);
   }
+
+  return {
+    localCallablesByFile: ctx.localCallablesByFile,
+    visibleCallables: ctx.visibleCallables,
+    localOpsByFile: ctx.localOpsByFile,
+    visibleOpsByName: ctx.visibleOpsByName,
+    declaredOpNames: ctx.declaredOpNames,
+    declaredBinNames: ctx.declaredBinNames,
+    storageTypes: ctx.storageTypes,
+    moduleAliasTargets: ctx.moduleAliasTargets,
+    moduleAliasDecls: ctx.moduleAliasDecls,
+    rawAddressSymbols: ctx.rawAddressSymbols,
+  };
 }
 
-export function lowerProgramDeclarations(ctx: Context): void {
+export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult): LoweringResult {
   const sinkOffsetRef = (sink: NamedSectionContributionSink) => ({
     get current() {
       return sink.offset;
@@ -627,6 +666,19 @@ export function lowerProgramDeclarations(ctx: Context): void {
     ctx.activeSectionRef.current = 'code';
     for (const item of module.items) lowerItem(item);
   }
+
+  return {
+    codeOffset: ctx.codeOffsetRef.current,
+    dataOffset: ctx.dataOffsetRef.current,
+    varOffset: ctx.varOffsetRef.current,
+    pending: ctx.pending,
+    symbols: ctx.symbols,
+    absoluteSymbols: ctx.absoluteSymbols,
+    deferredExterns: ctx.deferredExterns,
+    codeBytes: ctx.codeBytes,
+    dataBytes: ctx.dataBytes,
+    hexBytes: ctx.hexBytes,
+  };
 }
 
 export { finalizeProgramEmission } from './programLoweringFinalize.js';
