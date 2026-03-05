@@ -1,6 +1,12 @@
-export function canonicalModuleId(modulePath: string): string {
-  const normalized = modulePath.replace(/\\/g, '/');
-  const base = normalized.slice(normalized.lastIndexOf('/') + 1);
-  const dot = base.lastIndexOf('.');
-  return dot > 0 ? base.slice(0, dot) : base;
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
+
+function stripLastExtension(pathText: string): string {
+  return pathText.replace(/\.[^./]+$/, '');
+}
+
+export function canonicalModuleId(modulePath: string, rootDir = dirname(modulePath)): string {
+  const absoluteRoot = resolve(rootDir);
+  const absoluteModule = isAbsolute(modulePath) ? resolve(modulePath) : resolve(absoluteRoot, modulePath);
+  const rel = relative(absoluteRoot, absoluteModule).replace(/\\/g, '/');
+  return stripLastExtension(rel);
 }
