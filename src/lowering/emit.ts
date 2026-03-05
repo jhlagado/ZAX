@@ -376,8 +376,9 @@ export function emitProgram(
 
   const emitInstr = (head: string, operands: AsmOperandNode[], span: SourceSpan) => {
     const start = getCurrentCodeOffset();
+    const syntheticInstruction: AsmInstructionNode = { kind: 'AsmInstruction', span, head, operands };
     const encoded = encodeInstruction(
-      { kind: 'AsmInstruction', span, head, operands } as any,
+      syntheticInstruction,
       env,
       diagnostics,
     );
