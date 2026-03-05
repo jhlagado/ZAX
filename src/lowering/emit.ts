@@ -103,7 +103,22 @@ import {
   type FlowState,
   type OpExpansionFrame,
 } from './functionBodySetup.js';
-import { lowerFunctionDecl } from './functionLowering.js';
+import {
+  lowerFunctionDecl,
+  type FunctionLoweringAstUtilityContext,
+  type FunctionLoweringCallableResolutionContext,
+  type FunctionLoweringConditionContext,
+  type FunctionLoweringDiagnosticsContext,
+  type FunctionLoweringEmissionContext,
+  type FunctionLoweringMaterializationContext,
+  type FunctionLoweringOpOverloadContext,
+  type FunctionLoweringRegisterContext,
+  type FunctionLoweringSharedContext,
+  type FunctionLoweringSpTrackingContext,
+  type FunctionLoweringStorageContext,
+  type FunctionLoweringSymbolContext,
+  type FunctionLoweringTypeContext,
+} from './functionLowering.js';
 import {
   createNamedSectionContributionSinks,
   type NamedSectionContributionSink,
@@ -111,6 +126,7 @@ import {
 import {
   lowerProgramDeclarations,
   preScanProgramDeclarations,
+  type Context as ProgramLoweringContext,
 } from './programLowering.js';
 import { finalizeEmitProgram } from './emitFinalization.js';
 import {
@@ -712,26 +728,41 @@ export function emitProgram(
     },
   };
 
-  const programLoweringContext = {
+  const currentCodeSegmentTagRef: FunctionLoweringSymbolContext['currentCodeSegmentTagRef'] = {
+    get current() {
+      return currentCodeSegmentTag;
+    },
+    set current(value: SourceSegmentTag | undefined) {
+      currentCodeSegmentTag = value;
+      if (currentNamedSectionSink) currentNamedSectionSink.currentSourceTag = value;
+    },
+  };
+  const generatedLabelCounterRef: FunctionLoweringSymbolContext['generatedLabelCounterRef'] = {
+    get current() {
+      return generatedLabelCounter;
+    },
+    set current(value: number) {
+      generatedLabelCounter = value;
+    },
+  };
+
+  const functionLoweringDiagnosticsContext: FunctionLoweringDiagnosticsContext = {
     diagnostics,
     diag,
     diagAt,
     diagAtWithId,
     diagAtWithSeverityAndId,
     warnAt,
+  };
+  const functionLoweringSymbolContext: FunctionLoweringSymbolContext = {
     taken,
     pending,
     traceComment,
     traceLabel,
-    currentCodeSegmentTagRef: {
-      get current() {
-        return currentCodeSegmentTag;
-      },
-      set current(value: SourceSegmentTag | undefined) {
-        currentCodeSegmentTag = value;
-        if (currentNamedSectionSink) currentNamedSectionSink.currentSourceTag = value;
-      },
-    },
+    currentCodeSegmentTagRef,
+    generatedLabelCounterRef,
+  };
+  const functionLoweringSpTrackingContext: FunctionLoweringSpTrackingContext = {
     bindSpTracking: (
       callbacks?:
         | {
@@ -743,12 +774,16 @@ export function emitProgram(
       applySpTracking = callbacks?.applySpTracking;
       invalidateSpTracking = callbacks?.invalidateSpTracking;
     },
+  };
+  const functionLoweringEmissionContext: FunctionLoweringEmissionContext = {
     getCodeOffset: getCurrentCodeOffset,
     emitInstr,
     emitRawCodeBytes,
     emitAbs16Fixup,
     emitAbs16FixupPrefixed,
     emitRel8Fixup,
+  };
+  const functionLoweringConditionContext: FunctionLoweringConditionContext = {
     conditionOpcodeFromName,
     conditionNameFromOpcode,
     callConditionOpcodeFromName,
@@ -756,6 +791,8 @@ export function emitProgram(
     conditionOpcode,
     inverseConditionName,
     symbolicTargetFromExpr,
+  };
+  const functionLoweringTypeContext: FunctionLoweringTypeContext = {
     evalImmExpr,
     env,
     resolveScalarBinding,
@@ -763,6 +800,10 @@ export function emitProgram(
     resolveEaTypeExpr,
     resolveScalarTypeForEa,
     resolveArrayType,
+    typeDisplay,
+    sameTypeShape,
+  };
+  const functionLoweringMaterializationContext: FunctionLoweringMaterializationContext = {
     buildEaWordPipeline,
     enforceEaRuntimeAtomBudget,
     enforceDirectCallSiteEaBudget,
@@ -771,18 +812,22 @@ export function emitProgram(
     pushImm16,
     pushZeroExtendedReg8,
     loadImm16ToHL,
+    emitStepPipeline,
+    lowerLdWithEa,
+  };
+  const functionLoweringStorageContext: FunctionLoweringStorageContext = {
     stackSlotOffsets,
     stackSlotTypes,
     localAliasTargets,
     storageTypes,
     rawTypedCallWarningsEnabled,
-    localCallablesByFile,
-    visibleCallables,
-    localOpsByFile,
-    visibleOpsByName,
-    declaredOpNames,
-    deferredExterns,
+  };
+  const functionLoweringCallableResolutionContext: FunctionLoweringCallableResolutionContext = {
+    resolveCallable: resolveVisibleCallable,
+    resolveOpCandidates: resolveVisibleOpCandidates,
     opStackPolicyMode,
+  };
+  const functionLoweringOpOverloadContext: FunctionLoweringOpOverloadContext = {
     matcherMatchesOperand,
     formatOpSignature,
     formatAsmOperandForOpDiag,
@@ -790,31 +835,47 @@ export function emitProgram(
     formatOpDefinitionForDiag,
     selectMostSpecificOpOverload,
     summarizeOpStackEffect,
+  };
+  const functionLoweringAstUtilityContext: FunctionLoweringAstUtilityContext = {
     cloneImmExpr,
     cloneEaExpr,
     cloneOperand,
     flattenEaDottedName,
     normalizeFixedToken,
-    typeDisplay,
-    sameTypeShape,
-    emitStepPipeline,
-    lowerLdWithEa,
+  };
+  const functionLoweringRegisterContext: FunctionLoweringRegisterContext = {
     reg8,
     reg16,
-    generatedLabelCounterRef: {
-      get current() {
-        return generatedLabelCounter;
-      },
-      set current(value: number) {
-        generatedLabelCounter = value;
-      },
-    },
+  };
+  const functionLoweringSharedContext: FunctionLoweringSharedContext = {
+    ...functionLoweringDiagnosticsContext,
+    ...functionLoweringSymbolContext,
+    ...functionLoweringSpTrackingContext,
+    ...functionLoweringEmissionContext,
+    ...functionLoweringConditionContext,
+    ...functionLoweringTypeContext,
+    ...functionLoweringMaterializationContext,
+    ...functionLoweringStorageContext,
+    ...functionLoweringCallableResolutionContext,
+    ...functionLoweringOpOverloadContext,
+    ...functionLoweringAstUtilityContext,
+    ...functionLoweringRegisterContext,
+  };
+
+  const programLoweringContext: ProgramLoweringContext = {
+    ...functionLoweringSharedContext,
     program,
     includeDirs,
+    localCallablesByFile,
+    visibleCallables,
+    localOpsByFile,
+    visibleOpsByName,
+    declaredOpNames,
     declaredBinNames,
-    rawAddressSymbols,
+    deferredExterns,
     moduleAliasTargets,
     moduleAliasDecls,
+    rawAddressSymbols,
     absoluteSymbols,
     symbols,
     dataBytes,
@@ -832,8 +893,6 @@ export function emitProgram(
     resolveAggregateType,
     sizeOfTypeExpr,
     lowerFunctionDecl,
-    resolveCallable: resolveVisibleCallable,
-    resolveOpCandidates: resolveVisibleOpCandidates,
     namedSectionSinksByNode,
     withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T): T => {
       const prevSink = currentNamedSectionSink;
