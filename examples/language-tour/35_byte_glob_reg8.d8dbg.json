@@ -10,7 +10,7 @@
         {
           "start": 256,
           "end": 267,
-          "lstLine": 7,
+          "lstLine": 6,
           "kind": "code",
           "confidence": "high"
         },
@@ -24,56 +24,56 @@
         {
           "start": 267,
           "end": 286,
-          "lstLine": 8,
+          "lstLine": 7,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 286,
           "end": 305,
-          "lstLine": 9,
+          "lstLine": 8,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 305,
           "end": 307,
-          "lstLine": 10,
+          "lstLine": 9,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 307,
           "end": 308,
-          "lstLine": 11,
+          "lstLine": 10,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 308,
           "end": 316,
-          "lstLine": 7,
+          "lstLine": 6,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 316,
           "end": 328,
-          "lstLine": 14,
+          "lstLine": 13,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 328,
           "end": 337,
-          "lstLine": 15,
+          "lstLine": 14,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 337,
           "end": 346,
-          "lstLine": 14,
+          "lstLine": 13,
           "kind": "code",
           "confidence": "high"
         },
@@ -90,35 +90,35 @@
           "name": "byte_glob_reg",
           "kind": "label",
           "address": 256,
-          "line": 7,
+          "line": 6,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_0",
           "kind": "label",
           "address": 308,
-          "line": 7,
+          "line": 6,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
           "address": 316,
-          "line": 14,
+          "line": 13,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
           "address": 337,
-          "line": 14,
+          "line": 13,
           "scope": "local"
         },
         {
           "name": "glob_bytes",
           "kind": "data",
           "address": 8192,
-          "line": 3,
+          "line": 2,
           "scope": "global"
         },
         {
@@ -149,7 +149,7 @@
       "kind": "label",
       "address": 256,
       "file": "35_byte_glob_reg8.zax",
-      "line": 7,
+      "line": 6,
       "scope": "global"
     },
     {
@@ -157,7 +157,7 @@
       "kind": "label",
       "address": 308,
       "file": "35_byte_glob_reg8.zax",
-      "line": 7,
+      "line": 6,
       "scope": "local"
     },
     {
@@ -165,7 +165,7 @@
       "kind": "label",
       "address": 316,
       "file": "35_byte_glob_reg8.zax",
-      "line": 14,
+      "line": 13,
       "scope": "global"
     },
     {
@@ -173,7 +173,7 @@
       "kind": "label",
       "address": 337,
       "file": "35_byte_glob_reg8.zax",
-      "line": 14,
+      "line": 13,
       "scope": "local"
     },
     {
@@ -181,7 +181,7 @@
       "kind": "data",
       "address": 8192,
       "file": "35_byte_glob_reg8.zax",
-      "line": 3,
+      "line": 2,
       "scope": "global"
     },
     {

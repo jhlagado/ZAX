@@ -10,7 +10,7 @@
         {
           "start": 256,
           "end": 267,
-          "lstLine": 7,
+          "lstLine": 6,
           "kind": "code",
           "confidence": "high"
         },
@@ -24,42 +24,42 @@
         {
           "start": 267,
           "end": 270,
-          "lstLine": 8,
+          "lstLine": 7,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 270,
           "end": 285,
-          "lstLine": 9,
+          "lstLine": 8,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 285,
           "end": 293,
-          "lstLine": 7,
+          "lstLine": 6,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 293,
           "end": 305,
-          "lstLine": 12,
+          "lstLine": 11,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 305,
           "end": 308,
-          "lstLine": 13,
+          "lstLine": 12,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 308,
           "end": 317,
-          "lstLine": 12,
+          "lstLine": 11,
           "kind": "code",
           "confidence": "high"
         },
@@ -76,35 +76,35 @@
           "name": "word_glob_const",
           "kind": "label",
           "address": 256,
-          "line": 7,
+          "line": 6,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_0",
           "kind": "label",
           "address": 285,
-          "line": 7,
+          "line": 6,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
           "address": 293,
-          "line": 12,
+          "line": 11,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
           "address": 308,
-          "line": 12,
+          "line": 11,
           "scope": "local"
         },
         {
           "name": "glob_words",
           "kind": "data",
           "address": 8192,
-          "line": 3,
+          "line": 2,
           "scope": "global"
         },
         {
@@ -135,7 +135,7 @@
       "kind": "label",
       "address": 256,
       "file": "60_word_glob_const.zax",
-      "line": 7,
+      "line": 6,
       "scope": "global"
     },
     {
@@ -143,7 +143,7 @@
       "kind": "label",
       "address": 285,
       "file": "60_word_glob_const.zax",
-      "line": 7,
+      "line": 6,
       "scope": "local"
     },
     {
@@ -151,7 +151,7 @@
       "kind": "label",
       "address": 293,
       "file": "60_word_glob_const.zax",
-      "line": 12,
+      "line": 11,
       "scope": "global"
     },
     {
@@ -159,7 +159,7 @@
       "kind": "label",
       "address": 308,
       "file": "60_word_glob_const.zax",
-      "line": 12,
+      "line": 11,
       "scope": "local"
     },
     {
@@ -167,7 +167,7 @@
       "kind": "data",
       "address": 8192,
       "file": "60_word_glob_const.zax",
-      "line": 3,
+      "line": 2,
       "scope": "global"
     },
     {

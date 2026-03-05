@@ -10,7 +10,7 @@
         {
           "start": 256,
           "end": 268,
-          "lstLine": 11,
+          "lstLine": 10,
           "kind": "code",
           "confidence": "high"
         },
@@ -24,84 +24,84 @@
         {
           "start": 268,
           "end": 295,
-          "lstLine": 12,
+          "lstLine": 11,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 295,
           "end": 322,
-          "lstLine": 13,
+          "lstLine": 12,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 322,
           "end": 331,
-          "lstLine": 11,
+          "lstLine": 10,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 331,
           "end": 342,
-          "lstLine": 16,
+          "lstLine": 15,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 342,
           "end": 348,
-          "lstLine": 17,
+          "lstLine": 16,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 348,
           "end": 361,
-          "lstLine": 18,
+          "lstLine": 17,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 361,
           "end": 369,
-          "lstLine": 16,
+          "lstLine": 15,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 369,
           "end": 381,
-          "lstLine": 21,
+          "lstLine": 20,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 381,
           "end": 396,
-          "lstLine": 26,
+          "lstLine": 25,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 396,
           "end": 399,
-          "lstLine": 27,
+          "lstLine": 26,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 399,
           "end": 402,
-          "lstLine": 28,
+          "lstLine": 27,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 402,
           "end": 411,
-          "lstLine": 21,
+          "lstLine": 20,
           "kind": "code",
           "confidence": "high"
         },
@@ -118,49 +118,49 @@
           "name": "write_pair",
           "kind": "label",
           "address": 256,
-          "line": 11,
+          "line": 10,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_0",
           "kind": "label",
           "address": 322,
-          "line": 11,
+          "line": 10,
           "scope": "local"
         },
         {
           "name": "read_pair_word",
           "kind": "label",
           "address": 331,
-          "line": 16,
+          "line": 15,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
           "address": 361,
-          "line": 16,
+          "line": 15,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
           "address": 369,
-          "line": 21,
+          "line": 20,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_2",
           "kind": "label",
           "address": 402,
-          "line": 21,
+          "line": 20,
           "scope": "local"
         },
         {
           "name": "pair_buf",
           "kind": "data",
           "address": 4096,
-          "line": 8,
+          "line": 7,
           "scope": "global"
         },
         {
@@ -191,7 +191,7 @@
       "kind": "label",
       "address": 256,
       "file": "11_records_and_fields.zax",
-      "line": 11,
+      "line": 10,
       "scope": "global"
     },
     {
@@ -199,7 +199,7 @@
       "kind": "label",
       "address": 322,
       "file": "11_records_and_fields.zax",
-      "line": 11,
+      "line": 10,
       "scope": "local"
     },
     {
@@ -207,7 +207,7 @@
       "kind": "label",
       "address": 331,
       "file": "11_records_and_fields.zax",
-      "line": 16,
+      "line": 15,
       "scope": "global"
     },
     {
@@ -215,7 +215,7 @@
       "kind": "label",
       "address": 361,
       "file": "11_records_and_fields.zax",
-      "line": 16,
+      "line": 15,
       "scope": "local"
     },
     {
@@ -223,7 +223,7 @@
       "kind": "label",
       "address": 369,
       "file": "11_records_and_fields.zax",
-      "line": 21,
+      "line": 20,
       "scope": "global"
     },
     {
@@ -231,7 +231,7 @@
       "kind": "label",
       "address": 402,
       "file": "11_records_and_fields.zax",
-      "line": 21,
+      "line": 20,
       "scope": "local"
     },
     {
@@ -239,7 +239,7 @@
       "kind": "data",
       "address": 4096,
       "file": "11_records_and_fields.zax",
-      "line": 8,
+      "line": 7,
       "scope": "global"
     },
     {
