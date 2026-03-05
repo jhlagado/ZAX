@@ -71,6 +71,78 @@ export function parseModuleFile(
 
   const items: ModuleItemNode[] = [];
 
+  function parseExportModifier(
+    text: string,
+    lineNo: number,
+    allowAsmSpecialCase: boolean,
+  ): { rest: string; exported: boolean } | undefined {
+    const exportTail = consumeKeywordPrefix(text, 'export');
+    if (exportTail === undefined) return { rest: text, exported: false };
+
+    const rest = exportTail;
+    if (rest.length === 0) {
+      diag(diagnostics, modulePath, `Invalid export statement`, { line: lineNo, column: 1 });
+      return undefined;
+    }
+
+    const allowed =
+      consumeKeywordPrefix(rest, 'const') !== undefined ||
+      consumeKeywordPrefix(rest, 'type') !== undefined ||
+      consumeKeywordPrefix(rest, 'union') !== undefined ||
+      consumeKeywordPrefix(rest, 'enum') !== undefined ||
+      consumeKeywordPrefix(rest, 'func') !== undefined ||
+      consumeKeywordPrefix(rest, 'op') !== undefined;
+    if (allowed) return { rest, exported: true };
+
+    if (allowAsmSpecialCase) {
+      const exportAsmTail = consumeKeywordPrefix(rest, 'asm');
+      if (exportAsmTail !== undefined) {
+        diag(
+          diagnostics,
+          modulePath,
+          `"asm" is not a top-level construct (function and op bodies are implicit instruction streams)`,
+          {
+            line: lineNo,
+            column: 1,
+          },
+        );
+        return undefined;
+      }
+    }
+
+    const targetKeyword = topLevelStartKeyword(rest);
+    if (targetKeyword !== undefined) {
+      const targetKind = unsupportedExportTargetKind[targetKeyword];
+      if (targetKind !== undefined) {
+        diag(diagnostics, modulePath, `export not supported on ${targetKind}`, {
+          line: lineNo,
+          column: 1,
+        });
+      } else {
+        diag(
+          diagnostics,
+          modulePath,
+          `export is only permitted on const/type/union/enum/func/op declarations`,
+          {
+            line: lineNo,
+            column: 1,
+          },
+        );
+      }
+    } else {
+      diag(
+        diagnostics,
+        modulePath,
+        `export is only permitted on const/type/union/enum/func/op declarations`,
+        {
+          line: lineNo,
+          column: 1,
+        },
+      );
+    }
+    return undefined;
+  }
+
   function parseNamedSectionHeader(
     sectionText: string,
     sectionSpan: NamedSectionNode['span'],
@@ -151,60 +223,14 @@ export function parseModuleFile(
         return { items: sectionItems, nextIndex: index + 1, closed: true };
       }
 
-      const exportTail = consumeKeywordPrefix(text, 'export');
-      const hasExportPrefix = exportTail !== undefined;
-      const rest = hasExportPrefix ? exportTail : text;
-      const sectionSpan = span(file, startOffset, endOffset);
-
-      if (hasExportPrefix && rest.length === 0) {
-        diag(diagnostics, modulePath, `Invalid export statement`, { line: lineNo, column: 1 });
+      const exportParsed = parseExportModifier(text, lineNo, false);
+      if (!exportParsed) {
         index++;
         continue;
       }
-
-      if (hasExportPrefix) {
-        const allowed =
-          consumeKeywordPrefix(rest, 'const') !== undefined ||
-          consumeKeywordPrefix(rest, 'type') !== undefined ||
-          consumeKeywordPrefix(rest, 'union') !== undefined ||
-          consumeKeywordPrefix(rest, 'enum') !== undefined ||
-          consumeKeywordPrefix(rest, 'func') !== undefined ||
-          consumeKeywordPrefix(rest, 'op') !== undefined;
-        if (!allowed) {
-          const targetKeyword = topLevelStartKeyword(rest);
-          if (targetKeyword !== undefined) {
-            const targetKind = unsupportedExportTargetKind[targetKeyword];
-            if (targetKind !== undefined) {
-              diag(diagnostics, modulePath, `export not supported on ${targetKind}`, {
-                line: lineNo,
-                column: 1,
-              });
-            } else {
-              diag(
-                diagnostics,
-                modulePath,
-                `export is only permitted on const/type/union/enum/func/op declarations`,
-                {
-                  line: lineNo,
-                  column: 1,
-                },
-              );
-            }
-          } else {
-            diag(
-              diagnostics,
-              modulePath,
-              `export is only permitted on const/type/union/enum/func/op declarations`,
-              {
-                line: lineNo,
-                column: 1,
-              },
-            );
-          }
-          index++;
-          continue;
-        }
-      }
+      const hasExportPrefix = exportParsed.exported;
+      const rest = exportParsed.rest;
+      const sectionSpan = span(file, startOffset, endOffset);
 
       if (consumeTopKeyword(rest, 'import') !== undefined) {
         diag(diagnostics, modulePath, `import is only permitted at module scope`, {
@@ -519,78 +545,14 @@ export function parseModuleFile(
       continue;
     }
 
-    const exportTail = consumeKeywordPrefix(text, 'export');
-    const hasExportPrefix = exportTail !== undefined;
-    const rest = hasExportPrefix ? exportTail : text;
-
-    if (hasExportPrefix && rest.length === 0) {
-      diag(diagnostics, modulePath, `Invalid export statement`, { line: lineNo, column: 1 });
+    const exportParsed = parseExportModifier(text, lineNo, true);
+    if (!exportParsed) {
       i++;
       continue;
     }
+    const hasExportPrefix = exportParsed.exported;
+    const rest = exportParsed.rest;
     const hasTopKeyword = (kw: string): boolean => new RegExp(`^${kw}\\b`, 'i').test(rest);
-
-    // In v0.5, `export` is accepted on sectionless symbol declarations plus callable declarations.
-    // It has no semantic effect today, but we still reject it on all other constructs
-    // to keep the surface area explicit and future-proof.
-    if (hasExportPrefix) {
-      const allowed =
-        consumeKeywordPrefix(rest, 'const') !== undefined ||
-        consumeKeywordPrefix(rest, 'type') !== undefined ||
-        consumeKeywordPrefix(rest, 'union') !== undefined ||
-        consumeKeywordPrefix(rest, 'enum') !== undefined ||
-        consumeKeywordPrefix(rest, 'func') !== undefined ||
-        consumeKeywordPrefix(rest, 'op') !== undefined;
-      if (!allowed) {
-        const exportAsmTail = consumeKeywordPrefix(rest, 'asm');
-        if (exportAsmTail !== undefined) {
-          diag(
-            diagnostics,
-            modulePath,
-            `"asm" is not a top-level construct (function and op bodies are implicit instruction streams)`,
-            {
-              line: lineNo,
-              column: 1,
-            },
-          );
-          i++;
-          continue;
-        }
-
-        const targetKeyword = topLevelStartKeyword(rest);
-        if (targetKeyword !== undefined) {
-          const targetKind = unsupportedExportTargetKind[targetKeyword];
-          if (targetKind !== undefined) {
-            diag(diagnostics, modulePath, `export not supported on ${targetKind}`, {
-              line: lineNo,
-              column: 1,
-            });
-          } else {
-            diag(
-              diagnostics,
-              modulePath,
-              `export is only permitted on const/type/union/enum/func/op declarations`,
-              {
-                line: lineNo,
-                column: 1,
-              },
-            );
-          }
-        } else {
-          diag(
-            diagnostics,
-            modulePath,
-            `export is only permitted on const/type/union/enum/func/op declarations`,
-            {
-              line: lineNo,
-              column: 1,
-            },
-          );
-        }
-        i++;
-        continue;
-      }
-    }
 
     const importTail = consumeTopKeyword(rest, 'import');
     if (importTail !== undefined) {
