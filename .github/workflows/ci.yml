@@ -57,11 +57,28 @@ jobs:
           node-version: '20'
           cache: npm
 
+      - name: Collect changed files
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base_sha="${{ github.event.pull_request.base.sha }}"
+            head_sha="${{ github.event.pull_request.head.sha }}"
+            git diff --name-only "$base_sha" "$head_sha" > changed_files.txt
+          else
+            before_sha="${{ github.event.before }}"
+            head_sha="${{ github.sha }}"
+            if [[ "$before_sha" == "0000000000000000000000000000000000000000" ]]; then
+              git ls-files > changed_files.txt
+            else
+              git diff --name-only "$before_sha" "$head_sha" > changed_files.txt
+            fi
+          fi
+
       - name: Install
         run: npm ci
 
       - name: Docs format check
-        run: npx prettier -c "**/*.md" ".github/ISSUE_TEMPLATE/*.yml"
+        run: node ./scripts/ci/docs-prettier-check.js < changed_files.txt
 
   test:
     name: test (${{ matrix.os }})
