@@ -1,5 +1,12 @@
 import type { Diagnostic } from '../diagnostics/types.js';
-import type { AsmOperandNode, EaExprNode, ImmExprNode, SourceSpan } from '../frontend/ast.js';
+import type {
+  AsmOperandNode,
+  EaExprNode,
+  ImmExprNode,
+  OffsetofPathNode,
+  OffsetofPathStepNode,
+  SourceSpan,
+} from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 
 type OpSubstitutionContext = {
@@ -16,6 +23,18 @@ type OpSubstitutionContext = {
 };
 
 export function createOpSubstitutionHelpers(ctx: OpSubstitutionContext) {
+  const substituteOffsetofPath = (
+    path: OffsetofPathNode,
+    substituteImmExpr: (expr: ImmExprNode) => ImmExprNode,
+  ): OffsetofPathNode => ({
+    ...path,
+    steps: path.steps.map((step): OffsetofPathStepNode =>
+      step.kind === 'OffsetofIndex'
+        ? { ...step, expr: substituteImmExpr(step.expr) }
+        : { ...step },
+    ),
+  });
+
   const bindingAsImmExpr = (
     bound: AsmOperandNode | undefined,
     span: SourceSpan,
@@ -29,14 +48,6 @@ export function createOpSubstitutionHelpers(ctx: OpSubstitutionContext) {
   };
 
   const substituteImm = (expr: ImmExprNode): ImmExprNode => {
-    const substituteOffsetofPath = (path: any): any => ({
-      ...path,
-      steps: path.steps.map((step: any) =>
-        step.kind === 'OffsetofIndex'
-          ? { ...step, expr: substituteImm(step.expr) }
-          : { ...step },
-      ),
-    });
     if (expr.kind === 'ImmName') {
       const bound = ctx.bindings.get(expr.name.toLowerCase());
       const immBound = bindingAsImmExpr(bound, expr.span);
@@ -44,7 +55,7 @@ export function createOpSubstitutionHelpers(ctx: OpSubstitutionContext) {
       return { ...expr };
     }
     if (expr.kind === 'ImmOffsetof') {
-      return { ...expr, path: substituteOffsetofPath(expr.path) as typeof expr.path };
+      return { ...expr, path: substituteOffsetofPath(expr.path, substituteImm) };
     }
     if (expr.kind === 'ImmUnary') return { ...expr, expr: substituteImm(expr.expr) };
     if (expr.kind === 'ImmBinary') {
@@ -90,14 +101,6 @@ export function createOpSubstitutionHelpers(ctx: OpSubstitutionContext) {
     expr: ImmExprNode,
     localLabelMap: Map<string, string>,
   ): ImmExprNode => {
-    const substituteOffsetofPath = (path: any): any => ({
-      ...path,
-      steps: path.steps.map((step: any) =>
-        step.kind === 'OffsetofIndex'
-          ? { ...step, expr: substituteImmWithOpLabels(step.expr, localLabelMap) }
-          : { ...step },
-      ),
-    });
     if (expr.kind === 'ImmName') {
       const bound = ctx.bindings.get(expr.name.toLowerCase());
       const immBound = bindingAsImmExpr(bound, expr.span);
@@ -107,7 +110,12 @@ export function createOpSubstitutionHelpers(ctx: OpSubstitutionContext) {
       return { ...expr };
     }
     if (expr.kind === 'ImmOffsetof') {
-      return { ...expr, path: substituteOffsetofPath(expr.path) as typeof expr.path };
+      return {
+        ...expr,
+        path: substituteOffsetofPath(expr.path, (inner) =>
+          substituteImmWithOpLabels(inner, localLabelMap),
+        ),
+      };
     }
     if (expr.kind === 'ImmUnary') {
       return { ...expr, expr: substituteImmWithOpLabels(expr.expr, localLabelMap) };
