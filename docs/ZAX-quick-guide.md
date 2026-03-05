@@ -1837,10 +1837,10 @@ An identifier that matches none of these is a compile error.
 
 ZAX uses named sections:
 
-| Section | Contains                                             | Default start address                  |
-| ------- | ---------------------------------------------------- | -------------------------------------- |
-| `code`  | function bodies, `op` emission                       | anchored by root program (`at ...`)    |
-| `data`  | storage declarations and `bin` payloads              | anchored by root program (`at ...`)    |
+| Section | Contains                                | Default start address               |
+| ------- | --------------------------------------- | ----------------------------------- |
+| `code`  | function bodies, `op` emission          | anchored by root program (`at ...`) |
+| `data`  | storage declarations and `bin` payloads | anchored by root program (`at ...`) |
 
 Every contributed section key must be anchored exactly once by the root program. There is no external linker — ZAX resolves everything itself.
 
@@ -1867,12 +1867,12 @@ Rules:
 
 Each declaration kind emits to a fixed section regardless of which section is currently selected:
 
-| Declaration | Always emits to                                                             |
-| ----------- | --------------------------------------------------------------------------- |
-| `func`      | `code`                                                                      |
-| `data` declarations | `data`                                                             |
-| `bin`       | the section named in its `in <kind>` clause                                 |
-| `hex`       | absolute addresses in the final image (does not affect any section counter) |
+| Declaration         | Always emits to                                                             |
+| ------------------- | --------------------------------------------------------------------------- |
+| `func`              | `code`                                                                      |
+| `data` declarations | `data`                                                                      |
+| `bin`               | the section named in its `in <kind>` clause                                 |
+| `hex`               | absolute addresses in the final image (does not affect any section counter) |
 
 Variable declarations are valid only in `data` sections. Declaring storage in `code` sections is a compile error.
 
