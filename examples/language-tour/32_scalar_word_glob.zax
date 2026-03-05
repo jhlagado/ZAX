@@ -1,6 +1,5 @@
 section data vars at $2000
-  data
-    glob_w: word = $BEEF
+  glob_w: word = $BEEF
 end
 
 section code boot at $0100

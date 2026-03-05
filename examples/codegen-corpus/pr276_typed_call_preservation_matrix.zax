@@ -1,6 +1,5 @@
 section data vars at $1000
-  data
-    out: word = 0
+  out: word = 0
 end
 
 section code boot at $0000

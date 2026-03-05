@@ -9,8 +9,9 @@ ZAX is not a high-level language that happens to target Z80. It is assembly with
 ```
 const MsgLen = 5
 
-data
+section data app_data at $8000
   msg: byte[5] = "HELLO"
+end
 
 extern func bios_putc(ch: byte): void at $F003
 
@@ -195,8 +196,9 @@ type Sprite
   flags: byte
 end
 
-data
+section data sprites_data at $8200
   sprites: Sprite[8] = { ... }
+end
 ```
 
 Field access and array indexing produce effective addresses. Parentheses dereference. This is the same convention as Z80 indirect addressing, extended to structured data:
@@ -239,7 +241,7 @@ All module-scope names share a single global namespace. Name collisions across m
 
 ZAX is under active development. The compiler exists as a Node.js CLI tool and handles a meaningful subset of the active v0.2 draft specification. The end-to-end pipeline (lex → parse → lower → encode → emit) is functional and produces `.bin`, `.hex`, `.d8dbg.json` (Debug80-compatible debug maps), and `.lst` output.
 
-What works today: single and multi-module compilation, functions with locals and calling conventions, structured control flow, the op system, records/unions/arrays, `const`/`enum`/`data`/`globals`/`bin`/`hex`/`extern` declarations, forward references and fixups, and a growing slice of the Z80 instruction set.
+What works today: single and multi-module compilation, functions with locals and calling conventions, structured control flow, the op system, records/unions/arrays, named `section code`/`section data` blocks with direct declarations (`const`/`enum`/typed storage/`bin`/`hex`/`extern`), forward references and fixups, and a growing slice of the Z80 instruction set.
 
 What remains: broader ISA coverage, CLI hardening, full listing output, cross-platform acceptance testing, and Debug80 integration. See `docs/zax-dev-playbook.md` for the concrete milestone plan.
 

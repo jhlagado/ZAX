@@ -79,7 +79,7 @@ Do not implement banking in this phase.
 
 ### Phase 3. Program layout engine
 
-Replace the current active-counter section packing model with:
+Replace the current per-kind section packing model with:
 
 - contribution collection after import resolution
 - one anchor per contributed key
@@ -133,9 +133,9 @@ the implementation work for this phase.
 
 Hard-cut completion for v0.5:
 
-- remove old `globals ... end`
-- remove old top-level `data ... end`
-- remove old active-counter section usage (`section code/data/var [at ...]`)
+- remove old module-scope storage-block syntax
+- remove old unnamed section-base directives
+- complete migration to named section contributions and anchors
 - migrate examples and guides
 - validate and close the removal track
 
