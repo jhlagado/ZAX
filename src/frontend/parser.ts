@@ -430,7 +430,7 @@ export function parseModuleFile(
         return { nextIndex: parsedSection.nextIndex, node: sectionNode };
       }
 
-      const sectionNode = parseSectionDirectiveDecl(rest, sectionTail, {
+      parseSectionDirectiveDecl(rest, sectionTail, {
         diagnostics,
         modulePath,
         lineNo,
@@ -438,7 +438,7 @@ export function parseModuleFile(
         span: stmtSpan,
         isReservedTopLevelName,
       });
-      return { nextIndex: index + 1, ...(sectionNode ? { node: sectionNode } : {}) };
+      return { nextIndex: index + 1 };
     }
 
     const alignTail = consumeTopKeyword(rest, 'align');
