@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
+import { dirname, resolve } from 'node:path';
 import type {
   EnumDeclNode,
   ConstDeclNode,
@@ -220,7 +221,7 @@ function directImports(items: ModuleItemNode[]): ImportNode[] {
 export function buildEnv(
   program: ProgramNode,
   diagnostics: Diagnostic[],
-  options?: { typePaddingWarnings?: boolean },
+  options?: { typePaddingWarnings?: boolean; moduleIdRootDir?: string },
 ): CompileEnv {
   const consts = new Map<string, number>();
   const enums = new Map<string, number>();
@@ -236,11 +237,18 @@ export function buildEnv(
     return { consts, enums, types, moduleIds, importedModuleIds, visibleConsts, visibleEnums, visibleTypes };
   }
 
+  const moduleIdRootDir = options?.moduleIdRootDir ?? dirname(program.entryFile);
   for (const mf of program.files) {
-    moduleIds.set(mf.path, mf.moduleId || canonicalModuleId(mf.path));
+    moduleIds.set(mf.path, canonicalModuleId(mf.path, moduleIdRootDir));
     importedModuleIds.set(
       mf.path,
-      new Set(directImports(mf.items).map((item) => canonicalModuleId(item.specifier))),
+      new Set(
+        directImports(mf.items).map((item) => {
+          const target =
+            item.form === 'path' ? resolve(dirname(mf.path), item.specifier) : item.specifier;
+          return canonicalModuleId(target, moduleIdRootDir);
+        }),
+      ),
     );
   }
 
@@ -264,7 +272,8 @@ export function buildEnv(
       if (!claim(kind, name, item.span.file)) return;
       types.set(name, item);
       if (item.exported) {
-        const moduleId = moduleIds.get(item.span.file) ?? canonicalModuleId(item.span.file);
+        const moduleId =
+          moduleIds.get(item.span.file) ?? canonicalModuleId(item.span.file, moduleIdRootDir);
         const qualifiedName = `${moduleId}.${name}`;
         visibleTypes.set(qualifiedName, item);
       }
@@ -296,7 +305,7 @@ export function buildEnv(
         if (!claim('enum member', qualifiedName, e.span.file)) continue;
         enums.set(qualifiedName, idx);
         if (e.exported) {
-          const moduleId = moduleIds.get(e.span.file) ?? canonicalModuleId(e.span.file);
+          const moduleId = moduleIds.get(e.span.file) ?? canonicalModuleId(e.span.file, moduleIdRootDir);
           const exportedName = `${moduleId}.${qualifiedName}`;
           visibleEnums.set(exportedName, idx);
         }
@@ -354,7 +363,8 @@ export function buildEnv(
       }
       consts.set(item.name, v);
       if (item.exported) {
-        const moduleId = moduleIds.get(item.span.file) ?? canonicalModuleId(item.span.file);
+        const moduleId =
+          moduleIds.get(item.span.file) ?? canonicalModuleId(item.span.file, moduleIdRootDir);
         const qualifiedName = `${moduleId}.${item.name}`;
         visibleConsts.set(qualifiedName, v);
       }
