@@ -118,10 +118,8 @@ export function parseTopLevelFuncDecl(
 
   const funcStartOffset = stmtSpan.start.offset;
   const afterClose = header.slice(closeParen + 1).trimStart();
-  let returnRegs: string[] | undefined;
-  if (afterClose.length === 0) {
-    returnRegs = [];
-  } else {
+  let returnRegs: string[] = [];
+  if (afterClose.length !== 0) {
     const retMatch = /^:\s*(.+)$/.exec(afterClose);
     if (!retMatch) {
       diag(diagnostics, modulePath, `Invalid func header: expected ": <return registers>"`, {
@@ -339,7 +337,7 @@ export function parseTopLevelFuncDecl(
           name,
           exported,
           params,
-          ...(returnRegs ? { returnRegs } : {}),
+          returnRegs,
           ...(locals ? { locals } : {}),
           asm,
         },
