@@ -21,21 +21,21 @@ The following issues are ordered by the risk they pose if left unaddressed.
 
 ## Issue Index
 
-| ID | Area | Title | Priority |
-|----|------|-------|----------|
-| A-01 | Parser | Item dispatch duplicated for module and section scope | High |
-| A-02 | Parser | `export` prefix detection scattered across every parse file | High |
-| A-03 | AST | `exported` field inconsistent: required in some nodes, optional in others | High |
-| A-04 | AST | `SectionAnchorNode` permits invalid states (`size` + `end` simultaneously) | High |
-| A-05 | AST | `returnRegs?: string[]` — `undefined` and `[]` both mean "no return" | High |
-| A-06 | Parser | `diag()` helper re-implemented in every parse file (7 copies) | Medium |
-| A-07 | Semantics | `env.ts` uses three different traversal patterns for the same item tree | Medium |
-| A-08 | Semantics | `resolveVisibleConst/Enum/Type` triple-duplicate the same access-check pattern | Medium |
-| A-09 | Lowering | `FunctionLoweringContext` has 68 fields — emit, type, frame, clone concerns mixed | High |
-| A-10 | Lowering | Phase boundaries (lower → place → finalise) implicit in call order, not types | High |
-| A-11 | Lowering | `storageInfoForTypeExpr` and `offsetOfPathInTypeExpr` both implement type resolution independently | Medium |
-| A-12 | Pipeline | `canonicalModuleId` uses basename only — collides for same filename in different directories | High |
-| A-13 | Pipeline | `buildEnv` makes four separate passes over `program.files` that could be one | Low |
+| ID   | Area      | Title                                                                                              | Priority |
+| ---- | --------- | -------------------------------------------------------------------------------------------------- | -------- |
+| A-01 | Parser    | Item dispatch duplicated for module and section scope                                              | High     |
+| A-02 | Parser    | `export` prefix detection scattered across every parse file                                        | High     |
+| A-03 | AST       | `exported` field inconsistent: required in some nodes, optional in others                          | High     |
+| A-04 | AST       | `SectionAnchorNode` permits invalid states (`size` + `end` simultaneously)                         | High     |
+| A-05 | AST       | `returnRegs?: string[]` — `undefined` and `[]` both mean "no return"                               | High     |
+| A-06 | Parser    | `diag()` helper re-implemented in every parse file (7 copies)                                      | Medium   |
+| A-07 | Semantics | `env.ts` uses three different traversal patterns for the same item tree                            | Medium   |
+| A-08 | Semantics | `resolveVisibleConst/Enum/Type` triple-duplicate the same access-check pattern                     | Medium   |
+| A-09 | Lowering  | `FunctionLoweringContext` has 68 fields — emit, type, frame, clone concerns mixed                  | High     |
+| A-10 | Lowering  | Phase boundaries (lower → place → finalise) implicit in call order, not types                      | High     |
+| A-11 | Lowering  | `storageInfoForTypeExpr` and `offsetOfPathInTypeExpr` both implement type resolution independently | Medium   |
+| A-12 | Pipeline  | `canonicalModuleId` uses basename only — collides for same filename in different directories       | High     |
+| A-13 | Pipeline  | `buildEnv` makes four separate passes over `program.files` that could be one                       | Low      |
 
 ---
 
@@ -105,10 +105,10 @@ The grammar says `size` and `end` are mutually exclusive — you can have one or
 type AnchorBound =
   | { kind: 'none' }
   | { kind: 'size'; size: ImmExprNode }
-  | { kind: 'end';  end:  ImmExprNode };
+  | { kind: 'end'; end: ImmExprNode };
 
 type SectionAnchorNode = {
-  at:    ImmExprNode;
+  at: ImmExprNode;
   bound: AnchorBound;
 };
 ```
@@ -151,12 +151,12 @@ Seven files each define a private `function diag(...)` that pushes a `ParseError
 
 `buildEnv` traverses `program.files` four separate times, using a different helper each time:
 
-| Pass | Helper | Concern |
-|------|--------|---------|
-| Types | `forEachDeclItem(items, cb)` | Recurses into `NamedSection` |
-| Callables | `forEachDeclItem(items, cb)` | Same |
-| Enums | `collectEnumMembers(items)` | Returns array; does not use callback |
-| Imports | `directImports(items)` | Filter; does not recurse into `NamedSection` |
+| Pass      | Helper                       | Concern                                      |
+| --------- | ---------------------------- | -------------------------------------------- |
+| Types     | `forEachDeclItem(items, cb)` | Recurses into `NamedSection`                 |
+| Callables | `forEachDeclItem(items, cb)` | Same                                         |
+| Enums     | `collectEnumMembers(items)`  | Returns array; does not use callback         |
+| Imports   | `directImports(items)`       | Filter; does not recurse into `NamedSection` |
 
 `collectEnumMembers` and `directImports` are parallel reimplementations of part of `forEachDeclItem`. Adding a new symbol kind requires choosing which pattern to copy and risking that the choice does not recurse into named sections when it should.
 
@@ -164,12 +164,12 @@ Seven files each define a private `function diag(...)` that pushes a `ParseError
 
 ```typescript
 type DeclVisitor = {
-  onConst?:    (node: ConstDeclNode,    file: string) => void;
-  onType?:     (node: TypeDeclNode,     file: string) => void;
-  onEnum?:     (node: EnumDeclNode,     file: string) => void;
-  onImport?:   (node: ImportNode,       file: string) => void;
-  onFunc?:     (node: FuncDeclNode,     file: string) => void;
-  onOp?:       (node: OpDeclNode,       file: string) => void;
+  onConst?: (node: ConstDeclNode, file: string) => void;
+  onType?: (node: TypeDeclNode, file: string) => void;
+  onEnum?: (node: EnumDeclNode, file: string) => void;
+  onImport?: (node: ImportNode, file: string) => void;
+  onFunc?: (node: FuncDeclNode, file: string) => void;
+  onOp?: (node: OpDeclNode, file: string) => void;
 };
 
 function visitDecls(items: ModuleItemNode[], file: string, v: DeclVisitor): void;
@@ -197,11 +197,11 @@ The only difference between them is which maps are consulted (`visibleConsts` vs
 
 ```typescript
 function resolveVisible<T>(
-  name:         string,
-  file:         string,
-  env:          CompileEnv,
+  name: string,
+  file: string,
+  env: CompileEnv,
   qualifiedMap: Map<string, T> | undefined,
-  localMap:     Map<string, T>,
+  localMap: Map<string, T>,
 ): T | undefined {
   if (!canAccessQualifiedName(name, file, env)) return undefined;
   const q = moduleQualifierOf(name);
@@ -209,8 +209,8 @@ function resolveVisible<T>(
 }
 
 export const resolveVisibleConst = (n, f, e) => resolveVisible(n, f, e, e.visibleConsts, e.consts);
-export const resolveVisibleEnum  = (n, f, e) => resolveVisible(n, f, e, e.visibleEnums,  e.enums);
-export const resolveVisibleType  = (n, f, e) => resolveVisible(n, f, e, e.visibleTypes,  e.types);
+export const resolveVisibleEnum = (n, f, e) => resolveVisible(n, f, e, e.visibleEnums, e.enums);
+export const resolveVisibleType = (n, f, e) => resolveVisible(n, f, e, e.visibleTypes, e.types);
 ```
 
 `resolveVisibleEnum` needs a minor addition: it must preserve the existing local-enum-member priority (`env.enums.get(name)` before qualified lookup), which can be expressed as a `localFirst` flag or pre-check.
@@ -223,12 +223,12 @@ export const resolveVisibleType  = (n, f, e) => resolveVisible(n, f, e, e.visibl
 
 The context object passed to `lowerFunctionDecl` mixes four unrelated concerns:
 
-| Concern | Examples |
-|---------|---------|
-| Diagnostics | `diag`, `diagAt`, `diagAtWithId`, `diagAtWithSeverityAndId`, `warnAt` |
-| Emission | `emitInstr`, `emitRawCodeBytes`, `emitAbs16Fixup`, `emitRel8Fixup`, `emitPendingSymbol` |
-| Type resolution | `resolveScalarKind`, `resolveEaTypeExpr`, `scalarKindOfResolution`, `storageTypes` |
-| Stack frame | `stackSlotOffsets`, `stackSlotTypes`, `localAliasTargets`, `frameSize`, `bindSpTracking` |
+| Concern         | Examples                                                                                 |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| Diagnostics     | `diag`, `diagAt`, `diagAtWithId`, `diagAtWithSeverityAndId`, `warnAt`                    |
+| Emission        | `emitInstr`, `emitRawCodeBytes`, `emitAbs16Fixup`, `emitRel8Fixup`, `emitPendingSymbol`  |
+| Type resolution | `resolveScalarKind`, `resolveEaTypeExpr`, `scalarKindOfResolution`, `storageTypes`       |
+| Stack frame     | `stackSlotOffsets`, `stackSlotTypes`, `localAliasTargets`, `frameSize`, `bindSpTracking` |
 
 `lowerFunctionDecl` immediately destructures the entire context into local variables (lines 159–195), which means the context boundary provides no encapsulation — it is simply a named tuple of 68 values passed as one argument instead of 68.
 
@@ -352,11 +352,21 @@ export function canonicalModuleId(modulePath: string, rootDir: string): string {
 ```typescript
 for (const mf of program.files) {
   visitDecls(mf.items, mf.path, {
-    onType:   (node) => { /* collect */ },
-    onEnum:   (node) => { /* collect */ },
-    onConst:  (node) => { /* collect */ },
-    onFunc:   (node) => { /* collect */ },
-    onImport: (node) => { /* register edge */ },
+    onType: (node) => {
+      /* collect */
+    },
+    onEnum: (node) => {
+      /* collect */
+    },
+    onConst: (node) => {
+      /* collect */
+    },
+    onFunc: (node) => {
+      /* collect */
+    },
+    onImport: (node) => {
+      /* register edge */
+    },
   });
 }
 ```
