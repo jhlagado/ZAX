@@ -1,5 +1,4 @@
 section data vars at $2000
-  data
     dummy: byte = 0
 end
 

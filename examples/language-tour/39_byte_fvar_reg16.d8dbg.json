@@ -10,7 +10,7 @@
         {
           "start": 256,
           "end": 267,
-          "lstLine": 7,
+          "lstLine": 6,
           "kind": "code",
           "confidence": "high"
         },
@@ -24,63 +24,63 @@
         {
           "start": 267,
           "end": 275,
-          "lstLine": 8,
+          "lstLine": 7,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 275,
           "end": 287,
-          "lstLine": 9,
+          "lstLine": 8,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 287,
           "end": 299,
-          "lstLine": 10,
+          "lstLine": 9,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 299,
           "end": 301,
-          "lstLine": 11,
+          "lstLine": 10,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 301,
           "end": 302,
-          "lstLine": 12,
+          "lstLine": 11,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 302,
           "end": 310,
-          "lstLine": 7,
+          "lstLine": 6,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 310,
           "end": 322,
-          "lstLine": 15,
+          "lstLine": 14,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 322,
           "end": 337,
-          "lstLine": 16,
+          "lstLine": 15,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 337,
           "end": 346,
-          "lstLine": 15,
+          "lstLine": 14,
           "kind": "code",
           "confidence": "high"
         },
@@ -97,35 +97,35 @@
           "name": "byte_fvar_reg16",
           "kind": "label",
           "address": 256,
-          "line": 7,
+          "line": 6,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_0",
           "kind": "label",
           "address": 302,
-          "line": 7,
+          "line": 6,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
           "address": 310,
-          "line": 15,
+          "line": 14,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
           "address": 337,
-          "line": 15,
+          "line": 14,
           "scope": "local"
         },
         {
           "name": "glob_bytes",
           "kind": "data",
           "address": 8192,
-          "line": 3,
+          "line": 2,
           "scope": "global"
         },
         {
@@ -156,7 +156,7 @@
       "kind": "label",
       "address": 256,
       "file": "39_byte_fvar_reg16.zax",
-      "line": 7,
+      "line": 6,
       "scope": "global"
     },
     {
@@ -164,7 +164,7 @@
       "kind": "label",
       "address": 302,
       "file": "39_byte_fvar_reg16.zax",
-      "line": 7,
+      "line": 6,
       "scope": "local"
     },
     {
@@ -172,7 +172,7 @@
       "kind": "label",
       "address": 310,
       "file": "39_byte_fvar_reg16.zax",
-      "line": 15,
+      "line": 14,
       "scope": "global"
     },
     {
@@ -180,7 +180,7 @@
       "kind": "label",
       "address": 337,
       "file": "39_byte_fvar_reg16.zax",
-      "line": 15,
+      "line": 14,
       "scope": "local"
     },
     {
@@ -188,7 +188,7 @@
       "kind": "data",
       "address": 8192,
       "file": "39_byte_fvar_reg16.zax",
-      "line": 3,
+      "line": 2,
       "scope": "global"
     },
     {
