@@ -85,27 +85,25 @@ describe('cli failure contract matrix', () => {
     await rm(work, { recursive: true, force: true });
   });
 
-  it('returns code 1 for module-id collisions and reports colliding module span', async () => {
+  it('returns code 1 for canonical module-id collisions and reports colliding module span', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-module-id-collision-'));
     const entry = join(work, 'main.zax');
     const aDir = join(work, 'a');
-    const bDir = join(work, 'b');
-    const aModule = join(aDir, 'lib.zax');
-    const bModule = join(bDir, 'lib.zax');
+    const firstModule = join(aDir, 'lib.zax');
+    const secondModule = join(aDir, 'lib.alt');
     const outHex = join(work, 'out.hex');
     const base = join(work, 'out');
 
     await writeFile(
       entry,
-      ['import "a/lib.zax"', 'import "b/lib.zax"', '', 'func main()', '  ret', 'end', ''].join(
+      ['import "a/lib.zax"', 'import "a/lib.alt"', '', 'func main()', '  ret', 'end', ''].join(
         '\n',
       ),
       'utf8',
     );
     await mkdir(aDir, { recursive: true });
-    await mkdir(bDir, { recursive: true });
-    await writeFile(aModule, 'func a_lib()\n  ret\nend\n', 'utf8');
-    await writeFile(bModule, 'func b_lib()\n  ret\nend\n', 'utf8');
+    await writeFile(firstModule, 'func a_lib()\n  ret\nend\n', 'utf8');
+    await writeFile(secondModule, 'func b_lib()\n  ret\nend\n', 'utf8');
 
     const res = await runCli(['-o', outHex, entry]);
 
@@ -113,7 +111,7 @@ describe('cli failure contract matrix', () => {
     expect(res.stdout).toBe('');
     expect(res.stderr).toContain('[ZAX400]');
     expect(res.stderr).toContain('Module ID collision');
-    expect(res.stderr).toContain(`${bModule}:1:1`);
+    expect(res.stderr).toContain(`${secondModule}:1:1`);
     expect(res.stderr).not.toContain('zax [options] <entry.zax>');
     await expectNoArtifacts(base);
 
