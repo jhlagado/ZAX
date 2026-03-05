@@ -199,7 +199,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   localAliasTargets.clear();
 
   const localDecls = item.locals?.decls ?? [];
-  const returnRegs = (item.returnRegs ?? []).map((r: string) => r.toUpperCase());
+  const returnRegs = item.returnRegs.map((r: string) => r.toUpperCase());
   const basePreserveOrder: string[] = ['AF', 'BC', 'DE', 'HL'];
   let preserveSet = basePreserveOrder.filter((r) => !returnRegs.includes(r));
   const preserveBytes = preserveSet.length * 2;
