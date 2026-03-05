@@ -15,7 +15,7 @@ export function canAccessQualifiedName(name: string, file: string, env: CompileE
   if (currentModuleId === qualifier) return true;
 
   const imported = env.importedModuleIds?.get(file);
-  if (!imported) return true;
+  if (!imported) return false;
   return imported.has(qualifier);
 }
 
