@@ -292,7 +292,7 @@ export interface FuncDeclNode extends BaseNode {
   name: string;
   exported: boolean;
   params: ParamNode[];
-  returnRegs?: string[];
+  returnRegs: string[];
   locals?: VarBlockNode;
   asm: AsmBlockNode;
 }
