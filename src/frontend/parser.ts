@@ -472,16 +472,16 @@ export function parseModuleFile(
       }
 
       if (rest.toLowerCase() === 'data') {
-        const parsedData = parseDataBlock(index, {
-          file,
-          lineCount,
+        diag(
           diagnostics,
           modulePath,
-          getRawLine,
-          stopOnEnd: true,
-        });
-        sectionItems.push(parsedData.node);
-        index = parsedData.nextIndex;
+          `Bare "data" marker lines are removed; declare symbols directly inside named data sections.`,
+          {
+            line: lineNo,
+            column: 1,
+          },
+        );
+        index++;
         continue;
       }
 
