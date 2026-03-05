@@ -1,5 +1,4 @@
 section data vars at $2000
-  data
   arr_w: word[2] = { $1111, $2222 }
   tmp: word = $0000
 end

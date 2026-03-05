@@ -1,5 +1,4 @@
 section data vars at $1000
-  data
     msg: byte[2] = "HEY"
 end
 

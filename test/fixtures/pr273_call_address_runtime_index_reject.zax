@@ -1,12 +1,10 @@
 section data vars at $1000
-  data
     idx: byte = 0
 end
 
 extern func takeAddr(p: word): HL at $1234
 
 section data bytes at $0080
-  data
     arr: byte[4] = [ 1, 2, 3, 4 ]
 end
 
