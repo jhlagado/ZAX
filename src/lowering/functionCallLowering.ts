@@ -6,6 +6,7 @@ import type {
   AsmOperandNode,
   EaExprNode,
   ImmExprNode,
+  OpMatcherNode,
   OpDeclNode,
   ParamNode,
   SourceSpan,
@@ -90,7 +91,7 @@ type Context = {
     id: (typeof DiagnosticIds)[keyof typeof DiagnosticIds],
     message: string,
   ) => void;
-  matcherMatchesOperand: (matcher: any, operand: AsmOperandNode) => boolean;
+  matcherMatchesOperand: (matcher: OpMatcherNode, operand: AsmOperandNode) => boolean;
   formatOpSignature: (op: OpDeclNode) => string;
   formatAsmOperandForOpDiag: (operand: AsmOperandNode) => string;
   firstOpOverloadMismatchReason: (op: OpDeclNode, args: AsmOperandNode[]) => string | undefined;
