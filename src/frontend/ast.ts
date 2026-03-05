@@ -67,7 +67,6 @@ export type ModuleItemNode =
   | BinDeclNode
   | HexDeclNode
   | OpDeclNode
-  | SectionDirectiveNode
   | AlignDirectiveNode
   | UnimplementedNode;
 
@@ -109,15 +108,6 @@ export interface ImportNode extends BaseNode {
   kind: 'Import';
   specifier: string;
   form: 'moduleId' | 'path';
-}
-
-/**
- * Section selection directive.
- */
-export interface SectionDirectiveNode extends BaseNode {
-  kind: 'Section';
-  section: 'code' | 'data' | 'var';
-  at?: ImmExprNode;
 }
 
 export type AnchorBoundNode =

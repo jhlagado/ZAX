@@ -4,7 +4,6 @@ import type {
   ConstDeclNode,
   HexDeclNode,
   ImportNode,
-  SectionDirectiveNode,
   SourceSpan,
 } from './ast.js';
 import type { Diagnostic } from '../diagnostics/types.js';
@@ -58,7 +57,7 @@ export function parseSectionDirectiveDecl(
   rest: string,
   sectionTail: string | undefined,
   ctx: SimpleTopLevelContext,
-): SectionDirectiveNode | undefined {
+): void {
   const { diagnostics, modulePath, lineNo, text, span } = ctx;
   const decl = rest === 'section' ? '' : (sectionTail ?? '');
   const m = /^(code|data|var)(?:\s+at\s+(.+))?$/.exec(decl);
@@ -74,7 +73,7 @@ export function parseSectionDirectiveDecl(
     return undefined;
   }
 
-  const section = m[1]! as SectionDirectiveNode['section'];
+  const section = m[1]! as 'code' | 'data' | 'var';
   const atText = m[2]?.trim();
   diag(
     diagnostics,
