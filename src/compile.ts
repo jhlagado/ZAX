@@ -91,6 +91,7 @@ type LoadedProgram = {
   program: ProgramNode;
   sourceTexts: Map<string, string>;
   moduleTraversal: string[];
+  resolvedImportGraph: Map<string, string[]>;
 };
 
 async function loadProgram(
@@ -287,6 +288,9 @@ async function loadProgram(
     program: { kind: 'Program', span: entryModule.span, entryFile: entryPath, files: moduleFiles },
     sourceTexts,
     moduleTraversal,
+    resolvedImportGraph: new Map(
+      Array.from(edges.entries(), ([modulePath, moduleEdges]) => [modulePath, Array.from(moduleEdges.keys())]),
+    ),
   };
 }
 
@@ -307,7 +311,7 @@ export const compile: CompileFn = async (
   const diagnostics: Diagnostic[] = [];
   const loaded = await loadProgram(entryPath, diagnostics, options);
   if (!loaded) return { diagnostics, artifacts: [] };
-  const { program, sourceTexts, moduleTraversal } = loaded;
+  const { program, sourceTexts, moduleTraversal, resolvedImportGraph } = loaded;
 
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };
@@ -351,6 +355,7 @@ export const compile: CompileFn = async (
 
   const env = buildEnv(program, diagnostics, {
     typePaddingWarnings: options.typePaddingWarnings ?? false,
+    resolvedImportGraph,
   });
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };

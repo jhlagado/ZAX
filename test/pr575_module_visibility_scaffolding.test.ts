@@ -120,4 +120,81 @@ describe('PR575 module visibility scaffolding', () => {
     expect(sizeOfTypeExpr({ kind: 'TypeName', span: other.items[1]!.span, name: 'dep.Word' }, env, diagnostics)).toBeUndefined();
     expect(diagnostics.some((d) => d.message === 'Unknown type "dep.Word".')).toBe(true);
   });
+
+  it('uses resolved path-form import edges to determine visibility', () => {
+    const diagnostics: any[] = [];
+    const dep = parseModuleFile(
+      '/workspace/libs/dep.zax',
+      [
+        'export const FOO = 7',
+        'export type Word word',
+      ].join('\n'),
+      diagnostics,
+    );
+    const root = parseModuleFile(
+      '/workspace/root.zax',
+      [
+        'import "../vendor/alias_dep.zax"',
+        'const LOCAL = dep.FOO',
+      ].join('\n'),
+      diagnostics,
+    );
+
+    const program = {
+      kind: 'Program',
+      span: root.span,
+      entryFile: root.path,
+      files: [dep, root],
+    } as ProgramNode;
+
+    const env = buildEnv(program, diagnostics, {
+      typePaddingWarnings: false,
+      resolvedImportGraph: new Map([
+        [dep.path, []],
+        [root.path, [dep.path]],
+      ]),
+    });
+
+    expect(diagnostics).toEqual([]);
+    expect(env.importedModuleIds!.get(root.path)).toEqual(new Set([dep.moduleId]));
+    expect(env.consts.get('LOCAL')).toBe(7);
+  });
+
+  it('uses resolved module-id-form import edges to determine visibility', () => {
+    const diagnostics: any[] = [];
+    const dep = parseModuleFile(
+      '/workspace/libs/dep.zax',
+      [
+        'export const FOO = 7',
+      ].join('\n'),
+      diagnostics,
+    );
+    const root = parseModuleFile(
+      '/workspace/root.zax',
+      [
+        'import aliasdep',
+        'const LOCAL = dep.FOO',
+      ].join('\n'),
+      diagnostics,
+    );
+
+    const program = {
+      kind: 'Program',
+      span: root.span,
+      entryFile: root.path,
+      files: [dep, root],
+    } as ProgramNode;
+
+    const env = buildEnv(program, diagnostics, {
+      typePaddingWarnings: false,
+      resolvedImportGraph: new Map([
+        [dep.path, []],
+        [root.path, [dep.path]],
+      ]),
+    });
+
+    expect(diagnostics).toEqual([]);
+    expect(env.importedModuleIds!.get(root.path)).toEqual(new Set([dep.moduleId]));
+    expect(env.consts.get('LOCAL')).toBe(7);
+  });
 });
