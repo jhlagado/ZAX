@@ -1,5 +1,4 @@
 section data vars at $1000
-  data
     idxb: byte = 0
     idxw: word = 0
     arr: byte[8] = [ 0, 0, 0, 0, 0, 0, 0, 0 ]

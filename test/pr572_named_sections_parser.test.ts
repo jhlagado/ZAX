@@ -9,12 +9,9 @@ describe('PR572 named section parser scaffolding', () => {
     const program = parseProgram(
       'pr572_named_sections.zax',
       [
-        'section code boot at $1000 size $40',
+        'section data assets at $1000 size $40',
         '  align $10',
-        '  export func main(): HL',
-        '    ret',
-        '  end',
-        '  data',
+        '  export const Version = 1',
         '    message: byte[3] = "abc"',
         'end',
       ].join('\n'),
@@ -25,8 +22,8 @@ describe('PR572 named section parser scaffolding', () => {
     const section = program.files[0]?.items[0];
     expect(section).toMatchObject({
       kind: 'NamedSection',
-      section: 'code',
-      name: 'boot',
+      section: 'data',
+      name: 'assets',
       anchor: {
         kind: 'SectionAnchor',
         at: { kind: 'ImmLiteral', value: 0x1000 },
@@ -39,11 +36,11 @@ describe('PR572 named section parser scaffolding', () => {
     expect(section.items).toHaveLength(3);
     expect(section.items[0]).toMatchObject({ kind: 'Align' });
     expect(section.items[1]).toMatchObject({
-      kind: 'FuncDecl',
-      name: 'main',
+      kind: 'ConstDecl',
+      name: 'Version',
       exported: true,
     });
-    expect(section.items[2]).toMatchObject({ kind: 'DataBlock' });
+    expect(section.items[2]).toMatchObject({ kind: 'DataDecl', name: 'message' });
   });
 
   it('keeps imports module-scoped and rejects legacy section directives', () => {

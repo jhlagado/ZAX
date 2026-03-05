@@ -4,7 +4,6 @@ type Pair
 end
 
 section data vars at $1000
-  data
   pair_buf: Pair = { lo: 0, hi: 0 }
 end
 

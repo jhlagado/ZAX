@@ -100,7 +100,6 @@ section code app at $0000
 end
 
 section data vars at $1000
-  data
   out: word
 end
 
@@ -479,7 +478,7 @@ Rules:
 - Function locals/args remain scalar-slot storage in the current ABI.
 - A local composite declaration without initializer is a compile error (would imply stack composite allocation, not currently supported).
 - Composite locals may be declared only as aliases using inferred alias form (`name = rhs`).
-- In globals, both forms are allowed:
+- At module scope inside a named `data` section, both forms are allowed:
   - value initializer: defines storage contents
   - reference initializer: defines an alias to existing composite storage
 - Typed alias spellings are rejected in all scopes.
@@ -492,7 +491,6 @@ type Person
 end
 
 section data vars at $8000
-  data
   persons: Person[] = { ... }      ; value initializer (storage)
   admins = persons                 ; reference initializer (alias, inferred type)
 end
@@ -529,7 +527,6 @@ Type-shape rule:
 
 ```zax
 section data vars at $8000
-  data
   glob1: word = 23
   glob2 = glob1
 end
@@ -563,7 +560,6 @@ type Pair
 end
 
 section data vars at $8000
-  data
   p: Pair = 0           ; current compiler-supported composite zero-init form
 end
 
@@ -600,11 +596,10 @@ Compatibility:
 - Passing `T[]` to `T[N]` is rejected unless compiler can prove length is exactly `N`.
 - Passing mismatched element type is rejected (`byte[]` to `word[]`, etc).
 
-Example: globals array passed to both flexible and fixed signatures
+Example: module-scope array passed to both flexible and fixed signatures
 
 ```zax
 section data vars at $8000
-  data
   sample_bytes: byte[10] = { 1,2,3,4,5,6,7,8,9,10 }
 end
 
@@ -628,7 +623,6 @@ Negative example: narrowing without proof
 
 ```zax
 section data vars at $8000
-  data
   inferred_view = sample_bytes
 end
 

@@ -1,5 +1,4 @@
 section data vars at $1000
-  data
     arr_b: byte[8] = [0, 0, 0, 0, 0, 0, 0, 0]
 end
 
