@@ -173,7 +173,7 @@ describe('PR575 module visibility scaffolding', () => {
     );
     const root = parseModuleFile(
       '/workspace/root.zax',
-      ['import "../vendor/alias_dep.zax"', 'const LOCAL = dep.FOO'].join('\n'),
+      ['import "../vendor/alias_dep.zax"'].join('\n'),
       diagnostics,
     );
 
@@ -186,6 +186,7 @@ describe('PR575 module visibility scaffolding', () => {
 
     const env = buildEnv(program, diagnostics, {
       typePaddingWarnings: false,
+      moduleIdRootDir: '/workspace',
       resolvedImportGraph: new Map([
         [dep.path, []],
         [root.path, [dep.path]],
@@ -193,8 +194,18 @@ describe('PR575 module visibility scaffolding', () => {
     });
 
     expect(diagnostics).toEqual([]);
-    expect(env.importedModuleIds!.get(root.path)).toEqual(new Set([dep.moduleId]));
-    expect(env.consts.get('LOCAL')).toBe(7);
+    const depModuleId = env.moduleIds!.get(dep.path)!;
+    expect(env.importedModuleIds!.get(root.path)).toEqual(new Set([depModuleId]));
+    expect(
+      evalImmExpr(
+        { kind: 'ImmName', span: root.span, name: `${depModuleId}.FOO` },
+        env,
+        diagnostics,
+      ),
+    ).toBe(7);
+    expect(
+      sizeOfTypeExpr({ kind: 'TypeName', span: root.span, name: `${depModuleId}.Word` }, env, diagnostics),
+    ).toBe(2);
   });
 
   it('uses resolved module-id-form import edges to determine visibility', () => {
@@ -202,7 +213,7 @@ describe('PR575 module visibility scaffolding', () => {
     const dep = parseModuleFile('/workspace/libs/dep.zax', ['export const FOO = 7'].join('\n'), diagnostics);
     const root = parseModuleFile(
       '/workspace/root.zax',
-      ['import aliasdep', 'const LOCAL = dep.FOO'].join('\n'),
+      ['import aliasdep'].join('\n'),
       diagnostics,
     );
 
@@ -215,6 +226,7 @@ describe('PR575 module visibility scaffolding', () => {
 
     const env = buildEnv(program, diagnostics, {
       typePaddingWarnings: false,
+      moduleIdRootDir: '/workspace',
       resolvedImportGraph: new Map([
         [dep.path, []],
         [root.path, [dep.path]],
@@ -222,7 +234,14 @@ describe('PR575 module visibility scaffolding', () => {
     });
 
     expect(diagnostics).toEqual([]);
-    expect(env.importedModuleIds!.get(root.path)).toEqual(new Set([dep.moduleId]));
-    expect(env.consts.get('LOCAL')).toBe(7);
+    const depModuleId = env.moduleIds!.get(dep.path)!;
+    expect(env.importedModuleIds!.get(root.path)).toEqual(new Set([depModuleId]));
+    expect(
+      evalImmExpr(
+        { kind: 'ImmName', span: root.span, name: `${depModuleId}.FOO` },
+        env,
+        diagnostics,
+      ),
+    ).toBe(7);
   });
 });
