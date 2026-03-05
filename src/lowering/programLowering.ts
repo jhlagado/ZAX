@@ -16,7 +16,6 @@ import type {
   OpDeclNode,
   ProgramNode,
   SectionItemNode,
-  SectionDirectiveNode,
   SourceSpan,
   TypeExprNode,
   VarBlockNode,
@@ -71,8 +70,7 @@ export type Context = Omit<FunctionLoweringContext, 'item'> & {
   codeOffsetRef: { current: number };
   dataOffsetRef: { current: number };
   varOffsetRef: { current: number };
-  baseExprs: Partial<Record<SectionKind, SectionDirectiveNode['at']>>;
-  setBaseExpr: (kind: SectionKind, at: SectionDirectiveNode['at'], file: string) => void;
+  baseExprs: Partial<Record<SectionKind, ImmExprNode>>;
   advanceAlign: (a: number) => void;
   alignTo: (n: number, alignment: number) => number;
   loadBinInput: (
@@ -102,7 +100,7 @@ export type FinalizationContext = {
   diagnostics: Diagnostic[];
   diag: (diagnostics: Diagnostic[], file: string, message: string) => void;
   primaryFile: string;
-  baseExprs: Partial<Record<SectionKind, SectionDirectiveNode['at']>>;
+  baseExprs: Partial<Record<SectionKind, ImmExprNode>>;
   evalImmExpr: (
     expr: ImmExprNode,
     env: CompileEnv,
@@ -471,13 +469,6 @@ export function lowerProgramDeclarations(ctx: Context): void {
           scope: 'global',
         });
       }
-      return;
-    }
-
-    if (item.kind === 'Section') {
-      const s = item as SectionDirectiveNode;
-      ctx.activeSectionRef.current = s.section;
-      if (s.at) ctx.setBaseExpr(s.section, s.at, s.span.file);
       return;
     }
 
