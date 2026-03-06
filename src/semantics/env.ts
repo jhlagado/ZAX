@@ -14,7 +14,11 @@ import type {
 } from '../frontend/ast.js';
 import { canonicalModuleId } from '../moduleIdentity.js';
 import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
-import { offsetOfPathInTypeExpr, sizeOfTypeExpr, storageInfoForTypeDecl } from './layout.js';
+import {
+  offsetOfPathInTypeExpr,
+  preRoundSizeOfTypeExpr,
+  storageInfoForTypeDecl,
+} from './layout.js';
 import { visitDeclTree } from './declVisitor.js';
 
 /**
@@ -101,7 +105,7 @@ export function evalImmExpr(
       return undefined;
     }
     case 'ImmSizeof': {
-      return sizeOfTypeExpr(expr.typeExpr, env, diagnostics);
+      return preRoundSizeOfTypeExpr(expr.typeExpr, env, diagnostics);
     }
     case 'ImmOffsetof': {
       return offsetOfPathInTypeExpr(
