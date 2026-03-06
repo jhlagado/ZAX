@@ -16,7 +16,7 @@ digit           = "0".."9" ;
 
 int_dec         = [ "-" ] , digit , { digit } ;
 int_hex         = "$" , hex_digit , { hex_digit } ;
-int_bin         = ( "%" | "0b" ) , bin_digit , { bin_digit } ;
+int_bin         = "0b" , bin_digit , { bin_digit } ;
 hex_digit       = digit | "A".."F" | "a".."f" ;
 bin_digit       = "0" | "1" ;
 
@@ -226,6 +226,7 @@ These are semantic constraints enforced beyond pure grammar:
 - Local non-scalar value-init declarations are invalid.
 - Local non-scalar declarations are alias-only (`name = rhs`).
 - `@place` explicit address-of syntax is not part of the normative v0.2 surface.
+- The `%` binary prefix (e.g. `%01101`) is accepted by the parser but **deprecated**. Use `0b01101` instead. The `%` prefix will be removed in a future version.
 
 ## 9. Maintenance Rule
 
