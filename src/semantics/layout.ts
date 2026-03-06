@@ -38,6 +38,37 @@ function scalarSize(name: string): number | undefined {
 
 type TypeSizeResolver = (te: TypeExprNode) => TypeStorageInfo | undefined;
 
+type ResolveNamedTypeResult =
+  | { kind: 'Scalar'; name: string; size: number }
+  | { kind: 'Decl'; decl: TypeDeclNode | UnionDeclNode };
+
+function resolveNamedType<T>(
+  te: Extract<TypeExprNode, { kind: 'TypeName' }>,
+  env: CompileEnv,
+  visiting: Set<string>,
+  diag: (file: string, message: string) => void,
+  onResolve: (resolved: ResolveNamedTypeResult) => T | undefined,
+): T | undefined {
+  const s = scalarSize(te.name);
+  if (s !== undefined) return onResolve({ kind: 'Scalar', name: te.name, size: s });
+  if (visiting.has(te.name)) {
+    diag(te.span.file, `Recursive type definition detected for "${te.name}".`);
+    return undefined;
+  }
+  const decl = resolveVisibleType(te.name, te.span.file, env);
+  if (!decl) {
+    diag(te.span.file, `Unknown type "${te.name}".`);
+    return undefined;
+  }
+
+  visiting.add(te.name);
+  try {
+    return onResolve({ kind: 'Decl', decl });
+  } finally {
+    visiting.delete(te.name);
+  }
+}
+
 function typeStorageInfoForDecl(
   decl: TypeDeclNode | UnionDeclNode,
   resolveTypeExpr: TypeSizeResolver,
@@ -80,29 +111,16 @@ export function storageInfoForTypeExpr(
   const sizeOf = (te: TypeExprNode): TypeStorageInfo | undefined => {
     switch (te.kind) {
       case 'TypeName': {
-        const s = scalarSize(te.name);
-        if (s !== undefined) return { preRoundSize: s, storageSize: s };
-
         const cached = memo.get(te.name);
         if (cached !== undefined) return cached;
-
-        if (visiting.has(te.name)) {
-          diag(te.span.file, `Recursive type definition detected for "${te.name}".`);
-          return undefined;
-        }
-        visiting.add(te.name);
-        try {
-          const decl = resolveVisibleType(te.name, te.span.file, env);
-          if (!decl) {
-            diag(te.span.file, `Unknown type "${te.name}".`);
-            return undefined;
+        return resolveNamedType(te, env, visiting, diag, (resolved) => {
+          if (resolved.kind === 'Scalar') {
+            return { preRoundSize: resolved.size, storageSize: resolved.size };
           }
-          const info = typeStorageInfoForDecl(decl, sizeOf);
+          const info = typeStorageInfoForDecl(resolved.decl, sizeOf);
           if (info) memo.set(te.name, info);
           return info;
-        } finally {
-          visiting.delete(te.name);
-        }
+        });
       }
       case 'ArrayType': {
         const es = sizeOf(te.element);
@@ -192,25 +210,12 @@ export function offsetOfPathInTypeExpr(
     visiting = new Set<string>(),
   ): ResolvedType | undefined => {
     switch (te.kind) {
-      case 'TypeName': {
-        if (scalarSize(te.name) !== undefined) return { kind: 'Scalar', name: te.name };
-        if (visiting.has(te.name)) {
-          diag(te.span.file, `Recursive type definition detected for "${te.name}".`);
-          return undefined;
-        }
-        const decl = resolveVisibleType(te.name, te.span.file, env);
-        if (!decl) {
-          diag(te.span.file, `Unknown type "${te.name}".`);
-          return undefined;
-        }
-        visiting.add(te.name);
-        try {
-          if (decl.kind === 'UnionDecl') return { kind: 'Union', fields: decl.fields };
-          return resolveType(decl.typeExpr, visiting);
-        } finally {
-          visiting.delete(te.name);
-        }
-      }
+      case 'TypeName':
+        return resolveNamedType(te, env, visiting, diag, (resolved) => {
+          if (resolved.kind === 'Scalar') return { kind: 'Scalar', name: resolved.name };
+          if (resolved.decl.kind === 'UnionDecl') return { kind: 'Union', fields: resolved.decl.fields };
+          return resolveType(resolved.decl.typeExpr, visiting);
+        });
       case 'ArrayType': {
         if (te.length === undefined) {
           diag(
