@@ -50,91 +50,6 @@ ZAX replaces this with a proper compiler. Source is parsed into an AST. Names ar
 
 ---
 
-## The Op System: Typed Inline Macros
-
-The most distinctive feature of ZAX is `op` — inline macro-instructions with compiler-level operand matching. An op looks like a new opcode. It expands inline (no call, no return, zero overhead) and the compiler selects the right implementation based on the operands you pass, using a specificity-ranked overload system.
-
-The Z80 can add a 16-bit register pair into `HL`, but not into `DE` or `BC`. In a traditional assembler you'd write a macro or just inline the exchange dance every time. In ZAX:
-
-```
-op add16(dst: HL, src: reg16)
-  add hl, src
-end
-
-op add16(dst: DE, src: reg16)
-  ex de, hl
-  add hl, src
-  ex de, hl
-end
-
-op add16(dst: BC, src: reg16)
-  push hl
-  push bc
-  pop hl
-  add hl, src
-  push hl
-  pop bc
-  pop hl
-end
-```
-
-At a call site, `add16 DE, BC` reads like a native instruction. The compiler sees that the first operand is `DE`, selects the second overload (because the fixed matcher `DE` is more specific than the class matcher `reg16`), substitutes `BC` for `src`, and emits the resulting instruction sequence inline.
-
-This is not text substitution. The compiler operates on parsed AST nodes and matcher types. Register/flag/stack discipline inside an `op` body is developer-managed, so authors should keep expansions explicit and stack-balanced. If an expansion produces an invalid instruction, the error points to the call site with a clear diagnostic — not to a mangled token stream three macro levels deep.
-
-Op parameters use a system of **matcher types** that constrain what each operand position accepts:
-
-| Matcher                     | Accepts                            |
-| --------------------------- | ---------------------------------- |
-| `reg8`                      | `A B C D E H L`                    |
-| `reg16`                     | `HL DE BC SP`                      |
-| `A`, `HL`, `DE`, `BC`, `SP` | That register only                 |
-| `imm8`, `imm16`             | Compile-time immediate expressions |
-| `ea`                        | Effective address expressions      |
-| `mem8`, `mem16`             | Memory dereference operands `(ea)` |
-
-Fixed matchers beat class matchers. `imm8` beats `imm16` for small values. If two overloads tie, the compiler rejects the call as ambiguous rather than silently picking one. The resolution rules are simple enough to reason about by hand, which matters when you're debugging at the instruction level.
-
----
-
-## Structured Control Flow Without Abstraction
-
-ZAX provides `if`/`else`, `while`, `repeat`/`until`, and `select`/`case` inside function/op instruction streams. These compile to conditional jumps — nothing more. The key design decision is that **the programmer still sets the flags**. The control-flow keywords test CPU condition codes that you establish with normal Z80 instructions:
-
-```
-; Compare A to zero and branch
-or a
-if Z
-  ld b, $FF       ; A was zero
-else
-  ld b, $00       ; A was nonzero
-end
-
-; Loop until a counter expires
-ld b, 10
-repeat
-  ; ... loop body ...
-  dec b
-until Z
-
-; Multi-way dispatch on a value
-ld a, (mode)
-select A
-  case Mode.Read
-    call do_read
-  case Mode.Write
-    call do_write
-  else
-    call do_error
-end
-```
-
-There is no expression evaluator, no implicit comparison, no hidden register usage (except in `select` dispatch, which may use `A`). You write the instruction that sets the flags, then you write the keyword that tests them. This means you always know exactly what the CPU is doing — the structure is purely for the human reader and the compiler's jump/label bookkeeping.
-
-The compiler enforces stack-depth matching at all join points. If one arm of an `if` pushes a value and the other doesn't, that's a compile error, not a runtime crash three minutes into your program.
-
----
-
 ## Functions With Real Arguments and Locals
 
 In a traditional assembler, a "function" is a label you `call` and a `ret` you hope eventually executes. Arguments are wherever you left them — in registers, on the stack, at some agreed-upon memory address. Locals are registers you promised not to step on, or RAM you allocated by hand. The calling convention exists only in comments and in the programmer's head.
@@ -180,6 +95,125 @@ bios_putc A    ; pushes A (zero-extended), calls $F003, cleans up
 ```
 
 The compiler generates the correct calling sequence to the absolute address. You don't hand-roll the push/call/pop dance for every BIOS entry point in your project. At typed call boundaries (`func`/`extern func`), `void` calls preserve boundary-visible registers/flags, while non-`void` calls expose `HL` as the return channel.
+
+---
+
+## Conditionals: if / else
+
+ZAX provides `if`/`else` inside function and op bodies. The key design decision is that **the programmer still sets the flags**. The keyword tests a CPU condition code that you establish with normal Z80 instructions — there is no expression evaluator, no implicit comparison, no hidden register usage:
+
+```
+; Compare A to zero and branch
+or a
+if Z
+  ld b, $FF       ; A was zero
+else
+  ld b, $00       ; A was nonzero
+end
+```
+
+You write the instruction that sets the flags, then you write the keyword that tests them. The structure is purely for the human reader and the compiler's jump/label bookkeeping — the CPU sees only a conditional jump.
+
+The compiler enforces stack-depth matching at all join points. If one arm of an `if` pushes a value and the other doesn't, that's a compile error, not a runtime crash three minutes into your program.
+
+---
+
+## Multi-way Dispatch: select / case
+
+For multi-way branching, `select`/`case` dispatches on a value in a register:
+
+```
+; Multi-way dispatch on a value
+ld a, (mode)
+select A
+  case Mode.Read
+    call do_read
+  case Mode.Write
+    call do_write
+  else
+    call do_error
+end
+```
+
+Each `case` compares the selected register against a compile-time constant and jumps to the matching arm. The `else` arm handles anything that falls through. The `select` dispatch may use `A` internally — the programmer controls what is loaded before the construct and what registers the arms use.
+
+---
+
+## Loops: while and repeat / until
+
+ZAX provides two looping constructs. Both compile to conditional jumps — nothing more.
+
+`while` tests a condition at the top of the loop. You set the flags yourself before and at the bottom of the body:
+
+```
+ld b, 10
+cp b            ; set flags before entering
+while NZ
+  ; ... loop body ...
+  dec b
+  cp b          ; reset flags for next test
+end
+```
+
+`repeat`/`until` tests at the bottom, guaranteeing at least one execution. This maps naturally onto the Z80's `DJNZ` idiom:
+
+```
+; Loop until a counter expires
+ld b, 10
+repeat
+  ; ... loop body ...
+  dec b
+until Z
+```
+
+The condition after `while` or `until` is any standard Z80 condition code: `Z`, `NZ`, `C`, `NC`, `M`, `P`, `PE`, `PO`. You set the condition with whatever instruction is appropriate — `dec`, `cp`, `or`, `bit`, anything.
+
+---
+
+## The Op System: Typed Inline Macros
+
+The most distinctive feature of ZAX is `op` — inline macro-instructions with compiler-level operand matching. An op looks like a new opcode. It expands inline (no call, no return, zero overhead) and the compiler selects the right implementation based on the operands you pass, using a specificity-ranked overload system.
+
+The Z80 can add a 16-bit register pair into `HL`, but not into `DE` or `BC`. In a traditional assembler you'd write a macro or just inline the exchange dance every time. In ZAX:
+
+```
+op add16(dst: HL, src: reg16)
+  add hl, src
+end
+
+op add16(dst: DE, src: reg16)
+  ex de, hl
+  add hl, src
+  ex de, hl
+end
+
+op add16(dst: BC, src: reg16)
+  push hl
+  push bc
+  pop hl
+  add hl, src
+  push hl
+  pop bc
+  pop hl
+end
+```
+
+At a call site, `add16 DE, BC` reads like a native instruction. The compiler sees that the first operand is `DE`, selects the second overload (because the fixed matcher `DE` is more specific than the class matcher `reg16`), substitutes `BC` for `src`, and emits the resulting instruction sequence inline.
+
+This is not text substitution. The compiler operates on parsed AST nodes and matcher types. Register/flag/stack discipline inside an `op` body is developer-managed, so authors should keep expansions explicit and stack-balanced. If an expansion produces an invalid instruction, the error points to the call site with a clear diagnostic — not to a mangled token stream three macro levels deep.
+
+Op parameters use a system of **matcher types** that constrain what each operand position accepts:
+
+| Matcher                     | Accepts                            |
+| --------------------------- | ---------------------------------- |
+| `reg8`                      | `A B C D E H L`                    |
+| `reg16`                     | `HL DE BC SP`                      |
+| `A`, `HL`, `DE`, `BC`, `SP` | That register only                 |
+| `imm8`, `imm16`             | Compile-time immediate expressions |
+| `ea`                        | Effective address expressions      |
+| `mem8`, `mem16`             | Memory dereference operands `(ea)` |
+
+Fixed matchers beat class matchers. `imm8` beats `imm16` for small values. If two overloads tie, the compiler rejects the call as ambiguous rather than silently picking one. The resolution rules are simple enough to reason about by hand, which matters when you're debugging at the instruction level.
 
 ---
 
