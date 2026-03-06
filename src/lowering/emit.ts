@@ -475,12 +475,8 @@ export function emitProgram(
   };
 
   const {
-    matcherMatchesOperand,
-    selectMostSpecificOpOverload,
+    selectOpOverload,
     formatAsmOperandForOpDiag,
-    formatOpSignature,
-    formatOpDefinitionForDiag,
-    firstOpOverloadMismatchReason,
   } = createOpMatchingHelpers({
     reg8,
     isIxIyIndexedMem,
@@ -843,12 +839,8 @@ export function emitProgram(
     opStackPolicyMode,
   };
   const functionLoweringOpOverloadContext: FunctionLoweringOpOverloadContext = {
-    matcherMatchesOperand,
-    formatOpSignature,
     formatAsmOperandForOpDiag,
-    firstOpOverloadMismatchReason,
-    formatOpDefinitionForDiag,
-    selectMostSpecificOpOverload,
+    selectOpOverload,
     summarizeOpStackEffect,
   };
   const functionLoweringAstUtilityContext: FunctionLoweringAstUtilityContext = {
