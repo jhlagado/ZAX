@@ -8,6 +8,7 @@ import { defaultFormatWriters } from '../src/formats/index.js';
 import type { BinArtifact, D8mArtifact } from '../src/formats/types.js';
 import type { PlacedNamedSectionContribution } from '../src/lowering/sectionPlacement.js';
 import type { NamedSectionContributionSink } from '../src/lowering/sectionContributions.js';
+import { createNonBankedSectionKey } from '../src/sectionKeys.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,6 +19,11 @@ function fakeSink(
   bytes: Array<[number, number]>,
   startupInitActions: NamedSectionContributionSink['startupInitActions'] = [],
 ): NamedSectionContributionSink {
+  const created = createNonBankedSectionKey(section, name);
+  if (!created) {
+    throw new Error(`Invalid section key test fixture: ${section} ${name}`);
+  }
+
   const node = {
     kind: 'NamedSection' as const,
     span: { file: 'x', start: { line: 1, column: 1, offset: 0 }, end: { line: 1, column: 1, offset: 0 } },
@@ -27,16 +33,16 @@ function fakeSink(
   };
   return {
     anchor: {
-      keyId: `${section}:${name}`,
-      key: { section, name },
+      keyId: created.keyId,
+      key: created.key,
       node,
       moduleIndex: 0,
       itemIndex: 0,
       order: 0,
     },
     contribution: {
-      key: { section, name },
-      keyId: `${section}:${name}`,
+      key: created.key,
+      keyId: created.keyId,
       node,
       moduleIndex: 0,
       itemIndex: 0,
