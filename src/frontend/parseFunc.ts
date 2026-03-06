@@ -305,6 +305,14 @@ export function parseTopLevelFuncDecl(
       const funcSpan = span(file, funcStartOffset, funcEndOffset);
       const asmSpan = span(file, asmStartOffset, funcEndOffset);
       const asm: AsmBlockNode = { kind: 'AsmBlock', span: asmSpan, items: asmItems };
+      const localsNode: VarBlockNode =
+        locals ??
+        ({
+          kind: 'VarBlock',
+          span: span(file, funcStartOffset, funcStartOffset),
+          scope: 'function',
+          decls: [],
+        } satisfies VarBlockNode);
 
       return {
         node: {
@@ -314,7 +322,7 @@ export function parseTopLevelFuncDecl(
           exported,
           params,
           returnRegs,
-          ...(locals ? { locals } : {}),
+          locals: localsNode,
           asm,
         },
         nextIndex: index + 1,
