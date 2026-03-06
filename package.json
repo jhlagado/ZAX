@@ -14,6 +14,8 @@
     "pretest": "mkdir -p coverage/.tmp",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:ci:coverage-core": "vitest run --coverage --exclude 'test/cli_*.test.ts' --exclude 'test/pr312_expected_trace_corpus.test.ts'",
+    "test:ci:slow-reliability": "vitest run --no-file-parallelism --maxWorkers=1 --minWorkers=1 --testTimeout=20000 --hookTimeout=300000 test/cli_*.test.ts test/pr312_expected_trace_corpus.test.ts",
     "test:watch": "vitest",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
