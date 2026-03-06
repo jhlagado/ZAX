@@ -6,7 +6,6 @@ import type {
   AsmOperandNode,
   EaExprNode,
   ImmExprNode,
-  OpMatcherNode,
   OpDeclNode,
   ParamNode,
   SourceSpan,
@@ -16,6 +15,7 @@ import type { CompileEnv } from '../semantics/env.js';
 import type { StepPipeline } from '../addressing/steps.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import type { Callable, SourceSegmentTag } from './loweringTypes.js';
+import type { OpOverloadSelection } from './opMatching.js';
 import type { OpStackSummary } from './opStackAnalysis.js';
 import type { ScalarKind } from './typeResolution.js';
 import type { FlowState, OpExpansionFrame } from './functionBodySetup.js';
@@ -91,12 +91,8 @@ type Context = {
     id: (typeof DiagnosticIds)[keyof typeof DiagnosticIds],
     message: string,
   ) => void;
-  matcherMatchesOperand: (matcher: OpMatcherNode, operand: AsmOperandNode) => boolean;
-  formatOpSignature: (op: OpDeclNode) => string;
   formatAsmOperandForOpDiag: (operand: AsmOperandNode) => string;
-  firstOpOverloadMismatchReason: (op: OpDeclNode, args: AsmOperandNode[]) => string | undefined;
-  formatOpDefinitionForDiag: (op: OpDeclNode) => string;
-  selectMostSpecificOpOverload: (candidates: OpDeclNode[], args: AsmOperandNode[]) => OpDeclNode | undefined;
+  selectOpOverload: (overloads: OpDeclNode[], operands: AsmOperandNode[]) => OpOverloadSelection;
   summarizeOpStackEffect: (op: OpDeclNode) => OpStackSummary;
   cloneImmExpr: (expr: ImmExprNode) => ImmExprNode;
   cloneEaExpr: (expr: EaExprNode) => EaExprNode;
@@ -405,12 +401,8 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
         diagAt: ctx.diagAt,
         diagAtWithId: ctx.diagAtWithId,
         diagAtWithSeverityAndId: ctx.diagAtWithSeverityAndId,
-        matcherMatchesOperand: ctx.matcherMatchesOperand,
-        formatOpSignature: ctx.formatOpSignature,
         formatAsmOperandForOpDiag: ctx.formatAsmOperandForOpDiag,
-        firstOpOverloadMismatchReason: ctx.firstOpOverloadMismatchReason,
-        formatOpDefinitionForDiag: ctx.formatOpDefinitionForDiag,
-        selectMostSpecificOpOverload: ctx.selectMostSpecificOpOverload,
+        selectOpOverload: ctx.selectOpOverload,
         summarizeOpStackEffect: ctx.summarizeOpStackEffect,
         cloneImmExpr: ctx.cloneImmExpr,
         cloneEaExpr: ctx.cloneEaExpr,
