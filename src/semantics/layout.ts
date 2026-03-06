@@ -89,7 +89,7 @@ function typeStorageInfoForDecl(
     for (const f of te.fields) {
       const fs = resolveTypeExpr(f.typeExpr);
       if (!fs) return undefined;
-      sum += fs.storageSize;
+      sum += fs.preRoundSize;
     }
     return { preRoundSize: sum, storageSize: nextPow2(sum) };
   }
@@ -140,7 +140,7 @@ export function storageInfoForTypeExpr(
         for (const f of te.fields) {
           const fs = sizeOf(f.typeExpr);
           if (!fs) return undefined;
-          sum += fs.storageSize;
+          sum += fs.preRoundSize;
         }
         return { preRoundSize: sum, storageSize: nextPow2(sum) };
       }
@@ -165,11 +165,19 @@ export function storageInfoForTypeDecl(
 }
 
 /**
- * Compute the packed size (in bytes) of a type expression.
- *
- * PR3 implementation note:
- * - Supports scalar types (`byte`, `word`, `addr`), arrays, and record types.
- * - Named types are resolved via `env.types`.
+ * Compute the packed (pre-rounded) size in bytes of a type expression.
+ */
+export function preRoundSizeOfTypeExpr(
+  typeExpr: TypeExprNode,
+  env: CompileEnv,
+  diagnostics?: Diagnostic[],
+): number | undefined {
+  const info = storageInfoForTypeExpr(typeExpr, env, diagnostics);
+  return info?.preRoundSize;
+}
+
+/**
+ * Compute the storage (rounded) size in bytes of a type expression.
  */
 export function sizeOfTypeExpr(
   typeExpr: TypeExprNode,
@@ -239,7 +247,7 @@ export function offsetOfPathInTypeExpr(
     let offsetBefore = 0;
     for (const f of fields) {
       if (f.name === fieldName) return { field: f, offsetBefore };
-      const fs = sizeOfTypeExpr(f.typeExpr, env, diagnostics);
+      const fs = preRoundSizeOfTypeExpr(f.typeExpr, env, diagnostics);
       if (fs === undefined) return undefined;
       offsetBefore += fs;
     }
