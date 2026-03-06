@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { SourceSpan, TypeDeclNode, UnionDeclNode } from '../src/frontend/ast.js';
 import {
+  resolveVisibleSymbol,
   resolveVisibleConst,
   resolveVisibleEnum,
   resolveVisibleType,
@@ -58,6 +59,18 @@ describe('PR647 visible symbol resolver consolidation', () => {
 
     expect(resolveVisibleEnum('Mode.Value', 'root.zax', env)).toBe(7);
     expect(resolveVisibleEnum('dep.Mode.Value', 'root.zax', env)).toBe(9);
+  });
+
+  it('applies one shared precedence rule: local first, then imported qualified alias', () => {
+    const env = makeEnv();
+
+    expect(resolveVisibleSymbol('const', 'LOCAL', 'root.zax', env)).toBe(1);
+    expect(resolveVisibleSymbol('enum', 'Mode.Value', 'root.zax', env)).toBe(7);
+    expect(resolveVisibleSymbol('type', 'LocalType', 'root.zax', env)).toBe(typeDecl);
+
+    expect(resolveVisibleSymbol('const', 'dep.REMOTE', 'root.zax', env)).toBe(2);
+    expect(resolveVisibleSymbol('enum', 'dep.Mode.Value', 'root.zax', env)).toBe(9);
+    expect(resolveVisibleSymbol('type', 'dep.RemoteType', 'root.zax', env)).toBe(unionDecl);
   });
 
   it('fails closed for non-imported qualified access', () => {
