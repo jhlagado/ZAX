@@ -3,14 +3,15 @@ import type {
   AsmInstructionNode,
   OpDeclNode,
 } from '../frontend/ast.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type {
+  AsmRangeLoweringCapability,
+  HiddenLabelCapability,
+  LoweringDiagnosticsCapability,
+} from './capabilities.js';
 
-type OpExpansionExecutionContext = {
-  diagnostics: Diagnostic[];
-  diagAt: (diagnostics: Diagnostic[], span: AsmInstructionNode['span'], message: string) => void;
-  newHiddenLabel: (prefix: string) => string;
-  lowerAsmRange: (items: AsmItemNode[], startIndex: number, stopKinds: Set<AsmItemNode['kind']>) => number;
-};
+type OpExpansionExecutionContext = LoweringDiagnosticsCapability &
+  HiddenLabelCapability &
+  AsmRangeLoweringCapability;
 
 type ExpandAndLowerArgs = {
   opDecl: OpDeclNode;
