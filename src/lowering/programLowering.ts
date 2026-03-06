@@ -236,11 +236,11 @@ export function preScanProgramDeclarations(ctx: Context): PrescanResult {
       const vb = item as VarBlockNode;
       for (const decl of vb.decls) {
         const lower = decl.name.toLowerCase();
-        if (decl.typeExpr) {
+        if (decl.form === 'typed') {
           ctx.storageTypes.set(lower, decl.typeExpr);
           continue;
         }
-        if (decl.initializer?.kind === 'VarInitAlias') {
+        if (decl.initializer.kind === 'VarInitAlias') {
           ctx.moduleAliasTargets.set(lower, decl.initializer.expr);
           ctx.moduleAliasDecls.set(lower, decl);
         }
@@ -305,7 +305,7 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
   };
   const lowerVarBlock = (varBlock: VarBlockNode): void => {
     for (const decl of varBlock.decls) {
-      if (!decl.typeExpr) continue;
+      if (decl.form !== 'typed') continue;
       const size = ctx.sizeOfTypeExpr(decl.typeExpr, ctx.env, ctx.diagnostics);
       if (size === undefined) continue;
       if (ctx.env.consts.has(decl.name)) {
