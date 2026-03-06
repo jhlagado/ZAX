@@ -332,4 +332,4 @@ Tests are organized by spec section and PR scope under `test/`. Golden-file comp
 
 ## License
 
-GPL-3.0-or-later. See [LICENSE](LICENSE).
+Public domain. See [LICENSE](LICENSE) ([The Unlicense](https://unlicense.org)).
