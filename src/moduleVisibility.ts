@@ -1,16 +1,69 @@
 import type { TypeDeclNode, UnionDeclNode } from './frontend/ast.js';
 import type { CompileEnv } from './semantics/env.js';
 
-function resolveVisibleSymbol<T>(
+export type VisibleSymbolKind = 'const' | 'enum' | 'type';
+
+type ResolutionMaps<T> = {
+  localMap: ReadonlyMap<string, T> | undefined;
+  visibleMap: ReadonlyMap<string, T> | undefined;
+};
+
+function resolveVisibleSymbolWithMaps<T>(
   name: string,
   file: string,
   env: CompileEnv,
-  localMap: ReadonlyMap<string, T> | undefined,
-  visibleMap: ReadonlyMap<string, T> | undefined,
+  maps: ResolutionMaps<T>,
 ): T | undefined {
-  if (!canAccessQualifiedName(name, file, env)) return undefined;
+  const local = maps.localMap?.get(name);
+  if (local !== undefined) return local;
+
   const qualifier = moduleQualifierOf(name);
-  return qualifier ? visibleMap?.get(name) : localMap?.get(name);
+  if (!qualifier) return undefined;
+  if (!canAccessQualifiedName(name, file, env)) return undefined;
+  return maps.visibleMap?.get(name);
+}
+
+export function resolveVisibleSymbol(
+  kind: 'const',
+  name: string,
+  file: string,
+  env: CompileEnv,
+): number | undefined;
+export function resolveVisibleSymbol(
+  kind: 'enum',
+  name: string,
+  file: string,
+  env: CompileEnv,
+): number | undefined;
+export function resolveVisibleSymbol(
+  kind: 'type',
+  name: string,
+  file: string,
+  env: CompileEnv,
+): TypeDeclNode | UnionDeclNode | undefined;
+export function resolveVisibleSymbol(
+  kind: VisibleSymbolKind,
+  name: string,
+  file: string,
+  env: CompileEnv,
+): number | TypeDeclNode | UnionDeclNode | undefined {
+  switch (kind) {
+    case 'const':
+      return resolveVisibleSymbolWithMaps(name, file, env, {
+        localMap: env.consts,
+        visibleMap: env.visibleConsts,
+      });
+    case 'enum':
+      return resolveVisibleSymbolWithMaps(name, file, env, {
+        localMap: env.enums,
+        visibleMap: env.visibleEnums,
+      });
+    case 'type':
+      return resolveVisibleSymbolWithMaps(name, file, env, {
+        localMap: env.types,
+        visibleMap: env.visibleTypes,
+      });
+  }
 }
 
 export function moduleQualifierOf(name: string): string | undefined {
@@ -32,15 +85,11 @@ export function canAccessQualifiedName(name: string, file: string, env: CompileE
 }
 
 export function resolveVisibleConst(name: string, file: string, env: CompileEnv): number | undefined {
-  return resolveVisibleSymbol(name, file, env, env.consts, env.visibleConsts);
+  return resolveVisibleSymbol('const', name, file, env);
 }
 
 export function resolveVisibleEnum(name: string, file: string, env: CompileEnv): number | undefined {
-  // Preserve ordinary enum-member lookup (e.g. Mode.Value) before treating a
-  // dotted name as a module-qualified export alias (e.g. dep.Mode.Value).
-  const local = env.enums.get(name);
-  if (local !== undefined) return local;
-  return resolveVisibleSymbol(name, file, env, undefined, env.visibleEnums);
+  return resolveVisibleSymbol('enum', name, file, env);
 }
 
 export function resolveVisibleType(
@@ -48,5 +97,5 @@ export function resolveVisibleType(
   file: string,
   env: CompileEnv,
 ): TypeDeclNode | UnionDeclNode | undefined {
-  return resolveVisibleSymbol(name, file, env, env.types, env.visibleTypes);
+  return resolveVisibleSymbol('type', name, file, env);
 }
