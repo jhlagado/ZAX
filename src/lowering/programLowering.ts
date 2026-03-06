@@ -37,6 +37,7 @@ import type {
   SectionKind,
 } from './loweringTypes.js';
 import type { AggregateType, ScalarKind } from './typeResolution.js';
+import { preRoundSizeOfTypeExpr } from '../semantics/layout.js';
 import { lowerDataBlock } from './programLoweringData.js';
 
 // Program lowering owns module-wide declaration traversal and the final
@@ -306,7 +307,7 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
   const lowerVarBlock = (varBlock: VarBlockNode): void => {
     for (const decl of varBlock.decls) {
       if (decl.form !== 'typed') continue;
-      const size = ctx.sizeOfTypeExpr(decl.typeExpr, ctx.env, ctx.diagnostics);
+      const size = preRoundSizeOfTypeExpr(decl.typeExpr, ctx.env, ctx.diagnostics);
       if (size === undefined) continue;
       if (ctx.env.consts.has(decl.name)) {
         ctx.diag(ctx.diagnostics, decl.span.file, `Var name "${decl.name}" collides with a const.`);
