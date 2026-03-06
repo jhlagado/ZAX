@@ -518,6 +518,7 @@ export function emitProgram(
     getLocalAliasTargets: () => localAliasTargets,
     evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
     evalImmNoDiag,
+    resolveScalarKind,
     resolveAggregateType,
     resolveEaTypeExpr,
     sizeOfTypeExpr: (te) => sizeOfTypeExpr(te, env, diagnostics),
