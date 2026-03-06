@@ -195,16 +195,29 @@ export interface VarBlockNode extends BaseNode {
 /**
  * Single variable declaration inside a `var` block.
  */
-export interface VarDeclNode extends BaseNode {
+export type VarDeclNode = VarDeclTypedNode | VarDeclAliasNode;
+
+export interface VarDeclTypedNode extends BaseNode {
   kind: 'VarDecl';
+  form: 'typed';
   name: string;
-  typeExpr?: TypeExprNode;
-  initializer?: VarDeclInitializerNode;
+  typeExpr: TypeExprNode;
+  initializer?: VarDeclValueInitializerNode;
+}
+
+export interface VarDeclAliasNode extends BaseNode {
+  kind: 'VarDecl';
+  form: 'alias';
+  name: string;
+  initializer: VarDeclAliasInitializerNode;
 }
 
 export type VarDeclInitializerNode =
-  | { kind: 'VarInitValue'; span: SourceSpan; expr: ImmExprNode }
-  | { kind: 'VarInitAlias'; span: SourceSpan; expr: EaExprNode };
+  | VarDeclValueInitializerNode
+  | VarDeclAliasInitializerNode;
+
+export type VarDeclValueInitializerNode = { kind: 'VarInitValue'; span: SourceSpan; expr: ImmExprNode };
+export type VarDeclAliasInitializerNode = { kind: 'VarInitAlias'; span: SourceSpan; expr: EaExprNode };
 
 /**
  * Data storage block (`data`) with initializers.
@@ -287,7 +300,7 @@ export interface FuncDeclNode extends BaseNode {
   exported: boolean;
   params: ParamNode[];
   returnRegs: string[];
-  locals?: VarBlockNode;
+  locals: VarBlockNode;
   asm: AsmBlockNode;
 }
 

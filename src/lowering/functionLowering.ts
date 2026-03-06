@@ -249,7 +249,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   stackSlotTypes.clear();
   localAliasTargets.clear();
 
-  const localDecls = item.locals?.decls ?? [];
+  const localDecls = item.locals.decls;
   const returnRegs = item.returnRegs.map((r: string) => r.toUpperCase());
   const basePreserveOrder: string[] = ['AF', 'BC', 'DE', 'HL'];
   let preserveSet = basePreserveOrder.filter((r) => !returnRegs.includes(r));
@@ -266,7 +266,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   for (let li = 0; li < localDecls.length; li++) {
     const decl = localDecls[li]!;
     const declLower = decl.name.toLowerCase();
-    if (decl.typeExpr) {
+    if (decl.form === 'typed') {
       const scalarKind = resolveScalarKind(decl.typeExpr);
       if (!scalarKind) {
         diagAt(
@@ -282,14 +282,6 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       stackSlotTypes.set(declLower, decl.typeExpr);
       localSlotCount++;
       const init = decl.initializer;
-      if (init && init.kind !== 'VarInitValue') {
-        diagAt(
-          diagnostics,
-          decl.span,
-          `Unsupported typed alias form for "${decl.name}": use "${decl.name} = rhs" for alias initialization.`,
-        );
-        continue;
-      }
       localScalarInitializers.push({
         name: decl.name,
         ...(init ? { expr: init.expr } : {}),
@@ -299,14 +291,6 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       continue;
     }
     const init = decl.initializer;
-    if (init?.kind !== 'VarInitAlias') {
-      diagAt(
-        diagnostics,
-        decl.span,
-        `Invalid local declaration "${decl.name}": expected typed storage or alias initializer.`,
-      );
-      continue;
-    }
     localAliasTargets.set(declLower, init.expr);
     const inferred = resolveEaTypeExpr(init.expr);
     if (!inferred) {
