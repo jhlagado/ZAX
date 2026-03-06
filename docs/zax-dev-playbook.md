@@ -128,6 +128,12 @@ Preferred extraction order for oversized modules:
 
 ## Testing Expectations
 
+Canonical command reference:
+
+- `docs/testing-verification-guide.md`
+
+This playbook keeps workflow principles only. Keep concrete command lists and CI testing-path details in the testing guide.
+
 Use targeted tests to support refactors.
 
 Preferred order:
