@@ -14,7 +14,7 @@ describe('#510 op expansion execution helpers', () => {
   it('keeps label mapping and lowering handoff stable', () => {
     const diagnostics: Diagnostic[] = [];
     let hiddenCounter = 0;
-    let loweredItems: AsmItemNode[] = [];
+    let loweredItems: readonly AsmItemNode[] = [];
 
     const opDecl: OpDeclNode = {
       kind: 'OpDecl',
