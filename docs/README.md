@@ -19,6 +19,7 @@ This directory is intentionally constrained. Every file below has a unique purpo
 ## 3. Core Supporting References (Non-normative)
 
 - `zax-dev-playbook.md` — contributor workflow only (branching, review, refactor, merge hygiene); no roadmap history or semantic policy.
+- `testing-verification-guide.md` — canonical contributor testing, verification, fixture refresh, and CI expectations reference.
 - `v02-codegen-reference.md` — single-stop v0.2 codegen reference (what to read, invariants).
 - `v02-codegen-worked-examples.md` — worked `.zax` → `.asm` examples for frame/call behavior.
 - `v04-planning-track.md` — v0.4 code-quality planning record.
@@ -39,6 +40,7 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `v02-codegen-worked-examples.md`: executable worked examples and expected lowering shapes only.
 - `return-register-policy.md`: preservation matrix and HL-preserve swap guidance.
 - `zax-dev-playbook.md`: contributor workflow only; must not duplicate planning history, semantic policy, or version-status tracking.
+- `testing-verification-guide.md`: single source for contributor verification commands, fixture refresh flow, and CI testing expectations.
 - `source-overview.md`: non-normative architecture map of the current code layout and subsystem boundaries.
 - `modules.md`: non-normative but authoritative v0.5 design direction for the planned section/module model.
 - `v05-planning-track.md`: active staged implementation plan responding to `modules.md`.
