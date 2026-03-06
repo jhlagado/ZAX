@@ -1,16 +1,24 @@
-import { DiagnosticIds, type Diagnostic } from '../diagnostics/types.js';
+import { DiagnosticIds } from '../diagnostics/types.js';
 import type {
   AsmInstructionNode,
-  AsmItemNode,
   AsmOperandNode,
-  EaExprNode,
-  ImmExprNode,
-  OpDeclNode,
   SourceSpan,
 } from '../frontend/ast.js';
-import type { CompileEnv } from '../semantics/env.js';
-import type { OpOverloadSelection } from './opMatching.js';
-import type { OpStackSummary } from './opStackAnalysis.js';
+import type {
+  AsmRangeLoweringCapability,
+  AstCloneCapability,
+  CompileEnvCapability,
+  DottedEaNameCapability,
+  FixedTokenNormalizationCapability,
+  FlowSyncCapability,
+  HiddenLabelCapability,
+  InverseConditionCapability,
+  LoweringDiagnosticsWithSeverityCapability,
+  OpCandidateResolverCapability,
+  OpOperandFormattingCapability,
+  OpOverloadSelectionCapability,
+  OpStackSummaryCapability,
+} from './capabilities.js';
 import { createOpExpansionExecutionHelpers } from './opExpansionExecution.js';
 import { createOpSubstitutionHelpers } from './opSubstitution.js';
 
@@ -21,41 +29,22 @@ type OpExpansionStackEntry = {
   callSiteSpan: SourceSpan;
 };
 
-type CloneHelper<T> = (value: T) => T;
-
-type Context = {
-  resolveOpCandidates: (name: string, file: string) => OpDeclNode[] | undefined;
-  diagnostics: Diagnostic[];
-  env: CompileEnv;
+type Context = LoweringDiagnosticsWithSeverityCapability &
+  CompileEnvCapability &
+  OpCandidateResolverCapability &
+  OpOperandFormattingCapability &
+  OpOverloadSelectionCapability &
+  OpStackSummaryCapability &
+  AstCloneCapability &
+  DottedEaNameCapability &
+  FixedTokenNormalizationCapability &
+  InverseConditionCapability &
+  HiddenLabelCapability &
+  AsmRangeLoweringCapability &
+  FlowSyncCapability & {
   hasStackSlots: boolean;
   opStackPolicyMode: 'off' | 'warn' | 'error';
   opExpansionStack: OpExpansionStackEntry[];
-  diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
-  diagAtWithId: (
-    diagnostics: Diagnostic[],
-    span: SourceSpan,
-    id: (typeof DiagnosticIds)[keyof typeof DiagnosticIds],
-    message: string,
-  ) => void;
-  diagAtWithSeverityAndId: (
-    diagnostics: Diagnostic[],
-    span: SourceSpan,
-    id: (typeof DiagnosticIds)[keyof typeof DiagnosticIds],
-    severity: 'warning' | 'error',
-    message: string,
-  ) => void;
-  formatAsmOperandForOpDiag: (operand: AsmOperandNode) => string;
-  selectOpOverload: (overloads: OpDeclNode[], operands: AsmOperandNode[]) => OpOverloadSelection;
-  summarizeOpStackEffect: (opDecl: OpDeclNode) => OpStackSummary;
-  cloneImmExpr: CloneHelper<ImmExprNode>;
-  cloneEaExpr: CloneHelper<EaExprNode>;
-  cloneOperand: CloneHelper<AsmOperandNode>;
-  flattenEaDottedName: (ea: EaExprNode) => string | undefined;
-  normalizeFixedToken: (operand: AsmOperandNode) => string | undefined;
-  inverseConditionName: (name: string) => string | undefined;
-  newHiddenLabel: (prefix: string) => string;
-  lowerAsmRange: (items: readonly AsmItemNode[], startIndex: number, stopKinds: Set<string>) => number;
-  syncToFlow: () => void;
 };
 
 export function createOpExpansionOrchestrationHelpers(ctx: Context) {
