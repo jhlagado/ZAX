@@ -14,6 +14,12 @@ type Context = {
 type MatcherSpecificity = 'x_more_specific' | 'y_more_specific' | 'equal';
 type OverloadSpecificity = 'x_wins' | 'y_wins' | 'equal' | 'incomparable';
 
+export type OpOverloadSelection =
+  | { kind: 'arity_mismatch'; overloads: OpDeclNode[]; signatures: string[] }
+  | { kind: 'no_match'; overloads: OpDeclNode[]; mismatchDetails: string[] }
+  | { kind: 'ambiguous'; overloads: OpDeclNode[]; definitions: string[] }
+  | { kind: 'selected'; overload: OpDeclNode };
+
 const fitsImm8 = (value: number): boolean => value >= -0x80 && value <= 0xff;
 const fitsImm16 = (value: number): boolean => value >= -0x8000 && value <= 0xffff;
 
@@ -366,9 +372,55 @@ export function createOpMatchingHelpers(ctx: Context) {
     return undefined;
   };
 
+  const selectOpOverload = (
+    overloads: OpDeclNode[],
+    operands: AsmOperandNode[],
+  ): OpOverloadSelection => {
+    const arityMatches = overloads.filter((candidate) => candidate.params.length === operands.length);
+    if (arityMatches.length === 0) {
+      return {
+        kind: 'arity_mismatch',
+        overloads,
+        signatures: overloads.map((candidate) => formatOpSignature(candidate)),
+      };
+    }
+
+    const matches = arityMatches.filter((candidate) => {
+      if (candidate.params.length !== operands.length) return false;
+      for (let idx = 0; idx < candidate.params.length; idx++) {
+        const param = candidate.params[idx]!;
+        const arg = operands[idx]!;
+        if (!matcherMatchesOperand(param.matcher, arg)) return false;
+      }
+      return true;
+    });
+    if (matches.length === 0) {
+      return {
+        kind: 'no_match',
+        overloads: arityMatches,
+        mismatchDetails: arityMatches.map((candidate) => {
+          const reason = firstOpOverloadMismatchReason(candidate, operands);
+          return `${formatOpDefinitionForDiag(candidate)}${reason ? ` ; ${reason}` : ''}`;
+        }),
+      };
+    }
+
+    const selected = selectMostSpecificOpOverload(matches, operands);
+    if (!selected) {
+      return {
+        kind: 'ambiguous',
+        overloads: matches,
+        definitions: matches.map((candidate) => formatOpDefinitionForDiag(candidate)),
+      };
+    }
+
+    return { kind: 'selected', overload: selected };
+  };
+
   return {
     matcherMatchesOperand,
     selectMostSpecificOpOverload,
+    selectOpOverload,
     formatAsmOperandForOpDiag,
     formatOpSignature,
     formatOpDefinitionForDiag,

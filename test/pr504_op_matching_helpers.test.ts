@@ -43,7 +43,39 @@ describe('#504 op matching helpers', () => {
 
     expect(helpers.matcherMatchesOperand(fixed.params[0]!.matcher, reg('A'))).toBe(true);
     expect(helpers.selectMostSpecificOpOverload([general, fixed], [reg('A')])).toBe(fixed);
+    expect(helpers.selectOpOverload([general, fixed], [reg('A')])).toEqual({
+      kind: 'selected',
+      overload: fixed,
+    });
     expect(helpers.formatOpSignature(fixed)).toBe('my_op(arg: A)');
     expect(helpers.firstOpOverloadMismatchReason(fixed, [reg('B')])).toBe('arg: expects A, got B');
+  });
+
+  it('reports mismatch details through the shared overload selection result', () => {
+    const helpers = createOpMatchingHelpers({
+      reg8: new Set(['A', 'B', 'C', 'D', 'E', 'H', 'L']),
+      isIxIyIndexedMem: () => false,
+      flattenEaDottedName: () => undefined,
+      isEnumName: () => false,
+      normalizeFixedToken: (operand) => (operand.kind === 'Reg' ? operand.name.toUpperCase() : undefined),
+      conditionOpcodeFromName: () => undefined,
+      evalImmNoDiag: () => undefined,
+      inferMemWidth: () => undefined,
+    });
+
+    const fixed = {
+      kind: 'OpDecl',
+      span,
+      name: 'my_op',
+      params: [{ name: 'arg', matcher: { kind: 'MatcherFixed', span, token: 'A' } }],
+      body: { kind: 'AsmBlock', span, items: [] },
+      stackPolicy: 'default',
+    } as unknown as OpDeclNode;
+
+    expect(helpers.selectOpOverload([fixed], [reg('B')])).toEqual({
+      kind: 'no_match',
+      overloads: [fixed],
+      mismatchDetails: ['my_op(arg: A) (test.zax:1) ; arg: expects A, got B'],
+    });
   });
 });

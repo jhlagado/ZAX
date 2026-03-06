@@ -9,7 +9,6 @@ import type {
   FuncDeclNode,
   ImmExprNode,
   OpDeclNode,
-  OpMatcherNode,
   ParamNode,
   SourceSpan,
   TypeExprNode,
@@ -21,6 +20,7 @@ import type {
   PendingSymbol,
   SourceSegmentTag,
 } from './loweringTypes.js';
+import type { OpOverloadSelection } from './opMatching.js';
 import type { OpStackSummary } from './opStackAnalysis.js';
 import type { ScalarKind } from './typeResolution.js';
 import { createAsmInstructionLoweringHelpers } from './asmInstructionLowering.js';
@@ -164,18 +164,8 @@ export type FunctionLoweringCallableResolutionContext = {
 };
 
 export type FunctionLoweringOpOverloadContext = {
-  matcherMatchesOperand: (matcher: OpMatcherNode, operand: AsmOperandNode) => boolean;
-  formatOpSignature: (op: OpDeclNode) => string;
   formatAsmOperandForOpDiag: (operand: AsmOperandNode) => string;
-  firstOpOverloadMismatchReason: (
-    op: OpDeclNode,
-    args: AsmOperandNode[],
-  ) => string | undefined;
-  formatOpDefinitionForDiag: (op: OpDeclNode) => string;
-  selectMostSpecificOpOverload: (
-    candidates: OpDeclNode[],
-    args: AsmOperandNode[],
-  ) => OpDeclNode | undefined;
+  selectOpOverload: (overloads: OpDeclNode[], operands: AsmOperandNode[]) => OpOverloadSelection;
   summarizeOpStackEffect: (op: OpDeclNode) => OpStackSummary;
 };
 
@@ -233,9 +223,8 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const { pushEaAddress, pushMemValue, pushImm16, pushZeroExtendedReg8, loadImm16ToHL } = ctx;
   const { stackSlotOffsets, stackSlotTypes, localAliasTargets, storageTypes } = ctx;
   const { rawTypedCallWarningsEnabled, resolveCallable, resolveOpCandidates, opStackPolicyMode } = ctx;
-  const { matcherMatchesOperand, formatOpSignature, formatAsmOperandForOpDiag } = ctx;
-  const { firstOpOverloadMismatchReason, formatOpDefinitionForDiag, selectMostSpecificOpOverload } = ctx;
-  const { summarizeOpStackEffect, cloneImmExpr, cloneEaExpr, cloneOperand } = ctx;
+  const { formatAsmOperandForOpDiag, selectOpOverload, summarizeOpStackEffect } = ctx;
+  const { cloneImmExpr, cloneEaExpr, cloneOperand } = ctx;
   const { flattenEaDottedName, normalizeFixedToken, reg8, reg16, generatedLabelCounterRef } = ctx;
   const { typeDisplay, sameTypeShape, emitStepPipeline, lowerLdWithEa } = ctx;
   let currentCodeSegmentTag = currentCodeSegmentTagRef.current;
@@ -723,12 +712,8 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     opStackPolicyMode,
     opExpansionStack,
     diagAtWithId,
-    matcherMatchesOperand,
-    formatOpSignature,
     formatAsmOperandForOpDiag: (operand) => formatAsmOperandForOpDiag(operand) ?? '?',
-    firstOpOverloadMismatchReason,
-    formatOpDefinitionForDiag,
-    selectMostSpecificOpOverload,
+    selectOpOverload,
     summarizeOpStackEffect,
     cloneImmExpr,
     cloneEaExpr,
