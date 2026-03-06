@@ -1,4 +1,3 @@
-import type { Diagnostic } from '../diagnostics/types.js';
 import type {
   AsmOperandNode,
   EaExprNode,
@@ -7,19 +6,22 @@ import type {
   OffsetofPathStepNode,
   SourceSpan,
 } from '../frontend/ast.js';
-import type { CompileEnv } from '../semantics/env.js';
+import type {
+  AstCloneCapability,
+  CompileEnvCapability,
+  DottedEaNameCapability,
+  FixedTokenNormalizationCapability,
+  InverseConditionCapability,
+  LoweringDiagnosticsCapability,
+} from './capabilities.js';
 
-type OpSubstitutionContext = {
+type OpSubstitutionContext = LoweringDiagnosticsCapability &
+  CompileEnvCapability &
+  AstCloneCapability &
+  DottedEaNameCapability &
+  FixedTokenNormalizationCapability &
+  InverseConditionCapability & {
   bindings: Map<string, AsmOperandNode>;
-  env: CompileEnv;
-  diagnostics: Diagnostic[];
-  diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
-  cloneImmExpr: (expr: ImmExprNode) => ImmExprNode;
-  cloneEaExpr: (ea: EaExprNode) => EaExprNode;
-  cloneOperand: (operand: AsmOperandNode) => AsmOperandNode;
-  flattenEaDottedName: (ea: EaExprNode) => string | undefined;
-  normalizeFixedToken: (operand: AsmOperandNode) => string | undefined;
-  inverseConditionName: (name: string) => string | undefined;
 };
 
 export function createOpSubstitutionHelpers(ctx: OpSubstitutionContext) {
