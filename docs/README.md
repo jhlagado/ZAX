@@ -32,6 +32,7 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `github-backlog-workflow.md` — GitHub issue/label/milestone workflow used as the project backlog system.
 - `source-overview.md` — version-neutral source tree and subsystem map for reading the implementation.
 - `modules.md` — active v0.5 design anchor for sections, anchors, imports, exports, and merge semantics.
+- `architecture-audit-v2.md` — March 2026 structural audit: 22 issues across parser, AST, semantics, lowering, and module layers with a prioritised refactoring sequence.
 
 ## Content Ownership
 
