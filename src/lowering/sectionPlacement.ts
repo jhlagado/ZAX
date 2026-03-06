@@ -4,6 +4,8 @@ import type { CompileEnv } from '../semantics/env.js';
 import type { ImmExprNode, SourceSpan } from '../frontend/ast.js';
 import { diagAt } from './loweringDiagnostics.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
+import type { NonBankedSectionKeyId } from '../sectionKeys.js';
+import { formatNonBankedSectionKey } from '../sectionKeys.js';
 
 export type PlacedNamedSectionContribution = {
   sink: NamedSectionContributionSink;
@@ -11,7 +13,7 @@ export type PlacedNamedSectionContribution = {
 };
 
 export type PlacedNamedSectionRegion = {
-  keyId: string;
+  keyId: NonBankedSectionKeyId;
   section: 'code' | 'data';
   name: string;
   baseAddress: number;
@@ -52,10 +54,6 @@ function startOf(sink: NamedSectionContributionSink): {
   };
 }
 
-function formatKey(sink: NamedSectionContributionSink): string {
-  return `${sink.anchor.key.section} ${sink.anchor.key.name}`;
-}
-
 function evaluateAnchorBase(ctx: Context, sink: NamedSectionContributionSink): number | undefined {
   const anchor = sink.anchor.node.anchor;
   if (!anchor) return undefined;
@@ -65,7 +63,7 @@ function evaluateAnchorBase(ctx: Context, sink: NamedSectionContributionSink): n
     diagAt(
       ctx.diagnostics,
       pointSpan(where.file, where.line, where.column, where.offset),
-      `Failed to evaluate anchor base for section "${formatKey(sink)}".`,
+      `Failed to evaluate anchor base for section "${formatNonBankedSectionKey(sink.anchor.key)}".`,
     );
     return undefined;
   }
@@ -74,7 +72,7 @@ function evaluateAnchorBase(ctx: Context, sink: NamedSectionContributionSink): n
     diagAt(
       ctx.diagnostics,
       pointSpan(where.file, where.line, where.column, where.offset),
-      `Anchor base out of range for section "${formatKey(sink)}": ${at}.`,
+      `Anchor base out of range for section "${formatNonBankedSectionKey(sink.anchor.key)}": ${at}.`,
     );
     return undefined;
   }
@@ -98,7 +96,7 @@ function evaluateCapacity(
         diagAt(
           ctx.diagnostics,
           pointSpan(where.file, where.line, where.column, where.offset),
-          `Failed to evaluate anchor size for section "${formatKey(sink)}".`,
+          `Failed to evaluate anchor size for section "${formatNonBankedSectionKey(sink.anchor.key)}".`,
         );
         return undefined;
       }
@@ -107,7 +105,7 @@ function evaluateCapacity(
         diagAt(
           ctx.diagnostics,
           pointSpan(where.file, where.line, where.column, where.offset),
-          `Anchor size must be non-negative for section "${formatKey(sink)}".`,
+          `Anchor size must be non-negative for section "${formatNonBankedSectionKey(sink.anchor.key)}".`,
         );
         return undefined;
       }
@@ -120,7 +118,7 @@ function evaluateCapacity(
         diagAt(
           ctx.diagnostics,
           pointSpan(where.file, where.line, where.column, where.offset),
-          `Failed to evaluate anchor end for section "${formatKey(sink)}".`,
+          `Failed to evaluate anchor end for section "${formatNonBankedSectionKey(sink.anchor.key)}".`,
         );
         return undefined;
       }
@@ -129,7 +127,9 @@ function evaluateCapacity(
         diagAt(
           ctx.diagnostics,
           pointSpan(where.file, where.line, where.column, where.offset),
-          `Anchor end must be greater than or equal to the base for section "${formatKey(sink)}".`,
+          `Anchor end must be greater than or equal to the base for section "${formatNonBankedSectionKey(
+            sink.anchor.key,
+          )}".`,
         );
         return undefined;
       }
@@ -138,7 +138,7 @@ function evaluateCapacity(
         diagAt(
           ctx.diagnostics,
           pointSpan(where.file, where.line, where.column, where.offset),
-          `Anchor end out of range for section "${formatKey(sink)}": ${end}.`,
+          `Anchor end out of range for section "${formatNonBankedSectionKey(sink.anchor.key)}": ${end}.`,
         );
         return undefined;
       }
@@ -153,7 +153,7 @@ export function placeNonBankedSectionContributions(
 ): { placedRegions: PlacedNamedSectionRegion[]; placedContributions: PlacedNamedSectionContribution[] } {
   const placedRegions: PlacedNamedSectionRegion[] = [];
   const placedContributions: PlacedNamedSectionContribution[] = [];
-  const regionsByKey = new Map<string, PlacedNamedSectionRegion>();
+  const regionsByKey = new Map<NonBankedSectionKeyId, PlacedNamedSectionRegion>();
 
   for (const sink of sinks) {
     let region = regionsByKey.get(sink.anchor.keyId);
@@ -243,7 +243,9 @@ export function collectPlacedNamedSectionSymbols(
         diagAt(
           diagnostics,
           pointSpan(where.file, where.line, where.column, where.offset),
-          `Named section symbol "${pending.name}" resolves out of range in section "${formatKey(placed.sink)}".`,
+          `Named section symbol "${pending.name}" resolves out of range in section "${formatNonBankedSectionKey(
+            placed.sink.anchor.key,
+          )}".`,
         );
         continue;
       }
