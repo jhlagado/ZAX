@@ -8,6 +8,8 @@ import type {
 } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import { evalImmExpr } from '../semantics/env.js';
+import type { EncoderFamily } from './encoderRegistry.js';
+import { getEncoderRegistryEntry } from './encoderRegistry.js';
 import { encodeAluInstruction } from './encodeAlu.js';
 import { encodeBitOpsInstruction } from './encodeBitOps.js';
 import { encodeControlInstruction } from './encodeControl.js';
@@ -348,176 +350,83 @@ function retConditionOpcode(name: string): number | undefined {
   }
 }
 
-function zeroOperandEdOpcode(head: string): number | undefined {
-  switch (head) {
-    case 'reti':
-      return 0x4d;
-    case 'retn':
-      return 0x45;
-    case 'neg':
-      return 0x44;
-    case 'rrd':
-      return 0x67;
-    case 'rld':
-      return 0x6f;
-    case 'ldi':
-      return 0xa0;
-    case 'ldir':
-      return 0xb0;
-    case 'ldd':
-      return 0xa8;
-    case 'lddr':
-      return 0xb8;
-    case 'cpi':
-      return 0xa1;
-    case 'cpir':
-      return 0xb1;
-    case 'cpd':
-      return 0xa9;
-    case 'cpdr':
-      return 0xb9;
-    case 'ini':
-      return 0xa2;
-    case 'inir':
-      return 0xb2;
-    case 'ind':
-      return 0xaa;
-    case 'indr':
-      return 0xba;
-    case 'outi':
-      return 0xa3;
-    case 'otir':
-      return 0xb3;
-    case 'outd':
-      return 0xab;
-    case 'otdr':
-      return 0xbb;
-    default:
-      return undefined;
-  }
-}
-
-function zeroOperandOpcode(head: string): Uint8Array | undefined {
-  switch (head) {
-    case 'nop':
-      return Uint8Array.of(0x00);
-    case 'halt':
-      return Uint8Array.of(0x76);
-    case 'di':
-      return Uint8Array.of(0xf3);
-    case 'ei':
-      return Uint8Array.of(0xfb);
-    case 'scf':
-      return Uint8Array.of(0x37);
-    case 'ccf':
-      return Uint8Array.of(0x3f);
-    case 'cpl':
-      return Uint8Array.of(0x2f);
-    case 'daa':
-      return Uint8Array.of(0x27);
-    case 'rlca':
-      return Uint8Array.of(0x07);
-    case 'rrca':
-      return Uint8Array.of(0x0f);
-    case 'rla':
-      return Uint8Array.of(0x17);
-    case 'rra':
-      return Uint8Array.of(0x1f);
-    case 'exx':
-      return Uint8Array.of(0xd9);
-    default: {
-      const edOpcode = zeroOperandEdOpcode(head);
-      return edOpcode === undefined ? undefined : Uint8Array.of(0xed, edOpcode);
-    }
-  }
-}
-
-function arityDiagnostic(head: string, operandCount: number): string | undefined {
-  switch (head) {
-    case 'add':
+function encodeFamilyInstruction(
+  family: EncoderFamily,
+  node: AsmInstructionNode,
+  env: CompileEnv,
+  diagnostics: Diagnostic[],
+): Uint8Array | undefined {
+  switch (family) {
+    case 'control':
+      return encodeControlInstruction(node, env, diagnostics, {
+        diag,
+        immValue,
+        registerTokenName,
+        conditionName,
+        symbolicImmBaseName,
+        fitsImm16,
+        isMemRegName,
+        retConditionOpcode,
+        callConditionOpcode,
+        jpConditionOpcode,
+        jrConditionOpcode,
+      });
+    case 'alu':
+      return encodeAluInstruction(node, env, diagnostics, {
+        diag,
+        regName,
+        immValue,
+        indexedReg8,
+        reg8Code,
+        fitsImm8,
+        isMemHL,
+        memIndexed,
+      });
+    case 'io':
+      return encodeIoInstruction(node, env, diagnostics, {
+        diag,
+        regName,
+        immValue,
+        portImmValue,
+        indexedReg8,
+        reg8Code,
+        fitsImm8,
+      });
     case 'ld':
-    case 'ex':
-      if (operandCount === 2) return undefined;
-      return `${head} expects two operands`;
-    case 'sub':
-    case 'cp':
-    case 'and':
-    case 'or':
-    case 'xor':
-      if (operandCount === 1 || operandCount === 2) return undefined;
-      return `${head} expects one operand, or two with destination A`;
-    case 'adc':
-    case 'sbc':
-      if (operandCount === 1 || operandCount === 2) return undefined;
-      return `${head} expects one operand, two with destination A, or HL,rr form`;
-    case 'inc':
-    case 'dec':
-    case 'push':
-    case 'pop':
-      if (operandCount === 1) return undefined;
-      return `${head} expects one operand`;
+      return encodeLdInstruction(node, env, diagnostics, {
+        diag,
+        regName,
+        immValue,
+        indexedReg8,
+        reg8Code,
+        fitsImm8,
+        fitsImm16,
+        memAbs16,
+        memIndexed,
+        isMemHL,
+        isMemRegName,
+        isReg16TransferName,
+        isLegacyHLReg8,
+      });
+    case 'core':
+      return encodeCoreOpsInstruction(node, env, diagnostics, {
+        diag,
+        regName,
+        indexedReg8,
+        reg8Code,
+        isMemHL,
+        memIndexed,
+      });
     case 'bit':
-      if (operandCount === 2) return undefined;
-      return `${head} expects two operands`;
-    case 'res':
-    case 'set':
-      if (operandCount === 2 || operandCount === 3) return undefined;
-      return `${head} expects two operands, or three with indexed source + reg8 destination`;
-    case 'rl':
-    case 'rr':
-    case 'sla':
-    case 'sra':
-    case 'srl':
-    case 'sll':
-    case 'rlc':
-    case 'rrc':
-      if (operandCount === 1 || operandCount === 2) return undefined;
-      return `${head} expects one operand, or two with indexed source + reg8 destination`;
-    default:
-      return undefined;
-  }
-}
-
-function isKnownInstructionHead(head: string): boolean {
-  const h = head.toLowerCase();
-  switch (h) {
-    case 'ret':
-    case 'add':
-    case 'call':
-    case 'djnz':
-    case 'rst':
-    case 'im':
-    case 'in':
-    case 'out':
-    case 'jp':
-    case 'jr':
-    case 'ld':
-    case 'inc':
-    case 'dec':
-    case 'push':
-    case 'pop':
-    case 'ex':
-    case 'sub':
-    case 'cp':
-    case 'and':
-    case 'or':
-    case 'xor':
-    case 'adc':
-    case 'sbc':
-    case 'bit':
-    case 'res':
-    case 'set':
-    case 'rl':
-    case 'rr':
-    case 'sla':
-    case 'sra':
-    case 'srl':
-    case 'sll':
-    case 'rlc':
-    case 'rrc':
-      return true;
-    default:
-      return zeroOperandOpcode(h) !== undefined;
+      return encodeBitOpsInstruction(node, env, diagnostics, {
+        diag,
+        regName,
+        immValue,
+        indexedReg8,
+        reg8Code,
+        isMemHL,
+        memIndexed,
+      });
   }
 }
 
@@ -534,151 +443,31 @@ export function encodeInstruction(
 ): Uint8Array | undefined {
   const diagnosticsBefore = diagnostics.length;
   const head = node.head.toLowerCase();
-  const ops = node.operands;
-
-  if (head === 'ret' || head === 'call' || head === 'djnz' || head === 'jp' || head === 'jr') {
-    return encodeControlInstruction(node, env, diagnostics, {
-      diag,
-      immValue,
-      registerTokenName,
-      conditionName,
-      symbolicImmBaseName,
-      fitsImm16,
-      isMemRegName,
-      retConditionOpcode,
-      callConditionOpcode,
-      jpConditionOpcode,
-      jrConditionOpcode,
-    });
+  const entry = getEncoderRegistryEntry(head);
+  if (!entry) {
+    diag(diagnostics, node, `Unsupported instruction: ${node.head}`);
+    return undefined;
   }
-  const zeroOpcode = zeroOperandOpcode(head);
-  if (zeroOpcode) {
-    if (ops.length === 0) return zeroOpcode;
+
+  if (entry.kind === 'zero') {
+    if (node.operands.length === 0) return entry.bytes;
     diag(diagnostics, node, `${head} expects no operands`);
     return undefined;
   }
 
-  if (
-    head === 'add' ||
-    head === 'sub' ||
-    head === 'cp' ||
-    head === 'and' ||
-    head === 'or' ||
-    head === 'xor' ||
-    head === 'adc' ||
-    head === 'sbc'
-  ) {
-    const encoded = encodeAluInstruction(node, env, diagnostics, {
-      diag,
-      regName,
-      immValue,
-      indexedReg8,
-      reg8Code,
-      fitsImm8,
-      isMemHL,
-      memIndexed,
-    });
-    if (encoded) return encoded;
-  }
+  const encoded = encodeFamilyInstruction(entry.family, node, env, diagnostics);
+  if (encoded) return encoded;
 
-  if (head === 'rst' || head === 'im' || head === 'in' || head === 'out') {
-    const encoded = encodeIoInstruction(node, env, diagnostics, {
-      diag,
-      regName,
-      immValue,
-      portImmValue,
-      indexedReg8,
-      reg8Code,
-      fitsImm8,
-    });
-    if (encoded) return encoded;
-  }
+  if (entry.fallback === 'none') return undefined;
+  if (diagnostics.length > diagnosticsBefore) return undefined;
 
-  if (head === 'ld') {
-    return encodeLdInstruction(node, env, diagnostics, {
-      diag,
-      regName,
-      immValue,
-      indexedReg8,
-      reg8Code,
-      fitsImm8,
-      fitsImm16,
-      memAbs16,
-      memIndexed,
-      isMemHL,
-      isMemRegName,
-      isReg16TransferName,
-      isLegacyHLReg8,
-    });
-  }
-
-  if (head === 'inc' || head === 'dec' || head === 'push' || head === 'pop' || head === 'ex') {
-    const encoded = encodeCoreOpsInstruction(node, env, diagnostics, {
-      diag,
-      regName,
-      indexedReg8,
-      reg8Code,
-      isMemHL,
-      memIndexed,
-    });
-    if (encoded) return encoded;
-  }
-
-  if (
-    head === 'bit' ||
-    head === 'res' ||
-    head === 'set' ||
-    head === 'rl' ||
-    head === 'rr' ||
-    head === 'sla' ||
-    head === 'sra' ||
-    head === 'srl' ||
-    head === 'sll' ||
-    head === 'rlc' ||
-    head === 'rrc'
-  ) {
-    const encoded = encodeBitOpsInstruction(node, env, diagnostics, {
-      diag,
-      regName,
-      immValue,
-      indexedReg8,
-      reg8Code,
-      isMemHL,
-      memIndexed,
-    });
-    if (encoded) return encoded;
-    if (
-      (head === 'bit' && ops.length === 2) ||
-      ((head === 'res' || head === 'set') && (ops.length === 2 || ops.length === 3)) ||
-      ((head === 'rl' ||
-        head === 'rr' ||
-        head === 'sla' ||
-        head === 'sra' ||
-        head === 'srl' ||
-        head === 'sll' ||
-        head === 'rlc' ||
-        head === 'rrc') &&
-        (ops.length === 1 || ops.length === 2))
-    ) {
-      return undefined;
-    }
-  }
-
-  if (isKnownInstructionHead(head) && diagnostics.length > diagnosticsBefore) {
-    return undefined;
-  }
-
-  const arityMessage = arityDiagnostic(head, ops.length);
+  const arityMessage = entry.arityDiagnostic(head, node.operands.length);
+  if (entry.fallback === 'arity-short-circuit' && arityMessage === undefined) return undefined;
   if (arityMessage !== undefined) {
     diag(diagnostics, node, arityMessage);
     return undefined;
   }
 
-  if (isKnownInstructionHead(head)) {
-    diag(diagnostics, node, `${head} has unsupported operand form`);
-    return undefined;
-  }
-
-  diag(diagnostics, node, `Unsupported instruction: ${node.head}`);
+  diag(diagnostics, node, `${head} has unsupported operand form`);
   return undefined;
 }
