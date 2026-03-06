@@ -87,7 +87,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       SKIP_LANGUAGE_TOUR: '1'
-    timeout-minutes: 10
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -118,12 +118,15 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Test
-        id: coverage_tests
-        run: npm run test:coverage
+      - name: Test (coverage core)
+        id: coverage_core_tests
+        run: npm run test:ci:coverage-core
+
+      - name: Test (slow reliability partition)
+        run: npm run test:ci:slow-reliability
 
       - name: Upload coverage artifact
-        if: always() && steps.coverage_tests.outcome != 'skipped' && hashFiles('coverage/**') != ''
+        if: always() && steps.coverage_core_tests.outcome != 'skipped' && hashFiles('coverage/**') != ''
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ matrix.os }}
