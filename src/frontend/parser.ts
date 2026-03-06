@@ -212,7 +212,7 @@ export function parseModuleFile(
     sectionClosed?: boolean;
   };
 
-  function parseItemAt(index: number, ctx: ParseItemContext): ParseItemResult {
+  function parseModuleItem(index: number, ctx: ParseItemContext): ParseItemResult {
     const { raw, startOffset: lineStartOffset, endOffset: lineEndOffset } = getRawLine(index);
     const text = stripComment(raw).trim();
     const lineNo = index + 1;
@@ -593,7 +593,7 @@ export function parseModuleFile(
     let index = startIndex;
 
     while (index < lineCount) {
-      const parsed = parseItemAt(index, {
+      const parsed = parseModuleItem(index, {
         scope: 'section',
         sectionKind,
         directDeclNamesLower,
@@ -614,7 +614,7 @@ export function parseModuleFile(
 
   let i = 0;
   while (i < lineCount) {
-    const parsed = parseItemAt(i, { scope: 'module' });
+    const parsed = parseModuleItem(i, { scope: 'module' });
     if (parsed.node) items.push(parsed.node as ModuleItemNode);
     i = parsed.nextIndex;
   }
