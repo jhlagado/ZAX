@@ -10,12 +10,10 @@ import {
   type AsmControlFrame,
 } from './parseAsmStatements.js';
 import {
-  diagInvalidHeaderLine,
-  formatIdentifierToken,
-  parseReturnRegsFromText,
   topLevelStartKeyword,
 } from './parseModuleCommon.js';
 import type { ParseParamsContext } from './parseParams.js';
+import { parseCallableHeader } from './parseCallableHeader.js';
 
 function stripComment(line: string): string {
   const semi = line.indexOf(';');
@@ -66,33 +64,28 @@ export function parseTopLevelOpDecl(
     isReservedTopLevelName,
     parseOpParamsFromText,
   } = ctx;
-  const header = opTail;
-  const openParen = header.indexOf('(');
-  const closeParen = header.lastIndexOf(')');
-  if (openParen < 0 || closeParen < openParen) {
-    diagInvalidHeaderLine(diagnostics, modulePath, 'op header', stmtText, '<name>(...)', lineNo);
+  const parsedHeader = parseCallableHeader({
+    kind: 'op',
+    header: opTail,
+    stmtText,
+    stmtSpan,
+    lineNo,
+    diagnostics,
+    modulePath,
+    expectedHeader: '<name>(...)',
+    isReservedTopLevelName,
+    parseParams: (paramsText) =>
+      parseOpParamsFromText(modulePath, paramsText, stmtSpan, diagnostics, {
+        isReservedTopLevelName,
+      }),
+  });
+  if (!parsedHeader) {
     return undefined;
   }
 
-  const name = header.slice(0, openParen).trim();
-  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-    diag(
-      diagnostics,
-      modulePath,
-      `Invalid op name ${formatIdentifierToken(name)}: expected <identifier>.`,
-      { line: lineNo, column: 1 },
-    );
-    return undefined;
-  }
-  if (isReservedTopLevelName(name)) {
-    diag(diagnostics, modulePath, `Invalid op name "${name}": collides with a top-level keyword.`, {
-      line: lineNo,
-      column: 1,
-    });
-    return undefined;
-  }
-
-  const trailing = header.slice(closeParen + 1).trim();
+  const name = parsedHeader.name;
+  const params = parsedHeader.params;
+  const trailing = parsedHeader.trailing.trim();
   if (trailing.length > 0) {
     diag(diagnostics, modulePath, `Invalid op header: unexpected trailing tokens`, {
       line: lineNo,
@@ -102,11 +95,6 @@ export function parseTopLevelOpDecl(
   }
 
   const opStartOffset = stmtSpan.start.offset;
-  const paramsText = header.slice(openParen + 1, closeParen);
-  const params = parseOpParamsFromText(modulePath, paramsText, stmtSpan, diagnostics, {
-    isReservedTopLevelName,
-  });
-  if (!params) return undefined;
 
   let index = startIndex + 1;
   const bodyItems: AsmItemNode[] = [];
