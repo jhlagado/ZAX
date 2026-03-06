@@ -3,9 +3,24 @@ import { describe, expect, it } from 'vitest';
 import { DiagnosticIds } from '../src/diagnostics/types.js';
 import type { Diagnostic } from '../src/diagnostics/types.js';
 import { parseProgram } from '../src/frontend/parser.js';
-import { collectNonBankedSectionKeys } from '../src/sectionKeys.js';
+import { collectNonBankedSectionKeys, createNonBankedSectionKey } from '../src/sectionKeys.js';
 
 describe('PR573 non-banked section key collection', () => {
+  it('validates the section key constructor boundary', () => {
+    const valid = createNonBankedSectionKey('code', 'boot');
+    expect(valid).toMatchObject({
+      key: {
+        section: 'code',
+        name: 'boot',
+      },
+    });
+    expect(valid?.keyId).toBe('code\u0000boot');
+
+    expect(createNonBankedSectionKey('code', '')).toBeUndefined();
+    expect(createNonBankedSectionKey('code', 'a\u0000b')).toBeUndefined();
+    expect(createNonBankedSectionKey('rom', 'boot')).toBeUndefined();
+  });
+
   it('preserves deterministic contribution order and reports duplicate anchors', () => {
     const rootDiagnostics: Diagnostic[] = [];
     const root = parseProgram(
@@ -105,5 +120,40 @@ describe('PR573 non-banked section key collection', () => {
       column: 1,
       message: 'Anchor for section "code boot" has no contributions.',
     });
+  });
+
+  it('treats section kind as part of key identity during collection', () => {
+    const diagnostics: Diagnostic[] = [];
+    const program = parseProgram(
+      'key-kind-safety.zax',
+      [
+        'section code shared',
+        '  align $10',
+        'end',
+        'section code shared at $1000',
+        'end',
+        'section data shared',
+        '  align $10',
+        'end',
+        'section data shared at $2000',
+        'end',
+      ].join('\n'),
+      diagnostics,
+    );
+    expect(diagnostics).toEqual([]);
+
+    const collected = collectNonBankedSectionKeys(program, diagnostics);
+
+    expect(diagnostics).toEqual([]);
+    expect(collected.contributionsByKey.size).toBe(2);
+    expect(collected.anchorsByKey.size).toBe(2);
+    expect(collected.orderedContributions.map((entry) => [entry.key.section, entry.key.name])).toEqual([
+      ['code', 'shared'],
+      ['data', 'shared'],
+    ]);
+    expect(collected.orderedAnchors.map((entry) => [entry.key.section, entry.key.name])).toEqual([
+      ['code', 'shared'],
+      ['data', 'shared'],
+    ]);
   });
 });
