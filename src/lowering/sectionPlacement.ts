@@ -1,8 +1,8 @@
 import type { Diagnostic } from '../diagnostics/types.js';
-import { DiagnosticIds } from '../diagnostics/types.js';
 import type { SymbolEntry } from '../formats/types.js';
 import type { CompileEnv } from '../semantics/env.js';
-import type { ImmExprNode } from '../frontend/ast.js';
+import type { ImmExprNode, SourceSpan } from '../frontend/ast.js';
+import { diagAt } from './loweringDiagnostics.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
 
 export type PlacedNamedSectionContribution = {
@@ -26,32 +26,29 @@ type Context = {
   evalImmExpr: (expr: ImmExprNode, env: CompileEnv, diagnostics: Diagnostic[]) => number | undefined;
 };
 
-function diagAt(
-  diagnostics: Diagnostic[],
-  file: string,
-  line: number,
-  column: number,
-  message: string,
-): void {
-  diagnostics.push({
-    id: DiagnosticIds.EmitError,
-    severity: 'error',
+function pointSpan(file: string, line: number, column: number, offset: number): SourceSpan {
+  return {
     file,
-    line,
-    column,
-    message,
-  });
+    start: { line, column, offset },
+    end: { line, column, offset },
+  };
 }
 
 function toHexWord(value: number): string {
   return `$${(value & 0xffff).toString(16).toUpperCase().padStart(4, '0')}`;
 }
 
-function startOf(sink: NamedSectionContributionSink): { file: string; line: number; column: number } {
+function startOf(sink: NamedSectionContributionSink): {
+  file: string;
+  line: number;
+  column: number;
+  offset: number;
+} {
   return {
     file: sink.anchor.node.span.file,
     line: sink.anchor.node.span.start.line,
     column: sink.anchor.node.span.start.column,
+    offset: sink.anchor.node.span.start.offset,
   };
 }
 
@@ -67,9 +64,7 @@ function evaluateAnchorBase(ctx: Context, sink: NamedSectionContributionSink): n
     const where = startOf(sink);
     diagAt(
       ctx.diagnostics,
-      where.file,
-      where.line,
-      where.column,
+      pointSpan(where.file, where.line, where.column, where.offset),
       `Failed to evaluate anchor base for section "${formatKey(sink)}".`,
     );
     return undefined;
@@ -78,9 +73,7 @@ function evaluateAnchorBase(ctx: Context, sink: NamedSectionContributionSink): n
     const where = startOf(sink);
     diagAt(
       ctx.diagnostics,
-      where.file,
-      where.line,
-      where.column,
+      pointSpan(where.file, where.line, where.column, where.offset),
       `Anchor base out of range for section "${formatKey(sink)}": ${at}.`,
     );
     return undefined;
@@ -104,9 +97,7 @@ function evaluateCapacity(
         const where = startOf(sink);
         diagAt(
           ctx.diagnostics,
-          where.file,
-          where.line,
-          where.column,
+          pointSpan(where.file, where.line, where.column, where.offset),
           `Failed to evaluate anchor size for section "${formatKey(sink)}".`,
         );
         return undefined;
@@ -115,9 +106,7 @@ function evaluateCapacity(
         const where = startOf(sink);
         diagAt(
           ctx.diagnostics,
-          where.file,
-          where.line,
-          where.column,
+          pointSpan(where.file, where.line, where.column, where.offset),
           `Anchor size must be non-negative for section "${formatKey(sink)}".`,
         );
         return undefined;
@@ -130,9 +119,7 @@ function evaluateCapacity(
         const where = startOf(sink);
         diagAt(
           ctx.diagnostics,
-          where.file,
-          where.line,
-          where.column,
+          pointSpan(where.file, where.line, where.column, where.offset),
           `Failed to evaluate anchor end for section "${formatKey(sink)}".`,
         );
         return undefined;
@@ -141,9 +128,7 @@ function evaluateCapacity(
         const where = startOf(sink);
         diagAt(
           ctx.diagnostics,
-          where.file,
-          where.line,
-          where.column,
+          pointSpan(where.file, where.line, where.column, where.offset),
           `Anchor end must be greater than or equal to the base for section "${formatKey(sink)}".`,
         );
         return undefined;
@@ -152,9 +137,7 @@ function evaluateCapacity(
         const where = startOf(sink);
         diagAt(
           ctx.diagnostics,
-          where.file,
-          where.line,
-          where.column,
+          pointSpan(where.file, where.line, where.column, where.offset),
           `Anchor end out of range for section "${formatKey(sink)}": ${end}.`,
         );
         return undefined;
@@ -206,9 +189,7 @@ export function placeNonBankedSectionContributions(
         const where = startOf(region.contributions[0]!.sink);
         diagAt(
           ctx.diagnostics,
-          where.file,
-          where.line,
-          where.column,
+          pointSpan(where.file, where.line, where.column, where.offset),
           `Section "${region.section} ${region.name}" exceeds the 16-bit address space.`,
         );
       }
@@ -219,9 +200,7 @@ export function placeNonBankedSectionContributions(
       const where = startOf(region.contributions[0]!.sink);
       diagAt(
         ctx.diagnostics,
-        where.file,
-        where.line,
-        where.column,
+        pointSpan(where.file, where.line, where.column, where.offset),
         `Section "${region.section} ${region.name}" exceeds its anchored capacity (${region.totalSize} > ${capacity}).`,
       );
     }
@@ -237,9 +216,7 @@ export function placeNonBankedSectionContributions(
       const where = startOf(left.contributions[0]!.sink);
       diagAt(
         ctx.diagnostics,
-        where.file,
-        where.line,
-        where.column,
+        pointSpan(where.file, where.line, where.column, where.offset),
         `Anchored sections overlap: "${left.section} ${left.name}" (${toHexWord(left.baseAddress)}..${toHexWord(
           left.endAddress,
         )}) and "${right.section} ${right.name}" (${toHexWord(right.baseAddress)}..${toHexWord(
@@ -265,9 +242,7 @@ export function collectPlacedNamedSectionSymbols(
         const where = startOf(placed.sink);
         diagAt(
           diagnostics,
-          where.file,
-          where.line,
-          where.column,
+          pointSpan(where.file, where.line, where.column, where.offset),
           `Named section symbol "${pending.name}" resolves out of range in section "${formatKey(placed.sink)}".`,
         );
         continue;
@@ -309,9 +284,7 @@ export function resolvePlacedNamedSectionFixups(
         const where = startOf(sink);
         diagAt(
           diagnostics,
-          where.file,
-          where.line,
-          where.column,
+          pointSpan(where.file, where.line, where.column, where.offset),
           `Unresolved symbol "${fx.baseLower}" in named-section 16-bit fixup.`,
         );
         continue;
@@ -320,9 +293,7 @@ export function resolvePlacedNamedSectionFixups(
         const where = startOf(sink);
         diagAt(
           diagnostics,
-          where.file,
-          where.line,
-          where.column,
+          pointSpan(where.file, where.line, where.column, where.offset),
           `Named-section 16-bit fixup address out of range for "${fx.baseLower}" with addend ${fx.addend}: ${addr}.`,
         );
         continue;
@@ -339,9 +310,7 @@ export function resolvePlacedNamedSectionFixups(
         const where = startOf(sink);
         diagAt(
           diagnostics,
-          where.file,
-          where.line,
-          where.column,
+          pointSpan(where.file, where.line, where.column, where.offset),
           `Unresolved symbol "${fx.baseLower}" in named-section rel8 ${fx.mnemonic} fixup.`,
         );
         continue;
@@ -352,9 +321,7 @@ export function resolvePlacedNamedSectionFixups(
         const where = startOf(sink);
         diagAt(
           diagnostics,
-          where.file,
-          where.line,
-          where.column,
+          pointSpan(where.file, where.line, where.column, where.offset),
           `Named-section ${fx.mnemonic} target out of range for rel8 branch (${disp}, expected -128..127).`,
         );
         continue;
