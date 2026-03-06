@@ -65,6 +65,33 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
       if (elemSize !== 1) return null;
 
       switch (ea.index.kind) {
+        case 'IndexImm': {
+          const imm = ctx.evalImmExpr(ea.index.value);
+          if (imm !== undefined) {
+            return baseResolved.kind === 'abs'
+              ? EA_GLOB_CONST(baseResolved.baseLower, imm)
+              : EA_FVAR_CONST(baseResolved.ixDisp, imm);
+          }
+
+          if (ea.index.value.kind === 'ImmName') {
+            const idxScalar = ctx.resolveScalarBinding(ea.index.value.name);
+            if (idxScalar !== 'word' && idxScalar !== 'addr') return null;
+            const idxNameEa: EaExprNode = { kind: 'EaName', span, name: ea.index.value.name };
+            const idxResolved = ctx.resolveEa(idxNameEa, span);
+            if (!idxResolved) return null;
+            if (idxResolved.kind === 'abs') {
+              return baseResolved.kind === 'abs'
+                ? EA_GLOB_GLOB(baseResolved.baseLower, idxResolved.baseLower)
+                : EA_FVAR_GLOB(baseResolved.ixDisp, idxResolved.baseLower);
+            }
+            if (idxResolved.kind === 'stack') {
+              return baseResolved.kind === 'abs'
+                ? EA_GLOB_FVAR(baseResolved.baseLower, idxResolved.ixDisp)
+                : EA_FVAR_FVAR(baseResolved.ixDisp, idxResolved.ixDisp);
+            }
+          }
+          return null;
+        }
         case 'IndexReg8': {
           const regLower = ea.index.reg.toLowerCase();
           if (!ctx.reg8.has(regLower.toUpperCase())) return null;
