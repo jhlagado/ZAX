@@ -6,10 +6,10 @@ import type {
   EaExprNode,
   ImmExprNode,
   OpDeclNode,
-  OpMatcherNode,
   SourceSpan,
 } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
+import type { OpOverloadSelection } from './opMatching.js';
 import type { OpStackSummary } from './opStackAnalysis.js';
 import { createOpExpansionExecutionHelpers } from './opExpansionExecution.js';
 import { createOpSubstitutionHelpers } from './opSubstitution.js';
@@ -44,12 +44,8 @@ type Context = {
     severity: 'warning' | 'error',
     message: string,
   ) => void;
-  matcherMatchesOperand: (matcher: OpMatcherNode, operand: AsmOperandNode) => boolean;
-  formatOpSignature: (opDecl: OpDeclNode) => string;
   formatAsmOperandForOpDiag: (operand: AsmOperandNode) => string;
-  firstOpOverloadMismatchReason: (opDecl: OpDeclNode, operands: AsmOperandNode[]) => string | undefined;
-  formatOpDefinitionForDiag: (opDecl: OpDeclNode) => string;
-  selectMostSpecificOpOverload: (matches: OpDeclNode[], operands: AsmOperandNode[]) => OpDeclNode | undefined;
+  selectOpOverload: (overloads: OpDeclNode[], operands: AsmOperandNode[]) => OpOverloadSelection;
   summarizeOpStackEffect: (opDecl: OpDeclNode) => OpStackSummary;
   cloneImmExpr: CloneHelper<ImmExprNode>;
   cloneEaExpr: CloneHelper<EaExprNode>;
@@ -67,11 +63,9 @@ export function createOpExpansionOrchestrationHelpers(ctx: Context) {
     const opCandidates = ctx.resolveOpCandidates(asmItem.head, asmItem.span.file);
     if (!opCandidates || opCandidates.length === 0) return false;
 
-    const arityMatches = opCandidates.filter(
-      (candidate) => candidate.params.length === asmItem.operands.length,
-    );
-    if (arityMatches.length === 0) {
-      const available = opCandidates.map((candidate) => `  - ${ctx.formatOpSignature(candidate)}`).join('\n');
+    const selection = ctx.selectOpOverload(opCandidates, asmItem.operands);
+    if (selection.kind === 'arity_mismatch') {
+      const available = selection.signatures.map((signature) => `  - ${signature}`).join('\n');
       ctx.diagAtWithId(
         ctx.diagnostics,
         asmItem.span,
@@ -82,23 +76,9 @@ export function createOpExpansionOrchestrationHelpers(ctx: Context) {
       return true;
     }
 
-    const matches = arityMatches.filter((candidate) => {
-      if (candidate.params.length !== asmItem.operands.length) return false;
-      for (let idx = 0; idx < candidate.params.length; idx++) {
-        const param = candidate.params[idx]!;
-        const arg = asmItem.operands[idx]!;
-        if (!ctx.matcherMatchesOperand(param.matcher, arg)) return false;
-      }
-      return true;
-    });
-    if (matches.length === 0) {
+    if (selection.kind === 'no_match') {
       const operandSummary = asmItem.operands.map(ctx.formatAsmOperandForOpDiag).join(', ');
-      const available = arityMatches
-        .map((candidate) => {
-          const reason = ctx.firstOpOverloadMismatchReason(candidate, asmItem.operands);
-          return `  - ${ctx.formatOpDefinitionForDiag(candidate)}${reason ? ` ; ${reason}` : ''}`;
-        })
-        .join('\n');
+      const available = selection.mismatchDetails.map((detail) => `  - ${detail}`).join('\n');
       ctx.diagAtWithId(
         ctx.diagnostics,
         asmItem.span,
@@ -110,24 +90,21 @@ export function createOpExpansionOrchestrationHelpers(ctx: Context) {
       return true;
     }
 
-    const selected = ctx.selectMostSpecificOpOverload(matches, asmItem.operands);
-    if (!selected) {
+    if (selection.kind === 'ambiguous') {
       const operandSummary = asmItem.operands.map(ctx.formatAsmOperandForOpDiag).join(', ');
-      const equallySpecific = matches
-        .map((candidate) => `  - ${ctx.formatOpDefinitionForDiag(candidate)}`)
-        .join('\n');
+      const equallySpecific = selection.definitions.map((definition) => `  - ${definition}`).join('\n');
       ctx.diagAtWithId(
         ctx.diagnostics,
         asmItem.span,
         DiagnosticIds.OpAmbiguousOverload,
-        `Ambiguous op overload for "${asmItem.head}" (${matches.length} matches).\n` +
+        `Ambiguous op overload for "${asmItem.head}" (${selection.overloads.length} matches).\n` +
           `call-site operands: (${operandSummary})\n` +
           `equally specific candidates:\n${equallySpecific}`,
       );
       return true;
     }
 
-    const opDecl = selected;
+    const opDecl = selection.overload;
     if (ctx.opStackPolicyMode !== 'off' && ctx.hasStackSlots) {
       const summary = ctx.summarizeOpStackEffect(opDecl);
       const severity = ctx.opStackPolicyMode === 'error' ? 'error' : 'warning';
