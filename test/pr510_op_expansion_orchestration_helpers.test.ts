@@ -44,12 +44,12 @@ describe('#510 op expansion orchestration helpers', () => {
       diagAtWithSeverityAndId: (list, sourceSpan, id, severity, message) => {
         list.push({ id, severity, file: sourceSpan.file, message });
       },
-      matcherMatchesOperand: () => true,
-      formatOpSignature: (decl) => `${decl.name}(arg)`,
       formatAsmOperandForOpDiag: () => 'arg',
-      firstOpOverloadMismatchReason: () => undefined,
-      formatOpDefinitionForDiag: (decl) => decl.name,
-      selectMostSpecificOpOverload: () => opDecl,
+      selectOpOverload: () => ({
+        kind: 'arity_mismatch',
+        overloads: [opDecl],
+        signatures: [`${opDecl.name}(arg)`],
+      }),
       summarizeOpStackEffect: () => ({
         kind: 'known',
         delta: 0,
