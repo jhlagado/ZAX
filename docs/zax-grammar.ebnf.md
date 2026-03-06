@@ -16,9 +16,17 @@ digit           = "0".."9" ;
 
 int_dec         = [ "-" ] , digit , { digit } ;
 int_hex         = "$" , hex_digit , { hex_digit } ;
+int_bin         = ( "%" | "0b" ) , bin_digit , { bin_digit } ;
 hex_digit       = digit | "A".."F" | "a".."f" ;
+bin_digit       = "0" | "1" ;
 
-string_lit      = '"' , { any_char_except_quote } , '"' ;
+char_lit        = "'" , ( char_body | char_escape ) , "'" ;
+char_body       = any_char_except_quote_newline ;
+char_escape     = "\\" , ( "n" | "r" | "t" | "0" | "\\" | "'" | '"'
+                         | "x" , hex_digit , hex_digit ) ;
+
+string_lit      = '"' , { string_char } , '"' ;
+string_char     = any_char_except_dquote_newline | char_escape ;
 newline         = "\n" ;
 ```
 
@@ -181,7 +189,8 @@ imm_shift       = imm_add , { ( "<<" | ">>" ) , imm_add } ;
 imm_add         = imm_mul , { ( "+" | "-" ) , imm_mul } ;
 imm_mul         = imm_unary , { ( "*" | "/" | "%" ) , imm_unary } ;
 imm_unary       = [ "-" | "+" | "~" ] , imm_primary ;
-imm_primary     = int_dec | int_hex | identifier | enum_ref | "(" , imm_expr , ")"
+imm_primary     = int_dec | int_hex | int_bin | char_lit
+                | identifier | enum_ref | "(" , imm_expr , ")"
                 | "sizeof" , "(" , type_expr , ")"
                 | "offsetof" , "(" , type_expr , "," , field_path , ")" ;
 
