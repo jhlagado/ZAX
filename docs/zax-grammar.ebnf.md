@@ -140,6 +140,19 @@ instr_line      = z80_instruction
                 | local_label
                 | local_jump ;
 
+z80_instruction = head_token , [ asm_operand , { "," , asm_operand } ] ;
+head_token      = identifier ;
+asm_operand     = register
+                | imm_expr
+                | "(" , ea_expr , ")"                       (* memory dereference *)
+                | ea_expr                                   (* effective address *)
+                | "@" , ea_expr ;                            (* explicit address-of *)
+register        = "A" | "B" | "C" | "D" | "E" | "H" | "L"
+                | "HL" | "DE" | "BC" | "SP" | "IX" | "IY" | "AF" | "AF'"
+                | "IXH" | "IXL" | "IYH" | "IYL" | "I" | "R" ;
+
+cc_expr         = "z" | "nz" | "c" | "nc" | "pe" | "po" | "m" | "p" ;
+
 if_stmt         = "if" , cc_expr , newline , instr_stream ,
                   [ "else" , newline , instr_stream ] , "end" ;
 
@@ -147,13 +160,13 @@ while_stmt      = "while" , cc_expr , newline , instr_stream , "end" ;
 
 repeat_stmt     = "repeat" , newline , instr_stream , "until" , cc_expr ;
 
-select_stmt     = "select" , select_expr , newline ,
+select_stmt     = "select" , asm_operand , newline ,
                   case_clause , { case_clause } , [ else_clause ] , "end" ;
 
-case_clause     = "case" , imm_expr , newline , instr_stream ;
+case_clause     = "case" , imm_expr , { "," , imm_expr } , newline , instr_stream ;
 else_clause     = "else" , newline , instr_stream ;
 
-local_label     = "." , identifier , ":" ;
+local_label     = [ "." ] , identifier , ":" ;
 local_jump      = ( "jp" | "jr" | "djnz" ) , "." , identifier ;
 ```
 
@@ -180,7 +193,11 @@ ea_expr         = ea_term , { ( "+" | "-" ) , imm_expr } ;
 ea_term         = ea_base , { ea_segment } ;
 ea_base         = identifier | "(" , ea_expr , ")" ;
 ea_segment      = "." , identifier | "[" , ea_index , "]" ;
-ea_index        = imm_expr | reg8 | reg16 | "(" , reg16 , ")" ;
+ea_index        = reg8 | reg16
+                | "(" , "HL" , ")"
+                | "(" , ( "IX" | "IY" ) , [ ( "+" | "-" ) , imm_expr ] , ")"
+                | imm_expr
+                | ea_expr ;
 
 value_init_expr = imm_expr | "0" ;
 rhs_alias_expr  = ea_expr ;
