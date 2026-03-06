@@ -20,14 +20,13 @@ import {
 } from './parseAsmStatements.js';
 import {
   diagInvalidBlockLine,
-  diagInvalidHeaderLine,
-  formatIdentifierToken,
   looksLikeKeywordBodyDeclLine,
   parseReturnRegsFromText,
   parseVarDeclLine,
   topLevelStartKeyword,
 } from './parseModuleCommon.js';
 import type { ParseParamsContext } from './parseParams.js';
+import { parseCallableHeader } from './parseCallableHeader.js';
 
 function stripComment(line: string): string {
   const semi = line.indexOf(';');
@@ -78,46 +77,29 @@ export function parseTopLevelFuncDecl(
     isReservedTopLevelName,
     parseParamsFromText,
   } = ctx;
-  const header = funcTail;
-  const openParen = header.indexOf('(');
-  const closeParen = header.lastIndexOf(')');
-  if (openParen < 0 || closeParen < openParen) {
-    diagInvalidHeaderLine(
-      diagnostics,
-      modulePath,
-      'func header',
-      stmtText,
-      '<name>(...): <retType>',
-      lineNo,
-    );
+  const parsedHeader = parseCallableHeader({
+    kind: 'func',
+    header: funcTail,
+    stmtText,
+    stmtSpan,
+    lineNo,
+    diagnostics,
+    modulePath,
+    expectedHeader: '<name>(...): <retType>',
+    isReservedTopLevelName,
+    parseParams: (paramsText) =>
+      parseParamsFromText(modulePath, paramsText, stmtSpan, diagnostics, {
+        isReservedTopLevelName,
+      }),
+  });
+  if (!parsedHeader) {
     return { nextIndex: startIndex + 1 };
   }
 
-  const name = header.slice(0, openParen).trim();
-  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
-    diag(
-      diagnostics,
-      modulePath,
-      `Invalid func name ${formatIdentifierToken(name)}: expected <identifier>.`,
-      { line: lineNo, column: 1 },
-    );
-    return { nextIndex: startIndex + 1 };
-  }
-  if (isReservedTopLevelName(name)) {
-    diag(
-      diagnostics,
-      modulePath,
-      `Invalid func name "${name}": collides with a top-level keyword.`,
-      {
-        line: lineNo,
-        column: 1,
-      },
-    );
-    return { nextIndex: startIndex + 1 };
-  }
-
+  const name = parsedHeader.name;
+  const params = parsedHeader.params;
   const funcStartOffset = stmtSpan.start.offset;
-  const afterClose = header.slice(closeParen + 1).trimStart();
+  const afterClose = parsedHeader.trailing;
   let returnRegs: string[] = [];
   if (afterClose.length !== 0) {
     const retMatch = /^:\s*(.+)$/.exec(afterClose);
@@ -138,12 +120,6 @@ export function parseTopLevelFuncDecl(
     if (!parsedRegs) return { nextIndex: startIndex + 1 };
     returnRegs = parsedRegs.regs;
   }
-
-  const paramsText = header.slice(openParen + 1, closeParen);
-  const params = parseParamsFromText(modulePath, paramsText, stmtSpan, diagnostics, {
-    isReservedTopLevelName,
-  });
-  if (!params) return { nextIndex: startIndex + 1 };
 
   let index = startIndex + 1;
 
