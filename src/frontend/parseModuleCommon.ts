@@ -251,7 +251,7 @@ export function parseVarDeclLine(
       span: declSpan,
       expr: rhsEa,
     };
-    return { kind: 'VarDecl', span: declSpan, name, initializer };
+    return { kind: 'VarDecl', form: 'alias', span: declSpan, name, initializer };
   }
 
   const typedMatch = /^([^:]+)\s*:\s*(.+)$/.exec(raw);
@@ -301,7 +301,7 @@ export function parseVarDeclLine(
   }
 
   if (eqIdx < 0) {
-    return { kind: 'VarDecl', span: declSpan, name, typeExpr };
+    return { kind: 'VarDecl', form: 'typed', span: declSpan, name, typeExpr };
   }
 
   const aliasLike = parseEaExprFromText(modulePath, initText, declSpan, diagnostics);
@@ -326,5 +326,5 @@ export function parseVarDeclLine(
     span: declSpan,
     expr: valueExpr,
   };
-  return { kind: 'VarDecl', span: declSpan, name, typeExpr, initializer };
+  return { kind: 'VarDecl', form: 'typed', span: declSpan, name, typeExpr, initializer };
 }
