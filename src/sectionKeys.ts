@@ -2,14 +2,51 @@ import type { Diagnostic } from './diagnostics/types.js';
 import { DiagnosticIds } from './diagnostics/types.js';
 import type { NamedSectionNode, ProgramNode } from './frontend/ast.js';
 
-export type NonBankedSectionKey = {
-  section: 'code' | 'data';
-  name: string;
+export type NonBankedSectionKind = 'code' | 'data';
+
+declare const nonBankedSectionKeyIdBrand: unique symbol;
+export type NonBankedSectionKeyId = string & {
+  readonly [nonBankedSectionKeyIdBrand]: true;
 };
+
+export type NonBankedSectionKey = Readonly<{
+  section: NonBankedSectionKind;
+  name: string;
+}>;
+
+export function formatNonBankedSectionKey(key: NonBankedSectionKey): string {
+  return `${key.section} ${key.name}`;
+}
+
+function keyIdFor(section: NonBankedSectionKind, name: string): NonBankedSectionKeyId {
+  return `${section}\u0000${name.toLowerCase()}` as NonBankedSectionKeyId;
+}
+
+function isNonBankedSectionKind(section: unknown): section is NonBankedSectionKind {
+  return section === 'code' || section === 'data';
+}
+
+function isValidSectionName(name: unknown): name is string {
+  return typeof name === 'string' && name.length > 0 && !name.includes('\u0000');
+}
+
+export function createNonBankedSectionKey(
+  section: unknown,
+  name: unknown,
+): { key: NonBankedSectionKey; keyId: NonBankedSectionKeyId } | undefined {
+  if (!isNonBankedSectionKind(section) || !isValidSectionName(name)) return undefined;
+  return {
+    key: {
+      section,
+      name,
+    },
+    keyId: keyIdFor(section, name),
+  };
+}
 
 export type SectionContributionRecord = {
   key: NonBankedSectionKey;
-  keyId: string;
+  keyId: NonBankedSectionKeyId;
   moduleIndex: number;
   itemIndex: number;
   order: number;
@@ -18,7 +55,7 @@ export type SectionContributionRecord = {
 
 export type SectionAnchorRecord = {
   key: NonBankedSectionKey;
-  keyId: string;
+  keyId: NonBankedSectionKeyId;
   moduleIndex: number;
   itemIndex: number;
   order: number;
@@ -28,8 +65,8 @@ export type SectionAnchorRecord = {
 export type NonBankedSectionKeyCollection = {
   orderedContributions: SectionContributionRecord[];
   orderedAnchors: SectionAnchorRecord[];
-  contributionsByKey: Map<string, SectionContributionRecord[]>;
-  anchorsByKey: Map<string, SectionAnchorRecord>;
+  contributionsByKey: Map<NonBankedSectionKeyId, SectionContributionRecord[]>;
+  anchorsByKey: Map<NonBankedSectionKeyId, SectionAnchorRecord>;
 };
 
 function diag(
@@ -49,14 +86,6 @@ function diag(
   });
 }
 
-function keyFor(section: 'code' | 'data', name: string): string {
-  return `${section}\u0000${name.toLowerCase()}`;
-}
-
-function formatKey(key: NonBankedSectionKey): string {
-  return `${key.section} ${key.name}`;
-}
-
 function startOf(node: NamedSectionNode): { file: string; line: number; column: number } {
   return {
     file: node.span.file,
@@ -72,8 +101,8 @@ export function collectNonBankedSectionKeys(
 ): NonBankedSectionKeyCollection {
   const orderedContributions: SectionContributionRecord[] = [];
   const orderedAnchors: SectionAnchorRecord[] = [];
-  const contributionsByKey = new Map<string, SectionContributionRecord[]>();
-  const anchorsByKey = new Map<string, SectionAnchorRecord>();
+  const contributionsByKey = new Map<NonBankedSectionKeyId, SectionContributionRecord[]>();
+  const anchorsByKey = new Map<NonBankedSectionKeyId, SectionAnchorRecord>();
 
   const traversalIndexByFile = new Map<string, number>();
   if (moduleTraversal) {
@@ -97,8 +126,22 @@ export function collectNonBankedSectionKeys(
     for (const [itemIndex, item] of moduleFile.items.entries()) {
       if (item.kind !== 'NamedSection') continue;
       const node = item;
-      const key: NonBankedSectionKey = { section: node.section, name: node.name };
-      const keyId = keyFor(node.section, node.name);
+      const created = createNonBankedSectionKey(node.section, node.name);
+      if (!created) {
+        const at = startOf(node);
+        diag(
+          diagnostics,
+          DiagnosticIds.EmitError,
+          'error',
+          at.file,
+          `Invalid section key for named section: section="${String(node.section)}", name="${String(
+            node.name,
+          )}".`,
+          { line: at.line, column: at.column },
+        );
+        continue;
+      }
+      const { key, keyId } = created;
 
       if (node.items.length > 0) {
         const contribution: SectionContributionRecord = {
@@ -125,7 +168,7 @@ export function collectNonBankedSectionKeys(
           DiagnosticIds.EmitError,
           'error',
           at.file,
-          `Duplicate anchor for section "${formatKey(key)}".`,
+          `Duplicate anchor for section "${formatNonBankedSectionKey(key)}".`,
           { line: at.line, column: at.column },
         );
         continue;
@@ -144,7 +187,7 @@ export function collectNonBankedSectionKeys(
     }
   }
 
-  const reportedMissingAnchorKeys = new Set<string>();
+  const reportedMissingAnchorKeys = new Set<NonBankedSectionKeyId>();
   for (const contribution of orderedContributions) {
     if (anchorsByKey.has(contribution.keyId) || reportedMissingAnchorKeys.has(contribution.keyId)) continue;
     const at = startOf(contribution.node);
@@ -153,7 +196,7 @@ export function collectNonBankedSectionKeys(
       DiagnosticIds.EmitError,
       'error',
       at.file,
-      `Missing anchor for section "${formatKey(contribution.key)}".`,
+      `Missing anchor for section "${formatNonBankedSectionKey(contribution.key)}".`,
       { line: at.line, column: at.column },
     );
     reportedMissingAnchorKeys.add(contribution.keyId);
@@ -168,7 +211,7 @@ export function collectNonBankedSectionKeys(
       DiagnosticIds.EmitWarning,
       'warning',
       at.file,
-      `Anchor for section "${formatKey(anchor.key)}" has no contributions.`,
+      `Anchor for section "${formatNonBankedSectionKey(anchor.key)}" has no contributions.`,
       { line: at.line, column: at.column },
     );
   }

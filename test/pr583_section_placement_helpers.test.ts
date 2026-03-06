@@ -6,7 +6,7 @@ import { parseProgram } from '../src/frontend/parser.js';
 import { emitProgram } from '../src/lowering/emit.js';
 import { placeNonBankedSectionContributions } from '../src/lowering/sectionPlacement.js';
 import type { NamedSectionContributionSink } from '../src/lowering/sectionContributions.js';
-import { collectNonBankedSectionKeys } from '../src/sectionKeys.js';
+import { collectNonBankedSectionKeys, createNonBankedSectionKey } from '../src/sectionKeys.js';
 import { buildEnv } from '../src/semantics/env.js';
 
 function makeSink(
@@ -39,18 +39,23 @@ function makeSink(
     span,
   } as unknown) as NamedSectionNode;
 
+  const created = createNonBankedSectionKey(section, name);
+  if (!created) {
+    throw new Error(`Invalid section key test fixture: ${section} ${name}`);
+  }
+
   return {
     contribution: {
-      key: { section, name },
-      keyId: `${section}\u0000${name.toLowerCase()}`,
+      key: created.key,
+      keyId: created.keyId,
       moduleIndex: 0,
       itemIndex: 0,
       order: 0,
       node,
     },
     anchor: {
-      key: { section, name },
-      keyId: `${section}\u0000${name.toLowerCase()}`,
+      key: created.key,
+      keyId: created.keyId,
       moduleIndex: 0,
       itemIndex: 0,
       order: 0,
@@ -87,6 +92,26 @@ describe('PR583 section placement helpers', () => {
         totalSize: 8,
         endAddress: 0x1007,
       }),
+    ]);
+  });
+
+  it('treats section kind as part of key identity for placement', () => {
+    const diagnostics: Diagnostic[] = [];
+    const sinks = [makeSink('code', 'shared', 0x1000, 1), makeSink('data', 'shared', 0x2000, 2)];
+
+    const { placedContributions, placedRegions } = placeNonBankedSectionContributions(sinks, {
+      diagnostics,
+      env: {} as never,
+      evalImmExpr: (expr) => (expr.kind === 'ImmLiteral' ? expr.value : undefined),
+    });
+
+    expect(diagnostics).toEqual([]);
+    expect(placedContributions.map((p) => p.baseAddress)).toEqual([0x1000, 0x2000]);
+    expect(
+      placedRegions.map((region) => [region.section, region.name, region.baseAddress, region.totalSize]),
+    ).toEqual([
+      ['code', 'shared', 0x1000, 1],
+      ['data', 'shared', 0x2000, 2],
     ]);
   });
 
