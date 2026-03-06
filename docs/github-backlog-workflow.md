@@ -79,17 +79,9 @@ Issue close rule:
 
 ## CI Change Classification Rule
 
-Docs-only PRs are short-circuited in CI and must satisfy this path rule:
+Testing-path and CI verification expectations are maintained in:
 
-- docs-only set: all changed files are in `docs/**`, match `*.md`, or are under `.github/ISSUE_TEMPLATE/**`
-- docs-only result: run `docs (fast)` only, skip full `test (ubuntu/macos/windows)` matrix
-- any non-doc path in the change set: run full matrix
-
-Implementation anchors:
-
-- workflow: `.github/workflows/ci.yml` (`detect-changes` job)
-- classifier script: `scripts/ci/change-classifier.js`
-- classifier tests: `test/pr288_ci_docs_only_classifier.test.ts`
+- `docs/testing-verification-guide.md`
 
 ## Dependency Handling Without Project Views
 

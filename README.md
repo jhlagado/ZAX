@@ -331,24 +331,23 @@ zax [options] <entry.zax>
 
 ## Development
 
-```sh
-npm run typecheck     # Type-check without emitting
-npm test              # Run test suite
-npm run format        # Format with Prettier
-```
+Use the canonical contributor verification guide:
 
-Tests are organized by spec section and PR scope under `test/`. Golden-file comparisons ensure output stability. The `examples/*.zax` files serve as end-to-end acceptance tests — they must compile without errors in CI.
+- `docs/testing-verification-guide.md`
+
+It defines the current local verification flow, fixture refresh commands, and CI expectations.
 
 ---
 
 ## Documentation
 
-| Document                        | Purpose                                                             |
-| ------------------------------- | ------------------------------------------------------------------- |
-| `docs/zax-spec.md`              | **Normative** language specification (includes CLI/op appendices)   |
-| `docs/ZAX-quick-guide.md`       | Practical quick guide for daily language usage (non-normative)      |
-| `docs/zax-dev-playbook.md`      | Consolidated implementation, roadmap, checklist, and workflow guide |
-| `docs/v02-codegen-reference.md` | Consolidated v0.2 codegen entry point and archive links             |
+| Document                             | Purpose                                                           |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| `docs/zax-spec.md`                   | **Normative** language specification (includes CLI/op appendices) |
+| `docs/ZAX-quick-guide.md`            | Practical quick guide for daily language usage (non-normative)    |
+| `docs/testing-verification-guide.md` | Canonical testing/verification flow for contributors              |
+| `docs/zax-dev-playbook.md`           | Contributor workflow and review/merge hygiene                     |
+| `docs/v02-codegen-reference.md`      | Consolidated v0.2 codegen entry point and archive links           |
 
 ---
 
