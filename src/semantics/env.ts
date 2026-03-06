@@ -185,8 +185,17 @@ type BuildEnvOptions = {
   resolvedImportGraph?: ReadonlyMap<string, ReadonlyArray<string>>;
 };
 
+type CollectedDecls = {
+  imports: ImportNode[];
+  types: Array<TypeDeclNode | UnionDeclNode>;
+  callables: Array<FuncDeclNode | ExternDeclNode>;
+  enums: EnumDeclNode[];
+  consts: ConstDeclNode[];
+};
+
 function importedModuleIdsForFile(
   moduleFile: ProgramNode['files'][number],
+  imports: ImportNode[],
   moduleIdRootDir: string,
   options?: BuildEnvOptions,
 ): Set<string> {
@@ -196,11 +205,6 @@ function importedModuleIdsForFile(
     if (!resolvedTargets) return new Set();
     return new Set(resolvedTargets.map((targetPath) => canonicalModuleId(targetPath, moduleIdRootDir)));
   }
-  const imports: ImportNode[] = [];
-  visitDeclTree(moduleFile.items, (item, ctx) => {
-    if (ctx.inNamedSection || item.kind !== 'Import') return;
-    imports.push(item);
-  });
   return new Set(
     imports.map((importNode) => {
       const target =
@@ -239,9 +243,42 @@ export function buildEnv(
   }
 
   const moduleIdRootDir = options?.moduleIdRootDir ?? dirname(program.entryFile);
+  const collectedByFile = new Map<string, CollectedDecls>();
   for (const mf of program.files) {
     moduleIds.set(mf.path, canonicalModuleId(mf.path, moduleIdRootDir));
-    importedModuleIds.set(mf.path, importedModuleIdsForFile(mf, moduleIdRootDir, options));
+    const collected: CollectedDecls = {
+      imports: [],
+      types: [],
+      callables: [],
+      enums: [],
+      consts: [],
+    };
+    visitDeclTree(mf.items, (item, ctx) => {
+      if (!ctx.inNamedSection && item.kind === 'Import') {
+        collected.imports.push(item);
+        return;
+      }
+      if (item.kind === 'TypeDecl' || item.kind === 'UnionDecl') {
+        collected.types.push(item);
+        return;
+      }
+      if (item.kind === 'FuncDecl' || item.kind === 'ExternDecl') {
+        collected.callables.push(item);
+        return;
+      }
+      if (item.kind === 'EnumDecl') {
+        collected.enums.push(item);
+        return;
+      }
+      if (item.kind === 'ConstDecl') {
+        collected.consts.push(item);
+      }
+    });
+    collectedByFile.set(mf.path, collected);
+    importedModuleIds.set(
+      mf.path,
+      importedModuleIdsForFile(mf, collected.imports, moduleIdRootDir, options),
+    );
   }
 
   const globalLower = new Map<string, { kind: string; name: string; file: string }>();
@@ -257,11 +294,12 @@ export function buildEnv(
   };
 
   for (const mf of program.files) {
-    visitDeclTree(mf.items, (item) => {
-      if (item.kind !== 'TypeDecl' && item.kind !== 'UnionDecl') return;
+    const collected = collectedByFile.get(mf.path);
+    if (!collected) continue;
+    for (const item of collected.types) {
       const kind = item.kind === 'TypeDecl' ? 'type' : 'union';
       const name = item.name;
-      if (!claim(kind, name, item.span.file)) return;
+      if (!claim(kind, name, item.span.file)) continue;
       types.set(name, item);
       if (item.exported) {
         const moduleId =
@@ -269,11 +307,13 @@ export function buildEnv(
         const qualifiedName = `${moduleId}.${name}`;
         visibleTypes.set(qualifiedName, item);
       }
-    });
+    }
   }
 
   for (const mf of program.files) {
-    visitDeclTree(mf.items, (item) => {
+    const collected = collectedByFile.get(mf.path);
+    if (!collected) continue;
+    for (const item of collected.callables) {
       if (item.kind === 'FuncDecl') {
         const f = item as FuncDeclNode;
         claim('func', f.name, f.span.file);
@@ -283,13 +323,13 @@ export function buildEnv(
           claim('extern func', fn.name, fn.span.file);
         }
       }
-    });
+    }
   }
 
   for (const mf of program.files) {
-    visitDeclTree(mf.items, (item) => {
-      if (item.kind !== 'EnumDecl') return;
-      const e = item as EnumDeclNode;
+    const collected = collectedByFile.get(mf.path);
+    if (!collected) continue;
+    for (const e of collected.enums) {
       // Note: enum names are tracked for collision purposes even though PR4 does not use them.
       claim('enum', e.name, e.span.file);
 
@@ -304,7 +344,7 @@ export function buildEnv(
           visibleEnums.set(exportedName, idx);
         }
       }
-    });
+    }
   }
 
   const env: CompileEnv = {
@@ -320,11 +360,12 @@ export function buildEnv(
 
   if (options?.typePaddingWarnings === true) {
     for (const mf of program.files) {
-      visitDeclTree(mf.items, (item) => {
-        if (item.kind !== 'TypeDecl' && item.kind !== 'UnionDecl') return;
+      const collected = collectedByFile.get(mf.path);
+      if (!collected) continue;
+      for (const item of collected.types) {
         const info = storageInfoForTypeDecl(item, env, diagnostics);
-        if (!info) return;
-        if (info.storageSize <= info.preRoundSize) return;
+        if (!info) continue;
+        if (info.storageSize <= info.preRoundSize) continue;
         const padding = info.storageSize - info.preRoundSize;
         diagnostics.push({
           id: DiagnosticIds.TypePaddingWarning,
@@ -337,23 +378,24 @@ export function buildEnv(
           line: item.span.start.line,
           column: item.span.start.column,
         });
-      });
+      }
     }
   }
 
   for (const mf of program.files) {
-    visitDeclTree(mf.items, (item) => {
-      if (item.kind !== 'ConstDecl') return;
+    const collected = collectedByFile.get(mf.path);
+    if (!collected) continue;
+    for (const item of collected.consts) {
       if (types.has(item.name)) {
         diag(diagnostics, item.span.file, `Const name "${item.name}" collides with a type name.`);
-        return;
+        continue;
       }
-      if (!claim('const', item.name, item.span.file)) return;
+      if (!claim('const', item.name, item.span.file)) continue;
 
       const v = evalImmExpr(item.value, env, diagnostics);
       if (v === undefined) {
         diag(diagnostics, item.span.file, `Failed to evaluate const "${item.name}".`);
-        return;
+        continue;
       }
       consts.set(item.name, v);
       if (item.exported) {
@@ -362,7 +404,7 @@ export function buildEnv(
         const qualifiedName = `${moduleId}.${item.name}`;
         visibleConsts.set(qualifiedName, v);
       }
-    });
+    }
   }
 
   return env;
