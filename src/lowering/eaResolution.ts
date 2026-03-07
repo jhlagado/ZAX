@@ -5,7 +5,8 @@ import { preRoundSizeOfTypeExpr } from '../semantics/layout.js';
 
 export type EaResolution =
   | { kind: 'abs'; baseLower: string; addend: number; typeExpr?: TypeExprNode }
-  | { kind: 'stack'; ixDisp: number; typeExpr?: TypeExprNode };
+  | { kind: 'stack'; ixDisp: number; typeExpr?: TypeExprNode }
+  | { kind: 'indirect'; ixDisp: number; addend: number; typeExpr?: TypeExprNode };
 
 type EaResolutionContext = {
   env: CompileEnv;
@@ -18,6 +19,7 @@ type EaResolutionContext = {
   getLocalAliasTargets: () => Map<string, EaExprNode>;
   evalImmExpr: (expr: import('../frontend/ast.js').ImmExprNode) => number | undefined;
   evalImmNoDiag: (expr: import('../frontend/ast.js').ImmExprNode) => number | undefined;
+  resolveScalarKind: (typeExpr: TypeExprNode) => 'byte' | 'word' | 'addr' | undefined;
   resolveAggregateType: (
     te: TypeExprNode,
   ) => { kind: 'record' | 'union'; fields: import('../frontend/ast.js').RecordFieldNode[] } | undefined;
@@ -37,6 +39,15 @@ export function createEaResolutionHelpers(ctx: EaResolutionContext) {
           const slotOff = ctx.stackSlotOffsets.get(baseLower);
           if (slotOff !== undefined) {
             const slotType = ctx.stackSlotTypes.get(baseLower);
+            const scalarKind = slotType ? ctx.resolveScalarKind(slotType) : undefined;
+            if (slotType && scalarKind === undefined) {
+              return {
+                kind: 'indirect',
+                ixDisp: slotOff,
+                addend: 0,
+                typeExpr: slotType,
+              };
+            }
             return {
               kind: 'stack',
               ixDisp: slotOff,
@@ -64,6 +75,7 @@ export function createEaResolutionHelpers(ctx: EaResolutionContext) {
           if (v === undefined) return undefined;
           const delta = expr.kind === 'EaAdd' ? v : -v;
           if (base.kind === 'abs') return { ...base, addend: base.addend + delta };
+          if (base.kind === 'indirect') return { ...base, addend: base.addend + delta };
           return { ...base, ixDisp: base.ixDisp + delta };
         }
         case 'EaField': {
@@ -90,6 +102,14 @@ export function createEaResolutionHelpers(ctx: EaResolutionContext) {
                 return {
                   kind: 'abs',
                   baseLower: base.baseLower,
+                  addend: base.addend + off,
+                  typeExpr: f.typeExpr,
+                };
+              }
+              if (base.kind === 'indirect') {
+                return {
+                  kind: 'indirect',
+                  ixDisp: base.ixDisp,
                   addend: base.addend + off,
                   typeExpr: f.typeExpr,
                 };
@@ -132,6 +152,14 @@ export function createEaResolutionHelpers(ctx: EaResolutionContext) {
               return {
                 kind: 'abs',
                 baseLower: base.baseLower,
+                addend: base.addend + delta,
+                typeExpr: base.typeExpr.element,
+              };
+            }
+            if (base.kind === 'indirect') {
+              return {
+                kind: 'indirect',
+                ixDisp: base.ixDisp,
                 addend: base.addend + delta,
                 typeExpr: base.typeExpr.element,
               };
