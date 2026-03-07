@@ -48,12 +48,6 @@ export function lowerDataBlock(
       emitByte(w & 0xff);
       emitByte((w >> 8) & 0xff);
     };
-    const nextPow2 = (value: number): number => {
-      if (value <= 1) return value;
-      let pow = 1;
-      while (pow < value) pow <<= 1;
-      return pow;
-    };
     const recordStartupInit = (
       kind: 'copy' | 'zero',
       offset: number,
@@ -195,13 +189,6 @@ export function lowerDataBlock(
       for (let idx = 0; idx < init.value.length; idx++) emitByte(init.value.charCodeAt(idx));
       actualLength = init.value.length;
       recordStartupInit('copy', copyStart, actualLength);
-      if (type.kind === 'ArrayType') {
-        const emittedBytes = actualLength * elementSize;
-        const storageBytes = nextPow2(emittedBytes);
-        const zeroStart = target.offsetRef.current;
-        for (let pad = emittedBytes; pad < storageBytes; pad++) emitByte(0);
-        recordStartupInit('zero', zeroStart, storageBytes - emittedBytes);
-      }
       continue;
     }
 
@@ -227,12 +214,5 @@ export function lowerDataBlock(
     }
     actualLength = type.kind === 'ArrayType' ? values.length : 1;
     recordStartupInit('copy', copyStart, actualLength * elementSize);
-    if (type.kind === 'ArrayType') {
-      const emittedBytes = actualLength * elementSize;
-      const storageBytes = nextPow2(emittedBytes);
-      const zeroStart = target.offsetRef.current;
-      for (let pad = emittedBytes; pad < storageBytes; pad++) emitByte(0);
-      recordStartupInit('zero', zeroStart, storageBytes - emittedBytes);
-    }
   }
 }
