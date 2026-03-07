@@ -41,6 +41,22 @@ type Context = {
 };
 
 export function createValueMaterializationHelpers(ctx: Context) {
+  const ixDispMemExpr = (disp: number, span: SourceSpan): EaExprNode =>
+    disp === 0
+      ? { kind: 'EaName', span, name: 'IX' }
+      : {
+          kind: disp >= 0 ? 'EaAdd' : 'EaSub',
+          span,
+          base: { kind: 'EaName', span, name: 'IX' },
+          offset: { kind: 'ImmLiteral', span, value: Math.abs(disp) },
+        };
+
+  const ixDispMemOperand = (disp: number, span: SourceSpan): AsmOperandNode => ({
+    kind: 'Mem',
+    span,
+    expr: ixDispMemExpr(disp, span),
+  });
+
   const emitLoadWordFromHlAddress = (target: 'HL' | 'DE' | 'BC', span: SourceSpan): boolean => {
     if (target === 'DE') {
       return ctx.emitStepPipeline(ctx.LOAD_RP_EA('DE'), span);
@@ -54,6 +70,47 @@ export function createValueMaterializationHelpers(ctx: Context) {
     ctx.emitStepPipeline(ctx.STORE_RP_EA(source), span);
 
   let pushEaAddress: (ea: EaExprNode, span: SourceSpan) => boolean;
+
+  const materializeResolvedAddressToHL = (resolved: EaResolution, span: SourceSpan): boolean => {
+    if (resolved.kind === 'abs') {
+      ctx.emitAbs16Fixup(0x21, resolved.baseLower, resolved.addend, span);
+      return true;
+    }
+
+    if (resolved.kind === 'stack') {
+      if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span)) return false;
+      if (!ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
+      if (resolved.ixDisp !== 0) {
+        if (!ctx.loadImm16ToDE(resolved.ixDisp & 0xffff, span)) return false;
+        if (!ctx.emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span))
+          return false;
+      }
+      return true;
+    }
+
+    if (
+      !ctx.emitInstr('ld', [{ kind: 'Reg', span, name: 'E' }, ixDispMemOperand(resolved.ixDisp, span)], span)
+    ) {
+      return false;
+    }
+    if (
+      !ctx.emitInstr(
+        'ld',
+        [{ kind: 'Reg', span, name: 'D' }, ixDispMemOperand(resolved.ixDisp + 1, span)],
+        span,
+      )
+    ) {
+      return false;
+    }
+    if (!ctx.emitInstr('ex', [{ kind: 'Reg', span, name: 'DE' }, { kind: 'Reg', span, name: 'HL' }], span))
+      return false;
+    if (resolved.addend !== 0) {
+      if (!ctx.loadImm16ToDE(resolved.addend & 0xffff, span)) return false;
+      if (!ctx.emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span))
+        return false;
+    }
+    return true;
+  };
 
   const emitStoreSavedHlToEa = (ea: EaExprNode, span: SourceSpan): boolean => {
     if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
@@ -106,9 +163,23 @@ export function createValueMaterializationHelpers(ctx: Context) {
     }
 
     const eaPipe = ctx.buildEaBytePipeline(ea, span);
-    if (!eaPipe) return false;
-    const templated = ctx.TEMPLATE_L_ABC('A', eaPipe);
-    return ctx.emitStepPipeline(templated, span) && ctx.pushZeroExtendedReg8('A', span);
+    if (eaPipe) {
+      const templated = ctx.TEMPLATE_L_ABC('A', eaPipe);
+      return ctx.emitStepPipeline(templated, span) && ctx.pushZeroExtendedReg8('A', span);
+    }
+
+    if (!pushEaAddress(ea, span)) return false;
+    if (!ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
+    if (
+      !ctx.emitInstr(
+        'ld',
+        [{ kind: 'Reg', span, name: 'A' }, { kind: 'Mem', span, expr: { kind: 'EaName', span, name: 'HL' } }],
+        span,
+      )
+    ) {
+      return false;
+    }
+    return ctx.pushZeroExtendedReg8('A', span);
   };
 
   pushEaAddress = (ea: EaExprNode, span: SourceSpan): boolean => {
@@ -466,18 +537,8 @@ export function createValueMaterializationHelpers(ctx: Context) {
       if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
 
       const baseResolved = ctx.resolveEa(ea.base, span);
-      if (baseResolved?.kind === 'abs') {
-        ctx.emitAbs16Fixup(0x21, baseResolved.baseLower, baseResolved.addend, span);
-      } else if (baseResolved?.kind === 'stack') {
-        if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
-        if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span)) return false;
-        if (!ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
-        if (baseResolved.ixDisp !== 0) {
-          if (!ctx.loadImm16ToDE(baseResolved.ixDisp & 0xffff, span)) return false;
-          if (!ctx.emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span))
-            return false;
-        }
-        if (!ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
+      if (baseResolved) {
+        if (!materializeResolvedAddressToHL(baseResolved, span)) return false;
       } else {
         if (!pushEaAddress(ea.base, span)) return false;
         if (!ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
@@ -489,20 +550,8 @@ export function createValueMaterializationHelpers(ctx: Context) {
       return ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
     }
 
-    if (r.kind === 'abs') {
-      ctx.emitAbs16Fixup(0x21, r.baseLower, r.addend, span);
-      return ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
-    }
-    if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
-    if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span)) return false;
-    if (!ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
-    if (r.ixDisp !== 0) {
-      if (!ctx.loadImm16ToDE(r.ixDisp & 0xffff, span)) return false;
-      if (!ctx.emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span))
-        return false;
-    }
-    if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
-    return ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span);
+    if (!materializeResolvedAddressToHL(r, span)) return false;
+    return ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
   };
 
   return {
