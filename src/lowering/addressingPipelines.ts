@@ -1,6 +1,6 @@
 import {
   CALC_EA,
-  CALC_EA_2,
+  CALC_EA_WIDE,
   EA_FVAR_CONST,
   EA_FVAR_FVAR,
   EA_FVAR_GLOB,
@@ -54,6 +54,18 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
       default:
         return false;
     }
+  };
+
+  const getPow2ShiftCount = (elemSize: number | undefined): number | undefined => {
+    if (elemSize === undefined) return undefined;
+    let n = elemSize;
+    let shiftCount = 0;
+    while (n > 1 && (n & 1) === 0) {
+      n >>= 1;
+      shiftCount++;
+    }
+    if (n !== 1 || shiftCount < 1 || shiftCount > 15) return undefined;
+    return shiftCount;
   };
 
   const buildEaBytePipeline = (ea: EaExprNode, span: SourceSpan): StepPipeline | null => {
@@ -151,14 +163,15 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
       if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return null;
       if (baseResolved.kind === 'indirect') return null;
       const elemSize = ctx.sizeOfTypeExpr(baseType.element);
-      if (elemSize !== 2) return null;
+      if (getPow2ShiftCount(elemSize) === undefined || elemSize === undefined) return null;
+      const wideElemSize = elemSize;
 
       if (ea.index.kind === 'IndexImm') {
         const imm = ctx.evalImmExpr(ea.index.value);
         if (imm !== undefined) {
           return baseResolved.kind === 'abs'
-            ? EAW_GLOB_CONST(baseResolved.baseLower, imm)
-            : EAW_FVAR_CONST(baseResolved.ixDisp, imm);
+            ? EAW_GLOB_CONST(baseResolved.baseLower, imm, wideElemSize)
+            : EAW_FVAR_CONST(baseResolved.ixDisp, imm, wideElemSize);
         }
 
         if (ea.index.value.kind === 'ImmName') {
@@ -169,13 +182,13 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
           if (!idxResolved) return null;
           if (idxResolved.kind === 'abs') {
             return baseResolved.kind === 'abs'
-              ? EAW_GLOB_GLOB(baseResolved.baseLower, idxResolved.baseLower)
-              : EAW_FVAR_GLOB(baseResolved.ixDisp, idxResolved.baseLower);
+              ? EAW_GLOB_GLOB(baseResolved.baseLower, idxResolved.baseLower, wideElemSize)
+              : EAW_FVAR_GLOB(baseResolved.ixDisp, idxResolved.baseLower, wideElemSize);
           }
           if (idxResolved.kind === 'stack') {
             return baseResolved.kind === 'abs'
-              ? EAW_GLOB_FVAR(baseResolved.baseLower, idxResolved.ixDisp)
-              : EAW_FVAR_FVAR(baseResolved.ixDisp, idxResolved.ixDisp);
+              ? EAW_GLOB_FVAR(baseResolved.baseLower, idxResolved.ixDisp, wideElemSize)
+              : EAW_FVAR_FVAR(baseResolved.ixDisp, idxResolved.ixDisp, wideElemSize);
           }
         }
         return null;
@@ -187,17 +200,21 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
 
         if (baseResolved.kind === 'abs') {
           if (ea.index.kind === 'IndexReg8') {
-            return EAW_GLOB_REG(baseResolved.baseLower, idxReg.toLowerCase());
+            return EAW_GLOB_REG(baseResolved.baseLower, idxReg.toLowerCase(), wideElemSize);
           }
-          if (idxUpper === 'HL') return [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA_2()];
-          return EAW_GLOB_RP(baseResolved.baseLower, idxUpper);
+          if (idxUpper === 'HL') {
+            return [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA_WIDE(wideElemSize)];
+          }
+          return EAW_GLOB_RP(baseResolved.baseLower, idxUpper, wideElemSize);
         }
         if (baseResolved.kind === 'stack') {
           if (ea.index.kind === 'IndexReg8') {
-            return EAW_FVAR_REG(baseResolved.ixDisp, idxReg.toLowerCase());
+            return EAW_FVAR_REG(baseResolved.ixDisp, idxReg.toLowerCase(), wideElemSize);
           }
-          if (idxUpper === 'HL') return [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA_2()];
-          return EAW_FVAR_RP(baseResolved.ixDisp, idxUpper);
+          if (idxUpper === 'HL') {
+            return [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA_WIDE(wideElemSize)];
+          }
+          return EAW_FVAR_RP(baseResolved.ixDisp, idxUpper, wideElemSize);
         }
         return null;
       }
@@ -207,13 +224,13 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
         if (!idxResolved) return null;
         if (idxResolved.kind === 'abs') {
           return baseResolved.kind === 'abs'
-            ? EAW_GLOB_GLOB(baseResolved.baseLower, idxResolved.baseLower)
-            : EAW_FVAR_GLOB(baseResolved.ixDisp, idxResolved.baseLower);
+            ? EAW_GLOB_GLOB(baseResolved.baseLower, idxResolved.baseLower, wideElemSize)
+            : EAW_FVAR_GLOB(baseResolved.ixDisp, idxResolved.baseLower, wideElemSize);
         }
         if (idxResolved.kind === 'stack') {
           return baseResolved.kind === 'abs'
-            ? EAW_GLOB_FVAR(baseResolved.baseLower, idxResolved.ixDisp)
-            : EAW_FVAR_FVAR(baseResolved.ixDisp, idxResolved.ixDisp);
+            ? EAW_GLOB_FVAR(baseResolved.baseLower, idxResolved.ixDisp, wideElemSize)
+            : EAW_FVAR_FVAR(baseResolved.ixDisp, idxResolved.ixDisp, wideElemSize);
         }
         return null;
       }
@@ -224,9 +241,9 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
     const scalarKind = resolved.typeExpr ? ctx.resolveScalarKind(resolved.typeExpr) : undefined;
     const elemSize: number | undefined = (resolved as { elemSize?: number }).elemSize ?? 2;
     if (scalarKind !== 'word' && scalarKind !== 'addr') return null;
-    if (elemSize !== 2) return null;
-    if (resolved.kind === 'abs') return EAW_GLOB_CONST(resolved.baseLower, resolved.addend);
-    if (resolved.kind === 'stack') return EAW_FVAR_CONST(resolved.ixDisp, 0);
+    if (getPow2ShiftCount(elemSize) === undefined) return null;
+    if (resolved.kind === 'abs') return EAW_GLOB_CONST(resolved.baseLower, resolved.addend, elemSize);
+    if (resolved.kind === 'stack') return EAW_FVAR_CONST(resolved.ixDisp, 0, elemSize);
     return null;
   };
 
