@@ -9,58 +9,66 @@ add IX, SP                     ; 0106: DD 39
 push AF                        ; 0108: F5
 push BC                        ; 0109: C5
 push DE                        ; 010A: D5
-ex DE, HL                      ; 010B: EB
+push DE                        ; 010B: D5
 ld E, (IX + $0008)             ; 010C: DD 5E 08
 ld D, (IX + $0009)             ; 010F: DD 56 09
-ex DE, HL                      ; 0112: EB
-push DE                        ; 0113: D5
-push HL                        ; 0114: E5
-ld E, (IX + $000A)             ; 0115: DD 5E 0A
-ld D, (IX + $000B)             ; 0118: DD 56 0B
-ld HL, $0000                   ; 011B: 21 00 00
-add HL, HL                     ; 011E: 29
-add HL, DE                     ; 011F: 19
-pop DE                         ; 0120: D1
-ld (HL), E                     ; 0121: 73
-inc HL                         ; 0122: 23
-ld (HL), D                     ; 0123: 72
-pop DE                         ; 0124: D1
+ld HL, $0000                   ; 0112: 21 00 00
+add HL, HL                     ; 0115: 29
+add HL, DE                     ; 0116: 19
+ld E, (HL)                     ; 0117: 5E
+inc HL                         ; 0118: 23
+ld D, (HL)                     ; 0119: 56
+ld L, E                        ; 011A: 6B
+ld H, D                        ; 011B: 62
+pop DE                         ; 011C: D1
+push DE                        ; 011D: D5
+push HL                        ; 011E: E5
+ld E, (IX + $000A)             ; 011F: DD 5E 0A
+ld D, (IX + $000B)             ; 0122: DD 56 0B
+ld HL, $0000                   ; 0125: 21 00 00
+add HL, HL                     ; 0128: 29
+add HL, DE                     ; 0129: 19
+pop DE                         ; 012A: D1
+ld (HL), E                     ; 012B: 73
+inc HL                         ; 012C: 23
+ld (HL), D                     ; 012D: 72
+pop DE                         ; 012E: D1
 __zax_epilogue_0:
-pop DE                         ; 0125: D1
-pop BC                         ; 0126: C1
-pop AF                         ; 0127: F1
-ld SP, IX                      ; 0128: DD F9
-pop IX                         ; 012A: DD E1
-ret                            ; 012C: C9
+pop DE                         ; 012F: D1
+pop BC                         ; 0130: C1
+pop AF                         ; 0131: F1
+ld SP, IX                      ; 0132: DD F9
+pop IX                         ; 0134: DD E1
+ret                            ; 0136: C9
 ; func main begin
 ; func word_fvar_const end
 main:
-push IX                        ; 012D: DD E5
-ld IX, $0000                   ; 012F: DD 21 00 00
-add IX, SP                     ; 0133: DD 39
-push AF                        ; 0135: F5
-push BC                        ; 0136: C5
-push DE                        ; 0137: D5
-push HL                        ; 0138: E5
-ld HL, glob_words              ; 0139: 21 00 00
-push HL                        ; 013C: E5
-call word_fvar_const           ; 013D: CD 00 00
-inc SP                         ; 0140: 33
-inc SP                         ; 0141: 33
+push IX                        ; 0137: DD E5
+ld IX, $0000                   ; 0139: DD 21 00 00
+add IX, SP                     ; 013D: DD 39
+push AF                        ; 013F: F5
+push BC                        ; 0140: C5
+push DE                        ; 0141: D5
+push HL                        ; 0142: E5
+ld HL, glob_words              ; 0143: 21 00 00
+push HL                        ; 0146: E5
+call word_fvar_const           ; 0147: CD 00 00
+inc SP                         ; 014A: 33
+inc SP                         ; 014B: 33
 __zax_epilogue_1:
-pop HL                         ; 0142: E1
-pop DE                         ; 0143: D1
-pop BC                         ; 0144: C1
-pop AF                         ; 0145: F1
-ld SP, IX                      ; 0146: DD F9
-pop IX                         ; 0148: DD E1
-ret                            ; 014A: C9
+pop HL                         ; 014C: E1
+pop DE                         ; 014D: D1
+pop BC                         ; 014E: C1
+pop AF                         ; 014F: F1
+ld SP, IX                      ; 0150: DD F9
+pop IX                         ; 0152: DD E1
+ret                            ; 0154: C9
 ; func main end
 
 ; symbols:
 ; label word_fvar_const = $0100
-; label __zax_epilogue_0 = $0125
-; label main = $012D
-; label __zax_epilogue_1 = $0142
+; label __zax_epilogue_0 = $012F
+; label main = $0137
+; label __zax_epilogue_1 = $014C
 ; data glob_words = $2000
 ; label __zax_startup = $2010
