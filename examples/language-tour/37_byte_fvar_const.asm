@@ -9,46 +9,62 @@ add IX, SP                     ; 0106: DD 39
 push AF                        ; 0108: F5
 push BC                        ; 0109: C5
 push DE                        ; 010A: D5
-ld A, (ix+$06)                 ; 010B: DD 7E 06
-ld (ix+$07), A                 ; 010E: DD 77 07
-ld H, $0000                    ; 0111: 26 00
-ld L, A                        ; 0113: 6F
+push DE                        ; 010B: D5
+push HL                        ; 010C: E5
+ld E, (IX + $0006)             ; 010D: DD 5E 06
+ld D, (IX + $0007)             ; 0110: DD 56 07
+ld HL, $0000                   ; 0113: 21 00 00
+add HL, DE                     ; 0116: 19
+ld A, (HL)                     ; 0117: 7E
+pop HL                         ; 0118: E1
+pop DE                         ; 0119: D1
+push DE                        ; 011A: D5
+push HL                        ; 011B: E5
+ld E, (IX + $0007)             ; 011C: DD 5E 07
+ld D, (IX + $0008)             ; 011F: DD 56 08
+ld HL, $0000                   ; 0122: 21 00 00
+add HL, DE                     ; 0125: 19
+ld (HL), A                     ; 0126: 77
+pop HL                         ; 0127: E1
+pop DE                         ; 0128: D1
+ld H, $0000                    ; 0129: 26 00
+ld L, A                        ; 012B: 6F
 __zax_epilogue_0:
-pop DE                         ; 0114: D1
-pop BC                         ; 0115: C1
-pop AF                         ; 0116: F1
-ld SP, IX                      ; 0117: DD F9
-pop IX                         ; 0119: DD E1
-ret                            ; 011B: C9
+pop DE                         ; 012C: D1
+pop BC                         ; 012D: C1
+pop AF                         ; 012E: F1
+ld SP, IX                      ; 012F: DD F9
+pop IX                         ; 0131: DD E1
+ret                            ; 0133: C9
 ; func byte_fvar_const end
 ; func main begin
 main:
-push IX                        ; 011C: DD E5
-ld IX, $0000                   ; 011E: DD 21 00 00
-add IX, SP                     ; 0122: DD 39
-push AF                        ; 0124: F5
-push BC                        ; 0125: C5
-push DE                        ; 0126: D5
-push HL                        ; 0127: E5
-ld HL, glob_bytes              ; 0128: 21 00 00
-push HL                        ; 012B: E5
-call byte_fvar_const           ; 012C: CD 00 00
-inc SP                         ; 012F: 33
-inc SP                         ; 0130: 33
+push IX                        ; 0134: DD E5
+ld IX, $0000                   ; 0136: DD 21 00 00
+add IX, SP                     ; 013A: DD 39
+push AF                        ; 013C: F5
+push BC                        ; 013D: C5
+push DE                        ; 013E: D5
+push HL                        ; 013F: E5
+ld HL, glob_bytes              ; 0140: 21 00 00
+push HL                        ; 0143: E5
+call byte_fvar_const           ; 0144: CD 00 00
+inc SP                         ; 0147: 33
+inc SP                         ; 0148: 33
 __zax_epilogue_1:
-pop HL                         ; 0131: E1
-pop DE                         ; 0132: D1
-pop BC                         ; 0133: C1
-pop AF                         ; 0134: F1
-ld SP, IX                      ; 0135: DD F9
-pop IX                         ; 0137: DD E1
-ret                            ; 0139: C9
+pop HL                         ; 0149: E1
+pop DE                         ; 014A: D1
+pop BC                         ; 014B: C1
+pop AF                         ; 014C: F1
+ld SP, IX                      ; 014D: DD F9
+pop IX                         ; 014F: DD E1
+ret                            ; 0151: C9
 ; func main end
 
 ; symbols:
 ; label byte_fvar_const = $0100
-; label __zax_epilogue_0 = $0114
-; label main = $011C
-; label __zax_epilogue_1 = $0131
+; label __zax_epilogue_0 = $012C
+; label main = $0134
+; label __zax_epilogue_1 = $0149
 ; data glob_bytes = $2000
 ; label __zax_startup = $2008
