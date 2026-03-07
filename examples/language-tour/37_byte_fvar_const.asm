@@ -9,24 +9,24 @@ add IX, SP                     ; 0106: DD 39
 push AF                        ; 0108: F5
 push BC                        ; 0109: C5
 push DE                        ; 010A: D5
-push DE                        ; 010B: D5
-push HL                        ; 010C: E5
-ld E, (IX + $0006)             ; 010D: DD 5E 06
-ld D, (IX + $0007)             ; 0110: DD 56 07
-ld HL, $0000                   ; 0113: 21 00 00
-add HL, DE                     ; 0116: 19
-ld A, (HL)                     ; 0117: 7E
-pop HL                         ; 0118: E1
-pop DE                         ; 0119: D1
-push DE                        ; 011A: D5
-push HL                        ; 011B: E5
-ld E, (IX + $0007)             ; 011C: DD 5E 07
-ld D, (IX + $0008)             ; 011F: DD 56 08
-ld HL, $0000                   ; 0122: 21 00 00
-add HL, DE                     ; 0125: 19
-ld (HL), A                     ; 0126: 77
-pop HL                         ; 0127: E1
-pop DE                         ; 0128: D1
+ld E, (IX + $0004)             ; 010B: DD 5E 04
+ld D, (IX + $0005)             ; 010E: DD 56 05
+ex DE, HL                      ; 0111: EB
+ld DE, $0002                   ; 0112: 11 02 00
+add HL, DE                     ; 0115: 19
+push HL                        ; 0116: E5
+pop HL                         ; 0117: E1
+ld A, (hl)                     ; 0118: 7E
+push AF                        ; 0119: F5
+ld E, (IX + $0004)             ; 011A: DD 5E 04
+ld D, (IX + $0005)             ; 011D: DD 56 05
+ex DE, HL                      ; 0120: EB
+ld DE, $0003                   ; 0121: 11 03 00
+add HL, DE                     ; 0124: 19
+push HL                        ; 0125: E5
+pop HL                         ; 0126: E1
+ld (hl), A                     ; 0127: 77
+pop AF                         ; 0128: F1
 ld H, $0000                    ; 0129: 26 00
 ld L, A                        ; 012B: 6F
 __zax_epilogue_0:
