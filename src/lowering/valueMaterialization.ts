@@ -57,6 +57,18 @@ export function createValueMaterializationHelpers(ctx: Context) {
     expr: ixDispMemExpr(disp, span),
   });
 
+  const getPow2ShiftCount = (elemSize: number | undefined): number | undefined => {
+    if (elemSize === undefined) return undefined;
+    let n = elemSize;
+    let shiftCount = 0;
+    while (n > 1 && (n & 1) === 0) {
+      n >>= 1;
+      shiftCount++;
+    }
+    if (n !== 1 || shiftCount > 15) return undefined;
+    return shiftCount;
+  };
+
   const emitLoadWordFromHlAddress = (target: 'HL' | 'DE' | 'BC', span: SourceSpan): boolean => {
     if (target === 'DE') {
       return ctx.emitStepPipeline(ctx.LOAD_RP_EA('DE'), span);
@@ -189,17 +201,8 @@ export function createValueMaterializationHelpers(ctx: Context) {
       const baseType = ctx.resolveEaTypeExpr(ea.base);
       if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return false;
       const elemSize = ctx.sizeOfTypeExpr(baseType.element);
-      const shiftCount = (() => {
-        if (elemSize === undefined) return -1;
-        let n = elemSize;
-        let s = 0;
-        while (n > 1 && (n & 1) === 0) {
-          n >>= 1;
-          s++;
-        }
-        return n === 1 ? s : -1;
-      })();
-      if (shiftCount < 0 || shiftCount > 4) return false;
+      const shiftCount = getPow2ShiftCount(elemSize);
+      if (shiftCount === undefined) return false;
 
       const loadIndexToHL = (): boolean => {
         const index = ea.index;
@@ -440,21 +443,12 @@ export function createValueMaterializationHelpers(ctx: Context) {
         return false;
       }
       const elemSize = ctx.sizeOfTypeExpr(baseType.element);
-      const shiftCount = (() => {
-        if (elemSize === undefined) return -1;
-        let n = elemSize;
-        let s = 0;
-        while (n > 1 && (n & 1) === 0) {
-          n >>= 1;
-          s++;
-        }
-        return n === 1 ? s : -1;
-      })();
-      if (shiftCount < 0 || shiftCount > 4) {
+      const shiftCount = getPow2ShiftCount(elemSize);
+      if (shiftCount === undefined) {
         ctx.diagAt(
           ctx.diagnostics,
           span,
-          `Runtime indexing currently supports element sizes that are powers of two up to 16 bytes (got ${elemSize}).`,
+          `Runtime indexing currently supports element sizes that are powers of two up to $8000 (got ${elemSize}).`,
         );
         return false;
       }
