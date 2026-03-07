@@ -108,7 +108,7 @@ describe('PR577 startup init region', () => {
     expect(bin).toBeDefined();
     expect(d8m).toBeDefined();
     const bytes = Array.from(bin!.bytes);
-    expect(bytes.slice(0, 7)).toEqual([0x00, 0x61, 0x62, 0x63, 0x00, 0x01, 0x00]);
+    expect(bytes.slice(0, 6)).toEqual([0x00, 0x61, 0x62, 0x63, 0x01, 0x00]);
 
     const generator = d8m!.json.generator as { entrySymbol?: string; entryAddress?: number };
     expect(generator.entrySymbol).toBe('__zax_startup');
@@ -116,13 +116,12 @@ describe('PR577 startup init region', () => {
     const entryOffset = (generator.entryAddress ?? 0) - 0x4000;
     expect(bytes[entryOffset]).toBe(0x21);
 
-    expect(bytes.slice(-28)).toEqual([
+    expect(bytes.slice(-24)).toEqual([
       0x02, 0x00,
       0x01, 0x40, 0x00, 0x00, 0x03, 0x00,
-      0x05, 0x40, 0x03, 0x00, 0x02, 0x00,
-      0x02, 0x00,
+      0x04, 0x40, 0x03, 0x00, 0x02, 0x00,
+      0x01, 0x00,
       0x00, 0x40, 0x01, 0x00,
-      0x04, 0x40, 0x01, 0x00,
       0x61, 0x62, 0x63, 0x01,
     ]);
   });
