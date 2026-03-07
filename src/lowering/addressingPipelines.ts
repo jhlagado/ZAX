@@ -61,6 +61,7 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
       const baseResolved = ctx.resolveEa(ea.base, span);
       const baseType = ctx.resolveEaTypeExpr(ea.base);
       if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return null;
+      if (baseResolved.kind === 'indirect') return null;
       const elemSize = ctx.sizeOfTypeExpr(baseType.element);
       if (elemSize !== 1) return null;
 
@@ -148,6 +149,7 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
       const baseResolved = ctx.resolveEa(ea.base, span);
       const baseType = ctx.resolveEaTypeExpr(ea.base);
       if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return null;
+      if (baseResolved.kind === 'indirect') return null;
       const elemSize = ctx.sizeOfTypeExpr(baseType.element);
       if (elemSize !== 2) return null;
 

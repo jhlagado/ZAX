@@ -21,28 +21,8 @@ export function createEaMaterializationHelpers(ctx: EaMaterializationContext) {
       ctx.emitAbs16Fixup(0x21, resolved.baseLower, resolved.addend, span);
       return true;
     }
-
-    const disp = resolved.ixDisp & 0xffff;
-    if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
-    if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span)) return false;
-    if (!ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
-    if (disp !== 0) {
-      if (!ctx.loadImm16ToDE(disp, span)) return false;
-      if (
-        !ctx.emitInstr(
-          'add',
-          [
-            { kind: 'Reg', span, name: 'HL' },
-            { kind: 'Reg', span, name: 'DE' },
-          ],
-          span,
-        )
-      ) {
-        return false;
-      }
-    }
-    if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
-    return ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span);
+    if (!ctx.pushEaAddress(ea, span)) return false;
+    return ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span);
   };
 
   return {
