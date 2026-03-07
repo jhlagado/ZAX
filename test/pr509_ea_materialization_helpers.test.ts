@@ -13,12 +13,13 @@ const span: SourceSpan = {
 const eaName = (name: string): EaExprNode => ({ kind: 'EaName', span, name });
 
 describe('#509 ea materialization helpers', () => {
-  it('keeps absolute and frame-slot materialization shapes stable', () => {
+  it('keeps absolute materialization and non-abs delegation stable', () => {
     const emitted: string[] = [];
     const fixups: string[] = [];
     const resolutions = new Map<string, EaResolution>([
       ['globw', { kind: 'abs', baseLower: 'globw', addend: 2 }],
       ['slotw', { kind: 'stack', ixDisp: -4 }],
+      ['indw', { kind: 'indirect', ixDisp: -6, addend: 4 }],
     ]);
 
     const emitInstr = (head: string, operands: AsmOperandNode[]): boolean => {
@@ -50,16 +51,9 @@ describe('#509 ea materialization helpers', () => {
 
     expect(helpers.materializeEaAddressToHL(eaName('globw'), span)).toBe(true);
     expect(helpers.materializeEaAddressToHL(eaName('slotw'), span)).toBe(true);
+    expect(helpers.materializeEaAddressToHL(eaName('indw'), span)).toBe(true);
 
     expect(fixups).toEqual(['globw+2']);
-    expect(emitted).toEqual([
-      'push DE',
-      'push IX',
-      'pop HL',
-      'loadImm16ToDE 65532',
-      'add HL, DE',
-      'push HL',
-      'pop DE',
-    ]);
+    expect(emitted).toEqual(['pushEaAddress', 'pop HL', 'pushEaAddress', 'pop HL']);
   });
 });
