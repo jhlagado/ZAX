@@ -35,6 +35,7 @@ This directory is intentionally constrained. Every file below has a unique purpo
 - `architecture-audit-v2.md` — March 2026 structural audit: 22 issues across parser, AST, semantics, lowering, and module layers with a prioritised refactoring sequence.
 - `type-system-reform-plan.md` — Detailed implementation plan for three reforms: layout preRoundSize/storageSize separation, EAW Wide addressing pipeline extension, and correct `indirect` EA resolution for non-scalar function parameters.
 - `ops-first-addressing-direction.md` — design note exploring `lea`, typed pointer casts, op contracts, dead-register pragmas, and richer `select` cases as a way to reduce addressing magic.
+- `ops-first-addressing-decisions.md` — tighter decision record defining `lea`, cast syntax direction, op contracts, dead-register pragmas, and grouped/ranged `select case` as candidate language decisions.
 
 ## Content Ownership
 
