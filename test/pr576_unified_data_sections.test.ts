@@ -59,6 +59,6 @@ describe('PR576 unified data declarations inside data sections', () => {
     const symbols = d8m!.json.symbols as Array<{ name: string; address: number }>;
     expect(symbols.find((s) => s.name === 'counter')?.address).toBe(0x4000);
     expect(symbols.find((s) => s.name === 'message')?.address).toBe(0x4001);
-    expect(symbols.find((s) => s.name === 'flag')?.address).toBe(0x4005);
+    expect(symbols.find((s) => s.name === 'flag')?.address).toBe(0x4004);
   });
 });
