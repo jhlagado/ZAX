@@ -166,6 +166,21 @@ export const CALC_EA = (): StepPipeline => [step({ kind: 'addHlDe' })];
 
 export const CALC_EA_2 = (): StepPipeline => [step({ kind: 'addHlHl' }), step({ kind: 'addHlDe' })];
 
+const calcEaShift = (shiftCount: number): StepPipeline => [
+  ...Array.from({ length: shiftCount }, () => step({ kind: 'addHlHl' })),
+  step({ kind: 'addHlDe' }),
+];
+
+export const CALC_EA_WIDE = (elemSize: number): StepPipeline => {
+  let n = elemSize;
+  let shiftCount = 0;
+  while (n > 1 && (n & 1) === 0) {
+    n >>= 1;
+    shiftCount++;
+  }
+  return n === 1 ? calcEaShift(shiftCount) : CALC_EA_2();
+};
+
 // ---------------------------------------------------------------------------
 // Accessors (byte)
 // ---------------------------------------------------------------------------
@@ -368,63 +383,63 @@ export const EA_GLOB_GLOB = (globBase: string, globIdx: string): StepPipeline =>
 // ---------------------------------------------------------------------------
 // EA builders (word size, HL=EA, scaled by 2)
 // ---------------------------------------------------------------------------
-export const EAW_GLOB_CONST = (glob: string, idxConst: number): StepPipeline => [
+export const EAW_GLOB_CONST = (glob: string, idxConst: number, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_GLOB(glob),
   ...LOAD_IDX_CONST(idxConst),
-  ...CALC_EA_2(),
+  ...CALC_EA_WIDE(elemSize),
 ];
 
-export const EAW_GLOB_REG = (glob: string, reg8: string): StepPipeline => [
+export const EAW_GLOB_REG = (glob: string, reg8: string, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_GLOB(glob),
   ...LOAD_IDX_REG(reg8),
-  ...CALC_EA_2(),
+  ...CALC_EA_WIDE(elemSize),
 ];
 
-export const EAW_GLOB_RP = (glob: string, rp: string): StepPipeline => [
+export const EAW_GLOB_RP = (glob: string, rp: string, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_GLOB(glob),
   ...LOAD_IDX_RP(rp),
-  ...CALC_EA_2(),
+  ...CALC_EA_WIDE(elemSize),
 ];
 
-export const EAW_FVAR_CONST = (fvar: number, idxConst: number): StepPipeline => {
-  const folded = foldFvar(fvar, idxConst * 2);
-  return [...LOAD_BASE_FVAR(folded.base), ...LOAD_IDX_CONST(folded.idx), ...CALC_EA_2()];
+export const EAW_FVAR_CONST = (fvar: number, idxConst: number, elemSize = 2): StepPipeline => {
+  const folded = foldFvar(fvar, idxConst * elemSize);
+  return [...LOAD_BASE_FVAR(folded.base), ...LOAD_IDX_CONST(folded.idx), ...CALC_EA_WIDE(elemSize)];
 };
 
-export const EAW_FVAR_REG = (fvar: number, reg8: string): StepPipeline => [
+export const EAW_FVAR_REG = (fvar: number, reg8: string, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_FVAR(fvar),
   ...LOAD_IDX_REG(reg8),
-  ...CALC_EA_2(),
+  ...CALC_EA_WIDE(elemSize),
 ];
 
-export const EAW_FVAR_RP = (fvar: number, rp: string): StepPipeline => [
+export const EAW_FVAR_RP = (fvar: number, rp: string, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_FVAR(fvar),
   ...LOAD_IDX_RP(rp),
-  ...CALC_EA_2(),
+  ...CALC_EA_WIDE(elemSize),
 ];
 
-export const EAW_GLOB_FVAR = (glob: string, fvar: number): StepPipeline => [
+export const EAW_GLOB_FVAR = (glob: string, fvar: number, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_GLOB(glob),
   ...LOAD_IDX_FVAR(fvar),
-  ...CALC_EA_2(),
+  ...CALC_EA_WIDE(elemSize),
 ];
 
-export const EAW_FVAR_FVAR = (fvarBase: number, fvarIdx: number): StepPipeline => [
+export const EAW_FVAR_FVAR = (fvarBase: number, fvarIdx: number, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_FVAR(fvarBase),
   ...LOAD_IDX_FVAR(fvarIdx),
-  ...CALC_EA_2(),
+  ...CALC_EA_WIDE(elemSize),
 ];
 
-export const EAW_FVAR_GLOB = (fvar: number, glob: string): StepPipeline => [
+export const EAW_FVAR_GLOB = (fvar: number, glob: string, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_FVAR(fvar),
   ...LOAD_IDX_GLOB(glob),
-  ...CALC_EA_2(),
+  ...CALC_EA_WIDE(elemSize),
 ];
 
-export const EAW_GLOB_GLOB = (globBase: string, globIdx: string): StepPipeline => [
+export const EAW_GLOB_GLOB = (globBase: string, globIdx: string, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_GLOB(globBase),
   ...LOAD_IDX_GLOB(globIdx),
-  ...CALC_EA_2(),
+  ...CALC_EA_WIDE(elemSize),
 ];
 
 // ---------------------------------------------------------------------------
