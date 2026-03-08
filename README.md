@@ -365,4 +365,4 @@ It defines the current local verification flow, fixture refresh commands, and CI
 
 ## License
 
-GPL-3.0-or-later. See [LICENSE](LICENSE).
+Public domain. See [LICENSE](LICENSE) ([The Unlicense](https://unlicense.org)).
