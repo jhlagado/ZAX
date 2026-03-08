@@ -10,7 +10,14 @@ export func main(arg: byte): void
   ld a, byteVar
   ld byteVar, a
   ld hl, wordVar
-  ld wordVar, hl
+  push de
+  ex de, hl
+  addr hl, wordVar
+  ld (hl), e
+  inc hl
+  ld (hl), d
+  ex de, hl
+  pop de
   ld a, arr[1]
   ld arr[2], a
   ld a, arg

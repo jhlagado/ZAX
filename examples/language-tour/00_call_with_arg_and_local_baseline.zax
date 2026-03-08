@@ -17,5 +17,12 @@ export func main()
   end
 
   inc_one $44
-  ld result_word, hl
+  push de
+  ex de, hl
+  addr hl, result_word
+  ld (hl), e
+  inc hl
+  ld (hl), d
+  ex de, hl
+  pop de
 end

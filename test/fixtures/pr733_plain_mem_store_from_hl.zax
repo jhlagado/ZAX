@@ -1,0 +1,9 @@
+section data vars at $4000
+  dst_w: word = $1111
+end
+
+func main()
+  ld hl, $1234
+  ld (dst_w), hl
+  ret
+end
