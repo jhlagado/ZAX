@@ -4,8 +4,7 @@
 **Status:** Spec decisions — ready for implementation backlog
 **Purpose:** Close the implementation-blocking questions from `ops-first-addressing-decisions.md` before `addr` work begins. Not a replacement for that document; a narrower follow-up.
 
-Questions addressed here: Q3, Q4, Q5.
-Questions re-deferred: Q6, Q7 (`@dead` optimization — not needed before `addr` implementation).
+Questions addressed here: Q3, Q4, Q5, Q6, Q7.
 Questions deferred to a later pass: Q1, Q2 (cast syntax), Q8 (case overlap lowering).
 
 ---
@@ -173,23 +172,106 @@ This gap is resolved by either a future `addr de, ea` extension, or a standard-l
 
 ---
 
-## Q6 — Internal preservation-region model: deferred
+## Q6 — Internal preservation-region model
 
-`addr` has no automatic register preservation. It emits a raw instruction sequence that computes the effective address and places it in HL. Whatever other registers the lowering uses internally (DE, AF, etc., depending on the EA shape) are simply used — no push/pop wrapping is emitted by the compiler.
+**Answer:** `addr` has a fixed, compiler-guaranteed public contract:
 
-Register management is entirely the programmer's responsibility, as it is for any Z80 instruction sequence. The programmer knows what registers matter at each point in their code and saves them if needed.
+> `addr hl, ea_expr` places the effective address in `HL`. All other registers are preserved.
 
-`@dead` optimizations are a separate concern that applies to existing compiler-generated preservation scaffolding. That scaffolding currently exists in the transitional typed EA lowering. Designing a preservation-region model for `addr` specifically is premature — `@dead` should be designed against concrete running code, not against a hypothetical model built in advance.
+The programmer never needs to know how `addr` computes the address internally. Whatever registers the lowering path uses transiently (DE, AF, etc.), the compiler pushes and pops them around the lowering body. This is invisible and irrelevant to the programmer.
 
-**Q6 is deferred.** It is not a blocker for `addr` implementation.
+### Why this is not D4's deferred problem
+
+D4 (op contracts deferred) is about **user-written op bodies**, where the compiler has no way to verify register/flag side effects without a full per-instruction effect-analysis framework.
+
+`addr` is different. It is a **compiler-owned keyword**. The compiler generates the entire lowering. It knows exactly which registers each EA shape will transiently use, because it wrote the code. No effect analysis is needed — the compiler has complete internal knowledge.
+
+The preservation model is therefore straightforward:
+
+```
+for each addr lowering path:
+  transiently_used = registers used internally by this path, excluding HL
+  preserve_set     = transiently_used - dead_set_at_call_site
+
+emit:
+  push each R in preserve_set
+  [lowering body]
+  pop each R in reverse(preserve_set)
+```
+
+The `dead_set_at_call_site` is the union of `@dead` annotations in scope. See Q7.
+
+### Example
+
+`addr hl, arr[C]` where `C` is an 8-bit register index, base is a global:
+
+- lowering body: `ld de, base; ld a, C; add e; ld e, a; ld a, d; adc 0; ld d, a; ex de, hl`
+- transiently_used: `{DE, AF}`
+- default preserve_set: `{DE, AF}` — compiler emits `push de; push af` / `pop af; pop de`
+
+With `@dead DE` in scope:
+- dead_set: `{DE}`
+- effective preserve_set: `{AF}` — compiler emits only `push af` / `pop af`
+
+With `@dead DE` and `@dead AF` in scope:
+- effective preserve_set: `{}` — no push/pop emitted
+
+The lowering body itself never changes. Only the wrapping changes.
+
+### The key rule
+
+The programmer sees one thing: `addr` computes and preserves. The compiler sees the other thing: what needs wrapping for each path. The programmer can relax that wrapping selectively with `@dead`. Neither side needs to know the other's details.
 
 ---
 
-## Q7 — Pragma placement and scope rules for `@dead`: deferred
+## Q7 — Pragma placement and scope rules for `@dead`
 
-`@dead` is an optimization feature. It should be designed once `addr` is working and there is real code to optimize against.
+**Answer:**
 
-**Q7 is deferred.** It is not a blocker for `addr` implementation.
+### Placement
+
+`@dead` is a statement-level pragma placed in the instruction stream of a function or block body.
+
+Valid contexts in v1:
+- `func` or `op` body
+- body of any structured control block (`if`, `while`, `repeat`, `select`)
+
+Invalid contexts in v1:
+- `data` section
+- `type` or `union` declaration
+- module top level
+
+### Scope
+
+`@dead reg16` applies from the point of declaration to the end of the enclosing scope, including all nested scopes within it.
+
+`@dead DE` at function level covers the entire function body, including nested blocks. `@dead DE` within a block covers the remainder of that block and any blocks nested within it. There is no "un-dead" mechanism in v1.
+
+### Accumulation
+
+Multiple `@dead` declarations in the same scope union their sets:
+
+```zax
+func render(): HL
+  @dead BC
+  @dead DE
+  ; dead set for this scope: {BC, DE}
+  ...
+end
+```
+
+### Syntax
+
+```
+pragma_stmt = "@dead" reg16
+reg16       = "BC" | "DE" | "AF"
+```
+
+HL is not a valid `@dead` target. It is always the result of `addr` and is always clobbered by definition.
+
+### In op bodies
+
+`@dead` in an op body applies to any compiler-owned lowering within the op (e.g., `addr` lowering inside the op body). It does not and cannot affect the op's own push/pop statements — those are author-owned code, not compiler-generated preservation scaffolding.
 
 ---
 
@@ -202,8 +284,8 @@ Register management is entirely the programmer's responsibility, as it is for an
 | Q3: Transitional status of typed EA in `ld` | **Resolved above** | — |
 | Q4: Semantic mapping of transitional forms | **Resolved above** | — |
 | Q5: Op contracts | **Resolved: deferred** | — |
-| Q6: Preservation-region model | **Deferred** — not needed before `addr` |
-| Q7: `@dead` placement and scope | **Deferred** — design against real code |
+| Q6: Preservation-region model | **Resolved above** | — |
+| Q7: `@dead` placement and scope | **Resolved above** | — |
 | Q8: Range/grouped case overlap lowering | Open | Before `select` range implementation begins |
 
 ---
@@ -212,8 +294,9 @@ Register management is entirely the programmer's responsibility, as it is for an
 
 The resolved answers support a narrow first slice:
 
-1. `addr hl, ea_expr` — parser and lowering; emits raw address-computation sequence into HL, no automatic preservation
-2. Transitional typed EA in `ld` — routes through `addr` lowering, not bespoke; word-store-from-HL produces diagnostic
-3. Tests — verify `addr` produces correct addresses across EA shapes; verify diagnostic for unsupported word-store case
+1. `addr hl, ea_expr` — parser, lowering, and preservation-region emission around each lowering path
+2. `@dead reg16` pragma — recognition in instruction stream, scope tracking, dead-set propagation into preservation emission
+3. Transitional typed EA in `ld` — routes through `addr` lowering, not bespoke; word-store-from-HL produces diagnostic
+4. Tests — verify correct address computation across EA shapes; verify preservation emitted/elided correctly under `@dead`; verify diagnostic for unsupported word-store case
 
-`@dead`, cast syntax (Q1/Q2), and range case lowering (Q8) are not part of this slice.
+Cast syntax (Q1/Q2) and range case lowering (Q8) are not part of this slice.
