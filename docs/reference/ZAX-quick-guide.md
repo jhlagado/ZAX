@@ -2,7 +2,7 @@
 
 A practical quick-start guide to ZAX v0.2.
 
-This guide is instructional, not normative. Canonical language behavior is defined in `docs/zax-spec.md`.
+This guide is instructional, not normative. Canonical language behavior is defined in `docs/spec/zax-spec.md`.
 
 ---
 
@@ -120,7 +120,7 @@ Useful diagnostic options:
 | `--raw-typed-call-warn` | Warn when raw `call` / `call cc,nn` targets a typed callable symbol |
 | `-I <dir>`              | Add import search path (repeatable)                                 |
 
-The full CLI contract is in `docs/zax-spec.md` Appendix D.
+The full CLI contract is in `docs/spec/zax-spec.md` Appendix D.
 
 ---
 
@@ -1932,7 +1932,7 @@ extern func bios_getc(): byte at $F006
 
 - `at <imm16>` is required.
 - `extern`-declared names enter the global namespace. Collisions with other symbols are errors.
-- `extern func` calls carry **no** compiler-generated register preservation. Assume any register or flag may be clobbered on return. (Clobber annotation syntax is planned — see `docs/zax-spec.md` Appendix F.)
+- `extern func` calls carry **no** compiler-generated register preservation. Assume any register or flag may be clobbered on return. (Clobber annotation syntax is planned — see `docs/spec/zax-spec.md` Appendix F.)
 
 ### 11.8 Relative `extern` Blocks for `bin` Entry Points
 
@@ -2359,4 +2359,4 @@ Working in ZAX means keeping the lowering predictable. A few habits help:
 - **Use `sizeof` and `offsetof` everywhere.** Never hardcode a field offset. If the type changes, the built-ins update automatically.
 - **Use qualified enum names everywhere.** `Mode.Run` everywhere, never bare `Run`. Unqualified references are compile errors in v0.2 — this is enforced, not advisory.
 - **Check the `.asm` or `.lst` output when something looks wrong.** The lowered trace shows exactly what the compiler emitted. The IX byte-lane shuttle (`ex de, hl` / `ld e, (ix+d)` / ...) is particularly visible here.
-- **Treat `docs/zax-spec.md` as the final authority.** This guide is instructional; the spec is normative.
+- **Treat `docs/spec/zax-spec.md` as the final authority.** This guide is instructional; the spec is normative.

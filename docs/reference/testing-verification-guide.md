@@ -2,7 +2,7 @@
 
 This is the single contributor reference for local verification flow, fixture refresh commands, and CI expectations.
 
-Normative language behavior remains defined only by `docs/zax-spec.md`.
+Normative language behavior remains defined only by `docs/spec/zax-spec.md`.
 
 ## Local verification flow
 

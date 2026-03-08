@@ -4,7 +4,7 @@ This folder is the committed inspection mirror for the curated codegen corpus.
 
 The supported workflow is defined in:
 
-- `docs/codegen-corpus-workflow.md`
+- `docs/reference/codegen-corpus-workflow.md`
 
 The manifest for the curated set is:
 

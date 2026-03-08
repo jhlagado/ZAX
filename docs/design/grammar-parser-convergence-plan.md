@@ -4,7 +4,7 @@
 
 ZAX has two parallel representations of its syntax:
 
-1. **`docs/zax-grammar.ebnf.md`** — a descriptive EBNF companion that documents what the grammar looks like.
+1. **`docs/spec/zax-grammar.ebnf.md`** — a descriptive EBNF companion that documents what the grammar looks like.
 2. **Hand-written recursive-descent parser** — spread across ~10 files in `src/frontend/`, containing the actual parsing logic.
 
 These two representations are maintained independently. The grammar doc says "if this and the spec diverge, the spec wins," and the parser was built by reading the spec, not the grammar. As a result, grammar atoms (registers, condition codes, operator precedence, escape sequences, keywords, matcher types) are hardcoded as inline string literals, regex patterns, and switch arms scattered across the parser. There is no single source of truth shared between the documentation and the code.

@@ -1,6 +1,6 @@
 # ZAX Return Register Policy (v0.2 Detailed Design)
 
-Status: non-normative companion to `docs/zax-spec.md` §8.2. Intended for developers and reviewers implementing register-based returns and preservation.
+Status: non-normative companion to `docs/spec/zax-spec.md` §8.2. Intended for developers and reviewers implementing register-based returns and preservation.
 
 ## 1. Goals
 
@@ -118,7 +118,7 @@ ret
 
 - Prefer base in DE, offset/scale in HL; `add hl, de` for the final address.
 - Use DE shuttle for IX+d lane transfers when semantic register is HL (per v0.2 byte-lane rule).
-- Local+local base/index is high-cost; warn/reject under runtime-atom budget unless one side is hoisted to a register (per `docs/arrays.md`). If allowed, save/restore any scratch pair used.
+- Local+local base/index is high-cost; warn/reject under runtime-atom budget unless one side is hoisted to a register (per `docs/reference/arrays.md`). If allowed, save/restore any scratch pair used.
 
 ## 6. Call-Site Semantics
 

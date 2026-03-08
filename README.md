@@ -277,7 +277,7 @@ ZAX is under active development. The compiler exists as a Node.js CLI tool and h
 
 What works today: single and multi-module compilation, functions with locals and calling conventions, structured control flow, the op system, records/unions/arrays, named `section code`/`section data` blocks with direct declarations (`const`/`enum`/typed storage/`bin`/`hex`/`extern`), forward references and fixups, and a growing slice of the Z80 instruction set.
 
-What remains: broader ISA coverage, CLI hardening, full listing output, cross-platform acceptance testing, and Debug80 integration. See `docs/zax-dev-playbook.md` for the concrete milestone plan.
+What remains: broader ISA coverage, CLI hardening, full listing output, cross-platform acceptance testing, and Debug80 integration. See `docs/reference/zax-dev-playbook.md` for the concrete milestone plan.
 
 ---
 
@@ -333,7 +333,7 @@ zax [options] <entry.zax>
 
 Use the canonical contributor verification guide:
 
-- `docs/testing-verification-guide.md`
+- `docs/reference/testing-verification-guide.md`
 
 It defines the current local verification flow, fixture refresh commands, and CI expectations.
 
@@ -343,11 +343,11 @@ It defines the current local verification flow, fixture refresh commands, and CI
 
 | Document                             | Purpose                                                           |
 | ------------------------------------ | ----------------------------------------------------------------- |
-| `docs/zax-spec.md`                   | **Normative** language specification (includes CLI/op appendices) |
-| `docs/ZAX-quick-guide.md`            | Practical quick guide for daily language usage (non-normative)    |
-| `docs/testing-verification-guide.md` | Canonical testing/verification flow for contributors              |
-| `docs/zax-dev-playbook.md`           | Contributor workflow and review/merge hygiene                     |
-| `docs/v02-codegen-reference.md`      | Consolidated v0.2 codegen entry point and archive links           |
+| `docs/spec/zax-spec.md`                   | **Normative** language specification (includes CLI/op appendices) |
+| `docs/reference/ZAX-quick-guide.md`            | Practical quick guide for daily language usage (non-normative)    |
+| `docs/reference/testing-verification-guide.md` | Canonical testing/verification flow for contributors              |
+| `docs/reference/zax-dev-playbook.md`           | Contributor workflow and review/merge hygiene                     |
+| `docs/archive/versioned/v02-codegen-reference.md`      | Consolidated v0.2 codegen entry point and archive links           |
 
 ---
 
