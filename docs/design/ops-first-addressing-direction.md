@@ -400,7 +400,7 @@ The compiler should either prove the contract or refuse it.
 
 ---
 
-## 9. Dead-register pragmas are a good fit
+## 9. Dead-register pragmas are a good fit later
 
 This is exactly the kind of thing pragmas *should* do.
 
@@ -415,7 +415,7 @@ Dead-register information is:
 
 That makes it a good pragma candidate.
 
-### 9.2 Proposed scope
+### 9.2 Proposed later scope
 
 Support:
 
@@ -440,6 +440,7 @@ until Z
 ```
 
 This is enough to be useful without becoming a full liveness language.
+But it should land only after `addr` and its preservation machinery are stable in real code.
 
 ### 9.3 What `@dead` must and must not touch
 
@@ -476,7 +477,7 @@ Example shape:
 - clobber/result set: `HL, AF`
 - derived preserve set: `BC, DE`
 
-If the current scope contains:
+If a future scope contains:
 
 ```zax
 @dead DE
@@ -484,7 +485,7 @@ If the current scope contains:
 
 then the compiler trims only the derived preserve set and emits preservation for `BC` but not `DE`.
 
-This means dead-register optimization should operate on compiler-owned preservation metadata, not on raw emitted opcodes.
+This means any future dead-register optimization should operate on compiler-owned preservation metadata, not on raw emitted opcodes.
 
 ### 9.5 Why this pairs well with ops-first addressing
 
@@ -494,7 +495,7 @@ This fits the broader direction cleanly:
 - future standard-library ops can conceptually follow the same shape
 - semantic stack shuffling inside a body remains explicit and untouched
 
-So even during any transition period, dead-register metadata can reduce preservation cost without becoming unsafe.
+So once `addr` is stable, dead-register metadata can reduce preservation cost without becoming unsafe.
 
 ---
 

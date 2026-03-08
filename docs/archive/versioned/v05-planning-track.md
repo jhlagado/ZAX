@@ -1,8 +1,8 @@
 # ZAX v0.5 Planning Track
 
-This document converts `docs/modules.md` into an implementation plan.
+This document converts `docs/archive/design/modules.md` into an implementation plan.
 
-`docs/modules.md` is the design anchor. This file defines execution order,
+`docs/archive/design/modules.md` is the design anchor. This file defines execution order,
 staging rules, and explicit non-goals.
 
 ## 1. v0.5 Scope
@@ -139,10 +139,10 @@ Hard-cut completion for v0.5:
 - migrate examples and guides
 - validate and close the removal track
 
-## 5. Phase 6 Baseline (Resolved by `docs/modules.md`)
+## 5. Phase 6 Baseline (Resolved by `docs/archive/design/modules.md`)
 
 The startup-initialization phase now has a usable provisional baseline defined in
-`docs/modules.md` §§6.4-6.6.
+`docs/archive/design/modules.md` §§6.4-6.6.
 
 Phase 6 implementation should proceed using these v0.5 provisional rules:
 
@@ -174,7 +174,7 @@ Each phase should land with focused tests before the next one starts.
 
 ## 7. Relationship to Other Docs
 
-- `docs/zax-spec.md` remains normative until v0.5 work is implemented and
+- `docs/spec/zax-spec.md` remains normative until v0.5 work is implemented and
   adopted.
-- `docs/modules.md` is the design anchor for this topic.
+- `docs/archive/design/modules.md` is the design anchor for this topic.
 - This file is the implementation planning layer for that design.
