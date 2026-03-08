@@ -9,62 +9,85 @@ add IX, SP                     ; 0106: DD 39
 push AF                        ; 0108: F5
 push BC                        ; 0109: C5
 push DE                        ; 010A: D5
-ex DE, HL                      ; 010B: EB
-ld E, (IX + $0004)             ; 010C: DD 5E 04
-ld D, (IX + $0005)             ; 010F: DD 56 05
-ex DE, HL                      ; 0112: EB
-push DE                        ; 0113: D5
-push HL                        ; 0114: E5
-ld de, glob_bytes              ; 0115: 11 00 00
-add HL, DE                     ; 0118: 19
-ld A, (HL)                     ; 0119: 7E
-pop HL                         ; 011A: E1
-pop DE                         ; 011B: D1
-push DE                        ; 011C: D5
-push HL                        ; 011D: E5
-ld de, glob_bytes              ; 011E: 11 00 00
-add HL, DE                     ; 0121: 19
-ld (HL), A                     ; 0122: 77
-pop HL                         ; 0123: E1
-pop DE                         ; 0124: D1
-ld H, $0000                    ; 0125: 26 00
-ld L, A                        ; 0127: 6F
+push AF                        ; 010B: F5
+push BC                        ; 010C: C5
+push DE                        ; 010D: D5
+push IX                        ; 010E: DD E5
+pop HL                         ; 0110: E1
+ld DE, $0004                   ; 0111: 11 04 00
+add HL, DE                     ; 0114: 19
+push HL                        ; 0115: E5
+pop HL                         ; 0116: E1
+pop DE                         ; 0117: D1
+pop BC                         ; 0118: C1
+pop AF                         ; 0119: F1
+push DE                        ; 011A: D5
+ld E, (HL)                     ; 011B: 5E
+inc HL                         ; 011C: 23
+ld D, (HL)                     ; 011D: 56
+ld L, E                        ; 011E: 6B
+ld H, D                        ; 011F: 62
+pop DE                         ; 0120: D1
+push AF                        ; 0121: F5
+push BC                        ; 0122: C5
+push DE                        ; 0123: D5
+ld DE, glob_bytes              ; 0124: 11 00 00
+add HL, DE                     ; 0127: 19
+push HL                        ; 0128: E5
+pop HL                         ; 0129: E1
+pop DE                         ; 012A: D1
+pop BC                         ; 012B: C1
+pop AF                         ; 012C: F1
+ld A, (hl)                     ; 012D: 7E
+push AF                        ; 012E: F5
+push BC                        ; 012F: C5
+push DE                        ; 0130: D5
+ld DE, glob_bytes              ; 0131: 11 00 00
+add HL, DE                     ; 0134: 19
+push HL                        ; 0135: E5
+pop HL                         ; 0136: E1
+pop DE                         ; 0137: D1
+pop BC                         ; 0138: C1
+pop AF                         ; 0139: F1
+ld (hl), A                     ; 013A: 77
+ld H, $0000                    ; 013B: 26 00
+ld L, A                        ; 013D: 6F
 __zax_epilogue_0:
-pop DE                         ; 0128: D1
-pop BC                         ; 0129: C1
-pop AF                         ; 012A: F1
-ld SP, IX                      ; 012B: DD F9
-pop IX                         ; 012D: DD E1
-ret                            ; 012F: C9
+pop DE                         ; 013E: D1
+pop BC                         ; 013F: C1
+pop AF                         ; 0140: F1
+ld SP, IX                      ; 0141: DD F9
+pop IX                         ; 0143: DD E1
+ret                            ; 0145: C9
 ; func byte_glob_reg16 end
 ; func main begin
 main:
-push IX                        ; 0130: DD E5
-ld IX, $0000                   ; 0132: DD 21 00 00
-add IX, SP                     ; 0136: DD 39
-push AF                        ; 0138: F5
-push BC                        ; 0139: C5
-push DE                        ; 013A: D5
-push HL                        ; 013B: E5
-ld HL, $0004                   ; 013C: 21 04 00
-push HL                        ; 013F: E5
-call byte_glob_reg16           ; 0140: CD 00 00
-inc SP                         ; 0143: 33
-inc SP                         ; 0144: 33
+push IX                        ; 0146: DD E5
+ld IX, $0000                   ; 0148: DD 21 00 00
+add IX, SP                     ; 014C: DD 39
+push AF                        ; 014E: F5
+push BC                        ; 014F: C5
+push DE                        ; 0150: D5
+push HL                        ; 0151: E5
+ld HL, $0004                   ; 0152: 21 04 00
+push HL                        ; 0155: E5
+call byte_glob_reg16           ; 0156: CD 00 00
+inc SP                         ; 0159: 33
+inc SP                         ; 015A: 33
 __zax_epilogue_1:
-pop HL                         ; 0145: E1
-pop DE                         ; 0146: D1
-pop BC                         ; 0147: C1
-pop AF                         ; 0148: F1
-ld SP, IX                      ; 0149: DD F9
-pop IX                         ; 014B: DD E1
-ret                            ; 014D: C9
+pop HL                         ; 015B: E1
+pop DE                         ; 015C: D1
+pop BC                         ; 015D: C1
+pop AF                         ; 015E: F1
+ld SP, IX                      ; 015F: DD F9
+pop IX                         ; 0161: DD E1
+ret                            ; 0163: C9
 ; func main end
 
 ; symbols:
 ; label byte_glob_reg16 = $0100
-; label __zax_epilogue_0 = $0128
-; label main = $0130
-; label __zax_epilogue_1 = $0145
+; label __zax_epilogue_0 = $013E
+; label main = $0146
+; label __zax_epilogue_1 = $015B
 ; data glob_bytes = $2000
 ; label __zax_startup = $2008

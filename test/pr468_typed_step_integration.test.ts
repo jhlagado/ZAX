@@ -26,7 +26,8 @@ describe('PR468 typed-step integration coverage', () => {
     expect(text).toContain('ld E, (HL)');
     expect(text).toContain('inc HL');
     expect(text).toContain('ld D, (HL)');
-    expect(text).toContain('ld (dst_w), DE');
+    expect(text).toContain('ld HL, dst_w');
+    expect(text).toContain('ld (HL), E');
     expect(text).not.toContain('ld A, (HL)');
   });
 
@@ -35,9 +36,9 @@ describe('PR468 typed-step integration coverage', () => {
 
     expect(text).toContain('push DE');
     expect(text).toContain('push HL');
-    expect(text).toContain('ld de, arr_b');
+    expect(text).toContain('ld DE, arr_b');
     expect(text).toContain('add HL, DE');
-    expect(text).toContain('ld A, (HL)');
-    expect(text).toContain('ld (HL), D');
+    expect(text).toContain('ld A, (hl)');
+    expect(text).toContain('ld (hl), D');
   });
 });

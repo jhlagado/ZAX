@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 346,
+          "end": 400,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -44,84 +44,84 @@
         },
         {
           "start": 275,
-          "end": 281,
+          "end": 295,
           "lstLine": 7,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 281,
-          "end": 282,
+          "start": 295,
+          "end": 296,
           "lstLine": 8,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 282,
-          "end": 288,
+          "start": 296,
+          "end": 314,
           "lstLine": 9,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 288,
-          "end": 294,
+          "start": 314,
+          "end": 334,
           "lstLine": 10,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 294,
-          "end": 295,
+          "start": 334,
+          "end": 335,
           "lstLine": 11,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 295,
-          "end": 303,
+          "start": 335,
+          "end": 343,
           "lstLine": 1,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 303,
-          "end": 311,
+          "start": 343,
+          "end": 351,
           "lstLine": 14,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 311,
-          "end": 316,
+          "start": 351,
+          "end": 356,
           "lstLine": 16,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 316,
-          "end": 320,
+          "start": 356,
+          "end": 360,
           "lstLine": 14,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 320,
-          "end": 329,
+          "start": 360,
+          "end": 369,
           "lstLine": 19,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 329,
-          "end": 337,
+          "start": 369,
+          "end": 391,
           "lstLine": 20,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 337,
-          "end": 346,
+          "start": 391,
+          "end": 400,
           "lstLine": 14,
           "kind": "code",
           "confidence": "high"
@@ -138,21 +138,21 @@
         {
           "name": "__zax_epilogue_0",
           "kind": "label",
-          "address": 295,
+          "address": 335,
           "line": 1,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
-          "address": 303,
+          "address": 343,
           "line": 14,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
-          "address": 337,
+          "address": 391,
           "line": 14,
           "scope": "local"
         }
@@ -162,7 +162,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 346
+      "end": 400
     }
   ],
   "fileList": [
@@ -180,7 +180,7 @@
     {
       "name": "__zax_epilogue_0",
       "kind": "label",
-      "address": 295,
+      "address": 335,
       "file": "00_call_with_arg_and_local_baseline.zax",
       "line": 1,
       "scope": "local"
@@ -188,7 +188,7 @@
     {
       "name": "main",
       "kind": "label",
-      "address": 303,
+      "address": 343,
       "file": "00_call_with_arg_and_local_baseline.zax",
       "line": 14,
       "scope": "global"
@@ -196,7 +196,7 @@
     {
       "name": "__zax_epilogue_1",
       "kind": "label",
-      "address": 337,
+      "address": 391,
       "file": "00_call_with_arg_and_local_baseline.zax",
       "line": 14,
       "scope": "local"
@@ -205,6 +205,6 @@
   "generator": {
     "tool": "zax",
     "entrySymbol": "main",
-    "entryAddress": 303
+    "entryAddress": 343
   }
 }
