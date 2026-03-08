@@ -359,7 +359,7 @@ export interface AsmBlockNode extends BaseNode {
 /**
  * Items that can appear inside an `asm` block.
  */
-export type AsmItemNode = AsmInstructionNode | AsmControlNode | AsmLabelNode | UnimplementedNode;
+export type AsmItemNode = AsmInstructionNode | AsmAddrNode | AsmControlNode | AsmLabelNode | UnimplementedNode;
 
 /**
  * Label definition inside an `asm` stream.
@@ -377,6 +377,15 @@ export interface AsmInstructionNode extends BaseNode {
   /** Canonical lower-case instruction mnemonic. */
   head: string;
   operands: AsmOperandNode[];
+}
+
+/**
+ * `addr hl, ea_expr` instruction-like statement inside an `asm` stream.
+ */
+export interface AsmAddrNode extends BaseNode {
+  kind: 'AsmAddr';
+  dst: 'HL';
+  expr: EaExprNode;
 }
 
 /**
@@ -495,6 +504,7 @@ export type Node =
   | RecordFieldNode
   | AsmBlockNode
   | AsmItemNode
+  | AsmAddrNode
   | AsmControlNode
   | AsmOperandNode
   | TypeExprNode
