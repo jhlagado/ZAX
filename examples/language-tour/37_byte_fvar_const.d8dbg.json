@@ -16,63 +16,63 @@
         },
         {
           "start": 256,
-          "end": 338,
+          "end": 350,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
         },
         {
           "start": 267,
-          "end": 281,
+          "end": 287,
           "lstLine": 7,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 281,
-          "end": 297,
+          "start": 287,
+          "end": 309,
           "lstLine": 8,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 297,
-          "end": 299,
+          "start": 309,
+          "end": 311,
           "lstLine": 9,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 299,
-          "end": 300,
+          "start": 311,
+          "end": 312,
           "lstLine": 10,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 300,
-          "end": 308,
+          "start": 312,
+          "end": 320,
           "lstLine": 6,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 308,
-          "end": 320,
+          "start": 320,
+          "end": 332,
           "lstLine": 13,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 320,
-          "end": 329,
+          "start": 332,
+          "end": 341,
           "lstLine": 14,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 329,
-          "end": 338,
+          "start": 341,
+          "end": 350,
           "lstLine": 13,
           "kind": "code",
           "confidence": "high"
@@ -96,21 +96,21 @@
         {
           "name": "__zax_epilogue_0",
           "kind": "label",
-          "address": 300,
+          "address": 312,
           "line": 6,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
-          "address": 308,
+          "address": 320,
           "line": 13,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
-          "address": 329,
+          "address": 341,
           "line": 13,
           "scope": "local"
         },
@@ -133,7 +133,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 338
+      "end": 350
     },
     {
       "start": 8192,
@@ -155,7 +155,7 @@
     {
       "name": "__zax_epilogue_0",
       "kind": "label",
-      "address": 300,
+      "address": 312,
       "file": "37_byte_fvar_const.zax",
       "line": 6,
       "scope": "local"
@@ -163,7 +163,7 @@
     {
       "name": "main",
       "kind": "label",
-      "address": 308,
+      "address": 320,
       "file": "37_byte_fvar_const.zax",
       "line": 13,
       "scope": "global"
@@ -171,7 +171,7 @@
     {
       "name": "__zax_epilogue_1",
       "kind": "label",
-      "address": 329,
+      "address": 341,
       "file": "37_byte_fvar_const.zax",
       "line": 13,
       "scope": "local"

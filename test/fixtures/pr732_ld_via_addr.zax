@@ -1,0 +1,14 @@
+section data vars at $4000
+  bytes: byte[4] = { $10, $11, $12, $13 }
+  words: word[4] = { $1111, $2222, $3333, $4444 }
+end
+
+func main()
+  ld a, $12
+  ld bc, $3456
+  ld de, $789A
+  ld a, bytes[C]
+  ld bytes[C], a
+  ld de, words[C]
+  ret
+end
