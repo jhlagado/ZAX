@@ -22,8 +22,8 @@ describe('#509 lowerLdWithEa integration', () => {
     expect(byteRes.diagnostics).toEqual([]);
     expect(byteAsm).toBeDefined();
     expect(byteAsm!.text).toContain('push AF');
-    expect(byteAsm!.text).toContain('ld A, (glob_b)');
-    expect(byteAsm!.text).toContain('ld B, A');
+    expect(byteAsm!.text).toContain('ld HL, glob_b');
+    expect(byteAsm!.text).toContain('ld B, (hl)');
 
     const wordEntry = join(__dirname, 'fixtures', 'pr406_word_mem_to_mem_mixed_reverse.zax');
     const wordRes = await compile(wordEntry, {}, { formats: defaultFormatWriters });
@@ -36,6 +36,7 @@ describe('#509 lowerLdWithEa integration', () => {
     expect(wordRes.diagnostics).toEqual([]);
     expect(wordAsm).toBeDefined();
     expect(wordAsm!.text).toContain('ld E, (HL)');
-    expect(wordAsm!.text).toContain('ld (dst_w), DE');
+    expect(wordAsm!.text).toContain('ld HL, dst_w');
+    expect(wordAsm!.text).toContain('ld (HL), E');
   });
 });
