@@ -8,22 +8,25 @@ type Context = {
 export function createAddrLoweringHelpers(ctx: Context) {
   const preservedRegs: Array<'AF' | 'BC' | 'DE'> = ['AF', 'BC', 'DE'];
 
-  const lowerAsmAddr = (item: AsmAddrNode): boolean => {
+  const materializeAddrToHLWithPreservedRegs = (ea: EaExprNode, span: SourceSpan): boolean => {
     for (const reg of preservedRegs) {
-      if (!ctx.emitInstr('push', [{ kind: 'Reg', span: item.span, name: reg }], item.span)) return false;
+      if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: reg }], span)) return false;
     }
 
-    if (!ctx.materializeEaAddressToHL(item.expr, item.span)) return false;
+    if (!ctx.materializeEaAddressToHL(ea, span)) return false;
 
     for (let i = preservedRegs.length - 1; i >= 0; i--) {
       const reg = preservedRegs[i]!;
-      if (!ctx.emitInstr('pop', [{ kind: 'Reg', span: item.span, name: reg }], item.span)) return false;
+      if (!ctx.emitInstr('pop', [{ kind: 'Reg', span, name: reg }], span)) return false;
     }
 
     return true;
   };
 
+  const lowerAsmAddr = (item: AsmAddrNode): boolean => materializeAddrToHLWithPreservedRegs(item.expr, item.span);
+
   return {
     lowerAsmAddr,
+    materializeAddrToHLWithPreservedRegs,
   };
 }
