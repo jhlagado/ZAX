@@ -118,46 +118,27 @@ This needs a precise grammar production before implementation.
 
 ---
 
-### D4. Ops get verified return/clobber contracts
+### D4. Op contracts are deferred until there is a real effect-analysis mechanism
 
-Ops should adopt the same general contract surface as functions:
+Ops are still the right place for reusable access policy, but ZAX does not currently have any trustworthy mechanism for proving register/flag side effects.
 
-```zax
-op add16(dst: DE, src: reg16): DE
-  ex de, hl
-  add hl, src
-  ex de, hl
-end
-```
+That means v1 should **not** commit to verified op return/clobber contracts.
 
-Initial rule:
+For now:
 
-- registers listed after `:` are allowed to change and/or carry results
-- all other registers are required to be preserved
-- `AF` is the coarse flags/clobber surface
-
-Examples:
-
-```zax
-op cmp8(lhs: A, rhs: reg8): AF
-  cp rhs
-end
-```
-
-Important rule:
-
-- the compiler **verifies** the contract
-- the compiler does **not** silently insert save/restore code to satisfy it
+- ops remain explicit source-level abstractions
+- the language does not promise compiler-verified register contracts for them
+- any future clobber/result metadata must wait until there is a real effect-analysis framework
 
 Rationale:
 
-- makes op interfaces legible
-- fits ZAX’s machine-close philosophy
-- avoids compiler-owned tactical policy creeping back into ops
+- avoids signing up to a feature that has no implementation basis today
+- keeps the language direction honest
+- leaves room for a later, narrower design once effect analysis actually exists
 
 ---
 
-### D5. Dead-register pragmas are advisory optimization metadata
+### D5. Dead-register pragmas trim only explicit preservation regions
 
 ZAX should support dead-register metadata scoped to:
 
@@ -186,11 +167,20 @@ Semantics:
 - pragmas do not change program meaning
 - they only permit the compiler to skip unnecessary preservation work
 - the compiler may ignore them
+- they apply only to compiler-owned preservation regions, not arbitrary stack traffic in the body
+
+Required internal model:
+
+- compiler-owned slabs such as `lea` lowering or sugary EA access must carry a clobber/result set
+- the compiler derives the preserve set as the complement of that clobber set
+- `@dead` trims only that derived preserve set before concrete `push`/`pop` emission
+- semantic stack juggling inside the body remains untouched
 
 Rationale:
 
 - correct use of pragmas is advisory, not semantic
-- this gives optimization control without creating a liveness sublanguage
+- this keeps dead-register optimization targeted at preservation scaffolding only
+- it avoids unsafe deletion of stack operations that are actually part of the algorithm
 
 ---
 
@@ -244,9 +234,9 @@ Typing is applied only at point of access or interpretation.
 This direction does not introduce `ptr<T>`.
 Typed reinterpretation is done with cast syntax instead.
 
-### N4. No automatic compiler save/restore for op contracts
+### N4. No automatic compiler save/restore for hypothetical op contracts
 
-Op contracts are verified, not automatically satisfied by inserted code.
+If op contract metadata exists in the future, the compiler still should not silently satisfy it by inserting save/restore code.
 
 ### N5. No removal of existing EA sugar in the first pass
 
@@ -267,9 +257,10 @@ These questions need explicit answers before any implementation backlog is creat
 1. What is the exact grammar production for `<Type>base.tail`?
 2. What counts as a valid `base` for casted EA interpretation in v1?
 3. What precise sugar definition maps direct EA loads/stores onto `lea`?
-4. What exact register/flag contract model do ops use in v1?
-5. What pragma placement rules apply to `@dead`?
-6. How do range/grouped `case` values lower in the presence of overlapping clauses?
+4. Does v1 expose any op metadata at all, or are op contracts entirely deferred?
+5. What exact internal preservation-region model makes `@dead` safe?
+6. What pragma placement rules apply to `@dead`?
+7. How do range/grouped `case` values lower in the presence of overlapping clauses?
 
 ---
 
@@ -280,9 +271,10 @@ If this direction is accepted, the safest first implementation boundary is:
 1. add `lea hl, ea`
 2. define direct EA load/store sugar over `lea`
 3. leave existing op semantics unchanged
-4. add op contracts in a separate step
-5. add dead-register pragmas after `lea` exists
-6. add cast syntax only once `lea` boundary is stable
+4. introduce explicit compiler-owned preservation regions derived from clobber/result sets
+5. add dead-register pragmas on top of those preservation regions
+6. revisit op metadata only after there is a real effect-analysis mechanism
+7. add cast syntax only once `lea` boundary is stable
 
 This keeps the first implementation step focused and prevents the whole idea from becoming an entangled “big bang” redesign.
 
