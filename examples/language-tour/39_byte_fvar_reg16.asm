@@ -9,101 +9,88 @@ add IX, SP                     ; 0106: DD 39
 push AF                        ; 0108: F5
 push BC                        ; 0109: C5
 push DE                        ; 010A: D5
-push AF                        ; 010B: F5
-push BC                        ; 010C: C5
-push DE                        ; 010D: D5
-push IX                        ; 010E: DD E5
-pop HL                         ; 0110: E1
-ld DE, $0006                   ; 0111: 11 06 00
-add HL, DE                     ; 0114: 19
-push HL                        ; 0115: E5
-pop HL                         ; 0116: E1
-pop DE                         ; 0117: D1
-pop BC                         ; 0118: C1
-pop AF                         ; 0119: F1
-push DE                        ; 011A: D5
-ld E, (HL)                     ; 011B: 5E
-inc HL                         ; 011C: 23
-ld D, (HL)                     ; 011D: 56
-ld L, E                        ; 011E: 6B
-ld H, D                        ; 011F: 62
-pop DE                         ; 0120: D1
-push AF                        ; 0121: F5
-push BC                        ; 0122: C5
-push DE                        ; 0123: D5
-ex DE, HL                      ; 0124: EB
-push DE                        ; 0125: D5
-push IX                        ; 0126: DD E5
-pop HL                         ; 0128: E1
-ld DE, $0004                   ; 0129: 11 04 00
-add HL, DE                     ; 012C: 19
-pop DE                         ; 012D: D1
-add HL, DE                     ; 012E: 19
-push HL                        ; 012F: E5
-pop HL                         ; 0130: E1
-pop DE                         ; 0131: D1
-pop BC                         ; 0132: C1
-pop AF                         ; 0133: F1
-ld A, (hl)                     ; 0134: 7E
-push AF                        ; 0135: F5
-push BC                        ; 0136: C5
-push DE                        ; 0137: D5
-ex DE, HL                      ; 0138: EB
-push DE                        ; 0139: D5
-push IX                        ; 013A: DD E5
-pop HL                         ; 013C: E1
-ld DE, $0004                   ; 013D: 11 04 00
-add HL, DE                     ; 0140: 19
-pop DE                         ; 0141: D1
-add HL, DE                     ; 0142: 19
-push HL                        ; 0143: E5
-pop HL                         ; 0144: E1
-pop DE                         ; 0145: D1
-pop BC                         ; 0146: C1
-pop AF                         ; 0147: F1
-ld (hl), A                     ; 0148: 77
-ld H, $0000                    ; 0149: 26 00
-ld L, A                        ; 014B: 6F
+ex DE, HL                      ; 010B: EB
+ld E, (IX + $0006)             ; 010C: DD 5E 06
+ld D, (IX + $0007)             ; 010F: DD 56 07
+ex DE, HL                      ; 0112: EB
+push AF                        ; 0113: F5
+push BC                        ; 0114: C5
+push DE                        ; 0115: D5
+ex DE, HL                      ; 0116: EB
+push DE                        ; 0117: D5
+push IX                        ; 0118: DD E5
+pop HL                         ; 011A: E1
+ld DE, $0004                   ; 011B: 11 04 00
+add HL, DE                     ; 011E: 19
+pop DE                         ; 011F: D1
+add HL, DE                     ; 0120: 19
+push HL                        ; 0121: E5
+pop HL                         ; 0122: E1
+pop DE                         ; 0123: D1
+pop BC                         ; 0124: C1
+pop AF                         ; 0125: F1
+ld A, (hl)                     ; 0126: 7E
+push AF                        ; 0127: F5
+push AF                        ; 0128: F5
+push BC                        ; 0129: C5
+push DE                        ; 012A: D5
+ex DE, HL                      ; 012B: EB
+push DE                        ; 012C: D5
+push IX                        ; 012D: DD E5
+pop HL                         ; 012F: E1
+ld DE, $0004                   ; 0130: 11 04 00
+add HL, DE                     ; 0133: 19
+pop DE                         ; 0134: D1
+add HL, DE                     ; 0135: 19
+push HL                        ; 0136: E5
+pop HL                         ; 0137: E1
+pop DE                         ; 0138: D1
+pop BC                         ; 0139: C1
+pop AF                         ; 013A: F1
+ld (hl), A                     ; 013B: 77
+pop AF                         ; 013C: F1
+ld H, $0000                    ; 013D: 26 00
+ld L, A                        ; 013F: 6F
 __zax_epilogue_0:
-pop DE                         ; 014C: D1
-pop BC                         ; 014D: C1
-pop AF                         ; 014E: F1
-ld SP, IX                      ; 014F: DD F9
-pop IX                         ; 0151: DD E1
-ret                            ; 0153: C9
+pop DE                         ; 0140: D1
+pop BC                         ; 0141: C1
+pop AF                         ; 0142: F1
+ld SP, IX                      ; 0143: DD F9
+pop IX                         ; 0145: DD E1
+ret                            ; 0147: C9
 ; func byte_fvar_reg16 end
 ; func main begin
 main:
-push IX                        ; 0154: DD E5
-ld IX, $0000                   ; 0156: DD 21 00 00
-add IX, SP                     ; 015A: DD 39
-push AF                        ; 015C: F5
-push BC                        ; 015D: C5
-push DE                        ; 015E: D5
-push HL                        ; 015F: E5
-ld HL, $0006                   ; 0160: 21 06 00
-push HL                        ; 0163: E5
-ld HL, glob_bytes              ; 0164: 21 00 00
-push HL                        ; 0167: E5
-call byte_fvar_reg16           ; 0168: CD 00 00
-inc SP                         ; 016B: 33
-inc SP                         ; 016C: 33
-inc SP                         ; 016D: 33
-inc SP                         ; 016E: 33
+push IX                        ; 0148: DD E5
+ld IX, $0000                   ; 014A: DD 21 00 00
+add IX, SP                     ; 014E: DD 39
+push AF                        ; 0150: F5
+push BC                        ; 0151: C5
+push DE                        ; 0152: D5
+push HL                        ; 0153: E5
+ld HL, $0006                   ; 0154: 21 06 00
+push HL                        ; 0157: E5
+ld HL, glob_bytes              ; 0158: 21 00 00
+push HL                        ; 015B: E5
+call byte_fvar_reg16           ; 015C: CD 00 00
+inc SP                         ; 015F: 33
+inc SP                         ; 0160: 33
+inc SP                         ; 0161: 33
+inc SP                         ; 0162: 33
 __zax_epilogue_1:
-pop HL                         ; 016F: E1
-pop DE                         ; 0170: D1
-pop BC                         ; 0171: C1
-pop AF                         ; 0172: F1
-ld SP, IX                      ; 0173: DD F9
-pop IX                         ; 0175: DD E1
-ret                            ; 0177: C9
+pop HL                         ; 0163: E1
+pop DE                         ; 0164: D1
+pop BC                         ; 0165: C1
+pop AF                         ; 0166: F1
+ld SP, IX                      ; 0167: DD F9
+pop IX                         ; 0169: DD E1
+ret                            ; 016B: C9
 ; func main end
 
 ; symbols:
 ; label byte_fvar_reg16 = $0100
-; label __zax_epilogue_0 = $014C
-; label main = $0154
-; label __zax_epilogue_1 = $016F
+; label __zax_epilogue_0 = $0140
+; label main = $0148
+; label __zax_epilogue_1 = $0163
 ; data glob_bytes = $2000
 ; label __zax_startup = $2008

@@ -6,7 +6,7 @@ import { defaultFormatWriters } from '../src/formats/index.js';
 import type { AsmArtifact } from '../src/formats/types.js';
 
 describe('PR406: word scalar accessors', () => {
-  it('routes global word loads and stores through addr-style HL materialization for BC/DE', async () => {
+  it('uses direct global word accessors for BC/DE', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_global_scalar_accessors.zax');
     const res = await compile(
       entry,
@@ -19,17 +19,13 @@ describe('PR406: word scalar accessors', () => {
     expect(asm).toBeDefined();
     const text = asm!.text.toUpperCase();
 
-    expect((text.match(/\bPUSH AF\b/g) ?? []).length).toBeGreaterThanOrEqual(4);
-    expect(text).toContain('LD HL, GLOB_W');
-    expect(text).toContain('LD E, (HL)');
-    expect(text).toContain('LD D, (HL)');
-    expect(text).toContain('LD C, E');
-    expect(text).toContain('LD B, D');
-    expect(text).toContain('LD (HL), E');
-    expect(text).toContain('LD (HL), D');
+    expect(text).toContain('LD BC, (GLOB_W)');
+    expect(text).toContain('LD DE, (GLOB_W)');
+    expect(text).toContain('LD (GLOB_W), BC');
+    expect(text).toContain('LD (GLOB_W), DE');
   });
 
-  it('routes frame word loads and stores through addr-style HL materialization for BC/DE', async () => {
+  it('uses direct frame word accessors for BC/DE', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_frame_scalar_accessors.zax');
     const res = await compile(
       entry,
@@ -42,15 +38,14 @@ describe('PR406: word scalar accessors', () => {
     expect(asm).toBeDefined();
     const text = asm!.text.toUpperCase();
 
-    expect((text.match(/\bPUSH AF\b/g) ?? []).length).toBeGreaterThanOrEqual(4);
-    expect(text).toContain('PUSH IX');
-    expect(text).toContain('ADD HL, DE');
-    expect(text).toContain('LD E, (HL)');
-    expect(text).toContain('LD D, (HL)');
-    expect(text).toContain('LD C, E');
-    expect(text).toContain('LD B, D');
-    expect(text).toContain('LD (HL), E');
-    expect(text).toContain('LD (HL), D');
+    expect(text).toContain('LD C, (IX - $0002)');
+    expect(text).toContain('LD B, (IX - $0001)');
+    expect(text).toContain('LD E, (IX - $0002)');
+    expect(text).toContain('LD D, (IX - $0001)');
+    expect(text).toContain('LD (IX - $0002), C');
+    expect(text).toContain('LD (IX - $0001), B');
+    expect(text).toContain('LD (IX - $0002), E');
+    expect(text).toContain('LD (IX - $0001), D');
   });
 
   it('uses scalar word accessors for typed call arguments', async () => {
@@ -73,7 +68,7 @@ describe('PR406: word scalar accessors', () => {
     expect(text).toContain('LD D, (IX - $0001)');
   });
 
-  it('routes scalar mem-to-mem moves through addr-style HL materialization', async () => {
+  it('uses scalar word accessors for scalar mem-to-mem moves', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_mem_to_mem_scalar.zax');
     const res = await compile(
       entry,
@@ -86,12 +81,12 @@ describe('PR406: word scalar accessors', () => {
     expect(asm).toBeDefined();
     const text = asm!.text.toUpperCase();
 
-    expect((text.match(/\bPUSH DE\b/g) ?? []).length).toBeGreaterThanOrEqual(4);
-    expect(text).toContain('LD HL, GLOB_SRC');
-    expect(text).toContain('LD HL, GLOB_DST');
-    expect(text).toContain('LD E, (HL)');
-    expect(text).toContain('LD D, (HL)');
-    expect(text).toContain('LD (HL), E');
-    expect(text).toContain('LD (HL), D');
+    expect(text).toContain('LD DE, (GLOB_SRC)');
+    expect(text).toContain('LD (GLOB_DST), DE');
+    expect(text).toContain('LD (IX - $0002), E');
+    expect(text).toContain('LD (IX - $0001), D');
+    expect(text).toContain('LD E, (IX - $0002)');
+    expect(text).toContain('LD D, (IX - $0001)');
+    expect(text).not.toContain('LD A, (HL)');
   });
 });
