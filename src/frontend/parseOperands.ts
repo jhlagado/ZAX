@@ -1,4 +1,5 @@
 import type {
+  AsmAddrNode,
   AsmInstructionNode,
   AsmOperandNode,
   EaExprNode,
@@ -212,13 +213,40 @@ export function parseAsmInstruction(
   text: string,
   instrSpan: SourceSpan,
   diagnostics: Diagnostic[],
-): AsmInstructionNode | undefined {
+): AsmInstructionNode | AsmAddrNode | undefined {
   const trimmed = text.trim();
   if (trimmed.length === 0) return undefined;
   const firstSpace = trimmed.search(/\s/);
   const head = firstSpace === -1 ? trimmed : trimmed.slice(0, firstSpace);
   const headLower = head.toLowerCase();
   const rest = firstSpace === -1 ? '' : trimmed.slice(firstSpace).trim();
+
+  if (headLower === 'addr') {
+    const parts = rest.split(',').map((part) => part.trim());
+    if (parts.length !== 2 || parts.some((part) => part.length === 0)) {
+      diag(diagnostics, filePath, `"addr" expects "addr hl, <ea_expr>"`, {
+        line: instrSpan.start.line,
+        column: instrSpan.start.column,
+      });
+      return undefined;
+    }
+    if (!/^hl$/i.test(parts[0]!)) {
+      diag(diagnostics, filePath, `"addr" currently requires destination register HL`, {
+        line: instrSpan.start.line,
+        column: instrSpan.start.column,
+      });
+      return undefined;
+    }
+    const expr = parseEaExprFromText(filePath, parts[1]!, instrSpan, diagnostics);
+    if (!expr) {
+      diag(diagnostics, filePath, `"addr" expects an effective-address expression as its source`, {
+        line: instrSpan.start.line,
+        column: instrSpan.start.column,
+      });
+      return undefined;
+    }
+    return { kind: 'AsmAddr', span: instrSpan, dst: 'HL', expr };
+  }
 
   const operands: AsmOperandNode[] = [];
   if (rest.length > 0) {
