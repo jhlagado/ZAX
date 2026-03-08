@@ -5,7 +5,14 @@ end
 section code boot at $0100
   export func word_glob_reg(idx: word): HL
     ld hl, glob_words[idx]
-    ld glob_words[idx], hl
+    push de
+    ex de, hl
+    addr hl, glob_words[idx]
+    ld (hl), e
+    inc hl
+    ld (hl), d
+    ex de, hl
+    pop de
   end
 
   export func main()

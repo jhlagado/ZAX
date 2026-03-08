@@ -6,7 +6,14 @@ end
 section code boot at $0100
   export func word_fvar_glob(arr: word[]): HL
     ld hl, arr[glob_idx_word]
-    ld arr[glob_idx_word], hl
+    push de
+    ex de, hl
+    addr hl, arr[glob_idx_word]
+    ld (hl), e
+    inc hl
+    ld (hl), d
+    ex de, hl
+    pop de
   end
 
   export func main()

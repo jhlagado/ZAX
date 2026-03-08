@@ -12,7 +12,14 @@ func bump_byte(input_byte: byte): HL
   ld l, input_byte
   ld h, 0
   inc l
-  ld temp_word, hl
+  push de
+  ex de, hl
+  addr hl, temp_word
+  ld (hl), e
+  inc hl
+  ld (hl), d
+  ex de, hl
+  pop de
   ld hl, temp_word
 end
 
@@ -22,7 +29,14 @@ export func main()
   end
 
   add_words 10, 20
-  ld result_word, hl
+  push de
+  ex de, hl
+  addr hl, result_word
+  ld (hl), e
+  inc hl
+  ld (hl), d
+  ex de, hl
+  pop de
 
   bump_byte 7
 end

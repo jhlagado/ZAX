@@ -5,7 +5,14 @@ end
 section code boot at $0100
   export func word_glob_const(): HL
     ld hl, glob_words[1]
-    ld glob_words[2], hl
+    push de
+    ex de, hl
+    addr hl, glob_words[2]
+    ld (hl), e
+    inc hl
+    ld (hl), d
+    ex de, hl
+    pop de
   end
 
   export func main()
