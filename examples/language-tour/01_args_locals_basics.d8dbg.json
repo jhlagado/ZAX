@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 395,
+          "end": 423,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -93,71 +93,169 @@
         },
         {
           "start": 313,
-          "end": 321,
+          "end": 314,
           "lstLine": 15,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 321,
-          "end": 329,
+          "start": 314,
+          "end": 315,
           "lstLine": 16,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 329,
-          "end": 337,
-          "lstLine": 7,
+          "start": 315,
+          "end": 330,
+          "lstLine": 17,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 337,
-          "end": 345,
+          "start": 330,
+          "end": 331,
+          "lstLine": 18,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 331,
+          "end": 332,
           "lstLine": 19,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 345,
-          "end": 350,
+          "start": 332,
+          "end": 333,
+          "lstLine": 20,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 333,
+          "end": 334,
           "lstLine": 21,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 350,
-          "end": 354,
-          "lstLine": 19,
+          "start": 334,
+          "end": 335,
+          "lstLine": 22,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 354,
-          "end": 369,
-          "lstLine": 24,
+          "start": 335,
+          "end": 343,
+          "lstLine": 23,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 369,
-          "end": 377,
-          "lstLine": 25,
+          "start": 343,
+          "end": 351,
+          "lstLine": 7,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 377,
-          "end": 386,
-          "lstLine": 27,
+          "start": 351,
+          "end": 359,
+          "lstLine": 26,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 386,
-          "end": 395,
-          "lstLine": 19,
+          "start": 359,
+          "end": 364,
+          "lstLine": 28,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 364,
+          "end": 368,
+          "lstLine": 26,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 368,
+          "end": 383,
+          "lstLine": 31,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 383,
+          "end": 384,
+          "lstLine": 32,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 384,
+          "end": 385,
+          "lstLine": 33,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 385,
+          "end": 400,
+          "lstLine": 34,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 400,
+          "end": 401,
+          "lstLine": 35,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 401,
+          "end": 402,
+          "lstLine": 36,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 402,
+          "end": 403,
+          "lstLine": 37,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 403,
+          "end": 404,
+          "lstLine": 38,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 404,
+          "end": 405,
+          "lstLine": 39,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 405,
+          "end": 414,
+          "lstLine": 41,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 414,
+          "end": 423,
+          "lstLine": 26,
           "kind": "code",
           "confidence": "high"
         }
@@ -187,22 +285,22 @@
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
-          "address": 329,
+          "address": 343,
           "line": 7,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
-          "address": 337,
-          "line": 19,
+          "address": 351,
+          "line": 26,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_2",
           "kind": "label",
-          "address": 386,
-          "line": 19,
+          "address": 414,
+          "line": 26,
           "scope": "local"
         }
       ]
@@ -211,7 +309,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 395
+      "end": 423
     }
   ],
   "fileList": [
@@ -245,7 +343,7 @@
     {
       "name": "__zax_epilogue_1",
       "kind": "label",
-      "address": 329,
+      "address": 343,
       "file": "01_args_locals_basics.zax",
       "line": 7,
       "scope": "local"
@@ -253,23 +351,23 @@
     {
       "name": "main",
       "kind": "label",
-      "address": 337,
+      "address": 351,
       "file": "01_args_locals_basics.zax",
-      "line": 19,
+      "line": 26,
       "scope": "global"
     },
     {
       "name": "__zax_epilogue_2",
       "kind": "label",
-      "address": 386,
+      "address": 414,
       "file": "01_args_locals_basics.zax",
-      "line": 19,
+      "line": 26,
       "scope": "local"
     }
   ],
   "generator": {
     "tool": "zax",
     "entrySymbol": "main",
-    "entryAddress": 337
+    "entryAddress": 351
   }
 }

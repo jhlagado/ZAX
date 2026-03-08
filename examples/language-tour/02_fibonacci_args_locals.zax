@@ -19,16 +19,44 @@ func fib(target_count: word): HL
     ld hl, prev_value
     ld de, curr_value
     add hl, de
-    ld next_value, hl
+    push de
+    ex de, hl
+    addr hl, next_value
+    ld (hl), e
+    inc hl
+    ld (hl), d
+    ex de, hl
+    pop de
 
     ld hl, curr_value
-    ld prev_value, hl
+    push de
+    ex de, hl
+    addr hl, prev_value
+    ld (hl), e
+    inc hl
+    ld (hl), d
+    ex de, hl
+    pop de
     ld hl, next_value
-    ld curr_value, hl
+    push de
+    ex de, hl
+    addr hl, curr_value
+    ld (hl), e
+    inc hl
+    ld (hl), d
+    ex de, hl
+    pop de
 
     ld hl, index_value
     inc hl
-    ld index_value, hl
+    push de
+    ex de, hl
+    addr hl, index_value
+    ld (hl), e
+    inc hl
+    ld (hl), d
+    ex de, hl
+    pop de
 
     ld a, 1
     or a

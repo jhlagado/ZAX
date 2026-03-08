@@ -38,7 +38,10 @@ describe('PR407: emitted trace lines stay single-instruction for covered lowerin
         'word mixed edge cases',
         join(__dirname, 'fixtures', 'pr406_word_mem_to_mem_mixed_reverse.zax'),
       ],
-      ['word fallback store', join(__dirname, 'fixtures', 'pr406_word_hl_fallback_store.zax')],
+      [
+        'word explicit addr store',
+        join(__dirname, '..', 'examples', 'language-tour', '66_word_glob_fvar.zax'),
+      ],
       ['word fallback ix load', join(__dirname, 'fixtures', 'pr406_word_ix_fallback_load.zax')],
     ] as const;
 

@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 346,
+          "end": 360,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -114,14 +114,63 @@
         },
         {
           "start": 329,
-          "end": 337,
+          "end": 330,
           "lstLine": 20,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 337,
+          "start": 330,
+          "end": 331,
+          "lstLine": 21,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 331,
           "end": 346,
+          "lstLine": 22,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 346,
+          "end": 347,
+          "lstLine": 23,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 347,
+          "end": 348,
+          "lstLine": 24,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 348,
+          "end": 349,
+          "lstLine": 25,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 349,
+          "end": 350,
+          "lstLine": 26,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 350,
+          "end": 351,
+          "lstLine": 27,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 351,
+          "end": 360,
           "lstLine": 14,
           "kind": "code",
           "confidence": "high"
@@ -152,7 +201,7 @@
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
-          "address": 337,
+          "address": 351,
           "line": 14,
           "scope": "local"
         }
@@ -162,7 +211,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 346
+      "end": 360
     }
   ],
   "fileList": [
@@ -196,7 +245,7 @@
     {
       "name": "__zax_epilogue_1",
       "kind": "label",
-      "address": 337,
+      "address": 351,
       "file": "00_call_with_arg_and_local_baseline.zax",
       "line": 14,
       "scope": "local"

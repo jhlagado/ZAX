@@ -410,6 +410,14 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
 
       const r16 = src.name.toUpperCase();
       if (r16 === 'HL') {
+        if (dstUsesTypedEaSugar) {
+          diagAt(
+            diagnostics,
+            inst.span,
+            'Typed-EA transitional form `ld ea, hl` is not supported in the addr-first transition. Use `addr hl, ea` followed by an explicit word store sequence or a dedicated op.',
+          );
+          return true;
+        }
         if (dstScalarExact === 'byte') {
           diagAt(diagnostics, inst.span, 'Word register store requires a word-typed destination.');
           return true;
