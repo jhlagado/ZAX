@@ -4,7 +4,8 @@
 **Status:** Spec decisions — ready for implementation backlog
 **Purpose:** Close the implementation-blocking questions from `ops-first-addressing-decisions.md` before `addr` work begins. Not a replacement for that document; a narrower follow-up.
 
-Questions addressed here: Q3, Q4, Q5, Q6, Q7.
+Questions addressed here: Q3, Q4, Q5.
+Questions re-deferred: Q6, Q7 (`@dead` optimization — not needed before `addr` implementation).
 Questions deferred to a later pass: Q1, Q2 (cast syntax), Q8 (case overlap lowering).
 
 ---
@@ -170,152 +171,25 @@ addr de, ea     ; not available in v1 — addr is HL-only
 
 This gap is resolved by either a future `addr de, ea` extension, or a standard-library store op.
 
-### Summary of clobber sets for transitional forms
+---
 
-| Form | Expansion clobbers | Result |
-|---|---|---|
-| `ld a, ea` | HL | A |
-| `ld ea, a` | HL | memory |
-| `ld hl, ea` | HL (result), AF | HL |
-| `ld de, ea` | HL | DE |
-| `ld bc, ea` | HL | BC |
-| `ld ea, hl` | not supported in v1 | — |
+## Q6 — Internal preservation-region model: deferred
+
+`addr` has no automatic register preservation. It emits a raw instruction sequence that computes the effective address and places it in HL. Whatever other registers the lowering uses internally (DE, AF, etc., depending on the EA shape) are simply used — no push/pop wrapping is emitted by the compiler.
+
+Register management is entirely the programmer's responsibility, as it is for any Z80 instruction sequence. The programmer knows what registers matter at each point in their code and saves them if needed.
+
+`@dead` optimizations are a separate concern that applies to existing compiler-generated preservation scaffolding. That scaffolding currently exists in the transitional typed EA lowering. Designing a preservation-region model for `addr` specifically is premature — `@dead` should be designed against concrete running code, not against a hypothetical model built in advance.
+
+**Q6 is deferred.** It is not a blocker for `addr` implementation.
 
 ---
 
-## Q6 — Internal preservation-region model
+## Q7 — Pragma placement and scope rules for `@dead`: deferred
 
-**Answer:** The compiler tracks preservation regions explicitly. A preservation region is not an emitted instruction sequence; it is a compiler-internal descriptor attached to a lowering slab.
+`@dead` is an optimization feature. It should be designed once `addr` is working and there is real code to optimize against.
 
-### Structure
-
-Every compiler-owned lowering slab (initially: `addr hl, ea_expr`, and any transitional sugar forms that route through it) carries:
-
-```
-PreservationRegion {
-  clobberSet:  Set<RegPair>   // registers the slab will clobber or return
-  resultSet:   Set<RegPair>   // subset of clobberSet that carry output values
-  preserveSet: Set<RegPair>   // derived: complement of clobberSet within {BC, DE, AF}
-}
-```
-
-The `preserveSet` is always computed as:
-
-```
-preserveSet = { BC, DE, AF } - clobberSet
-```
-
-(HL is never in the preserve set because addr always produces its result in HL and therefore always clobbers it.)
-
-### Emission
-
-Before emitting the lowering body, the compiler emits push/pop wrappers for the preserve set:
-
-```
-; prologue
-for each R in (preserveSet - deadSet):
-    push R
-
-; lowering body (addr computation)
-...
-
-; epilogue (reverse order)
-for each R in reverse(preserveSet - deadSet):
-    pop R
-```
-
-The `deadSet` is the union of all `@dead` annotations in scope at the point of emission.
-
-### Example
-
-`addr hl, arr[C]` using a register index:
-
-- lowering body: `ld de, base; ld a, C; add e; ld e, a; ld a, d; adc 0; ld d, a; ex de, hl`
-- clobberSet: `{HL, DE, AF}`
-- resultSet: `{HL}`
-- preserveSet: `{BC}`
-
-With `@dead DE` in scope:
-- deadSet at this point: `{DE}`
-- effective preserve: `{BC} - {DE}` = `{BC}` (DE was not in preserveSet anyway; no change)
-
-With `@dead BC` in scope:
-- deadSet: `{BC}`
-- effective preserve: `{BC} - {BC}` = `{}` (no push/pop emitted)
-
-The body itself is never rewritten by `@dead`. Only the push/pop framing changes.
-
-### What does and does not have a preservation region
-
-**Has a preservation region:**
-- `addr hl, ea_expr` lowering
-- transitional typed EA forms in `ld` that route through `addr`
-
-**Does not have a preservation region:**
-- user-written instructions (raw Z80 opcodes)
-- op body instructions (op preservation is author-owned per D4)
-- structured control flow scaffolding (if/while/repeat/select branch wiring)
-
-`@dead` only trims the first category. The second and third categories are untouched.
-
----
-
-## Q7 — Pragma placement and scope rules for `@dead`
-
-**Answer:**
-
-### Placement
-
-`@dead` is placed as a statement in the instruction stream. It is a pragma line, not an expression or attribute.
-
-Valid placement contexts in v1:
-
-- **Function body** — anywhere in the instruction stream of a `func` or `op` body
-- **Block body** — anywhere within the body of `if`, `while`, `repeat`, or `select`
-
-Invalid placement in v1:
-
-- In a `data` section
-- In a `type` or `union` declaration
-- At module top level (outside any function or block)
-
-### Scope
-
-`@dead reg16` applies from the point of declaration to the end of the enclosing scope, including all nested scopes within it.
-
-Enclosing scope is:
-- the function body, if declared at function level
-- the current block, if declared within a block (`if`/`while`/`repeat`/`select`)
-
-`@dead DE` declared at function level applies to the entire function body, including any nested blocks within it. `@dead DE` declared within a block applies to the remainder of that block and any nested blocks within it.
-
-There is no "un-dead" mechanism in v1. A register declared dead in an outer scope is treated as dead for the entire remaining lexical scope from that point.
-
-### Accumulation
-
-Multiple `@dead` declarations in the same scope union their sets:
-
-```zax
-func render(): HL
-  @dead BC
-  @dead DE
-  ; dead set for this scope: {BC, DE}
-  ...
-end
-```
-
-### Syntax
-
-```
-pragma_stmt = "@dead" reg16
-reg16       = "BC" | "DE" | "AF"
-```
-
-HL is not a valid target for `@dead` because `addr` always clobbers HL as its result register. Declaring HL dead would have no valid meaning in this model.
-
-### In op bodies
-
-`@dead` in an op body applies only to compiler-owned preservation regions within the op (e.g., any `addr` lowering inside the op). It does not affect the op's own push/pop statements, which are author-owned per D4.
+**Q7 is deferred.** It is not a blocker for `addr` implementation.
 
 ---
 
@@ -328,19 +202,18 @@ HL is not a valid target for `@dead` because `addr` always clobbers HL as its re
 | Q3: Transitional status of typed EA in `ld` | **Resolved above** | — |
 | Q4: Semantic mapping of transitional forms | **Resolved above** | — |
 | Q5: Op contracts | **Resolved: deferred** | — |
-| Q6: Preservation-region model | **Resolved above** | — |
-| Q7: `@dead` placement and scope | **Resolved above** | — |
+| Q6: Preservation-region model | **Deferred** — not needed before `addr` |
+| Q7: `@dead` placement and scope | **Deferred** — design against real code |
 | Q8: Range/grouped case overlap lowering | Open | Before `select` range implementation begins |
 
 ---
 
 ## Implementation boundary
 
-The resolved answers above support a narrow first implementation slice:
+The resolved answers support a narrow first slice:
 
-1. `addr hl, ea_expr` — parser, lowering, preservation-region emission
-2. `@dead reg16` pragma — recognition in instruction stream, scope tracking, dead-set propagation into preservation-region emission
-3. Transitional typed EA in `ld` — routes through `addr` lowering, not bespoke; word-store-from-HL case produces diagnostic
-4. Tests — verify preservation elision under `@dead`, verify diagnostic for unsupported word-store case
+1. `addr hl, ea_expr` — parser and lowering; emits raw address-computation sequence into HL, no automatic preservation
+2. Transitional typed EA in `ld` — routes through `addr` lowering, not bespoke; word-store-from-HL produces diagnostic
+3. Tests — verify `addr` produces correct addresses across EA shapes; verify diagnostic for unsupported word-store case
 
-Cast syntax (Q1/Q2) and range case lowering (Q8) are not blocking and are not part of this slice.
+`@dead`, cast syntax (Q1/Q2), and range case lowering (Q8) are not part of this slice.
