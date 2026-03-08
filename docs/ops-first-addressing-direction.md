@@ -116,7 +116,7 @@ Those should increasingly live in:
 
 - explicit source code
 - standard-library ops
-- user-authored ops with clear contracts
+- user-authored ops with clear behavior
 
 This is the core of the ops-first direction.
 
@@ -352,57 +352,49 @@ So cast should be syntax, not pragma.
 
 ---
 
-## 8. Op contracts should mirror function contracts
+## 8. Op contracts are a possible future direction, not a current commitment
 
-Ops currently have power, but their interface is not explicit enough about preservation/clobber behavior.
+Ops currently have power, but there is no real mechanism in ZAX today for proving register/flag side effects instruction-by-instruction.
 
-This should be tightened.
+That means this direction should **not** commit to verified op contracts in the first pass.
 
-### 8.1 Proposed model
+### 8.1 What is still true
 
-Use the same return-register style as functions:
+Ops remain the right place for reusable access policy because they are:
+
+- hygienic
+- typed at the operand-shape level
+- explicit in source
+- deterministic in expansion
+
+That is enough to justify the ops-first direction without pretending there is already a contract-verification engine.
+
+### 8.2 What should be deferred
+
+Any feature like:
 
 ```zax
 op add16(dst: DE, src: reg16): DE
-  ex de, hl
-  add hl, src
-  ex de, hl
+  ...
 end
 ```
 
-Meaning:
+should be treated as a later possibility, not part of the current decision set.
 
-- result/clobber set is `DE`
-- everything else is preserved
+Before a real op-contract feature exists, ZAX would need:
 
-If flags are intentionally affected, that should be explicit too:
+- a real model of per-instruction register/flag effects
+- a clear verifier scope
+- a decision on what happens when verification is impossible
 
-```zax
-op cmp8(lhs: A, rhs: reg8): AF
-  cp rhs
-end
-```
+Until then, op contracts should be discussed as a future option, not a present language commitment.
 
-### 8.2 Why this matters
+### 8.3 Important constraint if this ever returns
 
-This gives ops a proper surface contract.
+Even if op metadata is added later, the compiler still should not silently wrap ops to satisfy it.
 
-The compiler can then:
-
-- verify the contract
-- reject ops that clobber undeclared state
-- let users read op behavior without reading the whole body
-
-This is a major quality improvement and fits ZAX's philosophy well.
-
-### 8.3 Important constraint
-
-The compiler should **verify**, not silently wrap.
-
-The op author owns the body.
-The contract is a promise, not a request for auto-generated saves.
-
-That keeps ops honest and machine-close.
+The op author must own preservation behavior.
+The compiler should either prove the contract or refuse it.
 
 ---
 
@@ -447,11 +439,60 @@ until Z
 
 This is enough to be useful without becoming a full liveness language.
 
-### 9.3 Why this pairs well with ops-first addressing
+### 9.3 What `@dead` must and must not touch
 
-If the compiler still supports sugary address-based loads/stores, dead-register pragmas give it explicit freedom to skip save/restore sequences.
+A raw pragma cannot safely mean “delete any `push de` / `pop de` you happen to see”.
 
-So even if ZAX keeps the current magic forms, dead-register metadata can reduce their cost.
+That would be wrong because some stack traffic is:
+
+- preservation scaffolding
+- temporary value transport
+- register shuffling
+- algorithmic staging
+
+Only the first category is eligible for dead-register suppression.
+
+So the compiler needs an internal distinction:
+
+- **preservation region**: compiler-owned save/restore wrapper around a slab of lowering
+- **body operations**: the actual instructions inside that slab
+
+`@dead` may trim preservation regions.
+It must not rewrite arbitrary stack juggling inside the body.
+
+### 9.4 The right internal model
+
+The useful model is the complement of a clobber/result set.
+
+For a compiler-owned slab, the compiler should know:
+
+- which register pairs it intends to clobber or return
+- therefore which register pairs it must preserve if it wants to present a preserving interface
+
+Example shape:
+
+- clobber/result set: `HL, AF`
+- derived preserve set: `BC, DE`
+
+If the current scope contains:
+
+```zax
+@dead DE
+```
+
+then the compiler trims only the derived preserve set and emits preservation for `BC` but not `DE`.
+
+This means dead-register optimization should operate on compiler-owned preservation metadata, not on raw emitted opcodes.
+
+### 9.5 Why this pairs well with ops-first addressing
+
+This fits the broader direction cleanly:
+
+- compiler-owned `lea` / sugar lowering can use the same internal clobber/preserve model
+- future standard-library ops can conceptually follow the same shape
+- semantic stack shuffling inside a body remains explicit and untouched
+
+So even if ZAX keeps current sugar, dead-register metadata can reduce preservation cost without becoming unsafe.
 
 ---
 
@@ -546,9 +587,9 @@ The best direction is:
 1. **`lea`** as a first-class primitive
 2. **angle-bracket cast syntax** for typed pointer interpretation
    - e.g. `<Sprite>hl.flags`
-3. **op contracts** using the same returned/clobbered register model as functions
-4. **scoped dead-register pragmas** for optimization metadata
-5. **richer `select` cases** with ranges and comma-separated groups
+3. **scoped dead-register pragmas** for optimization metadata
+4. **richer `select` cases** with ranges and comma-separated groups
+5. **later, if analysis exists:** optional op metadata
 
 ### Keep current sugar, but de-emphasize it
 
