@@ -42,11 +42,12 @@ describe('PR406: word edge cases', () => {
     expect(asm).toBeDefined();
     const text = asm!.text.toUpperCase();
 
-    expect(text).toContain('LD HL, SRC_W');
+    expect(text).toContain('LD DE, (SRC_W)');
     expect(text).toContain('ADD HL, HL');
     expect(text).toContain('LD DE, ARR_W');
-    expect(text).toContain('LD E, (HL)');
-    expect(text).toContain('LD D, (HL)');
+    expect(text).not.toContain('LD E, E');
+    expect(text).not.toContain('LD D, D');
+    expect(text).not.toContain('LD HL, SRC_W');
   });
 
   it('uses the indexed load template plus scalar store when only the destination is scalar-fast-path eligible', async () => {
@@ -66,7 +67,7 @@ describe('PR406: word edge cases', () => {
     expect(text).toContain('ADD HL, HL');
     expect(text).toContain('LD DE, ARR_W');
     expect(text).toContain('POP HL');
-    expect(text).toContain('LD HL, DST_W');
-    expect(text).toContain('LD (HL), E');
+    expect(text).toContain('LD (DST_W), DE');
+    expect(text).not.toContain('LD HL, DST_W');
   });
 });
