@@ -30,7 +30,7 @@ describe('PR453: codegen corpus workflow', () => {
     expect(workflowDoc).toContain('test/fixtures/corpus/manifest.json');
     expect(workflowDoc).toContain('examples/language-tour/30+');
     expect(indexDoc).toContain('npm run regen:codegen-corpus');
-    expect(indexDoc).toContain('docs/codegen-corpus-workflow.md');
+    expect(indexDoc).toContain('docs/reference/codegen-corpus-workflow.md');
   });
 
   it('uses explicit mixed-source manifest entries and keeps artifacts present', async () => {

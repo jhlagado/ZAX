@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-07
 **Status:** Draft decision record for review
-**Purpose:** Narrow the exploratory direction in `docs/ops-first-addressing-direction.md` into concrete language decisions and explicit non-goals.
+**Purpose:** Narrow the exploratory direction in `docs/design/ops-first-addressing-direction.md` into concrete language decisions and explicit non-goals.
 
 This document is not an implementation plan. It exists to decide the language boundary before any implementation backlog is created.
 

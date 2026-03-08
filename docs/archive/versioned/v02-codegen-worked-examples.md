@@ -2,7 +2,7 @@
 
 This document expands the lowering design with concrete, end-to-end examples.
 
-Normative language semantics are defined by `docs/zax-spec.md`.
+Normative language semantics are defined by `docs/spec/zax-spec.md`.
 This document is a codegen/lowering design reference.
 
 ## 1. Assumptions Used in These Examples

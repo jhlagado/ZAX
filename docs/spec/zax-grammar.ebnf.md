@@ -4,8 +4,8 @@ This file provides a single syntax-oriented grammar reference for ZAX.
 
 Authority note:
 
-- `docs/zax-spec.md` remains the sole normative language authority.
-- If this grammar and the spec ever diverge, `docs/zax-spec.md` wins.
+- `docs/spec/zax-spec.md` remains the sole normative language authority.
+- If this grammar and the spec ever diverge, `docs/spec/zax-spec.md` wins.
 
 ## 1. Lexical
 
@@ -206,5 +206,5 @@ These are semantic constraints enforced beyond pure grammar:
 When parser grammar changes land:
 
 1. Update this file in the same PR.
-2. Update `docs/zax-spec.md` if behavior changed.
+2. Update `docs/spec/zax-spec.md` if behavior changed.
 3. Include at least one positive and one negative parser/semantic test for the changed production.

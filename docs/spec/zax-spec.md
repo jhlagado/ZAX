@@ -12,7 +12,7 @@ ZAX aims to make assembly code easier to read and refactor by providing:
 
 Normative status for the current language surface: this document is the sole normative language source. Historical transition rationale documents have been retired and do not override this specification.
 
-Grammar companion: `docs/zax-grammar.ebnf.md` provides a single-file syntax reference. If any grammar text diverges from this specification, this specification wins.
+Grammar companion: `docs/spec/zax-grammar.ebnf.md` provides a single-file syntax reference. If any grammar text diverges from this specification, this specification wins.
 
 Anything not defined here is undefined behavior or a compile error.
 
@@ -20,9 +20,9 @@ Anything not defined here is undefined behavior or a compile error.
 
 ## Authority (Normative)
 
-- `docs/zax-spec.md` is the only normative language authority.
-- Supporting documents (`docs/zax-dev-playbook.md`, `docs/v02-codegen-reference.md`, `docs/return-register-policy.md`, `docs/v02-codegen-worked-examples.md`) are non-normative and must not introduce conflicting language rules.
-- `docs/modules.md` is the design anchor for module/layout behavior and is aligned with this v0.5 parser surface.
+- `docs/spec/zax-spec.md` is the only normative language authority.
+- Supporting documents (`docs/reference/zax-dev-playbook.md`, `docs/archive/versioned/v02-codegen-reference.md`, `docs/reference/return-register-policy.md`, `docs/archive/versioned/v02-codegen-worked-examples.md`) are non-normative and must not introduce conflicting language rules.
+- `docs/archive/design/modules.md` is the design anchor for module/layout behavior and is aligned with this v0.5 parser surface.
 - Historical transition rationale documents are retired; if any surviving text conflicts with this document, this document wins.
 
 ---
@@ -38,7 +38,7 @@ module model:
 - packing by section kind across the full import graph
 
 The accepted v0.5 direction replaces that model with the design defined in
-`docs/modules.md`.
+`docs/archive/design/modules.md`.
 
 The active v0.5 changes are:
 
@@ -123,7 +123,7 @@ The compiler parses the whole program, resolves forward references, and emits:
 - Optionally, Intel HEX output
 - Optionally, a listing with symbols (for debuggers/simulators — see Appendix B)
 
-Implementation note (non-normative): `docs/zax-dev-playbook.md` includes the implementation pipeline mapping used by the current compiler.
+Implementation note (non-normative): `docs/reference/zax-dev-playbook.md` includes the implementation pipeline mapping used by the current compiler.
 
 ### 0.5 Entry Point (Non-normative)
 
@@ -1587,7 +1587,7 @@ This appendix tracks migration-coverage status against the normative language ru
 
 This appendix consolidates former `docs/zax-cli.md` content. It is non-normative and cannot override language rules in this specification.
 
-This document describes recommended command-line behavior for the **ZAX assembler**. It is non-normative: the language rules live in `docs/zax-spec.md`.
+This document describes recommended command-line behavior for the **ZAX assembler**. It is non-normative: the language rules live in `docs/spec/zax-spec.md`.
 
 The goal is to feel familiar to assembler users (similar to `asm80`) while supporting required ZAX outputs: **BIN**, **Intel HEX**, and **D8 Debug Map (D8M)**.
 
@@ -1642,7 +1642,7 @@ Directory creation:
 Path handling:
 
 - Accept user-supplied paths as-is (Windows paths, drive letters, separators).
-- For debug maps, file keys should be normalized to project-relative paths with `/` separators (see `docs/zax-spec.md`, Appendix B).
+- For debug maps, file keys should be normalized to project-relative paths with `/` separators (see `docs/spec/zax-spec.md`, Appendix B).
 
 ## Options (proposed v0.1 baseline)
 
@@ -1693,7 +1693,7 @@ Co-locating these artifacts via the `--output`/artifactBase rule is the simplest
 
 This appendix consolidates former `docs/zax-op-system-spec.md` content. It is detailed implementation/reference guidance and cannot override language rules in this specification.
 
-This document expands Section 9 of the ZAX language specification (`docs/zax-spec.md`). It serves as a standalone reference for the `op` system: inline macro-instructions with AST-level operand matching.
+This document expands Section 9 of the ZAX language specification (`docs/spec/zax-spec.md`). It serves as a standalone reference for the `op` system: inline macro-instructions with AST-level operand matching.
 
 **Audience and purpose.** This document has two audiences:
 
@@ -1707,18 +1707,18 @@ The document addresses both by stating normative rules precisely while also expl
 
 - Normative rules are stated directly in prose. Where precision is critical, rules are numbered or bulleted.
 - Examples are illustrative unless marked "(normative example)".
-- Cross-references to the main spec use the form "Section N of the main spec" to mean `docs/zax-spec.md` Section N.
+- Cross-references to the main spec use the form "Section N of the main spec" to mean `docs/spec/zax-spec.md` Section N.
 - Implementation notes marked "(impl)" are recommendations for compiler authors; any compliant implementation that produces the same observable behavior is acceptable.
 - Algorithm descriptions use pseudocode for clarity; actual implementation may differ in structure as long as behavior matches.
 
 **Version:** This specification corresponds to ZAX v0.2 on `main`.
-Normative precedence: `docs/zax-spec.md` governs language behavior; this document expands op-specific details and must not introduce conflicting normative rules.
-Authority constraint: if behavior is required by this document but not required by `docs/zax-spec.md`, treat it as implementation guidance until promoted into `docs/zax-spec.md`.
+Normative precedence: `docs/spec/zax-spec.md` governs language behavior; this document expands op-specific details and must not introduce conflicting normative rules.
+Authority constraint: if behavior is required by this document but not required by `docs/spec/zax-spec.md`, treat it as implementation guidance until promoted into `docs/spec/zax-spec.md`.
 
 **Related documents:**
 
-- `docs/zax-spec.md` — The main ZAX language specification
-- `docs/zax-dev-playbook.md` — Implementation planning, rollout, and contributor workflow
+- `docs/spec/zax-spec.md` — The main ZAX language specification
+- `docs/reference/zax-dev-playbook.md` — Implementation planning, rollout, and contributor workflow
 
 ---
 
