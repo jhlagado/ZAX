@@ -4,12 +4,12 @@ This is the minimal, living reference for v0.2 codegen. Everything else for v0.2
 
 ## What to read (in order)
 
-1. `docs/zax-spec.md` §8.2 + local-init/epilogue sections (frame, return registers, preserves).
-2. `docs/return-register-policy.md` (matrix + HL-preserve swap guidance).
-3. `docs/v02-codegen-worked-examples.md` (assumptions + worked lowerings).
+1. `docs/spec/zax-spec.md` §8.2 + local-init/epilogue sections (frame, return registers, preserves).
+2. `docs/reference/return-register-policy.md` (matrix + HL-preserve swap guidance).
+3. `docs/archive/versioned/v02-codegen-worked-examples.md` (assumptions + worked lowerings).
 4. `examples/language-tour/00_call_with_arg_and_local_baseline.codegen-notes.md` (hand-crafted baseline; do **not** regenerate) with matching `.expected-v02.asm`.
-5. `docs/arrays.md` (IX + DE/HL lowering guidance and runtime-atom budget cues).
-6. `docs/addressing-model.md` (legal addressing shapes, grammar, and representative patterns; indexing stays anchored on typed bases).
+5. `docs/reference/arrays.md` (IX + DE/HL lowering guidance and runtime-atom budget cues).
+6. `docs/reference/addressing-model.md` (legal addressing shapes, grammar, and representative patterns; indexing stays anchored on typed bases).
 
 ## Invariants to keep
 

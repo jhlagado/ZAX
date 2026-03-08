@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-07
 **Status:** Draft decision record for review
-**Purpose:** Narrow the exploratory direction in `docs/ops-first-addressing-direction.md` into concrete language decisions and explicit non-goals.
+**Purpose:** Narrow the exploratory direction in `docs/design/ops-first-addressing-direction.md` into concrete language decisions and explicit non-goals.
 
 This document is not an implementation plan. It exists to decide the language boundary before any implementation backlog is created.
 
@@ -141,49 +141,30 @@ Rationale:
 
 ---
 
-### D5. Dead-register pragmas trim only explicit preservation regions
+### D5. Compiler-owned preservation machinery lands first; `@dead` comes later
 
-ZAX should support dead-register metadata scoped to:
+ZAX should give `addr` a fixed, compiler-guaranteed public contract:
 
-- functions
-- blocks
+> `addr hl, ea_expr` places the effective address in `HL` and preserves everything else.
 
-Examples:
-
-```zax
-func render(): HL
-  @dead DE
-  ...
-end
-```
-
-```zax
-repeat
-  @dead DE
-  addr hl, arr[C]
-  ld a, (hl)
-until Z
-```
-
-Semantics:
-
-- pragmas do not change program meaning
-- they only permit the compiler to skip unnecessary preservation work
-- the compiler may ignore them
-- they apply only to compiler-owned preservation regions, not arbitrary stack traffic in the body
+That requires compiler-owned preservation machinery from the first implementation slice.
 
 Required internal model:
 
-- compiler-owned slabs such as `addr` lowering or transitional sugary EA access must carry a clobber/result set
-- the compiler derives the preserve set as the complement of that clobber set
-- `@dead` trims only that derived preserve set before concrete `push`/`pop` emission
-- semantic stack juggling inside the body remains untouched
+- each compiler-owned lowering slab such as `addr` lowering or transitional sugary EA access must explicitly know which registers it uses transiently
+- the compiler emits preservation wrappers from that internal metadata
+- preservation scaffolding remains distinct from semantic body operations
+
+Future direction:
+
+- a later `@dead` surface may trim only compiler-owned preservation regions
+- it must not rewrite arbitrary stack juggling inside the body
 
 Rationale:
 
-- correct use of pragmas is advisory, not semantic
-- this keeps dead-register optimization targeted at preservation scaffolding only
-- it avoids unsafe deletion of stack operations that are actually part of the algorithm
+- keeps the programmer-facing contract simple and ZAX-like
+- avoids exposing internal lowering details to the programmer
+- builds the right machinery first, before adding optimization controls on top
 
 ---
 
@@ -267,23 +248,31 @@ But this direction does not commit to keeping them once `addr` is established.
 
 ### N6. No mandatory liveness analysis
 
-Dead-register pragmas are advisory.
+Any future dead-register optimization remains advisory.
 The compiler is not required to prove or infer full liveness in order to use this model.
+
+### N7. No `@dead` surface in the first slice
+
+The first slice must land compiler-owned preservation machinery for `addr`.
+The pragma surface itself can come later once that machinery is stable.
 
 ---
 
-## 4. Required Spec Questions Before Implementation
+## 4. Follow-up Spec Questions
 
-These questions need explicit answers before any implementation backlog is created:
+Resolved by `docs/design/addr-prereq-decisions.md`:
+
+1. Transitional status of typed EA inside `ld`
+2. Semantic mapping of transitional direct EA forms onto `addr`
+3. Op contracts deferred for v1
+4. `addr` preservation contract and compiler-owned preservation machinery
+
+Still open:
 
 1. What is the exact grammar production for `<Type>base.tail`?
 2. What counts as a valid `base` for casted EA interpretation in v1?
-3. Is direct typed EA inside `ld` specified only as transitional compatibility, or removed once `addr` lands well?
-4. What exact semantic definition maps any transitional direct EA load/store forms onto `addr`?
-5. Does v1 expose any op metadata at all, or are op contracts entirely deferred?
-6. What exact internal preservation-region model makes `@dead` safe?
-7. What pragma placement rules apply to `@dead`?
-8. How do range/grouped `case` values lower in the presence of overlapping clauses?
+3. Should `@dead` remain deferred until after `addr` stabilizes, or follow immediately after?
+4. How do range/grouped `case` values lower in the presence of overlapping clauses?
 
 ---
 
@@ -292,12 +281,12 @@ These questions need explicit answers before any implementation backlog is creat
 If this direction is accepted, the safest first implementation boundary is:
 
 1. add `addr hl, ea`
-2. leave existing `ld`-embedded typed EA forms untouched or transitional only
-3. leave existing op semantics unchanged
-4. introduce explicit compiler-owned preservation regions derived from clobber/result sets
-5. add dead-register pragmas on top of those preservation regions
-6. add cast syntax only once the `addr` boundary is stable
-7. decide whether to retire direct typed EA from `ld`
+2. give `addr` a compiler-guaranteed preservation contract using compiler-owned preservation machinery
+3. route existing `ld`-embedded typed EA forms through `addr` as transitional compatibility only
+4. leave existing op semantics unchanged
+5. add cast syntax only once the `addr` boundary is stable
+6. decide whether to retire direct typed EA from `ld`
+7. add any `@dead` pragma surface only after generated `addr` code is stable
 8. revisit op metadata only after there is a real effect-analysis mechanism
 
 This keeps the first implementation step focused and prevents the whole idea from becoming an entangled “big bang” redesign.

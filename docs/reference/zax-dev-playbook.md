@@ -5,7 +5,7 @@ This document is the contributor workflow guide.
 It is intentionally narrow. It does not own roadmap history, version closeout status,
 or language semantics.
 
-Normative language behavior is defined only by `docs/zax-spec.md`.
+Normative language behavior is defined only by `docs/spec/zax-spec.md`.
 
 ## Scope
 
@@ -25,14 +25,14 @@ This playbook does not track:
 
 For current planning, use:
 
-- `docs/v04-planning-track.md`
-- `docs/v04-priority-queue.md`
+- `docs/archive/versioned/v04-planning-track.md`
+- `docs/archive/versioned/v04-priority-queue.md`
 
 ## Document Authority
 
 Decision hierarchy:
 
-1. `docs/zax-spec.md`
+1. `docs/spec/zax-spec.md`
    - canonical language authority
 2. topic-specific supporting references
    - codegen, addressing, calling convention, corpus workflow, and similar guidance
@@ -41,7 +41,7 @@ Decision hierarchy:
 
 Conflict rule:
 
-- If this playbook conflicts with `docs/zax-spec.md`, the spec wins.
+- If this playbook conflicts with `docs/spec/zax-spec.md`, the spec wins.
 - If this playbook conflicts with a narrower topic reference, the narrower topic reference wins.
 
 ## Contributor Workflow
@@ -130,7 +130,7 @@ Preferred extraction order for oversized modules:
 
 Canonical command reference:
 
-- `docs/testing-verification-guide.md`
+- `docs/reference/testing-verification-guide.md`
 
 This playbook keeps workflow principles only. Keep concrete command lists and CI testing-path details in the testing guide.
 
@@ -160,7 +160,7 @@ Legacy-syntax guardrail:
 
 One topic should have one clear owner.
 
-- `docs/zax-spec.md` owns normative language rules
+- `docs/spec/zax-spec.md` owns normative language rules
 - topic references own narrow technical guidance
 - this playbook owns contributor workflow only
 
@@ -184,8 +184,8 @@ Historical material should either:
 
 The current active workstream is defined in:
 
-- `docs/v04-planning-track.md`
-- `docs/v04-priority-queue.md`
+- `docs/archive/versioned/v04-planning-track.md`
+- `docs/archive/versioned/v04-priority-queue.md`
 
 Use those files for execution order.
 Use this playbook for how to execute the work cleanly.

@@ -111,7 +111,7 @@ It supersedes the earlier
 for this topic.
 
 This file is authoritative for design work, but it is **not yet the normative
-language specification**. `docs/zax-spec.md` remains the current normative
+language specification**. `docs/spec/zax-spec.md` remains the current normative
 source until this design is implemented and adopted.
 
 For implementation planning:
