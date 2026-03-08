@@ -4,7 +4,7 @@
 **Status:** Design note for review
 **Scope:** Language direction only; not an implementation plan
 
-This note explores a possible next direction for ZAX: keep the compiler responsible for type-aware effective-address calculation, but move more of the memory-access policy and register-preservation policy out of the compiler and into explicit, programmable `op`s.
+This note explores a possible next direction for ZAX: keep the compiler responsible for type-aware effective-address calculation, but move more of the memory-access policy and register-preservation policy out of the compiler and into explicit ZAX constructs and programmable `op`s.
 
 The goal is not to weaken ZAX. The goal is to make the language more explicit, reduce hidden lowering magic, and let experienced Z80 programmers take direct control of important tradeoffs without falling back to unsafe textual macros.
 
@@ -122,22 +122,22 @@ This is the core of the ops-first direction.
 
 ---
 
-## 4. `lea` as the boundary primitive
+## 4. `addr` as the boundary primitive
 
-The cleanest way to separate these concerns is to introduce a first-class `lea` primitive.
+The cleanest way to separate these concerns is to introduce a first-class `addr` keyword.
 
 ### 4.1 Meaning
 
-`lea` means:
+`addr` means:
 
 > Compute the effective address of an EA expression and place it in a register.
 
 For example:
 
 ```zax
-lea hl, arr[C]
-lea hl, sprites[idx].flags
-lea hl, local_buf
+addr hl, arr[C]
+addr hl, sprites[idx].flags
+addr hl, local_buf
 ```
 
 The compiler still does all the smart work:
@@ -157,10 +157,10 @@ Today, `ld a, arr[C]` asks the compiler to do two jobs:
 1. compute the address
 2. choose a load strategy and register-preservation strategy
 
-With `lea`, these become separate:
+With `addr`, these become separate:
 
 ```zax
-lea hl, arr[C]
+addr hl, arr[C]
 ld a, (hl)
 ```
 
@@ -175,7 +175,7 @@ That is a better fit for Z80 programming.
 
 ## 5. Ops as the place for memory-access policy
 
-Once `lea` exists, `op`s become the natural way to define reusable load/store patterns.
+Once `addr` exists, `op`s become the natural way to define reusable load/store patterns.
 
 ### 5.1 Standard-library ops instead of hardcoded lowering templates
 
@@ -185,7 +185,7 @@ Instead of the compiler containing a large matrix of implicit memory templates, 
 op ldb(dst: A, src: ea): AF
   push de
   push hl
-  lea hl, src
+  addr hl, src
   ld a, (hl)
   pop hl
   pop de
@@ -193,7 +193,7 @@ end
 
 op ldw(dst: HL, src: ea): HL
   push de
-  lea hl, src
+  addr hl, src
   ld e, (hl)
   inc hl
   ld d, (hl)
@@ -205,9 +205,11 @@ end
 Then the language has two tiers:
 
 - ergonomic/high-level path via standard ops
-- explicit/manual path via `lea` + raw instructions
+- explicit/manual path via `addr` + raw instructions
 
 That is a much better distribution of complexity than burying everything in compiler-only lowering templates.
+
+`addr` is intentionally a ZAX keyword, not a mnemonic pretending to be a machine opcode.
 
 ### 5.2 Why ops are the right abstraction
 
@@ -242,7 +244,7 @@ Cons:
 - makes register effects harder to reason about
 - encourages the compiler to keep accumulating special cases
 
-### Option B - de-emphasize it in favor of `lea + ops`
+### Option B - de-emphasize it in favor of `addr + ops`
 
 Pros:
 
@@ -260,15 +262,15 @@ Cons:
 
 This is the strongest option.
 
-Keep `ld a, arr[C]` in the language, but treat it as sugar over a standard, explicit addressing strategy.
+Keep `ld a, arr[C]` only as a transitional compatibility form while the explicit model is introduced.
 
 That means:
 
-- casual users keep the nice syntax
-- expert users can always drop down to `lea` + ops
-- the language direction becomes explicit-first even if sugar remains available
+- the intended model becomes `addr` plus explicit access
+- any remaining typed EA inside `ld` must be defined in terms of that explicit model
+- ZAX can later remove typed EA magic from `ld` entirely if `addr` proves to be the better surface
 
-This is the best balance.
+This is the cleanest end-state.
 
 ---
 
@@ -314,9 +316,9 @@ That leaves the free bracket pairs:
 So the best candidate is angle-bracket cast syntax:
 
 ```zax
-lea hl, <Sprite>hl.flags
+addr hl, <Sprite>hl.flags
 ld a, <Sprite>hl.flags
-lea hl, <Outer>hl.inner.flags
+addr hl, <Outer>hl.inner.flags
 ```
 
 This should mean:
@@ -335,7 +337,7 @@ A cast pragma like:
 
 ```zax
 @cast Sprite
-lea hl, hl.flags
+addr hl, hl.flags
 ```
 
 is the wrong tool.
@@ -432,7 +434,7 @@ end
 ```zax
 repeat
   @dead DE
-  lea hl, arr[C]
+  addr hl, arr[C]
   ld a, (hl)
 until Z
 ```
@@ -488,11 +490,11 @@ This means dead-register optimization should operate on compiler-owned preservat
 
 This fits the broader direction cleanly:
 
-- compiler-owned `lea` / sugar lowering can use the same internal clobber/preserve model
+- compiler-owned `addr` / transitional sugar lowering can use the same internal clobber/preserve model
 - future standard-library ops can conceptually follow the same shape
 - semantic stack shuffling inside a body remains explicit and untouched
 
-So even if ZAX keeps current sugar, dead-register metadata can reduce preservation cost without becoming unsafe.
+So even during any transition period, dead-register metadata can reduce preservation cost without becoming unsafe.
 
 ---
 
@@ -551,7 +553,7 @@ Pow2 stride should become:
 - an optimization mode
 - or an implementation detail of specific fast paths
 
-not a universal storage policy.
+not a universal storage policy. Packed layout should be the semantic default.
 
 ### 11.2 `ptr` remains too raw
 
@@ -584,26 +586,27 @@ The best direction is:
 
 ### Provide these language features
 
-1. **`lea`** as a first-class primitive
+1. **`addr`** as a first-class keyword
 2. **angle-bracket cast syntax** for typed pointer interpretation
    - e.g. `<Sprite>hl.flags`
 3. **scoped dead-register pragmas** for optimization metadata
 4. **richer `select` cases** with ranges and comma-separated groups
 5. **later, if analysis exists:** optional op metadata
 
-### Keep current sugar, but de-emphasize it
+### Treat current `ld`-embedded typed EA as transitional
 
-Do not necessarily remove:
+Transition may temporarily keep:
 
 ```zax
 ld a, arr[C]
 ```
 
 But stop treating that style as the deepest or most serious programming model.
+If `addr` lands well, ZAX should be free to remove that typed EA sugar from `ld`.
 
 The serious model should be:
 
-- `lea`
+- `addr`
 - well-written ops
 - explicit register policy
 
