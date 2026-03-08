@@ -130,7 +130,8 @@ matcher_type    = "reg8" | "reg16"
 ```ebnf
 instr_stream    = { instr_line } ;
 
-instr_line      = z80_instruction
+instr_line      = addr_stmt
+                | z80_instruction
                 | op_invoke
                 | func_call
                 | if_stmt
@@ -139,6 +140,8 @@ instr_line      = z80_instruction
                 | select_stmt
                 | local_label
                 | local_jump ;
+
+addr_stmt       = "addr" , "HL" , "," , ea_expr ;
 
 if_stmt         = "if" , cc_expr , newline , instr_stream ,
                   [ "else" , newline , instr_stream ] , "end" ;
@@ -193,12 +196,15 @@ init_item       = imm_expr | aggregate_init ;
 
 These are semantic constraints enforced beyond pure grammar:
 
+- `addr` is the primary explicit typed-addressing form and currently requires destination `HL`:
+  - `addr hl, ea_expr`
 - Typed alias form is invalid in function-local `var`:
   - `name: Type = rhsAlias`
 - `import` remains module-scope only. It is not valid inside a named section.
 - Variable declarations inside a `code` named section are a compile error.
 - Local non-scalar value-init declarations are invalid.
 - Local non-scalar declarations are alias-only (`name = rhs`).
+- Direct typed-EA use inside `ld` remains transitional compatibility over `addr`; it is not the primary addressing model.
 - `@place` explicit address-of syntax is not part of the normative v0.2 surface.
 
 ## 9. Maintenance Rule

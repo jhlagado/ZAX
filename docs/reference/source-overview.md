@@ -57,7 +57,7 @@ src/
     parseGlobals.ts       Legacy module-scope storage-block parser
     parseImm.ts           Immediate expression parser (literals, names, sizeof, binary)
     parseOp.ts            Op declaration parser (header + asm body)
-    parseOperands.ts      Operand parser (Reg, Imm, Ea, Mem, PortC, PortImm8)
+    parseOperands.ts      Operand parser (Reg, Imm, Ea, Mem, PortC, PortImm8, addr)
     parseParams.ts        Parameter list parser (typed params and op matcher params)
     parseTopLevelSimple.ts Simple single-line parsers: import, const, section, align, bin, hex
     parseTypes.ts         Type and union declaration parsers (multi-line blocks)
@@ -268,9 +268,18 @@ Field access (`.field`) and constant index (`[n]`) are folded into the addend/ix
 resolution time. Runtime-indexed access (reg8/reg16 index) falls back to address materialization
 into HL.
 
-### 4.6 Lowering: LD Instruction
+### 4.6 Lowering: `addr` and `LD`
 
-`ldLowering.ts` handles the core complexity of the `ld` instruction, which must cover:
+The addr-first transition makes:
+
+- `addr hl, ea_expr` the primary explicit typed-addressing surface
+- direct typed-EA use inside `ld` transitional compatibility only
+
+`ldLowering.ts` still handles the core complexity of transitional typed-EA `ld` forms and raw `ld`
+encoding, but those typed-EA cases are expected to route through the same HL materialization model
+used by `addr`.
+
+Current transitional typed-EA coverage includes:
 
 - `ld r8, (ea)` — load byte from EA into reg8
 - `ld r16, (ea)` — load word from EA into reg16 pair
@@ -279,7 +288,7 @@ into HL.
 - `ld (ea), (ea)` — memory-to-memory copy (byte or word)
 - `ld (ea), imm` — store immediate to EA
 
-Each case tries multiple paths in priority order:
+These cases try multiple paths in priority order:
 
 1. Direct IX+d form (for stack slots within ±128 byte range)
 2. Step-pipeline template (for EAs that can be resolved to a step sequence)
