@@ -16,84 +16,84 @@
         },
         {
           "start": 256,
-          "end": 333,
+          "end": 374,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
         },
         {
           "start": 267,
-          "end": 270,
+          "end": 283,
           "lstLine": 20,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 270,
-          "end": 276,
+          "start": 283,
+          "end": 303,
           "lstLine": 21,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 276,
-          "end": 279,
+          "start": 303,
+          "end": 306,
           "lstLine": 22,
           "kind": "macro",
           "confidence": "high"
         },
         {
-          "start": 279,
-          "end": 287,
+          "start": 306,
+          "end": 314,
           "lstLine": 19,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 287,
-          "end": 295,
+          "start": 314,
+          "end": 322,
           "lstLine": 25,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 295,
-          "end": 300,
+          "start": 322,
+          "end": 327,
           "lstLine": 27,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 300,
-          "end": 304,
+          "start": 327,
+          "end": 331,
           "lstLine": 25,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 304,
-          "end": 307,
+          "start": 331,
+          "end": 334,
           "lstLine": 30,
           "kind": "macro",
           "confidence": "high"
         },
         {
-          "start": 307,
-          "end": 316,
+          "start": 334,
+          "end": 343,
           "lstLine": 31,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 316,
-          "end": 324,
+          "start": 343,
+          "end": 365,
           "lstLine": 32,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 324,
-          "end": 333,
+          "start": 365,
+          "end": 374,
           "lstLine": 25,
           "kind": "code",
           "confidence": "high"
@@ -117,21 +117,21 @@
         {
           "name": "__zax_epilogue_0",
           "kind": "label",
-          "address": 279,
+          "address": 306,
           "line": 19,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
-          "address": 287,
+          "address": 314,
           "line": 25,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
-          "address": 324,
+          "address": 365,
           "line": 25,
           "scope": "local"
         },
@@ -161,7 +161,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 333
+      "end": 374
     },
     {
       "start": 4096,
@@ -183,7 +183,7 @@
     {
       "name": "__zax_epilogue_0",
       "kind": "label",
-      "address": 279,
+      "address": 306,
       "file": "14_ops_and_calls.zax",
       "line": 19,
       "scope": "local"
@@ -191,7 +191,7 @@
     {
       "name": "main",
       "kind": "label",
-      "address": 287,
+      "address": 314,
       "file": "14_ops_and_calls.zax",
       "line": 25,
       "scope": "global"
@@ -199,7 +199,7 @@
     {
       "name": "__zax_epilogue_1",
       "kind": "label",
-      "address": 324,
+      "address": 365,
       "file": "14_ops_and_calls.zax",
       "line": 25,
       "scope": "local"
