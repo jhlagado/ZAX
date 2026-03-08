@@ -26,35 +26,36 @@ The purpose of this decision record is to make that split explicit.
 
 ## 2. Decisions
 
-### D1. Introduce `lea` as a first-class primitive
+### D1. Introduce `addr` as a first-class language keyword
 
-ZAX should introduce `lea` with this initial surface:
+ZAX should introduce `addr` with this initial surface:
 
 ```zax
-lea hl, ea_expr
+addr hl, ea_expr
 ```
 
 Meaning:
 
 > Compute the effective address of `ea_expr` into `HL`.
 
-`lea` is **HL-only in v1**.
+`addr` is **HL-only in v1**.
 
 Rationale:
 
 - this keeps the feature semantic, not tactical
 - it avoids reintroducing register-allocation/preservation policy into the feature itself
 - it provides a clean boundary primitive for typed addressing
+- it is visibly a ZAX language construct rather than a mnemonic that looks like a machine opcode
 
 Explicitly not included in v1:
 
-- `lea de, ...`
-- `lea bc, ...`
+- `addr de, ...`
+- `addr bc, ...`
 - arbitrary destination pairs
 
 ---
 
-### D2. Direct EA load/store forms become normative sugar over `lea`
+### D2. `addr` becomes the primary model; direct typed EA in `ld` is transitional only
 
 Forms such as:
 
@@ -64,18 +65,20 @@ ld arr[C], a
 ld de, table[idx]
 ```
 
-may remain in the language, but they should no longer be treated as independent compiler-owned special cases.
+may remain temporarily for compatibility, but they should no longer be treated as independent compiler-owned special cases, and they should not be the intended long-term surface.
 
-They should be defined as normative sugar over:
+The preferred model is:
 
-1. `lea hl, ...`
-2. a fixed access strategy for the relevant load/store form
+1. `addr hl, ...`
+2. explicit memory access via raw instructions or ops
+
+If transitional typed EA forms remain during migration, they must be defined in terms of the `addr` model rather than retaining bespoke hidden lowering.
 
 Rationale:
 
-- keeps current ergonomic surface
-- stops the sugary forms from owning separate hidden lowering semantics
-- makes the explicit model (`lea + instructions` or `lea + ops`) the real language center
+- makes the explicit model (`addr + instructions` or `addr + ops`) the real language center
+- keeps ZAX constructs visibly ZAX-like instead of hiding them inside Z80-looking opcodes
+- leaves room to remove typed EA magic from `ld` entirely once `addr` has proven itself
 
 This is a language-design decision, not merely an implementation preference.
 
@@ -92,9 +95,9 @@ ZAX should support explicit typed reinterpretation at the access site using:
 Examples:
 
 ```zax
-lea hl, <Sprite>hl.flags
+addr hl, <Sprite>hl.flags
 ld a, <Sprite>hl.flags
-lea hl, <Outer>hl.inner.flags
+addr hl, <Outer>hl.inner.flags
 ```
 
 Meaning:
@@ -157,7 +160,7 @@ end
 ```zax
 repeat
   @dead DE
-  lea hl, arr[C]
+  addr hl, arr[C]
   ld a, (hl)
 until Z
 ```
@@ -171,7 +174,7 @@ Semantics:
 
 Required internal model:
 
-- compiler-owned slabs such as `lea` lowering or sugary EA access must carry a clobber/result set
+- compiler-owned slabs such as `addr` lowering or transitional sugary EA access must carry a clobber/result set
 - the compiler derives the preserve set as the complement of that clobber set
 - `@dead` trims only that derived preserve set before concrete `push`/`pop` emission
 - semantic stack juggling inside the body remains untouched
@@ -216,6 +219,25 @@ Rationale:
 
 ---
 
+### D7. Packed layout is the semantic default; pow2 stride is a codegen choice
+
+ZAX should treat packed composite layout as the language semantic model.
+
+That means:
+
+- top-level records and arrays are not required to have pow2 total size
+- record field offsets are based on packed size
+- array element stride may use any constant-size codegen strategy needed to address packed elements correctly
+- pow2 stride remains an optimization path, not a universal storage invariant
+
+Rationale:
+
+- keeps storage semantics honest and space-efficient
+- avoids forcing padding into objects that are never indexed with shift-only fast paths
+- matches the broader direction that tactical codegen policy should not become a language law
+
+---
+
 ## 3. Non-Goals
 
 The following are explicitly **not** part of this direction:
@@ -238,10 +260,10 @@ Typed reinterpretation is done with cast syntax instead.
 
 If op contract metadata exists in the future, the compiler still should not silently satisfy it by inserting save/restore code.
 
-### N5. No removal of existing EA sugar in the first pass
+### N5. No promise that direct typed EA in `ld` remains part of the long-term surface
 
-Existing forms like `ld a, arr[C]` may remain.
-The shift is conceptual and semantic: they become sugar over the explicit `lea` model.
+Existing forms like `ld a, arr[C]` may remain during transition.
+But this direction does not commit to keeping them once `addr` is established.
 
 ### N6. No mandatory liveness analysis
 
@@ -256,11 +278,12 @@ These questions need explicit answers before any implementation backlog is creat
 
 1. What is the exact grammar production for `<Type>base.tail`?
 2. What counts as a valid `base` for casted EA interpretation in v1?
-3. What precise sugar definition maps direct EA loads/stores onto `lea`?
-4. Does v1 expose any op metadata at all, or are op contracts entirely deferred?
-5. What exact internal preservation-region model makes `@dead` safe?
-6. What pragma placement rules apply to `@dead`?
-7. How do range/grouped `case` values lower in the presence of overlapping clauses?
+3. Is direct typed EA inside `ld` specified only as transitional compatibility, or removed once `addr` lands well?
+4. What exact semantic definition maps any transitional direct EA load/store forms onto `addr`?
+5. Does v1 expose any op metadata at all, or are op contracts entirely deferred?
+6. What exact internal preservation-region model makes `@dead` safe?
+7. What pragma placement rules apply to `@dead`?
+8. How do range/grouped `case` values lower in the presence of overlapping clauses?
 
 ---
 
@@ -268,13 +291,14 @@ These questions need explicit answers before any implementation backlog is creat
 
 If this direction is accepted, the safest first implementation boundary is:
 
-1. add `lea hl, ea`
-2. define direct EA load/store sugar over `lea`
+1. add `addr hl, ea`
+2. leave existing `ld`-embedded typed EA forms untouched or transitional only
 3. leave existing op semantics unchanged
 4. introduce explicit compiler-owned preservation regions derived from clobber/result sets
 5. add dead-register pragmas on top of those preservation regions
-6. revisit op metadata only after there is a real effect-analysis mechanism
-7. add cast syntax only once `lea` boundary is stable
+6. add cast syntax only once the `addr` boundary is stable
+7. decide whether to retire direct typed EA from `ld`
+8. revisit op metadata only after there is a real effect-analysis mechanism
 
 This keeps the first implementation step focused and prevents the whole idea from becoming an entangled “big bang” redesign.
 
@@ -293,6 +317,6 @@ The key decision is not “more abstraction” versus “less abstraction”.
 
 The real decision is:
 
-> semantic address computation belongs in the compiler; tactical memory-access policy should increasingly belong to explicit source constructs and ops.
+> semantic address computation belongs in the compiler; tactical memory-access policy should increasingly belong to explicit ZAX constructs and ops.
 
 That is the boundary this design record adopts.
