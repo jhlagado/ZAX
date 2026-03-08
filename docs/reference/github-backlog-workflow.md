@@ -81,7 +81,7 @@ Issue close rule:
 
 Testing-path and CI verification expectations are maintained in:
 
-- `docs/testing-verification-guide.md`
+- `docs/reference/testing-verification-guide.md`
 
 ## Dependency Handling Without Project Views
 
