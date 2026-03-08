@@ -10,6 +10,13 @@ section code boot at $0000
     getb arr[idx]
     ld a, l
     getw 9
-    ld out, hl
+    push de
+    ex de, hl
+    addr hl, out
+    ld (hl), e
+    inc hl
+    ld (hl), d
+    ex de, hl
+    pop de
   end
 end

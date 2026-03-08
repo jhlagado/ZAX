@@ -16,7 +16,7 @@
         },
         {
           "start": 256,
-          "end": 361,
+          "end": 367,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -30,36 +30,85 @@
         },
         {
           "start": 298,
-          "end": 323,
+          "end": 299,
           "lstLine": 9,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 323,
-          "end": 331,
-          "lstLine": 7,
+          "start": 299,
+          "end": 300,
+          "lstLine": 10,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 331,
-          "end": 343,
+          "start": 300,
+          "end": 324,
+          "lstLine": 11,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 324,
+          "end": 325,
           "lstLine": 12,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 343,
-          "end": 352,
+          "start": 325,
+          "end": 326,
           "lstLine": 13,
           "kind": "code",
           "confidence": "high"
         },
         {
-          "start": 352,
-          "end": 361,
-          "lstLine": 12,
+          "start": 326,
+          "end": 327,
+          "lstLine": 14,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 327,
+          "end": 328,
+          "lstLine": 15,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 328,
+          "end": 329,
+          "lstLine": 16,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 329,
+          "end": 337,
+          "lstLine": 7,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 337,
+          "end": 349,
+          "lstLine": 19,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 349,
+          "end": 358,
+          "lstLine": 20,
+          "kind": "code",
+          "confidence": "high"
+        },
+        {
+          "start": 358,
+          "end": 367,
+          "lstLine": 19,
           "kind": "code",
           "confidence": "high"
         },
@@ -82,22 +131,22 @@
         {
           "name": "__zax_epilogue_0",
           "kind": "label",
-          "address": 323,
+          "address": 329,
           "line": 7,
           "scope": "local"
         },
         {
           "name": "main",
           "kind": "label",
-          "address": 331,
-          "line": 12,
+          "address": 337,
+          "line": 19,
           "scope": "global"
         },
         {
           "name": "__zax_epilogue_1",
           "kind": "label",
-          "address": 352,
-          "line": 12,
+          "address": 358,
+          "line": 19,
           "scope": "local"
         },
         {
@@ -126,7 +175,7 @@
   "segments": [
     {
       "start": 256,
-      "end": 361
+      "end": 367
     },
     {
       "start": 8192,
@@ -148,7 +197,7 @@
     {
       "name": "__zax_epilogue_0",
       "kind": "label",
-      "address": 323,
+      "address": 329,
       "file": "68_word_fvar_glob.zax",
       "line": 7,
       "scope": "local"
@@ -156,17 +205,17 @@
     {
       "name": "main",
       "kind": "label",
-      "address": 331,
+      "address": 337,
       "file": "68_word_fvar_glob.zax",
-      "line": 12,
+      "line": 19,
       "scope": "global"
     },
     {
       "name": "__zax_epilogue_1",
       "kind": "label",
-      "address": 352,
+      "address": 358,
       "file": "68_word_fvar_glob.zax",
-      "line": 12,
+      "line": 19,
       "scope": "local"
     },
     {

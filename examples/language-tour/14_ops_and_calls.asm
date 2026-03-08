@@ -40,25 +40,40 @@ push HL                        ; 0136: E5
 call add_to_sample             ; 0137: CD 00 00
 inc SP                         ; 013A: 33
 inc SP                         ; 013B: 33
-ex DE, HL                      ; 013C: EB
-ld (IX - $0002), E             ; 013D: DD 73 FE
-ld (IX - $0001), D             ; 0140: DD 72 FF
-ex DE, HL                      ; 0143: EB
+push DE                        ; 013C: D5
+ex DE, HL                      ; 013D: EB
+push AF                        ; 013E: F5
+push BC                        ; 013F: C5
+push DE                        ; 0140: D5
+push IX                        ; 0141: DD E5
+pop HL                         ; 0143: E1
+ld DE, $FFFE                   ; 0144: 11 FE FF
+add HL, DE                     ; 0147: 19
+push HL                        ; 0148: E5
+pop HL                         ; 0149: E1
+pop DE                         ; 014A: D1
+pop BC                         ; 014B: C1
+pop AF                         ; 014C: F1
+ld (hl), E                     ; 014D: 73
+inc HL                         ; 014E: 23
+ld (hl), D                     ; 014F: 72
+ex DE, HL                      ; 0150: EB
+pop DE                         ; 0151: D1
 __zax_epilogue_1:
-pop HL                         ; 0144: E1
-pop DE                         ; 0145: D1
-pop BC                         ; 0146: C1
-pop AF                         ; 0147: F1
-ld SP, IX                      ; 0148: DD F9
-pop IX                         ; 014A: DD E1
-ret                            ; 014C: C9
+pop HL                         ; 0152: E1
+pop DE                         ; 0153: D1
+pop BC                         ; 0154: C1
+pop AF                         ; 0155: F1
+ld SP, IX                      ; 0156: DD F9
+pop IX                         ; 0158: DD E1
+ret                            ; 015A: C9
 ; func main end
 
 ; symbols:
 ; label add_to_sample = $0100
 ; label __zax_epilogue_0 = $0117
 ; label main = $011F
-; label __zax_epilogue_1 = $0144
+; label __zax_epilogue_1 = $0152
 ; data sample_byte = $1000
 ; data sample_word = $1001
 ; label __zax_startup = $1003
