@@ -22,7 +22,7 @@ async function readManifest(): Promise<CorpusManifest> {
 describe('PR453: codegen corpus workflow', () => {
   it('documents the supported regeneration command and ownership', async () => {
     const [workflowDoc, indexDoc] = await Promise.all([
-      readFile(join(__dirname, '..', 'docs', 'reference', 'codegen-corpus-workflow.md'), 'utf8'),
+      readFile(join(__dirname, '..', 'docs', 'codegen-corpus-workflow.md'), 'utf8'),
       readFile(join(__dirname, '..', 'examples', 'codegen-corpus', 'INDEX.md'), 'utf8'),
     ]);
 
