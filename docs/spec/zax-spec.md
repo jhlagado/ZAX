@@ -178,7 +178,7 @@ Escapes in string/char literals:
 
 ZAX treats the following as **reserved** (case-insensitive):
 
-- Z80 mnemonics and assembler keywords used inside instruction streams (e.g., `ld`, `add`, `ret`, `jp`, ...) plus the ZAX instruction keyword `addr`.
+- Z80 mnemonics and assembler keywords used inside instruction streams (e.g., `ld`, `add`, `ret`, `jp`, ...).
 - Register names: `A F AF B C D E H L HL DE BC SP IX IY I R`.
 - Condition codes used by structured control flow: `Z NZ C NC PO PE M P`.
 - Structured-control keywords: `if`, `else`, `while`, `repeat`, `until`, `select`, `case`, `end`.
@@ -457,15 +457,14 @@ Field access:
 - If the field type is scalar, bare use has value semantics in `LD` and call arguments.
 - If the field type is aggregate, the result is the nested storage object and may be indexed or field-selected further.
 
-Example: arrays of records can be accessed explicitly through `addr` (informative):
+Example: arrays of records lower through storage-path access (informative):
 
 ```
 
-; `sprites[C].x` is a scalar field access. `addr` makes the address step
-; explicit, then ordinary raw access uses `(hl)`:
-addr hl, sprites[C].x
-ld a, (hl)
-ld (hl), a
+; `sprites[C].x` is a scalar field access. The compiler performs the
+; required address calculation internally, then loads/stores the value:
+ld hl, sprites[C].x   ; load word at sprites[C].x
+ld sprites[C].x, hl   ; store word to sprites[C].x
 
 ```
 
@@ -528,8 +527,6 @@ Module storage is declared inside named `data` sections.
 - Function-local `var`, parameters, and named-section `data` declarations are typed storage.
 - Scalar storage uses **value semantics** in `LD` and call arguments: a bare name means the stored value.
 - Composite storage (arrays, records, unions) is still referred to by name in source, but the compiler transparently passes or lowers it as a storage base when an aggregate operation needs one.
-- `addr hl, ea_expr` is the primary explicit typed-addressing form in the current language surface.
-- Direct typed-EA use inside `ld` remains supported only as transitional compatibility shorthand over the `addr` model.
 - `bin` and `hex` names denote storage regions/blobs and are primarily used as storage bases rather than scalar values.
 - Parentheses are an explicit low-level dereference form: `(ea)` denotes memory at the computed location `ea`. For normal scalar variables, bare forms are the normative source syntax.
 - Dereference width is implied by the instruction operand size:
@@ -547,7 +544,7 @@ Notes (v0.1):
   - These port forms refer to the Z80 I/O space (not memory) and are only valid where a raw Z80 mnemonic expects a port operand. They are not `ea` expressions.
 - Grouping parentheses apply only inside `imm` expressions (e.g., `const X = (1+2)*3`, or `ea + (1+2)`).
 
-### 6.1.1 `addr` and Lowering of Non-Encodable Operands
+### 6.1.1 Lowering of Non-Encodable Operands
 
 Many `ea` forms (locals/args, `rec.field`, `arr[i]`, and address arithmetic) are not directly encodable in a single Z80 instruction. In these cases, the compiler lowers the instruction to an equivalent instruction sequence.
 
@@ -562,29 +559,15 @@ Lowering limitations (v0.1):
 
 - Some source forms may be rejected if no correct lowering exists under the constraints above (e.g., operations whose operand ordering cannot be preserved without clobbering).
 
-Primary and transitional forms (current surface):
+Lowering guarantees and rejected patterns (v0.1):
 
-- The primary explicit addressing form is:
-
-```zax
-addr hl, ea_expr
-```
-
-  It computes the effective address of `ea_expr` into `HL` and preserves all other registers and flags.
-- Direct typed-EA uses inside `ld` remain supported only as transitional compatibility.
-  - Examples: `ld a, rec.field`, `ld rec.field, a`, `ld hl, table[idx]`
-  - These forms are defined in terms of `addr hl, ea_expr` plus the explicit byte/word access sequence required by the raw Z80 instruction.
-  - They are not the primary source model and should not gain bespoke lowering semantics separate from `addr`.
-- Supported `ea_expr` shapes for `addr` and transitional typed-EA lowering are:
-  - local/arg slots
-  - module-scope storage addresses (`data` / `bin`)
-  - field access (`rec.field`)
-  - indexing (`arr[i]`)
-  - address arithmetic (`ea +/- imm`)
+- The compiler guarantees lowering for loads/stores whose memory operand is an `ea` expression of the following forms:
+  - `LD r8, (ea)` and `LD (ea), r8`
+  - `LD r16, (ea)` and `LD (ea), r16`
+    where `ea` is a local/arg slot, a module-scope storage address (`data`/`bin`), `rec.field`, `arr[i]`, or `ea +/- imm`.
 - The compiler rejects source forms that are not meaningful on Z80 and do not have a well-defined lowering under the preservation constraints, including:
   - memory-to-memory forms (e.g., `LD (ea1), (ea2)`).
   - instructions where both operands require lowering and a correct sequence cannot be produced without clobbering non-destination registers or flags that must be preserved.
-  - transitional typed-EA word stores from `HL` (for example `ld rec.field, hl`), which must use `addr hl, ea` followed by an explicit store sequence or a dedicated op.
 
 Non-guarantees (v0.1):
 
@@ -795,9 +778,7 @@ Conceptually, an `ea` is a base storage location plus a sequence of path segment
 Value semantics note (v0.2):
 
 - Bare scalar variables use value semantics in ordinary instruction and call contexts.
-- `addr hl, ea_expr` is the primary explicit consumer of `ea` expressions.
 - `rec.field` and `arr[idx]` are storage-path expressions. In scalar value/store contexts (for example `LD A, rec.field`, `LD rec.field, A`), the compiler inserts the required load/store lowering.
-- Those direct `ld` forms are transitional compatibility over the `addr` model, not a separate primary addressing surface.
 - In aggregate contexts (for example passing an array/record parameter), the compiler passes the storage reference transparently.
 - Older address-of style wording (including `@place`) is retired from the normative v0.2 source model.
 
@@ -837,7 +818,7 @@ Rules:
   - at most one optional `var` block
   - instruction stream starts after the optional `var` block (or immediately if no `var` block)
   - `end` terminates the function body
-- Function instruction streams may contain Z80 mnemonics, `addr` instructions, `op` invocations, and structured control flow (Section 10).
+- Function instruction streams may contain Z80 mnemonics, `op` invocations, and structured control flow (Section 10).
 
 Function-local `var` declaration forms (v0.2):
 
@@ -874,23 +855,6 @@ Function-body block termination (v0.1):
 - Legacy explicit `asm` body markers are rejected with diagnostics (`Unexpected "asm" in function body ...`).
 - Function instruction streams may be empty (no instructions).
 - If control reaches the end of the function instruction stream (falls off the end), the compiler behaves as if a `ret` instruction were present at that point (i.e., it returns via the normal return/trampoline mechanism described in 8.4).
-
-### 8.1.1 `addr` Instruction
-
-Syntax:
-
-```zax
-addr hl, ea_expr
-```
-
-Rules:
-
-- `addr` is the primary explicit typed-addressing instruction in the current language surface.
-- The destination register is currently fixed to `HL`.
-- The source must be an `ea` expression as defined in Section 7.2.
-- The instruction computes the effective address of `ea_expr` into `HL`.
-- The instruction preserves all registers other than `HL`, preserves flags, and has net stack delta 0.
-- Direct typed-EA use inside `ld` remains transitional compatibility only and is defined in terms of this instruction plus explicit byte/word access.
 
 ### 8.2 Calling Convention
 

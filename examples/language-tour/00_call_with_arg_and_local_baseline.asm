@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$0168 (end exclusive)
+; range: $0100..$015A (end exclusive)
 
 ; func inc_one begin
 inc_one:
@@ -46,37 +46,22 @@ push HL                        ; 0143: E5
 call inc_one                   ; 0144: CD 00 00
 inc SP                         ; 0147: 33
 inc SP                         ; 0148: 33
-push DE                        ; 0149: D5
-ex DE, HL                      ; 014A: EB
-push AF                        ; 014B: F5
-push BC                        ; 014C: C5
-push DE                        ; 014D: D5
-push IX                        ; 014E: DD E5
-pop HL                         ; 0150: E1
-ld DE, $FFFE                   ; 0151: 11 FE FF
-add HL, DE                     ; 0154: 19
-push HL                        ; 0155: E5
-pop HL                         ; 0156: E1
-pop DE                         ; 0157: D1
-pop BC                         ; 0158: C1
-pop AF                         ; 0159: F1
-ld (hl), E                     ; 015A: 73
-inc HL                         ; 015B: 23
-ld (hl), D                     ; 015C: 72
-ex DE, HL                      ; 015D: EB
-pop DE                         ; 015E: D1
+ex DE, HL                      ; 0149: EB
+ld (IX - $0002), E             ; 014A: DD 73 FE
+ld (IX - $0001), D             ; 014D: DD 72 FF
+ex DE, HL                      ; 0150: EB
 __zax_epilogue_1:
-pop HL                         ; 015F: E1
-pop DE                         ; 0160: D1
-pop BC                         ; 0161: C1
-pop AF                         ; 0162: F1
-ld SP, IX                      ; 0163: DD F9
-pop IX                         ; 0165: DD E1
-ret                            ; 0167: C9
+pop HL                         ; 0151: E1
+pop DE                         ; 0152: D1
+pop BC                         ; 0153: C1
+pop AF                         ; 0154: F1
+ld SP, IX                      ; 0155: DD F9
+pop IX                         ; 0157: DD E1
+ret                            ; 0159: C9
 ; func main end
 
 ; symbols:
 ; label inc_one = $0100
 ; label __zax_epilogue_0 = $0127
 ; label main = $012F
-; label __zax_epilogue_1 = $015F
+; label __zax_epilogue_1 = $0151

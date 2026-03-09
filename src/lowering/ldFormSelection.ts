@@ -8,8 +8,6 @@ export type LdForm = {
   inst: AsmInstructionNode;
   dst: AsmOperandNode;
   src: AsmOperandNode;
-  dstUsesTypedEaSugar: boolean;
-  srcUsesTypedEaSugar: boolean;
   dstResolved: EaResolution | undefined;
   srcResolved: EaResolution | undefined;
   dstScalarExact: ScalarKind | undefined;
@@ -140,30 +138,15 @@ export function createLdFormSelectionHelpers(ctx: LdFormSelectionContext) {
   const analyzeLdInstruction = (inst: AsmInstructionNode): LdForm | null => {
     if (inst.head.toLowerCase() !== 'ld' || inst.operands.length !== 2) return null;
 
-    const rawDst = inst.operands[0]!;
-    const rawSrc = inst.operands[1]!;
-    const dst = coerceValueOperand(rawDst);
-    const src = coerceValueOperand(rawSrc);
+    const dst = coerceValueOperand(inst.operands[0]!);
+    const src = coerceValueOperand(inst.operands[1]!);
     const dstResolved = dst.kind === 'Mem' ? resolveEa(dst.expr, inst.span) : undefined;
     const srcResolved = src.kind === 'Mem' ? resolveEa(src.expr, inst.span) : undefined;
-    const usesTypedEaSugar = (raw: AsmOperandNode, coerced: AsmOperandNode): boolean => {
-      if (coerced.kind !== 'Mem') return false;
-      if (raw.kind === 'Mem') return false;
-      if (raw.kind === 'Ea') return !raw.explicitAddressOf && resolveScalarTypeForLd(raw.expr) !== undefined;
-      if (raw.kind === 'Imm' && raw.expr.kind === 'ImmName') return resolveScalarBinding(raw.expr.name) !== undefined;
-      if (raw.kind === 'Reg') {
-        const lower = raw.name.toLowerCase();
-        return stackSlotOffsets.has(lower) || storageTypes.has(lower) || env.consts.has(lower);
-      }
-      return false;
-    };
 
     return {
       inst,
       dst,
       src,
-      dstUsesTypedEaSugar: usesTypedEaSugar(rawDst, dst),
-      srcUsesTypedEaSugar: usesTypedEaSugar(rawSrc, src),
       dstResolved,
       srcResolved,
       dstScalarExact: scalarKindOfResolution(dstResolved),

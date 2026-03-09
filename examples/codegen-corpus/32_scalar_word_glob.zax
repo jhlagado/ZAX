@@ -5,14 +5,7 @@ end
 section code boot at $0100
   export func touch_scalar_word_glob(): HL
     ld hl, glob_w
-    push de
-    ex de, hl
-    addr hl, glob_w
-    ld (hl), e
-    inc hl
-    ld (hl), d
-    ex de, hl
-    pop de
+    ld glob_w, hl
   end
 
   export func main()

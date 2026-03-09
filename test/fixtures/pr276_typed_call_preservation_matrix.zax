@@ -12,14 +12,7 @@ section code boot at $0000
     getb 7
     ld a, l
     getw 9
-    push de
-    ex de, hl
-    addr hl, out
-    ld (hl), e
-    inc hl
-    ld (hl), d
-    ex de, hl
-    pop de
+    ld out, hl
     ret
   end
 end

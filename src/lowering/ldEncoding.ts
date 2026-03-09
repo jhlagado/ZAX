@@ -3,7 +3,6 @@ import type { Diagnostic } from '../diagnostics/types.js';
 import type { AsmInstructionNode, AsmOperandNode, EaExprNode } from '../frontend/ast.js';
 import type { ImmExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
-import { createAddrLoweringHelpers } from './addrLowering.js';
 import type { EaResolution } from './eaResolution.js';
 import type { LdForm } from './ldFormSelection.js';
 import type { ScalarKind } from './typeResolution.js';
@@ -120,21 +119,9 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
     resolveScalarKind,
     setSpTrackingInvalid,
   } = ctx;
-  const { materializeAddrToHLWithPreservedRegs } = createAddrLoweringHelpers({ emitInstr, materializeEaAddressToHL });
 
   const emitLdForm = (form: LdForm): boolean => {
-    const {
-      inst,
-      dst,
-      src,
-      dstResolved,
-      srcResolved,
-      dstScalarExact,
-      srcScalarExact,
-      scalarMemToMem,
-      dstUsesTypedEaSugar,
-      srcUsesTypedEaSugar,
-    } = form;
+    const { inst, dst, src, dstResolved, srcResolved, dstScalarExact, srcScalarExact, scalarMemToMem } = form;
 
     const ixDispMem = (disp: number): AsmOperandNode => ({
       kind: 'Mem',
@@ -149,8 +136,6 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
               offset: { kind: 'ImmLiteral', span: inst.span, value: Math.abs(disp) },
             },
     });
-    const materializeLdEaToHL = (ea: EaExprNode, span: SourceSpan, usesTypedEaSugar: boolean): boolean =>
-      usesTypedEaSugar ? materializeAddrToHLWithPreservedRegs(ea, span) : materializeEaAddressToHL(ea, span);
 
     if (dst.kind === 'Reg' && src.kind === 'Mem') {
       if (form.srcHasRegisterLikeEaBase) return false;
@@ -235,7 +220,7 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
           if (templated && emitStepPipeline(templated, inst.span)) return true;
         }
 
-        if (!materializeLdEaToHL(src.expr, inst.span, srcUsesTypedEaSugar)) return false;
+        if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         emitRawCodeBytes(Uint8Array.of(0x46 + (d << 3)), inst.span.file, `ld ${regUp}, (hl)`);
         return true;
       }
@@ -256,7 +241,7 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
         }
         const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
         if (srcPipeW && emitStepPipeline(TEMPLATE_LW_HL(srcPipeW), inst.span)) return true;
-        if (!materializeLdEaToHL(src.expr, inst.span, srcUsesTypedEaSugar)) return false;
+        if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         return emitLoadWordFromHlAddress('HL', inst.span);
       }
       if (r16 === 'DE') {
@@ -274,7 +259,7 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
         }
         const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
         if (srcPipeW && emitStepPipeline(TEMPLATE_LW_DE(srcPipeW), inst.span)) return true;
-        if (!materializeLdEaToHL(src.expr, inst.span, srcUsesTypedEaSugar)) return false;
+        if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         return emitLoadWordFromHlAddress('DE', inst.span);
       }
       if (r16 === 'BC') {
@@ -292,7 +277,7 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
         }
         const srcPipeW = buildEaWordPipeline(src.expr, inst.span);
         if (srcPipeW && emitStepPipeline(TEMPLATE_LW_BC(srcPipeW), inst.span)) return true;
-        if (!materializeLdEaToHL(src.expr, inst.span, srcUsesTypedEaSugar)) return false;
+        if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         return emitLoadWordFromHlAddress('BC', inst.span);
       }
       if (r16 === 'SP' && srcResolved?.kind === 'abs') {
@@ -305,7 +290,7 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
           emitAbs16FixupPrefixed(r16 === 'IX' ? 0xdd : 0xfd, 0x2a, srcResolved.baseLower, srcResolved.addend, inst.span);
           return true;
         }
-        if (!materializeLdEaToHL(src.expr, inst.span, srcUsesTypedEaSugar)) return false;
+        if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         if (!emitLoadWordFromHlAddress('HL', inst.span)) return false;
         if (
           !emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'HL' }], inst.span) ||
@@ -399,7 +384,7 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
         }
         const preserveA = regUp === 'A';
         if (preserveA && !emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) return false;
-        if (!materializeLdEaToHL(dst.expr, inst.span, dstUsesTypedEaSugar)) {
+        if (!materializeEaAddressToHL(dst.expr, inst.span)) {
           if (preserveA) return emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span);
           return false;
         }
@@ -410,14 +395,6 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
 
       const r16 = src.name.toUpperCase();
       if (r16 === 'HL') {
-        if (dstUsesTypedEaSugar) {
-          diagAt(
-            diagnostics,
-            inst.span,
-            'Typed-EA transitional form `ld ea, hl` is not supported in the addr-first transition. Use `addr hl, ea` followed by an explicit word store sequence or a dedicated op.',
-          );
-          return true;
-        }
         if (dstScalarExact === 'byte') {
           diagAt(diagnostics, inst.span, 'Word register store requires a word-typed destination.');
           return true;
@@ -449,7 +426,7 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
           emitAbs16FixupEd(0x53, dstResolved.baseLower, dstResolved.addend, inst.span);
           return true;
         }
-        if (!materializeLdEaToHL(dst.expr, inst.span, dstUsesTypedEaSugar)) return false;
+        if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
         return emitStoreWordToHlAddress('DE', inst.span);
       }
       if (r16 === 'BC') {
@@ -467,7 +444,7 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
           emitAbs16FixupEd(0x43, dstResolved.baseLower, dstResolved.addend, inst.span);
           return true;
         }
-        if (!materializeLdEaToHL(dst.expr, inst.span, dstUsesTypedEaSugar)) return false;
+        if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
         return emitStoreWordToHlAddress('BC', inst.span);
       }
       if (r16 === 'SP' && dstResolved?.kind === 'abs') {
@@ -485,7 +462,7 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
         ) {
           return false;
         }
-        if (!materializeLdEaToHL(dst.expr, inst.span, dstUsesTypedEaSugar)) return false;
+        if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
         return emitStoreWordToHlAddress('DE', inst.span);
       }
     }
@@ -543,9 +520,9 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
           return true;
         }
         if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) return false;
-        if (!materializeLdEaToHL(src.expr, inst.span, srcUsesTypedEaSugar)) return false;
+        if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
         emitRawCodeBytes(Uint8Array.of(0x7e), inst.span.file, 'ld a, (hl)');
-        if (!materializeLdEaToHL(dst.expr, inst.span, dstUsesTypedEaSugar)) return false;
+        if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
         emitRawCodeBytes(Uint8Array.of(0x77), inst.span.file, 'ld (hl), a');
         if (!emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'AF' }], inst.span)) return false;
         return true;
@@ -572,10 +549,10 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
         if (!emitScalarWordStore('DE', dstResolved, inst.span)) return false;
         return true;
       }
-      if (!materializeLdEaToHL(src.expr, inst.span, srcUsesTypedEaSugar)) return false;
+      if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
       if (!emitLoadWordFromHlAddress('DE', inst.span)) return false;
       if (!emitInstr('push', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span)) return false;
-      if (!materializeLdEaToHL(dst.expr, inst.span, dstUsesTypedEaSugar)) return false;
+      if (!materializeEaAddressToHL(dst.expr, inst.span)) return false;
       if (!emitInstr('pop', [{ kind: 'Reg', span: inst.span, name: 'DE' }], inst.span)) return false;
       return emitStoreWordToHlAddress('DE', inst.span);
     }
@@ -599,7 +576,7 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
           diagAt(diagnostics, inst.span, 'ld (ea), imm expects imm8.');
           return true;
         }
-        if (!materializeLdEaToHL(dst.expr, inst.span, dstUsesTypedEaSugar)) return true;
+        if (!materializeEaAddressToHL(dst.expr, inst.span)) return true;
         return emitInstr(
           'ld',
           [
@@ -620,7 +597,7 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
           emitAbs16Fixup(0x22, dstResolved.baseLower, dstResolved.addend, inst.span);
           return true;
         }
-        if (!materializeLdEaToHL(dst.expr, inst.span, dstUsesTypedEaSugar)) return true;
+        if (!materializeEaAddressToHL(dst.expr, inst.span)) return true;
         const lo = v & 0xff;
         const hi = (v >> 8) & 0xff;
         if (
