@@ -1,41 +1,34 @@
 # Current Stream
 
-## Addr-first transition
+## Addressing rollback checkpoint
 
-This is the active language and compiler stream currently staged for planning.
+The `addr` implementation stream has been rolled back from code.
 
-### Design anchors
+### Current implementation state
+
+- The `addr` parser/lowering work is not active in the compiler.
+- Direct typed `ld` forms remain the working language surface.
+- The `addr` design remains recorded in `docs/design/` as proposal material, not current implemented behavior.
+
+### Design anchors retained for later review
 
 - `docs/design/ops-first-addressing-direction.md`
 - `docs/design/ops-first-addressing-decisions.md`
 - `docs/design/addr-prereq-decisions.md`
 
-### Core settled decisions
+### Immediate priority
 
-- `addr` is the primary typed-addressing model.
-- `addr` is a ZAX keyword, not a mnemonic-style opcode.
-- `addr hl, ea_expr` is the v1 surface.
-- `addr` preserves everything except `HL`.
-- direct typed EA inside `ld` is transitional only and must route through `addr`.
-- packed layout is the semantic default; pow2 stride is a codegen choice, not a storage invariant.
-- user-authored op contracts remain deferred.
+1. Restore and keep the language-tour and user-facing examples aligned with the direct typed `ld` surface.
+2. Keep the current spec/reference docs aligned with implemented behavior.
+3. Reassess whether `addr` should return later as:
+   - an explicit expert construct,
+   - an internal lowering primitive,
+   - or an address-of expression form such as `@place`.
 
-### Required implementation sequence
+### Deferred until re-planned
 
-1. Add parser and lowering support for `addr hl, ea_expr`.
-2. Implement compiler-owned preservation machinery for `addr` so it preserves everything except `HL`.
-3. Route transitional typed-EA-in-`ld` forms through `addr` instead of bespoke lowering.
-4. Emit explicit diagnostics for unsupported transitional forms such as word store from `HL` via typed EA.
-5. Stabilize generated code and corpus expectations around the new `addr` center.
-6. Only after that, consider later features:
-   - `@dead` pragma surface
-   - `<Type>base.tail` typed reinterpretation syntax
-   - grouped and ranged `select case`
-   - eventual retirement of typed EA inside `ld`
-
-### Non-goals for the first slice
-
-- no user-authored op contract system
-- no `addr` destinations other than `HL`
-- no typed-register model
-- no automatic retirement of transitional `ld` sugar in the same first slice
+- `addr` parser/lowering reintroduction
+- `@dead` pragma surface
+- `<Type>base.tail` typed reinterpretation syntax
+- grouped and ranged `select case`
+- retirement of typed EA inside `ld`
