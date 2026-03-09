@@ -1,9 +1,0 @@
-section data vars at $4000
-  words: word[4] = { $1111, $2222, $3333, $4444 }
-end
-
-func main()
-  ld hl, $1234
-  ld words[C], hl
-  ret
-end

@@ -10,52 +10,39 @@ push AF                        ; 0108: F5
 push BC                        ; 0109: C5
 push DE                        ; 010A: D5
 ld hl, (glob_w)                ; 010B: 2A 00 00
-push DE                        ; 010E: D5
-ex DE, HL                      ; 010F: EB
-push AF                        ; 0110: F5
-push BC                        ; 0111: C5
-push DE                        ; 0112: D5
-ld HL, glob_w                  ; 0113: 21 00 00
-pop DE                         ; 0116: D1
-pop BC                         ; 0117: C1
-pop AF                         ; 0118: F1
-ld (hl), E                     ; 0119: 73
-inc HL                         ; 011A: 23
-ld (hl), D                     ; 011B: 72
-ex DE, HL                      ; 011C: EB
-pop DE                         ; 011D: D1
+ld (glob_w), HL                ; 010E: 22 00 00
 __zax_epilogue_0:
-pop DE                         ; 011E: D1
-pop BC                         ; 011F: C1
-pop AF                         ; 0120: F1
-ld SP, IX                      ; 0121: DD F9
-pop IX                         ; 0123: DD E1
-ret                            ; 0125: C9
+pop DE                         ; 0111: D1
+pop BC                         ; 0112: C1
+pop AF                         ; 0113: F1
+ld SP, IX                      ; 0114: DD F9
+pop IX                         ; 0116: DD E1
+ret                            ; 0118: C9
 ; func main begin
 ; func touch_scalar_word_glob end
 main:
-push IX                        ; 0126: DD E5
-ld IX, $0000                   ; 0128: DD 21 00 00
-add IX, SP                     ; 012C: DD 39
-push AF                        ; 012E: F5
-push BC                        ; 012F: C5
-push DE                        ; 0130: D5
-push HL                        ; 0131: E5
-call touch_scalar_word_glob    ; 0132: CD 00 00
+push IX                        ; 0119: DD E5
+ld IX, $0000                   ; 011B: DD 21 00 00
+add IX, SP                     ; 011F: DD 39
+push AF                        ; 0121: F5
+push BC                        ; 0122: C5
+push DE                        ; 0123: D5
+push HL                        ; 0124: E5
+call touch_scalar_word_glob    ; 0125: CD 00 00
 __zax_epilogue_1:
-pop HL                         ; 0135: E1
-pop DE                         ; 0136: D1
-pop BC                         ; 0137: C1
-pop AF                         ; 0138: F1
-ld SP, IX                      ; 0139: DD F9
-pop IX                         ; 013B: DD E1
-ret                            ; 013D: C9
+pop HL                         ; 0128: E1
+pop DE                         ; 0129: D1
+pop BC                         ; 012A: C1
+pop AF                         ; 012B: F1
+ld SP, IX                      ; 012C: DD F9
+pop IX                         ; 012E: DD E1
+ret                            ; 0130: C9
 ; func main end
 
 ; symbols:
 ; label touch_scalar_word_glob = $0100
-; label __zax_epilogue_0 = $011E
-; label main = $0126
-; label __zax_epilogue_1 = $0135
+; label __zax_epilogue_0 = $0111
+; label main = $0119
+; label __zax_epilogue_1 = $0128
 ; data glob_w = $2000
 ; label __zax_startup = $2002

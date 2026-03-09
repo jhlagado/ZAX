@@ -29,12 +29,5 @@ export func main()
 
   read_byte a, (sample_byte)
   add_to_sample 23
-  push de
-  ex de, hl
-  addr hl, result_word
-  ld (hl), e
-  inc hl
-  ld (hl), d
-  ex de, hl
-  pop de
+  ld result_word, hl
 end

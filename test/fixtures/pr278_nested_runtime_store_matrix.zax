@@ -14,14 +14,7 @@ section code boot at $0000
 
     ld a, grid[idx]
     ld hl, $1234
-    push de
-    ex de, hl
-    addr hl, mat[idx]
-    ld (hl), e
-    inc hl
-    ld (hl), d
-    ex de, hl
-    pop de
+    ld mat[idx], hl
     ld hl, mat[idx]
 
     ld a, arr[idxw + 2]
