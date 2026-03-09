@@ -30,61 +30,55 @@ ld L, E                        ; 0122: 6B
 ld H, D                        ; 0123: 62
 pop DE                         ; 0124: D1
 push DE                        ; 0125: D5
-ex DE, HL                      ; 0126: EB
-push AF                        ; 0127: F5
-push BC                        ; 0128: C5
-push DE                        ; 0129: D5
-ld E, (IX + $0004)             ; 012A: DD 5E 04
-ld D, (IX + $0005)             ; 012D: DD 56 05
-ex DE, HL                      ; 0130: EB
-ld DE, $0006                   ; 0131: 11 06 00
-add HL, DE                     ; 0134: 19
-push HL                        ; 0135: E5
-pop HL                         ; 0136: E1
-pop DE                         ; 0137: D1
-pop BC                         ; 0138: C1
-pop AF                         ; 0139: F1
-ld (hl), E                     ; 013A: 73
-inc HL                         ; 013B: 23
-ld (hl), D                     ; 013C: 72
-ex DE, HL                      ; 013D: EB
-pop DE                         ; 013E: D1
+push HL                        ; 0126: E5
+ld E, (IX + $0004)             ; 0127: DD 5E 04
+ld D, (IX + $0005)             ; 012A: DD 56 05
+ex DE, HL                      ; 012D: EB
+ld DE, $0006                   ; 012E: 11 06 00
+add HL, DE                     ; 0131: 19
+push HL                        ; 0132: E5
+pop HL                         ; 0133: E1
+pop DE                         ; 0134: D1
+ld (HL), E                     ; 0135: 73
+inc HL                         ; 0136: 23
+ld (HL), D                     ; 0137: 72
+pop DE                         ; 0138: D1
 __zax_epilogue_0:
-pop DE                         ; 013F: D1
-pop BC                         ; 0140: C1
-pop AF                         ; 0141: F1
-ld SP, IX                      ; 0142: DD F9
-pop IX                         ; 0144: DD E1
-ret                            ; 0146: C9
+pop DE                         ; 0139: D1
+pop BC                         ; 013A: C1
+pop AF                         ; 013B: F1
+ld SP, IX                      ; 013C: DD F9
+pop IX                         ; 013E: DD E1
+ret                            ; 0140: C9
 ; func main begin
 ; func word_fvar_const end
 main:
-push IX                        ; 0147: DD E5
-ld IX, $0000                   ; 0149: DD 21 00 00
-add IX, SP                     ; 014D: DD 39
-push AF                        ; 014F: F5
-push BC                        ; 0150: C5
-push DE                        ; 0151: D5
-push HL                        ; 0152: E5
-ld HL, glob_words              ; 0153: 21 00 00
-push HL                        ; 0156: E5
-call word_fvar_const           ; 0157: CD 00 00
-inc SP                         ; 015A: 33
-inc SP                         ; 015B: 33
+push IX                        ; 0141: DD E5
+ld IX, $0000                   ; 0143: DD 21 00 00
+add IX, SP                     ; 0147: DD 39
+push AF                        ; 0149: F5
+push BC                        ; 014A: C5
+push DE                        ; 014B: D5
+push HL                        ; 014C: E5
+ld HL, glob_words              ; 014D: 21 00 00
+push HL                        ; 0150: E5
+call word_fvar_const           ; 0151: CD 00 00
+inc SP                         ; 0154: 33
+inc SP                         ; 0155: 33
 __zax_epilogue_1:
-pop HL                         ; 015C: E1
-pop DE                         ; 015D: D1
-pop BC                         ; 015E: C1
-pop AF                         ; 015F: F1
-ld SP, IX                      ; 0160: DD F9
-pop IX                         ; 0162: DD E1
-ret                            ; 0164: C9
+pop HL                         ; 0156: E1
+pop DE                         ; 0157: D1
+pop BC                         ; 0158: C1
+pop AF                         ; 0159: F1
+ld SP, IX                      ; 015A: DD F9
+pop IX                         ; 015C: DD E1
+ret                            ; 015E: C9
 ; func main end
 
 ; symbols:
 ; label word_fvar_const = $0100
-; label __zax_epilogue_0 = $013F
-; label main = $0147
-; label __zax_epilogue_1 = $015C
+; label __zax_epilogue_0 = $0139
+; label main = $0141
+; label __zax_epilogue_1 = $0156
 ; data glob_words = $2000
 ; label __zax_startup = $2010
