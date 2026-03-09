@@ -1,5 +1,5 @@
 ; ZAX lowered .asm trace
-; range: $0100..$107B (end exclusive)
+; range: $0100..$1085 (end exclusive)
 
 ; func first_byte begin
 first_byte:
@@ -89,5 +89,5 @@ ret                            ; 016A: C9
 ; label main = $0140
 ; label __zax_epilogue_2 = $0162
 ; data bytes10 = $1000
-; data words4 = $100A
-; label __zax_startup = $1012
+; data words4 = $1010
+; label __zax_startup = $1018
