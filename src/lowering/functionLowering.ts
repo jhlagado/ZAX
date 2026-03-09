@@ -3,7 +3,6 @@ import type { StepPipeline } from '../addressing/steps.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
 import type { Diagnostic, DiagnosticId } from '../diagnostics/types.js';
 import type {
-  AsmAddrNode,
   AsmInstructionNode,
   AsmOperandNode,
   EaExprNode,
@@ -25,7 +24,6 @@ import type { OpOverloadSelection } from './opMatching.js';
 import type { OpStackSummary } from './opStackAnalysis.js';
 import type { ScalarKind } from './typeResolution.js';
 import { createAsmInstructionLoweringHelpers } from './asmInstructionLowering.js';
-import { createAddrLoweringHelpers } from './addrLowering.js';
 import { createAsmBodyOrchestrationHelpers } from './asmBodyOrchestration.js';
 import {
   createFunctionBodySetupHelpers,
@@ -147,7 +145,6 @@ export type FunctionLoweringMaterializationContext = {
   pushImm16: (value: number, span: SourceSpan) => boolean;
   pushZeroExtendedReg8: (regName: string, span: SourceSpan) => boolean;
   loadImm16ToHL: (value: number, span: SourceSpan) => boolean;
-  materializeEaAddressToHL: (ea: EaExprNode, span: SourceSpan) => boolean;
   emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
   lowerLdWithEa: (asmItem: AsmInstructionNode) => boolean;
 };
@@ -223,7 +220,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const { evalImmExpr, env, resolveScalarBinding, resolveScalarKind, resolveEaTypeExpr } = ctx;
   const { resolveScalarTypeForEa, resolveArrayType, buildEaWordPipeline } = ctx;
   const { enforceEaRuntimeAtomBudget, enforceDirectCallSiteEaBudget } = ctx;
-  const { pushEaAddress, pushMemValue, pushImm16, pushZeroExtendedReg8, loadImm16ToHL, materializeEaAddressToHL } = ctx;
+  const { pushEaAddress, pushMemValue, pushImm16, pushZeroExtendedReg8, loadImm16ToHL } = ctx;
   const { stackSlotOffsets, stackSlotTypes, localAliasTargets, storageTypes } = ctx;
   const { rawTypedCallWarningsEnabled, resolveCallable, resolveOpCandidates, opStackPolicyMode } = ctx;
   const { formatAsmOperandForOpDiag, selectOpOverload, summarizeOpStackEffect } = ctx;
@@ -662,11 +659,6 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     flowRef,
   });
 
-  const { lowerAsmAddr } = createAddrLoweringHelpers({
-    emitInstr,
-    materializeEaAddressToHL,
-  });
-
   const { emitAsmInstruction, lowerAsmRange } = createFunctionCallLoweringHelpers({
     diagnostics,
     asmItemSpanSourceTag: (span) => sourceTagForSpan(span, opExpansionStack),
@@ -730,7 +722,6 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     inverseConditionName,
     newHiddenLabel,
     lowerAsmInstructionDispatcher,
-    lowerAsmAddr: (asmItem: AsmAddrNode) => lowerAsmAddr(asmItem),
     defineCodeLabel,
     flowRef,
     syncFromFlow,

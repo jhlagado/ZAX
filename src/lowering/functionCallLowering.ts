@@ -2,7 +2,6 @@ import { TEMPLATE_SW_DEBC } from '../addressing/steps.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
 import type { Diagnostic } from '../diagnostics/types.js';
 import type {
-  AsmAddrNode,
   AsmInstructionNode,
   AsmOperandNode,
   EaExprNode,
@@ -102,7 +101,6 @@ type Context = {
   inverseConditionName: (name: string) => string | undefined;
   newHiddenLabel: (prefix: string) => string;
   lowerAsmInstructionDispatcher: (asmItem: AsmInstructionNode) => void;
-  lowerAsmAddr: (asmItem: AsmAddrNode) => boolean;
   defineCodeLabel: (name: string, span: SourceSpan, scope: 'global' | 'local') => void;
   flowRef: { readonly current: FlowState };
   syncFromFlow: () => void;
@@ -119,17 +117,6 @@ type Context = {
 };
 
 export function createFunctionCallLoweringHelpers(ctx: Context) {
-  const emitAsmAddr = (asmItem: AsmAddrNode): void => {
-    const prevTag = ctx.getCurrentCodeSegmentTag();
-    ctx.setCurrentCodeSegmentTag(ctx.asmItemSpanSourceTag(asmItem.span));
-    try {
-      ctx.lowerAsmAddr(asmItem);
-      ctx.syncToFlow();
-    } finally {
-      ctx.setCurrentCodeSegmentTag(prevTag);
-    }
-  };
-
   const emitAsmInstruction = (asmItem: AsmInstructionNode): void => {
     const prevTag = ctx.getCurrentCodeSegmentTag();
     const diagnosticsStart = ctx.diagnostics.length;
@@ -442,7 +429,6 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
     setCurrentCodeSegmentTag: ctx.setCurrentCodeSegmentTag,
     defineCodeLabel: ctx.defineCodeLabel,
     emitAsmInstruction,
-    emitAsmAddr,
     flowRef: ctx.flowRef,
     syncFromFlow: ctx.syncFromFlow,
     snapshotFlow: ctx.snapshotFlow,
@@ -464,7 +450,6 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
   });
 
   return {
-    emitAsmAddr,
     emitAsmInstruction,
     lowerAsmRange,
   };

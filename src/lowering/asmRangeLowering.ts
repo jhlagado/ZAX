@@ -1,4 +1,4 @@
-import type { AsmAddrNode, AsmInstructionNode, AsmItemNode, AsmOperandNode, ImmExprNode, SourceSpan } from '../frontend/ast.js';
+import type { AsmInstructionNode, AsmItemNode, AsmOperandNode, ImmExprNode, SourceSpan } from '../frontend/ast.js';
 
 type FlowState = {
   reachable: boolean;
@@ -13,7 +13,6 @@ type Context<TCodeSegmentTag> = {
   setCurrentCodeSegmentTag: (tag: TCodeSegmentTag | undefined) => void;
   defineCodeLabel: (name: string, span: SourceSpan, scope: 'global' | 'local') => void;
   emitAsmInstruction: (item: AsmInstructionNode) => void;
-  emitAsmAddr: (item: AsmAddrNode) => void;
   flowRef: { readonly current: FlowState };
   syncFromFlow: () => void;
   snapshotFlow: () => FlowState;
@@ -61,11 +60,6 @@ export function createAsmRangeLoweringHelpers<TCodeSegmentTag>(ctx: Context<TCod
         }
         if (it.kind === 'AsmInstruction') {
           ctx.emitAsmInstruction(it);
-          i++;
-          continue;
-        }
-        if (it.kind === 'AsmAddr') {
-          ctx.emitAsmAddr(it);
           i++;
           continue;
         }

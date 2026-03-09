@@ -824,7 +824,6 @@ export function emitProgram(
     pushImm16,
     pushZeroExtendedReg8,
     loadImm16ToHL,
-    materializeEaAddressToHL,
     emitStepPipeline,
     lowerLdWithEa,
   };

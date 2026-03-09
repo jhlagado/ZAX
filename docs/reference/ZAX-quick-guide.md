@@ -269,20 +269,11 @@ Use `sizeof` and `offsetof` everywhere instead of hand-computed constants. They 
 
 ## Chapter 3 — Addressing and Indexing
 
-The current surface is `addr`-first: `addr hl, ea_expr` is the primary explicit typed-addressing form. Direct typed-EA use inside `ld` still works as transitional compatibility, but it should be understood as shorthand over `addr`, not as the center of the model.
-
 ### 3.1 Place Expressions
 
 In ZAX, `rec.field` and `arr[i]` are **place expressions** — typed storage paths that the compiler can lower to a concrete location when needed.
 
-The primary explicit way to consume a place expression is:
-
-```zax
-addr hl, player.x
-ld a, (hl)
-```
-
-In ordinary **value/store contexts** (such as `LD A, rec.field` or `LD rec.field, A`), scalar places still use value semantics and the compiler inserts the required load or store automatically. Those direct `ld` forms are transitional compatibility over the `addr` model. In **storage-location contexts** (such as an `ea`-typed `op` parameter), the same place expression is passed as a storage location for the op body to use.
+In ordinary **value/store contexts** (such as `LD A, rec.field` or `LD rec.field, A`), scalar places use value semantics and the compiler inserts the required load or store automatically. In **storage-location contexts** (such as an `ea`-typed `op` parameter), the same place expression is passed as a storage location for the op body to use.
 
 Examples:
 
@@ -319,7 +310,7 @@ arr[(HL)]   ; the index is the byte READ FROM memory at address HL (indirect)
 
 If your code intends to use the byte at the address in `HL` as an index, write `arr[(HL)]`. If `HL` itself is the index, write `arr[HL]`.
 
-### 3.4 Value Semantics in `LD` (Transitional Compatibility)
+### 3.4 Value Semantics in `LD`
 
 Scalar typed storage — module symbols from named `data` sections, function-local `var` slots, and scalar record fields — uses **value semantics** in `LD` operands in v0.2. You do not need parentheses to read or write scalar module symbols:
 
@@ -342,26 +333,9 @@ end
 
 Explicit parentheses on scalar symbols are still accepted but are redundant. Parentheses continue to mean memory dereference for non-scalar expressions and for explicit indirection where the context demands it.
 
-This remains convenient source syntax, but the preferred explicit addressing model is still `addr hl, ea_expr` followed by the raw access you want.
-
 ### 3.5 Field and Element Access
 
-`rec.field` and `arr[idx]` are place expressions. The preferred explicit form is `addr hl, ...` plus raw access, while scalar `LD` contexts remain supported as transitional shorthand for the same lowering:
-
-```zax
-section data vars at $8000
-  player: Sprite
-end
-
-func update_explicit(): void
-  addr hl, player.x
-  ld a, (hl)
-  inc a
-  ld (hl), a
-end
-```
-
-The transitional shorthand still works:
+`rec.field` and `arr[idx]` are place expressions. In scalar `LD` contexts, the compiler lowers them to the required address calculation and load/store sequence:
 
 ```zax
 section data vars at $8000

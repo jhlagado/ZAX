@@ -3,18 +3,30 @@ import { join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import type { AsmArtifact } from '../src/formats/types.js';
 
 describe('PR406: HL fallback word store', () => {
-  it('now rejects typed-EA word stores from HL with the addr-first diagnostic', async () => {
+  it('preserves the HL value while materializing a runtime-affine destination EA', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_hl_fallback_store.zax');
     const res = await compile(
       entry,
       { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
 
-    const errors = res.diagnostics.filter((d) => d.severity === 'error');
-    expect(errors).toHaveLength(1);
-    expect(errors[0]!.message).toContain('Typed-EA transitional form `ld ea, hl` is not supported');
+    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
+    expect(asm).toBeDefined();
+    const text = asm!.text.toUpperCase();
+
+    expect(text).toContain('PUSH DE');
+    expect(text).toContain('PUSH HL');
+    expect(text).toContain('LD HL, (IDX_WORD)');
+    expect(text).toContain('ADD HL, DE');
+    expect(text).toContain('POP HL');
+    expect(text).toContain('POP DE');
+    expect(text).toContain('LD (HL), E');
+    expect(text).toContain('LD (HL), D');
+    expect(text).not.toContain('EX DE, HL');
   });
 });
