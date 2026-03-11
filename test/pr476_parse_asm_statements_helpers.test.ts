@@ -36,6 +36,26 @@ describe('PR476 asm statement parsing extraction', () => {
     expect(diagnostics).toEqual([]);
   });
 
+  it('parses grouped range case items without flattening the ranges away', () => {
+    const diagnostics: Diagnostic[] = [];
+    const controlStack: AsmControlFrame[] = [{ kind: 'Select', elseSeen: false, armSeen: false, openSpan: zeroSpan }];
+
+    const parsed = parseAsmStatement(file.path, "case 'A'..'Z', '_'", zeroSpan, diagnostics, controlStack);
+    const out: any[] = [];
+    appendParsedAsmStatement(out, parsed);
+
+    expect(out).toEqual([
+      {
+        kind: 'Case',
+        span: zeroSpan,
+        value: { kind: 'ImmLiteral', span: zeroSpan, value: 65 },
+        end: { kind: 'ImmLiteral', span: zeroSpan, value: 90 },
+      },
+      { kind: 'Case', span: zeroSpan, value: { kind: 'ImmLiteral', span: zeroSpan, value: 95 } },
+    ]);
+    expect(diagnostics).toEqual([]);
+  });
+
   it('keeps recovery markers intact', () => {
     const diagnostics: Diagnostic[] = [];
     const controlStack: AsmControlFrame[] = [];
