@@ -445,6 +445,7 @@ export type ImmExprNode =
  */
 export type EaExprNode =
   | { kind: 'EaName'; span: SourceSpan; name: string }
+  | { kind: 'EaReinterpret'; span: SourceSpan; typeExpr: TypeExprNode; base: EaExprNode }
   | { kind: 'EaField'; span: SourceSpan; base: EaExprNode; field: string }
   | { kind: 'EaIndex'; span: SourceSpan; base: EaExprNode; index: EaIndexNode }
   | { kind: 'EaAdd'; span: SourceSpan; base: EaExprNode; offset: ImmExprNode }
