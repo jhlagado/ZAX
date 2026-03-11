@@ -178,9 +178,18 @@ enum_ref        = identifier , "." , identifier ;
 field_path      = identifier , { "." , identifier | "[" , imm_expr , "]" } ;
 
 ea_expr         = ea_term , { ( "+" | "-" ) , imm_expr } ;
-ea_term         = ea_base , { ea_segment } ;
+ea_term         = ea_base , { ea_segment }
+                | typed_reinterpret_expr ;
 ea_base         = identifier | "(" , ea_expr , ")" ;
 ea_segment      = "." , identifier | "[" , ea_index , "]" ;
+typed_reinterpret_expr = "<" , type_expr , ">" , reinterpret_base , ea_segment , { ea_segment } ;
+reinterpret_base = reinterpret_reg
+                 | reinterpret_name
+                 | "(" , reinterpret_addr_expr , ")" ;
+reinterpret_addr_expr = reinterpret_atom , ( "+" | "-" ) , imm_expr ;
+reinterpret_atom = reinterpret_reg | reinterpret_name ;
+reinterpret_reg  = "HL" | "DE" | "BC" | "IX" | "IY" ;
+reinterpret_name = identifier ;
 ea_index        = imm_expr | reg8 | reg16 | "(" , reg16 , ")" ;
 
 value_init_expr = imm_expr | "0" ;
@@ -201,6 +210,9 @@ These are semantic constraints enforced beyond pure grammar:
 - Local non-scalar value-init declarations are invalid.
 - Local non-scalar declarations are alias-only (`name = rhs`).
 - `@place` explicit address-of syntax is not part of the normative v0.2 surface.
+- Typed reinterpretation requires at least one tail segment after the cast head.
+- `reinterpret_name` is limited semantically to scalar names of type `word` or `addr`.
+- Bare aggregate storage names are not valid reinterpret bases.
 
 ## 9. Maintenance Rule
 
