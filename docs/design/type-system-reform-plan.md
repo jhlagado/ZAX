@@ -1,10 +1,27 @@
 # Type System Reform Plan
 
 **Date:** 2026-03-07
-**Status:** Proposal — awaiting review
-**Validated against:** `main` at `a6b731b` (post-encoder-registry merge)
+**Status:** Partial historical record; refresh on 2026-03-12
+**Validated against:** `main` at `4d626c2`
 
-This document covers four phases of work to fix the ZAX type system, layout engine, and addressing pipeline. They are ordered by severity: the first two phases fix live wrong-code bugs; the latter two generalise and clean up. All four are needed before the module/section system can rely on stable layout semantics.
+This document originally proposed four phases of work to fix the ZAX type
+system, layout engine, and addressing pipeline.
+
+On current `main`, the situation has changed:
+
+- Phase A is implemented.
+- Phase B is implemented.
+- Phase C is implemented.
+- Phase D remains the main unfinished item in this document.
+
+This file is therefore no longer a pure forward plan. It is now a mixed design
+record:
+
+- Phases A-C explain why those changes were needed and what landed.
+- Phase D remains active design/work.
+
+Do not create new implementation tickets from this document without first
+checking current `main`.
 
 ---
 
@@ -24,15 +41,28 @@ Specifically:
 
 The current implementation applies `nextPow2` universally through `src/semantics/layout.ts`. This is safe (it never generates wrong code for single objects) but wastes memory and produces misleading field offset arithmetic. Phase D separates `preRoundSize` (the real packed size) from `storageSize` (the pow2-rounded stride used only when computing array element offsets).
 
-### What is currently broken
+### Original broken areas
 
-**1. Byte pipeline missing `IndexImm` — live wrong code today.** When a byte-array function parameter is indexed with a named word variable (e.g. `arr[idx_word]`), `buildEaBytePipeline` in `src/lowering/addressingPipelines.ts` returns null because it has no `IndexImm` case. The fallback path computes `IX+ixDisp+index` (the address of the pointer slot plus the index) instead of `*(IX+ixDisp)+index` (the actual array element). Three language-tour golden files (38, 41, 42) encode this wrong output.
+The following problems motivated the original plan. On current `main`, items
+1-3 are fixed; item 4 remains the live design/work item.
 
-**2. EA resolution for non-scalar function parameters — silently wrong code.** When a function declares a non-scalar parameter (e.g. `func render(s: Sprite[8]): void`), the caller correctly pushes the address of the sprite array. The callee receives a 2-byte pointer at IX+4. But `eaResolution.ts` then treats IX+4 as if the array data lived there directly — it resolves `s[2].flags` as `(IX + 4 + 2*elemStride + fieldOffset)`, which is a random stack location, not the actual flags byte.
+**1. Byte pipeline missing `IndexImm` — fixed on current `main`.** When this
+document was written, byte-array indexing with named word variables could fall
+through to the wrong fallback path. That gap has since been fixed and covered
+by targeted regression tests.
 
-**3. Wide array element pipelines stop at elemSize 2.** The structured addressing pipeline (`addressingPipelines.ts`) only handles element sizes 1 and 2. Any other power-of-two size falls through to an unstructured fallback in `valueMaterialization.ts` that is both slower (extra stack round-trips) and wrong for pointer-slot bases.
+**2. EA resolution for non-scalar function parameters — fixed on current
+`main`.** The original wrong-code path has been replaced by explicit indirect EA
+resolution and consumer handling.
 
-**4. Record field packing wastes memory.** `layout.ts` applies `nextPow2` to every composite type's total size. When a record is used as a field inside another record, its `storageSize` (pow2) is used for the field-to-field offset. A 3-byte record contributes 4 bytes to any outer record.
+**3. Wide array element pipelines stop at elemSize 2 — fixed on current
+`main`.** Wide `EAW_*` routing now handles broader power-of-two element sizes.
+
+**4. Record field packing wastes memory — still active.** `layout.ts` still
+applies `nextPow2` to every composite type's total size. When a record is used
+as a field inside another record, its `storageSize` (pow2) is used for the
+field-to-field offset. A 3-byte record contributes 4 bytes to any outer
+record.
 
 ### `push IX; pop HL` — full inventory
 
@@ -46,7 +76,7 @@ A codebase sweep confirmed that the `push IX; pop HL` idiom appears in exactly f
 | 4 | `src/lowering/eaMaterialization.ts` | 27–28 | `materializeEaAddressToHL`, `resolved.kind === 'stack'` | ⚠️ stack imbalance: `push DE` at line 26 never restored; locked in by `test/pr509_ea_materialization_helpers.test.ts` lines 51–63 | Phase B eliminates non-scalar case; scalar case needs audit |
 | — | `src/lowering/functionLowering.ts` | 341 | Function prologue | ✅ correct (saves IX for frame setup) | N/A |
 
-### Known wrong golden files
+### Historical wrong golden files
 
 These language-tour examples encode wrong assembly. Tests currently pass against the wrong output.
 
@@ -60,7 +90,9 @@ For comparison: `39_byte_fvar_reg16.asm` (`arr[hl]` — explicit HL register) is
 
 ---
 
-## Phase A — Byte pipeline `IndexImm` gap (immediate correctness fix)
+## Phase A — Byte pipeline `IndexImm` gap
+
+**Current status:** implemented on `main`
 
 ### Root cause
 
@@ -122,6 +154,8 @@ Low. This is a narrow, targeted fix. The byte EA_* pipeline families already exi
 ---
 
 ## Phase B — Indirect EA resolution (correct reference semantics for non-scalar parameters)
+
+**Current status:** implemented on `main`
 
 ### Current behaviour and bug
 
@@ -307,6 +341,8 @@ Moderate. The `indirect` kind must be handled in every consumer. TypeScript's ex
 
 ## Phase C — Wide EAW pipeline (any pow2 element size up to $8000)
 
+**Current status:** implemented on `main`
+
 ### Current behaviour
 
 The structured addressing pipeline only handles element sizes 1 (byte, `EA_*` family) and 2 (word, `EAW_*` family). The guards are:
@@ -470,6 +506,8 @@ Low–moderate. The ten `EAW_*` export names are preserved. `buildEaWordPipeline
 
 ## Phase D — Layout: separate packed size from array element stride
 
+**Current status:** still active design/work
+
 ### Current behaviour
 
 `src/semantics/layout.ts` applies `nextPow2` to every composite type's total size via `storageSize`. When a record is used as a field inside another record, its `storageSize` (pow2) is used for both the field's size contribution and the field-to-field offset.
@@ -527,14 +565,14 @@ Low–moderate. Only affects composite types used as record fields. Scalar types
 
 Phases are ordered by severity — correctness bugs first, then generalisation and cleanup.
 
-| Phase | What | Key files | Prerequisite |
+| Phase | What | Current state | Key files |
 |---|---|---|---|
-| A | Byte pipeline `IndexImm` gap | `src/lowering/addressingPipelines.ts` | None |
-| B | Indirect EA resolution | `src/lowering/eaResolution.ts`, `src/lowering/ldEncoding.ts`, `src/lowering/valueMaterialization.ts`, `src/lowering/eaMaterialization.ts` | None (independent of A) |
-| C | Wide EAW pipeline (2–$8000) | `src/addressing/steps.ts`, `src/lowering/addressingPipelines.ts`, `src/lowering/valueMaterialization.ts` | None (independent of A and B, but cleaner after B) |
-| D | Packed layout for record fields | `src/semantics/layout.ts`, `src/lowering/eaResolution.ts` | Phase B should land first (EaField uses field offsets) |
+| A | Byte pipeline `IndexImm` gap | Done on `main` | `src/lowering/addressingPipelines.ts` |
+| B | Indirect EA resolution | Done on `main` | `src/lowering/eaResolution.ts`, lowering consumers |
+| C | Wide EAW pipeline (2–$8000) | Done on `main` | `src/addressing/steps.ts`, `src/lowering/addressingPipelines.ts` |
+| D | Packed layout for record fields | Still pending | `src/semantics/layout.ts`, `src/lowering/eaResolution.ts` |
 
-Phases A and B can be done in parallel. Phase C is independent but benefits from B landing first (Instances 1 and 2 become unreachable after B). Phase D should wait for B (the `EaField` offset calculation changes overlap).
+Only Phase D should be treated as live unfinished work from this document.
 
 ---
 

@@ -8,10 +8,9 @@ direction.
 ### Current implementation state
 
 - Direct typed `ld` forms remain the active language surface.
-- Grouped `select case` values are implemented; ranged `case` values remain deferred.
+- Grouped and ranged `select case` values are implemented.
 - Parser/grammar convergence work is active again.
-- The next additive language design topic is typed reinterpretation syntax
-  `<Type>base.tail`.
+- Typed reinterpretation syntax `<Type>base.tail` is now active design work.
 
 ### Immediate priority
 
@@ -19,7 +18,8 @@ direction.
    implemented language.
 2. Continue parser/grammar convergence work.
 3. Define typed reinterpretation syntax as an additive feature on top of the
-   current direct typed-`ld` model.
+   current direct typed-`ld` model using
+   `docs/design/typed-reinterpretation-cast.md` as the design anchor.
 
 ### Deferred until re-planned
 
