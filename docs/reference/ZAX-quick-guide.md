@@ -670,12 +670,14 @@ The compiler-generated dispatch may modify `A` and flags. All other registers ar
 - If the selector is `A`, `A` may be clobbered by dispatch. Do not rely on `A` still holding the selector value inside a `case` body.
 - If the selector is any other register, that register's value is preserved across dispatch.
 
-#### Multiple Values per `case`
+#### Multiple Values and Ranges per `case`
 
-A single `case` line may list comma-separated values; any of them will match:
+A single `case` line may list comma-separated values or inclusive ranges; any listed item may match:
 
 ```zax
 select A
+  case 'A'..'Z', '_'             ; range + singleton group
+    ld a, 0
   case Mode.Idle, Mode.Stopped   ; either value routes here
     ld a, 0
   case Mode.Run
@@ -699,14 +701,15 @@ end
 
 - `else` is optional. If no `case` matches and there is no `else`, control falls through to after `end`.
 - `else` must be the final arm. A `case` after `else` is a compile error.
-- Duplicate `case` values in the same `select` are a compile error.
+- Overlapping reachable `case` items in the same `select` are a compile error.
 - `select` must contain at least one arm; a `select` with no arms is a compile error.
 - Nested `select` is allowed.
-- A `case` value outside `0..255` for a `reg8` selector can never match; the compiler warns and omits those arms from dispatch.
+- A `case` value outside `0..255` for a `reg8` selector can never match; the compiler warns and omits that item from dispatch.
+- A `case` range that partly exceeds `0..255` for a `reg8` selector warns and dispatches only on the reachable clipped portion.
 
 #### Lowering
 
-The compiler may implement `select` as a compare-and-branch chain or as a jump table. The strategy is a quality-of-implementation decision — no threshold is defined. Compile-time `imm` selectors may be folded entirely at compile time. In all cases the observable behavior is identical: the selector is evaluated once, each `case` is compared against it, and the matching body executes.
+The compiler may implement `select` as a compare-and-branch chain or as a jump table. The strategy is a quality-of-implementation decision — no threshold is defined. Compile-time `imm` selectors may be folded entirely at compile time. In all cases the observable behavior is identical: the selector is evaluated once, each `case` item is tested against it, and the matching body executes.
 
 ### 5.8 Local Labels
 

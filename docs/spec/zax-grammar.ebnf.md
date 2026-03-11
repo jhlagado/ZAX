@@ -150,7 +150,8 @@ repeat_stmt     = "repeat" , newline , instr_stream , "until" , cc_expr ;
 select_stmt     = "select" , select_expr , newline ,
                   case_clause , { case_clause } , [ else_clause ] , "end" ;
 
-case_clause     = "case" , imm_expr , newline , instr_stream ;
+case_clause     = "case" , case_item , { "," , case_item } , newline , instr_stream ;
+case_item       = imm_expr | imm_expr , ".." , imm_expr ;
 else_clause     = "else" , newline , instr_stream ;
 
 local_label     = "." , identifier , ":" ;

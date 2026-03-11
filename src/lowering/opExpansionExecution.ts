@@ -72,6 +72,7 @@ export function createOpExpansionExecutionHelpers(ctx: OpExpansionExecutionConte
           kind: 'Case',
           span: bodyItem.span,
           value: substituteImmWithOpLabels(bodyItem.value, localLabelMap),
+          ...(bodyItem.end ? { end: substituteImmWithOpLabels(bodyItem.end, localLabelMap) } : {}),
         };
       }
       if (bodyItem.kind === 'If' || bodyItem.kind === 'While' || bodyItem.kind === 'Until') {
