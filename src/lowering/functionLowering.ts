@@ -518,6 +518,8 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     joinFlows,
     emitSelectCompareToImm16,
     emitSelectCompareReg8ToImm8,
+    emitSelectCompareReg8Range,
+    emitSelectCompareImm16Range,
     loadSelectorIntoHL,
   } = createFunctionBodySetupHelpers({
     diagnostics,
@@ -736,6 +738,8 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     emitRawCodeBytes,
     emitSelectCompareReg8ToImm8,
     emitSelectCompareToImm16,
+    emitSelectCompareReg8Range,
+    emitSelectCompareImm16Range,
   });
 
   const { lowerAndFinalizeFunctionBody } = createAsmBodyOrchestrationHelpers({
