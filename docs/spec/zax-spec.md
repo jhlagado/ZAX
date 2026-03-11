@@ -15,6 +15,10 @@ ZAX aims to make assembly code easier to read and refactor by providing:
 Normative status for the current language surface: this document is the sole
 normative language source.
 
+Historical `v0.1` / `v0.2` labels are retained where they mark migrations,
+feature-era rules, or compatibility notes. They do not imply a separate
+competing versioned spec for the current language surface.
+
 Grammar companion: `docs/spec/zax-grammar.ebnf.md` provides a single-file syntax reference. If any grammar text diverges from this specification, this specification wins.
 
 Anything not defined here is undefined behavior or a compile error.
@@ -1705,7 +1709,8 @@ The document addresses both by stating normative rules precisely while also expl
 - Implementation notes marked "(impl)" are recommendations for compiler authors; any compliant implementation that produces the same observable behavior is acceptable.
 - Algorithm descriptions use pseudocode for clarity; actual implementation may differ in structure as long as behavior matches.
 
-**Version:** This specification corresponds to ZAX v0.2 on `main`.
+**Version position:** This specification describes the current ZAX language
+surface on `main`.
 Normative precedence: `docs/spec/zax-spec.md` governs language behavior; this document expands op-specific details and must not introduce conflicting normative rules.
 Authority constraint: if behavior is required by this document but not required by `docs/spec/zax-spec.md`, treat it as implementation guidance until promoted into `docs/spec/zax-spec.md`.
 
