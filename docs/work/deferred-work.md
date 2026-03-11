@@ -26,14 +26,14 @@ For each item record:
   - this is separate from current parser/spec cleanup work
 
 ### Typed cast surface `<Type>base.tail`
-- Status: deferred
-- Why deferred: the feature needs a dedicated grammar and semantics design pass
-  before implementation
+- Status: implementation deferred; design active
+- Why deferred: implementation should wait until the active design doc is
+  accepted and the grammar/spec deltas are written
 - Preconditions:
-  - a dedicated active design doc for typed reinterpretation
-  - valid base forms for v1 decided
-  - spec and quick guide stabilized around the current direct typed-`ld`
-    surface
+  - `docs/design/typed-reinterpretation-cast.md` accepted as the active design
+    basis
+  - grammar form added to `docs/spec/zax-grammar.ebnf.md`
+  - semantic rules added to `docs/spec/zax-spec.md`
 - Source:
   - GitHub issue `#736 (LANG-02)`
 - Notes:
