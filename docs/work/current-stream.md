@@ -1,34 +1,28 @@
 # Current Stream
 
-## Addressing rollback checkpoint
+## Current language direction
 
-The `addr` implementation stream has been rolled back from code.
+The rolled-back `addr` / ops-first addressing stream is not the active language
+direction.
 
 ### Current implementation state
 
-- The `addr` parser/lowering work is not active in the compiler.
-- Direct typed `ld` forms remain the working language surface.
-- The `addr` design remains recorded in `docs/design/` as proposal material, not current implemented behavior.
-
-### Design anchors retained for later review
-
-- `docs/design/ops-first-addressing-direction.md`
-- `docs/design/ops-first-addressing-decisions.md`
-- `docs/design/addr-prereq-decisions.md`
+- Direct typed `ld` forms remain the active language surface.
+- Grouped `select case` values are implemented; ranged `case` values remain deferred.
+- Parser/grammar convergence work is active again.
+- The next additive language design topic is typed reinterpretation syntax
+  `<Type>base.tail`.
 
 ### Immediate priority
 
-1. Restore and keep the language-tour and user-facing examples aligned with the direct typed `ld` surface.
-2. Keep the current spec/reference docs aligned with implemented behavior.
-3. Reassess whether `addr` should return later as:
-   - an explicit expert construct,
-   - an internal lowering primitive,
-   - or an address-of expression form such as `@place`.
+1. Keep the spec, quick guide, and user-facing examples aligned with the
+   implemented language.
+2. Continue parser/grammar convergence work.
+3. Define typed reinterpretation syntax as an additive feature on top of the
+   current direct typed-`ld` model.
 
 ### Deferred until re-planned
 
-- `addr` parser/lowering reintroduction
-- `@dead` pragma surface
-- `<Type>base.tail` typed reinterpretation syntax
-- grouped and ranged `select case`
+- any reintroduction of `addr` as a source-language feature
+- broad addressing-surface redesign
 - retirement of typed EA inside `ld`
