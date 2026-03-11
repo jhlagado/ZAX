@@ -114,6 +114,18 @@ type Context = {
   emitRawCodeBytes: (bytes: Uint8Array, file: string, trace: string) => void;
   emitSelectCompareReg8ToImm8: (value: number, missLabel: string, span: SourceSpan) => void;
   emitSelectCompareToImm16: (value: number, missLabel: string, span: SourceSpan) => void;
+  emitSelectCompareReg8Range: (
+    start: number,
+    end: number,
+    missLabel: string,
+    span: SourceSpan,
+  ) => void;
+  emitSelectCompareImm16Range: (
+    start: number,
+    end: number,
+    missLabel: string,
+    span: SourceSpan,
+  ) => void;
 };
 
 export function createFunctionCallLoweringHelpers(ctx: Context) {
@@ -446,6 +458,8 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
     emitRawCodeBytes: ctx.emitRawCodeBytes,
     emitSelectCompareReg8ToImm8: ctx.emitSelectCompareReg8ToImm8,
     emitSelectCompareToImm16: ctx.emitSelectCompareToImm16,
+    emitSelectCompareReg8Range: ctx.emitSelectCompareReg8Range,
+    emitSelectCompareImm16Range: ctx.emitSelectCompareImm16Range,
     emitInstr: ctx.emitInstr,
   });
 
