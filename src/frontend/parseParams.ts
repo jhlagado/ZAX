@@ -2,10 +2,13 @@ import type { OpMatcherNode, OpParamNode, ParamNode, SourceSpan, TypeExprNode } 
 import type { Diagnostic } from '../diagnostics/types.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import { parseTypeExprFromText } from './parseImm.js';
+import { MATCHER_TYPES } from './grammarData.js';
 
 export type ParseParamsContext = {
   isReservedTopLevelName: (name: string) => boolean;
 };
+
+type MatcherKind = Exclude<OpMatcherNode['kind'], 'MatcherFixed'>;
 
 export function parseParamsFromText(
   filePath: string,
@@ -88,31 +91,23 @@ export function parseParamsFromText(
   return out;
 }
 
+const MATCHER_KIND_BY_TYPE: Readonly<Record<string, MatcherKind>> = {
+  reg8: 'MatcherReg8',
+  reg16: 'MatcherReg16',
+  idx16: 'MatcherIdx16',
+  cc: 'MatcherCc',
+  imm8: 'MatcherImm8',
+  imm16: 'MatcherImm16',
+  ea: 'MatcherEa',
+  mem8: 'MatcherMem8',
+  mem16: 'MatcherMem16',
+};
+
 function parseOpMatcherFromText(matcherText: string, matcherSpan: SourceSpan): OpMatcherNode {
   const t = matcherText.trim();
   const lower = t.toLowerCase();
-  switch (lower) {
-    case 'reg8':
-      return { kind: 'MatcherReg8', span: matcherSpan };
-    case 'reg16':
-      return { kind: 'MatcherReg16', span: matcherSpan };
-    case 'idx16':
-      return { kind: 'MatcherIdx16', span: matcherSpan };
-    case 'cc':
-      return { kind: 'MatcherCc', span: matcherSpan };
-    case 'imm8':
-      return { kind: 'MatcherImm8', span: matcherSpan };
-    case 'imm16':
-      return { kind: 'MatcherImm16', span: matcherSpan };
-    case 'ea':
-      return { kind: 'MatcherEa', span: matcherSpan };
-    case 'mem8':
-      return { kind: 'MatcherMem8', span: matcherSpan };
-    case 'mem16':
-      return { kind: 'MatcherMem16', span: matcherSpan };
-    default:
-      return { kind: 'MatcherFixed', span: matcherSpan, token: t };
-  }
+  if (!MATCHER_TYPES.has(lower)) return { kind: 'MatcherFixed', span: matcherSpan, token: t };
+  return { kind: MATCHER_KIND_BY_TYPE[lower]!, span: matcherSpan };
 }
 
 export function parseOpParamsFromText(
