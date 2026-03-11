@@ -21,39 +21,20 @@ For each item record:
   - verifier scope definition
   - failure behavior when verification is impossible
 - Source:
-  - `docs/design/ops-first-addressing-decisions.md` D4
+  - historical addressing-design notes in `docs/archive/design/`
 - Notes:
-  - builtin `addr` preservation is separate and not blocked by this
-
-### `@dead` pragma surface
-- Status: deferred
-- Why deferred: preservation machinery should land before optimization controls
-- Preconditions:
-  - stable compiler-owned preservation model for `addr`
-  - generated code paths reviewed in practice
-- Source:
-  - `docs/design/ops-first-addressing-decisions.md`
-  - `docs/design/addr-prereq-decisions.md`
-- Notes:
-  - machinery first, pragma later
+  - this is separate from current parser/spec cleanup work
 
 ### Typed cast surface `<Type>base.tail`
 - Status: deferred
-- Why deferred: `addr` should land and stabilize before adding typed reinterpretation syntax
+- Why deferred: the feature needs a dedicated grammar and semantics design pass
+  before implementation
 - Preconditions:
-  - `addr` parser and lowering complete
+  - a dedicated active design doc for typed reinterpretation
   - valid base forms for v1 decided
+  - spec and quick guide stabilized around the current direct typed-`ld`
+    surface
 - Source:
-  - `docs/design/ops-first-addressing-decisions.md` D3
+  - GitHub issue `#736 (LANG-02)`
 - Notes:
-  - Q1 and Q2 remain intentionally deferred until `addr` is stable
-
-### `select case` ranges and grouped values
-- Status: deferred
-- Why deferred: unrelated to the first `addr` implementation slice
-- Preconditions:
-  - decision on overlap semantics
-  - parser and lowering design pass for `select`
-- Source:
-  - `docs/design/ops-first-addressing-decisions.md` D6
-  - `docs/design/addr-prereq-decisions.md`
+  - intended as additive language work, not as part of an `addr` revival

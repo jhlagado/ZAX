@@ -2,7 +2,9 @@
 
 **Date:** 2026-03-07
 **Status:** Draft decision record for review
-**Purpose:** Narrow the exploratory direction in `docs/design/ops-first-addressing-direction.md` into concrete language decisions and explicit non-goals.
+**Purpose:** Narrow the exploratory direction in
+`docs/archive/design/ops-first-addressing-direction.md` into concrete language
+decisions and explicit non-goals.
 
 This document is not an implementation plan. It exists to decide the language boundary before any implementation backlog is created.
 
@@ -260,7 +262,7 @@ The pragma surface itself can come later once that machinery is stable.
 
 ## 4. Follow-up Spec Questions
 
-Resolved by `docs/design/addr-prereq-decisions.md`:
+Resolved by `docs/archive/design/addr-prereq-decisions.md`:
 
 1. Transitional status of typed EA inside `ld`
 2. Semantic mapping of transitional direct EA forms onto `addr`
