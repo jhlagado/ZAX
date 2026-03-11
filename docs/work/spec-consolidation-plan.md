@@ -10,6 +10,9 @@ the rolled-back `addr` direction.
 This is not a normative language document. It is an editorial and planning note
 for the current cleanup pass.
 
+Status note: GitHub PR #759 completes Phase 1 items 1-6 of this plan. Items
+7-12 remain future work.
+
 ## Direction to lock in
 
 The cleanup should proceed from these language-direction assumptions:

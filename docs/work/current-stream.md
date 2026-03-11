@@ -8,7 +8,7 @@ direction.
 ### Current implementation state
 
 - Direct typed `ld` forms remain the active language surface.
-- Grouped and ranged `select case` is implemented.
+- Grouped `select case` values are implemented; ranged `case` values remain deferred.
 - Parser/grammar convergence work is active again.
 - The next additive language design topic is typed reinterpretation syntax
   `<Type>base.tail`.
