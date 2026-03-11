@@ -3,10 +3,7 @@ import type { Diagnostic } from '../diagnostics/types.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import { immLiteral, parseImmExprFromText } from './parseImm.js';
 import { parseAsmInstruction, parseAsmOperand } from './parseOperands.js';
-
-function canonicalConditionToken(token: string): string {
-  return token.toLowerCase();
-}
+import { CONDITION_CODES, CONDITION_CODE_LIST } from './grammarData.js';
 
 export type AsmControlFrame =
   | { kind: 'If'; elseSeen: boolean; openSpan: SourceSpan; recoverOnly?: boolean }
@@ -28,6 +25,9 @@ export function isRecoverOnlyControlFrame(frame: AsmControlFrame): boolean {
 }
 
 export type ParsedAsmStatement = AsmItemNode | AsmItemNode[] | undefined;
+export type ParseAsmStatementOptions = {
+  allowedConditionIdentifiers?: ReadonlySet<string>;
+};
 
 export function appendParsedAsmStatement(out: AsmItemNode[], parsed: ParsedAsmStatement): void {
   if (!parsed) return;
@@ -36,6 +36,29 @@ export function appendParsedAsmStatement(out: AsmItemNode[], parsed: ParsedAsmSt
     return;
   }
   out.push(parsed);
+}
+
+function parseConditionCode(
+  filePath: string,
+  keyword: 'if' | 'while' | 'until',
+  rawToken: string,
+  stmtSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+  options?: ParseAsmStatementOptions,
+): string {
+  const cc = rawToken.toLowerCase();
+  if (CONDITION_CODES.has(cc)) return cc;
+  if (options?.allowedConditionIdentifiers?.has(cc)) return cc;
+  diag(
+    diagnostics,
+    filePath,
+    `Invalid ${keyword} condition code "${rawToken}": expected ${CONDITION_CODE_LIST.join(', ')}.`,
+    {
+      line: stmtSpan.start.line,
+      column: stmtSpan.start.column,
+    },
+  );
+  return '__missing__';
 }
 
 type ParsedCaseItem = { value: ImmExprNode; end?: ImmExprNode };
@@ -206,6 +229,7 @@ export function parseAsmStatement(
   stmtSpan: SourceSpan,
   diagnostics: Diagnostic[],
   controlStack: AsmControlFrame[],
+  options?: ParseAsmStatementOptions,
 ): ParsedAsmStatement {
   const trimmed = text.trim();
   const lower = trimmed.toLowerCase();
@@ -299,7 +323,7 @@ export function parseAsmStatement(
 
   const ifMatch = /^if\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
   if (ifMatch) {
-    const cc = canonicalConditionToken(ifMatch[1]!);
+    const cc = parseConditionCode(filePath, 'if', ifMatch[1]!, stmtSpan, diagnostics, options);
     controlStack.push({ kind: 'If', elseSeen: false, openSpan: stmtSpan });
     return { kind: 'If', span: stmtSpan, cc };
   }
@@ -322,7 +346,7 @@ export function parseAsmStatement(
 
   const whileMatch = /^while\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
   if (whileMatch) {
-    const cc = canonicalConditionToken(whileMatch[1]!);
+    const cc = parseConditionCode(filePath, 'while', whileMatch[1]!, stmtSpan, diagnostics, options);
     controlStack.push({ kind: 'While', openSpan: stmtSpan });
     return { kind: 'While', span: stmtSpan, cc };
   }
@@ -361,7 +385,6 @@ export function parseAsmStatement(
   }
   const untilMatch = /^until\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
   if (untilMatch) {
-    const cc = canonicalConditionToken(untilMatch[1]!);
     const top = controlStack[controlStack.length - 1];
     if (top?.kind !== 'Repeat') {
       diag(diagnostics, filePath, `"until" without matching "repeat"`, {
@@ -370,6 +393,14 @@ export function parseAsmStatement(
       });
       return undefined;
     }
+    const cc = parseConditionCode(
+      filePath,
+      'until',
+      untilMatch[1]!,
+      stmtSpan,
+      diagnostics,
+      options,
+    );
     controlStack.pop();
     return { kind: 'Until', span: stmtSpan, cc };
   }

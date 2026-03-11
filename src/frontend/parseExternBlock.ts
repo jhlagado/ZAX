@@ -13,11 +13,7 @@ import {
 } from './parseModuleCommon.js';
 import { parseExternFuncFromTail } from './parseExtern.js';
 import type { ParseParamsContext } from './parseParams.js';
-
-function stripComment(line: string): string {
-  const semi = line.indexOf(';');
-  return semi >= 0 ? line.slice(0, semi) : line;
-}
+import { stripLineComment as stripComment } from './parseParserShared.js';
 
 type RawLine = {
   raw: string;
