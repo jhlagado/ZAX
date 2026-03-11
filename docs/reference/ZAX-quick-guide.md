@@ -1,6 +1,6 @@
 # ZAX Quick Guide
 
-A practical quick-start guide to ZAX v0.2.
+A practical quick-start guide to the current ZAX language surface.
 
 This guide is instructional, not normative. Canonical language behavior is defined in `docs/spec/zax-spec.md`.
 
@@ -383,7 +383,7 @@ ld hl, buffer + 16       ; address 16 bytes into buffer
 ld hl, table - 2         ; address 2 bytes before table start
 ```
 
-`ea + imm` and `ea - imm` bind more loosely than address-path segments. `@sprite.x + 4` means `(@sprite.x) + 4`.
+`ea + imm` and `ea - imm` bind more loosely than address-path segments.
 
 `imm + ea` is not permitted — always write `ea + imm`.
 
@@ -1457,9 +1457,16 @@ Duplicate `case` values within the same `select` are a compile error.
 
 When passing an enum value as a `byte` function parameter, it travels in the low byte of the 16-bit stack slot. For enums with ≤ 256 members this is always safe — the value fits in one byte. For enums with > 256 members, declare the parameter as `word` to ensure the full value is preserved.
 
-### 8.7 Enums and the Global Namespace
+### 8.7 Enums and Module Visibility
 
-Enum type names live in the global namespace and must be unique across all modules. Enum member names (`Idle`, `Run`, etc.) are not directly accessible as unqualified identifiers — they must always be prefixed with the enum type name. This means member names do not pollute the global namespace and multiple enums may use the same member names without collision:
+Within a module, enum type names live in the same module-scope declaration
+namespace as other top-level names. Enum member names (`Idle`, `Run`, etc.) are
+not directly accessible as unqualified identifiers — they must always be
+prefixed with the enum type name. Exported enums are referenced from importing
+modules by qualification (`dep.State.Idle`).
+
+This means member names do not pollute the module-scope declaration namespace
+and multiple enums may use the same member names without collision:
 
 ```zax
 enum StateA   Idle, Running
@@ -1509,11 +1516,9 @@ func update(): void
 end
 ```
 
-To get the address of a field rather than its value, use `@`:
-
-```zax
-  ld hl, @player.x       ; HL = address of player.x — NOT its value
-```
+There is no general-purpose source-level address-of operator in the current
+language. Scalar `ld` and typed-call contexts apply value semantics; non-scalar
+place expressions continue as storage locations.
 
 ### 9.3 `sizeof` and `offsetof` for Records
 
@@ -1781,7 +1786,9 @@ Circular imports are a compile error.
 
 ### 10.3 Module Visibility and Qualified Names
 
-Names declared in a module are local to that module unless imported visibility makes them accessible from another module. Imported symbols are referenced with qualified names (`dep.Symbol`) under the v0.5 visibility rules.
+Names declared in a module are local to that module unless imported visibility
+makes them accessible from another module. Imported symbols are referenced with
+qualified names (`dep.Symbol`) under the current module-visibility rules.
 
 Name collisions are still compile errors within a module scope and at qualified-import resolution points. There is no implicit renaming or shadowing.
 
@@ -1934,7 +1941,8 @@ extern func bios_getc(): byte at $F006
 ```
 
 - `at <imm16>` is required.
-- `extern`-declared names enter the global namespace. Collisions with other symbols are errors.
+- `extern`-declared names enter the module-scope declaration namespace.
+  Collisions with other module-scope symbols are errors.
 - `extern func` calls carry **no** compiler-generated register preservation. Assume any register or flag may be clobbered on return. (Clobber annotation syntax is planned — see `docs/spec/zax-spec.md` Appendix F.)
 
 ### 11.8 Relative `extern` Blocks for `bin` Entry Points
@@ -2009,7 +2017,10 @@ end
 
 ### 12.1 Introduction
 
-This chapter demonstrates how ZAX's features combine into practical system-level patterns. Each pattern is self-contained and uses the v0.5 surface — named sections, value semantics for scalar symbols, qualified enum references, and `op` declarations without parentheses for zero-parameter forms.
+This chapter demonstrates how ZAX's features combine into practical
+system-level patterns. Each pattern is self-contained and uses the current
+surface — named sections, value semantics for scalar symbols, qualified enum
+references, and `op` declarations without parentheses for zero-parameter forms.
 
 ---
 

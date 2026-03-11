@@ -1,10 +1,12 @@
-# ZAX Addressing Model (v0.2) — Step Pipelines
+# ZAX Addressing Model — Step Pipelines
 
 Goal: express every allowed load/store addressing shape as a short pipeline of reusable **steps** (concatenative/Forth style). A pipeline must leave all registers untouched except the destination (for loads) or the value-carrying register (for stores, typically `A` or `HL`). IX is never scratch.
 
-> **Normative** — This document is the contract for addressing lowering in v0.2. The code generator and tests MUST match the Steps/ASM shown here. Any divergence is a bug to be fixed in code or tests, not by relaxing this doc.
+> **Implementation reference** — This document describes the current handwritten step-pipeline lowering model. It is not the normative language specification.
+>
+> Normative source-language semantics belong in `docs/spec/zax-spec.md`. The live implementation remains in `src/addressing/steps.ts` plus its lowering consumers and tests. The intended direction is to codify the step inventory and routing rules in a machine-readable spec-data layer and make this reference mechanically checked against that layer.
 
-## Source Semantics (v0.2)
+## Source Semantics
 
 ZAX uses variable semantics for named storage. A bare variable name means the stored value, not the address of the storage.
 
@@ -85,7 +87,12 @@ CALC_EA                     add hl,de
 
 CALC_EA_2                   add hl,hl
                             add hl,de
+
+CALC_EA_WIDE elemSize       repeated add hl,hl for power-of-two elemSize
+                            then add hl,de
 ```
+
+`CALC_EA_2` is the common word-sized case. Current code also exposes `CALC_EA_WIDE(elemSize)` for wider power-of-two element sizes; the examples in Section 3 still show the size-2 case directly.
 
 ### 1.5 Accessors (byte)
 
@@ -696,9 +703,9 @@ EAW\_\* is any word-width EA builder (size = 2). Scaling is baked into EAW\_\*.
 
 ### EA builders (word width, HL=EA on exit, size = 2)
 
-Element size = 2. These scale the index by 2 (CALC_EA_2). HL returns the effective address; DE must be preserved. ZAX examples show typical shapes.
+Element size = 2. These scale the index by 2 (`CALC_EA_2`) in the common word-sized case. The live step library generalises this via `CALC_EA_WIDE(elemSize)` for wider power-of-two elements; the examples below show the size-2 case. HL returns the effective address; DE must be preserved. ZAX examples show typical shapes.
 
-#### EA_GLOB_CONST_W (base=glob, idx=const)
+#### EAW_GLOB_CONST (base=glob, idx=const)
 
 ZAX example: `ld rp, glob[const]`
 
@@ -719,7 +726,7 @@ add hl,hl
 add hl,de
 ```
 
-#### EA_GLOB_REG_W (base=glob, idx=reg8)
+#### EAW_GLOB_REG (base=glob, idx=reg8)
 
 ZAX example: `ld rp, glob[ireg]`
 
@@ -741,7 +748,7 @@ add hl,hl
 add hl,de
 ```
 
-#### EA_GLOB_RP_W (base=glob, idx=reg16)
+#### EAW_GLOB_RP (base=glob, idx=reg16)
 
 ZAX example: `ld rp, glob[rp]`
 
@@ -762,7 +769,7 @@ add hl,hl
 add hl,de
 ```
 
-#### EA_FVAR_CONST_W (base=fvar, idx=const)
+#### EAW_FVAR_CONST (base=fvar, idx=const)
 
 ZAX example: `ld rp, fvar[const]`
 
@@ -784,7 +791,7 @@ add hl,hl
 add hl,de
 ```
 
-#### EA_FVAR_REG_W (base=fvar, idx=reg8)
+#### EAW_FVAR_REG (base=fvar, idx=reg8)
 
 ZAX example: `ld rp, fvar[ireg]`
 
@@ -807,7 +814,7 @@ add hl,hl
 add hl,de
 ```
 
-#### EA_FVAR_RP_W (base=fvar, idx=reg16)
+#### EAW_FVAR_RP (base=fvar, idx=reg16)
 
 ZAX example: `ld rp, fvar[rp]`
 
@@ -829,7 +836,7 @@ add hl,hl
 add hl,de
 ```
 
-#### EA_GLOB_FVAR_W (base=glob, idx=word at fvar)
+#### EAW_GLOB_FVAR (base=glob, idx=word at fvar)
 
 ZAX example: `ld rp, glob[fvar]`
 
@@ -853,7 +860,7 @@ add hl,hl
 add hl,de
 ```
 
-#### EA_FVAR_FVAR_W (base=fvar, idx=word at fvar2)
+#### EAW_FVAR_FVAR (base=fvar, idx=word at fvar2)
 
 ZAX example: `ld rp, fvar[fvar2]`
 
@@ -878,7 +885,7 @@ add hl,hl
 add hl,de
 ```
 
-#### EA_FVAR_GLOB_W (base=fvar, idx=word at glob)
+#### EAW_FVAR_GLOB (base=fvar, idx=word at glob)
 
 ZAX example: `ld rp, fvar[glob]`
 
@@ -900,7 +907,7 @@ add hl,hl
 add hl,de
 ```
 
-#### EA_GLOB_GLOB_W (base=glob1, idx=word at glob2)
+#### EAW_GLOB_GLOB (base=glob1, idx=word at glob2)
 
 ZAX example: `ld rp, glob1[glob2]`
 

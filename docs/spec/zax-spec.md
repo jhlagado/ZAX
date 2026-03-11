@@ -1,6 +1,8 @@
-# ZAX Language Specification (Draft v0.5 Surface)
+# ZAX Language Specification
 
-This document is the implementable first draft specification for **ZAX**, a structured assembler for the Z80 family. It is written for humans: it introduces concepts in the same order you’ll use them when writing ZAX.
+This document is the normative specification for **ZAX**, a structured
+assembler for the Z80 family. It is written for humans: it introduces concepts
+in the same order you’ll use them when writing ZAX.
 
 ZAX aims to make assembly code easier to read and refactor by providing:
 
@@ -10,7 +12,8 @@ ZAX aims to make assembly code easier to read and refactor by providing:
 - structured control flow inside function/op instruction streams (`if`/`while`/`repeat`/`select`)
 - `op`: inline “macro-instructions” with operand matching
 
-Normative status for the current language surface: this document is the sole normative language source. Historical transition rationale documents have been retired and do not override this specification.
+Normative status for the current language surface: this document is the sole
+normative language source.
 
 Grammar companion: `docs/spec/zax-grammar.ebnf.md` provides a single-file syntax reference. If any grammar text diverges from this specification, this specification wins.
 
@@ -21,41 +24,10 @@ Anything not defined here is undefined behavior or a compile error.
 ## Authority (Normative)
 
 - `docs/spec/zax-spec.md` is the only normative language authority.
-- Supporting documents (`docs/reference/zax-dev-playbook.md`, `docs/archive/versioned/v02-codegen-reference.md`, `docs/reference/return-register-policy.md`, `docs/archive/versioned/v02-codegen-worked-examples.md`) are non-normative and must not introduce conflicting language rules.
-- `docs/archive/design/modules.md` is the design anchor for module/layout behavior and is aligned with this v0.5 parser surface.
-- Historical transition rationale documents are retired; if any surviving text conflicts with this document, this document wins.
-
----
-
-## Forward Direction: v0.5 Modules and Layout (Non-normative)
-
-The current normative rules in Sections 2 and 3 define the existing v0.2/v0.4
-module model:
-
-- module-scope `import`
-- a flat imported-name visibility model
-- historical per-kind section counters
-- packing by section kind across the full import graph
-
-The accepted v0.5 direction replaces that model with the design defined in
-`docs/archive/design/modules.md`.
-
-The active v0.5 changes are:
-
-- named section contributions and anchors
-- deterministic merge by section key `(kind, name)` in the non-banked initial
-  implementation
-- module-scope imports only, with import visibility separated from placement
-- explicit `export` semantics and qualified imported names (`dep.Symbol`)
-- root-first deterministic contribution order
-- unified direct declarations inside named `data` sections
-
-Banked section behavior remains out of scope for the initial v0.5
-implementation. Banking remains future direction only until it is promoted into
-the normative language.
-
-Legacy module-scope storage blocks and unnamed section-base directives are
-removed from the current parser surface.
+- All other documents are non-normative and must not override this
+  specification.
+- Historical and archived documents are retained for context only. If any of
+  them conflict with this specification, this specification wins.
 
 ---
 
@@ -215,7 +187,7 @@ Module identity (v0.1):
 
 ### 2.2 Named Sections and Anchors
 
-ZAX v0.5 uses named sections.
+ZAX uses named sections.
 
 Section kinds:
 
@@ -247,37 +219,55 @@ Layout:
 
 ### 3.1 Import Syntax
 
-This section defines the current v0.2 import and visibility model. It remains
-normative today, but it is scheduled to be replaced in v0.5 by explicit export
-semantics and qualified imported names.
+This section defines the current import syntax.
 
 - `import <ModuleId>`
 - `import "<path>"`
+- `import` is permitted only at module scope
 
-`<ModuleId>` is resolved via the compiler’s search path (project + standard modules). In v0.1, a `ModuleId` maps to a file named `<ModuleId>.zax` on the search path.
+`<ModuleId>` is resolved via the compiler’s search path (project + standard
+modules). A module-ID import names the desired module, not necessarily the
+spelling of the on-disk path used to reach it.
 
-`import "<path>"` loads a module from an explicit path. For v0.1, quoted paths should include the `.zax` extension and are resolved relative to the importing file (then search paths, if not found).
+`import "<path>"` loads a module from an explicit path. Quoted paths should
+include the `.zax` extension and are resolved relative to the importing file
+(then search paths, if not found).
+
+Each resolved import contributes a direct import edge. Those direct import edges
+determine which module qualifiers are visible in the importing file.
 
 ### 3.2 Visibility and Collisions
 
-This section defines the current v0.2 flat imported-visibility model. It
-remains normative today, but it is scheduled to be replaced in v0.5 by
-explicit export semantics and qualified imported names.
+This section defines the current imported-visibility model.
 
-- In v0.1, all module-scope names are public. The `export` keyword is accepted on `const`, `func`, and `op` declarations for clarity and forward compatibility, but has no effect. Using `export` on any other declaration form is a compile error.
-- All names from an imported module are brought into the importing module’s global namespace.
-- The program has a single global namespace across all modules.
-- Any symbol collision is a compile error (no implicit renaming).
-  - Collisions are detected ignoring case: you may not define two names that differ only by case (e.g., `Foo` and `foo`).
-  - This applies to all user-defined identifiers: module-scope symbols, locals/args, and labels.
-- Collisions include:
-  - two modules export the same name
-  - an import conflicts with a local symbol
-  - `bin` base names and `extern` names must also be unique
+- Module-scope declarations are private to their defining module unless marked
+  `export`.
+- `export` is permitted only on `const`, `type`, `union`, `enum`, `func`, and
+  `op` declarations.
+- Exported names from another module are accessed by qualification:
+  `dep.Name`.
+- Imported names are not injected into the local unqualified namespace.
+- Qualified access is allowed only for:
+  - the current module's own module ID
+  - modules directly imported by the current file
+- Unqualified references resolve only against the current module's own local
+  declarations.
+- Enum members use qualified names:
+  - same-module: `Mode.Value`
+  - imported: `dep.Mode.Value`
+- Unqualified enum member references are compile errors.
+- Module IDs must be unique across the build. If two modules resolve to the
+  same canonical module ID, compilation fails.
+- User-defined identifiers remain case-sensitive, but collisions are diagnosed
+  ignoring case: you may not define two names that differ only by case (for
+  example `Foo` and `foo`).
 
 Namespace rule (v0.1):
 
-- `type`, `union`, `enum`, `const`, storage symbols (`data`/`bin`), `func`, and `op` names share the same global namespace. Defining a `func` and an `op` with the same name is a compile error.
+- Within a module, `type`, `union`, `enum`, `const`, storage symbols
+  (`data`/`bin`), `func`, and `op` names share the same module-scope
+  declaration namespace. Defining a `func` and an `op` with the same name is a
+  compile error.
 
 Forward references (v0.1):
 
@@ -575,7 +565,7 @@ Non-guarantees (v0.1):
 
 ### 6.2 Removed Legacy Storage Surface
 
-Legacy module-scope storage blocks are removed in v0.5.
+Legacy module-scope storage blocks are removed.
 
 Use named `data` sections instead:
 
@@ -780,7 +770,8 @@ Value semantics note (v0.2):
 - Bare scalar variables use value semantics in ordinary instruction and call contexts.
 - `rec.field` and `arr[idx]` are storage-path expressions. In scalar value/store contexts (for example `LD A, rec.field`, `LD rec.field, A`), the compiler inserts the required load/store lowering.
 - In aggregate contexts (for example passing an array/record parameter), the compiler passes the storage reference transparently.
-- Older address-of style wording (including `@place`) is retired from the normative v0.2 source model.
+- Older address-of style wording (including `@place`) is retired from the
+  current source model.
 
 Precedence (v0.1):
 
@@ -1851,9 +1842,15 @@ Ops are module-scope declarations only. You cannot define an op inside a functio
 
 An op may invoke other ops in its body, but the expansion graph must be acyclic. If expanding op `A` would require expanding op `B`, which in turn requires expanding op `A`, the compiler reports a cyclic expansion error. The compiler detects this statically during expansion, not at runtime.
 
-**Forward references.** An op may be invoked before it is declared, consistent with ZAX's whole-program compilation model (Section 3.2 of the main spec). All op declarations are visible throughout the module and any importing modules.
+**Forward references.** An op may be invoked before it is declared, consistent
+with ZAX's whole-program compilation model (Section 3.2 of the main spec). All
+op declarations are visible throughout their defining module. Exported ops are
+visible to importing modules by qualified name.
 
-**Import visibility.** Ops follow the same visibility rules as other module-scope declarations. Ops are public; the `export` keyword is accepted for clarity/forward compatibility.
+**Import visibility.** Ops follow the same visibility rules as other
+module-scope declarations. Non-exported ops are private to their defining
+module; exported ops are accessible by qualified name from directly importing
+modules.
 
 ### 2.4 No Locals
 

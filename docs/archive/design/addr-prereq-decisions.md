@@ -2,7 +2,10 @@
 
 **Date:** 2026-03-08
 **Status:** Spec decisions — ready for implementation backlog
-**Purpose:** Close the implementation-blocking questions for the first `addr` slice before work begins. This document is narrower than `docs/design/ops-first-addressing-decisions.md` and records only the decisions needed to start `addr`.
+**Purpose:** Close the implementation-blocking questions for the first `addr`
+slice before work begins. This document is narrower than
+`docs/archive/design/ops-first-addressing-decisions.md` and records only the
+decisions needed to start `addr`.
 
 Questions addressed here: transitional typed EA in `ld`, semantic mapping onto `addr`, op-contract status for v1, and the preservation contract for `addr`.
 Questions intentionally deferred: cast syntax (`<Type>base.tail`), `@dead` pragma surface, and `select case` range/group overlap rules.
