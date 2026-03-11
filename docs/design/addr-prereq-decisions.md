@@ -189,7 +189,7 @@ Deferred op contracts are about **user-written op bodies**, where the compiler l
 | `<Type>base.tail` grammar production | Open | Before cast syntax implementation begins |
 | Valid `base` for cast in v1 | Open | Before cast syntax implementation begins |
 | `@dead` pragma surface and scope rules | Deferred | After `addr` lowering is stable |
-| `select case` range/group overlap lowering | Open | Before `select` range implementation begins |
+| `select case` range/group overlap lowering | Resolved | Overlapping reachable values are compile errors; out-of-range `reg8` portions warn and are omitted/clipped |
 
 ---
 
@@ -206,5 +206,5 @@ Not part of this first slice:
 
 - `@dead` pragma syntax or propagation
 - typed cast syntax
-- grouped/ranged `select case`
+- grouped/ranged `select case` (implemented later)
 - user-authored op contract metadata

@@ -30,8 +30,28 @@ type Context<TCodeSegmentTag> = {
   emitRawCodeBytes: (bytes: Uint8Array, file: string, trace: string) => void;
   emitSelectCompareReg8ToImm8: (value: number, missLabel: string, span: SourceSpan) => void;
   emitSelectCompareToImm16: (value: number, missLabel: string, span: SourceSpan) => void;
+  emitSelectCompareReg8Range: (
+    start: number,
+    end: number,
+    missLabel: string,
+    span: SourceSpan,
+  ) => void;
+  emitSelectCompareImm16Range: (
+    start: number,
+    end: number,
+    missLabel: string,
+    span: SourceSpan,
+  ) => void;
   emitInstr: (name: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
 };
+
+type SelectCaseArm =
+  | { kind: 'value'; value: number; bodyLabel: string; span: SourceSpan }
+  | { kind: 'range'; start: number; end: number; bodyLabel: string; span: SourceSpan };
+
+function formatCaseInterval(start: number, end: number): string {
+  return start === end ? `${start}` : `${start}..${end}`;
+}
 
 export function createAsmRangeLoweringHelpers<TCodeSegmentTag>(ctx: Context<TCodeSegmentTag>) {
   const lowerAsmRange = (
@@ -222,8 +242,8 @@ export function createAsmRangeLoweringHelpers<TCodeSegmentTag>(ctx: Context<TCod
           const endLabel = ctx.newHiddenLabel('__zax_select_end');
           const selectorIsReg8 =
             it.selector.kind === 'Reg' && ctx.reg8.has(it.selector.name.toUpperCase());
-          const caseValues = new Set<number>();
-          const caseArms: { value: number; bodyLabel: string; span: SourceSpan }[] = [];
+          const seenCaseIntervals: Array<{ start: number; end: number; desc: string }> = [];
+          const caseArms: SelectCaseArm[] = [];
           let elseLabel: string | undefined;
           let sawArm = false;
           const armExits: FlowState[] = [];
@@ -245,20 +265,71 @@ export function createAsmRangeLoweringHelpers<TCodeSegmentTag>(ctx: Context<TCod
               while (k < asmItems.length) {
                 const caseItem = asmItems[k]!;
                 if (caseItem.kind !== 'Case') break;
-                const v = ctx.evalImmExpr(caseItem.value);
-                if (v === undefined) {
+                const startValue = ctx.evalImmExpr(caseItem.value);
+                const endValue = caseItem.end ? ctx.evalImmExpr(caseItem.end) : startValue;
+                if (startValue === undefined || endValue === undefined) {
                   ctx.diagAt(caseItem.span, 'Failed to evaluate case value.');
                 } else {
-                  const key = v & 0xffff;
-                  const canMatchSelector = !selectorIsReg8 || key <= 0xff;
-                  if (selectorIsReg8 && key > 0xff) {
-                    ctx.warnAt(caseItem.span, `Case value ${key} can never match reg8 selector.`);
+                  const rawStart = startValue & 0xffff;
+                  const rawEnd = endValue & 0xffff;
+                  if (rawStart > rawEnd) {
+                    ctx.diagAt(
+                      caseItem.span,
+                      `Case range ${formatCaseInterval(rawStart, rawEnd)} is descending.`,
+                    );
+                    k++;
+                    continue;
                   }
-                  if (caseValues.has(key)) {
-                    ctx.diagAt(caseItem.span, `Duplicate case value ${key}.`);
+
+                  let start = rawStart;
+                  let end = rawEnd;
+                  if (selectorIsReg8 && start > 0xff) {
+                    const intervalText = formatCaseInterval(rawStart, rawEnd);
+                    ctx.warnAt(caseItem.span, `Case ${intervalText} can never match reg8 selector.`);
+                    k++;
+                    continue;
+                  }
+                  if (selectorIsReg8 && end > 0xff) {
+                    const original = formatCaseInterval(rawStart, rawEnd);
+                    ctx.warnAt(
+                      caseItem.span,
+                      `Case range ${original} exceeds reg8 selector range; reachable portion ${formatCaseInterval(
+                        start,
+                        0xff,
+                      )} is used.`,
+                    );
+                    end = 0xff;
+                  }
+
+                  const overlap = seenCaseIntervals.find(
+                    (interval) => !(end < interval.start || start > interval.end),
+                  );
+                  if (overlap) {
+                    const overlapStart = Math.max(start, overlap.start);
+                    const overlapEnd = Math.min(end, overlap.end);
+                    if (overlapStart === overlapEnd) {
+                      ctx.diagAt(caseItem.span, `Duplicate case value ${overlapStart}.`);
+                    } else {
+                      ctx.diagAt(
+                        caseItem.span,
+                        `Case range ${formatCaseInterval(start, end)} overlaps existing case ${
+                          overlap.desc
+                        } on ${formatCaseInterval(overlapStart, overlapEnd)}.`,
+                      );
+                    }
+                    k++;
+                    continue;
+                  }
+
+                  seenCaseIntervals.push({
+                    start,
+                    end,
+                    desc: formatCaseInterval(start, end),
+                  });
+                  if (start === end) {
+                    caseArms.push({ kind: 'value', value: start, bodyLabel, span: caseItem.span });
                   } else {
-                    caseValues.add(key);
-                    if (canMatchSelector) caseArms.push({ value: key, bodyLabel, span: caseItem.span });
+                    caseArms.push({ kind: 'range', start, end, bodyLabel, span: caseItem.span });
                   }
                 }
                 k++;
@@ -301,7 +372,11 @@ export function createAsmRangeLoweringHelpers<TCodeSegmentTag>(ctx: Context<TCod
             if (v !== undefined) selectorConst = v & 0xffff;
           }
           if (selectorConst !== undefined) {
-            const matched = caseArms.find((arm) => arm.value === selectorConst);
+            const matched = caseArms.find((arm) =>
+              arm.kind === 'value'
+                ? arm.value === selectorConst
+                : selectorConst >= arm.start && selectorConst <= arm.end,
+            );
             ctx.emitJumpTo(matched?.bodyLabel ?? elseLabel ?? endLabel, asmItems[j]!.span);
           } else if (caseArms.length === 0) {
             ctx.emitJumpTo(elseLabel ?? endLabel, asmItems[j]!.span);
@@ -317,10 +392,14 @@ export function createAsmRangeLoweringHelpers<TCodeSegmentTag>(ctx: Context<TCod
             }
             for (const arm of caseArms) {
               const miss = ctx.newHiddenLabel('__zax_select_next');
-              if (selectorIsReg8) {
+              if (arm.kind === 'value' && selectorIsReg8) {
                 ctx.emitSelectCompareReg8ToImm8(arm.value, miss, arm.span);
-              } else {
+              } else if (arm.kind === 'value') {
                 ctx.emitSelectCompareToImm16(arm.value, miss, arm.span);
+              } else if (selectorIsReg8) {
+                ctx.emitSelectCompareReg8Range(arm.start, arm.end, miss, arm.span);
+              } else {
+                ctx.emitSelectCompareImm16Range(arm.start, arm.end, miss, arm.span);
               }
               ctx.emitInstr('pop', [{ kind: 'Reg', span: arm.span, name: 'HL' }], arm.span);
               ctx.emitJumpTo(arm.bodyLabel, arm.span);
