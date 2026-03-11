@@ -25,6 +25,9 @@ export function isRecoverOnlyControlFrame(frame: AsmControlFrame): boolean {
 }
 
 export type ParsedAsmStatement = AsmItemNode | AsmItemNode[] | undefined;
+export type ParseAsmStatementOptions = {
+  allowedConditionIdentifiers?: ReadonlySet<string>;
+};
 
 export function appendParsedAsmStatement(out: AsmItemNode[], parsed: ParsedAsmStatement): void {
   if (!parsed) return;
@@ -41,9 +44,11 @@ function parseConditionCode(
   rawToken: string,
   stmtSpan: SourceSpan,
   diagnostics: Diagnostic[],
+  options?: ParseAsmStatementOptions,
 ): string {
   const cc = rawToken.toLowerCase();
   if (CONDITION_CODES.has(cc)) return cc;
+  if (options?.allowedConditionIdentifiers?.has(cc)) return cc;
   diag(
     diagnostics,
     filePath,
@@ -134,6 +139,7 @@ export function parseAsmStatement(
   stmtSpan: SourceSpan,
   diagnostics: Diagnostic[],
   controlStack: AsmControlFrame[],
+  options?: ParseAsmStatementOptions,
 ): ParsedAsmStatement {
   const trimmed = text.trim();
   const lower = trimmed.toLowerCase();
@@ -227,7 +233,7 @@ export function parseAsmStatement(
 
   const ifMatch = /^if\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
   if (ifMatch) {
-    const cc = parseConditionCode(filePath, 'if', ifMatch[1]!, stmtSpan, diagnostics);
+    const cc = parseConditionCode(filePath, 'if', ifMatch[1]!, stmtSpan, diagnostics, options);
     controlStack.push({ kind: 'If', elseSeen: false, openSpan: stmtSpan });
     return { kind: 'If', span: stmtSpan, cc };
   }
@@ -250,7 +256,7 @@ export function parseAsmStatement(
 
   const whileMatch = /^while\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
   if (whileMatch) {
-    const cc = parseConditionCode(filePath, 'while', whileMatch[1]!, stmtSpan, diagnostics);
+    const cc = parseConditionCode(filePath, 'while', whileMatch[1]!, stmtSpan, diagnostics, options);
     controlStack.push({ kind: 'While', openSpan: stmtSpan });
     return { kind: 'While', span: stmtSpan, cc };
   }
@@ -297,7 +303,14 @@ export function parseAsmStatement(
       });
       return undefined;
     }
-    const cc = parseConditionCode(filePath, 'until', untilMatch[1]!, stmtSpan, diagnostics);
+    const cc = parseConditionCode(
+      filePath,
+      'until',
+      untilMatch[1]!,
+      stmtSpan,
+      diagnostics,
+      options,
+    );
     controlStack.pop();
     return { kind: 'Until', span: stmtSpan, cc };
   }
