@@ -392,7 +392,7 @@ export type AsmControlNode =
   | { kind: 'Repeat'; span: SourceSpan }
   | { kind: 'Until'; span: SourceSpan; cc: string }
   | { kind: 'Select'; span: SourceSpan; selector: AsmOperandNode }
-  | { kind: 'Case'; span: SourceSpan; value: ImmExprNode }
+  | { kind: 'Case'; span: SourceSpan; value: ImmExprNode; end?: ImmExprNode }
   | { kind: 'SelectElse'; span: SourceSpan };
 
 /**

@@ -309,6 +309,50 @@ export function createFunctionBodySetupHelpers({
     emitJumpCondTo(0xc2, mismatchLabel, span);
   };
 
+  const emitSelectCompareReg8Range = (
+    start: number,
+    end: number,
+    mismatchLabel: string,
+    span: SourceSpan,
+  ): void => {
+    emitRawCodeBytes(Uint8Array.of(0xfe, start & 0xff), span.file, 'cp imm8');
+    emitJumpCondTo(0xda, mismatchLabel, span);
+    if (end < 0xff) {
+      emitRawCodeBytes(Uint8Array.of(0xfe, (end + 1) & 0xff), span.file, 'cp imm8');
+      emitJumpCondTo(0xd2, mismatchLabel, span);
+    }
+  };
+
+  const emitSelectCompareImm16Range = (
+    start: number,
+    end: number,
+    mismatchLabel: string,
+    span: SourceSpan,
+  ): void => {
+    const lowerOk = newHiddenLabel('__zax_select_range_lower_ok');
+    const upperOk = newHiddenLabel('__zax_select_range_upper_ok');
+
+    emitRawCodeBytes(Uint8Array.of(0x7c), span.file, 'ld a, h');
+    emitRawCodeBytes(Uint8Array.of(0xfe, (start >> 8) & 0xff), span.file, 'cp imm8');
+    emitJumpCondTo(0xda, mismatchLabel, span);
+    emitJumpCondTo(0xc2, lowerOk, span);
+    emitRawCodeBytes(Uint8Array.of(0x7d), span.file, 'ld a, l');
+    emitRawCodeBytes(Uint8Array.of(0xfe, start & 0xff), span.file, 'cp imm8');
+    emitJumpCondTo(0xda, mismatchLabel, span);
+    defineCodeLabel(lowerOk, span, 'local');
+
+    emitRawCodeBytes(Uint8Array.of(0x7c), span.file, 'ld a, h');
+    emitRawCodeBytes(Uint8Array.of(0xfe, (end >> 8) & 0xff), span.file, 'cp imm8');
+    emitJumpCondTo(0xda, upperOk, span);
+    emitJumpCondTo(0xc2, mismatchLabel, span);
+    emitRawCodeBytes(Uint8Array.of(0x7d), span.file, 'ld a, l');
+    emitRawCodeBytes(Uint8Array.of(0xfe, end & 0xff), span.file, 'cp imm8');
+    emitJumpCondTo(0xda, upperOk, span);
+    emitJumpCondTo(0xca, upperOk, span);
+    emitJumpTo(mismatchLabel, span);
+    defineCodeLabel(upperOk, span, 'local');
+  };
+
   const loadSelectorIntoHL = (selector: AsmOperandNode, span: SourceSpan): boolean => {
     if (selector.kind === 'Reg') {
       const r = selector.name.toUpperCase();
@@ -368,6 +412,8 @@ export function createFunctionBodySetupHelpers({
     joinFlows,
     emitSelectCompareToImm16,
     emitSelectCompareReg8ToImm8,
+    emitSelectCompareReg8Range,
+    emitSelectCompareImm16Range,
     loadSelectorIntoHL,
   };
 }

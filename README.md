@@ -135,7 +135,7 @@ select A
 end
 ```
 
-Each `case` compares the selected register against a compile-time constant and jumps to the matching arm. The `else` arm handles anything that falls through. The `select` dispatch may use `A` internally — the programmer controls what is loaded before the construct and what registers the arms use.
+Each `case` compares the selected register against compile-time values or inclusive ranges and jumps to the matching arm. A `case` line may also group multiple items with commas, such as `case 'A'..'Z', '_'`. The `else` arm handles anything that falls through. The `select` dispatch may use `A` internally — the programmer controls what is loaded before the construct and what registers the arms use.
 
 ---
 

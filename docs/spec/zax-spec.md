@@ -1235,8 +1235,8 @@ Syntax:
 
 ```
 select <selector>
-  case <imm>[, <imm> ...]
-  case <imm>[, <imm> ...]
+  case <imm-or-range>[, <imm-or-range> ...]
+  case <imm-or-range>[, <imm-or-range> ...]
   else ...
 end
 ```
@@ -1246,15 +1246,17 @@ Rules:
 - `<selector>` is evaluated once at `select` and treated as a 16-bit value.
   - Allowed selector forms: `reg16`, `reg8` (zero-extended), `imm` expression, `ea` (storage reference value), `(ea)` (loaded value).
   - `(ea)` selectors read a 16-bit word from memory.
-- Each `case` value must be a compile-time immediate (`imm`) and is compared against the selector.
-  - Comparisons are by 16-bit equality.
-  - For `reg8` selectors, the selector value is in the range `0..255` (zero-extended). `case` values outside `0..255` can never match; the compiler may warn.
+- Each `case` item must be either a compile-time immediate (`imm`) or an inclusive compile-time range (`imm .. imm`).
+  - Single values compare by 16-bit equality.
+  - Ranges match when the selector lies within the inclusive 16-bit interval.
+  - For `reg8` selectors, the selector value is in the range `0..255` (zero-extended). `case` items outside `0..255` can never match; the compiler may warn.
+  - For `reg8` selectors, a partially out-of-range `case` range may be clipped to its reachable `0..255` portion with a warning.
 - `else` is optional and is taken if no `case` matches. If no `else` is present and no `case` matches, control transfers to after the enclosing `end`.
 - If present, `else` must be the final arm in the `select`. A `case` after `else` is a compile error.
 - There is no fallthrough: after a `case` body finishes, control transfers to after the enclosing `end` (unless the case body terminates, e.g., `ret`).
-- Duplicate `case` values within the same `select` are a compile error.
+- Overlapping reachable `case` items within the same `select` are a compile error.
 - Nested `select` is allowed.
-- A `case` line may list one or more values separated by commas (for example, `case 0, 1`).
+- A `case` line may list one or more values or ranges separated by commas (for example, `case 0, 1..3`).
 - Consecutive `case` lines before statements share one clause body (stacked-case syntax), e.g.:
   - `case 0`
   - `case 1`
@@ -1272,8 +1274,9 @@ Notes:
 
 - `select <ea>` dispatches on the storage reference value carried by `<ea>`. To dispatch on the stored value, use `select (ea)`.
 - If you want to dispatch on a byte-sized value in memory, prefer loading into a `reg8` and using `select <reg8>` rather than `select (ea)` (which reads a 16-bit word).
-- The current compiler implementation emits a warning when a `reg8` selector has a `case` value outside `0..255`, because that arm can never match.
-  - Those unreachable `reg8` case values are omitted from runtime dispatch comparisons.
+- The current compiler implementation emits a warning when a `reg8` selector has a `case` item outside `0..255`, because that item can never match.
+  - Those unreachable `reg8` case items are omitted from runtime dispatch comparisons.
+  - Partially reachable `reg8` ranges are clipped to the reachable portion for runtime dispatch.
 
 Lowering (informative):
 
@@ -1281,7 +1284,7 @@ Lowering (informative):
   - For `reg8` selectors, lowering naturally uses 8-bit compares (e.g., `ld a, <reg8>` then `cp imm8`) because the selector’s high byte is always zero.
     - The current compiler implementation loads the selector byte once and reuses it across the compare chain.
   - For `reg16` selectors, lowering may require multi-instruction comparison sequences.
-  - Runtime compare-chain lowering evaluates the selector once, then compares case values against that stable selector value.
+  - Runtime compare-chain lowering evaluates the selector once, then compares case items against that stable selector value.
   - The compiler may test `case` values in any order.
     - Do not rely on any particular case-test order or intermediate dispatch effects.
   - If the selector is a compile-time `imm` expression, the compiler may resolve the match at compile time and emit only the matching arm (or nothing).
