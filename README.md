@@ -273,7 +273,7 @@ All module-scope names share a single global namespace. Name collisions across m
 
 ## Project Status
 
-ZAX is under active development. The compiler exists as a Node.js CLI tool and handles a meaningful subset of the active v0.2 draft specification. The end-to-end pipeline (lex → parse → lower → encode → emit) is functional and produces `.bin`, `.hex`, `.d8dbg.json` (Debug80-compatible debug maps), and `.lst` output.
+ZAX is under active development. The compiler exists as a Node.js CLI tool and handles a meaningful subset of the current language specification. The end-to-end pipeline (lex → parse → lower → encode → emit) is functional and produces `.bin`, `.hex`, `.d8dbg.json` (Debug80-compatible debug maps), and `.lst` output.
 
 What works today: single and multi-module compilation, functions with locals and calling conventions, structured control flow, the op system, records/unions/arrays, named `section code`/`section data` blocks with direct declarations (`const`/`enum`/typed storage/`bin`/`hex`/`extern`), forward references and fixups, and a growing slice of the Z80 instruction set.
 
