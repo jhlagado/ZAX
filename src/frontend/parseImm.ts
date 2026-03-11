@@ -1,6 +1,13 @@
 import type { ImmExprNode, OffsetofPathNode, SourceSpan, TypeExprNode } from './ast.js';
 import type { Diagnostic } from '../diagnostics/types.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
+import {
+  CHAR_ESCAPE_VALUES,
+  IMM_BINARY_OPERATORS,
+  IMM_BINARY_OPERATOR_PRECEDENCE,
+  IMM_MULTI_CHAR_OPERATORS,
+  IMM_UNARY_OPERATOR_SET,
+} from './grammarData.js';
 
 type ImmUnaryOp = Extract<ImmExprNode, { kind: 'ImmUnary' }>['op'];
 type ImmBinaryOp = Extract<ImmExprNode, { kind: 'ImmBinary' }>['op'];
@@ -93,38 +100,15 @@ type ImmToken =
   | { kind: 'rbrack' };
 
 function isImmUnaryOp(op: ImmOpToken): op is ImmUnaryOp {
-  return op === '+' || op === '-' || op === '~';
+  return IMM_UNARY_OPERATOR_SET.has(op);
 }
 
 function isImmBinaryOp(op: ImmOpToken): op is ImmBinaryOp {
-  return (
-    op === '*' ||
-    op === '/' ||
-    op === '%' ||
-    op === '+' ||
-    op === '-' ||
-    op === '&' ||
-    op === '^' ||
-    op === '|' ||
-    op === '<<' ||
-    op === '>>'
-  );
+  return IMM_BINARY_OPERATORS.has(op);
 }
 
 function isImmOpToken(text: string): text is ImmOpToken {
-  return (
-    text === '+' ||
-    text === '-' ||
-    text === '*' ||
-    text === '/' ||
-    text === '%' ||
-    text === '&' ||
-    text === '^' ||
-    text === '|' ||
-    text === '~' ||
-    text === '<<' ||
-    text === '>>'
-  );
+  return IMM_UNARY_OPERATOR_SET.has(text) || IMM_BINARY_OPERATORS.has(text);
 }
 
 function tokenizeImm(text: string): ImmToken[] | undefined {
@@ -168,8 +152,8 @@ function tokenizeImm(text: string): ImmToken[] | undefined {
       continue;
     }
     const two = s.slice(i, i + 2);
-    if (two === '<<' || two === '>>') {
-      out.push({ kind: 'op', text: two });
+    if (IMM_MULTI_CHAR_OPERATORS.has(two)) {
+      out.push({ kind: 'op', text: two as ImmOpToken });
       i += 2;
       continue;
     }
@@ -183,37 +167,15 @@ function tokenizeImm(text: string): ImmToken[] | undefined {
         if (i >= s.length) return undefined;
         const esc = s[i]!;
         i++;
-        switch (esc) {
-          case 'n':
-            value = 10;
-            break;
-          case 'r':
-            value = 13;
-            break;
-          case 't':
-            value = 9;
-            break;
-          case '0':
-            value = 0;
-            break;
-          case '\\':
-            value = 92;
-            break;
-          case "'":
-            value = 39;
-            break;
-          case '"':
-            value = 34;
-            break;
-          case 'x': {
-            const hex = s.slice(i, i + 2);
-            if (!/^[0-9A-Fa-f]{2}$/.test(hex)) return undefined;
-            value = Number.parseInt(hex, 16);
-            i += 2;
-            break;
-          }
-          default:
-            return undefined;
+        if (esc === 'x') {
+          const hex = s.slice(i, i + 2);
+          if (!/^[0-9A-Fa-f]{2}$/.test(hex)) return undefined;
+          value = Number.parseInt(hex, 16);
+          i += 2;
+        } else {
+          const escaped = CHAR_ESCAPE_VALUES.get(esc);
+          if (escaped === undefined) return undefined;
+          value = escaped;
         }
       } else {
         if (s[i] === "'" || s[i] === '\n' || s[i] === '\r') return undefined;
@@ -248,29 +210,6 @@ function tokenizeImm(text: string): ImmToken[] | undefined {
     return undefined;
   }
   return out;
-}
-
-function precedence(op: ImmOpToken): number {
-  switch (op) {
-    case '*':
-    case '/':
-    case '%':
-      return 7;
-    case '+':
-    case '-':
-      return 6;
-    case '<<':
-    case '>>':
-      return 5;
-    case '&':
-      return 4;
-    case '^':
-      return 3;
-    case '|':
-      return 2;
-    default:
-      return 0;
-  }
 }
 
 export function parseImmExprFromText(
@@ -362,7 +301,7 @@ export function parseImmExprFromText(
     while (true) {
       const t = tokens[idx];
       if (!t || t.kind !== 'op') break;
-      const prec = precedence(t.text);
+      const prec = IMM_BINARY_OPERATOR_PRECEDENCE.get(t.text) ?? 0;
       if (prec < minPrec) break;
       if (!isImmBinaryOp(t.text)) break;
       idx++;

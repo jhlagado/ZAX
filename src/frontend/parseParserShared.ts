@@ -1,23 +1,7 @@
-const RESERVED_TOP_LEVEL_KEYWORDS = new Set([
-  'func',
-  'const',
-  'enum',
-  'data',
-  'import',
-  'type',
-  'union',
-  'globals',
-  'var',
-  'extern',
-  'bin',
-  'hex',
-  'op',
-  'section',
-  'align',
-]);
+import { TOP_LEVEL_KEYWORDS } from './grammarData.js';
 
 export function isReservedTopLevelDeclName(name: string): boolean {
-  return RESERVED_TOP_LEVEL_KEYWORDS.has(name.toLowerCase());
+  return TOP_LEVEL_KEYWORDS.has(name.toLowerCase());
 }
 
 export function stripLineComment(line: string): string {
