@@ -81,6 +81,18 @@ describe('PR476 asm statement parsing extraction', () => {
     ]);
   });
 
+  it('allows symbolic condition placeholders when explicitly permitted', () => {
+    const diagnostics: Diagnostic[] = [];
+    const controlStack: AsmControlFrame[] = [];
+
+    const parsed = parseAsmStatement(file.path, 'if cond', zeroSpan, diagnostics, controlStack, {
+      allowedConditionIdentifiers: new Set(['cond']),
+    });
+
+    expect(parsed).toMatchObject({ kind: 'If', cc: 'cond' });
+    expect(diagnostics).toEqual([]);
+  });
+
   it('falls back to instruction parsing for plain asm lines', () => {
     const diagnostics: Diagnostic[] = [];
     const parsed = parseAsmStatement(file.path, 'ld a, $12', zeroSpan, diagnostics, []);

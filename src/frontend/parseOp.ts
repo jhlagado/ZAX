@@ -81,6 +81,7 @@ export function parseTopLevelOpDecl(
 
   const name = parsedHeader.name;
   const params = parsedHeader.params;
+  const allowedConditionIdentifiers = new Set(params.map((param) => param.name.toLowerCase()));
   const trailing = parsedHeader.trailing.trim();
   if (trailing.length > 0) {
     diag(diagnostics, modulePath, `Invalid op header: unexpected trailing tokens`, {
@@ -145,6 +146,7 @@ export function parseTopLevelOpDecl(
           contentSpan,
           diagnostics,
           controlStack,
+          { allowedConditionIdentifiers },
         );
         appendParsedAsmStatement(bodyItems, stmt);
       }
@@ -152,7 +154,9 @@ export function parseTopLevelOpDecl(
       continue;
     }
 
-    const stmt = parseAsmStatement(modulePath, content, contentSpan, diagnostics, controlStack);
+    const stmt = parseAsmStatement(modulePath, content, contentSpan, diagnostics, controlStack, {
+      allowedConditionIdentifiers,
+    });
     appendParsedAsmStatement(bodyItems, stmt);
     index++;
   }
