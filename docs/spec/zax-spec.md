@@ -765,6 +765,7 @@ Integer semantics (v0.1):
 - function-scope symbols: argument names and local `var` names (as frame slots)
 - field access: `rec.field`
 - indexing: `arr[i]` and nested `arr[r][c]` (index forms as defined above)
+- typed reinterpretation: `<Type>base.tail`
 - address arithmetic: `ea + imm`, `ea - imm`
 
 Conceptually, an `ea` is a base storage location plus a sequence of path segments: `.field` selects a record field, and `[index]` selects an array element. Lowering turns that path into an effective address when a Z80 instruction sequence needs one.
@@ -773,6 +774,9 @@ Value semantics note (v0.2):
 
 - Bare scalar variables use value semantics in ordinary instruction and call contexts.
 - `rec.field` and `arr[idx]` are storage-path expressions. In scalar value/store contexts (for example `LD A, rec.field`, `LD rec.field, A`), the compiler inserts the required load/store lowering.
+- `<Type>base.tail` is also a storage-path expression. It supplies the base
+  type explicitly at the access site, then applies ordinary field/index
+  traversal.
 - In aggregate contexts (for example passing an array/record parameter), the compiler passes the storage reference transparently.
 - Older address-of style wording (including `@place`) is retired from the
   current source model.
@@ -785,6 +789,60 @@ Notes (v0.1):
 
 - `imm + ea` is not permitted; write `ea + imm`.
 - `ea` describes memory addresses. Z80 I/O port operands (e.g., `(C)` and `($imm8)` used by `in`/`out`) are not `ea` expressions.
+
+### 7.2.1 Typed Reinterpretation
+
+ZAX supports typed reinterpretation using angle-bracket cast syntax:
+
+```zax
+<Type>base.tail
+```
+
+Meaning:
+
+- `base` is treated as the address of a value of type `Type`
+- the result is a typed storage base
+- normal storage-path traversal then applies:
+  - `.field`
+  - `[index]`
+
+Examples:
+
+```zax
+ld a, <Sprite>hl.flags
+ld hl, <Header>ptr.checksum
+ld a, <TileMap>(map_base + 32)[row][col]
+```
+
+Rules:
+
+- v1 requires at least one tail segment after the cast head:
+  - valid: `<Sprite>hl.flags`
+  - valid: `<Sprite[8]>ptr[2]`
+  - invalid: `<Sprite>hl`
+- valid base forms in v1 are:
+  - `HL`, `DE`, `BC`, `IX`, `IY`
+  - scalar names of type `word` or `addr`
+  - parenthesized base-plus-constant or base-minus-constant forms built from
+    those bases
+- invalid base forms in v1 include:
+  - `AF`
+  - `SP`
+  - bare aggregate storage names
+  - general immediate expressions
+  - nested casts
+
+Semantics:
+
+- The cast is local to the expression. It does not permanently type a register
+  or scalar name.
+- If the final selected target is scalar, ordinary scalar value/store semantics
+  apply in instruction and call contexts.
+- If the final selected target is aggregate, the result remains a storage base
+  for further traversal or aggregate use.
+
+This feature extends the existing typed storage-path model. It does not replace
+direct typed `ld`, and it is not coupled to any source-language `addr` feature.
 
 ---
 
@@ -1902,7 +1960,7 @@ end
 
 ### 3.3 Location and Dereference Matchers
 
-**`ea`** matches a storage-location expression as defined in Section 7.2 of the spec: storage names (`data`/`bin` names), function-local names (as frame slots), field access (`rec.field`), array indexing (`arr[i]`), and address arithmetic (`ea + imm`, `ea - imm`). When substituted, the parameter carries the location expression _without_ implicit parentheses, so the op body decides whether to use it as a location or an explicitly dereferenced operand.
+**`ea`** matches a storage-location expression as defined in Section 7.2 of the spec: storage names (`data`/`bin` names), function-local names (as frame slots), field access (`rec.field`), array indexing (`arr[i]`), typed reinterpretation (`<Type>base.tail`), and address arithmetic (`ea + imm`, `ea - imm`). When substituted, the parameter carries the location expression _without_ implicit parentheses, so the op body decides whether to use it as a location or an explicitly dereferenced operand.
 
 The main spec's runtime-atom expression budget applies to `ea` matching. In v0.2, matcher acceptance does not bypass that budget: if a call-site `ea` contains too many runtime atoms, the invocation is rejected before or during semantic validation.
 

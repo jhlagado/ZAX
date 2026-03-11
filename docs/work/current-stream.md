@@ -10,16 +10,18 @@ direction.
 - Direct typed `ld` forms remain the active language surface.
 - Grouped and ranged `select case` values are implemented.
 - Parser/grammar convergence work is active again.
-- Typed reinterpretation syntax `<Type>base.tail` is now active design work.
+- Typed reinterpretation syntax `<Type>base.tail` now has accepted design and
+  grammar/spec docs; implementation is the remaining step.
 
 ### Immediate priority
 
 1. Keep the spec, quick guide, and user-facing examples aligned with the
    implemented language.
 2. Continue parser/grammar convergence work.
-3. Define typed reinterpretation syntax as an additive feature on top of the
-   current direct typed-`ld` model using
-   `docs/design/typed-reinterpretation-cast.md` as the design anchor.
+3. Implement typed reinterpretation against the accepted docs set:
+   - `docs/design/typed-reinterpretation-cast.md`
+   - `docs/spec/zax-grammar.ebnf.md`
+   - `docs/spec/zax-spec.md`
 
 ### Deferred until re-planned
 
