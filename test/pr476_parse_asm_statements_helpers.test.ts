@@ -53,6 +53,34 @@ describe('PR476 asm statement parsing extraction', () => {
     expect(diagnostics[0]?.message).toContain('"if" expects a condition code');
   });
 
+  it('validates structured-control condition codes at parse time', () => {
+    const diagnostics: Diagnostic[] = [];
+    const repeatStack: AsmControlFrame[] = [{ kind: 'Repeat', openSpan: zeroSpan }];
+
+    expect(parseAsmStatement(file.path, 'if nope', zeroSpan, diagnostics, [])).toMatchObject({
+      kind: 'If',
+      cc: '__missing__',
+    });
+    expect(
+      parseAsmStatement(file.path, 'while nope', zeroSpan, diagnostics, []),
+    ).toMatchObject({
+      kind: 'While',
+      cc: '__missing__',
+    });
+    expect(
+      parseAsmStatement(file.path, 'until nope', zeroSpan, diagnostics, repeatStack),
+    ).toMatchObject({
+      kind: 'Until',
+      cc: '__missing__',
+    });
+    expect(repeatStack).toHaveLength(0);
+    expect(diagnostics.map((d) => d.message)).toEqual([
+      'Invalid if condition code "nope": expected z, nz, c, nc, pe, po, m, p.',
+      'Invalid while condition code "nope": expected z, nz, c, nc, pe, po, m, p.',
+      'Invalid until condition code "nope": expected z, nz, c, nc, pe, po, m, p.',
+    ]);
+  });
+
   it('falls back to instruction parsing for plain asm lines', () => {
     const diagnostics: Diagnostic[] = [];
     const parsed = parseAsmStatement(file.path, 'ld a, $12', zeroSpan, diagnostics, []);

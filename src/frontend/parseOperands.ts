@@ -9,6 +9,7 @@ import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
 import { immLiteral, parseImmExprFromText, parseNumberLiteral } from './parseImm.js';
 import { parseDiag as diag, parseDiagAtWithId } from './parseDiagnostics.js';
+import { ALL_REGISTER_NAMES, INDEX_REG16_NAMES, INDEX_REG8_NAMES } from './grammarData.js';
 
 function parseBalancedBracketContent(text: string): { inside: string; rest: string } | undefined {
   if (!text.startsWith('[')) return undefined;
@@ -79,10 +80,12 @@ export function parseEaIndexFromText(
     }
   }
   if (/^(HL|DE|BC)$/i.test(t)) {
-    return { kind: 'IndexReg16', span: indexSpan, reg: canonicalRegisterToken(t) };
+    const reg = canonicalRegisterToken(t);
+    if (INDEX_REG16_NAMES.has(reg)) return { kind: 'IndexReg16', span: indexSpan, reg };
   }
-  if (/^(A|B|C|D|E|H|L)$/i.test(t)) {
-    return { kind: 'IndexReg8', span: indexSpan, reg: canonicalRegisterToken(t) };
+  {
+    const reg = canonicalRegisterToken(t);
+    if (INDEX_REG8_NAMES.has(reg)) return { kind: 'IndexReg8', span: indexSpan, reg };
   }
 
   const imm = parseImmExprFromText(filePath, t, indexSpan, diagnostics, false);
@@ -173,8 +176,9 @@ export function parseAsmOperand(
     return undefined;
   }
 
-  if (/^(A|B|C|D|E|H|L|IXH|IXL|IYH|IYL|HL|DE|BC|SP|IX|IY|AF|AF'|I|R)$/i.test(t)) {
-    return { kind: 'Reg', span: operandSpan, name: canonicalRegisterToken(t) };
+  const canonicalRegister = canonicalRegisterToken(t);
+  if (ALL_REGISTER_NAMES.has(canonicalRegister)) {
+    return { kind: 'Reg', span: operandSpan, name: canonicalRegister };
   }
 
   const n = parseNumberLiteral(t);
