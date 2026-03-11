@@ -27,6 +27,7 @@ describe('#509 addressing pipeline builders', () => {
     ['globw', { kind: 'abs', baseLower: 'globw', addend: 0, typeExpr: wordArray() }],
     ['framew', { kind: 'stack', ixDisp: -8, typeExpr: wordArray() }],
     ['idxw', { kind: 'abs', baseLower: 'idxw', addend: 0, typeExpr: typeName('word') }],
+    ['idxa', { kind: 'stack', ixDisp: -10, typeExpr: typeName('addr') }],
   ]);
 
   const helpers = createAddressingPipelineBuilders({
@@ -48,7 +49,12 @@ describe('#509 addressing pipeline builders', () => {
       if (ea.kind === 'EaName') return baseResolutions.get(ea.name.toLowerCase())?.typeExpr;
       return undefined;
     },
-    resolveScalarBinding: (name) => (name.toLowerCase() === 'idxw' ? 'word' : undefined),
+    resolveScalarBinding: (name) => {
+      const lower = name.toLowerCase();
+      if (lower === 'idxw') return 'word';
+      if (lower === 'idxa') return 'addr';
+      return undefined;
+    },
     resolveScalarKind: (typeExpr) =>
       typeExpr.kind === 'TypeName' && (typeExpr.name === 'word' || typeExpr.name === 'addr')
         ? typeExpr.name
@@ -110,6 +116,42 @@ describe('#509 addressing pipeline builders', () => {
       'ld d, (ix-$07)',
       'ld hl, (idxw)',
       'add hl, hl',
+      'add hl, de',
+    ]);
+  });
+
+  it('routes named word/address byte indices through structured byte pipelines', () => {
+    const framePipe = helpers.buildEaBytePipeline(
+      {
+        kind: 'EaIndex',
+        span,
+        base: eaName('frameb'),
+        index: { kind: 'IndexImm', span, value: { kind: 'ImmName', span, name: 'idxw' } },
+      },
+      span,
+    );
+    const globPipe = helpers.buildEaBytePipeline(
+      {
+        kind: 'EaIndex',
+        span,
+        base: eaName('globb'),
+        index: { kind: 'IndexImm', span, value: { kind: 'ImmName', span, name: 'idxa' } },
+      },
+      span,
+    );
+
+    expect(renderStepPipeline(framePipe ?? [])).toEqual([
+      'ld e, (ix-$04)',
+      'ld d, (ix-$03)',
+      'ld hl, (idxw)',
+      'add hl, de',
+    ]);
+    expect(renderStepPipeline(globPipe ?? [])).toEqual([
+      'ld de, globb',
+      'ex de, hl',
+      'ld e, (ix-$0a)',
+      'ld d, (ix-$09)',
+      'ex de, hl',
       'add hl, de',
     ]);
   });
