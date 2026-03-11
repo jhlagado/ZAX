@@ -355,6 +355,20 @@ end
 
 For non-scalar fields (arrays, nested records), the place expression remains an address and no automatic dereference is inserted.
 
+Typed reinterpretation extends that same place-expression model to runtime
+address values:
+
+```zax
+ld a, <Sprite>hl.flags
+ld hl, <Header>ptr.checksum
+```
+
+The cast does not permanently type `HL` or `ptr`. It only supplies a typed
+storage base for the following field/index path.
+
+Implementation note: this surface is now part of the accepted language docs,
+but compiler support may lag while implementation work catches up.
+
 ### 3.6 Combining Field Access and Indexing
 
 Indexed element access and field access compose:
