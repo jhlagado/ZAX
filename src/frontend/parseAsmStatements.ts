@@ -1,9 +1,15 @@
 import type { AsmItemNode, SourceSpan } from './ast.js';
 import type { Diagnostic } from '../diagnostics/types.js';
+import {
+  isBareAsmControlKeyword,
+  parseAsmConditionKeyword,
+  parseAsmKeywordTail,
+  parseSelectOperandFromText,
+} from './parseAsmControlHelpers.js';
+import { parseCaseValuesFromText } from './parseAsmCaseValues.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import { immLiteral } from './parseImm.js';
-import { parseAsmInstruction, parseAsmOperand } from './parseOperands.js';
-import { parseCaseValuesFromText } from './parseAsmCaseValues.js';
+import { parseAsmInstruction } from './parseOperands.js';
 import {
   ASM_CONTROL_KEYWORDS,
   CONDITION_CODES,
@@ -83,7 +89,7 @@ function firstAsmControlKeyword(text: string): string | undefined {
 
 function parseRepeatStatement(trimmed: string, ctx: ParseAsmStatementContext): ParsedAsmStatement {
   const { filePath, stmtSpan, diagnostics, controlStack } = ctx;
-  if (trimmed.toLowerCase() === 'repeat') {
+  if (isBareAsmControlKeyword(trimmed, 'repeat')) {
     controlStack.push({ kind: 'Repeat', openSpan: stmtSpan });
     return { kind: 'Repeat', span: stmtSpan };
   }
@@ -96,7 +102,7 @@ function parseRepeatStatement(trimmed: string, ctx: ParseAsmStatementContext): P
 
 function parseElseStatement(trimmed: string, ctx: ParseAsmStatementContext): ParsedAsmStatement {
   const { filePath, stmtSpan, diagnostics, controlStack } = ctx;
-  if (trimmed.toLowerCase() !== 'else') {
+  if (!isBareAsmControlKeyword(trimmed, 'else')) {
     diag(diagnostics, filePath, `"else" does not take operands`, {
       line: stmtSpan.start.line,
       column: stmtSpan.start.column,
@@ -137,7 +143,7 @@ function parseElseStatement(trimmed: string, ctx: ParseAsmStatementContext): Par
 
 function parseEndStatement(trimmed: string, ctx: ParseAsmStatementContext): ParsedAsmStatement {
   const { filePath, stmtSpan, diagnostics, controlStack } = ctx;
-  if (trimmed.toLowerCase() !== 'end') {
+  if (!isBareAsmControlKeyword(trimmed, 'end')) {
     diag(diagnostics, filePath, `"end" does not take operands`, {
       line: stmtSpan.start.line,
       column: stmtSpan.start.column,
@@ -173,50 +179,45 @@ function parseEndStatement(trimmed: string, ctx: ParseAsmStatementContext): Pars
 function parseIfStatement(trimmed: string, ctx: ParseAsmStatementContext): ParsedAsmStatement {
   const { filePath, stmtSpan, diagnostics, controlStack, options } = ctx;
   const missingCc = '__missing__';
-  const ifMatch = /^if\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
-  if (ifMatch) {
-    const cc = parseConditionCode(filePath, 'if', ifMatch[1]!, stmtSpan, diagnostics, options);
+  const parsed = parseAsmConditionKeyword(trimmed, 'if');
+  if (parsed.kind === 'value') {
+    const cc = parseConditionCode(filePath, 'if', parsed.value, stmtSpan, diagnostics, options);
     controlStack.push({ kind: 'If', elseSeen: false, openSpan: stmtSpan });
     return { kind: 'If', span: stmtSpan, cc };
   }
-  if (trimmed.toLowerCase() === 'if') {
-    diag(diagnostics, filePath, `"if" expects a condition code`, {
-      line: stmtSpan.start.line,
-      column: stmtSpan.start.column,
-    });
-    controlStack.push({ kind: 'If', elseSeen: false, openSpan: stmtSpan });
-    return { kind: 'If', span: stmtSpan, cc: missingCc };
-  }
+
   diag(diagnostics, filePath, `"if" expects a condition code`, {
     line: stmtSpan.start.line,
     column: stmtSpan.start.column,
   });
-  controlStack.push({ kind: 'If', elseSeen: false, openSpan: stmtSpan, recoverOnly: true });
+  controlStack.push({
+    kind: 'If',
+    elseSeen: false,
+    openSpan: stmtSpan,
+    ...(parsed.kind === 'invalid' ? { recoverOnly: true } : {}),
+  });
   return { kind: 'If', span: stmtSpan, cc: missingCc };
 }
 
 function parseWhileStatement(trimmed: string, ctx: ParseAsmStatementContext): ParsedAsmStatement {
   const { filePath, stmtSpan, diagnostics, controlStack, options } = ctx;
   const missingCc = '__missing__';
-  const whileMatch = /^while\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
-  if (whileMatch) {
-    const cc = parseConditionCode(filePath, 'while', whileMatch[1]!, stmtSpan, diagnostics, options);
+  const parsed = parseAsmConditionKeyword(trimmed, 'while');
+  if (parsed.kind === 'value') {
+    const cc = parseConditionCode(filePath, 'while', parsed.value, stmtSpan, diagnostics, options);
     controlStack.push({ kind: 'While', openSpan: stmtSpan });
     return { kind: 'While', span: stmtSpan, cc };
   }
-  if (trimmed.toLowerCase() === 'while') {
-    diag(diagnostics, filePath, `"while" expects a condition code`, {
-      line: stmtSpan.start.line,
-      column: stmtSpan.start.column,
-    });
-    controlStack.push({ kind: 'While', openSpan: stmtSpan });
-    return { kind: 'While', span: stmtSpan, cc: missingCc };
-  }
+
   diag(diagnostics, filePath, `"while" expects a condition code`, {
     line: stmtSpan.start.line,
     column: stmtSpan.start.column,
   });
-  controlStack.push({ kind: 'While', openSpan: stmtSpan, recoverOnly: true });
+  controlStack.push({
+    kind: 'While',
+    openSpan: stmtSpan,
+    ...(parsed.kind === 'invalid' ? { recoverOnly: true } : {}),
+  });
   return { kind: 'While', span: stmtSpan, cc: missingCc };
 }
 
@@ -232,7 +233,8 @@ function parseUntilStatement(trimmed: string, ctx: ParseAsmStatementContext): Pa
     return undefined;
   }
 
-  if (trimmed.toLowerCase() === 'until') {
+  const parsed = parseAsmConditionKeyword(trimmed, 'until');
+  if (parsed.kind === 'missing') {
     diag(diagnostics, filePath, `"until" expects a condition code`, {
       line: stmtSpan.start.line,
       column: stmtSpan.start.column,
@@ -241,16 +243,8 @@ function parseUntilStatement(trimmed: string, ctx: ParseAsmStatementContext): Pa
     return { kind: 'Until', span: stmtSpan, cc: missingCc };
   }
 
-  const untilMatch = /^until\s+([A-Za-z][A-Za-z0-9]*)$/i.exec(trimmed);
-  if (untilMatch) {
-    const cc = parseConditionCode(
-      filePath,
-      'until',
-      untilMatch[1]!,
-      stmtSpan,
-      diagnostics,
-      options,
-    );
+  if (parsed.kind === 'value') {
+    const cc = parseConditionCode(filePath, 'until', parsed.value, stmtSpan, diagnostics, options);
     controlStack.pop();
     return { kind: 'Until', span: stmtSpan, cc };
   }
@@ -271,7 +265,8 @@ function parseSelectStatement(trimmed: string, ctx: ParseAsmStatementContext): P
     selector: { kind: 'Imm' as const, span: stmtSpan, expr: immLiteral(filePath, stmtSpan, 0) },
   };
 
-  if (trimmed.toLowerCase() === 'select') {
+  const parsed = parseSelectOperandFromText(filePath, trimmed, stmtSpan, diagnostics);
+  if (parsed.kind === 'missing') {
     diag(diagnostics, filePath, `"select" expects a selector`, {
       line: stmtSpan.start.line,
       column: stmtSpan.start.column,
@@ -280,26 +275,9 @@ function parseSelectStatement(trimmed: string, ctx: ParseAsmStatementContext): P
     return fallbackNode;
   }
 
-  const selectMatch = /^select\s+(.+)$/i.exec(trimmed);
-  if (selectMatch) {
-    const selectorText = selectMatch[1]!.trim();
-    const selector = parseAsmOperand(filePath, selectorText, stmtSpan, diagnostics, false);
-    if (!selector) {
-      diag(diagnostics, filePath, `Invalid select selector`, {
-        line: stmtSpan.start.line,
-        column: stmtSpan.start.column,
-      });
-      controlStack.push({
-        kind: 'Select',
-        elseSeen: false,
-        armSeen: false,
-        openSpan: stmtSpan,
-        recoverOnly: true,
-      });
-      return fallbackNode;
-    }
+  if (parsed.kind === 'value') {
     controlStack.push({ kind: 'Select', elseSeen: false, armSeen: false, openSpan: stmtSpan });
-    return { kind: 'Select', span: stmtSpan, selector };
+    return { kind: 'Select', span: stmtSpan, selector: parsed.value };
   }
 
   diag(diagnostics, filePath, `Invalid select selector`, {
@@ -335,7 +313,8 @@ function parseCaseStatement(trimmed: string, ctx: ParseAsmStatementContext): Par
   }
   top.armSeen = true;
 
-  if (trimmed.toLowerCase() === 'case') {
+  const parsed = parseAsmKeywordTail(trimmed, 'case');
+  if (parsed.kind === 'missing') {
     diag(diagnostics, filePath, `"case" expects a value`, {
       line: stmtSpan.start.line,
       column: stmtSpan.start.column,
@@ -343,10 +322,8 @@ function parseCaseStatement(trimmed: string, ctx: ParseAsmStatementContext): Par
     return undefined;
   }
 
-  const caseMatch = /^case\s+(.+)$/i.exec(trimmed);
-  if (caseMatch) {
-    const exprText = caseMatch[1]!.trim();
-    const values = parseCaseValuesFromText(filePath, exprText, stmtSpan, diagnostics);
+  if (parsed.kind === 'value') {
+    const values = parseCaseValuesFromText(filePath, parsed.value, stmtSpan, diagnostics);
     if (!values) {
       diag(diagnostics, filePath, `Invalid case value`, {
         line: stmtSpan.start.line,
