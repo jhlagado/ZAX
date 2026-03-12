@@ -137,12 +137,14 @@ describe('#711 wide EAW scaling', () => {
         if (ea.kind === 'EaName' && ea.name === 'globHuge') return hugeArray;
         return undefined;
       },
+      resolveAggregateType: () => undefined,
       resolveScalarBinding: () => undefined,
       resolveScalarKind: () => undefined,
       sizeOfTypeExpr: (typeExpr) => {
         if (typeExpr.kind === 'TypeName' && typeExpr.name === 'wide32768') return 0x8000;
         return undefined;
       },
+      preRoundSizeOfTypeExpr: () => undefined,
       evalImmExpr: () => undefined,
       evalImmNoDiag: () => undefined,
       emitInstr: (head: string, operands: AsmOperandNode[]) => {
