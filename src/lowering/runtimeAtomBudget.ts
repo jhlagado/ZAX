@@ -61,6 +61,8 @@ export function createRuntimeAtomBudgetHelpers(ctx: RuntimeAtomBudgetContext) {
         return ctx.resolveScalarBinding(ea.name) || runtimeAtomRegisterNames.has(ea.name.toUpperCase())
           ? 1
           : 0;
+      case 'EaReinterpret':
+        return countRuntimeAtomsInEaExpr(ea.base);
       case 'EaField':
         return countRuntimeAtomsInEaExpr(ea.base);
       case 'EaAdd':
@@ -107,6 +109,8 @@ export function createRuntimeAtomBudgetHelpers(ctx: RuntimeAtomBudgetContext) {
         if (isBoundStorageName) return 0;
         return runtimeAtomRegisterNames.has(ea.name.toUpperCase()) ? 1 : 0;
       }
+      case 'EaReinterpret':
+        return countRuntimeAtomsForDirectCallSiteEa(ea.base);
       case 'EaField':
         return countRuntimeAtomsForDirectCallSiteEa(ea.base);
       case 'EaAdd':
