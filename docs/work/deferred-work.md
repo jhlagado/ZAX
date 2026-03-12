@@ -26,13 +26,14 @@ For each item record:
   - this is separate from current parser/spec cleanup work
 
 ### Typed cast surface `<Type>base.tail`
-- Status: implementation deferred; docs accepted
-- Why deferred: implementation should wait for parser/lowering work to be
-  scheduled against the accepted docs set
+- Status: landed; monitor follow-up cleanup only
+- Why deferred: the feature itself is no longer deferred, but any further
+  expansion beyond the accepted v1 shape should wait until post-landing review
+  is complete
 - Preconditions:
-  - parser and lowering implementation tickets created from the accepted docs
-    set
+  - post-landing docs/spec cleanup completed
+  - any remaining `LANG-02` implementation tickets closed or re-scoped
 - Source:
   - GitHub issue `#736 (LANG-02)`
 - Notes:
-  - intended as additive language work, not as part of an `addr` revival
+  - landed as additive language work, not as part of an `addr` revival
