@@ -26,6 +26,8 @@ export function cloneEaExpr(ea: EaExprNode): EaExprNode {
   switch (ea.kind) {
     case 'EaName':
       return { ...ea };
+    case 'EaReinterpret':
+      return { ...ea, base: cloneEaExpr(ea.base) };
     case 'EaField':
       return { ...ea, base: cloneEaExpr(ea.base) };
     case 'EaIndex':
@@ -63,6 +65,7 @@ export function cloneOperand(op: AsmOperandNode): AsmOperandNode {
 
 export function flattenEaDottedName(ea: EaExprNode): string | undefined {
   if (ea.kind === 'EaName') return ea.name;
+  if (ea.kind === 'EaReinterpret') return undefined;
   if (ea.kind === 'EaField') {
     const base = flattenEaDottedName(ea.base);
     return base ? `${base}.${ea.field}` : undefined;

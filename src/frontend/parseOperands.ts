@@ -7,20 +7,29 @@ import type {
 } from './ast.js';
 import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
-import { immLiteral, parseImmExprFromText, parseNumberLiteral } from './parseImm.js';
+import {
+  immLiteral,
+  parseImmExprFromText,
+  parseNumberLiteral,
+  parseTypeExprFromText,
+} from './parseImm.js';
 import { parseDiag as diag, parseDiagAtWithId } from './parseDiagnostics.js';
 import { ALL_REGISTER_NAMES, INDEX_REG16_NAMES, INDEX_REG8_NAMES } from './grammarData.js';
 
-function parseBalancedBracketContent(text: string): { inside: string; rest: string } | undefined {
-  if (!text.startsWith('[')) return undefined;
+function parseBalancedContent(
+  text: string,
+  open: '[' | '(',
+  close: ']' | ')',
+): { inside: string; rest: string } | undefined {
+  if (!text.startsWith(open)) return undefined;
   let depth = 0;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i]!;
-    if (ch === '[') {
+    if (ch === open) {
       depth++;
       continue;
     }
-    if (ch !== ']') continue;
+    if (ch !== close) continue;
     depth--;
     if (depth === 0) {
       return {
@@ -33,9 +42,144 @@ function parseBalancedBracketContent(text: string): { inside: string; rest: stri
   return undefined;
 }
 
+function parseBalancedBracketContent(text: string): { inside: string; rest: string } | undefined {
+  return parseBalancedContent(text, '[', ']');
+}
+
+function parseBalancedParenContent(text: string): { inside: string; rest: string } | undefined {
+  return parseBalancedContent(text, '(', ')');
+}
+
 export function canonicalRegisterToken(token: string): string {
   if (/^af'$/i.test(token)) return "AF'";
   return token.toUpperCase();
+}
+
+type ParsedEaSegments = {
+  expr: EaExprNode;
+  rest: string;
+  sawSegment: boolean;
+};
+
+function parseEaSegments(
+  filePath: string,
+  expr: EaExprNode,
+  initialRest: string,
+  exprSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+): ParsedEaSegments | undefined {
+  let rest = initialRest.trimStart();
+  let sawSegment = false;
+
+  while (rest.length > 0) {
+    if (rest.startsWith('.')) {
+      const m = /^\.([A-Za-z_][A-Za-z0-9_]*)/.exec(rest);
+      if (!m) return undefined;
+      expr = { kind: 'EaField', span: exprSpan, base: expr, field: m[1]! };
+      rest = rest.slice(m[0].length).trimStart();
+      sawSegment = true;
+      continue;
+    }
+    if (rest.startsWith('[')) {
+      const bracket = parseBalancedBracketContent(rest);
+      if (!bracket) return undefined;
+      const index = parseEaIndexFromText(filePath, bracket.inside, exprSpan, diagnostics);
+      if (!index) return undefined;
+      expr = { kind: 'EaIndex', span: exprSpan, base: expr, index };
+      rest = bracket.rest.trimStart();
+      sawSegment = true;
+      continue;
+    }
+    break;
+  }
+
+  return { expr, rest, sawSegment };
+}
+
+function parseTypedReinterpretBaseAtom(
+  text: string,
+  exprSpan: SourceSpan,
+): { base: EaExprNode; rest: string } | undefined {
+  const regMatch = /^(HL|DE|BC|IX|IY)(?=$|[^A-Za-z0-9_'])/i.exec(text);
+  if (regMatch) {
+    return {
+      base: { kind: 'EaName', span: exprSpan, name: canonicalRegisterToken(regMatch[1]!) },
+      rest: text.slice(regMatch[0].length).trimStart(),
+    };
+  }
+
+  const nameMatch = /^([A-Za-z_][A-Za-z0-9_]*)/.exec(text);
+  if (!nameMatch) return undefined;
+  if (ALL_REGISTER_NAMES.has(canonicalRegisterToken(nameMatch[1]!))) return undefined;
+  return {
+    base: { kind: 'EaName', span: exprSpan, name: nameMatch[1]! },
+    rest: text.slice(nameMatch[0].length).trimStart(),
+  };
+}
+
+function parseTypedReinterpretBase(
+  filePath: string,
+  text: string,
+  exprSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+): { base: EaExprNode; rest: string } | undefined {
+  const trimmed = text.trimStart();
+  if (!trimmed.startsWith('(')) {
+    return parseTypedReinterpretBaseAtom(trimmed, exprSpan);
+  }
+
+  const grouped = parseBalancedParenContent(trimmed);
+  if (!grouped) return undefined;
+  const inner = grouped.inside.trim();
+  const atom = parseTypedReinterpretBaseAtom(inner, exprSpan);
+  if (!atom) return undefined;
+  const opMatch = /^([+-])\s*(.+)$/.exec(atom.rest);
+  if (!opMatch) return undefined;
+  const offset = parseImmExprFromText(filePath, opMatch[2]!, exprSpan, diagnostics, false);
+  if (!offset) return undefined;
+
+  return {
+    base:
+      opMatch[1] === '+'
+        ? { kind: 'EaAdd', span: exprSpan, base: atom.base, offset }
+        : { kind: 'EaSub', span: exprSpan, base: atom.base, offset },
+    rest: grouped.rest.trimStart(),
+  };
+}
+
+function parseTypedReinterpretHead(
+  filePath: string,
+  text: string,
+  exprSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+): { expr: EaExprNode; rest: string } | undefined {
+  if (!text.startsWith('<')) return undefined;
+  const closeIndex = text.indexOf('>');
+  if (closeIndex <= 1) return undefined;
+
+  const typeText = text.slice(1, closeIndex).trim();
+  const typeExpr = parseTypeExprFromText(typeText, exprSpan, {
+    allowInferredArrayLength: false,
+  });
+  if (!typeExpr) return undefined;
+
+  const parsedBase = parseTypedReinterpretBase(
+    filePath,
+    text.slice(closeIndex + 1),
+    exprSpan,
+    diagnostics,
+  );
+  if (!parsedBase) return undefined;
+
+  const segments = parseEaSegments(
+    filePath,
+    { kind: 'EaReinterpret', span: exprSpan, typeExpr, base: parsedBase.base },
+    parsedBase.rest,
+    exprSpan,
+    diagnostics,
+  );
+  if (!segments || !segments.sawSegment) return undefined;
+  return { expr: segments.expr, rest: segments.rest };
 }
 
 export function parseEaIndexFromText(
@@ -108,29 +252,22 @@ export function parseEaExprFromText(
   diagnostics: Diagnostic[],
 ): EaExprNode | undefined {
   let rest = exprText.trim();
-  const baseMatch = /^([A-Za-z_][A-Za-z0-9_]*)/.exec(rest);
-  if (!baseMatch) return undefined;
-  let expr: EaExprNode = { kind: 'EaName', span: exprSpan, name: baseMatch[1]! };
-  rest = rest.slice(baseMatch[0].length).trimStart();
+  let expr: EaExprNode;
 
-  while (rest.length > 0) {
-    if (rest.startsWith('.')) {
-      const m = /^\.([A-Za-z_][A-Za-z0-9_]*)/.exec(rest);
-      if (!m) return undefined;
-      expr = { kind: 'EaField', span: exprSpan, base: expr, field: m[1]! };
-      rest = rest.slice(m[0].length).trimStart();
-      continue;
-    }
-    if (rest.startsWith('[')) {
-      const bracket = parseBalancedBracketContent(rest);
-      if (!bracket) return undefined;
-      const index = parseEaIndexFromText(filePath, bracket.inside, exprSpan, diagnostics);
-      if (!index) return undefined;
-      expr = { kind: 'EaIndex', span: exprSpan, base: expr, index };
-      rest = bracket.rest.trimStart();
-      continue;
-    }
-    break;
+  const reinterpret = parseTypedReinterpretHead(filePath, rest, exprSpan, diagnostics);
+  if (reinterpret) {
+    expr = reinterpret.expr;
+    rest = reinterpret.rest;
+  } else {
+    const baseMatch = /^([A-Za-z_][A-Za-z0-9_]*)/.exec(rest);
+    if (!baseMatch) return undefined;
+    expr = { kind: 'EaName', span: exprSpan, name: baseMatch[1]! };
+    rest = rest.slice(baseMatch[0].length).trimStart();
+
+    const segments = parseEaSegments(filePath, expr, rest, exprSpan, diagnostics);
+    if (!segments) return undefined;
+    expr = segments.expr;
+    rest = segments.rest;
   }
 
   if (rest.length > 0) {
