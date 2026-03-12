@@ -129,6 +129,8 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
     switch (ea.kind) {
       case 'EaName':
         return ea.name;
+      case 'EaReinterpret':
+        return resolveEaBaseName(ea.base);
       case 'EaField':
       case 'EaIndex':
       case 'EaAdd':
@@ -162,6 +164,10 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
       case 'EaAdd':
       case 'EaSub':
         return resolveEaTypeExprInternal(ea.base, visitingAliases);
+      case 'EaReinterpret': {
+        const resolved = unwrapTypeAlias(ea.typeExpr);
+        return resolved ?? ea.typeExpr;
+      }
       case 'EaField': {
         const baseType = resolveEaTypeExprInternal(ea.base, visitingAliases);
         if (!baseType) return undefined;
