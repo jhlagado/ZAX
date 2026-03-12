@@ -31,6 +31,68 @@ export function createEaResolutionHelpers(ctx: EaResolutionContext) {
   const resolveAliasTarget = (nameLower: string): EaExprNode | undefined =>
     ctx.getLocalAliasTargets().get(nameLower) ?? ctx.moduleAliasTargets.get(nameLower);
 
+  const reinterpretBaseMessage = (base: EaExprNode): string => {
+    if (base.kind === 'EaName') {
+      return `Invalid reinterpret base "${base.name}": expected HL/DE/BC/IX/IY, a scalar word/addr name, or a parenthesized base +/- imm form built from one of those.`;
+    }
+    return 'Invalid reinterpret base: expected HL/DE/BC/IX/IY, a scalar word/addr name, or a parenthesized base +/- imm form built from one of those.';
+  };
+
+  const hasKnownType = (typeExpr: TypeExprNode): boolean =>
+    ctx.resolveScalarKind(typeExpr) !== undefined ||
+    ctx.resolveAggregateType(typeExpr) !== undefined ||
+    ctx.sizeOfTypeExpr(typeExpr) !== undefined;
+
+  const resolveReinterpretStackBase = (
+    expr: EaExprNode,
+  ): { kind: 'indirect'; ixDisp: number; addend: number } | { kind: 'runtime' } | { kind: 'invalid'; message: string } => {
+    switch (expr.kind) {
+      case 'EaName': {
+        const upper = expr.name.toUpperCase();
+        if (upper === 'HL' || upper === 'DE' || upper === 'BC' || upper === 'IX' || upper === 'IY') {
+          return { kind: 'runtime' };
+        }
+
+        const lower = expr.name.toLowerCase();
+        const slotOff = ctx.stackSlotOffsets.get(lower);
+        if (slotOff !== undefined) {
+          const slotType = ctx.stackSlotTypes.get(lower);
+          const scalar = slotType ? ctx.resolveScalarKind(slotType) : undefined;
+          if (scalar === 'word' || scalar === 'addr') {
+            return { kind: 'indirect', ixDisp: slotOff, addend: 0 };
+          }
+          return { kind: 'invalid', message: reinterpretBaseMessage(expr) };
+        }
+
+        const storageType = ctx.storageTypes.get(lower);
+        if (storageType) {
+          const scalar = ctx.resolveScalarKind(storageType);
+          if (scalar === 'word' || scalar === 'addr') return { kind: 'runtime' };
+          return { kind: 'invalid', message: reinterpretBaseMessage(expr) };
+        }
+
+        if (resolveAliasTarget(lower)) return { kind: 'runtime' };
+        return { kind: 'invalid', message: reinterpretBaseMessage(expr) };
+      }
+      case 'EaAdd':
+      case 'EaSub': {
+        const base = resolveReinterpretStackBase(expr.base);
+        if (base.kind !== 'indirect') return base;
+        const delta = ctx.evalImmNoDiag(expr.offset);
+        if (delta === undefined) {
+          return { kind: 'invalid', message: reinterpretBaseMessage(expr.base) };
+        }
+        return {
+          kind: 'indirect',
+          ixDisp: base.ixDisp,
+          addend: base.addend + (expr.kind === 'EaAdd' ? delta : -delta),
+        };
+      }
+      default:
+        return { kind: 'invalid', message: reinterpretBaseMessage(expr) };
+    }
+  };
+
   const resolveEa = (ea: EaExprNode, span: SourceSpan): EaResolution | undefined => {
     const go = (expr: EaExprNode, visitingAliases: Set<string>): EaResolution | undefined => {
       switch (expr.kind) {
@@ -66,6 +128,18 @@ export function createEaResolutionHelpers(ctx: EaResolutionContext) {
           }
           const typeExpr = ctx.storageTypes.get(baseLower);
           return { kind: 'abs', baseLower, addend: 0, ...(typeExpr ? { typeExpr } : {}) };
+        }
+        case 'EaReinterpret': {
+          if (!hasKnownType(expr.typeExpr)) return undefined;
+          const base = resolveReinterpretStackBase(expr.base);
+          if (base.kind === 'invalid') return undefined;
+          if (base.kind === 'runtime') return undefined;
+          return {
+            kind: 'indirect',
+            ixDisp: base.ixDisp,
+            addend: base.addend,
+            typeExpr: expr.typeExpr,
+          };
         }
         case 'EaAdd':
         case 'EaSub': {
