@@ -1,8 +1,8 @@
 # Type System Reform Plan
 
 **Date:** 2026-03-07
-**Status:** Partial historical record; refresh on 2026-03-12
-**Validated against:** `main` at `4d626c2`
+**Status:** Historical design record with one remaining active thread (Phase D)
+**Validated against:** `main` at `2f25068`
 
 This document originally proposed four phases of work to fix the ZAX type
 system, layout engine, and addressing pipeline.
@@ -21,7 +21,7 @@ record:
 - Phase D remains active design/work.
 
 Do not create new implementation tickets from this document without first
-checking current `main`.
+checking current `main`. Only Phase D should be treated as live work.
 
 ---
 
