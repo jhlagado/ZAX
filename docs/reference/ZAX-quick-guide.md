@@ -133,10 +133,10 @@ The full CLI contract is in `docs/spec/zax-spec.md` Appendix D.
 | `byte` | 1            | 8-bit unsigned                                                 |
 | `word` | 2            | 16-bit unsigned                                                |
 | `addr` | 2            | 16-bit address; semantic signal for "holds a memory address"   |
-| `ptr`  | 2            | 16-bit pointer; untyped in v0.2 (no `ptr<T>`)                  |
+| `ptr`  | 2            | 16-bit pointer; untyped in the current language (no `ptr<T>`)  |
 | `void` | —            | Return type only; not valid as a storage, field, or param type |
 
-There are no signed storage types in v0.2.
+There are no signed storage types in the current language.
 
 `ptr` and `addr` are identical in size and code generation. The distinction is semantic intent: `addr` signals "this holds a data address," `ptr` signals "this holds a pointer to something." Use whichever communicates your intent more clearly; the compiler treats them identically.
 
@@ -169,7 +169,7 @@ section data vars at $8000
 end
 ```
 
-Aggregate record initializer syntax for named `data` sections (positional or named-field) is deferred past v0.2. For initialized composite data, use `data` declarations.
+Aggregate record initializer syntax for named `data` sections (positional or named-field) is deferred in the current language. For initialized composite data, use `data` declarations.
 
 ### 2.3 `data` — Initialized Storage
 
@@ -282,7 +282,7 @@ ld a, sprite.flags      ; value semantics: load the byte stored in sprite.flags
 ld sprite.flags, a      ; value semantics: store A into sprite.flags
 ```
 
-There is no general-purpose source-level address-of operator in the normative v0.2 model. Effective addresses are a lowering detail unless a construct explicitly consumes an `ea` storage-location operand.
+There is no general-purpose source-level address-of operator in the current normative model. Effective addresses are a lowering detail unless a construct explicitly consumes an `ea` storage-location operand.
 
 ### 3.2 Valid Index Forms
 
@@ -299,9 +299,9 @@ Inside `arr[...]`, only the following forms are valid:
 
 Anything else inside `[...]` is a compile error. In particular: expressions involving arithmetic (`i + j`, `i * 2`, `i << 1`), arbitrary function calls, or other non-register forms are not valid index expressions. If you need a computed index, compute it into a register first.
 
-### 3.3 The Critical v0.2 Distinction: `arr[HL]` vs `arr[(HL)]`
+### 3.3 The Critical Distinction: `arr[HL]` vs `arr[(HL)]`
 
-This is the most common migration mistake from v0.1:
+This is one of the most common indexing mistakes:
 
 ```zax
 arr[HL]     ; the index IS the 16-bit value in HL (direct register index)
@@ -312,7 +312,7 @@ If your code intends to use the byte at the address in `HL` as an index, write `
 
 ### 3.4 Value Semantics in `LD`
 
-Scalar typed storage — module symbols from named `data` sections, function-local `var` slots, and scalar record fields — uses **value semantics** in `LD` operands in v0.2. You do not need parentheses to read or write scalar module symbols:
+Scalar typed storage — module symbols from named `data` sections, function-local `var` slots, and scalar record fields — uses **value semantics** in `LD` operands in the current language. You do not need parentheses to read or write scalar module symbols:
 
 ```zax
 section data vars at $8000
@@ -417,7 +417,7 @@ const FlagMask    = (1 << 4) | (1 << 2)
 
 Constants are compile-time `imm` expressions. Their values must be fully resolvable at compile time. Forward references between `const` declarations are allowed.
 
-`export const` is accepted and has no effect in v0.2 (see Chapter 10.4).
+`export const` is accepted and has no effect in the current language (see Chapter 10.4).
 
 ### 4.2 Literal Forms
 
@@ -473,7 +473,7 @@ const DefaultPriority = Priority.Normal    ; = 1
 const MaxPriority     = Priority.Critical  ; = 3
 ```
 
-Unqualified enum member references (`Normal` instead of `Priority.Normal`) are compile errors in v0.2. See Chapter 8 for full enum coverage.
+Unqualified enum member references (`Normal` instead of `Priority.Normal`) are compile errors in the current language. See Chapter 8 for full enum coverage.
 
 ### 4.6 Type Aliases
 
@@ -815,7 +815,7 @@ end
 
 Scalar initializers are lowered in declaration order at function entry. For zero or constant word-sized init, the preferred lowering is `LD HL, imm16` / `PUSH HL`, which allocates and initializes the slot in one sequence.
 
-### 6.3 The v0.2 Typed Call Boundary
+### 6.3 The Typed Call Boundary
 
 When the compiler generates a call to a typed internal `func`, it enforces a preservation contract at that boundary:
 
@@ -1319,7 +1319,7 @@ op swap_de_bc
 end
 ```
 
-**Destination parameter convention (v0.2):** parameters whose names start with `dst` or `out` are treated as destinations by optional diagnostic tooling. If no parameter starts with `dst` or `out`, the first parameter is assumed to be the destination. This affects only tooling output — it has no effect on expansion or overload resolution.
+**Destination parameter convention:** parameters whose names start with `dst` or `out` are treated as destinations by optional diagnostic tooling. If no parameter starts with `dst` or `out`, the first parameter is assumed to be the destination. This affects only tooling output — it has no effect on expansion or overload resolution.
 
 ### 7.10 Complete Example — 16-bit Add Family
 
@@ -1381,7 +1381,7 @@ Trailing commas in the member list are not permitted.
 
 ### 8.2 Qualified Access Is Required
 
-In v0.2, every enum member reference must use the fully qualified form `EnumType.Member`. Unqualified references are always compile errors:
+In the current language, every enum member reference must use the fully qualified form `EnumType.Member`. Unqualified references are always compile errors:
 
 ```zax
 ld a, Mode.Run    ; correct
@@ -2385,6 +2385,6 @@ Working in ZAX means keeping the lowering predictable. A few habits help:
 - **Establish flags immediately before `if`/`while`/`until`.** The condition is tested at the keyword using whatever flags are current. A `ld` between your compare and your `if` will overwrite the flags silently on Z80.
 - **Keep `op` bodies small and mechanical.** If an op body is doing significant work, consider whether a `func` with its typed boundary guarantees would be clearer.
 - **Use `sizeof` and `offsetof` everywhere.** Never hardcode a field offset. If the type changes, the built-ins update automatically.
-- **Use qualified enum names everywhere.** `Mode.Run` everywhere, never bare `Run`. Unqualified references are compile errors in v0.2 — this is enforced, not advisory.
+- **Use qualified enum names everywhere.** `Mode.Run` everywhere, never bare `Run`. Unqualified references are compile errors in the current language — this is enforced, not advisory.
 - **Check the `.asm` or `.lst` output when something looks wrong.** The lowered trace shows exactly what the compiler emitted. The IX byte-lane shuttle (`ex de, hl` / `ld e, (ix+d)` / ...) is particularly visible here.
 - **Treat `docs/spec/zax-spec.md` as the final authority.** This guide is instructional; the spec is normative.
