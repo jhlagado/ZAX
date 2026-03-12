@@ -1,10 +1,10 @@
 # Typed Reinterpretation Cast (`LANG-02`)
 
 **Date:** 2026-03-12
-**Status:** Active design proposal
+**Status:** Accepted design; implementation landed on `main`
 **Source:** GitHub issue `#736 (LANG-02)`
 
-This document defines the intended source-language shape for typed
+This document defines the accepted source-language shape for typed
 reinterpretation using angle-bracket cast syntax:
 
 ```zax
@@ -12,7 +12,7 @@ reinterpretation using angle-bracket cast syntax:
 ```
 
 It replaces the scattered historical cast notes in archived addressing
-documents and serves as the single active design anchor for `LANG-02`.
+documents and serves as the retained design record for `LANG-02`.
 
 ---
 
