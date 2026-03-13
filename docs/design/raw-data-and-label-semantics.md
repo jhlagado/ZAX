@@ -1,6 +1,6 @@
 # RAW-01: raw data directives and label semantics
 
-Status: Draft discussion paper
+Status: Direction accepted; RAW-02 and RAW-03 implemented
 Scope: define the raw-data complement to the `move`/`ld` split
 Purpose: decide how ZAX represents classic assembler-style labels and raw memory layouts without collapsing typed storage back into overloaded `ld`
 
@@ -94,7 +94,7 @@ section data tables at $4000
 end
 ```
 
-The exact line grammar can be refined in `RAW-02`, but the declaration family itself should stay conventional.
+The declaration family is now implemented in `RAW-02`/`RAW-03` in the accepted conventional form.
 
 ## 5. Exact `ld`/`move` semantic split
 
@@ -199,21 +199,16 @@ In practice, `RAW-02` should add dedicated productions for labeled raw data bloc
 
 ## 9. Staged implementation plan
 
-Stage 1: accept this design direction in docs.
+Completed stages:
 
-Stage 2: `RAW-02`
-- add parser and AST support for the raw data directive family
-- preserve raw-label symbol class in the AST
+- docs direction accepted in `RAW-01`
+- `RAW-02` parser/AST support landed
+- `RAW-03` lowering/emission and classic `ld` integration landed
 
-Stage 3: `RAW-03`
-- emit raw bytes/words/reserved space
-- produce raw address-semantics labels in semantic resolution
-- integrate classic `ld` behavior over those labels
+Remaining follow-up, if wanted later:
 
-Stage 4: examples and reference updates
 - add a small set of raw-data examples
-- show typed storage and raw labels side by side
-- keep the distinction explicit in the quick guide and spec
+- show typed storage and raw labels side by side in user-facing reference material
 
 ## 10. Non-goals
 
