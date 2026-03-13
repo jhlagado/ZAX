@@ -21,6 +21,7 @@ Current active design docs:
 - `docs/design/type-system-reform-plan.md`
 - `docs/design/typed-reinterpretation-cast.md`
 - `docs/design/raw-data-and-label-semantics.md`
+- `docs/design/address-of-storage-paths.md`
 
 These documents are not normative language authority. They describe current direction, decisions, and unresolved design work.
 

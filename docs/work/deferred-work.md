@@ -38,13 +38,14 @@ For each item record:
 - Notes:
   - landed as additive language work, not as part of an `addr` revival
 
-### `@place` address-of expression
-- Status: deferred
-- Why deferred: address-of semantics should follow the raw-label/raw-data design, not precede it
+### `@path` address-of storage paths
+- Status: active design; implementation blocked until direction is accepted
+- Why deferred: the feature is clearly needed, but its operand class and interaction with raw labels must be locked before parser work starts
 - Preconditions:
-  - `RAW-01` accepted
-  - `RAW-02` and `RAW-03` far enough along to define address-valued forms cleanly
+  - raw-label/raw-data semantics landed
+  - direction for `@path` accepted in docs
 - Source:
   - GitHub issue `#788 (ADDR-EXPR-01)`
 - Notes:
-  - do not smuggle `@...` back into `move` before raw address semantics are settled
+  - `@` is intended as outermost-prefix address-of on typed storage paths only
+  - do not smuggle `@...` into `move`; the intended v1 use is `ld rr, @path`
