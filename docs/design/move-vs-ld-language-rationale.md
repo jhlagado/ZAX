@@ -211,6 +211,44 @@ Then instruction meaning is straightforward:
 This prevents the language from having to guess whether `x` is "a variable" or
 "an address". The declaration form decides it.
 
+### Register operands are not typed storage
+
+Registers are a third operand category. They are neither typed storage symbols
+nor raw labels.
+
+So the intended split is narrower than "use `move` for everything value-like".
+The cleaner rule is:
+
+- `move` is for transfers between a register and a typed storage path
+- `ld` remains the raw Z80 form for register-to-register transfer and classic
+  assembler memory/address transfer
+
+That means forms such as:
+
+```z80
+ld a, b
+ld hl, de
+```
+
+remain ordinary `ld`.
+
+And it also means the valid `move` family is intentionally constrained:
+
+```zax
+move a, x
+move x, a
+move hl, words[idx]
+move words[idx], hl
+```
+
+where exactly one side is a register operand and exactly one side is a typed
+storage-path operand.
+
+So:
+
+- both-register `move` is invalid
+- both-storage-path `move` is invalid
+
 ### What this means for existing typed `ld`
 
 Current ZAX effectively allows `ld` to act like `move` in many places. Under
@@ -238,6 +276,36 @@ move words[idx], hl
 ```
 
 while `ld` remains available for the raw assembler layer.
+
+### `LANG-02` as direct precedent
+
+`LANG-02` makes the current tension especially visible.
+
+Current ZAX now supports forms such as:
+
+```zax
+ld a, <Sprite>hl.flags
+ld <Sprite>hl.flags, a
+```
+
+These are plainly ZAX-layer constructs:
+
+- typed reinterpretation head
+- field traversal
+- compiler-managed offset semantics
+
+They are not classic Z80 operand forms in any meaningful sense. If the project
+is uncomfortable continuing to hide such forms inside `ld`, then `LANG-02` is
+one of the clearest concrete arguments for the `move` proposal.
+
+Under the proposed split, these become:
+
+```zax
+move a, <Sprite>hl.flags
+move <Sprite>hl.flags, a
+```
+
+which makes the layer boundary explicit rather than implied.
 
 ### Why this split is worth considering
 
@@ -447,6 +515,26 @@ If the answer is "transitional aliasing", the language can migrate more gently,
 but it must tolerate temporary duplication in docs, parser behavior, and test
 coverage.
 
+### Recommended migration stance
+
+The paper does not recommend keeping all three migration strategies equally
+open.
+
+If the project chooses `move`, the most coherent stance is:
+
+- introduce `move` decisively as the new canonical spelling
+- keep typed `ld` only as an explicitly transitional compatibility form
+- track that compatibility form with a named sunset issue
+- do not let typed `ld` and `move` drift into indefinite equal status
+
+In other words, the recommended path is:
+
+- Option A in intent
+- Option B in mechanics
+
+That preserves a manageable transition while still treating the split as a real
+language decision rather than an optional style preference.
+
 ---
 
 ## 4. Grammar impact
@@ -479,6 +567,13 @@ with Z80 operands". It is closer to:
 
 That is one reason `ld` has become the pressure point for the language.
 
+The current grammar also hides part of the implementation problem by treating
+`z80_instruction` as an opaque parser category. In practice, typed `ld` forms
+are being accepted through that opaque path today. A real `move` transition
+would therefore require more than adding a new keyword. It would require
+pulling the typed-storage operand family out of the current `ld` parsing path
+and making it explicit.
+
 ### What `move` would do to the grammar
 
 Introducing `move` would let the grammar express the language split directly.
@@ -502,6 +597,29 @@ and instead say:
 
 That is exactly the kind of explicit categorization the parser reform has been
 moving toward.
+
+### Draft grammar sketch
+
+At draft level, the grammar effect can be stated concretely:
+
+```ebnf
+instr_line = z80_instruction
+           | move_stmt
+           | op_invoke
+           | func_call
+           | ...
+
+move_stmt  = "move" , move_lhs , "," , move_rhs ;
+move_lhs   = reg8 | reg16 | typed_storage_path ;
+move_rhs   = reg8 | reg16 | typed_storage_path ;
+```
+
+with the semantic restriction that exactly one side must be a register operand
+and exactly one side must be a typed storage-path operand.
+
+The point is not the exact final production wording. The point is that `move`
+becomes a first-class grammar branch rather than remaining hidden inside the
+current opaque `z80_instruction` path.
 
 ### Likely grammar categories
 
@@ -799,6 +917,36 @@ In the proposed version, the language boundary is visible in the code:
 - `move sprite.flags, a` is typed field store
 
 That makes the program read as two layers instead of one overloaded mnemonic.
+
+### Example H — `op` call site versus `op` body
+
+One subtle but important distinction is the difference between:
+
+- the source-language call site
+- the raw instruction body of an `op`
+
+At the call site, typed storage belongs in the ZAX layer:
+
+```zax
+move a, sprite.flags
+```
+
+But inside an `op` body, raw instruction text remains raw:
+
+```zax
+op copy_a_to_hl_byte()
+  ld (hl), a
+end
+```
+
+That means the proposal is not saying "replace `ld` everywhere". It is saying:
+
+- use `move` where the source language is expressing typed variable/storage
+  access
+- keep `ld` inside raw instruction bodies and other raw assembler contexts
+
+This matters because `op` bodies are already one of the places where ZAX
+maintains a cleaner layer boundary today.
 
 ### What these examples show
 
