@@ -67,10 +67,13 @@ describe('PR779 move parser/AST support', () => {
     expect(parsed.diagnostics[0]?.message).toContain('move');
   });
 
-  it('rejects address-of operands', () => {
+  it('accepts address-of operands', () => {
     const parsed = parse('move a, @x');
-    expect(parsed.diagnostics.length).toBeGreaterThan(0);
-    expect(parsed.diagnostics[0]?.message).toContain('move');
+    expect(parsed.diagnostics).toEqual([]);
+    expect(parsed.instr?.operands[1]).toMatchObject({
+      kind: 'Ea',
+      explicitAddressOf: true,
+    });
   });
 
 });
