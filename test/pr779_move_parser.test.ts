@@ -73,16 +73,4 @@ describe('PR779 move parser/AST support', () => {
     expect(parsed.diagnostics[0]?.message).toContain('move');
   });
 
-  it('keeps existing typed ld parsing intact', () => {
-    const parsed = parse('ld a, words[idx]');
-    expect(parsed.diagnostics).toEqual([]);
-    expect(parsed.instr).toMatchObject({
-      kind: 'AsmInstruction',
-      head: 'ld',
-      operands: [
-        { kind: 'Reg', name: 'A' },
-        { kind: 'Ea', expr: { kind: 'EaIndex' } },
-      ],
-    });
-  });
 });

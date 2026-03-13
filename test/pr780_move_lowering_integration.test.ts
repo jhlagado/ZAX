@@ -10,7 +10,7 @@ const span: SourceSpan = {
 };
 
 describe('PR780 move lowering integration', () => {
-  it('routes move through typed ld lowering', () => {
+  it('routes move through shared lowering path', () => {
     const received: AsmInstructionNode[] = [];
     const helper = createAsmInstructionLoweringHelpers({
       diagnostics: [],
