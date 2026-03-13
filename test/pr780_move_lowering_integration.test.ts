@@ -35,7 +35,9 @@ describe('PR780 move lowering integration', () => {
         received.push(inst);
         return true;
       },
+      pushEaAddress: () => false,
       emitVirtualReg16Transfer: () => false,
+      reg16: new Set(['BC', 'DE', 'HL']),
       emitSyntheticEpilogue: false,
       epilogueLabel: '__zax_epilogue_0',
       emitJumpTo: () => {},

@@ -56,7 +56,9 @@ describe('PR532 asm instruction lowering integration', () => {
         if (target) events.push(`warn:${target.baseLower}`);
       },
       lowerLdWithEa: () => false,
+      pushEaAddress: () => false,
       emitVirtualReg16Transfer: () => false,
+      reg16: new Set(['BC', 'DE', 'HL']),
       emitSyntheticEpilogue: true,
       epilogueLabel: '__zax_epilogue_0',
       emitJumpTo: (label) => {
