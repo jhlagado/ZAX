@@ -17,7 +17,7 @@ direction.
 
 1. Keep the spec, quick guide, and user-facing examples aligned with the
    implemented language.
-2. Finish `RAW-01` design work before starting raw-data implementation.
+2. Raw data directives and raw label semantics are now implemented on `main`.
 3. Continue parser/grammar convergence work.
 
 ### Deferred until re-planned
