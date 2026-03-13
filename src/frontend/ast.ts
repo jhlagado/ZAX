@@ -78,6 +78,7 @@ export type ModuleItemNode =
 export type SectionItemNode =
   | ConstDeclNode
   | EnumDeclNode
+  | RawDataDeclNode
   | DataDeclNode
   | DataBlockNode
   | VarBlockNode
@@ -251,6 +252,25 @@ export interface DataRecordFieldInitNode extends BaseNode {
   name: string;
   value: ImmExprNode;
 }
+
+/**
+ * Raw data declaration inside a named data section.
+ */
+export type RawDataDeclNode =
+  | {
+      kind: 'RawDataDecl';
+      span: SourceSpan;
+      name: string;
+      directive: 'db' | 'dw';
+      values: ImmExprNode[];
+    }
+  | {
+      kind: 'RawDataDecl';
+      span: SourceSpan;
+      name: string;
+      directive: 'ds';
+      size: ImmExprNode;
+    };
 
 /**
  * `bin` declaration: include raw bytes from an external file into a section.
@@ -489,6 +509,7 @@ export type Node =
   | ProgramNode
   | ModuleFileNode
   | ModuleItemNode
+  | RawDataDeclNode
   | VarDeclNode
   | DataDeclNode
   | ParamNode
