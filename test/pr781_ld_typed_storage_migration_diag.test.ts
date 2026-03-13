@@ -47,7 +47,9 @@ describe('PR781 ld typed-storage migration diagnostics', () => {
         ldCalled = true;
         return false;
       },
+      pushEaAddress: () => false,
       emitVirtualReg16Transfer: () => false,
+      reg16: new Set(['BC', 'DE', 'HL']),
       emitSyntheticEpilogue: false,
       epilogueLabel: '__zax_epilogue_0',
       emitJumpTo: () => {},
