@@ -3,8 +3,8 @@ section data vars at $1000
 end
 
 export func main(): AF, BC, DE, HL
-  ld b, glob_b
-  ld h, glob_b
-  ld glob_b, b
-  ld glob_b, h
+  move b, glob_b
+  move h, glob_b
+  move glob_b, b
+  move glob_b, h
 end

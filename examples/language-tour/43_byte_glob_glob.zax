@@ -5,8 +5,8 @@ end
 
 section code boot at $0100
   export func byte_glob_glob(): HL
-    ld a, glob_bytes[glob_idx_word]
-    ld glob_bytes[glob_idx_word], a
+    move a, glob_bytes[glob_idx_word]
+    move glob_bytes[glob_idx_word], a
     ld h, 0
     ld l, a
   end

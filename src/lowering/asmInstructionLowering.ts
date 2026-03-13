@@ -62,6 +62,17 @@ type Context = {
 };
 
 export function createAsmInstructionLoweringHelpers(ctx: Context) {
+  const isTypedStorageLdOperand = (op: AsmOperandNode): boolean => {
+    if (op.kind === 'Ea') return true;
+    if (op.kind === 'Imm' && op.expr.kind === 'ImmName') {
+      return ctx.resolveScalarBinding(op.expr.name) !== undefined;
+    }
+    if (op.kind === 'Reg') {
+      return ctx.resolveScalarBinding(op.name) !== undefined;
+    }
+    return false;
+  };
+
   const emitRel8FromOperand = (
     asmItem: AsmInstructionNode,
     operand: AsmOperandNode,
@@ -363,6 +374,15 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
         return;
       }
       ctx.diagAt(ctx.diagnostics, asmItem.span, `"move" form is not supported.`);
+      return;
+    }
+
+    if (head === 'ld' && asmItem.operands.some(isTypedStorageLdOperand)) {
+      ctx.diagAt(
+        ctx.diagnostics,
+        asmItem.span,
+        `"ld" no longer accepts typed storage operands; use "move".`,
+      );
       return;
     }
 
