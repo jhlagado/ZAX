@@ -772,7 +772,9 @@ Current style:
 
 ```zax
 func bump()
-  var x: byte
+  var
+    x: byte = 2
+  end
   ld a, x
   inc a
   ld x, a
@@ -783,7 +785,9 @@ Proposed split:
 
 ```zax
 func bump()
-  var x: byte
+  var
+    x: byte = 2
+  end
   move a, x
   inc a
   move x, a
