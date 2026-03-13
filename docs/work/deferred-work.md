@@ -48,4 +48,4 @@ For each item record:
   - GitHub issue `#788 (ADDR-EXPR-01)`
 - Notes:
   - `@` is intended as outermost-prefix address-of on typed storage paths only
-  - do not smuggle `@...` into `move`; the intended v1 use is `ld rr, @path`
+  - do not smuggle `@...` into `ld`; the intended v1 use is `move rr, @path`
