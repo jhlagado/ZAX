@@ -18,7 +18,8 @@ direction.
 1. Keep the spec, quick guide, and user-facing examples aligned with the
    implemented language.
 2. Raw data directives and raw label semantics are now implemented on `main`.
-3. Continue parser/grammar convergence work.
+3. Define `ADDR-EXPR-01` before starting any parser or lowering work for `@path`.
+4. Continue parser/grammar convergence work.
 
 ### Deferred until re-planned
 
