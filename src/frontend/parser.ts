@@ -786,7 +786,7 @@ export function parseModuleFile(
     const rest = exportParsed.rest;
     const stmtSpan = span(file, lineStartOffset, lineEndOffset);
 
-    if (ctx.scope === 'section') {
+    if (ctx.scope === 'section' && ctx.sectionKind === 'data') {
       if (ctx.pendingRawLabel) {
         const parsedRaw = parseRawDataDirective(ctx.pendingRawLabel, rest, lineNo, stmtSpan);
         if (parsedRaw) {
@@ -858,7 +858,29 @@ export function parseModuleFile(
         ctx.pendingRawLabel = { name: labelName, span: stmtSpan, lineNo };
         return { nextIndex: index + 1 };
       }
-    } else {
+    } else if (ctx.scope === 'section' && ctx.sectionKind === 'code') {
+      if (/^(db|dw|ds)\b/i.test(rest) || /^[A-Za-z_][A-Za-z0-9_]*\s*:\s*(db|dw|ds)\b/i.test(rest)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Raw data directives are only permitted inside data sections.`,
+          { line: lineNo, column: 1 },
+        );
+        return { nextIndex: index + 1 };
+      }
+      if (/^[A-Za-z_][A-Za-z0-9_]*\s*:/.test(rest)) {
+        return {
+          nextIndex: index + 1,
+          node: { kind: 'Unimplemented', span: stmtSpan, note: 'section asm label' },
+        };
+      }
+      if (rest.length > 0) {
+        return {
+          nextIndex: index + 1,
+          node: { kind: 'Unimplemented', span: stmtSpan, note: 'section asm instruction' },
+        };
+      }
+    } else if (ctx.scope === 'module') {
       if (/^(db|dw|ds)\b/i.test(rest) || /^[A-Za-z_][A-Za-z0-9_]*\s*:\s*(db|dw|ds)\b/i.test(rest)) {
         diag(
           diagnostics,
@@ -886,7 +908,7 @@ export function parseModuleFile(
       if (parsed) return parsed;
     }
 
-    if (ctx.scope === 'section' && /^[A-Za-z_][A-Za-z0-9_]*\s*:/.test(rest)) {
+    if (ctx.scope === 'section' && ctx.sectionKind === 'data' && /^[A-Za-z_][A-Za-z0-9_]*\s*:/.test(rest)) {
       const sectionDataDecl = parseDataDeclLine({
         allowOmittedInitializer: true,
         allowInferredArrayLength: false,
