@@ -67,6 +67,12 @@ describe('PR779 move parser/AST support', () => {
     expect(parsed.diagnostics[0]?.message).toContain('move');
   });
 
+  it('rejects address-of operands', () => {
+    const parsed = parse('move a, @x');
+    expect(parsed.diagnostics.length).toBeGreaterThan(0);
+    expect(parsed.diagnostics[0]?.message).toContain('move');
+  });
+
   it('keeps existing typed ld parsing intact', () => {
     const parsed = parse('ld a, words[idx]');
     expect(parsed.diagnostics).toEqual([]);

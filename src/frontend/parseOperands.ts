@@ -447,17 +447,7 @@ function parseMoveOperand(
   if (t.length === 0) return undefined;
 
   if (t.startsWith('@')) {
-    const placeText = t.slice(1).trim();
-    if (placeText.length === 0) {
-      diag(diagnostics, filePath, `Invalid "move" operand "${t}": expected @<place>.`, {
-        line: operandSpan.start.line,
-        column: operandSpan.start.column,
-      });
-      return undefined;
-    }
-    const ea = parseEaExprFromText(filePath, placeText, operandSpan, diagnostics);
-    if (ea) return { kind: 'Ea', span: operandSpan, expr: ea, explicitAddressOf: true };
-    diag(diagnostics, filePath, `Invalid "move" operand "${t}": expected @<place>.`, {
+    diag(diagnostics, filePath, `"move" does not accept address-of operands`, {
       line: operandSpan.start.line,
       column: operandSpan.start.column,
     });
