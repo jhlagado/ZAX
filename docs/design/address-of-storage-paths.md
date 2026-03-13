@@ -61,7 +61,7 @@ array[@i]
 @(<Sprite>hl.flags)
 ```
 
-The feature is intentionally narrow. `@` is not a general-purpose unary operator.
+The feature is intentionally narrow. `@` is not a general-purpose unary operator, so it cannot wrap arbitrary parenthesized groupings or participate in normal expression nesting.
 
 ## 4. Semantic category
 
@@ -92,6 +92,9 @@ ld bc, @record.field
 These forms mean: compute the address of the storage path and place that address in the destination register pair.
 
 `@path` is not legal as a destination in v1.
+
+The v1 scope is `ld rr, @path` only. `@path` is not yet accepted as a general operand category for `op` invocation arguments, even when an op parameter is typed as `ea`. That broader use can be reconsidered later, but it is out of scope for the first implementation.
+
 
 ## 6. Exact interaction with typed storage paths
 
@@ -141,6 +144,8 @@ This keeps the split clean:
 
 Grammar impact should be narrow.
 
+`@path` should not become a general `ea_expr` head available everywhere. In v1 it is a grammar-restricted operand form recognized only where the language explicitly permits address-of storage paths. That keeps the first implementation small and prevents `@` from leaking into unrelated expression positions.
+
 The parser should recognize `@` only as the outermost prefix on a storage-path operand, producing a dedicated AST node such as:
 
 ```text
@@ -159,6 +164,7 @@ Stage 1: accept this design in docs.
 
 Stage 2: parser/AST
 - add `@path` parsing as an outermost storage-path prefix
+- keep it grammar-restricted to the accepted v1 operand positions
 - reject nested or interior uses
 - reject raw-label uses explicitly if needed
 
