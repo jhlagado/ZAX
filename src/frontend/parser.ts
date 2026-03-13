@@ -919,21 +919,6 @@ export function parseModuleFile(
       return { nextIndex: index + 1, node: sectionDataDecl };
     }
 
-    if (ctx.scope === 'section' && ctx.sectionKind === 'code') {
-      if (/^[A-Za-z_][A-Za-z0-9_]*\s*:/.test(rest)) {
-        return {
-          nextIndex: index + 1,
-          node: { kind: 'Unimplemented', span: stmtSpan, note: 'section asm label' },
-        };
-      }
-      if (rest.length > 0) {
-        return {
-          nextIndex: index + 1,
-          node: { kind: 'Unimplemented', span: stmtSpan, note: 'section asm instruction' },
-        };
-      }
-    }
-
     const asmTail = consumeKeywordPrefix(text, 'asm');
     const asmAfterExportTail = hasExportPrefix ? consumeKeywordPrefix(rest, 'asm') : undefined;
     if (asmTail !== undefined || asmAfterExportTail !== undefined) {

@@ -99,7 +99,7 @@ section code text at $0000
 end
     `);
     expect(diagnostics.length).toBeGreaterThan(0);
-    expect(diagnostics[0]?.message).toContain('Raw data');
+    expect(diagnostics.some((d) => d.message.includes('Raw data'))).toBe(true);
   });
 
   it('rejects malformed db/dw/ds directives', () => {
@@ -135,6 +135,7 @@ section code text at $0000
   nop
 end
     `);
-    expect(diagnostics).toEqual([]);
+    expect(diagnostics.length).toBeGreaterThan(0);
+    expect(diagnostics[0]?.message).toContain('Unsupported section-contained construct');
   });
 });
