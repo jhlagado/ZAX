@@ -20,6 +20,7 @@ Current active design docs:
 - `docs/design/move-vs-ld-language-rationale.md`
 - `docs/design/type-system-reform-plan.md`
 - `docs/design/typed-reinterpretation-cast.md`
+- `docs/design/raw-data-and-label-semantics.md`
 
 These documents are not normative language authority. They describe current direction, decisions, and unresolved design work.
 
