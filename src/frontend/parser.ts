@@ -896,7 +896,8 @@ export function parseModuleFile(
       if (parsed) return parsed;
     }
 
-    if (ctx.scope === 'section' && ctx.sectionKind === 'data' && /^[A-Za-z_][A-Za-z0-9_]*\s*:/.test(rest)) {
+    const labelOnly = /^[A-Za-z_][A-Za-z0-9_]*\s*:\s*$/.test(rest);
+    if (ctx.scope === 'section' && /^[A-Za-z_][A-Za-z0-9_]*\s*:/.test(rest) && !(ctx.sectionKind === 'code' && labelOnly)) {
       const sectionDataDecl = parseDataDeclLine({
         allowOmittedInitializer: true,
         allowInferredArrayLength: false,
