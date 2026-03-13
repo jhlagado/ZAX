@@ -1,7 +1,7 @@
 # `move` vs `ld` Language Rationale
 
 **Date:** 2026-03-13
-**Status:** Draft discussion paper
+**Status:** Direction accepted; implementation planning pending
 **Source:** Post-`LANG-02` language-boundary review
 
 This paper asks whether ZAX should stop overloading `ld` with typed variable
