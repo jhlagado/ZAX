@@ -3,6 +3,8 @@ import type {
   ModuleItemNode,
   NamedSectionNode,
   ProgramNode,
+  RawDataDeclNode,
+  ImmExprNode,
   SectionAnchorNode,
   SourceSpan,
   SectionItemNode,
@@ -45,6 +47,60 @@ import {
   stripLineComment as stripComment,
 } from './parseParserShared.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
+
+function splitTopLevelComma(text: string): string[] {
+  const parts: string[] = [];
+  let start = 0;
+  let parenDepth = 0;
+  let bracketDepth = 0;
+  let braceDepth = 0;
+  let inChar = false;
+  let escaped = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!;
+    if (inChar) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === "'") inChar = false;
+      continue;
+    }
+    if (ch === "'") {
+      inChar = true;
+      continue;
+    }
+    if (ch === '(') {
+      parenDepth++;
+      continue;
+    }
+    if (ch === ')') {
+      if (parenDepth > 0) parenDepth--;
+      continue;
+    }
+    if (ch === '[') {
+      bracketDepth++;
+      continue;
+    }
+    if (ch === ']') {
+      if (bracketDepth > 0) bracketDepth--;
+      continue;
+    }
+    if (ch === '{') {
+      braceDepth++;
+      continue;
+    }
+    if (ch === '}') {
+      if (braceDepth > 0) braceDepth--;
+      continue;
+    }
+    if (ch === ',' && parenDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts;
+}
 
 /**
  * Parse a single `.zax` module file from an in-memory source string.
@@ -203,9 +259,20 @@ export function parseModuleFile(
     return { section, name, ...(anchor ? { anchor } : {}) };
   }
 
+  type PendingRawLabel = {
+    name: string;
+    span: SourceSpan;
+    lineNo: number;
+  };
+
   type ParseItemContext =
     | { scope: 'module' }
-    | { scope: 'section'; sectionKind: 'code' | 'data'; directDeclNamesLower: Set<string> };
+    | {
+        scope: 'section';
+        sectionKind: 'code' | 'data';
+        directDeclNamesLower: Set<string>;
+        pendingRawLabel?: PendingRawLabel;
+      };
 
   type ParseItemResult = {
     nextIndex: number;
@@ -624,14 +691,90 @@ export function parseModuleFile(
     data: parseDataItem,
   };
 
+  function parseRawDataValues(
+    directive: 'db' | 'dw',
+    valuesText: string,
+    lineNo: number,
+    lineSpan: SourceSpan,
+  ): RawDataDeclNode | undefined {
+    const parts = splitTopLevelComma(valuesText).map((part) => part.trim());
+    if (parts.length === 0 || parts.every((part) => part.length === 0)) {
+      diag(diagnostics, modulePath, `"${directive}" expects one or more imm expressions`, {
+        line: lineNo,
+        column: 1,
+      });
+      return undefined;
+    }
+    const values: ImmExprNode[] = [];
+    for (const part of parts) {
+      if (part.length === 0) {
+        diag(diagnostics, modulePath, `"${directive}" expects one or more imm expressions`, {
+          line: lineNo,
+          column: 1,
+        });
+        return undefined;
+      }
+      const expr = parseImmExprFromText(modulePath, part, lineSpan, diagnostics);
+      if (!expr) return undefined;
+      values.push(expr);
+    }
+    return { kind: 'RawDataDecl', span: lineSpan, name: '', directive, values };
+  }
+
+  function parseRawDataSize(
+    sizeText: string,
+    lineNo: number,
+    lineSpan: SourceSpan,
+  ): RawDataDeclNode | undefined {
+    const parts = splitTopLevelComma(sizeText).map((part) => part.trim());
+    if (parts.length !== 1 || parts[0]!.length === 0) {
+      diag(diagnostics, modulePath, `"ds" expects a single imm expression size`, {
+        line: lineNo,
+        column: 1,
+      });
+      return undefined;
+    }
+    const expr = parseImmExprFromText(modulePath, parts[0]!, lineSpan, diagnostics);
+    if (!expr) return undefined;
+    return { kind: 'RawDataDecl', span: lineSpan, name: '', directive: 'ds', size: expr };
+  }
+
+  function parseRawDataDirective(
+    label: PendingRawLabel,
+    directiveText: string,
+    lineNo: number,
+    lineSpan: SourceSpan,
+  ): RawDataDeclNode | undefined {
+    const match = /^(db|dw|ds)\b(.*)$/i.exec(directiveText.trim());
+    if (!match) return undefined;
+    const directive = match[1]!.toLowerCase() as 'db' | 'dw' | 'ds';
+    const payload = match[2]!.trim();
+    const parsed =
+      directive === 'ds'
+        ? parseRawDataSize(payload, lineNo, lineSpan)
+        : parseRawDataValues(directive, payload, lineNo, lineSpan);
+    if (!parsed) return undefined;
+    return { ...parsed, name: label.name, span: lineSpan };
+  }
+
   function parseModuleItem(index: number, ctx: ParseItemContext): ParseItemResult {
     const { raw, startOffset: lineStartOffset, endOffset: lineEndOffset } = getRawLine(index);
     const text = stripComment(raw).trim();
     const lineNo = index + 1;
     if (text.length === 0) {
+      if (ctx.scope === 'section') {
+        return { nextIndex: index + 1 };
+      }
       return { nextIndex: index + 1 };
     }
     if (ctx.scope === 'section' && text.toLowerCase() === 'end') {
+      if (ctx.pendingRawLabel) {
+        diag(diagnostics, modulePath, `Raw data label "${ctx.pendingRawLabel.name}" is missing a directive`, {
+          line: ctx.pendingRawLabel.lineNo,
+          column: 1,
+        });
+        delete ctx.pendingRawLabel;
+      }
       return { nextIndex: index + 1, sectionClosed: true };
     }
 
@@ -642,6 +785,90 @@ export function parseModuleFile(
     const hasExportPrefix = exportParsed.exported;
     const rest = exportParsed.rest;
     const stmtSpan = span(file, lineStartOffset, lineEndOffset);
+
+    if (ctx.scope === 'section') {
+      if (ctx.pendingRawLabel) {
+        const parsedRaw = parseRawDataDirective(ctx.pendingRawLabel, rest, lineNo, stmtSpan);
+        if (parsedRaw) {
+          ctx.directDeclNamesLower.add(ctx.pendingRawLabel.name.toLowerCase());
+          delete ctx.pendingRawLabel;
+          if (ctx.sectionKind !== 'data') {
+            diag(
+              diagnostics,
+              modulePath,
+              `Raw data declarations are only permitted inside data sections.`,
+              { line: lineNo, column: 1 },
+            );
+            return { nextIndex: index + 1 };
+          }
+          return { nextIndex: index + 1, node: parsedRaw };
+        }
+        diag(diagnostics, modulePath, `Raw data label "${ctx.pendingRawLabel.name}" is missing a directive`, {
+          line: ctx.pendingRawLabel.lineNo,
+          column: 1,
+        });
+        delete ctx.pendingRawLabel;
+      }
+      const inlineMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(db|dw|ds)\b(.*)$/i.exec(rest);
+      if (inlineMatch) {
+        const labelName = inlineMatch[1]!;
+        const labelLower = labelName.toLowerCase();
+        if (ctx.directDeclNamesLower.has(labelLower)) {
+          diag(diagnostics, modulePath, `Duplicate data declaration name "${labelName}".`, {
+            line: lineNo,
+            column: 1,
+          });
+          return { nextIndex: index + 1 };
+        }
+        const label: PendingRawLabel = { name: labelName, span: stmtSpan, lineNo };
+        const parsedRaw = parseRawDataDirective(label, inlineMatch[2]! + inlineMatch[3]!, lineNo, stmtSpan);
+        if (!parsedRaw) return { nextIndex: index + 1 };
+        ctx.directDeclNamesLower.add(labelLower);
+        if (ctx.sectionKind !== 'data') {
+          diag(
+            diagnostics,
+            modulePath,
+            `Raw data declarations are only permitted inside data sections.`,
+            { line: lineNo, column: 1 },
+          );
+          return { nextIndex: index + 1 };
+        }
+        return { nextIndex: index + 1, node: parsedRaw };
+      }
+      const labelMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*$/.exec(rest);
+      if (labelMatch) {
+        const labelName = labelMatch[1]!;
+        const labelLower = labelName.toLowerCase();
+        if (ctx.directDeclNamesLower.has(labelLower)) {
+          diag(diagnostics, modulePath, `Duplicate data declaration name "${labelName}".`, {
+            line: lineNo,
+            column: 1,
+          });
+          return { nextIndex: index + 1 };
+        }
+        if (ctx.sectionKind !== 'data') {
+          diag(
+            diagnostics,
+            modulePath,
+            `Raw data labels are only permitted inside data sections.`,
+            { line: lineNo, column: 1 },
+          );
+          return { nextIndex: index + 1 };
+        }
+        ctx.pendingRawLabel = { name: labelName, span: stmtSpan, lineNo };
+        return { nextIndex: index + 1 };
+      }
+    } else {
+      if (/^(db|dw|ds)\b/i.test(rest) || /^[A-Za-z_][A-Za-z0-9_]*\s*:\s*(db|dw|ds)\b/i.test(rest)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Raw data directives are only permitted inside data sections.`,
+          { line: lineNo, column: 1 },
+        );
+        return { nextIndex: index + 1 };
+      }
+    }
     const dispatchKeyword = topLevelStartKeyword(rest);
     const dispatchHandler =
       dispatchKeyword === undefined ? undefined : moduleItemDispatchTable[dispatchKeyword];
@@ -733,19 +960,29 @@ export function parseModuleFile(
   } {
     const sectionItems: SectionItemNode[] = [];
     const directDeclNamesLower = new Set<string>();
+    const ctx: Extract<ParseItemContext, { scope: 'section' }> = {
+      scope: 'section',
+      sectionKind,
+      directDeclNamesLower,
+    };
     let index = startIndex;
 
     while (index < lineCount) {
-      const parsed = parseModuleItem(index, {
-        scope: 'section',
-        sectionKind,
-        directDeclNamesLower,
-      });
+      const parsed = parseModuleItem(index, ctx);
       if (parsed.sectionClosed) {
+        delete ctx.pendingRawLabel;
         return { items: sectionItems, nextIndex: parsed.nextIndex, closed: true };
       }
       if (parsed.node) sectionItems.push(parsed.node as SectionItemNode);
       index = parsed.nextIndex;
+    }
+
+    if (ctx.pendingRawLabel) {
+      diag(diagnostics, modulePath, `Raw data label "${ctx.pendingRawLabel.name}" is missing a directive`, {
+        line: ctx.pendingRawLabel.lineNo,
+        column: 1,
+      });
+      delete ctx.pendingRawLabel;
     }
 
     return { items: sectionItems, nextIndex: index, closed: false };
