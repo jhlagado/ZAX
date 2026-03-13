@@ -37,3 +37,14 @@ For each item record:
   - GitHub issue `#736 (LANG-02)`
 - Notes:
   - landed as additive language work, not as part of an `addr` revival
+
+### `@place` address-of expression
+- Status: deferred
+- Why deferred: address-of semantics should follow the raw-label/raw-data design, not precede it
+- Preconditions:
+  - `RAW-01` accepted
+  - `RAW-02` and `RAW-03` far enough along to define address-valued forms cleanly
+- Source:
+  - GitHub issue `#788 (ADDR-EXPR-01)`
+- Notes:
+  - do not smuggle `@...` back into `move` before raw address semantics are settled

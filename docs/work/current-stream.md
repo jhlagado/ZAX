@@ -17,11 +17,8 @@ direction.
 
 1. Keep the spec, quick guide, and user-facing examples aligned with the
    implemented language.
-2. Continue parser/grammar convergence work.
-3. Do a post-landing cleanup pass for `LANG-02`:
-   - confirm spec/reference wording matches shipped behavior
-   - close or refresh any still-open implementation tickets
-   - fold any remaining reviewer guidance back into the docs set
+2. Finish `RAW-01` design work before starting raw-data implementation.
+3. Continue parser/grammar convergence work.
 
 ### Deferred until re-planned
 
