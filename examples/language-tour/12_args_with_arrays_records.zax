@@ -4,13 +4,13 @@ section data vars at $1000
 end
 
 func read_byte_at(index_value: word): HL
-  ld a, sample_bytes[index_value]
+  move a, sample_bytes[index_value]
   ld l, a
   ld h, 0
 end
 
 func read_word_at(index_value: word): HL
-  ld hl, sample_words[index_value]
+  move hl, sample_words[index_value]
 end
 
 export func main()

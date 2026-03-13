@@ -12,7 +12,7 @@ section code boot at $0000
     getb 7
     ld a, l
     getw 9
-    ld out, hl
+    move out, hl
     ret
   end
 end
