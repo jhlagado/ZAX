@@ -12,6 +12,6 @@ section data vars at $1000
 end
 
 export func main()
-  ld a, one.x
+  move a, one.x
   ret
 end
