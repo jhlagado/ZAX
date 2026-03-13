@@ -356,6 +356,16 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       }
     }
 
+    if (head === 'move') {
+      const moveAsLd: AsmInstructionNode = { ...asmItem, head: 'ld' };
+      if (ctx.lowerLdWithEa(moveAsLd)) {
+        ctx.syncToFlow();
+        return;
+      }
+      ctx.diagAt(ctx.diagnostics, asmItem.span, `"move" form is not supported.`);
+      return;
+    }
+
     if (ctx.lowerLdWithEa(asmItem)) {
       ctx.syncToFlow();
       return;
