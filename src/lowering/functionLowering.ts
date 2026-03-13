@@ -652,7 +652,9 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       );
     },
     lowerLdWithEa,
+    pushEaAddress,
     emitVirtualReg16Transfer,
+    reg16,
     emitSyntheticEpilogue,
     epilogueLabel,
     emitJumpTo,
