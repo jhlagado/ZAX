@@ -2,6 +2,6 @@ func store_only(a: word)
   var
     dst: word = 0
   end
-  ld dst, a
+  move dst, a
   ret
 end

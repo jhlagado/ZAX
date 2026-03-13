@@ -10,19 +10,19 @@ section data vars at $1000
 end
 
 op readAddr(addr: ea)
-  ld a, (addr)
+  move a, addr
 end
 
 export func main()
-  ld a, p.lo
-  ld p.lo, a
-  ld a, arr[idx]
-  ld arr[idx], a
+  move a, p.lo
+  move p.lo, a
+  move a, arr[idx]
+  move arr[idx], a
 
-  ld a, (p.lo)
-  ld (p.lo), a
-  ld a, (arr[idx])
-  ld (arr[idx]), a
+  move a, p.lo
+  move p.lo, a
+  move a, arr[idx]
+  move arr[idx], a
 
   readAddr p.lo
   readAddr arr[idx]
