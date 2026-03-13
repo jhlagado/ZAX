@@ -44,22 +44,36 @@ end
       (item): item is RawDataDeclNode => item.kind === 'RawDataDecl',
     );
     expect(rawItems).toHaveLength(3);
-    expect(rawItems[0]).toMatchObject({
+    const first = rawItems[0];
+    const second = rawItems[1];
+    const third = rawItems[2];
+    if (!first || !second || !third) {
+      throw new Error('Expected three raw data declarations.');
+    }
+
+    expect(first).toMatchObject({
       name: 'table',
       directive: 'db',
     });
-    expect(rawItems[0].values?.map((value) => value.kind === 'ImmLiteral' && value.value)).toEqual(
-      [1, 2, 3],
-    );
-    expect(rawItems[1]).toMatchObject({
+    if (first.directive !== 'db') {
+      throw new Error('Expected first raw item to be db.');
+    }
+    expect(first.values.map((value) => value.kind === 'ImmLiteral' && value.value)).toEqual([
+      1, 2, 3,
+    ]);
+
+    expect(second).toMatchObject({
       name: 'jump_table',
       directive: 'dw',
     });
-    expect(rawItems[1].values).toMatchObject([
+    if (second.directive !== 'dw') {
+      throw new Error('Expected second raw item to be dw.');
+    }
+    expect(second.values).toMatchObject([
       { kind: 'ImmName', name: 'handler_a' },
       { kind: 'ImmName', name: 'handler_b' },
     ]);
-    expect(rawItems[2]).toMatchObject({
+    expect(third).toMatchObject({
       name: 'scratch',
       directive: 'ds',
       size: { kind: 'ImmLiteral', value: 32 },
