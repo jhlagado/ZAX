@@ -4,15 +4,12 @@ import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
-
-type MaybeAsm = AsmArtifact | undefined;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 describe('PR287 explicit address-of operator (@place)', () => {
-  it('accepts @place and preserves explicit address intent in lowering', async () => {
+  it('rejects @place outside move with a stable diagnostic', async () => {
     const entry = join(__dirname, 'fixtures', 'pr287_address_of_positive.zax');
     const res = await compile(
       entry,
@@ -21,15 +18,9 @@ describe('PR287 explicit address-of operator (@place)', () => {
     );
 
     const errors = res.diagnostics.filter((d) => d.severity === 'error');
-    expect(errors).toEqual([]);
-
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm') as MaybeAsm;
-    expect(asm).toBeDefined();
-
-    const text = asm!.text;
-    expect(text).toContain('call accept');
-    expect(text).toContain('ld HL, b');
-    expect(text).not.toContain('ld A, (b)');
+    expect(errors.map((d) => d.message)).toContain(
+      '"@<path>" is only supported with "move" in this phase.',
+    );
   });
 
   it('rejects invalid @ targets with stable diagnostics', async () => {

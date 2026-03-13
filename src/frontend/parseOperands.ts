@@ -388,6 +388,13 @@ export function parseAsmInstruction(
     }
   }
 
+  if (operands.some((op) => op.kind === 'Ea' && op.explicitAddressOf)) {
+    diag(diagnostics, filePath, `"@<path>" is only supported with "move" in this phase.`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+  }
+
   return { kind: 'AsmInstruction', span: instrSpan, head: headLower, operands };
 }
 
@@ -420,6 +427,13 @@ function parseMoveInstruction(
     if (operand) operands.push(operand);
   }
 
+  if (operands[0]?.kind === 'Ea' && operands[0].explicitAddressOf) {
+    diag(diagnostics, filePath, `"move" address-of operands must appear on the source side.`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+  }
+
   const regCount = operands.filter((op) => op.kind === 'Reg').length;
   const eaCount = operands.filter((op) => op.kind === 'Ea').length;
   if (operands.length !== 2 || regCount !== 1 || eaCount !== 1) {
@@ -447,11 +461,23 @@ function parseMoveOperand(
   if (t.length === 0) return undefined;
 
   if (t.startsWith('@')) {
-    diag(diagnostics, filePath, `"move" does not accept address-of operands`, {
-      line: operandSpan.start.line,
-      column: operandSpan.start.column,
-    });
-    return undefined;
+    if (t.length < 2 || t[1] === '@' || t[1] === '(') {
+      diag(diagnostics, filePath, `"move" address-of form must be "@<path>" with a storage path.`, {
+        line: operandSpan.start.line,
+        column: operandSpan.start.column,
+      });
+      return undefined;
+    }
+    const eaText = t.slice(1).trim();
+    const ea = parseEaExprFromText(filePath, eaText, operandSpan, diagnostics);
+    if (!ea) {
+      diag(diagnostics, filePath, `"move" address-of form must be "@<path>" with a storage path.`, {
+        line: operandSpan.start.line,
+        column: operandSpan.start.column,
+      });
+      return undefined;
+    }
+    return { kind: 'Ea', span: operandSpan, expr: ea, explicitAddressOf: true };
   }
 
   const canonicalRegister = canonicalRegisterToken(t);
