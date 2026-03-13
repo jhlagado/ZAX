@@ -282,7 +282,12 @@ move a, sprite.flags      ; value semantics: load the byte stored in sprite.flag
 move sprite.flags, a      ; value semantics: store A into sprite.flags
 ```
 
-There is no general-purpose source-level address-of operator in the current normative model. Effective addresses are a lowering detail unless a construct explicitly consumes an `ea` storage-location operand.
+`@path` is the source-level address-of form for typed storage paths. In v1 it is accepted as the source operand in `move rr, @path`, where it produces the address of the typed storage path instead of its scalar value.
+
+```zax
+move hl, @player.flags     ; HL = address of the flags field
+move de, @sprites[bc].x    ; DE = address of sprites[BC].x
+```
 
 ### 3.2 Valid Index Forms
 
@@ -1530,9 +1535,9 @@ func update(): void
 end
 ```
 
-There is no general-purpose source-level address-of operator in the current
-language. Scalar `move` and typed-call contexts apply value semantics; non-scalar
-place expressions continue as storage locations.
+`@path` is now the source-level address-of form for typed storage paths.
+It is not a general unary operator, and in v1 it is accepted only as the
+source operand in `move rr, @path`.
 
 ### 9.3 `sizeof` and `offsetof` for Records
 

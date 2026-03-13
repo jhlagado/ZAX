@@ -209,7 +209,7 @@ These are semantic constraints enforced beyond pure grammar:
 - Variable declarations inside a `code` named section are a compile error.
 - Local non-scalar value-init declarations are invalid.
 - Local non-scalar declarations are alias-only (`name = rhs`).
-- `@place` explicit address-of syntax is not part of the normative v0.2 surface.
+- `@path` is not a general expression operator. In v1 it is accepted only as the source operand in `move rr, @path`.
 - Typed reinterpretation requires at least one tail segment after the cast head.
 - `reinterpret_name` is limited semantically to scalar names of type `word` or `addr`.
 - Bare aggregate storage names are not valid reinterpret bases.

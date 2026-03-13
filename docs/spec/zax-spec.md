@@ -457,8 +457,8 @@ Example: arrays of records lower through storage-path access (informative):
 
 ; `sprites[C].x` is a scalar field access. The compiler performs the
 ; required address calculation internally, then loads/stores the value:
-ld hl, sprites[C].x   ; load word at sprites[C].x
-ld sprites[C].x, hl   ; store word to sprites[C].x
+move hl, sprites[C].x   ; load word at sprites[C].x
+move sprites[C].x, hl   ; store word to sprites[C].x
 
 ```
 
@@ -499,9 +499,9 @@ section data vars at $2000
 end
 
 func read_value_overlay()
-  ld a, v.b  ; read low byte
-  ld hl, v.w ; read word overlay
-  ld de, v.p ; read pointer overlay
+  move a, v.b  ; read low byte
+  move hl, v.w ; read word overlay
+  move de, v.p ; read pointer overlay
 end
 
 ```
@@ -770,16 +770,20 @@ Integer semantics (v0.1):
 
 Conceptually, an `ea` is a base storage location plus a sequence of path segments: `.field` selects a record field, and `[index]` selects an array element. Lowering turns that path into an effective address when a Z80 instruction sequence needs one.
 
-Value semantics note (v0.2):
+Value semantics note (current):
 
-- Bare scalar variables use value semantics in ordinary instruction and call contexts.
-- `rec.field` and `arr[idx]` are storage-path expressions. In scalar value/store contexts (for example `LD A, rec.field`, `LD rec.field, A`), the compiler inserts the required load/store lowering.
+- Bare scalar variables use value semantics in ordinary `move` and call contexts.
+- `rec.field` and `arr[idx]` are storage-path expressions. In scalar value/store contexts (for example `move A, rec.field`, `move rec.field, A`), the compiler inserts the required load/store lowering.
 - `<Type>base.tail` is also a storage-path expression. It supplies the base
   type explicitly at the access site, then applies ordinary field/index
   traversal.
 - In aggregate contexts (for example passing an array/record parameter), the compiler passes the storage reference transparently.
-- Older address-of style wording (including `@place`) is retired from the
-  current source model.
+- `@path` is the source-level address-of form for typed storage paths. In v1 it is accepted only as the source operand in `move rr, @path`:
+
+  ```zax
+  move hl, @player.flags
+  move de, @sprites[bc].x
+  ```
 
 Precedence (v0.1):
 
@@ -809,9 +813,9 @@ Meaning:
 Examples:
 
 ```zax
-ld a, <Sprite>hl.flags
-ld hl, <Header>ptr.checksum
-ld a, <TileMap>(map_base + 32)[row][col]
+move a, <Sprite>hl.flags
+move hl, <Header>ptr.checksum
+move a, <TileMap>(map_base + 32)[row][col]
 ```
 
 Rules:
@@ -841,8 +845,9 @@ Semantics:
 - If the final selected target is aggregate, the result remains a storage base
   for further traversal or aggregate use.
 
-This feature extends the existing typed storage-path model. It does not replace
-direct typed `ld`, and it is not coupled to any source-language `addr` feature.
+This feature extends the existing typed storage-path model. It works with the
+current `move`-based typed storage surface, and it is not coupled to any
+source-language `addr` feature.
 
 ---
 
@@ -1434,13 +1439,13 @@ This section defines required source migration behavior for programs moving from
 
 ```zax
 ; v0.1 intent: index comes from byte at memory[HL]
-ld a, arr[HL]
+move a, arr[HL]
 
 ; v0.2 equivalent
-ld a, arr[(HL)]
+move a, arr[(HL)]
 
 ; v0.2 direct 16-bit register index
-ld a, arr[HL]
+move a, arr[HL]
 ```
 
 Scalar value semantics:

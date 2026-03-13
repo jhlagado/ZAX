@@ -17,11 +17,6 @@ Active design work and review-target design records.
 
 Current active design docs:
 - `docs/design/grammar-parser-convergence-plan.md`
-- `docs/design/move-vs-ld-language-rationale.md`
-- `docs/design/type-system-reform-plan.md`
-- `docs/design/typed-reinterpretation-cast.md`
-- `docs/design/raw-data-and-label-semantics.md`
-- `docs/design/address-of-storage-paths.md`
 
 These documents are not normative language authority. They describe current direction, decisions, and unresolved design work.
 
@@ -55,6 +50,11 @@ This includes:
 - old version-specific implementation references
 
 Archived documents are retained for context only. They are not current truth.
+
+Recently completed design records now live under:
+
+- `docs/archive/design/`
+- `docs/archive/work/`
 
 ## Rules
 
