@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../diagnostics/types.js';
-import type { AsmInstructionNode, AsmOperandNode } from '../frontend/ast.js';
+import type { AsmInstructionNode, AsmOperandNode, EaExprNode } from '../frontend/ast.js';
 
 type DiagAt = (diagnostics: Diagnostic[], span: AsmInstructionNode['span'], message: string) => void;
 
@@ -52,7 +52,9 @@ type Context = {
     symbolicTarget: { baseLower: string; addend: number } | undefined,
   ) => void;
   lowerLdWithEa: (asmItem: AsmInstructionNode) => boolean;
+  pushEaAddress: (ea: EaExprNode, span: AsmInstructionNode['span']) => boolean;
   emitVirtualReg16Transfer: (asmItem: AsmInstructionNode) => boolean;
+  reg16: Set<string>;
   emitSyntheticEpilogue: boolean;
   epilogueLabel: string;
   emitJumpTo: (label: string, span: AsmInstructionNode['span']) => void;
@@ -368,6 +370,23 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     }
 
     if (head === 'move') {
+      const dst = asmItem.operands[0];
+      const src = asmItem.operands[1];
+      if (src?.kind === 'Ea' && src.explicitAddressOf) {
+        if (!dst || dst.kind !== 'Reg' || !ctx.reg16.has(dst.name.toUpperCase())) {
+          ctx.diagAt(
+            ctx.diagnostics,
+            asmItem.span,
+            `"move" address-of source requires a 16-bit register destination.`,
+          );
+          return;
+        }
+        if (!ctx.pushEaAddress(src.expr, asmItem.span)) return;
+        if (!ctx.emitInstr('pop', [{ kind: 'Reg', span: asmItem.span, name: dst.name.toUpperCase() }], asmItem.span))
+          return;
+        ctx.syncToFlow();
+        return;
+      }
       const moveAsLd: AsmInstructionNode = { ...asmItem, head: 'ld' };
       if (ctx.lowerLdWithEa(moveAsLd)) {
         ctx.syncToFlow();
