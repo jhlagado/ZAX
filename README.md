@@ -238,8 +238,8 @@ end
 Field access and array indexing produce effective addresses. Parentheses dereference. This is the same convention as Z80 indirect addressing, extended to structured data:
 
 ```
-ld hl, (sprites[C].x)    ; load word at sprites[C].x into HL
-ld (sprites[C].flags), A  ; store A into the flags field
+move hl, sprites[C].x      ; load word at sprites[C].x into HL
+move sprites[C].flags, a   ; store A into the flags field
 ```
 
 The compiler lowers these into real instruction sequences (computing the offset, loading the address, performing the access). If a form can't be lowered without violating register/flag preservation constraints, it's a compile error — not a silent clobber.

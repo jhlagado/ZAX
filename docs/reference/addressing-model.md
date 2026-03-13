@@ -310,7 +310,7 @@ Element size = 1. HL returns the effective address; DE must be preserved. EA\_\*
 
 #### EA_GLOB_CONST (base=glob, idx=const)
 
-ZAX example: `ld reg, glob[const]`
+ZAX example: `move reg, glob[const]`
 
 Steps
 
@@ -330,7 +330,7 @@ add hl,de
 
 #### EA_GLOB_REG (base=glob, idx=reg8)
 
-ZAX example: `ld reg, glob[ireg]`
+ZAX example: `move reg, glob[ireg]`
 
 Steps
 
@@ -351,7 +351,7 @@ add hl,de
 
 #### EA_GLOB_RP (base=glob, idx=reg16)
 
-ZAX example: `ld reg, glob[rp]`
+ZAX example: `move reg, glob[rp]`
 
 Steps
 
@@ -371,7 +371,7 @@ add hl,de
 
 #### EA_FVAR_CONST (base=fvar, idx=const)
 
-ZAX example: `ld reg, fvar[const]`
+ZAX example: `move reg, fvar[const]`
 
 Steps
 
@@ -392,7 +392,7 @@ add hl,de
 
 #### EA_FVAR_REG (base=fvar, idx=reg8)
 
-ZAX example: `ld reg, fvar[ireg]`
+ZAX example: `move reg, fvar[ireg]`
 
 Steps
 
@@ -414,7 +414,7 @@ add hl,de
 
 #### EA_FVAR_RP (base=fvar, idx=reg16)
 
-ZAX example: `ld reg, fvar[rp]`
+ZAX example: `move reg, fvar[rp]`
 
 Steps
 
@@ -435,7 +435,7 @@ add hl,de
 
 #### EA_GLOB_FVAR (base=glob, idx=word at fvar)
 
-ZAX example: `ld reg, glob[fvar]`
+ZAX example: `move reg, glob[fvar]`
 
 Steps
 
@@ -458,7 +458,7 @@ add hl,de
 
 #### EA_FVAR_FVAR (base=fvar, idx=word at fvar2)
 
-ZAX example: `ld reg, fvar[fvar2]`
+ZAX example: `move reg, fvar[fvar2]`
 
 Steps
 
@@ -482,7 +482,7 @@ add hl,de
 
 #### EA_FVAR_GLOB (base=fvar, idx=word at glob)
 
-ZAX example: `ld reg, fvar[glob]`
+ZAX example: `move reg, fvar[glob]`
 
 Steps
 
@@ -503,7 +503,7 @@ add hl,de
 
 #### EA_GLOB_GLOB (base=glob1, idx=word at glob2)
 
-ZAX example: `ld reg, glob1[glob2]`
+ZAX example: `move reg, glob1[glob2]`
 
 Steps
 
@@ -707,7 +707,7 @@ Element size = 2. These scale the index by 2 (`CALC_EA_2`) in the common word-si
 
 #### EAW_GLOB_CONST (base=glob, idx=const)
 
-ZAX example: `ld rp, glob[const]`
+ZAX example: `move rp, glob[const]`
 
 Steps
 
@@ -728,7 +728,7 @@ add hl,de
 
 #### EAW_GLOB_REG (base=glob, idx=reg8)
 
-ZAX example: `ld rp, glob[ireg]`
+ZAX example: `move rp, glob[ireg]`
 
 Steps
 
@@ -750,7 +750,7 @@ add hl,de
 
 #### EAW_GLOB_RP (base=glob, idx=reg16)
 
-ZAX example: `ld rp, glob[rp]`
+ZAX example: `move rp, glob[rp]`
 
 Steps
 
@@ -771,7 +771,7 @@ add hl,de
 
 #### EAW_FVAR_CONST (base=fvar, idx=const)
 
-ZAX example: `ld rp, fvar[const]`
+ZAX example: `move rp, fvar[const]`
 
 Steps
 
@@ -793,7 +793,7 @@ add hl,de
 
 #### EAW_FVAR_REG (base=fvar, idx=reg8)
 
-ZAX example: `ld rp, fvar[ireg]`
+ZAX example: `move rp, fvar[ireg]`
 
 Steps
 
@@ -816,7 +816,7 @@ add hl,de
 
 #### EAW_FVAR_RP (base=fvar, idx=reg16)
 
-ZAX example: `ld rp, fvar[rp]`
+ZAX example: `move rp, fvar[rp]`
 
 Steps
 
@@ -838,7 +838,7 @@ add hl,de
 
 #### EAW_GLOB_FVAR (base=glob, idx=word at fvar)
 
-ZAX example: `ld rp, glob[fvar]`
+ZAX example: `move rp, glob[fvar]`
 
 Steps
 
@@ -862,7 +862,7 @@ add hl,de
 
 #### EAW_FVAR_FVAR (base=fvar, idx=word at fvar2)
 
-ZAX example: `ld rp, fvar[fvar2]`
+ZAX example: `move rp, fvar[fvar2]`
 
 Steps
 
@@ -887,7 +887,7 @@ add hl,de
 
 #### EAW_FVAR_GLOB (base=fvar, idx=word at glob)
 
-ZAX example: `ld rp, fvar[glob]`
+ZAX example: `move rp, fvar[glob]`
 
 Steps
 
@@ -909,7 +909,7 @@ add hl,de
 
 #### EAW_GLOB_GLOB (base=glob1, idx=word at glob2)
 
-ZAX example: `ld rp, glob1[glob2]`
+ZAX example: `move rp, glob1[glob2]`
 
 Steps
 
