@@ -5,8 +5,8 @@ section data vars at $1000
 end
 
 export func main()
-  move a, arr[idxb]
-  move arr[idxb], a
-  move a, arr[idxw]
-  move arr[idxw], a
+  ld a, arr[idxb]
+  ld arr[idxb], a
+  ld a, arr[idxw]
+  ld arr[idxw], a
 end

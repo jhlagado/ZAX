@@ -5,8 +5,8 @@ end
 
 section code boot at $0100
   export func byte_fvar_glob(arr: byte[]): HL
-    move a, arr[glob_idx_word]
-    move arr[glob_idx_word], a
+    ld a, arr[glob_idx_word]
+    ld arr[glob_idx_word], a
     ld h, 0
     ld l, a
   end

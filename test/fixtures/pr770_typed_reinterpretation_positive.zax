@@ -10,24 +10,24 @@ type Header
 end
 
 func touch_pair(p: Pair)
-  move a, p.y
+  ld a, p.y
   inc a
-  move p.y, a
+  ld p.y, a
 end
 
 op bump(slot: ea)
-  move a, slot
+  ld a, slot
   inc a
-  move slot, a
+  ld slot, a
 end
 
 export func main(ptr: addr)
-  move hl, ptr
-  move a, <Header>hl.flags
+  ld hl, ptr
+  ld a, <Header>hl.flags
 
-  move de, ptr
+  ld de, ptr
   ld a, 1
-  move <Header>de.flags, a
+  ld <Header>de.flags, a
 
   bump <Header>hl.flags
   touch_pair <Header>ptr.pair

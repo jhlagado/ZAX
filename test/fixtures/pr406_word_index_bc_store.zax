@@ -4,6 +4,6 @@ end
 
 export func main()
   ld hl, $0001
-  move bc, arr_w[hl]
-  move arr_w[hl], bc
+  ld bc, arr_w[hl]
+  ld arr_w[hl], bc
 end

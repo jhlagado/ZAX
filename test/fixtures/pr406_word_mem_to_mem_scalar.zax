@@ -8,10 +8,7 @@ export func main(): AF, BC, DE, HL
     local_w: word = $1234
   end
 
-  move de, glob_src
-  move glob_dst, de
-  move de, glob_src
-  move local_w, de
-  move de, local_w
-  move glob_dst, de
+  ld glob_dst, glob_src
+  ld local_w, glob_src
+  ld glob_dst, local_w
 end

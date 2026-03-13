@@ -1,6 +1,6 @@
 func add_words(left_word: word, right_word: word): HL
-  move hl, left_word
-  move de, right_word
+  ld hl, left_word
+  ld de, right_word
   add hl, de
 end
 
@@ -9,11 +9,11 @@ func bump_byte(input_byte: byte): HL
     temp_word: word = 0
   end
 
-  move l, input_byte
+  ld l, input_byte
   ld h, 0
   inc l
-  move temp_word, hl
-  move hl, temp_word
+  ld temp_word, hl
+  ld hl, temp_word
 end
 
 export func main()
@@ -22,7 +22,7 @@ export func main()
   end
 
   add_words 10, 20
-  move result_word, hl
+  ld result_word, hl
 
   bump_byte 7
 end

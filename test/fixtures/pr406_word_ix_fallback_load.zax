@@ -4,5 +4,5 @@ section data vars at $2000
 end
 
 export func main(): AF, BC, DE, HL
-  move ix, arr_w[idx_word + 1]
+  ld ix, arr_w[idx_word + 1]
 end
