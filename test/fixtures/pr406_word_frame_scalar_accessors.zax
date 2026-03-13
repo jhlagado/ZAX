@@ -4,9 +4,9 @@ section code main at $0100
       local_w: word = $1234
     end
 
-    move bc, local_w
-    move de, local_w
-    move local_w, bc
-    move local_w, de
+    ld bc, local_w
+    ld de, local_w
+    ld local_w, bc
+    ld local_w, de
   end
 end

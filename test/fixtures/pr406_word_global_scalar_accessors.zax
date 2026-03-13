@@ -4,9 +4,9 @@ end
 
 section code main at $0100
   export func main(): AF, BC, DE, HL
-    move bc, glob_w
-    move de, glob_w
-    move glob_w, bc
-    move glob_w, de
+    ld bc, glob_w
+    ld de, glob_w
+    ld glob_w, bc
+    ld glob_w, de
   end
 end

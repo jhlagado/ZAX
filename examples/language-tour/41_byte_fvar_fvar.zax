@@ -4,8 +4,8 @@ end
 
 section code boot at $0100
   export func byte_fvar_fvar(arr: byte[], idx_word: word): HL
-    move a, arr[idx_word]
-    move arr[idx_word], a
+    ld a, arr[idx_word]
+    ld arr[idx_word], a
     ld h, 0
     ld l, a
   end

@@ -4,8 +4,8 @@ end
 
 section code boot at $0100
   export func byte_glob_reg(idx: word): HL
-    move b, glob_bytes[idx]
-    move glob_bytes[idx], b
+    ld b, glob_bytes[idx]
+    ld glob_bytes[idx], b
     ld h, 0
     ld l, b
   end

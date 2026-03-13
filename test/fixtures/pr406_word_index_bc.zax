@@ -4,5 +4,5 @@ end
 
 export func main()
   ld hl, $0001        ; runtime index
-  move bc, arr_w[hl]  ; load word into BC via runtime index
+  ld bc, (arr_w[hl])  ; load word into BC via runtime index
 end
