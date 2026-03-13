@@ -9,7 +9,7 @@ section data vars at $1000
     arr: byte[8] = [0, 0, 0, 0, 0, 0, 0, 0]
 end
 
-op readAddr(addr: byte)
+op readAddr(addr: ea)
   move a, addr
 end
 
