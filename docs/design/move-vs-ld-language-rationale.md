@@ -260,11 +260,12 @@ instr_line = z80_instruction
 
 move_stmt  = "move" , move_lhs , "," , move_rhs ;
 move_lhs   = reg8 | reg16 | typed_storage_path ;
-move_rhs   = reg8 | reg16 | typed_storage_path ;
+move_rhs   = reg8 | reg16 | typed_storage_path | address_of_path ;
 ```
 
-with the semantic rule that exactly one side must be a register and exactly one
-side must be a typed storage path.
+with the semantic rule that exactly one side must be a register and the other
+side must be a typed storage path, or later an explicitly accepted address-of
+storage-path form.
 
 The long-term benefit is that the grammar becomes more honest about operand
 categories:
