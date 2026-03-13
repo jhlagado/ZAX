@@ -361,6 +361,10 @@ export function parseAsmInstruction(
   const headLower = head.toLowerCase();
   const rest = firstSpace === -1 ? '' : trimmed.slice(firstSpace).trim();
 
+  if (headLower === 'move') {
+    return parseMoveInstruction(filePath, rest, instrSpan, diagnostics);
+  }
+
   const operands: AsmOperandNode[] = [];
   if (rest.length > 0) {
     const parseInOutOperand = (operandText: string): AsmOperandNode | undefined => {
@@ -385,4 +389,90 @@ export function parseAsmInstruction(
   }
 
   return { kind: 'AsmInstruction', span: instrSpan, head: headLower, operands };
+}
+
+function parseMoveInstruction(
+  filePath: string,
+  rest: string,
+  instrSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+): AsmInstructionNode | undefined {
+  if (rest.length === 0) {
+    diag(diagnostics, filePath, `"move" expects two operands`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+    return undefined;
+  }
+
+  const parts = rest.split(',').map((part) => part.trim());
+  if (parts.length !== 2) {
+    diag(diagnostics, filePath, `"move" expects exactly two operands`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+  }
+
+  const operands: AsmOperandNode[] = [];
+  for (const part of parts) {
+    if (part.length === 0) continue;
+    const operand = parseMoveOperand(filePath, part, instrSpan, diagnostics);
+    if (operand) operands.push(operand);
+  }
+
+  const regCount = operands.filter((op) => op.kind === 'Reg').length;
+  const eaCount = operands.filter((op) => op.kind === 'Ea').length;
+  if (operands.length !== 2 || regCount !== 1 || eaCount !== 1) {
+    diag(
+      diagnostics,
+      filePath,
+      `"move" expects exactly one register operand and one typed storage operand`,
+      {
+        line: instrSpan.start.line,
+        column: instrSpan.start.column,
+      },
+    );
+  }
+
+  return { kind: 'AsmInstruction', span: instrSpan, head: 'move', operands };
+}
+
+function parseMoveOperand(
+  filePath: string,
+  operandText: string,
+  operandSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+): AsmOperandNode | undefined {
+  const t = operandText.trim();
+  if (t.length === 0) return undefined;
+
+  if (t.startsWith('@')) {
+    diag(diagnostics, filePath, `"move" does not accept address-of operands`, {
+      line: operandSpan.start.line,
+      column: operandSpan.start.column,
+    });
+    return undefined;
+  }
+
+  const canonicalRegister = canonicalRegisterToken(t);
+  if (ALL_REGISTER_NAMES.has(canonicalRegister)) {
+    return { kind: 'Reg', span: operandSpan, name: canonicalRegister };
+  }
+
+  if (t.startsWith('(') && t.endsWith(')')) {
+    diag(diagnostics, filePath, `"move" does not accept indirect memory operands`, {
+      line: operandSpan.start.line,
+      column: operandSpan.start.column,
+    });
+    return undefined;
+  }
+
+  const ea = parseEaExprFromText(filePath, t, operandSpan, diagnostics);
+  if (ea) return { kind: 'Ea', span: operandSpan, expr: ea };
+
+  diag(diagnostics, filePath, `Invalid "move" operand "${t}"`, {
+    line: operandSpan.start.line,
+    column: operandSpan.start.column,
+  });
+  return undefined;
 }
