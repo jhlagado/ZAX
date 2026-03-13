@@ -249,6 +249,10 @@ So:
 - both-register `move` is invalid
 - both-storage-path `move` is invalid
 
+In practical terms, a direct typed-storage copy such as `move x, y` is also
+invalid; the transfer must go through a register, which matches the underlying
+Z80 execution model.
+
 ### What this means for existing typed `ld`
 
 Current ZAX effectively allows `ld` to act like `move` in many places. Under
