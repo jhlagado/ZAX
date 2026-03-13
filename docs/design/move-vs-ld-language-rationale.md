@@ -7,6 +7,16 @@
 This document is a staged discussion paper. It is intended to be built section
 by section and reviewed incrementally.
 
+## Contents
+
+1. [Why this question exists](#1-why-this-question-exists)
+2. [Exact semantic split between `move` and `ld`](#2-exact-semantic-split-between-move-and-ld)
+3. [Source compatibility and migration impact](#3-source-compatibility-and-migration-impact)
+4. [Grammar impact](#4-grammar-impact)
+5. [Examples rewritten both ways](#5-examples-rewritten-both-ways)
+6. [Implications for raw label and data directives](#6-implications-for-raw-label-and-data-directives)
+7. [Staged implementation plan](#7-staged-implementation-plan)
+
 ---
 
 ## 1. Why this question exists
@@ -627,12 +637,12 @@ move flag, a
 What changes:
 
 This is the smallest and most direct case. The current spelling is compact and
- familiar. The proposed spelling is more explicit about the fact that `flag` is
- a typed storage object, not a raw assembler label.
+familiar. The proposed spelling is more explicit about the fact that `flag` is
+a typed storage object, not a raw assembler label.
 
 This example is important because it shows the cost of the proposal most
- clearly. If the language adopts `move`, then even the simplest scalar variable
- access changes spelling.
+clearly. If the language adopts `move`, then even the simplest scalar variable
+access changes spelling.
 
 ### Example B — local/frame scalar
 
@@ -661,8 +671,8 @@ end
 What changes:
 
 This case makes the layer distinction easier to defend. A frame variable is not
- a classic assembler label in any meaningful sense. Treating it through `move`
- is conceptually cleaner than pretending raw `ld` is still unchanged here.
+a classic assembler label in any meaningful sense. Treating it through `move`
+is conceptually cleaner than pretending raw `ld` is still unchanged here.
 
 ### Example C — indexed byte array
 
@@ -683,8 +693,8 @@ move bytes[c], a
 What changes:
 
 This is one of the strongest arguments for `move`. `bytes[c]` is a typed
- storage path with runtime indexing. It is not a classic raw assembler operand.
- The proposed spelling makes that fact visible.
+storage path with runtime indexing. It is not a classic raw assembler operand.
+The proposed spelling makes that fact visible.
 
 ### Example D — indexed word array
 
@@ -705,9 +715,9 @@ move words[idx], hl
 What changes:
 
 This is the core example for the proposal. It exposes the fact that current
- ZAX lets a standard Z80 mnemonic carry a substantial typed storage-path
- language. Under the split, the typed semantics are still available, but they
- are no longer hidden inside `ld`.
+ZAX lets a standard Z80 mnemonic carry a substantial typed storage-path
+language. Under the split, the typed semantics are still available, but they
+are no longer hidden inside `ld`.
 
 ### Example E — record field access
 
@@ -730,8 +740,8 @@ move hl, sprite.position
 What changes:
 
 Again, the difference is not in capability but in layer ownership. Record field
- access is clearly a language-level storage feature. The proposed spelling says
- so.
+access is clearly a language-level storage feature. The proposed spelling says
+so.
 
 ### Example F — raw label semantics
 
@@ -754,8 +764,8 @@ ld hl, (table)
 What changes:
 
 Nothing at the source level. That is the point. The raw assembler layer stays
- raw. The proposal does not rename classic `ld`; it removes typed variable
- semantics from it.
+raw. The proposal does not rename classic `ld`; it removes typed variable
+semantics from it.
 
 ### Example G — mixed code showing the layer boundary
 
@@ -795,11 +805,11 @@ That makes the program read as two layers instead of one overloaded mnemonic.
 The examples expose both the gain and the cost.
 
 The gain is conceptual honesty. Typed storage access no longer pretends to be a
- plain Z80 mnemonic use.
+plain Z80 mnemonic use.
 
 The cost is pervasive spelling churn. Even simple scalar variable accesses
- change. That is why this proposal should not be treated as a trivial syntax
- cleanup. It is a deliberate language re-centering.
+change. That is why this proposal should not be treated as a trivial syntax
+cleanup. It is a deliberate language re-centering.
 
 ### What the examples do not yet settle
 
@@ -812,8 +822,8 @@ These examples show the surface-language effect. They do not yet answer:
 - how much compatibility syntax the parser should retain during transition
 
 Those questions are implementation- and policy-level follow-ons. The examples
- are here to make the source-language stakes concrete before those later choices
- are made.
+are here to make the source-language stakes concrete before those later choices
+are made.
 
 ---
 
@@ -845,7 +855,7 @@ ZAX's typed storage model is already good at:
 - typed storage-path access
 
 This is the "variable" side of the language. It is structured, type-aware, and
- value-oriented.
+value-oriented.
 
 It works well for code that thinks in terms of:
 
@@ -872,9 +882,9 @@ Classic assemblers also support a different style of memory authoring:
 This is where directives like `DB`, `DW`, and `DS` traditionally live.
 
 Typed reinterpretation and typed casts do not solve that problem. They help the
- programmer *read through* an address as a type. They do not by themselves give
- the language a clean way to *define* raw address-semantics data in the first
- place.
+programmer *read through* an address as a type. They do not by themselves give
+the language a clean way to *define* raw address-semantics data in the first
+place.
 
 So if ZAX wants `ld` to return to classic assembler semantics, the language
  likely also needs a real raw-data declaration story.
@@ -882,7 +892,7 @@ So if ZAX wants `ld` to return to classic assembler semantics, the language
 ### The symbol-class consequence
 
 Once raw data directives exist, their labels should not behave like typed
- globals.
+globals.
 
 That is the crucial point.
 
@@ -914,15 +924,15 @@ There are several possible syntactic paths for raw data directives:
 This document does not choose among them yet.
 
 The important design point at this stage is not exact directive spelling. It is
- that the language should have an explicit declaration family whose symbols are
- address-semantics symbols rather than value-semantics variables.
+that the language should have an explicit declaration family whose symbols are
+address-semantics symbols rather than value-semantics variables.
 
 ### Why this matters for `ld`
 
 Without raw data directives, restoring `ld` to classic semantics is only half a
- solution. The instruction would be cleaner, but the language would still lack
- a good way to define many of the raw address-based objects that assembler
- programmers routinely use.
+solution. The instruction would be cleaner, but the language would still lack
+a good way to define many of the raw address-based objects that assembler
+programmers routinely use.
 
 With raw data directives, the model becomes much more coherent:
 
@@ -938,8 +948,8 @@ That is a language with a real two-layer memory model instead of a single
 This also reinforces the parser/grammar convergence agenda.
 
 Raw data directives should not just be treated as a few extra parser cases. They
- should introduce explicit AST and symbol classes, because their semantic role
- is different from typed storage declarations.
+should introduce explicit AST and symbol classes, because their semantic role
+is different from typed storage declarations.
 
 So the right long-term framing is:
 
@@ -957,7 +967,7 @@ They become part of the same reform family.
 
 The sequence does not have to be simultaneous. `move` could be specified first,
 and raw data directives could follow. But the design should acknowledge from the
- start that the two ideas belong together.
+start that the two ideas belong together.
 
 Otherwise the project risks solving only half the problem:
 
@@ -995,8 +1005,8 @@ This should result in:
 - a backlog umbrella with sequenced issues
 
 No implementation work should begin until those points are settled. Otherwise
- the project risks repeating the earlier `addr` problem: implementation landing
- before the language boundary is actually stable.
+the project risks repeating the earlier `addr` problem: implementation landing
+before the language boundary is actually stable.
 
 ### Stage 1 — semantic and grammar groundwork
 
