@@ -127,4 +127,14 @@ end
     `);
     expect(parsed.diagnostics.length).toBeGreaterThan(0);
   });
+
+  it('allows code labels inside code sections', () => {
+    const { diagnostics } = parse(`
+section code text at $0000
+  loop:
+  nop
+end
+    `);
+    expect(diagnostics).toEqual([]);
+  });
 });
