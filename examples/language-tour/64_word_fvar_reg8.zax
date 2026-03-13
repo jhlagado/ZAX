@@ -4,8 +4,8 @@ end
 
 section code boot at $0100
   export func word_fvar_reg(arr: word[], idx: word): HL
-    ld de, arr[idx]
-    ld arr[idx], de
+    move de, arr[idx]
+    move arr[idx], de
     ex de, hl
   end
 

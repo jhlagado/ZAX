@@ -4,9 +4,9 @@ end
 
 section code boot at $0100
   export func byte_fvar_reg16(arr: byte[], idx: word): HL
-    ld hl, idx
-    ld a, arr[hl]
-    ld arr[hl], a
+    move hl, idx
+    move a, arr[hl]
+    move arr[hl], a
     ld h, 0
     ld l, a
   end
