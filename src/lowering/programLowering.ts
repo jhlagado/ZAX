@@ -13,6 +13,7 @@ import type {
   ModuleFileNode,
   ModuleItemNode,
   NamedSectionNode,
+  RawDataDeclNode,
   OpDeclNode,
   ProgramNode,
   SectionItemNode,
@@ -271,6 +272,10 @@ export function preScanProgramDeclarations(ctx: Context): PrescanResult {
       ctx.storageTypes.set(lower, decl.typeExpr);
       const scalar = ctx.resolveScalarKind(decl.typeExpr);
       if (!scalar) ctx.rawAddressSymbols.add(lower);
+    } else if (item.kind === 'RawDataDecl') {
+      if (namedSection && namedSection.section !== 'data') return;
+      const decl = item as RawDataDeclNode;
+      ctx.rawAddressSymbols.add(decl.name.toLowerCase());
     }
   };
 
@@ -446,6 +451,108 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
     }
     ctx.pending.push({ kind: 'data', name: binDecl.name, section: 'data', offset: ctx.dataOffsetRef.current, file: binDecl.span.file, line: binDecl.span.start.line, scope: 'global' });
     for (const b of blob) ctx.dataBytes.set(ctx.dataOffsetRef.current++, b & 0xff);
+  };
+  const symbolicTargetFromExpr = (
+    expr: ImmExprNode,
+  ): { baseLower: string; addend: number } | undefined => {
+    if (expr.kind === 'ImmName') return { baseLower: expr.name.toLowerCase(), addend: 0 };
+    if (expr.kind !== 'ImmBinary') return undefined;
+    if (expr.op !== '+' && expr.op !== '-') return undefined;
+
+    const leftName = expr.left.kind === 'ImmName' ? expr.left.name.toLowerCase() : undefined;
+    const rightName = expr.right.kind === 'ImmName' ? expr.right.name.toLowerCase() : undefined;
+
+    if (leftName) {
+      const right = ctx.evalImmExpr(expr.right, ctx.env, ctx.diagnostics);
+      if (right === undefined) return undefined;
+      return { baseLower: leftName, addend: expr.op === '+' ? right : -right };
+    }
+
+    if (expr.op === '+' && rightName) {
+      const left = ctx.evalImmExpr(expr.left, ctx.env, ctx.diagnostics);
+      if (left === undefined) return undefined;
+      return { baseLower: rightName, addend: left };
+    }
+
+    return undefined;
+  };
+  const lowerRawDataDecl = (
+    decl: RawDataDeclNode,
+    namedSection?: { node: NamedSectionNode; sink: NamedSectionContributionSink },
+  ): void => {
+    if (!namedSection || namedSection.node.section !== 'data') {
+      const sectionName = namedSection?.node.name ?? 'module scope';
+      ctx.diag(
+        ctx.diagnostics,
+        decl.span.file,
+        `Raw data declarations are only allowed inside data sections${namedSection ? ` like "${sectionName}"` : ''}.`,
+      );
+      return;
+    }
+
+    const okToDeclareSymbol = !ctx.taken.has(decl.name);
+    if (!okToDeclareSymbol) {
+      ctx.diag(ctx.diagnostics, decl.span.file, `Duplicate symbol name "${decl.name}".`);
+    } else {
+      ctx.taken.add(decl.name);
+      namedSection.sink.pendingSymbols.push({
+        kind: 'data',
+        name: decl.name,
+        section: namedSection.node.section,
+        offset: namedSection.sink.offset,
+        file: decl.span.file,
+        line: decl.span.start.line,
+        scope: 'global',
+      });
+    }
+
+    const emitByte = (b: number): void => {
+      namedSection.sink.bytes.set(namedSection.sink.offset, b & 0xff);
+      namedSection.sink.offset++;
+    };
+    const emitWord = (w: number): void => {
+      emitByte(w & 0xff);
+      emitByte((w >> 8) & 0xff);
+    };
+
+    if (decl.directive === 'ds') {
+      const size = ctx.evalImmExpr(decl.size, ctx.env, ctx.diagnostics);
+      if (size === undefined) {
+        ctx.diag(ctx.diagnostics, decl.span.file, `Failed to evaluate raw data size for "${decl.name}".`);
+        return;
+      }
+      if (size < 0) {
+        ctx.diag(ctx.diagnostics, decl.span.file, `Raw data size for "${decl.name}" must be non-negative.`);
+        return;
+      }
+      for (let i = 0; i < size; i++) emitByte(0);
+      return;
+    }
+
+    for (const value of decl.values) {
+      const v = ctx.evalImmExpr(value, ctx.env, ctx.diagnostics);
+      if (v !== undefined) {
+        if (decl.directive === 'db') emitByte(v);
+        else emitWord(v);
+        continue;
+      }
+      if (decl.directive === 'dw') {
+        const symbolic = symbolicTargetFromExpr(value);
+        if (symbolic) {
+          namedSection.sink.fixups.push({
+            offset: namedSection.sink.offset,
+            baseLower: symbolic.baseLower,
+            addend: symbolic.addend,
+            file: decl.span.file,
+          });
+          emitWord(0);
+          continue;
+        }
+      }
+      ctx.diag(ctx.diagnostics, decl.span.file, `Failed to evaluate raw data value for "${decl.name}".`);
+      if (decl.directive === 'db') emitByte(0);
+      else emitWord(0);
+    }
   };
   const lowerItem = (
     item: ModuleItemNode | SectionItemNode,
@@ -647,6 +754,11 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
           startupInitActions: namedSection.sink.startupInitActions,
         },
       );
+      return;
+    }
+
+    if (item.kind === 'RawDataDecl') {
+      lowerRawDataDecl(item as RawDataDeclNode, namedSection);
       return;
     }
 
