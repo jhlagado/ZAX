@@ -17,6 +17,7 @@ Active design work and review-target design records.
 
 Current active design docs:
 - `docs/design/grammar-parser-convergence-plan.md`
+- `docs/design/move-vs-ld-language-rationale.md`
 - `docs/design/type-system-reform-plan.md`
 - `docs/design/typed-reinterpretation-cast.md`
 
