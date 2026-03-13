@@ -7,7 +7,7 @@ direction.
 
 ### Current implementation state
 
-- Direct typed `ld` forms remain the active language surface.
+- Typed storage transfers now use `move` (typed-storage inside `ld` has been removed).
 - Grouped and ranged `select case` values are implemented.
 - Parser/grammar convergence work is active again.
 - Typed reinterpretation syntax `<Type>base.tail` is now implemented on
@@ -27,4 +27,4 @@ direction.
 
 - any reintroduction of `addr` as a source-language feature
 - broad addressing-surface redesign
-- retirement of typed EA inside `ld`
+- further addressing-surface redesign beyond the current `move`/typed-path split
