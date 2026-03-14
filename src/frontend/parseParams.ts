@@ -2,7 +2,7 @@ import type { OpMatcherNode, OpParamNode, ParamNode, SourceSpan, TypeExprNode } 
 import type { Diagnostic } from '../diagnostics/types.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import { parseTypeExprFromText } from './parseImm.js';
-import { MATCHER_TYPES } from './grammarData.js';
+import { MATCHER_KIND_BY_TYPE, MATCHER_TYPES } from './grammarData.js';
 
 export type ParseParamsContext = {
   isReservedTopLevelName: (name: string) => boolean;
@@ -91,23 +91,11 @@ export function parseParamsFromText(
   return out;
 }
 
-const MATCHER_KIND_BY_TYPE: Readonly<Record<string, MatcherKind>> = {
-  reg8: 'MatcherReg8',
-  reg16: 'MatcherReg16',
-  idx16: 'MatcherIdx16',
-  cc: 'MatcherCc',
-  imm8: 'MatcherImm8',
-  imm16: 'MatcherImm16',
-  ea: 'MatcherEa',
-  mem8: 'MatcherMem8',
-  mem16: 'MatcherMem16',
-};
-
 function parseOpMatcherFromText(matcherText: string, matcherSpan: SourceSpan): OpMatcherNode {
   const t = matcherText.trim();
   const lower = t.toLowerCase();
   if (!MATCHER_TYPES.has(lower)) return { kind: 'MatcherFixed', span: matcherSpan, token: t };
-  return { kind: MATCHER_KIND_BY_TYPE[lower]!, span: matcherSpan };
+  return { kind: MATCHER_KIND_BY_TYPE[lower as keyof typeof MATCHER_KIND_BY_TYPE], span: matcherSpan };
 }
 
 export function parseOpParamsFromText(
