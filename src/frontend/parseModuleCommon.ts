@@ -7,7 +7,7 @@ import {
   parseTypeExprFromText,
 } from './parseImm.js';
 import { parseEaExprFromText } from './parseOperands.js';
-import { RETURN_REGISTERS, TOP_LEVEL_KEYWORDS } from './grammarData.js';
+import { LEGACY_RETURN_KEYWORDS, RETURN_REGISTERS, TOP_LEVEL_KEYWORDS } from './grammarData.js';
 
 export { TOP_LEVEL_KEYWORDS } from './grammarData.js';
 
@@ -148,11 +148,10 @@ export function parseReturnRegsFromText(
     .filter((t) => t.length > 0);
   if (tokens.length === 0) return { regs: [] };
 
-  const legacyKeywords = new Set(['VOID', 'BYTE', 'WORD', 'LONG', 'VERYLONG', 'NONE', 'FLAGS']);
   const seen = new Set<string>();
   for (const t of tokens) {
     const upper = t.toUpperCase();
-    if (legacyKeywords.has(upper)) {
+    if (LEGACY_RETURN_KEYWORDS.has(upper)) {
       diag(
         diagnostics,
         modulePath,
