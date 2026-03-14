@@ -31,6 +31,8 @@ export const ALL_REGISTER_NAMES = new Set<string>([
 export const INDEX_REG8_NAMES = new Set<string>(REGISTERS_8);
 export const INDEX_REG16_NAMES = new Set<string>(['HL', 'DE', 'BC']);
 export const RETURN_REGISTERS = new Set<string>(['HL', 'DE', 'BC', 'AF']);
+export const LEGACY_RETURN_KEYWORD_LIST = ['VOID', 'BYTE', 'WORD', 'LONG', 'VERYLONG', 'NONE', 'FLAGS'] as const;
+export const LEGACY_RETURN_KEYWORDS = new Set<string>(LEGACY_RETURN_KEYWORD_LIST);
 
 export const CONDITION_CODE_LIST = ['z', 'nz', 'c', 'nc', 'pe', 'po', 'm', 'p'] as const;
 export const CONDITION_CODES = new Set<string>(CONDITION_CODE_LIST);
