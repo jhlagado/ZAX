@@ -3,7 +3,7 @@ export func main()
     call z, 2 + target
     jp 3 + target
     call 4 + target
-  target:
+  .target:
     nop
     ret
   end

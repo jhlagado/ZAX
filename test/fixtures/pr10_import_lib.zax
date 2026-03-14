@@ -2,7 +2,7 @@
 const LibConst = 42
 
 func lib()
-    lib_start:
+    .lib_start:
     nop
 end
 

@@ -1,6 +1,6 @@
 export func main()
     ld ix, target
     ld iy, target
-  target:
+  .target:
     ret
   end

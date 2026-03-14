@@ -1,4 +1,4 @@
 export func main()
-  target:
+  .target:
     jp target - 1
   end

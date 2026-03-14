@@ -4,7 +4,7 @@ export func main()
     call pe, $3000
     jp nz, skip
     nop
-  skip:
+  .skip:
     call c, tail
-  tail:
+  .tail:
 end

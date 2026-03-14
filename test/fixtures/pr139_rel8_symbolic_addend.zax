@@ -1,7 +1,7 @@
 export func main()
     jr target + 1
     nop
-  target:
+  .target:
     nop
     djnz target - 1
     ret

@@ -1,6 +1,6 @@
 export func main()
     call target
     nop
-target:
+.target:
     nop
 end

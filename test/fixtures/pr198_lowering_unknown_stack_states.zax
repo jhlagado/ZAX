@@ -1,6 +1,6 @@
 op branch_unknown()
   jp target
-target:
+.target:
   nop
 end
 
@@ -10,7 +10,7 @@ export func unknown_if_join(a: byte): void
   end
   if nz
     jp then_target
-  then_target:
+  .then_target:
     nop
   else
     nop
@@ -23,7 +23,7 @@ export func unknown_while_backedge(a: byte): void
   end
   while nz
     jp body_target
-  body_target:
+  .body_target:
     nop
   end
 end
@@ -34,7 +34,7 @@ export func unknown_repeat_backedge(a: byte): void
   end
   repeat
     jp body_target
-  body_target:
+  .body_target:
     nop
   until z
 end
@@ -46,7 +46,7 @@ export func unknown_select_join(a: byte): void
   select a
     case 0
       jp arm_zero
-    arm_zero:
+    .arm_zero:
       nop
     case 1
       nop
@@ -60,7 +60,7 @@ export func unknown_ret(a: byte): void
   push bc
   jp done
   pop bc
-done:
+.done:
   ret
 end
 
@@ -71,7 +71,7 @@ export func unknown_fallthrough(a: byte): void
   push bc
   jp done
   pop bc
-done:
+.done:
   nop
 end
 

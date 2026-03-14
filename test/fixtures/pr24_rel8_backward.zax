@@ -1,4 +1,4 @@
 export func main()
-  loop:
+  .loop:
     djnz loop
 end

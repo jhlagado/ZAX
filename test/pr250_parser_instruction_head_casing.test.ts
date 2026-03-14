@@ -9,8 +9,7 @@ describe('PR250 parser asm head canonicalization', () => {
     const source = `
 func main()
   LD A, 1
-  dJnZ loop
-  loop:
+  dJnZ 5
   Ret
 end
 `;

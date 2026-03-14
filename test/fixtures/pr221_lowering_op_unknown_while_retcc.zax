@@ -1,6 +1,6 @@
 op branch_unknown()
   jp target
-target:
+.target:
   nop
 end
 

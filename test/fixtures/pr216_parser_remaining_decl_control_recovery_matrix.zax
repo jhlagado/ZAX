@@ -1,5 +1,5 @@
 func parser_diag_probe()
-  stray: end
+  .stray: end
 end
 
 extern Legacy

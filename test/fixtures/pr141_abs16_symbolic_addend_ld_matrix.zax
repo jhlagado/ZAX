@@ -13,7 +13,7 @@ export func main()
     ld (target + 12), sp
     ld iy, (target + 13)
     ld (target + 14), iy
-  target:
+  .target:
     nop
     ret
   end

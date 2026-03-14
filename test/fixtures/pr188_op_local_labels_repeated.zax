@@ -1,5 +1,5 @@
 op spin()
-again:
+.again:
   nop
   jr again
 end

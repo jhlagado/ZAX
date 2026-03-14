@@ -141,6 +141,6 @@ export func main()
     nop
     nop
     nop
-  far:
+  .far:
     nop
   end

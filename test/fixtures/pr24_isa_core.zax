@@ -9,6 +9,6 @@ export func main()
     cp (hl)
     jr nz, skip
     djnz skip
-  skip:
+  .skip:
     nop
 end

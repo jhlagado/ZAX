@@ -2,7 +2,7 @@
 import "pr10_import_lib.zax"
 
 export func main()
-    main_start:
+    .main_start:
     ld a, LibConst
 end
 
