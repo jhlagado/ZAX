@@ -91,3 +91,14 @@ export const MATCHER_TYPE_LIST = [
   'mem16',
 ] as const;
 export const MATCHER_TYPES = new Set<string>(MATCHER_TYPE_LIST);
+export const MATCHER_KIND_BY_TYPE: Readonly<Record<(typeof MATCHER_TYPE_LIST)[number], 'MatcherReg8' | 'MatcherReg16' | 'MatcherIdx16' | 'MatcherCc' | 'MatcherImm8' | 'MatcherImm16' | 'MatcherEa' | 'MatcherMem8' | 'MatcherMem16'>> = {
+  reg8: 'MatcherReg8',
+  reg16: 'MatcherReg16',
+  idx16: 'MatcherIdx16',
+  cc: 'MatcherCc',
+  imm8: 'MatcherImm8',
+  imm16: 'MatcherImm16',
+  ea: 'MatcherEa',
+  mem8: 'MatcherMem8',
+  mem16: 'MatcherMem16',
+};
