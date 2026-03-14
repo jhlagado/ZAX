@@ -46,6 +46,8 @@ section code text at $0000
 export func main()
   move hl, @@x
   move hl, @(@x)
+  move hl, @(array[i])
+  move hl, array[@i]
   ret
 end
 end
