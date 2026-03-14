@@ -154,8 +154,10 @@ instr_line      = z80_instruction
                 | asm_label
                 | local_jump ;
 
-move_stmt       = "move" , move_operand , "," , move_operand ;
-move_operand    = move_reg | ea_expr | move_addr ;
+move_stmt       = "move" , move_reg , "," , move_src
+                | "move" , move_path , "," , move_reg ;
+move_src        = move_addr | move_path ;
+move_path       = ea_expr ;
 move_reg        = reg8 | reg16 | "AF" | "SP" | "IXH" | "IXL" | "IYH" | "IYL" ;
 move_addr       = "@" , ea_expr ;  (* move_addr is only valid as the source operand in v1 *)
 
