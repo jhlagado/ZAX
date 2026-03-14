@@ -134,10 +134,10 @@ export function parseTopLevelOpDecl(
     const contentStart = rawNoComment.indexOf(content);
     const contentSpan =
       contentStart >= 0 ? span(file, so + contentStart, so + rawNoComment.length) : fullSpan;
-    const labelMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$/.exec(content);
-    if (labelMatch) {
-      const label = labelMatch[1]!;
-      const remainder = labelMatch[2] ?? '';
+    const dotLabelMatch = /^\.([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$/.exec(content);
+    if (dotLabelMatch) {
+      const label = dotLabelMatch[1]!;
+      const remainder = dotLabelMatch[2] ?? '';
       bodyItems.push({ kind: 'AsmLabel', span: fullSpan, name: label });
       if (remainder.trim().length > 0) {
         const stmt = parseAsmStatement(
@@ -150,6 +150,15 @@ export function parseTopLevelOpDecl(
         );
         appendParsedAsmStatement(bodyItems, stmt);
       }
+      index++;
+      continue;
+    }
+    const bareLabelMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$/.exec(content);
+    if (bareLabelMatch) {
+      diag(diagnostics, modulePath, `Bare asm labels are not supported; use ".label:"`, {
+        line: contentSpan.start.line,
+        column: contentSpan.start.column,
+      });
       index++;
       continue;
     }
