@@ -58,7 +58,7 @@ describe('PR575 module visibility scaffolding', () => {
       files: [dep, root],
     } as ProgramNode;
 
-    const env = buildEnv(program, diagnostics, { typePaddingWarnings: false });
+    const env = buildEnv(program, diagnostics);
 
     expect(diagnostics).toEqual([]);
     expect(env.importedModuleIds!.get(root.path)).toEqual(new Set(['dep']));
@@ -108,7 +108,7 @@ describe('PR575 module visibility scaffolding', () => {
       files: [dep, root, other],
     } as ProgramNode;
 
-    const env = buildEnv(program, diagnostics, { typePaddingWarnings: false });
+    const env = buildEnv(program, diagnostics);
 
     expect(env.consts.get('LOCAL')).toBe(7);
     expect(
@@ -147,7 +147,7 @@ describe('PR575 module visibility scaffolding', () => {
       files: [dep, root],
     } as ProgramNode;
 
-    const env = buildEnv(program, diagnostics, { typePaddingWarnings: false });
+    const env = buildEnv(program, diagnostics);
     env.importedModuleIds!.delete(root.path);
 
     expect(diagnostics).toEqual([]);
@@ -185,7 +185,6 @@ describe('PR575 module visibility scaffolding', () => {
     } as ProgramNode;
 
     const env = buildEnv(program, diagnostics, {
-      typePaddingWarnings: false,
       resolvedImportGraph: new Map([
         [dep.path, []],
         [root.path, [dep.path]],
@@ -214,7 +213,6 @@ describe('PR575 module visibility scaffolding', () => {
     } as ProgramNode;
 
     const env = buildEnv(program, diagnostics, {
-      typePaddingWarnings: false,
       resolvedImportGraph: new Map([
         [dep.path, []],
         [root.path, [dep.path]],

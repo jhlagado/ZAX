@@ -24,7 +24,6 @@ type CliOptions = {
   emitAsm: boolean;
   caseStyle: CaseStyleMode;
   opStackPolicy: OpStackPolicyMode;
-  typePaddingWarnings: boolean;
   rawTypedCallWarnings: boolean;
   includeDirs: string[];
 };
@@ -43,7 +42,6 @@ function usage(): string {
     '      --noasm           Suppress .asm lowering trace',
     '      --case-style <m>  Case-style lint mode: off|upper|lower|consistent',
     '      --op-stack-policy <m> Op stack-policy mode: off|warn|error',
-    '      --type-padding-warn Emit warnings for power-of-2 type storage padding',
     '      --raw-typed-call-warn Emit warnings for raw call to typed callable targets',
     '  -I, --include <dir>   Add import search path (repeatable)',
     '  -V, --version         Print version',
@@ -70,7 +68,6 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
   let emitAsm = true;
   let caseStyle: CaseStyleMode = 'off';
   let opStackPolicy: OpStackPolicyMode = 'off';
-  let typePaddingWarnings = false;
   let rawTypedCallWarnings = false;
   const includeDirs: string[] = [];
   let entryFile: string | undefined;
@@ -158,10 +155,6 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
       opStackPolicy = v;
       continue;
     }
-    if (a === '--type-padding-warn') {
-      typePaddingWarnings = true;
-      continue;
-    }
     if (a === '--raw-typed-call-warn') {
       rawTypedCallWarnings = true;
       continue;
@@ -216,7 +209,6 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
     emitAsm,
     caseStyle,
     opStackPolicy,
-    typePaddingWarnings,
     rawTypedCallWarnings,
     includeDirs,
   };
@@ -332,7 +324,6 @@ export async function runCli(argv: string[]): Promise<number> {
         emitAsm: parsed.emitAsm,
         caseStyle: parsed.caseStyle,
         opStackPolicy: parsed.opStackPolicy,
-        typePaddingWarnings: parsed.typePaddingWarnings,
         rawTypedCallWarnings: parsed.rawTypedCallWarnings,
         includeDirs: parsed.includeDirs,
         requireMain: true,
