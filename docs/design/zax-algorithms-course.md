@@ -520,20 +520,24 @@ section data heap at $8400
   nodes: Node[16]    ; fixed-size pool — no dynamic allocation
 end
 
-; traverse the list starting at HL, summing values
+; traverse the list starting at head, summing values
 func list_sum(head: addr): HL
   var
     total: word = 0
   end
-  move hl, head
-  or a              ; test for null (HL = 0 means end)
+  move hl, head          ; HL = current node pointer
+  ld a, h
+  or l                   ; set Z if HL == 0 (null)
   while NZ
-    move de, <Node>hl.value    ; read value field
+    push hl                        ; save current node pointer
+    move de, <Node>hl.value        ; DE = value of current node
     move hl, total
     add hl, de
-    move total, hl
-    move hl, <Node>hl.next     ; advance to next node
-    or a                       ; test next pointer for null
+    move total, hl                 ; accumulate into total
+    pop hl                         ; restore current node pointer
+    move hl, <Node>hl.next         ; HL = next node pointer
+    ld a, h
+    or l                           ; set Z if next pointer is null
   end
   move hl, total
 end
@@ -632,9 +636,9 @@ than speculation.
 | Example Gap | Status |
 |---|---|
 | RPN calculator / quicksort software stack | Stack-typed local or push/pop op idiom — not yet on roadmap |
-| Linked list, BST — untyped `ptr` fields, explicit casts, null-as-zero convention | Pointer-typing ergonomics — Tier 2 friction; self-referential record declarations would resolve, not yet on roadmap |
+| Linked list, BST — untyped `ptr` fields, explicit casts, null-as-zero convention | Pointer-typing ergonomics — Tier 2 friction; self-referential record declarations would improve precision, not yet on roadmap |
 | Eight queens labeled exit | `break` / named exit — not yet on roadmap; course surfaces this |
-| Word frequency string ops | Standard `op` library — not yet on roadmap |
+| Word frequency string ops | Standard `op` library — library workstream, separate from language/compiler roadmap |
 | Ring buffer with exact-size sizeof | Exact-size layout stream (#817–820) — active |
 
 Note: typed reinterpretation (`<Type>base.tail`) and grouped/ranged `select
