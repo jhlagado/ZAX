@@ -2,7 +2,7 @@ import type { DataBlockNode, ImmExprNode } from '../frontend/ast.js';
 import type { StartupInitAction } from './sectionContributions.js';
 import type { PendingSymbol } from './loweringTypes.js';
 import type { Context } from './programLowering.js';
-import { preRoundSizeOfTypeExpr } from '../semantics/layout.js';
+import { sizeOfTypeExpr } from '../semantics/layout.js';
 
 export function lowerDataBlock(
   ctx: Context,
@@ -66,7 +66,7 @@ export function lowerDataBlock(
     if (recordType?.kind === 'record') {
       if (init.kind === 'InitZero') {
         const zeroStart = target.offsetRef.current;
-        const storageBytes = preRoundSizeOfTypeExpr(type, ctx.env, ctx.diagnostics);
+        const storageBytes = sizeOfTypeExpr(type, ctx.env, ctx.diagnostics);
         if (storageBytes === undefined) continue;
         for (let pad = 0; pad < storageBytes; pad++) emitByte(0);
         recordStartupInit('zero', zeroStart, storageBytes);
@@ -143,7 +143,7 @@ export function lowerDataBlock(
           emitted += 2;
         }
       }
-      const storageBytes = preRoundSizeOfTypeExpr(type, ctx.env, ctx.diagnostics);
+      const storageBytes = sizeOfTypeExpr(type, ctx.env, ctx.diagnostics);
       if (storageBytes === undefined) continue;
       recordStartupInit('copy', copyStart, emitted);
       const zeroStart = target.offsetRef.current;
@@ -159,7 +159,7 @@ export function lowerDataBlock(
 
     if (init.kind === 'InitZero') {
       const zeroStart = target.offsetRef.current;
-      const storageBytes = preRoundSizeOfTypeExpr(type, ctx.env, ctx.diagnostics);
+      const storageBytes = sizeOfTypeExpr(type, ctx.env, ctx.diagnostics);
       if (storageBytes === undefined) continue;
       for (let pad = 0; pad < storageBytes; pad++) emitByte(0);
       recordStartupInit('zero', zeroStart, storageBytes);

@@ -75,7 +75,7 @@ import type {
 } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import { evalImmExpr } from '../semantics/env.js';
-import { preRoundSizeOfTypeExpr, sizeOfTypeExpr } from '../semantics/layout.js';
+import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { encodeInstruction } from '../z80/encode.js';
 import type { NonBankedSectionKeyCollection } from '../sectionKeys.js';
 import type { Callable, PendingSymbol, SectionKind, SourceSegmentTag } from './loweringTypes.js';
@@ -599,7 +599,6 @@ export function emitProgram(
     resolveScalarBinding,
     resolveScalarKind,
     sizeOfTypeExpr: (typeExpr) => sizeOfTypeExpr(typeExpr, env, diagnostics),
-    preRoundSizeOfTypeExpr: (typeExpr) => preRoundSizeOfTypeExpr(typeExpr, env, diagnostics),
     evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
     evalImmNoDiag,
     emitInstr,
