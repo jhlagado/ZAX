@@ -3,6 +3,13 @@
 ; Source/problem: copy a zero-terminated string byte by byte.
 ; Unit 2 example: walk source and destination pointers together.
 
+op copy_and_advance(src_ptr: HL, dst_ptr: DE)
+  ld a, (hl)
+  ld (de), a
+  inc hl
+  inc de
+end
+
 section data vars at $8000
   source_text: byte[6] = { 'H', 'E', 'L', 'L', 'O', 0 }
   target_text: byte[6] = { 0, 0, 0, 0, 0, 0 }
@@ -15,10 +22,7 @@ export func strcpy_demo()
   ld a, 1
   or a
   while NZ
-    ld a, (hl)
-    ld (de), a
-    inc hl
-    inc de
+    copy_and_advance hl, de
     or a
     if Z
       ret
