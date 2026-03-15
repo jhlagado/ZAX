@@ -825,7 +825,7 @@ array access and `select` ranges in context.
 sorting examples. Author it inline in `bubble_sort.zax` first; if it recurs
 in two or more files, factor it into a shared `ops.zax` for the unit.
 
-**Friction to log**: quicksort is intentionally deferred to Tranche 3 (Tier 2).
+**Friction to log**: quicksort is intentionally deferred beyond the current tranche plan (Tier 2 — not yet scheduled).
 If any Tranche 2 algorithm needs a software stack or multi-level loop exit,
 log it and defer — do not paper over the gap.
 
