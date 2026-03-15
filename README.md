@@ -350,12 +350,14 @@ func update_sprite(idx: byte): void
 end
 ```
 
-Composite storage sizes are rounded to the next power of two, enabling Z80's shift-chain index scaling (`ADD HL, HL` chains) without a multiply routine. Use `sizeof` and `offsetof` for all layout constants — they update automatically when types change:
+Composite types use exact semantic sizes — the sum of their field sizes with no rounding. Use `sizeof` and `offsetof` for all layout constants; they update automatically when type definitions change:
 
 ```zax
-const SpriteSize  = sizeof(Sprite)           ; = 8 (fields sum to 6, rounded to 8)
+const SpriteSize  = sizeof(Sprite)           ; = 6 (pos: 4, tile: 1, flags: 1)
 const FlagsOffset = offsetof(Sprite, flags)  ; = 5 (after pos: 4, tile: 1)
 ```
+
+Power-of-two composite sizes remain a runtime performance consideration: when `sizeof(element)` is a power of two, array indexing can use a pure `ADD HL, HL` shift chain. For non-power-of-two strides the compiler uses a shift/add sequence. Explicit pad fields can be added to a record when a power-of-two total is required for performance or an external binary layout.
 
 Unions overlay fields at the same base address. All fields refer to the same memory; the programmer selects the interpretation in use:
 
@@ -505,7 +507,7 @@ ZAX is under active development. The compiler is a Node.js CLI tool; the end-to-
 
 What works today: single and multi-module compilation, functions with typed parameters and locals, IX-anchored frame calling conventions, structured control flow, the op system, records/unions/arrays, named `section code`/`section data` blocks, typed storage via `move`, `@path` address-of, `<Type>base.tail` typed reinterpretation, grouped and ranged `select case`, raw data directives (`db`/`dw`/`ds`), compile-time expressions, forward references and fixups, and a growing slice of the Z80 instruction set.
 
-Active work: exact-size layout (removing power-of-two rounding from semantic layout via issues #817–820), broader ISA coverage, and Debug80 integration.
+Active work: exact-size runtime indexing for non-power-of-two composite strides (issues #817–820), broader ISA coverage, and Debug80 integration.
 
 ---
 
