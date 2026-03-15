@@ -131,11 +131,20 @@ Required diagnostics:
 The diagnostics should make clear that the failure is about const-ness, not a
 mysterious alias parse.
 
+Ownership notes:
+
+- unknown constant name is a semantic lookup failure, not a parser failure
+- type-size mismatch is a semantic evaluation/type-fit failure, not a parser
+  concern
+
 ---
 
 ## 7. Implementation slices
 
-1. parser/semantic fix for constant-name local initializers
-2. broaden to simple compile-time expressions if not already covered
-3. diagnostics and regression tests
-4. spec / quick-guide updates after implementation
+1. parser fix so constant-name initializers are not misrouted into alias-style
+   declaration handling
+2. semantic support for constant-name local initializers
+3. broaden to simple compile-time expressions if not already covered
+4. diagnostics and regression tests, including unknown-name and type-width
+   checks
+5. spec / quick-guide updates after implementation
