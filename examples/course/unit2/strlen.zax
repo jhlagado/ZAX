@@ -1,0 +1,42 @@
+; strlen.zax
+;
+; Source/problem: count bytes until a zero terminator.
+; Unit 2 example: the basic HL pointer-advance idiom.
+
+section data vars at $8000
+  sample_text: byte[6] = { 'H', 'E', 'L', 'L', 'O', 0 }
+end
+
+export func strlen_demo(): HL
+  var
+    count_value: word = 0
+  end
+
+  move hl, @sample_text
+
+  ld a, 1
+  or a
+  while NZ
+    ld a, (hl)
+    or a
+    if Z
+      move hl, count_value
+      ret
+    end
+
+    inc hl
+
+    move de, count_value
+    inc de
+    move count_value, de
+
+    ld a, 1
+    or a
+  end
+
+  move hl, count_value
+end
+
+export func main()
+  strlen_demo
+end

@@ -1,0 +1,88 @@
+; ring_buffer.zax
+;
+; Source/problem: fixed-capacity ring buffer over exact-size records.
+; Unit 4 example: record layout plus non-power-of-two indexed access.
+
+const Capacity = 5
+
+type Entry
+  value: byte
+  stamp: word
+end
+
+section data vars at $8000
+  entries: Entry[5]
+  head_slot: byte = 0
+  tail_slot: byte = 0
+  used_slots: byte = 0
+end
+
+func next_slot(slot_index: byte): HL
+  move a, slot_index
+  inc a
+  cp Capacity
+  if C
+    ld h, 0
+    ld l, a
+    ret
+  end
+
+  ld hl, 0
+end
+
+func enqueue(entry_value: byte, entry_stamp: word)
+  move a, used_slots
+  cp Capacity
+  if NC
+    ret
+  end
+
+  move l, tail_slot
+  move a, entry_value
+  move entries[L].value, a
+  move hl, entry_stamp
+  move entries[L].stamp, hl
+
+  next_slot tail_slot
+  ld a, l
+  move tail_slot, a
+
+  move a, used_slots
+  inc a
+  move used_slots, a
+end
+
+func dequeue(): HL
+  var
+    removed_value: byte = 0
+  end
+
+  move a, used_slots
+  or a
+  if Z
+    ld hl, $FFFF
+    ret
+  end
+
+  move l, head_slot
+  move a, entries[L].value
+  move removed_value, a
+
+  next_slot head_slot
+  ld a, l
+  move head_slot, a
+
+  move a, used_slots
+  dec a
+  move used_slots, a
+
+  ld h, 0
+  move a, removed_value
+  ld l, a
+end
+
+export func main()
+  enqueue 7, 100
+  enqueue 9, 101
+  dequeue
+end
