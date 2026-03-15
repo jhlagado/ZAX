@@ -1492,7 +1492,7 @@ next_char
 - Compilers must emit an error for unqualified enum member references.
 - Compilers must emit an error when index expressions use unsupported forms for v0.2 grammar/semantics.
 - Compilers should emit diagnostics that distinguish typed-call boundary guarantees from raw Z80 `call` behavior.
-- Compilers may warn about non-power-of-two composite sizes only as a code-generation cost hint, not as a layout rule.
+- Padding warnings tied to power-of-two semantic layout are retired. Future non-power-of-two cost hints, if added, are advisory lowering diagnostics rather than layout rules.
 - Compilers must emit an error for typed alias forms (`name: Type = rhs`) in function-local `var`.
 - Compilers must emit an error for non-scalar local storage declarations without alias initialization.
 
@@ -1622,7 +1622,7 @@ This appendix tracks migration-coverage status against the normative language ru
 ### C.1 Breaking Changes Checklist
 
 - [x] Composite semantic sizes are exact for arrays/records/unions; `sizeof` and layout use exact size. (Sections 4.1, 5.1, 5.2, 5.3, 11.1)
-- [x] Runtime index scaling is shift-only (`ADD HL,HL` chains); no multiply-based lowering for indexed composite access. (Sections 5.1, 11.1)
+- [x] Current runtime-indexed composite lowering still uses the shift-only fast path; exact-size non-power-of-two runtime scaling is tracked in GitHub issue #819. (Sections 5.1, 11.1)
 - [x] `arr[HL]` is a 16-bit direct index; indirect byte-at-HL indexing uses `arr[(HL)]`. (Sections 5.1, 11.1, 11.2)
 - [x] Typed scalar variables use value semantics; legacy scalar paren-dereference examples are removed from normative guidance. (Sections 6.1, 7, 11.1, 11.2)
 - [x] Enum members require qualification (`EnumType.Member`); unqualified members are compile errors. (Sections 4.3, 11.1, 11.3)
