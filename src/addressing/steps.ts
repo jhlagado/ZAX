@@ -171,14 +171,41 @@ const calcEaShift = (shiftCount: number): StepPipeline => [
   step({ kind: 'addHlDe' }),
 ];
 
-export const CALC_EA_WIDE = (elemSize: number): StepPipeline => {
+const getPow2ShiftCount = (elemSize: number): number | undefined => {
+  if (!Number.isInteger(elemSize) || elemSize < 1) return undefined;
   let n = elemSize;
   let shiftCount = 0;
   while (n > 1 && (n & 1) === 0) {
     n >>= 1;
     shiftCount++;
   }
-  return n === 1 ? calcEaShift(shiftCount) : CALC_EA_2();
+  return n === 1 ? shiftCount : undefined;
+};
+
+const calcEaMultiplyOps = (elemSize: number): StepPipeline => {
+  const bits = elemSize.toString(2).slice(1);
+  const pipeline: StepPipeline = [];
+  for (const bit of bits) {
+    pipeline.push(step({ kind: 'addHlHl' }));
+    if (bit === '1') pipeline.push(step({ kind: 'addHlDe' }));
+  }
+  return pipeline;
+};
+
+const calcEaExact = (elemSize: number): StepPipeline => [
+  step({ kind: 'push', reg: 'DE' }),
+  step({ kind: 'ldRegReg', dst: 'd', src: 'h' }),
+  step({ kind: 'ldRegReg', dst: 'e', src: 'l' }),
+  ...calcEaMultiplyOps(elemSize),
+  step({ kind: 'pop', reg: 'DE' }),
+  step({ kind: 'addHlDe' }),
+];
+
+export const CALC_EA_WIDE = (elemSize: number): StepPipeline => {
+  if (!Number.isInteger(elemSize) || elemSize < 1) return CALC_EA_2();
+  if (elemSize === 1) return CALC_EA();
+  const shiftCount = getPow2ShiftCount(elemSize);
+  return shiftCount !== undefined ? calcEaShift(shiftCount) : calcEaExact(elemSize);
 };
 
 // ---------------------------------------------------------------------------
