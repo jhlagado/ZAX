@@ -23,28 +23,30 @@ jp __zax_while_cond_3          ; 0018: C3 00 00
 __zax_repeat_body_5:
 __zax_while_end_4:
 nop                            ; 001B: 00
+__zax_repeat_cond_6:
 jp nz, __zax_repeat_body_5     ; 001C: C2 00 00
-jp __zax_select_dispatch_6     ; 001F: C3 00 00
-__zax_case_8:
+__zax_repeat_end_7:
+jp __zax_select_dispatch_8     ; 001F: C3 00 00
+__zax_case_10:
 nop                            ; 0022: 00
-jp __zax_select_end_7          ; 0023: C3 00 00
-__zax_select_else_9:
+jp __zax_select_end_9          ; 0023: C3 00 00
+__zax_select_else_11:
 nop                            ; 0026: 00
-jp __zax_select_end_7          ; 0027: C3 00 00
-__zax_select_dispatch_6:
+jp __zax_select_end_9          ; 0027: C3 00 00
+__zax_select_dispatch_8:
 push HL                        ; 002A: E5
 ld H, $0000                    ; 002B: 26 00
 ld L, A                        ; 002D: 6F
 ld a, l                        ; 002E: 7D
 cp imm8                        ; 002F: FE 00
-jp nz, __zax_select_next_10    ; 0031: C2 00 00
+jp nz, __zax_select_next_12    ; 0031: C2 00 00
 pop HL                         ; 0034: E1
-jp __zax_case_8                ; 0035: C3 00 00
-__zax_select_next_10:
+jp __zax_case_10               ; 0035: C3 00 00
+__zax_select_next_12:
 pop HL                         ; 0038: E1
-jp __zax_select_else_9         ; 0039: C3 00 00
+jp __zax_select_else_11        ; 0039: C3 00 00
 __zax_epilogue_0:
-__zax_select_end_7:
+__zax_select_end_9:
 pop HL                         ; 003C: E1
 pop DE                         ; 003D: D1
 pop BC                         ; 003E: C1
@@ -61,9 +63,11 @@ ret                            ; 0044: C9
 ; label __zax_while_cond_3 = $0014
 ; label __zax_repeat_body_5 = $001B
 ; label __zax_while_end_4 = $001B
-; label __zax_case_8 = $0022
-; label __zax_select_else_9 = $0026
-; label __zax_select_dispatch_6 = $002A
-; label __zax_select_next_10 = $0038
+; label __zax_repeat_cond_6 = $001C
+; label __zax_repeat_end_7 = $001F
+; label __zax_case_10 = $0022
+; label __zax_select_else_11 = $0026
+; label __zax_select_dispatch_8 = $002A
+; label __zax_select_next_12 = $0038
 ; label __zax_epilogue_0 = $003C
-; label __zax_select_end_7 = $003C
+; label __zax_select_end_9 = $003C
