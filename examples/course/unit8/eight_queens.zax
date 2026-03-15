@@ -1,0 +1,121 @@
+; eight_queens.zax
+;
+; Source/problem: first-solution search for the eight queens puzzle.
+; Unit 8 example: recursive backtracking with an explicit found flag to simulate named exit.
+
+const BoardSize = 8
+const LastRow = 7
+const LastColumn = 7
+const DiagBias = 7
+
+section data vars at $8000
+  queen_cols: byte[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }
+  col_used: byte[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }
+  diag_sum_used: byte[15] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+  diag_diff_used: byte[15] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+  found_solution: byte = 0
+end
+
+func place_row(row_index: byte)
+  var
+    col_index: byte = 0
+    sum_index: byte = 0
+    diff_index: byte = 0
+  end
+
+  move a, found_solution
+  or a
+  if NZ
+    ret
+  end
+
+  move a, row_index
+  cp BoardSize
+  if Z
+    ld a, 1
+    move found_solution, a
+    ret
+  end
+
+  ld a, 0
+  move col_index, a
+
+  ld a, 1
+  or a
+  while NZ
+    move a, col_index
+    cp BoardSize
+    if NC
+      ret
+    end
+
+    move a, row_index
+    move b, col_index
+    add a, b
+    move sum_index, a
+
+    move a, row_index
+    add a, DiagBias
+    move b, col_index
+    sub b
+    move diff_index, a
+
+    move l, col_index
+    move a, col_used[L]
+    or a
+    if Z
+      move l, sum_index
+      move a, diag_sum_used[L]
+      or a
+      if Z
+        move l, diff_index
+        move a, diag_diff_used[L]
+        or a
+        if Z
+          move l, row_index
+          move a, col_index
+          move queen_cols[L], a
+
+          move l, col_index
+          ld a, 1
+          move col_used[L], a
+          move l, sum_index
+          move diag_sum_used[L], a
+          move l, diff_index
+          move diag_diff_used[L], a
+
+          move a, row_index
+          inc a
+          place_row a
+
+          move a, found_solution
+          or a
+          if NZ
+            ret
+          end
+
+          move l, col_index
+          ld a, 0
+          move col_used[L], a
+          move l, sum_index
+          move diag_sum_used[L], a
+          move l, diff_index
+          move diag_diff_used[L], a
+        end
+      end
+    end
+
+    move a, col_index
+    inc a
+    move col_index, a
+
+    ld a, 1
+    or a
+  end
+end
+
+export func main()
+  ld a, 0
+  move found_solution, a
+  place_row 0
+end
