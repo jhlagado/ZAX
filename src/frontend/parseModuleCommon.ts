@@ -287,19 +287,27 @@ export function parseVarDeclLine(
     return { kind: 'VarDecl', form: 'typed', span: declSpan, name, typeExpr };
   }
 
-  const aliasLike = parseEaExprFromText(modulePath, initText, declSpan, diagnostics);
-  if (aliasLike) {
-    diag(
-      diagnostics,
-      modulePath,
-      `Unsupported typed alias form for "${name}": use "${name} = ${initText}" for alias initialization.`,
-      { line: lineNo, column: 1 },
-    );
-    return undefined;
-  }
-
-  const valueExpr = parseImmExprFromText(modulePath, initText, declSpan, diagnostics);
+  const valueExpr = parseImmExprFromText(modulePath, initText, declSpan, diagnostics, false);
   if (!valueExpr) {
+    const aliasLike = parseEaExprFromText(modulePath, initText, declSpan, diagnostics);
+    if (aliasLike) {
+      if (scope === 'globals') {
+        diag(
+          diagnostics,
+          modulePath,
+          `Unsupported typed alias form for "${name}": use "${name} = ${initText}" for alias initialization.`,
+          { line: lineNo, column: 1 },
+        );
+      } else {
+        diag(
+          diagnostics,
+          modulePath,
+          `Invalid local constant initializer for "${name}": expected compile-time immediate expression.`,
+          { line: lineNo, column: 1 },
+        );
+      }
+      return undefined;
+    }
     diagInvalidBlockLine(diagnostics, modulePath, declKind, raw, valueOrAliasExpected, lineNo);
     return undefined;
   }
