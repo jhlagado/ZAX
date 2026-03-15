@@ -21,6 +21,8 @@ direction.
 1. Keep the spec, quick guide, and user-facing examples aligned with the
    implemented language.
 2. Continue parser/grammar convergence work.
+3. Design and stage exact-size layout/indexing so semantic size no longer
+   depends on power-of-two rounding.
 
 ### Deferred until re-planned
 
