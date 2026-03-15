@@ -14,10 +14,7 @@ import type {
 } from '../frontend/ast.js';
 import { canonicalModuleId } from '../moduleIdentity.js';
 import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
-import {
-  offsetOfPathInTypeExpr,
-  sizeOfTypeExpr,
-} from './layout.js';
+import { offsetOfPathInTypeExpr, sizeOfTypeExpr } from './layout.js';
 import { visitDeclTree } from './declVisitor.js';
 
 /**
@@ -362,7 +359,7 @@ export function buildEnv(
   };
 
   if (options?.typePaddingWarnings === true) {
-    // Exact sizes are now the only semantic sizes; padding warnings are no longer applicable.
+    // Exact sizes are now authoritative; no padding warnings are produced.
   }
 
   for (const mf of program.files) {
