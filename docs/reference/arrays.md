@@ -374,7 +374,9 @@ Array indexing computes `base + index * element_size`. When the element size is 
 
 **Element size 3, 5, 6, 7 (odd-sized records).** These require a multiply-by-constant sequence. For element size 3: `add hl, hl` (×2) then `add hl, de` where DE holds the original index (×2 + ×1 = ×3). This requires keeping the original index in a second register, which costs a register pair. For element size 5: `add hl, hl; add hl, hl` (×4) then `add hl, de` (×4 + ×1 = ×5). The general pattern is shift-and-add decomposition.
 
-Current lowering implements exact constant-size scaling for any positive element size using an unrolled shift/add chain. Power-of-two sizes stay on the shorter pure-shift fast path; non-power-of-two sizes preserve `DE` while materializing the longer exact sequence. Programmers should still prefer power-of-two element sizes in hot loops when the extra instructions matter, but exact semantic layout is no longer constrained by that performance consideration.
+For element sizes that don't decompose into a short shift-and-add chain, the compiler may reject the form or emit a runtime multiply loop. In v0.1, the spec does not guarantee lowering for arbitrary element sizes (see Section 6.1.1 non-guarantees). Programmers should prefer power-of-two element sizes for performance-critical arrays, and the language's record padding story (currently: records are packed, no implicit padding) means the programmer is responsible for sizing records to favorable widths if indexing performance matters.
+
+**Design recommendation for the spec:** document that array element sizes that are powers of two receive efficient scaling, and that other sizes may result in longer or rejected lowering sequences. This sets expectations without overcommitting the compiler.
 
 ---
 
