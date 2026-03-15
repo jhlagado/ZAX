@@ -21,8 +21,8 @@ direction.
 1. Keep the spec, quick guide, and user-facing examples aligned with the
    implemented language.
 2. Continue parser/grammar convergence work.
-3. Design and stage structured loop escape (`break`, likely `continue`).
-4. Design and stage named constants in local initializers.
+3. Review pointer-typing ergonomics against the landed course examples.
+4. Keep post-course language work evidence-driven and narrow.
 
 ### Deferred until re-planned
 
