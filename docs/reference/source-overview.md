@@ -204,8 +204,7 @@ then ZAX bindings), mirroring the spec but implemented ad hoc.
 
 `semantics/layout.ts` implements:
 
-- `sizeOfTypeExpr` — returns the power-of-2 padded storage size
-- `storageInfoForTypeExpr` — returns `{ preRoundSize, storageSize }` pair
+- `sizeOfTypeExpr` — returns the exact semantic size
 - `offsetOfPathInTypeExpr` — resolves `offsetof(T, a.b[2])` paths to byte offsets
 
 Type resolution is recursive with cycle detection via `visiting` sets.

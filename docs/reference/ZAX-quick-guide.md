@@ -229,7 +229,7 @@ There is no implicit power-of-two padding in semantic layout. Power-of-two sizes
 The Z80 has no hardware multiply instruction. Indexing into an array of composites requires computing `base + i × sizeof(element)`.
 
 - When `sizeof(element)` is a power of two, lowering can use a pure shift chain (`ADD HL,HL`).
-- When `sizeof(element)` is not a power of two, lowering needs an exact shift/add sequence. That lowering work is staged separately; exact size is already the semantic rule.
+- When `sizeof(element)` is not a power of two, lowering emits an exact shift/add sequence derived from the constant element size.
 
 So power-of-two sizes remain a performance consideration, but they are no longer part of semantic layout.
 
@@ -238,7 +238,7 @@ So power-of-two sizes remain a performance consideration, but they are no longer
 Both are compile-time built-ins:
 
 ```zax
-const SpriteSize   = sizeof(Sprite)          ; = 8
+const SpriteSize   = sizeof(Sprite)          ; = 5
 const TileOffset   = offsetof(Sprite, tile)  ; = 2  (1 + 1)
 const FlagsOffset  = offsetof(Sprite, flags) ; = 3  (1 + 1 + 1)
 ```
@@ -1590,7 +1590,7 @@ const BrYOff = offsetof(Rect, bottomRight.y)   ; = 6
 
 ### 9.5 Arrays of Records
 
-When you declare an array of a record type, the element stride is the exact `sizeof(record)`. Power-of-two sizes remain the fast path; exact-size runtime scaling is being completed as a lowering follow-up.
+When you declare an array of a record type, the element stride is the exact `sizeof(record)`. Power-of-two sizes remain the fast path, but non-power-of-two sizes also lower through an exact shift/add sequence.
 
 ```zax
 const MaxSprites = 16
@@ -1613,7 +1613,7 @@ loop:
 end
 ```
 
-The index here is `HL` holding a 0-based element number (0..15). The semantic stride is `sizeof(Sprite) = 5`. Power-of-two strides still use a pure shift chain; non-power-of-two runtime indexed lowering is being completed separately in GitHub issue #819.
+The index here is `HL` holding a 0-based element number (0..15). The semantic stride is `sizeof(Sprite) = 5`. Power-of-two strides still use a pure shift chain; non-power-of-two strides use a longer exact shift/add sequence.
 
 **`sizeof(Sprite[MaxSprites])` = 16 × 5 = 80 bytes.**
 

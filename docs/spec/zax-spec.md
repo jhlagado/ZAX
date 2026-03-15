@@ -1622,7 +1622,7 @@ This appendix tracks migration-coverage status against the normative language ru
 ### C.1 Breaking Changes Checklist
 
 - [x] Composite semantic sizes are exact for arrays/records/unions; `sizeof` and layout use exact size. (Sections 4.1, 5.1, 5.2, 5.3, 11.1)
-- [x] Current runtime-indexed composite lowering still uses the shift-only fast path; exact-size non-power-of-two runtime scaling is tracked in GitHub issue #819. (Sections 5.1, 11.1)
+- [x] Current runtime-indexed composite lowering uses exact semantic element sizes, keeping the shift-only fast path for power-of-two strides and exact shift/add scaling for other positive constant sizes. (Sections 5.1, 11.1)
 - [x] `arr[HL]` is a 16-bit direct index; indirect byte-at-HL indexing uses `arr[(HL)]`. (Sections 5.1, 11.1, 11.2)
 - [x] Typed scalar variables use value semantics; legacy scalar paren-dereference examples are removed from normative guidance. (Sections 6.1, 7, 11.1, 11.2)
 - [x] Enum members require qualification (`EnumType.Member`); unqualified members are compile errors. (Sections 4.3, 11.1, 11.3)
