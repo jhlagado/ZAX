@@ -16,8 +16,7 @@ import { canonicalModuleId } from '../moduleIdentity.js';
 import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
 import {
   offsetOfPathInTypeExpr,
-  preRoundSizeOfTypeExpr,
-  storageInfoForTypeDecl,
+  sizeOfTypeExpr,
 } from './layout.js';
 import { visitDeclTree } from './declVisitor.js';
 
@@ -105,7 +104,7 @@ export function evalImmExpr(
       return undefined;
     }
     case 'ImmSizeof': {
-      return preRoundSizeOfTypeExpr(expr.typeExpr, env, diagnostics);
+      return sizeOfTypeExpr(expr.typeExpr, env, diagnostics);
     }
     case 'ImmOffsetof': {
       return offsetOfPathInTypeExpr(
@@ -363,27 +362,7 @@ export function buildEnv(
   };
 
   if (options?.typePaddingWarnings === true) {
-    for (const mf of program.files) {
-      const collected = collectedByFile.get(mf.path);
-      if (!collected) continue;
-      for (const item of collected.types) {
-        const info = storageInfoForTypeDecl(item, env, diagnostics);
-        if (!info) continue;
-        if (info.storageSize <= info.preRoundSize) continue;
-        const padding = info.storageSize - info.preRoundSize;
-        diagnostics.push({
-          id: DiagnosticIds.TypePaddingWarning,
-          severity: 'warning',
-          message:
-            `Type "${item.name}" size ${info.preRoundSize} padded to ${info.storageSize} ` +
-            `(${padding} byte${padding === 1 ? '' : 's'} padding). ` +
-            `Storage-visible size is used for layout, indexing, and sizeof.`,
-          file: item.span.file,
-          line: item.span.start.line,
-          column: item.span.start.column,
-        });
-      }
-    }
+    // Exact sizes are now the only semantic sizes; padding warnings are no longer applicable.
   }
 
   for (const mf of program.files) {

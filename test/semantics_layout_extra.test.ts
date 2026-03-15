@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import type { CompileEnv } from '../src/semantics/env.js';
 import {
   offsetOfPathInTypeExpr,
-  preRoundSizeOfTypeExpr,
   sizeOfTypeExpr,
   storageInfoForTypeExpr,
 } from '../src/semantics/layout.js';
@@ -32,14 +31,14 @@ function recordField(name: string, typeExpr: TypeExprNode): RecordFieldNode {
 describe('semantics/layout', () => {
   const emptyEnv: CompileEnv = { consts: new Map(), enums: new Map(), types: new Map() };
 
-  it('computes rounded storage for records and unions', () => {
+  it('computes exact storage for records and unions', () => {
     const rec: TypeExprNode = {
       kind: 'RecordType',
       span,
       fields: [recordField('x', byteType), recordField('y', wordType)],
     };
     const info = storageInfoForTypeExpr(rec, emptyEnv);
-    expect(info).toEqual({ preRoundSize: 3, storageSize: 4 });
+    expect(info).toEqual({ size: 3 });
 
     const unionDecl: UnionDeclNode = {
       kind: 'UnionDecl',
@@ -50,19 +49,17 @@ describe('semantics/layout', () => {
     };
     const env: CompileEnv = { ...emptyEnv, types: new Map([['U', unionDecl]]) };
     const unionInfo = storageInfoForTypeExpr({ kind: 'TypeName', span, name: 'U' }, env);
-    expect(unionInfo).toEqual({ preRoundSize: 2, storageSize: 2 });
+    expect(unionInfo).toEqual({ size: 2 });
   });
 
-  it('computes packed sizes for records via preRoundSizeOfTypeExpr', () => {
+  it('computes exact sizes for records via sizeOfTypeExpr', () => {
     const rec: TypeExprNode = {
       kind: 'RecordType',
       span,
       fields: [recordField('x', byteType), recordField('y', wordType)],
     };
-    const packed = preRoundSizeOfTypeExpr(rec, emptyEnv);
-    expect(packed).toBe(3);
     const storage = sizeOfTypeExpr(rec, emptyEnv);
-    expect(storage).toBe(4);
+    expect(storage).toBe(3);
   });
 
   it('rejects inferred-length arrays without initializer', () => {
@@ -111,7 +108,7 @@ describe('semantics/layout', () => {
     expect(offset).toBe(1); // byte field x (1) before y
   });
 
-  it('uses packed record fields and rounded array stride in offsetof', () => {
+  it('uses exact record fields and exact array stride in offsetof', () => {
     const inner: TypeDeclNode = {
       kind: 'TypeDecl',
       span,
@@ -194,7 +191,7 @@ describe('semantics/layout', () => {
       evalImm,
       diagnostics,
     );
-    expect(rowsOffset).toBe(5); // stride 4 + field b offset 1
+    expect(rowsOffset).toBe(4); // stride 3 + field b offset 1
     expect(diagnostics).toEqual([]);
   });
 });
