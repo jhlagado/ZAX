@@ -46,4 +46,24 @@ describe('PR476 module helper extraction', () => {
       },
     });
   });
+
+  it('parses local typed constant-name initializers as imm expressions', () => {
+    const diagnostics: Diagnostic[] = [];
+    const decl = parseVarDeclLine('value: word = LastIndex', zeroSpan, 1, 'var', {
+      diagnostics,
+      modulePath: file.path,
+      isReservedTopLevelName: () => false,
+    });
+
+    expect(diagnostics).toEqual([]);
+    expect(decl).toMatchObject({
+      kind: 'VarDecl',
+      name: 'value',
+      typeExpr: { kind: 'TypeName', name: 'word' },
+      initializer: {
+        kind: 'VarInitValue',
+        expr: { kind: 'ImmName', name: 'LastIndex' },
+      },
+    });
+  });
 });
