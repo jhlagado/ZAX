@@ -21,7 +21,7 @@ written examples before an issue is filed.
 |---|---|---|
 | Named exit / `break` from nested loop | Eight Queens backtracking requires an explicit flag variable to exit a nested `while` | Tranche 5 (Unit 8) |
 | Pointer-typing ergonomics — `ptr<T>` or self-referential records | Linked list and BST require explicit `<Node>hl.next` cast at every traversal site; `next: ptr` carries no type information | Tranche 5 (Unit 7) |
-| Software stack type or `stack` construct | Quicksort and RPN calculator implement push/pop over a global `word[]` with manual index; verbose and error-prone | Tranche 3 (Unit 6) |
+| Software stack type or `stack` construct | RPN calculator (Unit 6) implements push/pop over a global `word[]` with manual index; verbose and error-prone. Quicksort (Tier 2) exposes the same gap but is not in the current tranche plan. | Tranche 5 (Unit 6); Tranche 2 if quicksort is added |
 
 **Process rule**: do not file a language issue based on this table alone. The
 issue is filed when the written example exists and the workaround is documented
