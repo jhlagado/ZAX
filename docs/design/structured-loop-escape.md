@@ -70,6 +70,11 @@ while NZ
 end
 ```
 
+For `repeat … until`, `continue` jumps to the `until` condition check, not back
+to the top of the body. This matches `do … while` convention. The programmer is
+responsible for ensuring the flags reflect the intended `until` result before
+`continue` executes, just as they are for the normal fall-through path.
+
 ### 3.3 Illegal positions
 
 Both forms are invalid when not nested inside a loop body.
