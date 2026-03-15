@@ -56,11 +56,11 @@ The examples themselves, organized by tranche. This is the primary work queue.
 | Tranche | Unit | Files | Status |
 |---|---|---|---|
 | 1 | 0 — Foundations | `power`, `gcd_iterative`, `gcd_recursive`, `sqrt_newton`, `exp_squaring`, `fibonacci`, `digits` | complete |
-| 2 | 1 — Arrays and Loops | `insertion_sort`, `bubble_sort`, `selection_sort`, `binary_search`, `linear_search`, `prime_sieve` | in progress |
-| 3 | 2 — Strings | `strlen`, `strcpy`, `strcmp`, `strcat`, `str_reverse`, `atoi`, `itoa` | pending |
-| 3 | 4 — Records | `ring_buffer` (init, push, pop, predicates) | pending |
-| 4 | 3 — Bit Patterns | `popcount`, `bit_reverse`, `parity`, `getbits` | pending |
-| 4 | 5 — Recursion | `hanoi`, `array_sum_recursive`, `array_reverse_recursive` | pending |
+| 2 | 1 — Arrays and Loops | `insertion_sort`, `bubble_sort`, `selection_sort`, `binary_search`, `linear_search`, `prime_sieve` | complete |
+| 3 | 2 — Strings | `strlen`, `strcpy`, `strcmp`, `strcat`, `str_reverse`, `atoi`, `itoa` | complete |
+| 3 | 4 — Records | `ring_buffer` (init, push, pop, predicates) | complete |
+| 4 | 3 — Bit Patterns | `popcount`, `bit_reverse`, `parity`, `getbits` | complete |
+| 4 | 5 — Recursion | `hanoi`, `array_sum_recursive`, `array_reverse_recursive` | complete |
 | 5 | 6 — Composition | `rpn_calculator` | pending |
 | 5 | 7 — Pointer Structures | `linked_list`, `bst` | pending |
 | 5 | 8 — Gaps and Futures | `eight_queens` | pending |
@@ -196,6 +196,32 @@ case if examples keep wanting explicit zero-initialized aggregate declarations.
 **Recurrence**: currently observed in `ring_buffer.zax`.
 **Priority signal**: medium-low; real example pressure exists, but only from one
 example so far.
+
+### [Unit 3] Shift/test/accumulate helper recurrence
+
+**Workaround**: keep the bit-manipulation state machine local, with one inline
+helper op (`append_low_bit`) in `bit_reverse.zax` and raw `A`/`B` register work
+elsewhere.
+**Desired expression**: likely a small helper-op surface if the same
+shift/test/accumulate pattern keeps recurring across more bit examples.
+**Gap type**: library
+**Recurrence**: recurring across `popcount.zax`, `parity.zax`, `getbits.zax`,
+and `bit_reverse.zax`.
+**Priority signal**: medium; concrete pattern, but still local enough that it
+does not force a shared helper stream yet.
+
+### [Unit 5] Multi-branch recursion frame noise
+
+**Workaround**: keep extra temporaries in the local frame to preserve
+intermediate results across recursive calls, as in `hanoi.zax`.
+**Desired expression**: none established yet. The current recursion surface is
+adequate, but multi-branch recursion becomes noticeably noisy once several
+intermediate values must be preserved between calls.
+**Gap type**: style / readability
+**Recurrence**: clearly visible in `hanoi.zax`; lighter in the recursive array
+examples.
+**Priority signal**: medium-low; real readability pressure, but not a missing
+language feature from this tranche alone.
 
 ---
 
