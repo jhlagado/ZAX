@@ -1,5 +1,6 @@
 ; sqrt_newton.zax
 ;
+; Source/problem: Newton-Raphson integer square root.
 ; Unit 0 foundations example: integer square root by Newton iteration.
 
 func div_u16(dividend: word, divisor: word): HL

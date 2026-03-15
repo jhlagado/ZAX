@@ -1,5 +1,6 @@
 ; gcd_iterative.zax
 ;
+; Source/problem: Euclid's algorithm, iterative subtraction form.
 ; Unit 0 foundations example: Euclid's algorithm with iterative subtraction.
 
 func gcd_iterative(left_input: word, right_input: word): HL
