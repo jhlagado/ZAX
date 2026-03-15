@@ -14,6 +14,7 @@ import type {
   TypeExprNode,
 } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
+import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import type {
   Callable,
@@ -197,6 +198,60 @@ export type FunctionLoweringSharedContext = FunctionLoweringDiagnosticsContext &
 
 export type FunctionLoweringContext = FunctionLoweringItemContext & FunctionLoweringSharedContext;
 
+type LocalInitializerNameStatus = 'constant' | 'non-constant' | 'unknown';
+
+function collectImmExprNames(expr: ImmExprNode): string[] {
+  switch (expr.kind) {
+    case 'ImmLiteral':
+    case 'ImmSizeof':
+      return [];
+    case 'ImmName':
+      return [expr.name];
+    case 'ImmOffsetof':
+      return expr.path.steps.flatMap((step) =>
+        step.kind === 'OffsetofIndex' ? collectImmExprNames(step.expr) : [],
+      );
+    case 'ImmUnary':
+      return collectImmExprNames(expr.expr);
+    case 'ImmBinary':
+      return [...collectImmExprNames(expr.left), ...collectImmExprNames(expr.right)];
+  }
+}
+
+function classifyLocalInitializerName(
+  name: string,
+  file: string,
+  env: CompileEnv,
+  resolveScalarBinding: (name: string) => ScalarKind | undefined,
+  stackSlotTypes: Map<string, TypeExprNode>,
+  localAliasTargets: Map<string, EaExprNode>,
+  storageTypes: Map<string, TypeExprNode>,
+): LocalInitializerNameStatus {
+  if (resolveVisibleConst(name, file, env) !== undefined) return 'constant';
+  if (resolveVisibleEnum(name, file, env) !== undefined) return 'constant';
+
+  const lower = name.toLowerCase();
+  if (
+    resolveScalarBinding(name) !== undefined ||
+    stackSlotTypes.has(lower) ||
+    localAliasTargets.has(lower) ||
+    storageTypes.has(lower)
+  ) {
+    return 'non-constant';
+  }
+
+  return 'unknown';
+}
+
+function localInitializerFitsScalarKind(value: number, scalarKind: 'byte' | 'word' | 'addr'): boolean {
+  if (scalarKind === 'byte') return value >= -0x80 && value <= 0xff;
+  return value >= -0x8000 && value <= 0xffff;
+}
+
+function localInitializerRangeLabel(scalarKind: 'byte' | 'word' | 'addr'): string {
+  return scalarKind === 'byte' ? 'byte range (-128..255)' : 'word/addr range (-32768..65535)';
+}
+
 export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const { item, diagnostics, diag, diagAt, diagAtWithId, diagAtWithSeverityAndId, warnAt } = ctx;
   const {
@@ -374,17 +429,76 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       confidence: 'high',
     });
     try {
-      const initValue =
-        init.expr !== undefined ? evalImmExpr(init.expr, env, diagnostics) : 0;
-      if (init.expr !== undefined && initValue === undefined) {
+      let initValue = 0;
+      if (init.expr !== undefined) {
+        const referencedNames = [...new Set(collectImmExprNames(init.expr))];
+        const nonConstantName = referencedNames.find(
+          (name) =>
+            classifyLocalInitializerName(
+              name,
+              init.span.file,
+              env,
+              resolveScalarBinding,
+              stackSlotTypes,
+              localAliasTargets,
+              storageTypes,
+            ) === 'non-constant',
+        );
+        if (nonConstantName) {
+          diagAt(
+            diagnostics,
+            init.span,
+            `Invalid local constant initializer for "${init.name}": "${nonConstantName}" is not a compile-time constant.`,
+          );
+          continue;
+        }
+
+        const unknownName = referencedNames.find(
+          (name) =>
+            classifyLocalInitializerName(
+              name,
+              init.span.file,
+              env,
+              resolveScalarBinding,
+              stackSlotTypes,
+              localAliasTargets,
+              storageTypes,
+            ) === 'unknown',
+        );
+        if (unknownName) {
+          diagAt(
+            diagnostics,
+            init.span,
+            `Unknown compile-time name "${unknownName}" in local initializer for "${init.name}".`,
+          );
+          continue;
+        }
+
+        const initDiagnostics: Diagnostic[] = [];
+        const evaluated = evalImmExpr(init.expr, env, initDiagnostics);
+        if (evaluated === undefined) {
+          diagnostics.push(...initDiagnostics);
+          if (initDiagnostics.length === 0) {
+            diagAt(
+              diagnostics,
+              init.span,
+              `Invalid local constant initializer for "${init.name}".`,
+            );
+          }
+          continue;
+        }
+        initValue = evaluated;
+      }
+
+      if (!localInitializerFitsScalarKind(initValue, init.scalarKind)) {
         diagAt(
           diagnostics,
           init.span,
-          `Failed to evaluate local initializer for "${init.name}".`,
+          `Local initializer for "${init.name}" does not fit ${localInitializerRangeLabel(init.scalarKind)}; got ${initValue}.`,
         );
         continue;
       }
-      const narrowed = init.scalarKind === 'byte' ? initValue! & 0xff : initValue! & 0xffff;
+      const narrowed = init.scalarKind === 'byte' ? initValue & 0xff : initValue & 0xffff;
       if (hlPreserved) {
         // Preserve caller-visible HL by swapping the initialized local word with
         // the saved HL already at the top of the stack.
