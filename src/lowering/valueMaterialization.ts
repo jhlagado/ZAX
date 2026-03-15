@@ -17,7 +17,6 @@ type Context = {
   resolveScalarBinding: (name: string) => 'byte' | 'word' | 'addr' | undefined;
   resolveScalarKind: (typeExpr: TypeExprNode) => 'byte' | 'word' | 'addr' | undefined;
   sizeOfTypeExpr: (typeExpr: TypeExprNode) => number | undefined;
-  preRoundSizeOfTypeExpr: (typeExpr: TypeExprNode) => number | undefined;
   evalImmExpr: (expr: ImmExprNode) => number | undefined;
   evalImmNoDiag: (expr: ImmExprNode) => number | undefined;
   emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
@@ -165,7 +164,7 @@ export function createValueMaterializationHelpers(ctx: Context) {
     for (const field of agg.fields) {
       if (field.name === fieldName) return offset;
       if (agg.kind === 'record') {
-        const fieldSize = ctx.preRoundSizeOfTypeExpr(field.typeExpr);
+        const fieldSize = ctx.sizeOfTypeExpr(field.typeExpr);
         if (fieldSize === undefined) return undefined;
         offset += fieldSize;
       }

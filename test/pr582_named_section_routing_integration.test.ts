@@ -25,7 +25,7 @@ describe('PR582 named section routing integration', () => {
     const sectionKeys = collectNonBankedSectionKeys(program, diagnostics);
     expect(diagnostics).toEqual([]);
 
-    const env = buildEnv(program, diagnostics, { typePaddingWarnings: false });
+    const env = buildEnv(program, diagnostics);
     expect(diagnostics).toEqual([]);
 
     const { map } = emitProgram(program, env, diagnostics, { namedSectionKeys: sectionKeys });

@@ -12,15 +12,7 @@ import { resolveVisibleType } from '../moduleVisibility.js';
 import type { CompileEnv } from './env.js';
 
 export interface TypeStorageInfo {
-  preRoundSize: number;
-  storageSize: number;
-}
-
-function nextPow2(value: number): number {
-  if (value <= 1) return value;
-  let pow = 1;
-  while (pow < value) pow <<= 1;
-  return pow;
+  size: number;
 }
 
 function scalarSize(name: string): number | undefined {
@@ -78,9 +70,9 @@ function typeStorageInfoForDecl(
     for (const f of decl.fields) {
       const fs = resolveTypeExpr(f.typeExpr);
       if (!fs) return undefined;
-      if (fs.storageSize > maxStorage) maxStorage = fs.storageSize;
+      if (fs.size > maxStorage) maxStorage = fs.size;
     }
-    return { preRoundSize: maxStorage, storageSize: nextPow2(maxStorage) };
+    return { size: maxStorage };
   }
 
   const te = decl.typeExpr;
@@ -89,9 +81,9 @@ function typeStorageInfoForDecl(
     for (const f of te.fields) {
       const fs = resolveTypeExpr(f.typeExpr);
       if (!fs) return undefined;
-      sum += fs.preRoundSize;
+      sum += fs.size;
     }
-    return { preRoundSize: sum, storageSize: nextPow2(sum) };
+    return { size: sum };
   }
   return resolveTypeExpr(te);
 }
@@ -115,7 +107,7 @@ export function storageInfoForTypeExpr(
         if (cached !== undefined) return cached;
         return resolveNamedType(te, env, visiting, diag, (resolved) => {
           if (resolved.kind === 'Scalar') {
-            return { preRoundSize: resolved.size, storageSize: resolved.size };
+            return { size: resolved.size };
           }
           const info = typeStorageInfoForDecl(resolved.decl, sizeOf);
           if (info) memo.set(te.name, info);
@@ -132,17 +124,16 @@ export function storageInfoForTypeExpr(
           );
           return undefined;
         }
-        const preRound = es.storageSize * te.length;
-        return { preRoundSize: preRound, storageSize: nextPow2(preRound) };
+        return { size: es.size * te.length };
       }
       case 'RecordType': {
         let sum = 0;
         for (const f of te.fields) {
           const fs = sizeOf(f.typeExpr);
           if (!fs) return undefined;
-          sum += fs.preRoundSize;
+          sum += fs.size;
         }
-        return { preRoundSize: sum, storageSize: nextPow2(sum) };
+        return { size: sum };
       }
     }
   };
@@ -150,34 +141,8 @@ export function storageInfoForTypeExpr(
   return sizeOf(typeExpr);
 }
 
-export function storageInfoForTypeDecl(
-  decl: TypeDeclNode | UnionDeclNode,
-  env: CompileEnv,
-  diagnostics?: Diagnostic[],
-): TypeStorageInfo | undefined {
-  return storageInfoForTypeExpr(
-    decl.kind === 'UnionDecl'
-      ? { kind: 'TypeName', span: decl.span, name: decl.name }
-      : decl.typeExpr,
-    env,
-    diagnostics,
-  );
-}
-
 /**
- * Compute the packed (pre-rounded) size in bytes of a type expression.
- */
-export function preRoundSizeOfTypeExpr(
-  typeExpr: TypeExprNode,
-  env: CompileEnv,
-  diagnostics?: Diagnostic[],
-): number | undefined {
-  const info = storageInfoForTypeExpr(typeExpr, env, diagnostics);
-  return info?.preRoundSize;
-}
-
-/**
- * Compute the storage (rounded) size in bytes of a type expression.
+ * Compute the exact semantic size in bytes of a type expression.
  */
 export function sizeOfTypeExpr(
   typeExpr: TypeExprNode,
@@ -185,16 +150,16 @@ export function sizeOfTypeExpr(
   diagnostics?: Diagnostic[],
 ): number | undefined {
   const info = storageInfoForTypeExpr(typeExpr, env, diagnostics);
-  return info?.storageSize;
+  return info?.size;
 }
 
 /**
  * Compute the byte offset of a field path inside a type expression.
  *
  * Rules:
- * - Record fields contribute storage sizes of preceding fields.
+ * - Record fields contribute exact sizes of preceding fields.
  * - Union field offsets are always 0.
- * - Array indices must be compile-time constants and contribute index * element storage size.
+ * - Array indices must be compile-time constants and contribute index * element exact size.
  */
 export function offsetOfPathInTypeExpr(
   typeExpr: TypeExprNode,
@@ -247,7 +212,7 @@ export function offsetOfPathInTypeExpr(
     let offsetBefore = 0;
     for (const f of fields) {
       if (f.name === fieldName) return { field: f, offsetBefore };
-      const fs = preRoundSizeOfTypeExpr(f.typeExpr, env, diagnostics);
+      const fs = sizeOfTypeExpr(f.typeExpr, env, diagnostics);
       if (fs === undefined) return undefined;
       offsetBefore += fs;
     }
