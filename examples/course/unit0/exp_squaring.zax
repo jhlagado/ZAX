@@ -1,5 +1,6 @@
 ; exp_squaring.zax
 ;
+; Source/problem: binary exponentiation / exponentiation by squaring.
 ; Unit 0 foundations example: exponentiation by squaring.
 
 func mul_u16(lhs: word, rhs: word): HL
