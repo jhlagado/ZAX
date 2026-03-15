@@ -1,0 +1,79 @@
+; linked_list.zax
+;
+; Source/problem: traverse and sum a singly-linked list.
+; Unit 7 example: actual pointer typing through addr links plus typed reinterpretation.
+
+type ListNode
+  value: byte
+  next: addr
+end
+
+section data vars at $8000
+  node_a: ListNode
+  node_b: ListNode
+  node_c: ListNode
+  list_head: addr = 0
+end
+
+func init_list()
+  ld a, 4
+  move node_a.value, a
+  move hl, @node_b
+  move node_a.next, hl
+
+  ld a, 7
+  move node_b.value, a
+  move hl, @node_c
+  move node_b.next, hl
+
+  ld a, 2
+  move node_c.value, a
+  ld hl, 0
+  move node_c.next, hl
+
+  move hl, @node_a
+  move list_head, hl
+end
+
+export func list_sum(): HL
+  var
+    current_ptr: addr = 0
+    total_value: word = 0
+  end
+
+  move hl, list_head
+  move current_ptr, hl
+
+  ld a, 1
+  or a
+  while NZ
+    move hl, current_ptr
+    ld a, h
+    or l
+    if Z
+      move hl, total_value
+      ret
+    end
+
+    move a, <ListNode>hl.value
+    ld e, a
+    ld d, 0
+    move hl, total_value
+    add hl, de
+    move total_value, hl
+
+    move hl, current_ptr
+    move hl, <ListNode>hl.next
+    move current_ptr, hl
+
+    ld a, 1
+    or a
+  end
+
+  move hl, total_value
+end
+
+export func main()
+  init_list
+  list_sum
+end
