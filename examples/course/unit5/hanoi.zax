@@ -1,0 +1,38 @@
+; hanoi.zax
+;
+; Source/problem: Tower of Hanoi move counting.
+; Unit 5 example: direct recursive decomposition with local frame state.
+
+func hanoi_count(disks_count: byte, source_peg: byte, spare_peg: byte, target_peg: byte): HL
+  var
+    reduced_count: byte = 0
+    left_count: word = 0
+    right_count: word = 0
+  end
+
+  move a, disks_count
+  or a
+  if Z
+    ld hl, 0
+    ret
+  end
+
+  move a, disks_count
+  dec a
+  move reduced_count, a
+
+  hanoi_count reduced_count, source_peg, target_peg, spare_peg
+  move left_count, hl
+
+  hanoi_count reduced_count, spare_peg, source_peg, target_peg
+  move right_count, hl
+
+  move hl, left_count
+  inc hl
+  move de, right_count
+  add hl, de
+end
+
+export func main()
+  hanoi_count 4, 1, 2, 3
+end

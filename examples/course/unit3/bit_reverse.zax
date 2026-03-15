@@ -1,0 +1,57 @@
+; bit_reverse.zax
+;
+; Source/problem: reverse the bit order of one byte.
+; Unit 3 example: a local op for the append-low-bit idiom.
+
+op append_low_bit(reversed_reg: A, source_reg: B)
+  add a, a
+  bit 0, b
+  if NZ
+    or 1
+  end
+end
+
+export func bit_reverse_demo(): HL
+  var
+    source_value: byte = $96
+    reversed_value: byte = 0
+    bit_count: byte = 8
+  end
+
+  ld a, 1
+  or a
+  while NZ
+    move a, bit_count
+    or a
+    if Z
+      ld h, 0
+      move a, reversed_value
+      ld l, a
+      ret
+    end
+
+    move a, reversed_value
+    move b, source_value
+    append_low_bit a, b
+    move reversed_value, a
+
+    move a, source_value
+    srl a
+    move source_value, a
+
+    move a, bit_count
+    dec a
+    move bit_count, a
+
+    ld a, 1
+    or a
+  end
+
+  ld h, 0
+  move a, reversed_value
+  ld l, a
+end
+
+export func main()
+  bit_reverse_demo
+end
