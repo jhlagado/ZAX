@@ -180,7 +180,6 @@ export function evalImmExpr(
 }
 
 type BuildEnvOptions = {
-  typePaddingWarnings?: boolean;
   moduleIdRootDir?: string;
   resolvedImportGraph?: ReadonlyMap<string, ReadonlyArray<string>>;
 };
@@ -357,10 +356,6 @@ export function buildEnv(
     visibleEnums,
     visibleTypes,
   };
-
-  if (options?.typePaddingWarnings === true) {
-    // Exact sizes are now authoritative; no padding warnings are produced.
-  }
 
   for (const mf of program.files) {
     const collected = collectedByFile.get(mf.path);

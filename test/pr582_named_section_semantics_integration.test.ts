@@ -47,7 +47,7 @@ describe('PR582 named section semantics integration', () => {
     );
     expect(diagnostics).toEqual([]);
 
-    const env = buildEnv(program, diagnostics, { typePaddingWarnings: false });
+    const env = buildEnv(program, diagnostics);
 
     expect(diagnostics).toEqual([]);
     expect(env.consts.get('COUNT')).toBe(3);
