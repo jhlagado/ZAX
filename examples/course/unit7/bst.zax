@@ -1,0 +1,85 @@
+; bst.zax
+;
+; Source/problem: search a binary search tree using addr-linked records.
+; Unit 7 example: pointer-typed traversal pressure with recursive descent.
+
+type TreeNode
+  value: byte
+  left: addr
+  right: addr
+end
+
+section data vars at $8000
+  root_node: TreeNode
+  left_node: TreeNode
+  right_node: TreeNode
+  left_right_node: TreeNode
+  tree_root: addr = 0
+end
+
+func init_tree()
+  ld a, 8
+  move root_node.value, a
+  move hl, @left_node
+  move root_node.left, hl
+  move hl, @right_node
+  move root_node.right, hl
+
+  ld a, 3
+  move left_node.value, a
+  ld hl, 0
+  move left_node.left, hl
+  move hl, @left_right_node
+  move left_node.right, hl
+
+  ld a, 11
+  move right_node.value, a
+  ld hl, 0
+  move right_node.left, hl
+  ld hl, 0
+  move right_node.right, hl
+
+  ld a, 6
+  move left_right_node.value, a
+  ld hl, 0
+  move left_right_node.left, hl
+  ld hl, 0
+  move left_right_node.right, hl
+
+  move hl, @root_node
+  move tree_root, hl
+end
+
+func bst_contains(node_ptr: addr, target_value: byte): HL
+  move hl, node_ptr
+  ld a, h
+  or l
+  if Z
+    ld hl, 0
+    ret
+  end
+
+  move a, <TreeNode>hl.value
+  move b, target_value
+  cp b
+  if Z
+    ld hl, 1
+    ret
+  end
+  if C
+    move hl, node_ptr
+    move hl, <TreeNode>hl.right
+    bst_contains hl, target_value
+    ret
+  end
+
+  move hl, node_ptr
+  move hl, <TreeNode>hl.left
+  bst_contains hl, target_value
+end
+
+export func main()
+  init_tree
+  move hl, tree_root
+  bst_contains hl, 6
+end

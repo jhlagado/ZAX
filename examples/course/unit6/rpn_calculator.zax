@@ -1,0 +1,135 @@
+; rpn_calculator.zax
+;
+; Source/problem: evaluate a small reverse-polish expression with a software stack.
+; Unit 6 example: explicit push/pop discipline over typed stack storage.
+
+const TokenCount = 5
+const KindNumber = 1
+const KindAdd = 2
+const KindMultiply = 3
+
+section data vars at $8000
+  token_kinds: byte[5] = { KindNumber, KindNumber, KindAdd, KindNumber, KindMultiply }
+  token_values: word[5] = { 7, 3, 0, 2, 0 }
+  value_stack: word[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }
+  stack_depth: byte = 0
+end
+
+func push_value(value_word: word)
+  move a, stack_depth
+  ld l, a
+  move hl, value_word
+  move value_stack[L], hl
+
+  move a, stack_depth
+  inc a
+  move stack_depth, a
+end
+
+func pop_value(): HL
+  move a, stack_depth
+  dec a
+  move stack_depth, a
+
+  ld l, a
+  move hl, value_stack[L]
+end
+
+func mul_u16(left_word: word, right_word: word): HL
+  var
+    accum_value: word = 0
+    repeat_count: word = 0
+  end
+
+  move hl, right_word
+  move repeat_count, hl
+
+  ld a, 1
+  or a
+  while NZ
+    move hl, repeat_count
+    ld a, h
+    or l
+    if Z
+      move hl, accum_value
+      ret
+    end
+
+    move hl, accum_value
+    move de, left_word
+    add hl, de
+    move accum_value, hl
+
+    move hl, repeat_count
+    dec hl
+    move repeat_count, hl
+
+    ld a, 1
+    or a
+  end
+
+  move hl, accum_value
+end
+
+export func rpn_demo(): HL
+  var
+    token_index: byte = 0
+    current_kind: byte = 0
+    right_value: word = 0
+    left_value: word = 0
+  end
+
+  ld a, 0
+  move stack_depth, a
+
+  ld a, 1
+  or a
+  while NZ
+    move a, token_index
+    cp TokenCount
+    if NC
+      pop_value
+      ret
+    end
+
+    move l, token_index
+    move a, token_kinds[L]
+    move current_kind, a
+
+    select A
+      case KindNumber
+        move l, token_index
+        move hl, token_values[L]
+        push_value hl
+      case KindAdd
+        pop_value
+        move right_value, hl
+        pop_value
+        move left_value, hl
+        move hl, left_value
+        move de, right_value
+        add hl, de
+        push_value hl
+      case KindMultiply
+        pop_value
+        move right_value, hl
+        pop_value
+        move left_value, hl
+        mul_u16 left_value, right_value
+        push_value hl
+    end
+
+    move a, token_index
+    inc a
+    move token_index, a
+
+    ld a, 1
+    or a
+  end
+
+  pop_value
+end
+
+export func main()
+  rpn_demo
+end
