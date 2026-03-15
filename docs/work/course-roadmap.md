@@ -238,26 +238,26 @@ from the course so far.
 
 ## Issue-Ready Sequence
 
-When the friction log has entries, this section will contain the recommended
-filing sequence. No issues are filed until the friction is grounded in actual
-written and compiled examples.
+The course evidence now supports the following discussion order:
 
-**Anticipated categories** (not yet filed):
+1. **Structured loop escape (`break`, likely `continue`)**
+   - already opened as `GitHub issue #844`
+   - strongest language signal from `eight_queens.zax`
 
-1. **Course example files** — one issue per unit, filed when the tranche is
-   ready to start. Issue contains the file list, style requirements, and a
-   checklist. These are course/example stream.
+2. **Local named-constant initialization**
+   - should be opened next as a focused language issue
+   - grounded by `binary_search.zax` and `bubble_sort.zax`
 
-2. **Standard `op` library candidates** — filed after Unit 2 or 3 confirms
-   which `op` definitions recur across multiple files. Library stream.
+3. **Pointer-typing ergonomics**
+   - discuss later, after the first two items
+   - evidence is now real from `linked_list.zax` and `bst.zax`
 
-3. **Named exit / `break`** — filed after Eight Queens is written and the
-   flag-variable workaround is documented. Language stream candidate.
+4. **Library/support candidates**
+   - pointer-advance helper op
+   - byte-array swap/load-store helper op
+   - possibly arithmetic helpers if recurrence broadens further
 
-4. **Pointer-typing ergonomics** — filed after linked list and BST are written
-   and the explicit-cast friction is measured across both. Language stream
-   candidate. Not filed before then.
-
-5. **Software stack idiom** — filed after RPN calculator and quicksort are
-   written and the manual push/pop verbosity is documented. May resolve as a
-   library `op` pattern rather than a language change. Stream TBD.
+5. **Lower-priority follow-ups**
+   - aggregate zero-initializer clarification
+   - software-stack direction
+   - narrow `move` conversion forms
