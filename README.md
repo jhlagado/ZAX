@@ -1,196 +1,292 @@
 # ZAX
 
-**A structured assembler for the Z80 family.**
+ZAX is a structured assembler for Z80-family processors. It compiles source directly to machine code — there is no separate linker, no object format, and no runtime system.
 
-ZAX is a compiler that produces Z80 machine code from structured, assembly-like source. You still choose registers, manage flags, and decide what lives in RAM versus ROM — but you do it inside a language that gives you imports, typed data layouts, functions with real calling conventions, structured control flow, and an inline macro system that understands operand types.
+The language adds typed storage, function declarations with formal parameters and stack-frame locals, structured control flow (`if`, `while`, `repeat`, `select`), inline macro-instructions with typed operand matching and overload resolution, and a module system with explicit imports and full-graph name resolution. Register selection, flag management, and memory layout remain the programmer's responsibility throughout.
 
-ZAX is not a high-level language that happens to target Z80. It is assembly with the organization problems solved.
+ZAX is not a high-level language that targets Z80. It is assembly with structured organisation layered on top.
 
-```
-const MsgLen = 5
+---
 
-section data app_data at $8000
-  msg: byte[5] = "HELLO"
+## A First Look
+
+A function that takes a typed argument, maintains local variables across iterations, and returns a value in a declared register. It mixes raw Z80 instructions with typed storage accesses and structured control flow in the same instruction stream:
+
+```zax
+func fib(target_count: word): HL
+  var
+    prev_value:  word = 0
+    curr_value:  word = 1
+    index_value: word = 0
+    next_value:  word = 0
+  end
+
+  ld a, 1
+  or a                       ; establish NZ before entering loop
+  while NZ
+    move hl, index_value
+    move de, target_count
+    xor a
+    sbc hl, de
+    if Z
+      move hl, prev_value    ; return early — epilogue handles frame cleanup
+      ret
+    end
+
+    move hl, prev_value
+    move de, curr_value
+    add hl, de
+    move next_value, hl
+
+    move hl, curr_value
+    move prev_value, hl
+    move hl, next_value
+    move curr_value, hl
+
+    move hl, index_value
+    inc hl
+    move index_value, hl
+
+    ld a, 1
+    or a                     ; re-establish NZ for next iteration
+  end
+
+  move hl, prev_value
 end
-
-extern func bios_putc(ch: byte): void at $F003
 
 export func main(): void
-  var
-    p: addr
-  end
-  ld hl, msg
-  ld p, hl
-
-  ld b, MsgLen
-  repeat
-    ld hl, p
-    ld a, (hl)
-    inc hl
-    ld p, hl
-    push bc
-    bios_putc A
-    pop bc
-    dec b
-  until Z
+  fib 10                     ; result in HL
 end
 ```
 
-Every instruction in that listing is a real Z80 instruction or a direct call. `repeat ... until Z` compiles to a conditional branch. `bios_putc A` compiles to a push, a `call $F003`, and a stack cleanup. There is no hidden abstraction — just structure.
+`func fib(target_count: word): HL` declares a function with one parameter of type `word` and a return value in register `HL`. The `var` block allocates four `word`-sized locals in the IX-anchored stack frame, with initializers emitted at function entry. `move` reads and writes named locals and parameters by value — the compiler emits IX-relative loads and stores. `ld` and `or` are raw Z80 instructions. `while NZ` and `if Z` lower to compiler-managed conditional jumps; the programmer establishes the flags with `or a` or `xor a`/`sbc hl,de` before each test. `ret` inside the loop is routed through the compiler-generated epilogue, which restores the frame before returning.
 
 ---
 
-## Why ZAX Exists
+## Motivation
 
-Traditional Z80 assemblers give you mnemonics and macros. The mnemonics are fine. The macros are not.
+Traditional Z80 assemblers provide mnemonics and text macros. Text macros operate on token streams — they have no concept of operand types, no overload resolution, no hygiene, and no mechanism for the assembler to reason about what a macro does to machine state. The result in any non-trivial project is an accumulated layer of fragile, context-dependent macro definitions.
 
-Text-based macros operate on strings. They paste tokens, re-scan the result, and hope it parses. They have no concept of operand types, no overloading, no hygiene, no way for the assembler to reason about what a macro does to the machine state. The result is that any non-trivial assembler project eventually accumulates a layer of fragile, opaque macro definitions that no one wants to touch.
+ZAX uses a compiler pipeline instead: source is parsed to an AST, names are resolved across the full module graph, data layouts are computed from type declarations, and inline macro-instructions are expanded with typed operand matching. The output is deterministic — same source, same flags, same binary — and inspectable via the `.asm` lowering trace.
 
-ZAX replaces this with a proper compiler. Source is parsed into an AST. Names are resolved across modules. Data layouts are computed from type declarations. Macros are expanded at the AST level with typed operand matching. The output is deterministic machine code, Intel HEX, and a debug map — from any platform, every time.
+Register selection, flag management, and memory layout remain the programmer's responsibility. The compiler manages names, scopes, call sequences, and frame layout; it makes no decisions about register usage or data placement.
+
+Typical use cases: game engines, demoscene tools, firmware, ROM monitors, hardware drivers, systems programming education.
 
 ---
 
-## Functions With Real Arguments and Locals
+## Typed Storage and `move`
 
-In a traditional assembler, a "function" is a label you `call` and a `ret` you hope eventually executes. Arguments are wherever you left them — in registers, on the stack, at some agreed-upon memory address. Locals are registers you promised not to step on, or RAM you allocated by hand. The calling convention exists only in comments and in the programmer's head.
+Module-level storage is declared in named `data` sections. Function-local storage lives in `var` blocks. Both are accessed with `move` using value semantics:
 
-ZAX functions have formal typed parameters, optional local variables, and a compiler-managed stack frame:
+```zax
+section data vars at $8000
+  count:  word
+  mode:   byte
+  origin: Point = { x: 0, y: 0 }
+end
 
-```
-func add_words(a: word, b: word): word
+func update(): void
   var
-    result: word
+    delta: word = 10
   end
-  ld hl, a
-  ld de, b
+  move hl, count     ; load word into HL
+  move de, delta     ; load local into DE
   add hl, de
-  ld result, hl
+  move count, hl     ; store result back
+
+  move a, mode       ; load byte into A
+  inc a
+  move mode, a       ; store back
 end
 ```
 
-Arguments are passed on the stack (pushed right-to-left by the caller, cleaned up after return). Each argument and each local occupies a 16-bit slot. The compiler computes SP-relative offsets for every slot, so names like `a` and `result` map to real SP-relative accesses in lowered code. Return values come back in `HL` (16-bit) or `L` (8-bit), following Z80 convention.
+For scalars, `move target, source` inserts the required load or store automatically — IX-relative for locals, absolute for module storage. Frame offsets are computed by the compiler.
 
-Calling a function inside an instruction stream looks like calling an instruction:
+### Address-of with `@path`
 
-```
-func main(): void
-  add_words $0010, $0020   ; compiler pushes args, emits call, cleans stack
-  ; HL now contains the result
-end
-```
+`@path` takes the address of a typed storage path rather than its value:
 
-The compiler emits the full calling sequence: push the arguments, `call` the function, pop the arguments. You can pass registers, immediates, effective addresses, or dereferenced memory as arguments — the compiler handles the marshalling.
-
-Crucially, a function body is still real assembly. You have full access to every Z80 instruction. The function declaration gives you a frame and named slots; what you do inside is up to you. If control falls off the end of the instruction stream, the compiler inserts an implicit `ret` (including any epilogue needed to clean up locals). If you write `ret` yourself, the compiler rewrites it to jump through the epilogue so the stack is always correct.
-
-This is the middle ground ZAX occupies: you get the organizational benefit of C-style function signatures — typed parameters, scoped locals, a defined return convention — without surrendering control of the register file or the instruction stream. The function boundary is real (it affects the stack and the calling convention), but inside that boundary you are writing assembly, not a high-level language.
-
-External entry points work the same way. If your ROM has a BIOS call at a fixed address, you declare it as an `extern func` and call it with the same syntax:
-
-```
-extern func bios_putc(ch: byte): void at $F003
-
-; later, in a function body:
-bios_putc A    ; pushes A (zero-extended), calls $F003, cleans up
+```zax
+move hl, @player.flags     ; HL = address of the flags field
+move de, @sprites[bc].x    ; DE = address of sprites[BC].x
 ```
 
-The compiler generates the correct calling sequence to the absolute address. You don't hand-roll the push/call/pop dance for every BIOS entry point in your project. At typed call boundaries (`func`/`extern func`), `void` calls preserve boundary-visible registers/flags, while non-`void` calls expose `HL` as the return channel.
+### Typed Reinterpretation
+
+`<Type>base.tail` reinterprets a register or pointer as a typed base for a field access. The cast is local — it does not permanently retype the register:
+
+```zax
+; HL holds a runtime pointer to a Header in memory
+move a, <Header>hl.flags       ; read the flags field via HL
+ld a, 1
+move <Header>hl.flags, a       ; write back
+bump <Header>hl.flags          ; op call with typed path
+```
+
+This is the mechanism used for pointer-based traversal where the type of the pointed-to data is known at the access site but not statically bound to the pointer.
 
 ---
 
-## Conditionals: if / else
+## Functions
 
-ZAX provides `if`/`else` inside function and op bodies. The key design decision is that **the programmer still sets the flags**. The keyword tests a CPU condition code that you establish with normal Z80 instructions — there is no expression evaluator, no implicit comparison, no hidden register usage:
+ZAX functions have formal typed parameters, scoped locals, and a compiler-managed IX-anchored stack frame. The return register is declared explicitly:
 
-```
-; Compare A to zero and branch
-or a
-if Z
-  ld b, $FF       ; A was zero
-else
-  ld b, $00       ; A was nonzero
+```zax
+func fib(target_count: word): HL
+  var
+    prev_value:  word = 0
+    curr_value:  word = 1
+    index_value: word = 0
+    next_value:  word = 0
+  end
+
+  ld a, 1
+  or a                       ; establish NZ to enter loop
+  while NZ
+    move hl, index_value
+    move de, target_count
+    xor a
+    sbc hl, de
+    if Z
+      move hl, prev_value
+      ret
+    end
+
+    move hl, prev_value
+    move de, curr_value
+    add hl, de
+    move next_value, hl
+
+    move hl, curr_value
+    move prev_value, hl
+    move hl, next_value
+    move curr_value, hl
+
+    move hl, index_value
+    inc hl
+    move index_value, hl
+
+    ld a, 1
+    or a
+  end
+
+  move hl, prev_value
+end
+
+export func main(): void
+  fib 10            ; result returned in HL
 end
 ```
 
-You write the instruction that sets the flags, then you write the keyword that tests them. The structure is purely for the human reader and the compiler's jump/label bookkeeping — the CPU sees only a conditional jump.
+Parameters are pushed right-to-left at call sites; locals occupy IX-relative frame slots. The compiler generates the prologue, epilogue, and all call-site sequences. The callee-save complement is computed from the declared return registers, so preservation is mechanically enforced.
 
-The compiler enforces stack-depth matching at all join points. If one arm of an `if` pushes a value and the other doesn't, that's a compile error, not a runtime crash three minutes into your program.
+**At typed call boundaries:** `HL` is boundary-volatile; all other registers are callee-preserved by the compiler-generated epilogue. Raw `call` and `extern func` calls carry no such guarantee — assume all registers may be clobbered.
 
----
+External entry points (BIOS calls, ROM routines) are declared once and called with the same syntax:
 
-## Multi-way Dispatch: select / case
+```zax
+extern func bios_puts(buf: addr, len: word): void at $F006
 
-For multi-way branching, `select`/`case` dispatches on a value in a register:
-
-```
-; Multi-way dispatch on a value
-ld a, (mode)
-select A
-  case Mode.Read
-    call do_read
-  case Mode.Write
-    call do_write
-  else
-    call do_error
+func print_banner(): void
+  bios_puts banner_msg, banner_len   ; compiler emits push × 2, call, pop × 2
 end
 ```
 
-Each `case` compares the selected register against compile-time values or inclusive ranges and jumps to the matching arm. A `case` line may also group multiple items with commas, such as `case 'A'..'Z', '_'`. The `else` arm handles anything that falls through. The `select` dispatch may use `A` internally — the programmer controls what is loaded before the construct and what registers the arms use.
-
 ---
 
-## Loops: while and repeat / until
+## Structured Control Flow
 
-ZAX provides two looping constructs. Both compile to conditional jumps — nothing more.
+All four constructs lower to conditional jumps. The constructs do not set flags — they test the CPU flag state at the point where the condition code keyword appears. The programmer is responsible for establishing the correct flags with a Z80 instruction immediately before the condition is tested.
 
-`while` tests a condition at the top of the loop. You set the flags yourself before and at the bottom of the body:
+### `if` / `else`
 
+```zax
+cp $80
+if C              ; A < $80
+  cp $40
+  if C            ; A < $40
+    ld b, 0
+  else            ; $40 ≤ A < $80
+    ld b, 1
+  end
+else              ; A ≥ $80
+  ld b, 2
+end
 ```
-ld b, 10
-cp b            ; set flags before entering
+
+### `while` — top-test loop
+
+Flags must be established before entering. The body re-establishes them before the back-edge:
+
+```zax
+move hl, count
+ld a, h
+or l              ; set NZ if count ≠ 0
 while NZ
-  ; ... loop body ...
-  dec b
-  cp b          ; reset flags for next test
+  ; ... process item ...
+  dec hl
+  ld a, h
+  or l            ; re-establish flags for next test
 end
 ```
 
-`repeat`/`until` tests at the bottom, guaranteeing at least one execution. This maps naturally onto the Z80's `DJNZ` idiom:
+### `repeat ... until` — bottom-test loop
 
-```
-; Loop until a counter expires
-ld b, 10
+Body always runs at least once. Flags are tested at `until`:
+
+```zax
+; Walk a null-terminated string
 repeat
-  ; ... loop body ...
-  dec b
+  ld a, (hl)      ; read byte
+  inc hl
+  or a            ; Z if null terminator
 until Z
+; HL points one past the null terminator
 ```
 
-The condition after `while` or `until` is any standard Z80 condition code: `Z`, `NZ`, `C`, `NC`, `M`, `P`, `PE`, `PO`. You set the condition with whatever instruction is appropriate — `dec`, `cp`, `or`, `bit`, anything.
+### `select` / `case` — multi-way dispatch with ranges
+
+`select` dispatches by value equality. A single `case` line may list comma-separated values or inclusive ranges. There is no fallthrough:
+
+```zax
+move a, mode_value
+select A
+  case Mode.Idle, Mode.Stopped  ; two values, one body
+    ld a, 0
+  case Mode.Run
+    ld a, 1
+  case 'A'..'Z', '_'            ; inclusive range plus singleton
+    call handle_identifier
+  else
+    ld a, $FF
+end
+```
+
+The compiler-generated dispatch may use a compare-and-branch chain or a jump table. Stack depth must match across all paths at every structured-flow join point — a `push` in one arm without a matching `pop` before `end` is a compile error.
 
 ---
 
-## The Op System: Typed Inline Macros
+## The Op System — Typed Inline Macros
 
-The most distinctive feature of ZAX is `op` — inline macro-instructions with compiler-level operand matching. An op looks like a new opcode. It expands inline (no call, no return, zero overhead) and the compiler selects the right implementation based on the operands you pass, using a specificity-ranked overload system.
+`op` declarations define inline macro-instructions with AST-level operand matching and overload resolution. An op expands inline at the call site — there is no call instruction and no return. The compiler selects the matching overload based on operand types using a specificity-ranked resolution:
 
-The Z80 can add a 16-bit register pair into `HL`, but not into `DE` or `BC`. In a traditional assembler you'd write a macro or just inline the exchange dance every time. In ZAX:
-
-```
+```zax
 op add16(dst: HL, src: reg16)
-  add hl, src
+  xor a
+  adc hl, src
 end
 
 op add16(dst: DE, src: reg16)
   ex de, hl
-  add hl, src
+  xor a
+  adc hl, src
   ex de, hl
 end
 
 op add16(dst: BC, src: reg16)
   push hl
-  push bc
-  pop hl
+  ld hl, 0
   add hl, src
   push hl
   pop bc
@@ -198,55 +294,72 @@ op add16(dst: BC, src: reg16)
 end
 ```
 
-At a call site, `add16 DE, BC` reads like a native instruction. The compiler sees that the first operand is `DE`, selects the second overload (because the fixed matcher `DE` is more specific than the class matcher `reg16`), substitutes `BC` for `src`, and emits the resulting instruction sequence inline.
+At a call site, `add16 DE, BC` is parsed as an op invocation. The compiler matches `DE` against the first parameter of each overload: the fixed matcher `DE` is more specific than the class matcher `reg16`, so the second overload is selected. `BC` is substituted for `src` and the expansion is emitted inline. If two overloads match at equal specificity, the call is a compile error. Fixed matchers (`HL`, `DE`, `A`, `BC`, `SP`) always beat class matchers (`reg8`, `reg16`, `imm8`, `imm16`, `ea`, `mem8`, `mem16`).
 
-This is not text substitution. The compiler operates on parsed AST nodes and matcher types. Register/flag/stack discipline inside an `op` body is developer-managed, so authors should keep expansions explicit and stack-balanced. If an expansion produces an invalid instruction, the error points to the call site with a clear diagnostic — not to a mangled token stream three macro levels deep.
+Op bodies can call other ops:
 
-Op parameters use a system of **matcher types** that constrain what each operand position accepts:
+```zax
+op clear_carry()
+  xor a
+end
 
-| Matcher                     | Accepts                            |
-| --------------------------- | ---------------------------------- |
-| `reg8`                      | `A B C D E H L`                    |
-| `reg16`                     | `HL DE BC SP`                      |
-| `A`, `HL`, `DE`, `BC`, `SP` | That register only                 |
-| `imm8`, `imm16`             | Compile-time immediate expressions |
-| `ea`                        | Effective address expressions      |
-| `mem8`, `mem16`             | Memory dereference operands `(ea)` |
+op add16(dst: HL, src: reg16)
+  clear_carry
+  adc hl, src
+end
+```
 
-Fixed matchers beat class matchers. `imm8` beats `imm16` for small values. If two overloads tie, the compiler rejects the call as ambiguous rather than silently picking one. The resolution rules are simple enough to reason about by hand, which matters when you're debugging at the instruction level.
+Local labels inside op bodies are hygienically rewritten per expansion site, so two expansions of the same op at different call sites never collide on label names.
 
 ---
 
-## Data Layouts That Stay Out of Your Way
+## Records, Arrays, and Unions
 
-ZAX has records (power-of-two-sized layouts), unions (overlays), arrays, and enums. These are **layout descriptions**, not runtime abstractions. They compute addresses — nothing else.
+Records, unions, and arrays are layout descriptions. They compute field offsets and array strides at compile time; there is no associated runtime metadata, vtable, or allocator:
 
-```
-type Sprite
+```zax
+type Point
   x: word
   y: word
-  w: byte
-  h: byte
+end
+
+type Sprite
+  pos:   Point
+  tile:  byte
   flags: byte
 end
 
-section data sprites_data at $8200
-  sprites: Sprite[8] = { ... }
+enum Mode Idle, Run, Dead
+
+section data vars at $8000
+  sprites: Sprite[8]
+  player:  Sprite = { pos: { x: 0, y: 0 }, tile: 0, flags: 0 }
 end
 ```
 
-Field access and array indexing produce effective addresses. Parentheses dereference. This is the same convention as Z80 indirect addressing, extended to structured data:
+Field and array access compose as place expressions. The compiler lowers them to address calculations and load/store sequences:
 
+```zax
+func update_sprite(idx: byte): void
+  move l, idx
+  move a, sprites[L].flags    ; load flags field of sprites[idx]
+  set 0, a
+  move sprites[L].flags, a    ; write back
+
+  move hl, @sprites[L].pos    ; HL = address of the pos sub-record
+end
 ```
-move hl, sprites[C].x      ; load word at sprites[C].x into HL
-move sprites[C].flags, a   ; store A into the flags field
+
+Composite types use exact semantic sizes. Use `sizeof` and `offsetof` for all layout constants; they update automatically when type definitions change:
+
+```zax
+const SpriteSize  = sizeof(Sprite)           ; = 6 (pos: 4, tile: 1, flags: 1)
+const FlagsOffset = offsetof(Sprite, flags)  ; = 5 (after pos: 4, tile: 1)
 ```
 
-The compiler lowers these into real instruction sequences (computing the offset, loading the address, performing the access). If a form can't be lowered without violating register/flag preservation constraints, it's a compile error — not a silent clobber.
+Unions overlay fields at the same base address. All fields refer to the same memory; the programmer selects the interpretation in use:
 
-Unions overlay fields at the same base address, useful for reinterpreting memory regions:
-
-```
+```zax
 union Value
   b: byte
   w: word
@@ -254,30 +367,61 @@ union Value
 end
 ```
 
-There are no tags, no runtime checks, no vtables. A union is a lens over bytes. You decide which interpretation applies.
+---
+
+## Raw Data Directives
+
+For lookup tables, jump tables, and binary blobs, raw data directives are supported directly inside `data` sections:
+
+```zax
+section data assets at $0100
+  sine:
+  db $00, $19, $32, $4A, $61, $74, $84, $90   ; raw bytes
+
+  fibonacci:
+  db 1, 2, 3, 5, 8, 13, 21, 34               ; raw bytes (decimal)
+
+  dispatch:
+  dw handler_a, handler_b, handler_c          ; 16-bit words or label addresses
+
+  padding:
+  ds 8                                        ; 8 zero bytes
+end
+```
+
+Labels within raw data blocks are valid as jump targets and in `dw` initializers. Raw declarations coexist with typed storage declarations in the same section.
 
 ---
 
-## Modules, Not Include Files
+## Compile-Time Expressions
 
-ZAX programs are composed of modules with explicit imports. The compiler resolves the full import graph, detects collisions, and packs sections in a deterministic order. There is no `#include` and no textual concatenation.
+Constants, enums, and all layout queries are resolved entirely at compile time:
 
+```zax
+const ScreenBase = $C000
+const TileWidth  = 8
+const TileBytes  = TileWidth * TileWidth    ; = 64
+const FlagMask   = (1 << 4) | (1 << 2)     ; = %00010100
+
+enum Priority Low, Normal, High, Critical   ; = 0, 1, 2, 3
+
+const DefaultPri = Priority.Normal          ; = 1
 ```
+
+Literal forms: decimal `255`, hex `$FF`, binary `%11111111` or `0b11111111`, character `'A'`. Full arithmetic with standard operator precedence including bitwise ops and shifts. Forward references between constants are allowed.
+
+---
+
+## Modules
+
+ZAX programs compose from modules with explicit imports. The compiler resolves the full import graph, detects collisions, and packs sections in a deterministic order:
+
+```zax
 import mathlib
 import "drivers/uart.zax"
 ```
 
-All module-scope names share a single global namespace. Name collisions across modules are compile errors with clear diagnostics, not silent redefinitions. The compiler produces the same binary regardless of filesystem enumeration order or platform path conventions.
-
----
-
-## Project Status
-
-ZAX is under active development. The compiler exists as a Node.js CLI tool and handles a meaningful subset of the current language specification. The end-to-end pipeline (lex → parse → lower → encode → emit) is functional and produces `.bin`, `.hex`, `.d8dbg.json` (Debug80-compatible debug maps), and `.lst` output.
-
-What works today: single and multi-module compilation, functions with locals and calling conventions, structured control flow, the op system, records/unions/arrays, named `section code`/`section data` blocks with direct declarations (`const`/`enum`/typed storage/`bin`/`hex`/`extern`), forward references and fixups, and a growing slice of the Z80 instruction set.
-
-What remains: broader ISA coverage, CLI hardening, full listing output, cross-platform acceptance testing, and Debug80 integration. See `docs/reference/zax-dev-playbook.md` for the concrete milestone plan.
+All module-scope names share a single global namespace. Name collisions are compile errors with clear diagnostics. Use `export` to mark symbols visible to importers; unexported symbols are module-private. There is no `#include` and no textual concatenation.
 
 ---
 
@@ -287,29 +431,29 @@ What remains: broader ISA coverage, CLI hardening, full listing output, cross-pl
 
 - Node.js 20+
 
-### Install and Build
+### Install
 
 ```sh
-git clone https://github.com/user/zax.git
+git clone https://github.com/jhlagado/zax.git
 cd zax
 npm install
 ```
 
-### Compile a ZAX File
+### Compile
 
 ```sh
-npm run zax -- examples/hello.zax
+npm run zax -- examples/language-tour/02_fibonacci_args_locals.zax
 ```
 
-This produces `examples/hello.hex`, `examples/hello.bin`, `examples/hello.d8dbg.json`, and `examples/hello.lst` alongside the source.
+### Outputs
 
-### Specify an Output Path
-
-```sh
-npm run zax -- -o build/output.hex examples/hello.zax
-```
-
-All sibling artifacts (`.bin`, `.lst`, `.d8dbg.json`) are derived from the primary output path.
+| File          | Contents                                          |
+| ------------- | ------------------------------------------------- |
+| `.bin`        | flat binary image                                 |
+| `.hex`        | Intel HEX output                                  |
+| `.lst`        | deterministic byte dump with symbol table         |
+| `.d8dbg.json` | Debug80-compatible debug map                      |
+| `.asm`        | lowered trace — exactly what the compiler emitted |
 
 ### CLI Options
 
@@ -317,49 +461,51 @@ All sibling artifacts (`.bin`, `.lst`, `.d8dbg.json`) are derived from the prima
 zax [options] <entry.zax>
 
   -o, --output <file>    Primary output path (default: <entry>.hex)
-  -t, --type <type>      Primary output type: hex, bin (default: hex)
+  -t, --type <type>      Output type: hex, bin (default: hex)
   -n, --nolist           Suppress .lst output
   --nobin                Suppress .bin output
   --nohex                Suppress .hex output
   --nod8m                Suppress .d8dbg.json output
+  --noasm                Suppress .asm output
   -I, --include <dir>    Add import search path (repeatable)
+  --case-style <m>       Case-style lint: off, upper, lower, consistent
+  --op-stack-policy <m>  Op stack-discipline diagnostics: off, warn, error
+  --type-padding-warn    Warn when composite type storage is padded
   -V, --version          Print version
   -h, --help             Print help
 ```
 
 ---
 
-## Development
-
-Use the canonical contributor verification guide:
-
-- `docs/reference/testing-verification-guide.md`
-
-It defines the current local verification flow, fixture refresh commands, and CI expectations.
-
----
-
 ## Documentation
 
-| Document                             | Purpose                                                           |
-| ------------------------------------ | ----------------------------------------------------------------- |
-| `docs/spec/zax-spec.md`                   | **Normative** language specification (includes CLI/op appendices) |
-| `docs/reference/ZAX-quick-guide.md`            | Practical quick guide for daily language usage (non-normative)    |
-| `docs/reference/testing-verification-guide.md` | Canonical testing/verification flow for contributors              |
-| `docs/reference/zax-dev-playbook.md`           | Contributor workflow and review/merge hygiene                     |
-| `docs/archive/versioned/v02-codegen-reference.md`      | Consolidated v0.2 codegen entry point and archive links           |
+| Document                                       | Purpose                                                                |
+| ---------------------------------------------- | ---------------------------------------------------------------------- |
+| `docs/reference/ZAX-quick-guide.md`            | Practical quick-start guide — recommended first read after this README |
+| `docs/spec/zax-spec.md`                        | Normative language specification                                       |
+| `docs/design/zax-algorithms-course.md`         | Algorithm course outline — classic CS problems in ZAX                  |
+| `docs/reference/testing-verification-guide.md` | Contributor testing and verification flow                              |
+| `docs/reference/zax-dev-playbook.md`           | Contributor workflow and review hygiene                                |
 
 ---
 
-## Design Principles
+## Design Notes
 
-**High-level structure, low-level semantics.** You still choose registers and manage flags. The language adds names, scope, and structure — not abstraction.
+The language surface is deliberately close to the Z80 instruction set. Register names, condition codes, and addressing modes appear directly in source. Constructs that require the programmer to specify a register (such as `select A` or `move hl, count`) are preferred over constructs that allocate registers implicitly.
 
-**Compiler, not preprocessor.** ZAX parses to an AST and emits code with fixups. There are no textual macros, no re-scanning, no token pasting. Every construct the compiler processes is typed and validated.
+The compiler pipeline operates on an AST with typed nodes. There are no textual macros, no token re-scanning, and no string substitution. Name resolution, type checking, and code generation are distinct phases; errors are reported with source locations, not mangled token streams.
 
-**Registers are first-class.** Register names appear directly in code, in op matcher types, and in calling conventions. The language is designed around the reality of an 8-bit register file, not against it.
+Output is deterministic: given the same source and the same compiler flags, the binary is identical across platforms and invocations. The `.asm` lowering trace shows exactly what instruction sequence was emitted for each source construct.
 
-**Deterministic output.** Same source, same flags, same binary. No timestamps, no host paths, no enumeration-order dependencies. Builds are reproducible by construction.
+---
+
+## Project Status
+
+ZAX is under active development. The compiler is a Node.js CLI tool; the end-to-end pipeline (lex → parse → lower → encode → emit) is functional and produces `.bin`, `.hex`, `.d8dbg.json`, `.lst`, and `.asm` output.
+
+What works today: single and multi-module compilation, functions with typed parameters and locals, IX-anchored frame calling conventions, structured control flow, the op system, records/unions/arrays, named `section code`/`section data` blocks, typed storage via `move`, `@path` address-of, `<Type>base.tail` typed reinterpretation, grouped and ranged `select case`, raw data directives (`db`/`dw`/`ds`), compile-time expressions, forward references and fixups, and a growing slice of the Z80 instruction set.
+
+Active work: exact-size runtime indexing for non-power-of-two composite strides (issues #817–820), broader ISA coverage, and Debug80 integration.
 
 ---
 
