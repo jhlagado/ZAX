@@ -37,6 +37,19 @@ describe('GitHub issue #849 local constant initializers', () => {
     );
   });
 
+  it('diagnoses EA-shaped local initializer expressions as invalid local constant initializers', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr849_local_init_ea_shape_negative.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    const messages = res.diagnostics.map((d) => d.message);
+
+    expect(messages).toContain(
+      'Invalid local constant initializer for "value": expected compile-time immediate expression.',
+    );
+    expect(messages).not.toContain(
+      'Invalid var declaration line "value: word = arr[0]": expected <name>: <type>',
+    );
+  });
+
   it('diagnoses type-fit failures with existing immediate ranges', async () => {
     const entry = join(__dirname, 'fixtures', 'pr849_local_init_type_fit_negative.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
