@@ -1,34 +1,31 @@
 # Current Stream
 
-## Addressing rollback checkpoint
+## Current language direction
 
-The `addr` implementation stream has been rolled back from code.
+The rolled-back `addr` / ops-first addressing stream is not the active language
+direction.
 
 ### Current implementation state
 
-- The `addr` parser/lowering work is not active in the compiler.
-- Direct typed `ld` forms remain the working language surface.
-- The `addr` design remains recorded in `docs/design/` as proposal material, not current implemented behavior.
-
-### Design anchors retained for later review
-
-- `docs/design/ops-first-addressing-direction.md`
-- `docs/design/ops-first-addressing-decisions.md`
-- `docs/design/addr-prereq-decisions.md`
+- Typed storage transfers now use `move` (typed-storage inside `ld` has been removed).
+- Grouped and ranged `select case` values are implemented.
+- Parser/grammar convergence work is active again.
+- Typed reinterpretation syntax `<Type>base.tail` is now implemented on
+  `main`, with parser and lowering landed.
+- Raw data directives and raw-label semantics are implemented on `main`.
+- `@path` address-of storage paths are implemented on `main` under
+  `move rr, @path`.
 
 ### Immediate priority
 
-1. Restore and keep the language-tour and user-facing examples aligned with the direct typed `ld` surface.
-2. Keep the current spec/reference docs aligned with implemented behavior.
-3. Reassess whether `addr` should return later as:
-   - an explicit expert construct,
-   - an internal lowering primitive,
-   - or an address-of expression form such as `@place`.
+1. Keep the spec, quick guide, and user-facing examples aligned with the
+   implemented language.
+2. Continue parser/grammar convergence work.
+3. Implement the staged exact-size layout/indexing stream so semantic size no
+   longer depends on power-of-two rounding.
 
 ### Deferred until re-planned
 
-- `addr` parser/lowering reintroduction
-- `@dead` pragma surface
-- `<Type>base.tail` typed reinterpretation syntax
-- grouped and ranged `select case`
-- retirement of typed EA inside `ld`
+- any reintroduction of `addr` as a source-language feature
+- broad addressing-surface redesign
+- further addressing-surface redesign beyond the current `move`/typed-path split

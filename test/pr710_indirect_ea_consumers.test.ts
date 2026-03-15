@@ -42,12 +42,14 @@ describe('#710 indirect ea consumers', () => {
         return undefined;
       },
       resolveEaTypeExpr: () => undefined,
+      resolveAggregateType: () => undefined,
       resolveScalarBinding: () => undefined,
       resolveScalarKind: (typeExpr) =>
         typeExpr.kind === 'TypeName' && (typeExpr.name === 'byte' || typeExpr.name === 'word' || typeExpr.name === 'addr')
           ? typeExpr.name
           : undefined,
       sizeOfTypeExpr: () => undefined,
+      preRoundSizeOfTypeExpr: () => undefined,
       evalImmExpr: () => undefined,
       evalImmNoDiag: () => undefined,
       emitInstr: (head, operands) => {

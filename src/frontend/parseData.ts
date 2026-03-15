@@ -11,11 +11,7 @@ import {
   isTopLevelStart,
   looksLikeKeywordBodyDeclLine,
 } from './parseModuleCommon.js';
-
-function stripComment(line: string): string {
-  const semi = line.indexOf(';');
-  return semi >= 0 ? line.slice(0, semi) : line;
-}
+import { stripLineComment as stripComment } from './parseParserShared.js';
 
 function splitTopLevelComma(text: string): string[] {
   const parts: string[] = [];

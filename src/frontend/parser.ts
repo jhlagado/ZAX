@@ -3,7 +3,10 @@ import type {
   ModuleItemNode,
   NamedSectionNode,
   ProgramNode,
+  RawDataDeclNode,
+  ImmExprNode,
   SectionAnchorNode,
+  SourceSpan,
   SectionItemNode,
 } from './ast.js';
 import { makeSourceFile, span } from './source.js';
@@ -44,6 +47,60 @@ import {
   stripLineComment as stripComment,
 } from './parseParserShared.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
+
+function splitTopLevelComma(text: string): string[] {
+  const parts: string[] = [];
+  let start = 0;
+  let parenDepth = 0;
+  let bracketDepth = 0;
+  let braceDepth = 0;
+  let inChar = false;
+  let escaped = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!;
+    if (inChar) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === "'") inChar = false;
+      continue;
+    }
+    if (ch === "'") {
+      inChar = true;
+      continue;
+    }
+    if (ch === '(') {
+      parenDepth++;
+      continue;
+    }
+    if (ch === ')') {
+      if (parenDepth > 0) parenDepth--;
+      continue;
+    }
+    if (ch === '[') {
+      bracketDepth++;
+      continue;
+    }
+    if (ch === ']') {
+      if (bracketDepth > 0) bracketDepth--;
+      continue;
+    }
+    if (ch === '{') {
+      braceDepth++;
+      continue;
+    }
+    if (ch === '}') {
+      if (braceDepth > 0) braceDepth--;
+      continue;
+    }
+    if (ch === ',' && parenDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
+      parts.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(text.slice(start));
+  return parts;
+}
 
 /**
  * Parse a single `.zax` module file from an in-memory source string.
@@ -202,9 +259,20 @@ export function parseModuleFile(
     return { section, name, ...(anchor ? { anchor } : {}) };
   }
 
+  type PendingRawLabel = {
+    name: string;
+    span: SourceSpan;
+    lineNo: number;
+  };
+
   type ParseItemContext =
     | { scope: 'module' }
-    | { scope: 'section'; sectionKind: 'code' | 'data'; directDeclNamesLower: Set<string> };
+    | {
+        scope: 'section';
+        sectionKind: 'code' | 'data';
+        directDeclNamesLower: Set<string>;
+        pendingRawLabel?: PendingRawLabel;
+      };
 
   type ParseItemResult = {
     nextIndex: number;
@@ -212,14 +280,501 @@ export function parseModuleFile(
     sectionClosed?: boolean;
   };
 
+  type ParseModuleItemDispatchArgs = {
+    index: number;
+    lineNo: number;
+    text: string;
+    rest: string;
+    stmtSpan: SourceSpan;
+    lineStartOffset: number;
+    hasExportPrefix: boolean;
+    ctx: ParseItemContext;
+  };
+
+  type ParseModuleItemDispatchHandler = (
+    args: ParseModuleItemDispatchArgs,
+  ) => ParseItemResult | undefined;
+
+  function parseImportItem({
+    index,
+    lineNo,
+    text,
+    rest,
+    stmtSpan,
+    ctx,
+  }: ParseModuleItemDispatchArgs): ParseItemResult {
+    const importTail = consumeTopKeyword(rest, 'import') ?? '';
+    if (ctx.scope === 'module') {
+      const importNode = parseImportDecl(importTail, {
+        diagnostics,
+        modulePath,
+        lineNo,
+        text,
+        span: stmtSpan,
+        isReservedTopLevelName,
+      });
+      return { nextIndex: index + 1, ...(importNode ? { node: importNode } : {}) };
+    }
+    diag(diagnostics, modulePath, `import is only permitted at module scope`, {
+      line: lineNo,
+      column: 1,
+    });
+    return { nextIndex: index + 1 };
+  }
+
+  function parseTypeItem({
+    index,
+    lineNo,
+    text,
+    rest,
+    stmtSpan,
+    hasExportPrefix,
+  }: ParseModuleItemDispatchArgs): ParseItemResult {
+    const typeTail = consumeTopKeyword(rest, 'type') ?? '';
+    const parsedType = parseTypeDecl(
+      typeTail,
+      text,
+      stmtSpan,
+      lineNo,
+      index,
+      {
+        file,
+        lineCount,
+        diagnostics,
+        modulePath,
+        getRawLine,
+        isReservedTopLevelName,
+      },
+      hasExportPrefix,
+    );
+    if (!parsedType) return { nextIndex: index + 1 };
+    return { nextIndex: parsedType.nextIndex, node: parsedType.node };
+  }
+
+  function parseUnionItem({
+    index,
+    lineNo,
+    text,
+    rest,
+    stmtSpan,
+    hasExportPrefix,
+  }: ParseModuleItemDispatchArgs): ParseItemResult {
+    const unionTail = consumeTopKeyword(rest, 'union') ?? '';
+    const parsedUnion = parseUnionDecl(
+      unionTail,
+      text,
+      stmtSpan,
+      lineNo,
+      index,
+      {
+        file,
+        lineCount,
+        diagnostics,
+        modulePath,
+        getRawLine,
+        isReservedTopLevelName,
+      },
+      hasExportPrefix,
+    );
+    if (!parsedUnion) return { nextIndex: index + 1 };
+    return { nextIndex: parsedUnion.nextIndex, node: parsedUnion.node };
+  }
+
+  function parseGlobalsItem({
+    index,
+    lineNo,
+    rest,
+  }: ParseModuleItemDispatchArgs): ParseItemResult | undefined {
+    const storageHeader = rest.toLowerCase();
+    if (storageHeader !== 'var' && storageHeader !== 'globals') return undefined;
+    const parsedGlobals = parseGlobalsBlock(storageHeader, index, lineNo, {
+      file,
+      lineCount,
+      diagnostics,
+      modulePath,
+      getRawLine,
+      isReservedTopLevelName,
+    });
+    return { nextIndex: parsedGlobals.nextIndex };
+  }
+
+  function parseFuncItem({
+    index,
+    lineNo,
+    text,
+    rest,
+    stmtSpan,
+    hasExportPrefix,
+  }: ParseModuleItemDispatchArgs): ParseItemResult {
+    const funcTail = consumeTopKeyword(rest, 'func') ?? '';
+    const parsedFunc = parseTopLevelFuncDecl(
+      funcTail,
+      text,
+      stmtSpan,
+      lineNo,
+      index,
+      hasExportPrefix,
+      {
+        file,
+        lineCount,
+        diagnostics,
+        modulePath,
+        getRawLine,
+        isReservedTopLevelName,
+        parseParamsFromText,
+      },
+    );
+    return { nextIndex: parsedFunc.nextIndex, ...(parsedFunc.node ? { node: parsedFunc.node } : {}) };
+  }
+
+  function parseOpItem({
+    index,
+    lineNo,
+    text,
+    rest,
+    stmtSpan,
+    hasExportPrefix,
+  }: ParseModuleItemDispatchArgs): ParseItemResult {
+    const opTail = consumeTopKeyword(rest, 'op') ?? '';
+    const parsedOp = parseTopLevelOpDecl(
+      opTail,
+      text,
+      stmtSpan,
+      lineNo,
+      index,
+      hasExportPrefix,
+      {
+        file,
+        lineCount,
+        diagnostics,
+        modulePath,
+        getRawLine,
+        isReservedTopLevelName,
+        parseOpParamsFromText,
+      },
+    );
+    if (!parsedOp) return { nextIndex: index + 1 };
+    return { nextIndex: parsedOp.nextIndex, node: parsedOp.node };
+  }
+
+  function parseExternItem({
+    index,
+    lineNo,
+    text,
+    rest,
+    stmtSpan,
+  }: ParseModuleItemDispatchArgs): ParseItemResult {
+    const externTail = consumeTopKeyword(rest, 'extern') ?? '';
+    const parsedExtern = parseTopLevelExternDecl(
+      externTail,
+      text,
+      stmtSpan,
+      lineNo,
+      index,
+      {
+        file,
+        lineCount,
+        diagnostics,
+        modulePath,
+        getRawLine,
+        isReservedTopLevelName,
+        parseParamsFromText,
+      },
+    );
+    return { nextIndex: parsedExtern.nextIndex, ...(parsedExtern.node ? { node: parsedExtern.node } : {}) };
+  }
+
+  function parseEnumItem({
+    index,
+    lineNo,
+    text,
+    rest,
+    stmtSpan,
+    hasExportPrefix,
+  }: ParseModuleItemDispatchArgs): ParseItemResult {
+    const enumTail = consumeTopKeyword(rest, 'enum') ?? '';
+    const enumNode = parseEnumDecl(
+      enumTail,
+      {
+        diagnostics,
+        modulePath,
+        lineNo,
+        text,
+        span: stmtSpan,
+        isReservedTopLevelName,
+      },
+      hasExportPrefix,
+    );
+    return { nextIndex: index + 1, ...(enumNode ? { node: enumNode } : {}) };
+  }
+
+  function parseSectionItem({
+    index,
+    lineNo,
+    text,
+    rest,
+    stmtSpan,
+    lineStartOffset,
+    ctx,
+  }: ParseModuleItemDispatchArgs): ParseItemResult {
+    const sectionTail = consumeTopKeyword(rest, 'section') ?? '';
+    if (ctx.scope === 'section') {
+      diag(diagnostics, modulePath, `nested section blocks are not supported`, {
+        line: lineNo,
+        column: 1,
+      });
+      return { nextIndex: index + 1 };
+    }
+
+    const sectionDecl = rest === 'section' ? '' : sectionTail;
+    const namedTokens = sectionDecl.trim().split(/\s+/).filter((token) => token.length > 0);
+    const namedPrefix =
+      namedTokens.length >= 2 &&
+      /^(code|data)$/i.test(namedTokens[0] ?? '') &&
+      /^[A-Za-z_][A-Za-z0-9_]*$/.test(namedTokens[1] ?? '') &&
+      !/^(at|size|end)$/i.test(namedTokens[1] ?? '');
+    if (namedPrefix) {
+      const header = parseNamedSectionHeader(sectionDecl, stmtSpan, lineNo, text);
+      if (!header) return { nextIndex: index + 1 };
+      const parsedSection = parseSectionItems(index + 1, header.section);
+      const sectionEndIndex = Math.max(parsedSection.nextIndex - 1, index);
+      const sectionEnd = getRawLine(sectionEndIndex);
+      const sectionNode: NamedSectionNode = {
+        kind: 'NamedSection',
+        span: span(file, lineStartOffset, sectionEnd.endOffset),
+        section: header.section,
+        name: header.name,
+        items: parsedSection.items,
+        ...(header.anchor ? { anchor: header.anchor } : {}),
+      };
+      if (!parsedSection.closed) {
+        diag(diagnostics, modulePath, `Missing end for section "${header.name}"`, {
+          line: lineNo,
+          column: 1,
+        });
+      }
+      return { nextIndex: parsedSection.nextIndex, node: sectionNode };
+    }
+
+    parseSectionDirectiveDecl(rest, sectionTail, {
+      diagnostics,
+      modulePath,
+      lineNo,
+      text,
+      span: stmtSpan,
+      isReservedTopLevelName,
+    });
+    return { nextIndex: index + 1 };
+  }
+
+  function parseAlignItem({
+    index,
+    lineNo,
+    text,
+    rest,
+    stmtSpan,
+  }: ParseModuleItemDispatchArgs): ParseItemResult {
+    const alignTail = consumeTopKeyword(rest, 'align') ?? '';
+    const alignNode = parseAlignDirectiveDecl(rest, alignTail, {
+      diagnostics,
+      modulePath,
+      lineNo,
+      text,
+      span: stmtSpan,
+      isReservedTopLevelName,
+    });
+    return { nextIndex: index + 1, ...(alignNode ? { node: alignNode } : {}) };
+  }
+
+  function parseConstItem({
+    index,
+    lineNo,
+    text,
+    rest,
+    stmtSpan,
+    hasExportPrefix,
+  }: ParseModuleItemDispatchArgs): ParseItemResult {
+    const constTail = consumeTopKeyword(rest, 'const') ?? '';
+    const constNode = parseConstDecl(constTail, hasExportPrefix, {
+      diagnostics,
+      modulePath,
+      lineNo,
+      text,
+      span: stmtSpan,
+      isReservedTopLevelName,
+    });
+    return { nextIndex: index + 1, ...(constNode ? { node: constNode } : {}) };
+  }
+
+  function parseBinItem({
+    index,
+    lineNo,
+    text,
+    rest,
+    stmtSpan,
+  }: ParseModuleItemDispatchArgs): ParseItemResult {
+    const binTail = consumeTopKeyword(rest, 'bin') ?? '';
+    const node = parseBinDecl(binTail, {
+      diagnostics,
+      modulePath,
+      lineNo,
+      text,
+      span: stmtSpan,
+      isReservedTopLevelName,
+    });
+    return { nextIndex: index + 1, ...(node ? { node } : {}) };
+  }
+
+  function parseHexItem({
+    index,
+    lineNo,
+    text,
+    rest,
+    stmtSpan,
+  }: ParseModuleItemDispatchArgs): ParseItemResult {
+    const hexTail = consumeTopKeyword(rest, 'hex') ?? '';
+    const node = parseHexDecl(hexTail, {
+      diagnostics,
+      modulePath,
+      lineNo,
+      text,
+      span: stmtSpan,
+      isReservedTopLevelName,
+    });
+    return { nextIndex: index + 1, ...(node ? { node } : {}) };
+  }
+
+  function parseDataItem({
+    index,
+    lineNo,
+    rest,
+    ctx,
+  }: ParseModuleItemDispatchArgs): ParseItemResult | undefined {
+    if (rest.toLowerCase() !== 'data') return undefined;
+    if (ctx.scope === 'module') {
+      const parsedData = parseDataBlock(index, {
+        file,
+        lineCount,
+        diagnostics,
+        modulePath,
+        getRawLine,
+      });
+      return { nextIndex: parsedData.nextIndex };
+    }
+    diag(
+      diagnostics,
+      modulePath,
+      `Bare "data" marker lines are removed; declare symbols directly inside named data sections.`,
+      {
+        line: lineNo,
+        column: 1,
+      },
+    );
+    return { nextIndex: index + 1 };
+  }
+
+  const moduleItemDispatchTable: Readonly<Partial<Record<string, ParseModuleItemDispatchHandler>>> = {
+    import: parseImportItem,
+    type: parseTypeItem,
+    union: parseUnionItem,
+    globals: parseGlobalsItem,
+    var: parseGlobalsItem,
+    func: parseFuncItem,
+    op: parseOpItem,
+    extern: parseExternItem,
+    enum: parseEnumItem,
+    section: parseSectionItem,
+    align: parseAlignItem,
+    const: parseConstItem,
+    bin: parseBinItem,
+    hex: parseHexItem,
+    data: parseDataItem,
+  };
+
+  function parseRawDataValues(
+    directive: 'db' | 'dw',
+    valuesText: string,
+    lineNo: number,
+    lineSpan: SourceSpan,
+  ): RawDataDeclNode | undefined {
+    const parts = splitTopLevelComma(valuesText).map((part) => part.trim());
+    if (parts.length === 0 || parts.every((part) => part.length === 0)) {
+      diag(diagnostics, modulePath, `"${directive}" expects one or more imm expressions`, {
+        line: lineNo,
+        column: 1,
+      });
+      return undefined;
+    }
+    const values: ImmExprNode[] = [];
+    for (const part of parts) {
+      if (part.length === 0) {
+        diag(diagnostics, modulePath, `"${directive}" expects one or more imm expressions`, {
+          line: lineNo,
+          column: 1,
+        });
+        return undefined;
+      }
+      const expr = parseImmExprFromText(modulePath, part, lineSpan, diagnostics);
+      if (!expr) return undefined;
+      values.push(expr);
+    }
+    return { kind: 'RawDataDecl', span: lineSpan, name: '', directive, values };
+  }
+
+  function parseRawDataSize(
+    sizeText: string,
+    lineNo: number,
+    lineSpan: SourceSpan,
+  ): RawDataDeclNode | undefined {
+    const parts = splitTopLevelComma(sizeText).map((part) => part.trim());
+    if (parts.length !== 1 || parts[0]!.length === 0) {
+      diag(diagnostics, modulePath, `"ds" expects a single imm expression size`, {
+        line: lineNo,
+        column: 1,
+      });
+      return undefined;
+    }
+    const expr = parseImmExprFromText(modulePath, parts[0]!, lineSpan, diagnostics);
+    if (!expr) return undefined;
+    return { kind: 'RawDataDecl', span: lineSpan, name: '', directive: 'ds', size: expr };
+  }
+
+  function parseRawDataDirective(
+    label: PendingRawLabel,
+    directiveText: string,
+    lineNo: number,
+    lineSpan: SourceSpan,
+  ): RawDataDeclNode | undefined {
+    const match = /^(db|dw|ds)\b(.*)$/i.exec(directiveText.trim());
+    if (!match) return undefined;
+    const directive = match[1]!.toLowerCase() as 'db' | 'dw' | 'ds';
+    const payload = match[2]!.trim();
+    const parsed =
+      directive === 'ds'
+        ? parseRawDataSize(payload, lineNo, lineSpan)
+        : parseRawDataValues(directive, payload, lineNo, lineSpan);
+    if (!parsed) return undefined;
+    return { ...parsed, name: label.name, span: lineSpan };
+  }
+
   function parseModuleItem(index: number, ctx: ParseItemContext): ParseItemResult {
     const { raw, startOffset: lineStartOffset, endOffset: lineEndOffset } = getRawLine(index);
     const text = stripComment(raw).trim();
     const lineNo = index + 1;
     if (text.length === 0) {
+      if (ctx.scope === 'section') {
+        return { nextIndex: index + 1 };
+      }
       return { nextIndex: index + 1 };
     }
     if (ctx.scope === 'section' && text.toLowerCase() === 'end') {
+      if (ctx.pendingRawLabel) {
+        diag(diagnostics, modulePath, `Raw data label "${ctx.pendingRawLabel.name}" is missing a directive`, {
+          line: ctx.pendingRawLabel.lineNo,
+          column: 1,
+        });
+        delete ctx.pendingRawLabel;
+      }
       return { nextIndex: index + 1, sectionClosed: true };
     }
 
@@ -231,292 +786,118 @@ export function parseModuleFile(
     const rest = exportParsed.rest;
     const stmtSpan = span(file, lineStartOffset, lineEndOffset);
 
-    const importTail = consumeTopKeyword(rest, 'import');
-    if (importTail !== undefined) {
-      if (ctx.scope === 'module') {
-        const importNode = parseImportDecl(importTail, {
-          diagnostics,
-          modulePath,
-          lineNo,
-          text,
-          span: stmtSpan,
-          isReservedTopLevelName,
-        });
-        return { nextIndex: index + 1, ...(importNode ? { node: importNode } : {}) };
-      }
-      diag(diagnostics, modulePath, `import is only permitted at module scope`, {
-        line: lineNo,
-        column: 1,
-      });
-      return { nextIndex: index + 1 };
-    }
-
-    const typeTail = consumeTopKeyword(rest, 'type');
-    if (typeTail !== undefined) {
-      const parsedType = parseTypeDecl(
-        typeTail,
-        text,
-        stmtSpan,
-        lineNo,
-        index,
-        {
-          file,
-          lineCount,
-          diagnostics,
-          modulePath,
-          getRawLine,
-          isReservedTopLevelName,
-        },
-        hasExportPrefix,
-      );
-      if (!parsedType) return { nextIndex: index + 1 };
-      return { nextIndex: parsedType.nextIndex, node: parsedType.node };
-    }
-
-    const unionTail = consumeTopKeyword(rest, 'union');
-    if (unionTail !== undefined) {
-      const parsedUnion = parseUnionDecl(
-        unionTail,
-        text,
-        stmtSpan,
-        lineNo,
-        index,
-        {
-          file,
-          lineCount,
-          diagnostics,
-          modulePath,
-          getRawLine,
-          isReservedTopLevelName,
-        },
-        hasExportPrefix,
-      );
-      if (!parsedUnion) return { nextIndex: index + 1 };
-      return { nextIndex: parsedUnion.nextIndex, node: parsedUnion.node };
-    }
-
-    const storageHeader = rest.toLowerCase();
-    if (storageHeader === 'var' || storageHeader === 'globals') {
-      const parsedGlobals = parseGlobalsBlock(storageHeader, index, lineNo, {
-        file,
-        lineCount,
-        diagnostics,
-        modulePath,
-        getRawLine,
-        isReservedTopLevelName,
-      });
-      return { nextIndex: parsedGlobals.nextIndex };
-    }
-
-    const funcTail = consumeTopKeyword(rest, 'func');
-    if (funcTail !== undefined) {
-      const parsedFunc = parseTopLevelFuncDecl(
-        funcTail,
-        text,
-        stmtSpan,
-        lineNo,
-        index,
-        hasExportPrefix,
-        {
-          file,
-          lineCount,
-          diagnostics,
-          modulePath,
-          getRawLine,
-          isReservedTopLevelName,
-          parseParamsFromText,
-        },
-      );
-      return { nextIndex: parsedFunc.nextIndex, ...(parsedFunc.node ? { node: parsedFunc.node } : {}) };
-    }
-
-    const opTail = consumeTopKeyword(rest, 'op');
-    if (opTail !== undefined) {
-      const parsedOp = parseTopLevelOpDecl(
-        opTail,
-        text,
-        stmtSpan,
-        lineNo,
-        index,
-        hasExportPrefix,
-        {
-          file,
-          lineCount,
-          diagnostics,
-          modulePath,
-          getRawLine,
-          isReservedTopLevelName,
-          parseOpParamsFromText,
-        },
-      );
-      if (!parsedOp) return { nextIndex: index + 1 };
-      return { nextIndex: parsedOp.nextIndex, node: parsedOp.node };
-    }
-
-    const externTail = consumeTopKeyword(rest, 'extern');
-    if (externTail !== undefined) {
-      const parsedExtern = parseTopLevelExternDecl(
-        externTail,
-        text,
-        stmtSpan,
-        lineNo,
-        index,
-        {
-          file,
-          lineCount,
-          diagnostics,
-          modulePath,
-          getRawLine,
-          isReservedTopLevelName,
-          parseParamsFromText,
-        },
-      );
-      return { nextIndex: parsedExtern.nextIndex, ...(parsedExtern.node ? { node: parsedExtern.node } : {}) };
-    }
-
-    const enumTail = consumeTopKeyword(rest, 'enum');
-    if (enumTail !== undefined) {
-      const enumNode = parseEnumDecl(
-        enumTail,
-        {
-          diagnostics,
-          modulePath,
-          lineNo,
-          text,
-          span: stmtSpan,
-          isReservedTopLevelName,
-        },
-        hasExportPrefix,
-      );
-      return { nextIndex: index + 1, ...(enumNode ? { node: enumNode } : {}) };
-    }
-
-    const sectionTail = consumeTopKeyword(rest, 'section');
-    if (rest.toLowerCase() === 'section' || sectionTail !== undefined) {
-      if (ctx.scope === 'section') {
-        diag(diagnostics, modulePath, `nested section blocks are not supported`, {
-          line: lineNo,
+    if (ctx.scope === 'section' && ctx.sectionKind === 'data') {
+      if (ctx.pendingRawLabel) {
+        const parsedRaw = parseRawDataDirective(ctx.pendingRawLabel, rest, lineNo, stmtSpan);
+        if (parsedRaw) {
+          ctx.directDeclNamesLower.add(ctx.pendingRawLabel.name.toLowerCase());
+          delete ctx.pendingRawLabel;
+          if (ctx.sectionKind !== 'data') {
+            diag(
+              diagnostics,
+              modulePath,
+              `Raw data declarations are only permitted inside data sections.`,
+              { line: lineNo, column: 1 },
+            );
+            return { nextIndex: index + 1 };
+          }
+          return { nextIndex: index + 1, node: parsedRaw };
+        }
+        diag(diagnostics, modulePath, `Raw data label "${ctx.pendingRawLabel.name}" is missing a directive`, {
+          line: ctx.pendingRawLabel.lineNo,
           column: 1,
         });
-        return { nextIndex: index + 1 };
+        delete ctx.pendingRawLabel;
       }
-      const sectionDecl = rest === 'section' ? '' : (sectionTail ?? '');
-      const namedTokens = sectionDecl.trim().split(/\s+/).filter((token) => token.length > 0);
-      const namedPrefix =
-        namedTokens.length >= 2 &&
-        /^(code|data)$/i.test(namedTokens[0] ?? '') &&
-        /^[A-Za-z_][A-Za-z0-9_]*$/.test(namedTokens[1] ?? '') &&
-        !/^(at|size|end)$/i.test(namedTokens[1] ?? '');
-      if (namedPrefix) {
-        const header = parseNamedSectionHeader(sectionDecl, stmtSpan, lineNo, text);
-        if (!header) return { nextIndex: index + 1 };
-        const parsedSection = parseSectionItems(index + 1, header.section);
-        const sectionEndIndex = Math.max(parsedSection.nextIndex - 1, index);
-        const sectionEnd = getRawLine(sectionEndIndex);
-        const sectionNode: NamedSectionNode = {
-          kind: 'NamedSection',
-          span: span(file, lineStartOffset, sectionEnd.endOffset),
-          section: header.section,
-          name: header.name,
-          items: parsedSection.items,
-          ...(header.anchor ? { anchor: header.anchor } : {}),
-        };
-        if (!parsedSection.closed) {
-          diag(diagnostics, modulePath, `Missing end for section "${header.name}"`, {
+      const inlineMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(db|dw|ds)\b(.*)$/i.exec(rest);
+      if (inlineMatch) {
+        const labelName = inlineMatch[1]!;
+        const labelLower = labelName.toLowerCase();
+        if (ctx.directDeclNamesLower.has(labelLower)) {
+          diag(diagnostics, modulePath, `Duplicate data declaration name "${labelName}".`, {
             line: lineNo,
             column: 1,
           });
+          return { nextIndex: index + 1 };
         }
-        return { nextIndex: parsedSection.nextIndex, node: sectionNode };
+        const label: PendingRawLabel = { name: labelName, span: stmtSpan, lineNo };
+        const parsedRaw = parseRawDataDirective(label, inlineMatch[2]! + inlineMatch[3]!, lineNo, stmtSpan);
+        if (!parsedRaw) return { nextIndex: index + 1 };
+        ctx.directDeclNamesLower.add(labelLower);
+        if (ctx.sectionKind !== 'data') {
+          diag(
+            diagnostics,
+            modulePath,
+            `Raw data declarations are only permitted inside data sections.`,
+            { line: lineNo, column: 1 },
+          );
+          return { nextIndex: index + 1 };
+        }
+        return { nextIndex: index + 1, node: parsedRaw };
       }
-
-      parseSectionDirectiveDecl(rest, sectionTail, {
-        diagnostics,
-        modulePath,
-        lineNo,
-        text,
-        span: stmtSpan,
-        isReservedTopLevelName,
-      });
-      return { nextIndex: index + 1 };
-    }
-
-    const alignTail = consumeTopKeyword(rest, 'align');
-    if (rest.toLowerCase() === 'align' || alignTail !== undefined) {
-      const alignNode = parseAlignDirectiveDecl(rest, alignTail, {
-        diagnostics,
-        modulePath,
-        lineNo,
-        text,
-        span: stmtSpan,
-        isReservedTopLevelName,
-      });
-      return { nextIndex: index + 1, ...(alignNode ? { node: alignNode } : {}) };
-    }
-
-    const constTail = consumeTopKeyword(rest, 'const');
-    if (constTail !== undefined) {
-      const constNode = parseConstDecl(constTail, hasExportPrefix, {
-        diagnostics,
-        modulePath,
-        lineNo,
-        text,
-        span: stmtSpan,
-        isReservedTopLevelName,
-      });
-      return { nextIndex: index + 1, ...(constNode ? { node: constNode } : {}) };
-    }
-
-    const binTail = consumeTopKeyword(rest, 'bin');
-    if (binTail !== undefined) {
-      const node = parseBinDecl(binTail, {
-        diagnostics,
-        modulePath,
-        lineNo,
-        text,
-        span: stmtSpan,
-        isReservedTopLevelName,
-      });
-      return { nextIndex: index + 1, ...(node ? { node } : {}) };
-    }
-
-    const hexTail = consumeTopKeyword(rest, 'hex');
-    if (hexTail !== undefined) {
-      const node = parseHexDecl(hexTail, {
-        diagnostics,
-        modulePath,
-        lineNo,
-        text,
-        span: stmtSpan,
-        isReservedTopLevelName,
-      });
-      return { nextIndex: index + 1, ...(node ? { node } : {}) };
-    }
-
-    if (rest.toLowerCase() === 'data') {
-      if (ctx.scope === 'module') {
-        const parsedData = parseDataBlock(index, {
-          file,
-          lineCount,
+      const labelMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*$/.exec(rest);
+      if (labelMatch) {
+        const labelName = labelMatch[1]!;
+        const labelLower = labelName.toLowerCase();
+        if (ctx.directDeclNamesLower.has(labelLower)) {
+          diag(diagnostics, modulePath, `Duplicate data declaration name "${labelName}".`, {
+            line: lineNo,
+            column: 1,
+          });
+          return { nextIndex: index + 1 };
+        }
+        if (ctx.sectionKind !== 'data') {
+          diag(
+            diagnostics,
+            modulePath,
+            `Raw data labels are only permitted inside data sections.`,
+            { line: lineNo, column: 1 },
+          );
+          return { nextIndex: index + 1 };
+        }
+        ctx.pendingRawLabel = { name: labelName, span: stmtSpan, lineNo };
+        return { nextIndex: index + 1 };
+      }
+    } else if (ctx.scope === 'section' && ctx.sectionKind === 'code') {
+      if (/^(db|dw|ds)\b/i.test(rest) || /^[A-Za-z_][A-Za-z0-9_]*\s*:\s*(db|dw|ds)\b/i.test(rest)) {
+        diag(
           diagnostics,
           modulePath,
-          getRawLine,
-        });
-        return { nextIndex: parsedData.nextIndex };
+          `Raw data directives are only permitted inside data sections.`,
+          { line: lineNo, column: 1 },
+        );
+        return { nextIndex: index + 1 };
       }
-      diag(
-        diagnostics,
-        modulePath,
-        `Bare "data" marker lines are removed; declare symbols directly inside named data sections.`,
-        {
-          line: lineNo,
-          column: 1,
-        },
-      );
-      return { nextIndex: index + 1 };
+    } else if (ctx.scope === 'module') {
+      if (/^(db|dw|ds)\b/i.test(rest) || /^[A-Za-z_][A-Za-z0-9_]*\s*:\s*(db|dw|ds)\b/i.test(rest)) {
+        diag(
+          diagnostics,
+          modulePath,
+          `Raw data directives are only permitted inside data sections.`,
+          { line: lineNo, column: 1 },
+        );
+        return { nextIndex: index + 1 };
+      }
+    }
+    const dispatchKeyword = topLevelStartKeyword(rest);
+    const dispatchHandler =
+      dispatchKeyword === undefined ? undefined : moduleItemDispatchTable[dispatchKeyword];
+    if (dispatchHandler) {
+      const parsed = dispatchHandler({
+        index,
+        lineNo,
+        text,
+        rest,
+        stmtSpan,
+        lineStartOffset,
+        hasExportPrefix,
+        ctx,
+      });
+      if (parsed) return parsed;
     }
 
-    if (ctx.scope === 'section' && /^[A-Za-z_][A-Za-z0-9_]*\s*:/.test(rest)) {
+    const labelOnly = /^[A-Za-z_][A-Za-z0-9_]*\s*:\s*$/.test(rest);
+    if (ctx.scope === 'section' && /^[A-Za-z_][A-Za-z0-9_]*\s*:/.test(rest) && !(ctx.sectionKind === 'code' && labelOnly)) {
       const sectionDataDecl = parseDataDeclLine({
         allowOmittedInitializer: true,
         allowInferredArrayLength: false,
@@ -590,19 +971,29 @@ export function parseModuleFile(
   } {
     const sectionItems: SectionItemNode[] = [];
     const directDeclNamesLower = new Set<string>();
+    const ctx: Extract<ParseItemContext, { scope: 'section' }> = {
+      scope: 'section',
+      sectionKind,
+      directDeclNamesLower,
+    };
     let index = startIndex;
 
     while (index < lineCount) {
-      const parsed = parseModuleItem(index, {
-        scope: 'section',
-        sectionKind,
-        directDeclNamesLower,
-      });
+      const parsed = parseModuleItem(index, ctx);
       if (parsed.sectionClosed) {
+        delete ctx.pendingRawLabel;
         return { items: sectionItems, nextIndex: parsed.nextIndex, closed: true };
       }
       if (parsed.node) sectionItems.push(parsed.node as SectionItemNode);
       index = parsed.nextIndex;
+    }
+
+    if (ctx.pendingRawLabel) {
+      diag(diagnostics, modulePath, `Raw data label "${ctx.pendingRawLabel.name}" is missing a directive`, {
+        line: ctx.pendingRawLabel.lineNo,
+        column: 1,
+      });
+      delete ctx.pendingRawLabel;
     }
 
     return { items: sectionItems, nextIndex: index, closed: false };

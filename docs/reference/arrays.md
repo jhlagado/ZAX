@@ -5,7 +5,7 @@ Date: 2026-02-21.
 
 This document works through the concrete lowering strategies for effective-address computation in ZAX, given the decision to use IX as a permanent frame pointer. It covers every combination of base and offset provenance (register, local/arg variable, global symbol), for both 8-bit and 16-bit offsets, with approximate T-state costs and practical guidance for the compiler and the programmer.
 
-The focus is array indexing (`arr[i]`) and field access on records, but the same machinery applies to any `ea + offset` computation used internally by lowering. Examples use the v0.2 value-semantics model: `arr[i]` / `rec.field` are source-level storage accesses, while lowered Z80 examples may still show `(addr)` forms to make the emitted code explicit.
+The focus is array indexing (`arr[i]`) and field access on records, but the same machinery applies to any `ea + offset` computation used internally by lowering. Examples use the current `move`-based value-semantics model: `arr[i]` / `rec.field` are source-level storage accesses, while lowered Z80 examples may still show `(addr)` forms to make the emitted code explicit.
 
 ---
 
@@ -32,7 +32,7 @@ Lowering convention (v0.2):
 
 ## 2. The Lowering Problem
 
-When the programmer writes `ld a, arr[i]` or `ld hl, sprites[C].x`, the compiler must produce an instruction sequence that computes the effective address and performs the memory access. The effective address is always `base + offset`, where:
+When the programmer writes `move a, arr[i]` or `move hl, sprites[C].x`, the compiler must produce an instruction sequence that computes the effective address and performs the memory access. The effective address is always `base + offset`, where:
 
 The **base** is the starting address of the storage (an array, a record, a variable). It might be a compile-time constant (a global symbol), a value in a register, or a value stored in a local/arg slot.
 
@@ -73,7 +73,7 @@ ld a, (arr + 3)         ; 13 T-states
 For 16-bit access:
 
 ```
-ld hl, (arr + 6)        ; 16 T-states (assuming word[3])
+move hl, arr[3]         ; source-level form; lowering can fold this to an absolute access
 ```
 
 No address computation at runtime. This is the fastest path and should be the compiler's first check: if both base and offset are constant, fold and emit an absolute access.

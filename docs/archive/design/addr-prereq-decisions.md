@@ -2,7 +2,10 @@
 
 **Date:** 2026-03-08
 **Status:** Spec decisions — ready for implementation backlog
-**Purpose:** Close the implementation-blocking questions for the first `addr` slice before work begins. This document is narrower than `docs/design/ops-first-addressing-decisions.md` and records only the decisions needed to start `addr`.
+**Purpose:** Close the implementation-blocking questions for the first `addr`
+slice before work begins. This document is narrower than
+`docs/archive/design/ops-first-addressing-decisions.md` and records only the
+decisions needed to start `addr`.
 
 Questions addressed here: transitional typed EA in `ld`, semantic mapping onto `addr`, op-contract status for v1, and the preservation contract for `addr`.
 Questions intentionally deferred: cast syntax (`<Type>base.tail`), `@dead` pragma surface, and `select case` range/group overlap rules.
@@ -189,7 +192,7 @@ Deferred op contracts are about **user-written op bodies**, where the compiler l
 | `<Type>base.tail` grammar production | Open | Before cast syntax implementation begins |
 | Valid `base` for cast in v1 | Open | Before cast syntax implementation begins |
 | `@dead` pragma surface and scope rules | Deferred | After `addr` lowering is stable |
-| `select case` range/group overlap lowering | Open | Before `select` range implementation begins |
+| `select case` range/group overlap lowering | Resolved | Overlapping reachable values are compile errors; out-of-range `reg8` portions warn and are omitted/clipped |
 
 ---
 
@@ -206,5 +209,5 @@ Not part of this first slice:
 
 - `@dead` pragma syntax or propagation
 - typed cast syntax
-- grouped/ranged `select case`
+- grouped/ranged `select case` (implemented later)
 - user-authored op contract metadata

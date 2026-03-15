@@ -1,6 +1,6 @@
 # ZAX Quick Guide
 
-A practical quick-start guide to ZAX v0.2.
+A practical quick-start guide to the current ZAX language surface.
 
 This guide is instructional, not normative. Canonical language behavior is defined in `docs/spec/zax-spec.md`.
 
@@ -67,13 +67,13 @@ export func main(): void
     p: addr
   end
   ld hl, msg        ; address of msg
-  ld p, hl          ; store address into local p
+  move p, hl        ; store address into local p
   ld b, MsgLen
   repeat
-    ld hl, p        ; load current pointer
+    move hl, p      ; load current pointer
     ld a, (hl)      ; read byte
     inc hl
-    ld p, hl        ; save advanced pointer
+    move p, hl      ; save advanced pointer
     push bc
     bios_putc A
     pop bc
@@ -85,7 +85,7 @@ end
 Key ideas this demonstrates:
 
 - `data` declares initialized storage in the `data` section; `var` reserves stack-frame locals in the function body.
-- `p` is a scalar local of type `addr` — `ld p, hl` and `ld hl, p` use value semantics (compiler emits the IX-relative load/store).
+- `p` is a scalar local of type `addr` — `move p, hl` and `move hl, p` use value semantics (compiler emits the IX-relative load/store).
 - `bios_putc` is an external function bound to a fixed ROM address.
 - `push bc` / `pop bc` around the call is necessary because `extern func` carries no register preservation guarantee.
 - Structured control flow (`repeat ... until`) lowers to compiler-generated labels and branches.
@@ -133,10 +133,10 @@ The full CLI contract is in `docs/spec/zax-spec.md` Appendix D.
 | `byte` | 1            | 8-bit unsigned                                                 |
 | `word` | 2            | 16-bit unsigned                                                |
 | `addr` | 2            | 16-bit address; semantic signal for "holds a memory address"   |
-| `ptr`  | 2            | 16-bit pointer; untyped in v0.2 (no `ptr<T>`)                  |
+| `ptr`  | 2            | 16-bit pointer; untyped in the current language (no `ptr<T>`)  |
 | `void` | —            | Return type only; not valid as a storage, field, or param type |
 
-There are no signed storage types in v0.2.
+There are no signed storage types in the current language.
 
 `ptr` and `addr` are identical in size and code generation. The distinction is semantic intent: `addr` signals "this holds a data address," `ptr` signals "this holds a pointer to something." Use whichever communicates your intent more clearly; the compiler treats them identically.
 
@@ -169,7 +169,7 @@ section data vars at $8000
 end
 ```
 
-Aggregate record initializer syntax for named `data` sections (positional or named-field) is deferred past v0.2. For initialized composite data, use `data` declarations.
+Aggregate record initializer syntax for named `data` sections (positional or named-field) is deferred in the current language. For initialized composite data, use `data` declarations.
 
 ### 2.3 `data` — Initialized Storage
 
@@ -273,16 +273,21 @@ Use `sizeof` and `offsetof` everywhere instead of hand-computed constants. They 
 
 In ZAX, `rec.field` and `arr[i]` are **place expressions** — typed storage paths that the compiler can lower to a concrete location when needed.
 
-In ordinary **value/store contexts** (such as `LD A, rec.field` or `LD rec.field, A`), scalar places use value semantics and the compiler inserts the required load or store automatically. In **storage-location contexts** (such as an `ea`-typed `op` parameter), the same place expression is passed as a storage location for the op body to use.
+In ordinary **value/store contexts** (such as `move A, rec.field` or `move rec.field, A`), scalar places use value semantics and the compiler inserts the required load or store automatically. In **storage-location contexts** (such as an `ea`-typed `op` parameter), the same place expression is passed as a storage location for the op body to use.
 
 Examples:
 
 ```zax
-ld a, sprite.flags      ; value semantics: load the byte stored in sprite.flags
-ld sprite.flags, a      ; value semantics: store A into sprite.flags
+move a, sprite.flags      ; value semantics: load the byte stored in sprite.flags
+move sprite.flags, a      ; value semantics: store A into sprite.flags
 ```
 
-There is no general-purpose source-level address-of operator in the normative v0.2 model. Effective addresses are a lowering detail unless a construct explicitly consumes an `ea` storage-location operand.
+`@path` is the source-level address-of form for typed storage paths. In v1 it is accepted as the source operand in `move rr, @path`, where it produces the address of the typed storage path instead of its scalar value.
+
+```zax
+move hl, @player.flags     ; HL = address of the flags field
+move de, @sprites[bc].x    ; DE = address of sprites[BC].x
+```
 
 ### 3.2 Valid Index Forms
 
@@ -299,9 +304,9 @@ Inside `arr[...]`, only the following forms are valid:
 
 Anything else inside `[...]` is a compile error. In particular: expressions involving arithmetic (`i + j`, `i * 2`, `i << 1`), arbitrary function calls, or other non-register forms are not valid index expressions. If you need a computed index, compute it into a register first.
 
-### 3.3 The Critical v0.2 Distinction: `arr[HL]` vs `arr[(HL)]`
+### 3.3 The Critical Distinction: `arr[HL]` vs `arr[(HL)]`
 
-This is the most common migration mistake from v0.1:
+This is one of the most common indexing mistakes:
 
 ```zax
 arr[HL]     ; the index IS the 16-bit value in HL (direct register index)
@@ -310,9 +315,9 @@ arr[(HL)]   ; the index is the byte READ FROM memory at address HL (indirect)
 
 If your code intends to use the byte at the address in `HL` as an index, write `arr[(HL)]`. If `HL` itself is the index, write `arr[HL]`.
 
-### 3.4 Value Semantics in `LD`
+### 3.4 Value Semantics in `move`
 
-Scalar typed storage — module symbols from named `data` sections, function-local `var` slots, and scalar record fields — uses **value semantics** in `LD` operands in v0.2. You do not need parentheses to read or write scalar module symbols:
+Scalar typed storage — module symbols from named `data` sections, function-local `var` slots, and scalar record fields — uses **value semantics** in `move` operands in the current language. You do not need parentheses to read or write scalar module symbols:
 
 ```zax
 section data vars at $8000
@@ -321,13 +326,13 @@ section data vars at $8000
 end
 
 func example(): void
-  ld hl, count       ; load the 16-bit value stored in 'count' into HL
+  move hl, count     ; load the 16-bit value stored in 'count' into HL
   inc hl
-  ld count, hl       ; store HL back into 'count'
+  move count, hl     ; store HL back into 'count'
 
-  ld a, mode         ; load the byte stored in 'mode' into A
+  move a, mode       ; load the byte stored in 'mode' into A
   inc a
-  ld mode, a         ; store A back into 'mode'
+  move mode, a       ; store A back into 'mode'
 end
 ```
 
@@ -335,7 +340,7 @@ Explicit parentheses on scalar symbols are still accepted but are redundant. Par
 
 ### 3.5 Field and Element Access
 
-`rec.field` and `arr[idx]` are place expressions. In scalar `LD` contexts, the compiler lowers them to the required address calculation and load/store sequence:
+`rec.field` and `arr[idx]` are place expressions. In scalar `move` contexts, the compiler lowers them to the required address calculation and load/store sequence:
 
 ```zax
 section data vars at $8000
@@ -343,17 +348,31 @@ section data vars at $8000
 end
 
 func update(): void
-  ld a, player.x         ; read player.x (byte) into A
+  move a, player.x       ; read player.x (byte) into A
   inc a
-  ld player.x, a         ; write A back to player.x
+  move player.x, a       ; write A back to player.x
 
-  ld hl, player.flags    ; read player.flags (word) into HL
+  move hl, player.flags  ; read player.flags (word) into HL
   set 0, l
-  ld player.flags, hl    ; write back
+  move player.flags, hl  ; write back
 end
 ```
 
 For non-scalar fields (arrays, nested records), the place expression remains an address and no automatic dereference is inserted.
+
+Typed reinterpretation extends that same place-expression model to runtime
+address values:
+
+```zax
+move a, <Sprite>hl.flags
+move hl, <Header>ptr.checksum
+```
+
+The cast does not permanently type `HL` or `ptr`. It only supplies a typed
+storage base for the following field/index path.
+
+Implementation note: this surface is now part of the accepted language docs,
+but compiler support may lag while implementation work catches up.
 
 ### 3.6 Combining Field Access and Indexing
 
@@ -365,10 +384,10 @@ section data sprites_data at $8200
 end
 
 func move(idx: byte): void
-  ld l, idx              ; put index in L (8-bit register)
-  ld a, sprites[L].x     ; read x field of sprites[L]
+  move l, idx            ; put index in L (8-bit register)
+  move a, sprites[L].x   ; read x field of sprites[L]
   inc a
-  ld sprites[L].x, a     ; write back
+  move sprites[L].x, a   ; write back
 end
 ```
 
@@ -383,7 +402,7 @@ ld hl, buffer + 16       ; address 16 bytes into buffer
 ld hl, table - 2         ; address 2 bytes before table start
 ```
 
-`ea + imm` and `ea - imm` bind more loosely than address-path segments. `@sprite.x + 4` means `(@sprite.x) + 4`.
+`ea + imm` and `ea - imm` bind more loosely than address-path segments.
 
 `imm + ea` is not permitted — always write `ea + imm`.
 
@@ -403,7 +422,7 @@ const FlagMask    = (1 << 4) | (1 << 2)
 
 Constants are compile-time `imm` expressions. Their values must be fully resolvable at compile time. Forward references between `const` declarations are allowed.
 
-`export const` is accepted and has no effect in v0.2 (see Chapter 10.4).
+`export const` is accepted and has no effect in the current language (see Chapter 10.4).
 
 ### 4.2 Literal Forms
 
@@ -459,7 +478,7 @@ const DefaultPriority = Priority.Normal    ; = 1
 const MaxPriority     = Priority.Critical  ; = 3
 ```
 
-Unqualified enum member references (`Normal` instead of `Priority.Normal`) are compile errors in v0.2. See Chapter 8 for full enum coverage.
+Unqualified enum member references (`Normal` instead of `Priority.Normal`) are compile errors in the current language. See Chapter 8 for full enum coverage.
 
 ### 4.6 Type Aliases
 
@@ -605,7 +624,7 @@ Use `repeat ... until` when:
 
 ```zax
 ; Decrement B from some value down to zero
-ld b, count
+move b, count
 repeat
   ; ... do work ...
   dec b             ; sets Z when B reaches 0
@@ -640,7 +659,7 @@ Stack depth must match across all paths at every structured-flow join. The compi
 `select` dispatches on a selector value compared by equality against compile-time `case` constants. There is **no fallthrough** — after a `case` body completes, control always transfers to after the enclosing `end`.
 
 ```zax
-ld a, mode             ; load selector value
+move a, mode           ; load selector value
 select A
   case Mode.Idle
     ld a, 0
@@ -670,12 +689,14 @@ The compiler-generated dispatch may modify `A` and flags. All other registers ar
 - If the selector is `A`, `A` may be clobbered by dispatch. Do not rely on `A` still holding the selector value inside a `case` body.
 - If the selector is any other register, that register's value is preserved across dispatch.
 
-#### Multiple Values per `case`
+#### Multiple Values and Ranges per `case`
 
-A single `case` line may list comma-separated values; any of them will match:
+A single `case` line may list comma-separated values or inclusive ranges; any listed item may match:
 
 ```zax
 select A
+  case 'A'..'Z', '_'             ; range + singleton group
+    ld a, 0
   case Mode.Idle, Mode.Stopped   ; either value routes here
     ld a, 0
   case Mode.Run
@@ -699,14 +720,15 @@ end
 
 - `else` is optional. If no `case` matches and there is no `else`, control falls through to after `end`.
 - `else` must be the final arm. A `case` after `else` is a compile error.
-- Duplicate `case` values in the same `select` are a compile error.
+- Overlapping reachable `case` items in the same `select` are a compile error.
 - `select` must contain at least one arm; a `select` with no arms is a compile error.
 - Nested `select` is allowed.
-- A `case` value outside `0..255` for a `reg8` selector can never match; the compiler warns and omits those arms from dispatch.
+- A `case` value outside `0..255` for a `reg8` selector can never match; the compiler warns and omits that item from dispatch.
+- A `case` range that partly exceeds `0..255` for a `reg8` selector warns and dispatches only on the reachable clipped portion.
 
 #### Lowering
 
-The compiler may implement `select` as a compare-and-branch chain or as a jump table. The strategy is a quality-of-implementation decision — no threshold is defined. Compile-time `imm` selectors may be folded entirely at compile time. In all cases the observable behavior is identical: the selector is evaluated once, each `case` is compared against it, and the matching body executes.
+The compiler may implement `select` as a compare-and-branch chain or as a jump table. The strategy is a quality-of-implementation decision — no threshold is defined. Compile-time `imm` selectors may be folded entirely at compile time. In all cases the observable behavior is identical: the selector is evaluated once, each `case` item is tested against it, and the matching body executes.
 
 ### 5.8 Local Labels
 
@@ -751,8 +773,8 @@ export func add(a: word, b: word): word
   var
     temp: word = 0    ; local scalar, initialized to 0
   end
-  ld hl, a            ; load argument a (value semantics)
-  ld de, b            ; load argument b (value semantics)
+  move hl, a          ; load argument a (value semantics)
+  move de, b          ; load argument b (value semantics)
   add hl, de          ; HL = a + b
   ; result in HL — the word return channel
 end
@@ -798,7 +820,7 @@ end
 
 Scalar initializers are lowered in declaration order at function entry. For zero or constant word-sized init, the preferred lowering is `LD HL, imm16` / `PUSH HL`, which allocates and initializes the slot in one sequence.
 
-### 6.3 The v0.2 Typed Call Boundary
+### 6.3 The Typed Call Boundary
 
 When the compiler generates a call to a typed internal `func`, it enforces a preservation contract at that boundary:
 
@@ -995,20 +1017,20 @@ func sum_bytes(data: addr, count: byte): word
   end
 
   ; Initialise pointer from argument
-  ld hl, data
-  ld ptr, hl
+  move hl, data
+  move ptr, hl
 
-  ld b, count         ; loop counter in B
+  move b, count       ; loop counter in B
   ld hl, 0            ; running total in HL
 
 loop:
-  ld de, ptr          ; load current pointer into DE
+  move de, ptr        ; load current pointer into DE
   ld a, (de)          ; read byte from memory
   ld e, a
   ld d, 0
   add hl, de          ; accumulate
   inc de              ; advance pointer
-  ld ptr, de          ; save advanced pointer
+  move ptr, de        ; save advanced pointer
   djnz loop
 
   ; Return total: HL already holds the result
@@ -1021,7 +1043,7 @@ Notes:
 - `ptr` is an `addr` local used to persist the pointer across loop iterations.
 - `djnz` uses `B` as the decrement-and-branch counter. Keep `B` free inside the loop body.
 - The result is in `HL` at function exit — the compiler uses this as the `word` return channel.
-- `data` is an `addr` argument: `ld hl, data` reads the 16-bit value from the IX-relative slot via the compiler's DE-shuttle lowering.
+- `data` is an `addr` argument: `move hl, data` reads the 16-bit value from the IX-relative slot via the compiler's DE-shuttle lowering.
 
 ---
 
@@ -1302,7 +1324,7 @@ op swap_de_bc
 end
 ```
 
-**Destination parameter convention (v0.2):** parameters whose names start with `dst` or `out` are treated as destinations by optional diagnostic tooling. If no parameter starts with `dst` or `out`, the first parameter is assumed to be the destination. This affects only tooling output — it has no effect on expansion or overload resolution.
+**Destination parameter convention:** parameters whose names start with `dst` or `out` are treated as destinations by optional diagnostic tooling. If no parameter starts with `dst` or `out`, the first parameter is assumed to be the destination. This affects only tooling output — it has no effect on expansion or overload resolution.
 
 ### 7.10 Complete Example — 16-bit Add Family
 
@@ -1330,13 +1352,13 @@ op add16(dst: BC, src: reg16)
 end
 
 func vector_add(ax: word, ay: word, bx: word, by: word): void
-  ld hl, ax
-  ld de, bx
+  move hl, ax
+  move de, bx
   add16 HL, DE             ; selects first overload; emits: add hl, de
   ; HL = ax + bx
 
-  ld de, ay
-  ld bc, by
+  move de, ay
+  move bc, by
   add16 DE, BC             ; selects second overload; ex/add/ex sequence
   ; DE = ay + by
 end
@@ -1364,7 +1386,7 @@ Trailing commas in the member list are not permitted.
 
 ### 8.2 Qualified Access Is Required
 
-In v0.2, every enum member reference must use the fully qualified form `EnumType.Member`. Unqualified references are always compile errors:
+In the current language, every enum member reference must use the fully qualified form `EnumType.Member`. Unqualified references are always compile errors:
 
 ```zax
 ld a, Mode.Run    ; correct
@@ -1385,7 +1407,7 @@ const TopPriority     = Priority.Critical  ; = 3
 const PriorityRange   = Priority.Critical - Priority.Low  ; = 3
 
 func at_max(p: byte): byte
-  ld a, p
+  move a, p
   cp Priority.Critical
   if Z
     ld l, 1
@@ -1404,7 +1426,7 @@ end
 enum DeviceState Idle, Busy, Error, Reset
 
 func handle_state(state: byte): void
-  ld a, state
+  move a, state
   select A
   case DeviceState.Idle
     ; nothing to do
@@ -1417,7 +1439,7 @@ func handle_state(state: byte): void
     ret
   case DeviceState.Reset
     ld a, DeviceState.Idle
-    ld state, a
+    move state, a
     ret
   end
 end
@@ -1433,7 +1455,7 @@ Comma-separated enum members and stacked `case` lines both work:
 enum Signal Red, Amber, Green, FlashAmber
 
 func is_stop(sig: byte): byte
-  ld a, sig
+  move a, sig
   select A
   case Signal.Red, Signal.FlashAmber   ; either value takes this body
     ld l, 1
@@ -1454,9 +1476,16 @@ Duplicate `case` values within the same `select` are a compile error.
 
 When passing an enum value as a `byte` function parameter, it travels in the low byte of the 16-bit stack slot. For enums with ≤ 256 members this is always safe — the value fits in one byte. For enums with > 256 members, declare the parameter as `word` to ensure the full value is preserved.
 
-### 8.7 Enums and the Global Namespace
+### 8.7 Enums and Module Visibility
 
-Enum type names live in the global namespace and must be unique across all modules. Enum member names (`Idle`, `Run`, etc.) are not directly accessible as unqualified identifiers — they must always be prefixed with the enum type name. This means member names do not pollute the global namespace and multiple enums may use the same member names without collision:
+Within a module, enum type names live in the same module-scope declaration
+namespace as other top-level names. Enum member names (`Idle`, `Run`, etc.) are
+not directly accessible as unqualified identifiers — they must always be
+prefixed with the enum type name. Exported enums are referenced from importing
+modules by qualification (`dep.State.Idle`).
+
+This means member names do not pollute the module-scope declaration namespace
+and multiple enums may use the same member names without collision:
 
 ```zax
 enum StateA   Idle, Running
@@ -1488,7 +1517,7 @@ Records must contain at least one field — an empty `type ... end` is a compile
 
 ### 9.2 Field Access and Value Semantics
 
-`rec.field` is a **place expression** — a typed field location. In value/store contexts (LD, typed call arguments), the compiler inserts the required load or store automatically:
+`rec.field` is a **place expression** — a typed field location. In value/store contexts (`move`, typed call arguments), the compiler inserts the required load or store automatically:
 
 ```zax
 section data vars at $8000
@@ -1496,21 +1525,19 @@ section data vars at $8000
 end
 
 func update(): void
-  ld a, player.x         ; read player.x byte into A (value semantics)
+  move a, player.x       ; read player.x byte into A (value semantics)
   inc a
-  ld player.x, a         ; write A back to player.x (value semantics)
+  move player.x, a       ; write A back to player.x (value semantics)
 
-  ld hl, player.flags    ; read player.flags word into HL (value semantics)
+  move hl, player.flags  ; read player.flags word into HL (value semantics)
   set 0, l               ; set bit 0
-  ld player.flags, hl    ; write back
+  move player.flags, hl  ; write back
 end
 ```
 
-To get the address of a field rather than its value, use `@`:
-
-```zax
-  ld hl, @player.x       ; HL = address of player.x — NOT its value
-```
+`@path` is now the source-level address-of form for typed storage paths.
+It is not a general unary operator, and in v1 it is accepted only as the
+source operand in `move rr, @path`.
 
 ### 9.3 `sizeof` and `offsetof` for Records
 
@@ -1556,8 +1583,8 @@ section data vars at $8000
 end
 
 func clip_right(x: word): word
-  ld de, x
-  ld hl, vp.bottomRight.x    ; load the word value of bottomRight.x
+  move de, x
+  move hl, vp.bottomRight.x  ; load the word value of bottomRight.x
   sbc hl, de
   ; result in HL
   ret
@@ -1586,9 +1613,9 @@ func move_all(): void
   ld b, MaxSprites
   ld hl, 0              ; element index (0-based integer, not byte offset)
 loop:
-  ld a, sprites[HL].x   ; load x field of sprites[HL] (value semantics)
+  move a, sprites[HL].x ; load x field of sprites[HL] (value semantics)
   inc a
-  ld sprites[HL].x, a   ; write back
+  move sprites[HL].x, a ; write back
 
   inc hl                ; advance to next index
   djnz loop
@@ -1653,8 +1680,8 @@ end
 
 func split(): void
   ld hl, $1234
-  ld val.w, hl          ; write 16-bit word: memory holds $34 at offset 0, $12 at offset 1
-  ld a, val.lo          ; read low byte: A = $34 (offset 0 — same as low byte of w)
+  move val.w, hl        ; write 16-bit word: memory holds $34 at offset 0, $12 at offset 1
+  move a, val.lo        ; read low byte: A = $34 (offset 0 — same as low byte of w)
 end
 ```
 
@@ -1701,9 +1728,9 @@ end
 
 func example(): void
   ld hl, $ABCD
-  ld sw.w, hl             ; write $ABCD
-  ld a, sw.pair.lo        ; read low byte: A = $CD
-  ld a, sw.pair.hi        ; read high byte: A = $AB
+  move sw.w, hl           ; write $ABCD
+  move a, sw.pair.lo      ; read low byte: A = $CD
+  move a, sw.pair.hi      ; read high byte: A = $AB
 end
 ```
 
@@ -1778,7 +1805,9 @@ Circular imports are a compile error.
 
 ### 10.3 Module Visibility and Qualified Names
 
-Names declared in a module are local to that module unless imported visibility makes them accessible from another module. Imported symbols are referenced with qualified names (`dep.Symbol`) under the v0.5 visibility rules.
+Names declared in a module are local to that module unless imported visibility
+makes them accessible from another module. Imported symbols are referenced with
+qualified names (`dep.Symbol`) under the current module-visibility rules.
 
 Name collisions are still compile errors within a module scope and at qualified-import resolution points. There is no implicit renaming or shadowing.
 
@@ -1931,7 +1960,8 @@ extern func bios_getc(): byte at $F006
 ```
 
 - `at <imm16>` is required.
-- `extern`-declared names enter the global namespace. Collisions with other symbols are errors.
+- `extern`-declared names enter the module-scope declaration namespace.
+  Collisions with other module-scope symbols are errors.
 - `extern func` calls carry **no** compiler-generated register preservation. Assume any register or flag may be clobbered on return. (Clobber annotation syntax is planned — see `docs/spec/zax-spec.md` Appendix F.)
 
 ### 11.8 Relative `extern` Blocks for `bin` Entry Points
@@ -2006,7 +2036,10 @@ end
 
 ### 12.1 Introduction
 
-This chapter demonstrates how ZAX's features combine into practical system-level patterns. Each pattern is self-contained and uses the v0.5 surface — named sections, value semantics for scalar symbols, qualified enum references, and `op` declarations without parentheses for zero-parameter forms.
+This chapter demonstrates how ZAX's features combine into practical
+system-level patterns. Each pattern is self-contained and uses the current
+surface — named sections, value semantics for scalar symbols, qualified enum
+references, and `op` declarations without parentheses for zero-parameter forms.
 
 ---
 
@@ -2022,20 +2055,20 @@ section data vars at $8000
 end
 
 func tick(): void
-  ld a, state        ; value semantics — no parentheses needed
+  move a, state      ; value semantics — no parentheses needed
   select A
   case DeviceState.Idle
     ; check for work, transition to Busy if found
     ld a, DeviceState.Busy
-    ld state, a
+    move state, a
   case DeviceState.Busy
     ; do work, transition back to Idle when done
     ld a, DeviceState.Idle
-    ld state, a
+    move state, a
   case DeviceState.Error
     ; latch error, transition to Idle for recovery
     ld a, DeviceState.Idle
-    ld state, a
+    move state, a
   end
   ret
 end
@@ -2043,7 +2076,7 @@ end
 
 Key properties:
 
-- `state` is a scalar data symbol: `ld a, state` and `ld state, a` use value semantics directly — no `(state)` dereference.
+- `state` is a scalar data symbol: `move a, state` and `move state, a` use value semantics directly — no `(state)` dereference.
 - Enum qualification (`DeviceState.Idle`) makes every state name unambiguous even after imports.
 - All state transitions are visible at one dispatch site. No hidden transitions elsewhere.
 - `select` lowering is bounded compare/branch — no software multiply or jump table at three cases.
@@ -2073,27 +2106,27 @@ const UART_RX_READY = %00000010
 
 op uart_wait_tx
 poll_tx:
-  ld a, uart.status    ; value semantics — reads the status byte
+  move a, uart.status  ; value semantics — reads the status byte
   and UART_TX_READY
   jr Z, poll_tx
 end
 
 op uart_wait_rx
 poll_rx:
-  ld a, uart.status
+  move a, uart.status
   and UART_RX_READY
   jr Z, poll_rx
 end
 
 func uart_send(ch: byte): void
   uart_wait_tx         ; inline poll — no call overhead
-  ld uart.tx_data, ch  ; write via value semantics
+  move uart.tx_data, ch  ; write via value semantics
   ret
 end
 
 func uart_recv(): byte
   uart_wait_rx
-  ld l, uart.rx_data   ; result in L (byte return channel)
+  move l, uart.rx_data   ; result in L (byte return channel)
   ret
 end
 ```
@@ -2115,7 +2148,7 @@ Dispatching on a command byte received from hardware or a protocol:
 enum Command CmdNop, CmdRead, CmdWrite, CmdReset, CmdStatus
 
 func handle_command(cmd: byte): byte
-  ld a, cmd
+  move a, cmd
   select A
   case Command.CmdNop
     ld l, 0
@@ -2130,7 +2163,7 @@ func handle_command(cmd: byte): byte
     ld l, 0
   case Command.CmdStatus
     ; return status byte
-    ld a, status_flags
+    move a, status_flags
     ld l, a
   else
     ; unknown command — return error code
@@ -2144,7 +2177,7 @@ Key properties:
 
 - All dispatch is in one place. Adding a new command means adding one `case` arm.
 - The `else` arm catches any byte value not covered by a `case` — important for protocol robustness.
-- `cmd` is a `byte` parameter: it arrives in the low byte of its 16-bit frame slot. `ld a, cmd` reads from the IX-relative slot via compiler lowering.
+- `cmd` is a `byte` parameter: it arrives in the low byte of its 16-bit frame slot. `move a, cmd` reads from the IX-relative slot via compiler lowering.
 - No fallthrough between arms. Each arm is isolated.
 
 ---
@@ -2173,13 +2206,13 @@ func update_all(): void
   ld hl, 0              ; element index (0-based)
 
 loop:
-  ld a, entities[HL].active   ; load active flag for entity HL
+  move a, entities[HL].active   ; load active flag for entity HL
   or a
   if NZ
     ; entity is active: update position
-    ld a, entities[HL].x
+    move a, entities[HL].x
     add a, entities[HL].speed
-    ld entities[HL].x, a
+    move entities[HL].x, a
   end
 
   inc hl                ; advance index
@@ -2237,11 +2270,11 @@ op clr16(dst: BC)
 end
 
 func vector_add(ax: word, ay: word, bx: word, by: word): void
-  ld hl, ax
-  ld de, bx
+  move hl, ax
+  move de, bx
   add16 HL, DE          ; HL = ax + bx
-  ld de, ay
-  ld bc, by
+  move de, ay
+  move bc, by
   add16 DE, BC          ; DE = ay + by
   ret
 end
@@ -2292,12 +2325,12 @@ func isr_handler(): void
 
   ; Minimal work: set a flag for the main loop to act on
   ld a, 1
-  ld irq_pending, a
+  move irq_pending, a
 
   ; Increment counter
-  ld hl, irq_count    ; value semantics: loads the current count
+  move hl, irq_count    ; value semantics: loads the current count
   inc hl
-  ld irq_count, hl    ; store back
+  move irq_count, hl    ; store back
 
   restore_all
   reti                ; raw reti — NOT rewritten to epilogue jump
@@ -2315,11 +2348,11 @@ Key properties:
 ```zax
 export func main(): void
 main_loop:
-  ld a, irq_pending
+  move a, irq_pending
   or a
   if NZ
     ld a, 0
-    ld irq_pending, a   ; clear the flag
+    move irq_pending, a   ; clear the flag
     ; handle the interrupt event
   end
   jr main_loop
@@ -2357,6 +2390,6 @@ Working in ZAX means keeping the lowering predictable. A few habits help:
 - **Establish flags immediately before `if`/`while`/`until`.** The condition is tested at the keyword using whatever flags are current. A `ld` between your compare and your `if` will overwrite the flags silently on Z80.
 - **Keep `op` bodies small and mechanical.** If an op body is doing significant work, consider whether a `func` with its typed boundary guarantees would be clearer.
 - **Use `sizeof` and `offsetof` everywhere.** Never hardcode a field offset. If the type changes, the built-ins update automatically.
-- **Use qualified enum names everywhere.** `Mode.Run` everywhere, never bare `Run`. Unqualified references are compile errors in v0.2 — this is enforced, not advisory.
+- **Use qualified enum names everywhere.** `Mode.Run` everywhere, never bare `Run`. Unqualified references are compile errors in the current language — this is enforced, not advisory.
 - **Check the `.asm` or `.lst` output when something looks wrong.** The lowered trace shows exactly what the compiler emitted. The IX byte-lane shuttle (`ex de, hl` / `ld e, (ix+d)` / ...) is particularly visible here.
 - **Treat `docs/spec/zax-spec.md` as the final authority.** This guide is instructional; the spec is normative.

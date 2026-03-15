@@ -1,6 +1,8 @@
-# ZAX Language Specification (Draft v0.5 Surface)
+# ZAX Language Specification
 
-This document is the implementable first draft specification for **ZAX**, a structured assembler for the Z80 family. It is written for humans: it introduces concepts in the same order you’ll use them when writing ZAX.
+This document is the normative specification for **ZAX**, a structured
+assembler for the Z80 family. It is written for humans: it introduces concepts
+in the same order you’ll use them when writing ZAX.
 
 ZAX aims to make assembly code easier to read and refactor by providing:
 
@@ -10,7 +12,12 @@ ZAX aims to make assembly code easier to read and refactor by providing:
 - structured control flow inside function/op instruction streams (`if`/`while`/`repeat`/`select`)
 - `op`: inline “macro-instructions” with operand matching
 
-Normative status for the current language surface: this document is the sole normative language source. Historical transition rationale documents have been retired and do not override this specification.
+Normative status for the current language surface: this document is the sole
+normative language source.
+
+Historical `v0.1` / `v0.2` labels are retained where they mark migrations,
+feature-era rules, or compatibility notes. They do not imply a separate
+competing versioned spec for the current language surface.
 
 Grammar companion: `docs/spec/zax-grammar.ebnf.md` provides a single-file syntax reference. If any grammar text diverges from this specification, this specification wins.
 
@@ -21,41 +28,10 @@ Anything not defined here is undefined behavior or a compile error.
 ## Authority (Normative)
 
 - `docs/spec/zax-spec.md` is the only normative language authority.
-- Supporting documents (`docs/reference/zax-dev-playbook.md`, `docs/archive/versioned/v02-codegen-reference.md`, `docs/reference/return-register-policy.md`, `docs/archive/versioned/v02-codegen-worked-examples.md`) are non-normative and must not introduce conflicting language rules.
-- `docs/archive/design/modules.md` is the design anchor for module/layout behavior and is aligned with this v0.5 parser surface.
-- Historical transition rationale documents are retired; if any surviving text conflicts with this document, this document wins.
-
----
-
-## Forward Direction: v0.5 Modules and Layout (Non-normative)
-
-The current normative rules in Sections 2 and 3 define the existing v0.2/v0.4
-module model:
-
-- module-scope `import`
-- a flat imported-name visibility model
-- historical per-kind section counters
-- packing by section kind across the full import graph
-
-The accepted v0.5 direction replaces that model with the design defined in
-`docs/archive/design/modules.md`.
-
-The active v0.5 changes are:
-
-- named section contributions and anchors
-- deterministic merge by section key `(kind, name)` in the non-banked initial
-  implementation
-- module-scope imports only, with import visibility separated from placement
-- explicit `export` semantics and qualified imported names (`dep.Symbol`)
-- root-first deterministic contribution order
-- unified direct declarations inside named `data` sections
-
-Banked section behavior remains out of scope for the initial v0.5
-implementation. Banking remains future direction only until it is promoted into
-the normative language.
-
-Legacy module-scope storage blocks and unnamed section-base directives are
-removed from the current parser surface.
+- All other documents are non-normative and must not override this
+  specification.
+- Historical and archived documents are retained for context only. If any of
+  them conflict with this specification, this specification wins.
 
 ---
 
@@ -215,7 +191,7 @@ Module identity (v0.1):
 
 ### 2.2 Named Sections and Anchors
 
-ZAX v0.5 uses named sections.
+ZAX uses named sections.
 
 Section kinds:
 
@@ -247,37 +223,55 @@ Layout:
 
 ### 3.1 Import Syntax
 
-This section defines the current v0.2 import and visibility model. It remains
-normative today, but it is scheduled to be replaced in v0.5 by explicit export
-semantics and qualified imported names.
+This section defines the current import syntax.
 
 - `import <ModuleId>`
 - `import "<path>"`
+- `import` is permitted only at module scope
 
-`<ModuleId>` is resolved via the compiler’s search path (project + standard modules). In v0.1, a `ModuleId` maps to a file named `<ModuleId>.zax` on the search path.
+`<ModuleId>` is resolved via the compiler’s search path (project + standard
+modules). A module-ID import names the desired module, not necessarily the
+spelling of the on-disk path used to reach it.
 
-`import "<path>"` loads a module from an explicit path. For v0.1, quoted paths should include the `.zax` extension and are resolved relative to the importing file (then search paths, if not found).
+`import "<path>"` loads a module from an explicit path. Quoted paths should
+include the `.zax` extension and are resolved relative to the importing file
+(then search paths, if not found).
+
+Each resolved import contributes a direct import edge. Those direct import edges
+determine which module qualifiers are visible in the importing file.
 
 ### 3.2 Visibility and Collisions
 
-This section defines the current v0.2 flat imported-visibility model. It
-remains normative today, but it is scheduled to be replaced in v0.5 by
-explicit export semantics and qualified imported names.
+This section defines the current imported-visibility model.
 
-- In v0.1, all module-scope names are public. The `export` keyword is accepted on `const`, `func`, and `op` declarations for clarity and forward compatibility, but has no effect. Using `export` on any other declaration form is a compile error.
-- All names from an imported module are brought into the importing module’s global namespace.
-- The program has a single global namespace across all modules.
-- Any symbol collision is a compile error (no implicit renaming).
-  - Collisions are detected ignoring case: you may not define two names that differ only by case (e.g., `Foo` and `foo`).
-  - This applies to all user-defined identifiers: module-scope symbols, locals/args, and labels.
-- Collisions include:
-  - two modules export the same name
-  - an import conflicts with a local symbol
-  - `bin` base names and `extern` names must also be unique
+- Module-scope declarations are private to their defining module unless marked
+  `export`.
+- `export` is permitted only on `const`, `type`, `union`, `enum`, `func`, and
+  `op` declarations.
+- Exported names from another module are accessed by qualification:
+  `dep.Name`.
+- Imported names are not injected into the local unqualified namespace.
+- Qualified access is allowed only for:
+  - the current module's own module ID
+  - modules directly imported by the current file
+- Unqualified references resolve only against the current module's own local
+  declarations.
+- Enum members use qualified names:
+  - same-module: `Mode.Value`
+  - imported: `dep.Mode.Value`
+- Unqualified enum member references are compile errors.
+- Module IDs must be unique across the build. If two modules resolve to the
+  same canonical module ID, compilation fails.
+- User-defined identifiers remain case-sensitive, but collisions are diagnosed
+  ignoring case: you may not define two names that differ only by case (for
+  example `Foo` and `foo`).
 
 Namespace rule (v0.1):
 
-- `type`, `union`, `enum`, `const`, storage symbols (`data`/`bin`), `func`, and `op` names share the same global namespace. Defining a `func` and an `op` with the same name is a compile error.
+- Within a module, `type`, `union`, `enum`, `const`, storage symbols
+  (`data`/`bin`), `func`, and `op` names share the same module-scope
+  declaration namespace. Defining a `func` and an `op` with the same name is a
+  compile error.
 
 Forward references (v0.1):
 
@@ -463,8 +457,8 @@ Example: arrays of records lower through storage-path access (informative):
 
 ; `sprites[C].x` is a scalar field access. The compiler performs the
 ; required address calculation internally, then loads/stores the value:
-ld hl, sprites[C].x   ; load word at sprites[C].x
-ld sprites[C].x, hl   ; store word to sprites[C].x
+move hl, sprites[C].x   ; load word at sprites[C].x
+move sprites[C].x, hl   ; store word to sprites[C].x
 
 ```
 
@@ -505,9 +499,9 @@ section data vars at $2000
 end
 
 func read_value_overlay()
-  ld a, v.b  ; read low byte
-  ld hl, v.w ; read word overlay
-  ld de, v.p ; read pointer overlay
+  move a, v.b  ; read low byte
+  move hl, v.w ; read word overlay
+  move de, v.p ; read pointer overlay
 end
 
 ```
@@ -575,7 +569,7 @@ Non-guarantees (v0.1):
 
 ### 6.2 Removed Legacy Storage Surface
 
-Legacy module-scope storage blocks are removed in v0.5.
+Legacy module-scope storage blocks are removed.
 
 Use named `data` sections instead:
 
@@ -771,16 +765,25 @@ Integer semantics (v0.1):
 - function-scope symbols: argument names and local `var` names (as frame slots)
 - field access: `rec.field`
 - indexing: `arr[i]` and nested `arr[r][c]` (index forms as defined above)
+- typed reinterpretation: `<Type>base.tail`
 - address arithmetic: `ea + imm`, `ea - imm`
 
 Conceptually, an `ea` is a base storage location plus a sequence of path segments: `.field` selects a record field, and `[index]` selects an array element. Lowering turns that path into an effective address when a Z80 instruction sequence needs one.
 
-Value semantics note (v0.2):
+Value semantics note (current):
 
-- Bare scalar variables use value semantics in ordinary instruction and call contexts.
-- `rec.field` and `arr[idx]` are storage-path expressions. In scalar value/store contexts (for example `LD A, rec.field`, `LD rec.field, A`), the compiler inserts the required load/store lowering.
+- Bare scalar variables use value semantics in ordinary `move` and call contexts.
+- `rec.field` and `arr[idx]` are storage-path expressions. In scalar value/store contexts (for example `move A, rec.field`, `move rec.field, A`), the compiler inserts the required load/store lowering.
+- `<Type>base.tail` is also a storage-path expression. It supplies the base
+  type explicitly at the access site, then applies ordinary field/index
+  traversal.
 - In aggregate contexts (for example passing an array/record parameter), the compiler passes the storage reference transparently.
-- Older address-of style wording (including `@place`) is retired from the normative v0.2 source model.
+- `@path` is the source-level address-of form for typed storage paths. In v1 it is accepted only as the source operand in `move rr, @path`:
+
+  ```zax
+  move hl, @player.flags
+  move de, @sprites[bc].x
+  ```
 
 Precedence (v0.1):
 
@@ -790,6 +793,61 @@ Notes (v0.1):
 
 - `imm + ea` is not permitted; write `ea + imm`.
 - `ea` describes memory addresses. Z80 I/O port operands (e.g., `(C)` and `($imm8)` used by `in`/`out`) are not `ea` expressions.
+
+### 7.2.1 Typed Reinterpretation
+
+ZAX supports typed reinterpretation using angle-bracket cast syntax:
+
+```zax
+<Type>base.tail
+```
+
+Meaning:
+
+- `base` is treated as the address of a value of type `Type`
+- the result is a typed storage base
+- normal storage-path traversal then applies:
+  - `.field`
+  - `[index]`
+
+Examples:
+
+```zax
+move a, <Sprite>hl.flags
+move hl, <Header>ptr.checksum
+move a, <TileMap>(map_base + 32)[row][col]
+```
+
+Rules:
+
+- v1 requires at least one tail segment after the cast head:
+  - valid: `<Sprite>hl.flags`
+  - valid: `<Sprite[8]>ptr[2]`
+  - invalid: `<Sprite>hl`
+- valid base forms in v1 are:
+  - `HL`, `DE`, `BC`, `IX`, `IY`
+  - scalar names of type `word` or `addr`
+  - parenthesized base-plus-constant or base-minus-constant forms built from
+    those bases
+- invalid base forms in v1 include:
+  - `AF`
+  - `SP`
+  - bare aggregate storage names
+  - general immediate expressions
+  - nested casts
+
+Semantics:
+
+- The cast is local to the expression. It does not permanently type a register
+  or scalar name.
+- If the final selected target is scalar, ordinary scalar value/store semantics
+  apply in instruction and call contexts.
+- If the final selected target is aggregate, the result remains a storage base
+  for further traversal or aggregate use.
+
+This feature extends the existing typed storage-path model. It works with the
+current `move`-based typed storage surface, and it is not coupled to any
+source-language `addr` feature.
 
 ---
 
@@ -1235,8 +1293,8 @@ Syntax:
 
 ```
 select <selector>
-  case <imm>[, <imm> ...]
-  case <imm>[, <imm> ...]
+  case <imm-or-range>[, <imm-or-range> ...]
+  case <imm-or-range>[, <imm-or-range> ...]
   else ...
 end
 ```
@@ -1246,15 +1304,17 @@ Rules:
 - `<selector>` is evaluated once at `select` and treated as a 16-bit value.
   - Allowed selector forms: `reg16`, `reg8` (zero-extended), `imm` expression, `ea` (storage reference value), `(ea)` (loaded value).
   - `(ea)` selectors read a 16-bit word from memory.
-- Each `case` value must be a compile-time immediate (`imm`) and is compared against the selector.
-  - Comparisons are by 16-bit equality.
-  - For `reg8` selectors, the selector value is in the range `0..255` (zero-extended). `case` values outside `0..255` can never match; the compiler may warn.
+- Each `case` item must be either a compile-time immediate (`imm`) or an inclusive compile-time range (`imm .. imm`).
+  - Single values compare by 16-bit equality.
+  - Ranges match when the selector lies within the inclusive 16-bit interval.
+  - For `reg8` selectors, the selector value is in the range `0..255` (zero-extended). `case` items outside `0..255` can never match; the compiler may warn.
+  - For `reg8` selectors, a partially out-of-range `case` range may be clipped to its reachable `0..255` portion with a warning.
 - `else` is optional and is taken if no `case` matches. If no `else` is present and no `case` matches, control transfers to after the enclosing `end`.
 - If present, `else` must be the final arm in the `select`. A `case` after `else` is a compile error.
 - There is no fallthrough: after a `case` body finishes, control transfers to after the enclosing `end` (unless the case body terminates, e.g., `ret`).
-- Duplicate `case` values within the same `select` are a compile error.
+- Overlapping reachable `case` items within the same `select` are a compile error.
 - Nested `select` is allowed.
-- A `case` line may list one or more values separated by commas (for example, `case 0, 1`).
+- A `case` line may list one or more values or ranges separated by commas (for example, `case 0, 1..3`).
 - Consecutive `case` lines before statements share one clause body (stacked-case syntax), e.g.:
   - `case 0`
   - `case 1`
@@ -1272,8 +1332,9 @@ Notes:
 
 - `select <ea>` dispatches on the storage reference value carried by `<ea>`. To dispatch on the stored value, use `select (ea)`.
 - If you want to dispatch on a byte-sized value in memory, prefer loading into a `reg8` and using `select <reg8>` rather than `select (ea)` (which reads a 16-bit word).
-- The current compiler implementation emits a warning when a `reg8` selector has a `case` value outside `0..255`, because that arm can never match.
-  - Those unreachable `reg8` case values are omitted from runtime dispatch comparisons.
+- The current compiler implementation emits a warning when a `reg8` selector has a `case` item outside `0..255`, because that item can never match.
+  - Those unreachable `reg8` case items are omitted from runtime dispatch comparisons.
+  - Partially reachable `reg8` ranges are clipped to the reachable portion for runtime dispatch.
 
 Lowering (informative):
 
@@ -1281,7 +1342,7 @@ Lowering (informative):
   - For `reg8` selectors, lowering naturally uses 8-bit compares (e.g., `ld a, <reg8>` then `cp imm8`) because the selector’s high byte is always zero.
     - The current compiler implementation loads the selector byte once and reuses it across the compare chain.
   - For `reg16` selectors, lowering may require multi-instruction comparison sequences.
-  - Runtime compare-chain lowering evaluates the selector once, then compares case values against that stable selector value.
+  - Runtime compare-chain lowering evaluates the selector once, then compares case items against that stable selector value.
   - The compiler may test `case` values in any order.
     - Do not rely on any particular case-test order or intermediate dispatch effects.
   - If the selector is a compile-time `imm` expression, the compiler may resolve the match at compile time and emit only the matching arm (or nothing).
@@ -1378,13 +1439,13 @@ This section defines required source migration behavior for programs moving from
 
 ```zax
 ; v0.1 intent: index comes from byte at memory[HL]
-ld a, arr[HL]
+move a, arr[HL]
 
 ; v0.2 equivalent
-ld a, arr[(HL)]
+move a, arr[(HL)]
 
 ; v0.2 direct 16-bit register index
-ld a, arr[HL]
+move a, arr[HL]
 ```
 
 Scalar value semantics:
@@ -1711,7 +1772,8 @@ The document addresses both by stating normative rules precisely while also expl
 - Implementation notes marked "(impl)" are recommendations for compiler authors; any compliant implementation that produces the same observable behavior is acceptable.
 - Algorithm descriptions use pseudocode for clarity; actual implementation may differ in structure as long as behavior matches.
 
-**Version:** This specification corresponds to ZAX v0.2 on `main`.
+**Version position:** This specification describes the current ZAX language
+surface on `main`.
 Normative precedence: `docs/spec/zax-spec.md` governs language behavior; this document expands op-specific details and must not introduce conflicting normative rules.
 Authority constraint: if behavior is required by this document but not required by `docs/spec/zax-spec.md`, treat it as implementation guidance until promoted into `docs/spec/zax-spec.md`.
 
@@ -1848,9 +1910,15 @@ Ops are module-scope declarations only. You cannot define an op inside a functio
 
 An op may invoke other ops in its body, but the expansion graph must be acyclic. If expanding op `A` would require expanding op `B`, which in turn requires expanding op `A`, the compiler reports a cyclic expansion error. The compiler detects this statically during expansion, not at runtime.
 
-**Forward references.** An op may be invoked before it is declared, consistent with ZAX's whole-program compilation model (Section 3.2 of the main spec). All op declarations are visible throughout the module and any importing modules.
+**Forward references.** An op may be invoked before it is declared, consistent
+with ZAX's whole-program compilation model (Section 3.2 of the main spec). All
+op declarations are visible throughout their defining module. Exported ops are
+visible to importing modules by qualified name.
 
-**Import visibility.** Ops follow the same visibility rules as other module-scope declarations. Ops are public; the `export` keyword is accepted for clarity/forward compatibility.
+**Import visibility.** Ops follow the same visibility rules as other
+module-scope declarations. Non-exported ops are private to their defining
+module; exported ops are accessible by qualified name from directly importing
+modules.
 
 ### 2.4 No Locals
 
@@ -1897,7 +1965,7 @@ end
 
 ### 3.3 Location and Dereference Matchers
 
-**`ea`** matches a storage-location expression as defined in Section 7.2 of the spec: storage names (`data`/`bin` names), function-local names (as frame slots), field access (`rec.field`), array indexing (`arr[i]`), and address arithmetic (`ea + imm`, `ea - imm`). When substituted, the parameter carries the location expression _without_ implicit parentheses, so the op body decides whether to use it as a location or an explicitly dereferenced operand.
+**`ea`** matches a storage-location expression as defined in Section 7.2 of the spec: storage names (`data`/`bin` names), function-local names (as frame slots), field access (`rec.field`), array indexing (`arr[i]`), typed reinterpretation (`<Type>base.tail`), and address arithmetic (`ea + imm`, `ea - imm`). When substituted, the parameter carries the location expression _without_ implicit parentheses, so the op body decides whether to use it as a location or an explicitly dereferenced operand.
 
 The main spec's runtime-atom expression budget applies to `ea` matching. In v0.2, matcher acceptance does not bypass that budget: if a call-site `ea` contains too many runtime atoms, the invocation is rejected before or during semantic validation.
 
