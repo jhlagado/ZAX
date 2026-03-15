@@ -81,11 +81,12 @@ ensures that each feature is introduced in a context where it earns its place.
    but structured. The examples should model that voice consistently. Future
    ZAX authors will learn the idiom by reading these examples.
 
-4. **Validate the design decisions already made.** Typed storage with value
-   semantics, the `ld`-for-typed-access model, `select` dispatch,
-   `op` overload resolution, the IX-anchored frame — these features exist
-   because design arguments said they were needed. The algorithms will confirm
-   or challenge those arguments with actual code.
+4. **Validate the design decisions already made.** The `move`/`ld` split with
+   typed-storage value semantics, `@path` for address-of, `<Type>base.tail`
+   typed reinterpretation, grouped and ranged `select case`, `op` overload
+   resolution, the IX-anchored frame model — these features exist because design
+   arguments said they were needed. The algorithms will confirm or challenge
+   those arguments with actual code.
 
 5. **Identify the design decisions not yet made.** Missing features will
    announce themselves as comments, workarounds, or hand-lowered sequences in
@@ -95,68 +96,126 @@ ensures that each feature is introduced in a context where it earns its place.
 
 ## 4. Style Guide for Course Examples
 
-Every example in the course must follow these conventions.
+Every example in the course must follow these conventions. All examples must be
+written against the current normative surface defined in
+`docs/spec/zax-spec.md`, with `docs/reference/ZAX-quick-guide.md` as the
+practical reference.
 
-### 4.1 Typed Storage First
+### 4.1 Typed Storage First; Raw Data for Raw Data
 
 All working data lives in typed storage — `byte`, `word`, `addr`, records,
 arrays — declared in `section data ... end` blocks or function `var` blocks.
-`bin` and `hex` directives are for importing external binary blobs, not for
-declaring working data. There are no raw assembler directives (`db`, `dw`,
-`ds`) in ZAX; everything is typed.
+`bin` and `hex` directives are for importing external binary blobs.
+
+ZAX does provide raw data directives (`db`, `dw`, `ds`) for interoperability
+with classic assembler data and for low-level interface constants. These are
+deliberately kept away from working algorithm data: a course example that uses
+`db` for its main data structures has missed the point of the language.
 
 ```zax
-; correct — typed declaration in a named section
-section data app_state at $8000
-  count:  word = 0
-  buffer: byte[32]
-  mode:   byte = 0
+; correct — typed array for working data
+section data assets at $8100
+  digits: byte[] = "0123456789"    ; inferred length 10
+  table:  word[4] = { 100, 200, 300, 400 }
 end
 
-; correct — literal byte table as a typed array
-section data char_table at $8100
-  digits: byte[] = "0123456789"    ; inferred length 10
+; raw db/dw are reserved for ROM constants and interface tables —
+; never for algorithm state or working buffers
+```
+
+### 4.2 `move` for Typed Storage; `ld` for Raw Z80
+
+The `move`/`ld` split is the central design decision in the current ZAX
+surface. **`move` carries typed-storage value semantics; `ld` is raw Z80.**
+
+`move reg, symbol` reads the value stored at a typed symbol. `move symbol, reg`
+writes it back. The compiler resolves the IX-relative or absolute
+load/store sequence.
+
+`ld` is a raw Z80 mnemonic. It operates on registers, raw immediates, and raw
+memory dereferences. It has no knowledge of typed storage symbols.
+
+```zax
+section data state at $8000
+  count: word = 0
+  mode:  byte = 0
+end
+
+func bump(): void
+  move hl, count    ; reads 16-bit VALUE stored in 'count' into HL
+  inc hl
+  move count, hl    ; writes HL back to 'count'
+
+  move a, mode      ; reads byte VALUE stored in 'mode' into A
+  inc a
+  move mode, a      ; writes A back to 'mode'
+
+  ld hl, $FF00      ; raw Z80: load an immediate constant — not a typed symbol
+  ld a, (hl)        ; raw Z80: dereference HL — not a typed storage access
 end
 ```
 
-Literal tables that are read-only constants belong in their own named `data`
-section with a meaningful name. There is no special "constant data" directive —
-layout placement and initialization syntax serve that role.
+The `@path` address-of form produces the address of a typed storage path.
+It is valid only as the source operand of `move rr, @path`:
 
-### 4.2 Structured Control Flow Always
+```zax
+move hl, @sprite.flags      ; HL = address of sprite.flags
+move de, @sprites[bc].x     ; DE = address of sprites[BC].x
+```
+
+Typed reinterpretation `<Type>base.tail` extends the place-expression model to
+runtime address values:
+
+```zax
+move a, <Sprite>hl.flags    ; read Sprite.flags field relative to HL as base
+```
+
+The cast does not permanently type the register — it only supplies a typed base
+for the following field/index path.
+
+### 4.3 Structured Control Flow Always
 
 Never use conditional jumps to structured labels as a substitute for
 `if`/`while`/`repeat`/`select`. The only labels in an example are those the
 reader genuinely needs to see — `djnz` loop anchors, computed dispatch targets.
-Avoid `jp cc, label` anywhere a structured construct would serve.
 
 ```zax
-; correct — structured selection
-ld a, mode
+; correct — structured selection with range case
+move a, mode
 select A
   case Mode.Idle
-    ld a, 0
+    move a, 0
   case Mode.Run
-    ld a, 1
+    move a, 1
   else
-    ld a, $FF
+    move a, $FF
 end
 
-; correct — structured loop with test inside
+; correct — range case for character classification
+select A
+  case 'a'..'z', 'A'..'Z', '_'   ; letter or underscore
+    ; identifier character
+  case '0'..'9'
+    ; digit character
+  else
+    ; other
+end
+
+; correct — do-while with natural flag test
 repeat
   ld a, (hl)
   inc hl
-  or a           ; sets Z if zero byte
+  or a               ; sets Z if zero byte
 until Z
 ```
 
-### 4.3 Functions for Every Named Operation
+### 4.4 Functions for Every Named Operation
 
 Every algorithm has at least one named function. Helper routines that are
 called from more than one place are always `func` or `op` definitions — never
 copy-pasted instruction sequences with a comment header.
 
-### 4.4 Comments Explain the Algorithm, Not the Instruction
+### 4.5 Comments Explain the Algorithm, Not the Instruction
 
 Assembly comments that explain what a single instruction does are noise.
 Comments in the course examples explain algorithmic decisions: why this loop
@@ -165,51 +224,63 @@ maintains.
 
 ```zax
 ; BAD — comments explain the instruction, not the algorithm
-ld hl, count     ; load count into HL
+move hl, count   ; load count into HL
 inc hl           ; increment HL
-ld count, hl     ; store HL back into count
+move count, hl   ; store HL back
 
-; GOOD — comment explains the invariant
-; advance count past the current element before yielding to caller
-ld hl, count
+; GOOD — comment explains why the advance happens here
+; advance past the current element before yielding to caller
+move hl, count
 inc hl
-ld count, hl
+move count, hl
 ```
 
-### 4.5 `op` for Reusable Instruction Families
+### 4.6 `op` for Reusable Instruction Families
 
 When an idiom recurs across more than one function — a byte-load-and-advance,
 a compare-and-swap, a rotate-and-mask — it is factored into an `op`. This is
-the correct use of `op`: not abbreviation, but named, overloadable instruction
-families with compiler-enforced operand matching.
+the correct use of `op`: named, overloadable instruction families with
+compiler-enforced operand matching.
 
 ```zax
-; a recurring pattern factored into an op
-op advance_byte(dst: reg8, src: mem8)
-  ld dst, src
+; a recurring pointer-advance pattern
+op fetch_advance(dst: reg8)
+  ld dst, (hl)
   inc hl
+end
+
+; an instruction family with typed destination
+op add16(dst: HL, src: reg16)
+  add hl, src
+end
+
+op add16(dst: DE, src: reg16)
+  ex de, hl
+  add hl, src
+  ex de, hl
 end
 ```
 
-### 4.6 Explicit Return Register and Preservation
+### 4.7 Explicit Return Register and Preservation
 
-Every `func` that returns a value must declare its return register explicitly.
-The compiler enforces the complementary preservation set — the programmer
-should not re-document what the signature already states.
+Every `func` that returns a value must declare its return register in the
+signature. The compiler enforces the complementary callee-save set mechanically;
+comments should document algorithmic register *choices*, not preservation rules
+the signature already declares.
 
 ```zax
 ; return register declared in signature — compiler preserves AF, BC, DE
 func sum(a: word, b: word): HL
-  ld hl, a
-  ld de, b
+  move hl, a
+  move de, b
   add hl, de
 end
 
-; void function — compiler preserves AF, BC, DE, HL
-func clear(buf: addr, len: word)
-  ld hl, buf
-  ld b, len
-  ld a, 0
+; void: compiler preserves AF, BC, DE, HL at the call boundary
+func clear(buf: addr, len: word): void
+  move hl, buf
+  move b, len       ; B is the loop counter — an algorithmic choice worth noting
+  xor a
   repeat
     ld (hl), a
     inc hl
@@ -218,29 +289,24 @@ func clear(buf: addr, len: word)
 end
 ```
 
-Comments should explain register *choices* — why BC holds the counter rather
-than DE, why the accumulator is loaded into L before extending — not the
-preservation rules the signature already declares.
+### 4.8 No Unexplained Magic
 
-### 4.7 No Unexplained Magic
-
-Any hand-optimized sequence that diverges from the obvious straightforward
-implementation must be accompanied by a comment explaining the transformation
-and its cost rationale. The course teaches optimization as a deliberate act,
-not a reflex.
+Any hand-optimized sequence that diverges from the obvious implementation must
+be accompanied by a comment explaining the transformation and its cost
+rationale. The course teaches optimization as a deliberate act, not a reflex.
 
 ---
 
 ## 5. Algorithm Catalogue
 
 Algorithms are organized in four tiers by dependency on language features not
-yet implemented. The tier is a planning signal, not a permanent ranking.
+yet fully implemented. The tier is a planning signal, not a permanent ranking.
 
 ### Tier 1 — Available Now
 
 These algorithms can be written in clean ZAX today using the current normative
-surface: typed storage, `func`, `if`/`while`/`repeat`/`select`, `op`, `const`,
-`enum`, arrays, records.
+surface: typed storage, `func`, `if`/`while`/`repeat`/`select` with ranges,
+`op`, `const`, `enum`, arrays, records, `@path`, `<Type>base.tail`.
 
 #### 1A: Arithmetic and Number Theory
 
@@ -254,19 +320,11 @@ surface: typed storage, `func`, `if`/`while`/`repeat`/`select`, `op`, `const`,
 | Fibonacci (iterative) | Wirth Ch.1 | `while`, two-variable rolling state in locals |
 | Decimal digit decomposition | K&R §1.2 | division-by-10, character offset, `repeat` |
 
-Note: Fibonacci already has a reference implementation in
+Note: a Fibonacci reference implementation already exists at
 `examples/language-tour/02_fibonacci_args_locals.zax`. That file is the style
 baseline for Unit 0.
 
-The prime sieve of Eratosthenes belongs in Tier 1B because it requires a
-byte array large enough to expose the array-index and loop interaction clearly —
-it is listed there.
-
 #### 1B: Sorting and Searching
-
-Sorting algorithms are a canonical test of structured control flow. The Z80
-byte width and limited registers make sort design choices concrete and
-interesting.
 
 | Algorithm | Source | ZAX Features Exercised |
 |---|---|---|
@@ -276,13 +334,13 @@ interesting.
 | Bubble sort | baseline | nested `while`, swap `op`, pass-completion flag |
 | Counting sort | technique | `byte[]` two-pass, offset-index, no comparisons |
 | Prime sieve (Eratosthenes) | Wirth Ch.5 | `byte[256]`, nested `while`, constant-stride marking |
-| Linear search (byte array) | K&R §3.3 | `while`, early exit via local flag or `djnz` |
+| Linear search (byte array) | K&R §3.3 | `while`, early exit via `djnz` with label |
 | Binary search (sorted byte array) | K&R §3.3 | `word` lo/hi locals, midpoint via `sra`, `while` |
 | Sentinel linear search | Wirth Ch.2 | array with one extra cell, single-test `repeat` |
 
-Binary search on the Z80 is a good example because the midpoint calculation
-`(lo + hi) >> 1` has a natural Z80 expression: `add hl, de` then `sra h` /
-`rr l` for arithmetic right-shift of a 16-bit value.
+Binary search midpoint calculation `(lo + hi) >> 1` has a natural Z80
+expression: `add hl, de` then `sra h` / `rr l` for arithmetic right-shift
+of a 16-bit pair.
 
 #### 1C: String Operations
 
@@ -296,8 +354,8 @@ Binary search on the Z80 is a good example because the midpoint calculation
 | Atoi (string to integer) | K&R §2.7 | `select A` for digit test, 16-bit accumulate |
 | Itoa (integer to string) | K&R §3.6 | digit extraction loop, reverse result |
 
-String operations expose how ZAX handles the common Z80 pointer-advance idiom.
-The pattern `ld a, (hl) / inc hl` recurs throughout; it is a natural `op`
+String operations expose the recurrent Z80 pointer-advance idiom. The pattern
+`ld A, (HL)` / `inc HL` recurs throughout and is the natural `op fetch_advance`
 candidate:
 
 ```zax
@@ -307,10 +365,6 @@ op fetch_advance(dst: reg8)
 end
 ```
 
-String operations also surface the first practical need for `addr` locals that
-persist a pointer across loop iterations — the same pattern seen in
-`examples/ZAX-quick-guide.md` §1.4.
-
 #### 1D: Bit Manipulation
 
 | Algorithm | Source | ZAX Features Exercised |
@@ -319,30 +373,29 @@ persist a pointer across loop iterations — the same pattern seen in
 | Bit reversal (byte) | classic | `while`, `rla`/`rra` shift pair, 8-iteration loop |
 | Parity (byte) | classic | `xor` reduction, `op parity` over `reg8` |
 | Highest set bit position | classic | `while`, `srl A`, count-down in `B` |
-| Round up to next power of two | K&R §2.9 | `dec hl` / `or`-reduction / `inc hl` |
 | Extract bit field | K&R §2.9 | `op getbits(val: reg8, offset: imm8, width: imm8)` |
 
 The bit manipulation group is where `op` with `imm8` matchers pays off.
-`getbits` is a natural fit for an op that accepts fixed-width operands and
-expands to a shift-and-mask sequence parameterized at compile time.
+`getbits` expands to a shift-and-mask sequence parameterized entirely at
+compile time.
 
 #### 1E: Data Structure — Ring Buffer
 
 The ring buffer is the canonical embedded data structure: fixed-size, head/tail
-pointers, modular arithmetic. It appears everywhere in I/O and event systems
-and is the first complete record example.
+pointers, modular arithmetic. It is the first complete record example.
 
 ```zax
 const RingSize = 16
+const RingMask = RingSize - 1    ; = %00001111, assumes power-of-two
 
 type Ring
-  buf:  byte[16]    ; sizeof = 16; sizeof(Ring) = pow2(16+2+2+2) = 32
-  head: byte
+  buf:  byte[16]    ; note: sizeof(Ring) = pow2(16+3) = 32 today;
+  head: byte        ;        exact-size layout (in progress) will give 19
   tail: byte
   len:  byte
 end
 
-section data io_ring at $8200
+section data io at $8200
   rx_ring: Ring = 0    ; zero-initialize all fields
 end
 ```
@@ -350,14 +403,15 @@ end
 | Algorithm | ZAX Features Exercised |
 |---|---|
 | Ring buffer init | `record`, `section data`, zero-initializer |
-| Ring buffer push | field access, modular index via `and RingSize-1` |
+| Ring buffer push | field `move`, `and RingMask` for wrap |
 | Ring buffer pop | `select` on empty predicate, early return |
-| Ring buffer full/empty predicates | `func` returning `byte`, field comparison |
+| Ring buffer full/empty predicates | `func` returning `byte`, field compare |
 
-Note: `sizeof(Ring)` is rounded to the next power of two. With 16-byte `buf`
-and three `byte` fields the field sum is 19; `pow2(19) = 32`. Designers should
-note this padding when the ring is embedded in a larger record or array. The
-`--type-padding-warn` flag will flag it.
+The ring buffer is also a good test for the exact-size layout stream: once
+power-of-two rounding is removed, `sizeof(Ring)` changes from 32 to 19, and
+any runtime-indexed array of rings will exercise the binary-decomposition
+multiply path. This makes the ring buffer a natural regression checkpoint for
+that stream.
 
 #### 1F: Classic Puzzles and Recursion
 
@@ -365,12 +419,12 @@ note this padding when the ring is embedded in a larger record or array. The
 |---|---|---|
 | Towers of Hanoi | Wirth Ch.4 | recursive `func`, depth as `byte` param |
 | Recursive array sum | Wirth Ch.4 | base case test, recursive call, `HL` accumulator |
-| Recursive array reverse | Wirth Ch.4 | index passing, recursive `func`, `addr` params |
+| Recursive array reverse | Wirth Ch.4 | index passing, `@path` for address-of element |
 
-Towers of Hanoi is the cleanest recursion showcase. With no local state beyond
-the arguments, the IX frame cost is minimal and the structure of the recursion
-is legible. The output action (recording or printing a move) is a natural
-`extern func` hook for a BIOS call or a trace buffer append.
+Towers of Hanoi with no local state beyond arguments makes the IX frame cost
+minimal and the recursion structure legible. The output action — recording or
+printing a move — is a natural `extern func` hook to a BIOS call or trace
+buffer append.
 
 ---
 
@@ -378,177 +432,154 @@ is legible. The output action (recording or printing a move) is a natural
 
 These algorithms are implementable but require workarounds that reveal genuine
 language gaps. They should be written with explicit commentary on what is
-missing, and the workarounds should be noted as roadmap inputs.
+missing, and the workarounds should feed the roadmap.
 
 #### 2A: Quicksort
 
-Quicksort requires a recursion stack or an explicit software stack for the
-partition boundaries. On Z80 this typically means using the hardware stack
-directly (which the caller must protect) or maintaining a software stack as a
-`word[]` array.
-
-ZAX gap: no current first-class construct for a typed software push/pop stack.
-The example will implement it as a `word[]` with an explicit `sp_idx` local,
-which is clear but verbose. This feeds into the design of a `stack` type or
-push/pop `op` idiom.
+Quicksort requires a recursion stack or explicit software stack for partition
+boundaries. ZAX has no first-class construct for a typed software push/pop
+stack. The example will implement it as a `word[]` with an explicit `sp_idx`
+local — clear but verbose:
 
 ```zax
-; workaround pattern — explicit software stack using a word array
-const StackDepth = 16
+const StkDepth = 16
 
 section data sort_state at $8300
   stk:    word[16]
   stk_sp: byte = 0
 end
 
-op push_word(val: reg16)
-  ld a, stk_sp
+op stk_push(val: reg16)
+  move a, stk_sp
   ld l, a
   ld h, 0
-  ld stk[HL], val      ; store into stk[stk_sp]
+  move stk[HL], val
   inc a
-  ld stk_sp, a
+  move stk_sp, a
+end
+
+op stk_pop(dst: reg16)
+  move a, stk_sp
+  dec a
+  ld l, a
+  ld h, 0
+  move dst, stk[HL]
+  move stk_sp, a
 end
 ```
 
-The awkwardness of this idiom — especially keeping `stk_sp` in sync and
-indexing a global array from inside a function that also has its own IX frame —
-is the precise friction the course should expose and measure.
+The friction here — keeping `stk_sp` in sync, indexing a global array from
+inside a function that also has its own IX frame — is the precise gap the
+course should expose. This feeds into design of a `stack` type or dedicated
+push/pop `op` idiom.
 
 #### 2B: Merge Sort (bottom-up, iterative)
 
 Bottom-up merge sort avoids recursion by operating on runs of increasing width.
-It requires two buffers and careful index arithmetic. The ZAX gap here is not a
-missing construct but the verbosity of tracking four index variables
-simultaneously. A `merge_pass` op idiom or an abstraction over the double-index
-advance pattern would help. This is a design probe for whether `op` with
-multiple `ea` parameters can carry enough state to be useful as a loop
-abstraction.
+The ZAX gap is not a missing construct but the verbosity of tracking four index
+variables simultaneously — a candidate for an `op merge_pass` idiom. This is a
+design probe for whether `op` with multiple `ea` parameters can carry enough
+state to be useful as a loop abstraction.
 
 #### 2C: RPN Calculator (K&R §4)
 
-The K&R reverse Polish calculator uses a stack for operands and a hand-written
-lexer for tokens. The ZAX expression of the operand stack is natural (a `word[]`
-with a stack-pointer local, cf. §2A above). The lexer loop is a candidate for
-`select` with range cases — which ZAX does not yet support.
-
-```zax
-; what we can write today — individual cases
-select A
-  case '+'
-    ; add
-  case '-'
-    ; subtract
-  case '='
-    ; print
-  else
-    ; digit or error — needs range test, not available yet
-end
-```
-
-The desired expression would be:
+The operand stack is natural (a `word[]` with a local stack pointer, as in
+§2A). The lexer loop now has grouped and ranged `case` available:
 
 ```zax
 select A
-  case '0'..'9'      ; range case — not yet in language
+  case '0'..'9'
     ; accumulate digit
   case '+', '-', '*', '/'
-    ; operator
+    ; operator dispatch
+  else
+    ; unknown token
 end
 ```
 
-This is a direct roadmap input for grouped and ranged `select case`. The RPN
-calculator is the best motivating example because the single-character dispatch
-is the whole inner loop of the calculator.
-
-#### 2D: Word Frequency Count (K&R §6.3)
-
-K&R uses a hash table to count word occurrences. A fixed-size hash table is
-directly expressible in ZAX as a record array with key and count fields. The
-gaps are:
-
-1. String comparison as an `op` (no standard ops library yet).
-2. The hash function requires a byte-by-byte loop — expressible but highlights
-   that a `strings` module with standard `op` definitions would reduce
-   boilerplate across many examples.
+This works today. The remaining Tier 2 issue is the software stack itself —
+the RPN calculator is the cleanest concrete motivator for a first-class stack
+type. The example should be written using the `stk_push`/`stk_pop` op idiom
+from §2A, with a comment noting where a dedicated stack type would improve
+clarity.
 
 ---
 
 ### Tier 3 — Needs Language Features
 
-These algorithms require features on the roadmap but not yet implemented. They
-belong in the course as **specification targets**: write the algorithm as you
-wish ZAX could express it, note the delta from what the compiler currently
-accepts, and file the gap as a language issue.
+These algorithms require features not yet implemented. They belong in the
+course as **specification targets**: write the algorithm as you wish ZAX could
+express it, note the delta from what the compiler currently accepts, and file
+the gap as a language issue.
 
 #### 3A: Linked List (K&R §6.5)
 
-A singly-linked list requires a node record with a `ptr`-typed `next` field
-pointing back to the same record type. This requires:
+`<Type>base.tail` typed reinterpretation is now implemented — field access
+through a runtime address value is available. The remaining blocker is
+**self-referential record types**:
 
-- Self-referential record type declarations (currently a compile error in v0.2).
-- A typed dereference of the `ptr` field to access subsequent node fields —
-  some form of typed pointer cast.
+```zax
+; this is what we want to write — but self-referential types are not yet legal:
+type Node
+  value: word
+  next:  ptr       ; this holds the address of another Node
+end
+```
 
-The example should be written to show what the ZAX code would look like once
-these are available. It becomes a design test for whatever typed-pointer-cast
-syntax is proposed.
+Once self-referential types are allowed, the typed reinterpretation cast
+provides field access through the `next` pointer:
+
+```zax
+; access the 'value' field of the node pointed to by HL
+move hl, <Node>hl.next     ; advance to next node
+move de, <Node>hl.value    ; read its value
+```
+
+The example should be written in the desired form, with a clear annotation of
+the one missing feature. It becomes a concrete design test for self-referential
+type declarations.
 
 #### 3B: Binary Search Tree
 
-Similar to linked list, but with two child pointers. Same gaps apply. A BST
-insert and search pair is the second self-referential record example. Together
-with the linked list, these two define the minimum requirements for
-pointer-to-typed-record field access in ZAX. They also probe whether ZAX needs
-a `null` sentinel value or whether address zero is sufficient.
+Similar to linked list, with two child pointers. Same gap applies. A BST insert
+and search pair together with the linked list defines the minimum requirements
+for self-referential record types in ZAX. They also probe whether `ptr` being
+zero-initializable serves adequately as a null sentinel, or whether ZAX needs
+an explicit `null` value.
 
 #### 3C: Eight Queens (Wirth Ch.4)
 
-The eight queens problem is a backtracking search over a chessboard. On Z80 it
-is typically implemented with a byte array for column occupancy and bit arrays
-for diagonal conflicts. The ZAX expression is nearly complete in Tier 1 —
-except that the backtracking loop structure benefits from a named exit or
-labeled break out of a nested `while`, which ZAX does not currently support.
+The ZAX expression is nearly complete in Tier 1 — except that the backtracking
+loop structure benefits from a named exit or `break` out of a nested `while`:
 
 ```zax
-; what we must write today — exit via flag + while test
-ld found, 0
-ld col, 0
-ld a, 0
-or a
-while NZ           ; awkward: must pre-set flag and use or a
-  ; ... backtrack body ...
-  ; to "break" we must set found, 1 and then force the while condition false
-  ; this leaks control flow state into a flag variable
-end
-```
-
-The desired expression would be a `break` or labeled exit:
-
-```zax
+; what we must write today — exit via a found-flag variable
+move found, 0
+; ... set up NZ precondition ...
 while NZ
   ; ... backtrack body ...
-  ; exit when done
+  ; to "break": set found, 1 and force the while condition false via flags
 end
 ```
 
-This is a concrete design probe: does ZAX need a labeled exit or `break`
-statement? The eight queens example makes the case with real code.
+The desired expression would be a `break` or labeled exit construct. The eight
+queens problem makes the case concretely: the workaround forces backtracking
+state into an explicit flag variable, which pollutes both the algorithm logic
+and the register assignments.
 
 ---
 
 ### Tier 4 — Not in Scope for v1
 
-These algorithms are valuable but depend on memory management or OS services
-that ZAX targets cannot assume.
+These algorithms are valuable but depend on dynamic memory or OS services that
+ZAX targets cannot assume.
 
-- **Dynamic memory allocator** (K&R §8.7): requires a heap, which requires an
-  OS or firmware memory map. Expressible in ZAX for embedded targets with a
-  fixed memory arena, but not a standalone portable example.
+- **Dynamic memory allocator** (K&R §8.7): requires a heap, which requires a
+  firmware memory map. Expressible in ZAX for embedded targets with a fixed
+  arena, but not a standalone portable example.
 - **Hash table with chaining**: requires dynamic node allocation.
-- **Heap sort with dynamic structure**: naturally expressible as an in-place
-  array sort (Tier 1B), but the tree-visualization form requires dynamic
-  allocation.
+- **General tree structures**: naturally expressible once self-referential
+  records land (Tier 3), but dynamic allocation moves them out of scope.
 
 ---
 
@@ -567,65 +598,98 @@ documented with:
    one-off?
 
 This produces a ranked list of language gaps, grounded in actual use rather
-than speculation. The list supplements and validates the existing roadmap
-streams.
+than speculation.
 
 ### Known Roadmap Connections
 
-| Example Gap | Roadmap Status |
+| Example Gap | Status |
 |---|---|
-| RPN calculator case ranges | Select/case ranges — on roadmap |
-| Linked list, BST self-referential types | Recursive type declarations — roadmap gap |
-| Linked list, BST typed pointer dereference | Typed pointer cast — roadmap gap |
+| RPN calculator / quicksort software stack | Stack-typed local or push/pop op idiom — not yet on roadmap |
+| Linked list, BST | Self-referential record declarations — not yet on roadmap |
 | Eight queens labeled exit | `break` / named exit — not yet on roadmap; course surfaces this |
 | Word frequency string ops | Standard `op` library — not yet on roadmap |
-| Quicksort software stack | Stack-typed local or push/pop op idiom — not yet on roadmap |
+| Ring buffer with exact-size sizeof | Exact-size layout stream (#817–820) — active |
+
+Note: typed reinterpretation (`<Type>base.tail`) and grouped/ranged `select
+case` were roadmap items at course inception but are now implemented. The linked
+list example should be updated once self-referential record types land.
 
 ---
 
 ## 7. A Note on ZAX Syntax in Examples
 
-All course examples must be written against the current normative surface
-(`docs/zax-spec.md`). The key surface facts that differ from classical
-assembler conventions:
+All course examples must compile against the current surface. The key surface
+facts that differ from classical assembler conventions:
 
-**Typed storage uses `ld` with value semantics.** There are no separate
-`move`/`store` keywords. `ld hl, count` reads the 16-bit value stored in
-`count`; `ld count, hl` writes HL back. The compiler inserts the IX-relative
-or absolute load/store sequence.
+**`move` carries typed-storage value semantics; `ld` is raw Z80.**
 
 ```zax
-section data state at $8000
+section data vars at $8000
   count: word = 0
 end
 
 func bump(): void
-  ld hl, count    ; reads word at 'count' into HL
+  move hl, count    ; reads 16-bit VALUE of 'count' into HL
   inc hl
-  ld count, hl    ; writes HL back to 'count'
+  move count, hl    ; writes HL back to 'count'
+
+  ld hl, $FF00      ; raw Z80: immediate constant — unrelated to typed storage
+  ld a, (hl)        ; raw Z80: memory dereference — unrelated to typed storage
 end
 ```
 
-**Record fields and array elements use the same `ld` surface.** `ld a, ring.head`
-reads the byte field; `ld ring.head, a` writes it. For array elements,
-`ld a, buf[B]` reads the element at index B.
+**`@path` loads the address of a typed storage path.**
 
 ```zax
-ld a, ring.head           ; read byte field
-ld ring.buf[B], a         ; write element at register index B
+move hl, @sprite.flags      ; HL = address of sprite.flags
+move de, @sprites[bc].x     ; DE = address of sprites[BC].x
 ```
 
-**There are no `db`, `dw`, or `ds` assembler directives.** Literal byte tables
-are typed `byte[]` declarations in `section data ... end` blocks.
+**`<Type>base.tail` provides typed field access through a runtime address.**
 
-**Functions declare return registers explicitly.** `func foo(): HL` returns a
-16-bit value in HL; `func foo(): HL,DE` returns a 32-bit value split across
-HL and DE. The compiler generates the callee-save epilogue for all registers
-not in the return set.
+```zax
+move a, <Sprite>hl.flags    ; read flags field of Sprite struct pointed to by HL
+```
 
-**`op` bodies are typed, not textual.** An `op` with `dst: reg8` and
-`src: mem8` matches `ld A, (count)` and emits the correct instruction at that
-call site. The operands are AST nodes, not source text.
+**`select case` accepts comma-grouped values and inclusive ranges.**
+
+```zax
+select A
+  case 'a'..'z', 'A'..'Z', '_'   ; identifier start character
+    ; ...
+  case '0'..'9'
+    ; ...
+end
+```
+
+**Record field and array element access use `move`.**
+
+```zax
+move a, ring.head           ; read byte field
+move ring.buf[B], a         ; write element at register index B
+move sprites[L].x, a        ; write field of indexed element
+```
+
+**Functions declare return registers explicitly. The compiler enforces the
+preservation complement.**
+
+```zax
+func sum(a: word, b: word): HL
+  move hl, a
+  move de, b
+  add hl, de
+end
+```
+
+**`db`/`dw`/`ds` are low-level raw data directives.** They exist in ZAX for
+classic assembler interoperability and low-level interface tables. They are not
+for algorithm working data, which should always use typed declarations.
+
+**Exact-size layout is the accepted direction.** The compiler is migrating from
+power-of-two rounded `sizeof` to exact packed size. During the transition,
+examples should note where the sizeof of a composite type will change. Once the
+exact-size stream (#817–820) lands, `sizeof(Ring)` changes from 32 to 19 in
+the examples above.
 
 ---
 
@@ -651,27 +715,22 @@ limits honestly.
 The K&R and Wirth canon provides the calibration baseline. These algorithms are
 known. Their properties are understood. When ZAX expresses them cleanly,
 readers can see exactly what the language has added over raw assembly. When ZAX
-expresses them awkwardly, the gap is precisely located. There is no ambiguity
-about whether the friction is algorithmic or linguistic.
+expresses them awkwardly, the gap is precisely located.
 
 ---
 
 ## 9. Course Structure (Proposed)
 
-The course is organized into units of increasing structural complexity. Each
-unit introduces one or two ZAX constructs through the demands of its
-algorithms; it never introduces constructs in a vacuum.
-
 | Unit | Title | Algorithms | ZAX Constructs Introduced |
 |---|---|---|---|
-| 0 | Foundations | Arithmetic, power, Fibonacci, GCD | `func`, `const`, `while`, return register |
-| 1 | Arrays and Loops | Sorting (insertion, bubble, selection), binary search, prime sieve | `byte[]`, indexed access, `select` |
-| 2 | String Model | strlen, strcpy, strcmp, atoi/itoa | null-sentinel loops, `repeat`, `op fetch_advance` |
+| 0 | Foundations | Arithmetic, power, Fibonacci, GCD | `func`, `const`, `while`, return register, `move` |
+| 1 | Arrays and Loops | Sorting (insertion, bubble, selection), binary search, prime sieve | `byte[]`, indexed access, `move arr[r], a`, `select` with ranges |
+| 2 | String Model | strlen, strcpy, strcmp, atoi/itoa | null-sentinel loops, `repeat`, `op fetch_advance`, `@path` |
 | 3 | Bit Patterns | Population count, bit reversal, parity, field extract | Shift idioms, `op` with `imm8` matchers |
-| 4 | Records | Ring buffer | `record`, `section data`, `type`, `sizeof` / `offsetof` |
-| 5 | Recursion | Towers of Hanoi, recursive sum, recursive reverse | Recursive `func`, IX frame discipline |
-| 6 | Composition | RPN calculator | All of the above: `op`, `record`, `select`, `func` |
-| 7 | Gaps and Futures | Linked list, BST, eight queens (design exercises) | Specification target exercises |
+| 4 | Records | Ring buffer | `type`, `record`, `section data`, `sizeof`/`offsetof`, exact-size awareness |
+| 5 | Recursion | Towers of Hanoi, recursive sum, recursive reverse | Recursive `func`, IX frame discipline, `<Type>base.tail` |
+| 6 | Composition | RPN calculator | All of the above: `op`, `record`, `select` ranges, `func`, software stack |
+| 7 | Gaps and Futures | Linked list, BST, eight queens | Specification target exercises; self-referential types, `break` |
 
 Unit 7 is intentionally incomplete. It is a design dialogue between the course
 author and the language — a record of what comes next.
@@ -682,18 +741,17 @@ author and the language — a record of what comes next.
 
 1. **Write Unit 0 in full** — arithmetic and number theory. The existing
    `examples/language-tour/02_fibonacci_args_locals.zax` sets the style
-   baseline. Unit 0 must match that style and compile clean.
+   baseline. Unit 0 must match that style, use `move` throughout, and compile
+   clean against the current main.
 
 2. **Review Unit 0 examples against the compiler** — run every example, inspect
    the `.asm` output, confirm that clean ZAX produces readable Z80.
 
 3. **Document the first friction point** — whatever resists clean expression in
-   Unit 0 becomes the first roadmap input from the course. It is expected to be
-   minor; the Unit 0 algorithms are the simplest.
+   Unit 0 becomes the first roadmap input from the course.
 
 4. **Commission Unit 1** — once Unit 0 is stable, sorting and searching follow
-   as the first array-heavy unit. The sorting algorithms are where the register
-   pressure of the Z80 becomes interesting.
+   as the first array-heavy unit.
 
 Unit 0 is the right place to start because its algorithms are the simplest, the
 register contracts are clear, and the ZAX surface needed is fully implemented.
