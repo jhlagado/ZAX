@@ -44,6 +44,8 @@ export const ASM_CONTROL_KEYWORD_LIST = [
   'while',
   'repeat',
   'until',
+  'break',
+  'continue',
   'select',
   'case',
 ] as const;

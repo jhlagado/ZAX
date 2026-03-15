@@ -128,4 +128,39 @@ describe('PR476 asm statement parsing extraction', () => {
     });
     expect(diagnostics).toEqual([]);
   });
+
+  it('parses break and continue only when enclosed by a loop', () => {
+    const diagnostics: Diagnostic[] = [];
+
+    expect(
+      parseAsmStatement(
+        file.path,
+        'break',
+        zeroSpan,
+        diagnostics,
+        [{ kind: 'While', openSpan: zeroSpan }, { kind: 'If', elseSeen: false, openSpan: zeroSpan }],
+      ),
+    ).toEqual({ kind: 'Break', span: zeroSpan });
+    expect(
+      parseAsmStatement(
+        file.path,
+        'continue',
+        zeroSpan,
+        diagnostics,
+        [{ kind: 'Repeat', openSpan: zeroSpan }],
+      ),
+    ).toEqual({ kind: 'Continue', span: zeroSpan });
+    expect(diagnostics).toEqual([]);
+  });
+
+  it('diagnoses out-of-loop or malformed break and continue', () => {
+    const diagnostics: Diagnostic[] = [];
+
+    expect(parseAsmStatement(file.path, 'break', zeroSpan, diagnostics, [])).toBeUndefined();
+    expect(parseAsmStatement(file.path, 'continue extra', zeroSpan, diagnostics, [])).toBeUndefined();
+    expect(diagnostics.map((d) => d.message)).toEqual([
+      '"break" is only valid inside "while" or "repeat"',
+      '"continue" does not take operands',
+    ]);
+  });
 });

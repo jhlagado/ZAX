@@ -411,6 +411,8 @@ export type AsmControlNode =
   | { kind: 'While'; span: SourceSpan; cc: string }
   | { kind: 'Repeat'; span: SourceSpan }
   | { kind: 'Until'; span: SourceSpan; cc: string }
+  | { kind: 'Break'; span: SourceSpan }
+  | { kind: 'Continue'; span: SourceSpan }
   | { kind: 'Select'; span: SourceSpan; selector: AsmOperandNode }
   | { kind: 'Case'; span: SourceSpan; value: ImmExprNode; end?: ImmExprNode }
   | { kind: 'SelectElse'; span: SourceSpan };

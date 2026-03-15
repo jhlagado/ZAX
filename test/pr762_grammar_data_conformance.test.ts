@@ -126,6 +126,14 @@ describe('PR762 grammar-data conformance', () => {
         text: 'until z',
         makeStack: () => [{ kind: 'Repeat', openSpan: zeroSpan }],
       },
+      break: {
+        text: 'break',
+        makeStack: () => [{ kind: 'While', openSpan: zeroSpan }],
+      },
+      continue: {
+        text: 'continue',
+        makeStack: () => [{ kind: 'Repeat', openSpan: zeroSpan }],
+      },
       select: { text: 'select a', makeStack: () => [] },
       case: {
         text: 'case 1',

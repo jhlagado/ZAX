@@ -81,6 +81,10 @@ function keywordFromControl(control: AsmControlNode): string {
       return 'repeat';
     case 'Until':
       return 'until';
+    case 'Break':
+      return 'break';
+    case 'Continue':
+      return 'continue';
     case 'Select':
       return 'select';
     case 'Case':
@@ -170,6 +174,8 @@ function lintAsmItems(
       item.kind === 'While' ||
       item.kind === 'Repeat' ||
       item.kind === 'Until' ||
+      item.kind === 'Break' ||
+      item.kind === 'Continue' ||
       item.kind === 'Select' ||
       item.kind === 'Case' ||
       item.kind === 'SelectElse'
