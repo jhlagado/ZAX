@@ -126,6 +126,20 @@ intended language boundary rather than a defect.
 **Priority signal**: low; teach the boundary explicitly rather than open a
 language issue now.
 
+### [Unit 1] No `move` register-to-register conversion forms
+
+**Workaround**: use raw `ld` when examples need register-to-register transfer.
+This is especially visible when promoting an 8-bit value into a 16-bit register
+pair or extracting the low byte of a pair into an 8-bit register.
+**Desired expression**: discuss whether a narrow `move` extension should exist
+for conversion-like forms only, e.g. 8-bit to 16-bit promotion with zeroing of
+the high byte, or 16-bit pair to 8-bit low-byte extraction. Do not broaden
+`move` into a general raw register-transfer replacement for `ld`.
+**Gap type**: language candidate / design discussion
+**Recurrence**: present but not yet dominant in Unit 1.
+**Priority signal**: medium-low; worth recording and discussing, but not yet a
+clear issue candidate.
+
 ### [Unit 1] Byte-array swap/load-store scaffolding
 
 **Workaround**: keep byte-array swap and load/store helper patterns inline in
