@@ -1,0 +1,114 @@
+; bubble_sort.zax
+;
+; Source/problem: bubble sort over a small byte array.
+; Unit 1 example: repeated adjacent swaps through shrinking passes.
+
+const ItemCount = 8
+const LastIndex = 7
+
+section data vars at $8000
+  values: byte[8] = { 9, 4, 6, 2, 8, 1, 7, 3 }
+end
+
+func swap_values(left_index: byte, right_index: byte)
+  var
+    left_value: byte = 0
+    right_value: byte = 0
+  end
+
+  move l, left_index
+  move a, values[L]
+  move left_value, a
+
+  move l, right_index
+  move a, values[L]
+  move right_value, a
+
+  move l, left_index
+  move a, right_value
+  move values[L], a
+
+  move l, right_index
+  move a, left_value
+  move values[L], a
+end
+
+func bubble_pass(last_index: byte)
+  var
+    inner_index: byte = 0
+    next_index: byte = 0
+    left_value: byte = 0
+    right_value: byte = 0
+  end
+
+  ld a, 1
+  or a
+  while NZ
+    move a, inner_index
+    move b, last_index
+    cp b
+    if NC
+      ret
+    end
+
+    move l, inner_index
+    move a, values[L]
+    move left_value, a
+
+    move a, inner_index
+    inc a
+    move next_index, a
+
+    move l, next_index
+    move a, values[L]
+    move right_value, a
+
+    move a, left_value
+    move b, right_value
+    cp b
+    if NC
+      if NZ
+        swap_values inner_index, next_index
+      end
+    end
+
+    move a, inner_index
+    inc a
+    move inner_index, a
+
+    ld a, 1
+    or a
+  end
+end
+
+export func bubble_sort()
+  var
+    pass_last: byte = 0
+  end
+
+  ld a, LastIndex
+  move pass_last, a
+
+  ld a, 1
+  or a
+  while NZ
+    move a, pass_last
+    or a
+    if Z
+      ret
+    end
+
+    bubble_pass pass_last
+
+    move a, pass_last
+    dec a
+    move pass_last, a
+
+    ld a, 1
+    or a
+  end
+end
+
+export func main()
+  bubble_sort
+end
