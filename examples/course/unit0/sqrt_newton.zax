@@ -1,0 +1,97 @@
+; sqrt_newton.zax
+;
+; Unit 0 foundations example: integer square root by Newton iteration.
+
+func div_u16(dividend: word, divisor: word): HL
+  var
+    quotient: word = 0
+    remainder: word = 0
+  end
+
+  move hl, dividend
+  move remainder, hl
+
+  while NZ
+    move hl, remainder
+    move de, divisor
+    xor a
+    sbc hl, de
+    if C
+      move hl, quotient
+      ret
+    end
+
+    move remainder, hl
+    move hl, quotient
+    inc hl
+    move quotient, hl
+
+    ld a, 1
+    or a
+  end
+
+  move hl, quotient
+end
+
+func sqrt_newton(value: word): HL
+  var
+    guess: word = 0
+    quotient: word = 0
+    next_guess: word = 0
+    remaining_iters: word = 4
+  end
+
+  move hl, value
+  ld a, h
+  or l
+  if Z
+    ld hl, 0
+    ret
+  end
+
+  move guess, hl
+
+  while NZ
+    move hl, remaining_iters
+    ld a, h
+    or l
+    if Z
+      move hl, guess
+      ret
+    end
+
+    div_u16 value, guess
+    move quotient, hl
+
+    move hl, guess
+    move de, quotient
+    add hl, de
+    srl h
+    rr l
+    move next_guess, hl
+
+    move hl, next_guess
+    ld a, h
+    or l
+    if Z
+      ld hl, 1
+      move next_guess, hl
+    end
+
+    move hl, next_guess
+    move guess, hl
+
+    move hl, remaining_iters
+    dec hl
+    move remaining_iters, hl
+
+    ld a, 1
+    or a
+  end
+
+  move hl, guess
+end
+
+export func main()
+  sqrt_newton 81
+end

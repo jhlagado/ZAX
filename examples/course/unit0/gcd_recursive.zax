@@ -1,0 +1,52 @@
+; gcd_recursive.zax
+;
+; Unit 0 foundations example: recursive Euclid subtraction.
+
+func gcd_recursive(left_input: word, right_input: word): HL
+  var
+    next_a: word = 0
+    next_b: word = 0
+  end
+
+  move hl, right_input
+  ld a, h
+  or l
+  if Z
+    move hl, left_input
+    ret
+  end
+
+  move hl, left_input
+  move de, right_input
+  xor a
+  sbc hl, de
+  if Z
+    move hl, right_input
+    ret
+  end
+  if NC
+    move hl, right_input
+    move next_a, hl
+    move next_b, hl
+    move hl, left_input
+    move de, right_input
+    xor a
+    sbc hl, de
+    move next_b, hl
+    gcd_recursive next_a, next_b
+    ret
+  end
+
+  move hl, left_input
+  move next_a, hl
+  move hl, right_input
+  move de, left_input
+  xor a
+  sbc hl, de
+  move next_b, hl
+  gcd_recursive next_a, next_b
+end
+
+export func main()
+  gcd_recursive 84, 30
+end
