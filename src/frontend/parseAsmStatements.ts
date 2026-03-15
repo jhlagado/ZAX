@@ -100,6 +100,33 @@ function parseRepeatStatement(trimmed: string, ctx: ParseAsmStatementContext): P
   return undefined;
 }
 
+function hasEnclosingLoop(controlStack: AsmControlFrame[]): boolean {
+  return controlStack.some((frame) => frame.kind === 'While' || frame.kind === 'Repeat');
+}
+
+function parseLoopEscapeStatement(
+  trimmed: string,
+  keyword: 'break' | 'continue',
+  ctx: ParseAsmStatementContext,
+): ParsedAsmStatement {
+  const { filePath, stmtSpan, diagnostics, controlStack } = ctx;
+  if (!isBareAsmControlKeyword(trimmed, keyword)) {
+    diag(diagnostics, filePath, `"${keyword}" does not take operands`, {
+      line: stmtSpan.start.line,
+      column: stmtSpan.start.column,
+    });
+    return undefined;
+  }
+  if (!hasEnclosingLoop(controlStack)) {
+    diag(diagnostics, filePath, `"${keyword}" is only valid inside "while" or "repeat"`, {
+      line: stmtSpan.start.line,
+      column: stmtSpan.start.column,
+    });
+    return undefined;
+  }
+  return { kind: keyword === 'break' ? 'Break' : 'Continue', span: stmtSpan };
+}
+
 function parseElseStatement(trimmed: string, ctx: ParseAsmStatementContext): ParsedAsmStatement {
   const { filePath, stmtSpan, diagnostics, controlStack } = ctx;
   if (!isBareAsmControlKeyword(trimmed, 'else')) {
@@ -370,6 +397,10 @@ export function parseAsmStatement(
       return parseWhileStatement(trimmed, ctx);
     case 'until':
       return parseUntilStatement(trimmed, ctx);
+    case 'break':
+      return parseLoopEscapeStatement(trimmed, 'break', ctx);
+    case 'continue':
+      return parseLoopEscapeStatement(trimmed, 'continue', ctx);
     case 'select':
       return parseSelectStatement(trimmed, ctx);
     case 'case':
