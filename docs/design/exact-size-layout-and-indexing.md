@@ -1,6 +1,6 @@
 # Exact-Size Layout and Indexing
 
-Status: direction accepted; implementation planning pending
+Status: direction accepted; implementation staged via issues #817-#820
 
 ## Purpose
 
@@ -74,16 +74,20 @@ For indexed array addressing with runtime index in `HL` and base in `DE`:
   - then `add hl, de`
   - no `DE` preservation needed
 - if `elemSize` is not a power of two:
-  1. preserve incoming base `DE`
+  1. preserve incoming base `DE` on the stack with `push de`
   2. copy original index from `HL` into `DE` using `ld d, h` / `ld e, l`
   3. emit an unrolled shift/add multiply sequence using:
      - `add hl, hl`
      - `add hl, de`
-  4. restore base `DE`
+  4. restore base `DE` with `pop de`
   5. `add hl, de` to combine scaled index with base
 
 This keeps power-of-two sizes fast while making exact-size indexing correct for
 all sizes.
+
+The non-power-of-two path must keep stack balance exact. The preserved base in
+`DE` is restored from the stack before the final base add; this is not an
+optional implementation detail.
 
 ## General multiply-by-constant algorithm
 
