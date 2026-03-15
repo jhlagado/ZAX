@@ -505,49 +505,76 @@ clarity.
 
 ---
 
-### Tier 3 — Needs Language Features
+#### 2D: Linked List (K&R §6.5)
 
-These algorithms require features not yet implemented. They belong in the
-course as **specification targets**: write the algorithm as you wish ZAX could
-express it, note the delta from what the compiler currently accepts, and file
-the gap as a language issue.
-
-#### 3A: Linked List (K&R §6.5)
-
-`<Type>base.tail` typed reinterpretation is now implemented — field access
-through a runtime address value is available. The remaining blocker is
-**self-referential record types**:
+A linked list node can be written today with a `ptr` field in an ordinary
+record, and traversed with `<Node>base.tail`:
 
 ```zax
-; this is what we want to write — but self-referential types are not yet legal:
 type Node
   value: word
-  next:  ptr       ; this holds the address of another Node
+  next:  ptr       ; holds address of the next Node (or 0 for end-of-list)
+end
+
+section data heap at $8400
+  nodes: Node[16]    ; fixed-size pool — no dynamic allocation
+end
+
+; traverse the list starting at HL, summing values
+func list_sum(head: addr): HL
+  var
+    total: word = 0
+  end
+  move hl, head
+  or a              ; test for null (HL = 0 means end)
+  while NZ
+    move de, <Node>hl.value    ; read value field
+    move hl, total
+    add hl, de
+    move total, hl
+    move hl, <Node>hl.next     ; advance to next node
+    or a                       ; test next pointer for null
+  end
+  move hl, total
 end
 ```
 
-Once self-referential types are allowed, the typed reinterpretation cast
-provides field access through the `next` pointer:
+The algorithm is fully expressible. The ergonomic gaps to note and document:
 
-```zax
-; access the 'value' field of the node pointed to by HL
-move hl, <Node>hl.next     ; advance to next node
-move de, <Node>hl.value    ; read its value
-```
+- **No null literal** — `0` serves as null but there is no named sentinel.
+  Using `addr` zero is a convention, not a language guarantee.
+- **`ptr` is untyped** — the `next` field is `ptr`, not `ptr<Node>`. The cast
+  `<Node>hl.next` must be written explicitly at every dereference site.
+  Self-referential record declarations would allow the type to carry that
+  intent, eliminating the cast at each traversal step.
+- **No standard allocation** — lists must use a fixed pool. The pool management
+  pattern (free list, bump allocator) is worth documenting as its own idiom.
 
-The example should be written in the desired form, with a clear annotation of
-the one missing feature. It becomes a concrete design test for self-referential
-type declarations.
+These are pointer-typing ergonomics and library conventions, not hard blockers.
+The linked list is a productive Tier 2 example precisely because it works today
+and surfaces real friction.
 
-#### 3B: Binary Search Tree
+#### 2E: Binary Search Tree
 
-Similar to linked list, with two child pointers. Same gap applies. A BST insert
-and search pair together with the linked list defines the minimum requirements
-for self-referential record types in ZAX. They also probe whether `ptr` being
-zero-initializable serves adequately as a null sentinel, or whether ZAX needs
-an explicit `null` value.
+Same analysis as the linked list. A BST node has two `ptr` children (`left`,
+`right`). Insert and search are fully expressible using `<Node>hl.left` and
+`<Node>hl.right`. The same ergonomic gaps apply: untyped `ptr` fields,
+explicit casts at each traversal, null-as-zero convention, fixed pool
+allocation.
 
-#### 3C: Eight Queens (Wirth Ch.4)
+Together the linked list and BST define the recurring pointer-structure idioms
+that a future standard library or typed-pointer extension would address.
+
+---
+
+### Tier 3 — Needs Language Features
+
+These algorithms require a language construct that does not yet exist. They
+belong in the course as **specification targets**: write the algorithm as you
+wish ZAX could express it, annotate the gap precisely, and file it as a
+language issue.
+
+#### 3A: Eight Queens (Wirth Ch.4)
 
 The ZAX expression is nearly complete in Tier 1 — except that the backtracking
 loop structure benefits from a named exit or `break` out of a nested `while`:
@@ -605,14 +632,15 @@ than speculation.
 | Example Gap | Status |
 |---|---|
 | RPN calculator / quicksort software stack | Stack-typed local or push/pop op idiom — not yet on roadmap |
-| Linked list, BST | Self-referential record declarations — not yet on roadmap |
+| Linked list, BST — untyped `ptr` fields, explicit casts, null-as-zero convention | Pointer-typing ergonomics — Tier 2 friction; self-referential record declarations would resolve, not yet on roadmap |
 | Eight queens labeled exit | `break` / named exit — not yet on roadmap; course surfaces this |
 | Word frequency string ops | Standard `op` library — not yet on roadmap |
 | Ring buffer with exact-size sizeof | Exact-size layout stream (#817–820) — active |
 
 Note: typed reinterpretation (`<Type>base.tail`) and grouped/ranged `select
 case` were roadmap items at course inception but are now implemented. The linked
-list example should be updated once self-referential record types land.
+list and BST examples work today with the current surface; the documented
+friction points are ergonomic, not structural.
 
 ---
 
@@ -730,9 +758,10 @@ expresses them awkwardly, the gap is precisely located.
 | 4 | Records | Ring buffer | `type`, `record`, `section data`, `sizeof`/`offsetof`, exact-size awareness |
 | 5 | Recursion | Towers of Hanoi, recursive sum, recursive reverse | Recursive `func`, IX frame discipline, `<Type>base.tail` |
 | 6 | Composition | RPN calculator | All of the above: `op`, `record`, `select` ranges, `func`, software stack |
-| 7 | Gaps and Futures | Linked list, BST, eight queens | Specification target exercises; self-referential types, `break` |
+| 7 | Pointer Structures | Linked list, BST | `ptr` fields, `<Type>base.tail` traversal, null-sentinel convention, fixed-pool allocation |
+| 8 | Gaps and Futures | Eight queens | Specification target exercise; named exit / `break` — language gap documented |
 
-Unit 7 is intentionally incomplete. It is a design dialogue between the course
+Unit 8 is intentionally incomplete. It is a design dialogue between the course
 author and the language — a record of what comes next.
 
 ---
