@@ -49,15 +49,78 @@ type SelectCaseArm =
   | { kind: 'value'; value: number; bodyLabel: string; span: SourceSpan }
   | { kind: 'range'; start: number; end: number; bodyLabel: string; span: SourceSpan };
 
+type LoopContext = {
+  breakLabel: string;
+  continueLabel: string;
+  breakExits: FlowState[];
+  continueExits: FlowState[];
+};
+
 function formatCaseInterval(start: number, end: number): string {
   return start === end ? `${start}` : `${start}..${end}`;
 }
 
 export function createAsmRangeLoweringHelpers<TCodeSegmentTag>(ctx: Context<TCodeSegmentTag>) {
+  const joinFlowList = (
+    flows: readonly FlowState[],
+    span: SourceSpan,
+    contextName: string,
+  ): FlowState => {
+    const reachable = flows.filter((flow) => flow.reachable);
+    if (reachable.length === 0) {
+      return {
+        reachable: false,
+        spDelta: 0,
+        spValid: true,
+        spInvalidDueToMutation: false,
+      };
+    }
+    return reachable.slice(1).reduce((joined, flow) => ctx.joinFlows(joined, flow, span, contextName), reachable[0]!);
+  };
+
+  const validateLoopBackEdges = (
+    entry: FlowState,
+    backEdgeFlows: readonly FlowState[],
+    span: SourceSpan,
+    exactMismatchMessage: (flow: FlowState, baseline: FlowState) => string,
+    mutationMessage: string,
+    unknownMessage: string,
+  ): { unknown: boolean; mutation: boolean } => {
+    const reachable = backEdgeFlows.filter((flow) => flow.reachable);
+    if (reachable.length === 0) return { unknown: false, mutation: false };
+
+    const exactMismatch = reachable.find(
+      (flow) => flow.spValid && entry.spValid && flow.spDelta !== entry.spDelta,
+    );
+    if (exactMismatch) {
+      ctx.diagAt(span, exactMismatchMessage(exactMismatch, entry));
+      return { unknown: true, mutation: false };
+    }
+
+    const mutationUnknown = reachable.some(
+      (flow) =>
+        (!flow.spValid || !entry.spValid) &&
+        (flow.spInvalidDueToMutation || entry.spInvalidDueToMutation),
+    );
+    if (mutationUnknown) {
+      ctx.diagAt(span, mutationMessage);
+      return { unknown: true, mutation: true };
+    }
+
+    const plainUnknown = reachable.some((flow) => (!flow.spValid || !entry.spValid) && ctx.hasStackSlots);
+    if (plainUnknown) {
+      ctx.diagAt(span, unknownMessage);
+      return { unknown: true, mutation: false };
+    }
+
+    return { unknown: false, mutation: false };
+  };
+
   const lowerAsmRange = (
     asmItems: readonly AsmItemNode[],
     startIndex: number,
     stopKinds: Set<string>,
+    loopStack: LoopContext[] = [],
   ): number => {
     let i = startIndex;
     while (i < asmItems.length) {
@@ -89,7 +152,7 @@ export function createAsmRangeLoweringHelpers<TCodeSegmentTag>(ctx: Context<TCod
           const endLabel = ctx.newHiddenLabel('__zax_if_end');
           ctx.emitJumpIfFalse(it.cc, elseLabel, it.span);
 
-          let j = lowerAsmRange(asmItems, i + 1, new Set(['Else', 'End']));
+          let j = lowerAsmRange(asmItems, i + 1, new Set(['Else', 'End']), loopStack);
           const thenExit = ctx.snapshotFlow();
           if (j >= asmItems.length) {
             ctx.diagAt(it.span, 'if without matching end.');
@@ -100,7 +163,7 @@ export function createAsmRangeLoweringHelpers<TCodeSegmentTag>(ctx: Context<TCod
             if (thenExit.reachable) ctx.emitJumpTo(endLabel, term.span);
             ctx.defineCodeLabel(elseLabel, term.span, 'local');
             ctx.restoreFlow(entry);
-            j = lowerAsmRange(asmItems, j + 1, new Set(['End']));
+            j = lowerAsmRange(asmItems, j + 1, new Set(['End']), loopStack);
             const elseExit = ctx.snapshotFlow();
             if (j >= asmItems.length || asmItems[j]!.kind !== 'End') {
               ctx.diagAt(it.span, 'if/else without matching end.');
@@ -124,116 +187,108 @@ export function createAsmRangeLoweringHelpers<TCodeSegmentTag>(ctx: Context<TCod
           const entry = ctx.snapshotFlow();
           const condLabel = ctx.newHiddenLabel('__zax_while_cond');
           const endLabel = ctx.newHiddenLabel('__zax_while_end');
-          let backEdgeUnknown = false;
-          let backEdgeMutation = false;
+          const loopCtx: LoopContext = {
+            breakLabel: endLabel,
+            continueLabel: condLabel,
+            breakExits: [],
+            continueExits: [],
+          };
           ctx.defineCodeLabel(condLabel, it.span, 'local');
           ctx.emitJumpIfFalse(it.cc, endLabel, it.span);
 
-          const j = lowerAsmRange(asmItems, i + 1, new Set(['End']));
+          const j = lowerAsmRange(asmItems, i + 1, new Set(['End']), [...loopStack, loopCtx]);
           const bodyExit = ctx.snapshotFlow();
           if (j >= asmItems.length || asmItems[j]!.kind !== 'End') {
             ctx.diagAt(it.span, 'while without matching end.');
             return asmItems.length;
           }
-          if (
-            bodyExit.reachable &&
-            bodyExit.spValid &&
-            entry.spValid &&
-            bodyExit.spDelta !== entry.spDelta
-          ) {
-            backEdgeUnknown = true;
-            ctx.diagAt(
-              asmItems[j]!.span,
-              `Stack depth mismatch at while back-edge (${bodyExit.spDelta} vs ${entry.spDelta}).`,
-            );
-          } else if (
-            bodyExit.reachable &&
-            (!bodyExit.spValid || !entry.spValid) &&
-            (bodyExit.spInvalidDueToMutation || entry.spInvalidDueToMutation)
-          ) {
-            backEdgeUnknown = true;
-            backEdgeMutation = true;
-            ctx.diagAt(
-              asmItems[j]!.span,
-              'Cannot verify stack depth at while back-edge due to untracked SP mutation.',
-            );
-          } else if (
-            bodyExit.reachable &&
-            (!bodyExit.spValid || !entry.spValid) &&
-            ctx.hasStackSlots
-          ) {
-            backEdgeUnknown = true;
-            ctx.diagAt(asmItems[j]!.span, 'Cannot verify stack depth at while back-edge due to unknown stack state.');
-          }
+          const backEdge = validateLoopBackEdges(
+            entry,
+            [bodyExit, ...loopCtx.continueExits],
+            asmItems[j]!.span,
+            (flow, baseline) =>
+              `Stack depth mismatch at while back-edge (${flow.spDelta} vs ${baseline.spDelta}).`,
+            'Cannot verify stack depth at while back-edge due to untracked SP mutation.',
+            'Cannot verify stack depth at while back-edge due to unknown stack state.',
+          );
           if (bodyExit.reachable) ctx.emitJumpTo(condLabel, asmItems[j]!.span);
           ctx.defineCodeLabel(endLabel, asmItems[j]!.span, 'local');
-          if (backEdgeUnknown) {
-            ctx.restoreFlow({
-              reachable: entry.reachable,
-              spDelta: 0,
-              spValid: false,
-              spInvalidDueToMutation: backEdgeMutation,
-            });
-          } else {
-            ctx.restoreFlow(entry);
-          }
+          const normalExit = backEdge.unknown
+            ? {
+                reachable: entry.reachable,
+                spDelta: 0,
+                spValid: false,
+                spInvalidDueToMutation: backEdge.mutation,
+              }
+            : entry;
+          ctx.restoreFlow(joinFlowList([normalExit, ...loopCtx.breakExits], asmItems[j]!.span, 'while exit'));
           i = j + 1;
           continue;
         }
         if (it.kind === 'Repeat') {
           const entry = ctx.snapshotFlow();
           const loopLabel = ctx.newHiddenLabel('__zax_repeat_body');
-          let backEdgeUnknown = false;
-          let backEdgeMutation = false;
+          const condLabel = ctx.newHiddenLabel('__zax_repeat_cond');
+          const endLabel = ctx.newHiddenLabel('__zax_repeat_end');
+          const loopCtx: LoopContext = {
+            breakLabel: endLabel,
+            continueLabel: condLabel,
+            breakExits: [],
+            continueExits: [],
+          };
           ctx.defineCodeLabel(loopLabel, it.span, 'local');
-          const j = lowerAsmRange(asmItems, i + 1, new Set(['Until']));
+          const j = lowerAsmRange(asmItems, i + 1, new Set(['Until']), [...loopStack, loopCtx]);
           if (j >= asmItems.length || asmItems[j]!.kind !== 'Until') {
             ctx.diagAt(it.span, 'repeat without matching until.');
             return asmItems.length;
           }
           const untilNode = asmItems[j]!;
           const bodyExit = ctx.snapshotFlow();
+          ctx.defineCodeLabel(condLabel, untilNode.span, 'local');
+          ctx.restoreFlow(joinFlowList([bodyExit, ...loopCtx.continueExits], untilNode.span, 'repeat continue'));
+          const condExit = ctx.snapshotFlow();
           const ok = ctx.emitJumpIfFalse(untilNode.cc, loopLabel, untilNode.span);
           if (!ok) return asmItems.length;
-          if (
-            bodyExit.reachable &&
-            bodyExit.spValid &&
-            entry.spValid &&
-            bodyExit.spDelta !== entry.spDelta
-          ) {
-            backEdgeUnknown = true;
-            ctx.diagAt(
-              untilNode.span,
-              `Stack depth mismatch at repeat/until (${bodyExit.spDelta} vs ${entry.spDelta}).`,
-            );
-          } else if (
-            bodyExit.reachable &&
-            (!bodyExit.spValid || !entry.spValid) &&
-            (bodyExit.spInvalidDueToMutation || entry.spInvalidDueToMutation)
-          ) {
-            backEdgeUnknown = true;
-            backEdgeMutation = true;
-            ctx.diagAt(
-              untilNode.span,
-              'Cannot verify stack depth at repeat/until due to untracked SP mutation.',
-            );
-          } else if (
-            bodyExit.reachable &&
-            (!bodyExit.spValid || !entry.spValid) &&
-            ctx.hasStackSlots
-          ) {
-            backEdgeUnknown = true;
-            ctx.diagAt(untilNode.span, 'Cannot verify stack depth at repeat/until due to unknown stack state.');
-          }
-          if (backEdgeUnknown) {
-            ctx.restoreFlow({
-              reachable: bodyExit.reachable,
-              spDelta: 0,
-              spValid: false,
-              spInvalidDueToMutation: backEdgeMutation,
-            });
-          }
+          const backEdge = validateLoopBackEdges(
+            entry,
+            [condExit],
+            untilNode.span,
+            (flow, baseline) =>
+              `Stack depth mismatch at repeat/until (${flow.spDelta} vs ${baseline.spDelta}).`,
+            'Cannot verify stack depth at repeat/until due to untracked SP mutation.',
+            'Cannot verify stack depth at repeat/until due to unknown stack state.',
+          );
+          ctx.defineCodeLabel(endLabel, untilNode.span, 'local');
+          const normalExit = backEdge.unknown
+            ? {
+                reachable: condExit.reachable,
+                spDelta: 0,
+                spValid: false,
+                spInvalidDueToMutation: backEdge.mutation,
+              }
+            : condExit;
+          ctx.restoreFlow(joinFlowList([normalExit, ...loopCtx.breakExits], untilNode.span, 'repeat exit'));
           i = j + 1;
+          continue;
+        }
+        if (it.kind === 'Break' || it.kind === 'Continue') {
+          const loopCtx = loopStack.at(-1);
+          if (!loopCtx) {
+            ctx.diagAt(it.span, `"${it.kind.toLowerCase()}" is only valid inside "while" or "repeat".`);
+            i++;
+            continue;
+          }
+          const exitFlow = ctx.snapshotFlow();
+          if (it.kind === 'Break') {
+            loopCtx.breakExits.push(exitFlow);
+            ctx.emitJumpTo(loopCtx.breakLabel, it.span);
+          } else {
+            loopCtx.continueExits.push(exitFlow);
+            ctx.emitJumpTo(loopCtx.continueLabel, it.span);
+          }
+          ctx.flowRef.current.reachable = false;
+          ctx.syncFromFlow();
+          i++;
           continue;
         }
         if (it.kind === 'Select') {
@@ -336,7 +391,7 @@ export function createAsmRangeLoweringHelpers<TCodeSegmentTag>(ctx: Context<TCod
               }
               ctx.restoreFlow(entry);
               sawArm = true;
-              j = lowerAsmRange(asmItems, k, new Set(['Case', 'SelectElse', 'End']));
+              j = lowerAsmRange(asmItems, k, new Set(['Case', 'SelectElse', 'End']), loopStack);
               closeArm(asmItems[Math.min(j, asmItems.length - 1)]!.span);
               continue;
             }
@@ -348,7 +403,7 @@ export function createAsmRangeLoweringHelpers<TCodeSegmentTag>(ctx: Context<TCod
               ctx.defineCodeLabel(elseLabel, armItem.span, 'local');
               ctx.restoreFlow(entry);
               sawArm = true;
-              j = lowerAsmRange(asmItems, j + 1, new Set(['End']));
+              j = lowerAsmRange(asmItems, j + 1, new Set(['End']), loopStack);
               closeArm(asmItems[Math.min(j, asmItems.length - 1)]!.span);
               continue;
             }
