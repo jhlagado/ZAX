@@ -1,0 +1,73 @@
+; power.zax
+;
+; Unit 0 foundations example: naive integer power by repeated multiplication.
+
+func mul_u16(lhs: word, rhs: word): HL
+  var
+    acc: word = 0
+    count: word = 0
+  end
+
+  move hl, rhs
+  move count, hl
+
+  while NZ
+    move hl, count
+    ld a, h
+    or l
+    if Z
+      move hl, acc
+      ret
+    end
+
+    move hl, acc
+    move de, lhs
+    add hl, de
+    move acc, hl
+
+    move hl, count
+    dec hl
+    move count, hl
+
+    ld a, 1
+    or a
+  end
+
+  move hl, acc
+end
+
+func power(base: word, exponent: word): HL
+  var
+    result: word = 1
+    remaining: word = 0
+  end
+
+  move hl, exponent
+  move remaining, hl
+
+  while NZ
+    move hl, remaining
+    ld a, h
+    or l
+    if Z
+      move hl, result
+      ret
+    end
+
+    mul_u16 result, base
+    move result, hl
+
+    move hl, remaining
+    dec hl
+    move remaining, hl
+
+    ld a, 1
+    or a
+  end
+
+  move hl, result
+end
+
+export func main()
+  power 3, 5
+end
