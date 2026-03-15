@@ -19,6 +19,9 @@ int_hex         = "$" , hex_digit , { hex_digit } ;
 hex_digit       = digit | "A".."F" | "a".."f" ;
 
 string_lit      = '"' , { any_char_except_quote } , '"' ;
+char_lit        = "'" , char_body , "'" ;
+char_body       = any_char_except_quote | escape_seq ;
+escape_seq      = "\\" , ( "n" | "r" | "t" | "'" | "\\" | "x" , hex_digit , hex_digit ) ;
 newline         = "\n" ;
 ```
 
@@ -50,6 +53,7 @@ section_item    = const_decl
                 | union_decl
                 | data_section_block
                 | data_decl
+                | raw_data_decl
                 | bin_decl
                 | hex_decl
                 | extern_block
@@ -91,6 +95,15 @@ scalar_type     = "byte" | "word" | "addr" | "ptr" ;
 data_section_block = "data" , newline , data_decl , { newline , data_decl } ;
 data_decl          = identifier , ":" , type_expr , [ "=" , data_init_expr ] ;
 
+raw_label       = identifier , ":" ;
+raw_data_decl   = raw_label , [ newline ] , raw_directive ;
+raw_directive   = "db" , raw_db_list
+                | "dw" , raw_dw_list
+                | "ds" , imm_expr ;
+raw_db_list     = raw_db_item , { "," , raw_db_item } ;
+raw_db_item     = imm_expr | string_lit ;
+raw_dw_list     = imm_expr , { "," , imm_expr } ;
+
 bin_decl        = "bin" , identifier , "in" , section_kind , "from" , string_lit ;
 hex_decl        = "hex" , identifier , "from" , string_lit ;
 ```
@@ -131,14 +144,22 @@ matcher_type    = "reg8" | "reg16"
 instr_stream    = { instr_line } ;
 
 instr_line      = z80_instruction
+                | move_stmt
                 | op_invoke
                 | func_call
                 | if_stmt
                 | while_stmt
                 | repeat_stmt
                 | select_stmt
-                | local_label
+                | asm_label
                 | local_jump ;
+
+move_stmt       = "move" , move_reg , "," , move_src
+                | "move" , move_path , "," , move_reg ;
+move_src        = move_addr | move_path ;
+move_path       = ea_expr ;
+move_reg        = reg8 | reg16 | "AF" | "SP" | "IXH" | "IXL" | "IYH" | "IYL" ;
+move_addr       = "@" , ea_expr ;  (* move_addr is only valid as the source operand in v1 *)
 
 if_stmt         = "if" , cc_expr , newline , instr_stream ,
                   [ "else" , newline , instr_stream ] , "end" ;
@@ -150,10 +171,11 @@ repeat_stmt     = "repeat" , newline , instr_stream , "until" , cc_expr ;
 select_stmt     = "select" , select_expr , newline ,
                   case_clause , { case_clause } , [ else_clause ] , "end" ;
 
-case_clause     = "case" , imm_expr , newline , instr_stream ;
+case_clause     = "case" , case_item , { "," , case_item } , newline , instr_stream ;
+case_item       = imm_expr | imm_expr , ".." , imm_expr ;
 else_clause     = "else" , newline , instr_stream ;
 
-local_label     = "." , identifier , ":" ;
+asm_label       = [ "." ] , identifier , ":" ;
 local_jump      = ( "jp" | "jr" | "djnz" ) , "." , identifier ;
 ```
 
@@ -168,18 +190,27 @@ imm_shift       = imm_add , { ( "<<" | ">>" ) , imm_add } ;
 imm_add         = imm_mul , { ( "+" | "-" ) , imm_mul } ;
 imm_mul         = imm_unary , { ( "*" | "/" | "%" ) , imm_unary } ;
 imm_unary       = [ "-" | "+" | "~" ] , imm_primary ;
-imm_primary     = int_dec | int_hex | identifier | enum_ref | "(" , imm_expr , ")"
+imm_primary     = int_dec | int_hex | char_lit | imm_name | "(" , imm_expr , ")"
                 | "sizeof" , "(" , type_expr , ")"
                 | "offsetof" , "(" , type_expr , "," , field_path , ")" ;
 
-enum_ref        = identifier , "." , identifier ;
+imm_name        = identifier , { "." , identifier } ;
 
 field_path      = identifier , { "." , identifier | "[" , imm_expr , "]" } ;
 
 ea_expr         = ea_term , { ( "+" | "-" ) , imm_expr } ;
-ea_term         = ea_base , { ea_segment } ;
+ea_term         = ea_base , { ea_segment }
+                | typed_reinterpret_expr ;
 ea_base         = identifier | "(" , ea_expr , ")" ;
 ea_segment      = "." , identifier | "[" , ea_index , "]" ;
+typed_reinterpret_expr = "<" , type_expr , ">" , reinterpret_base , ea_segment , { ea_segment } ;
+reinterpret_base = reinterpret_reg
+                 | reinterpret_name
+                 | "(" , reinterpret_addr_expr , ")" ;
+reinterpret_addr_expr = reinterpret_atom , ( "+" | "-" ) , imm_expr ;
+reinterpret_atom = reinterpret_reg | reinterpret_name ;
+reinterpret_reg  = "HL" | "DE" | "BC" | "IX" | "IY" ;
+reinterpret_name = identifier ;
 ea_index        = imm_expr | reg8 | reg16 | "(" , reg16 , ")" ;
 
 value_init_expr = imm_expr | "0" ;
@@ -187,6 +218,10 @@ rhs_alias_expr  = ea_expr ;
 data_init_expr  = string_lit | aggregate_init | imm_expr ;
 aggregate_init  = "{" , [ init_item , { "," , init_item } ] , "}" ;
 init_item       = imm_expr | aggregate_init ;
+
+reg8            = "A" | "B" | "C" | "D" | "E" | "H" | "L"
+                | "IXH" | "IXL" | "IYH" | "IYL" ;
+reg16           = "HL" | "DE" | "BC" | "SP" | "IX" | "IY" ;
 ```
 
 ## 8. Known Current Constraints (Semantic)
@@ -199,7 +234,12 @@ These are semantic constraints enforced beyond pure grammar:
 - Variable declarations inside a `code` named section are a compile error.
 - Local non-scalar value-init declarations are invalid.
 - Local non-scalar declarations are alias-only (`name = rhs`).
-- `@place` explicit address-of syntax is not part of the normative v0.2 surface.
+- `@path` is not a general expression operator. In v1 it is accepted only as the source operand in `move rr, @path`.
+- Raw data directives (`db`/`dw`/`ds`) and `raw_label` are only valid inside `section data` blocks.
+- A `raw_label` must be followed by a raw directive; it cannot stand alone.
+- Typed reinterpretation requires at least one tail segment after the cast head.
+- `reinterpret_name` is limited semantically to scalar names of type `word` or `addr`.
+- Bare aggregate storage names are not valid reinterpret bases.
 
 ## 9. Maintenance Rule
 

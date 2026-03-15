@@ -5,5 +5,6 @@ end
 
 export func main(): AF, BC, DE, HL
   ld hl, $0001
-  ld dst_w, arr_w[hl]
+  move de, arr_w[hl]
+  move dst_w, de
 end

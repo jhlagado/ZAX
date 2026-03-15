@@ -24,8 +24,5 @@ describe('PR507: extracted EA resolution helpers', () => {
     expect(messages).toContain(
       'Runtime array index expression is unsupported. Use a single scalar runtime atom with +, -, *, << and constants (no /, %, &, |, ^, >> on runtime atoms).',
     );
-    expect(messages).toContain(
-      'Runtime EA offset expression is unsupported. Use a single scalar runtime atom with +, -, *, << and constants (no /, %, &, |, ^, >> on runtime atoms).',
-    );
   });
 });

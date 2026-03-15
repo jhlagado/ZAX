@@ -135,7 +135,7 @@ select A
 end
 ```
 
-Each `case` compares the selected register against a compile-time constant and jumps to the matching arm. The `else` arm handles anything that falls through. The `select` dispatch may use `A` internally — the programmer controls what is loaded before the construct and what registers the arms use.
+Each `case` compares the selected register against compile-time values or inclusive ranges and jumps to the matching arm. A `case` line may also group multiple items with commas, such as `case 'A'..'Z', '_'`. The `else` arm handles anything that falls through. The `select` dispatch may use `A` internally — the programmer controls what is loaded before the construct and what registers the arms use.
 
 ---
 
@@ -238,8 +238,8 @@ end
 Field access and array indexing produce effective addresses. Parentheses dereference. This is the same convention as Z80 indirect addressing, extended to structured data:
 
 ```
-ld hl, (sprites[C].x)    ; load word at sprites[C].x into HL
-ld (sprites[C].flags), A  ; store A into the flags field
+move hl, sprites[C].x      ; load word at sprites[C].x into HL
+move sprites[C].flags, a   ; store A into the flags field
 ```
 
 The compiler lowers these into real instruction sequences (computing the offset, loading the address, performing the access). If a form can't be lowered without violating register/flag preservation constraints, it's a compile error — not a silent clobber.
@@ -273,7 +273,7 @@ All module-scope names share a single global namespace. Name collisions across m
 
 ## Project Status
 
-ZAX is under active development. The compiler exists as a Node.js CLI tool and handles a meaningful subset of the active v0.2 draft specification. The end-to-end pipeline (lex → parse → lower → encode → emit) is functional and produces `.bin`, `.hex`, `.d8dbg.json` (Debug80-compatible debug maps), and `.lst` output.
+ZAX is under active development. The compiler exists as a Node.js CLI tool and handles a meaningful subset of the current language specification. The end-to-end pipeline (lex → parse → lower → encode → emit) is functional and produces `.bin`, `.hex`, `.d8dbg.json` (Debug80-compatible debug maps), and `.lst` output.
 
 What works today: single and multi-module compilation, functions with locals and calling conventions, structured control flow, the op system, records/unions/arrays, named `section code`/`section data` blocks with direct declarations (`const`/`enum`/typed storage/`bin`/`hex`/`extern`), forward references and fixups, and a growing slice of the Z80 instruction set.
 

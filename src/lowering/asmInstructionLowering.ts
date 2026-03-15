@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../diagnostics/types.js';
-import type { AsmInstructionNode, AsmOperandNode } from '../frontend/ast.js';
+import type { AsmInstructionNode, AsmOperandNode, EaExprNode } from '../frontend/ast.js';
 
 type DiagAt = (diagnostics: Diagnostic[], span: AsmInstructionNode['span'], message: string) => void;
 
@@ -52,7 +52,9 @@ type Context = {
     symbolicTarget: { baseLower: string; addend: number } | undefined,
   ) => void;
   lowerLdWithEa: (asmItem: AsmInstructionNode) => boolean;
+  pushEaAddress: (ea: EaExprNode, span: AsmInstructionNode['span']) => boolean;
   emitVirtualReg16Transfer: (asmItem: AsmInstructionNode) => boolean;
+  reg16: Set<string>;
   emitSyntheticEpilogue: boolean;
   epilogueLabel: string;
   emitJumpTo: (label: string, span: AsmInstructionNode['span']) => void;
@@ -62,6 +64,17 @@ type Context = {
 };
 
 export function createAsmInstructionLoweringHelpers(ctx: Context) {
+  const isTypedStorageLdOperand = (op: AsmOperandNode): boolean => {
+    if (op.kind === 'Ea') return true;
+    if (op.kind === 'Imm' && op.expr.kind === 'ImmName') {
+      return ctx.resolveScalarBinding(op.expr.name) !== undefined;
+    }
+    if (op.kind === 'Reg') {
+      return ctx.resolveScalarBinding(op.name) !== undefined;
+    }
+    return false;
+  };
+
   const emitRel8FromOperand = (
     asmItem: AsmInstructionNode,
     operand: AsmOperandNode,
@@ -354,6 +367,42 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
           return;
         }
       }
+    }
+
+    if (head === 'move') {
+      const dst = asmItem.operands[0];
+      const src = asmItem.operands[1];
+      if (src?.kind === 'Ea' && src.explicitAddressOf) {
+        if (!dst || dst.kind !== 'Reg' || !ctx.reg16.has(dst.name.toUpperCase())) {
+          ctx.diagAt(
+            ctx.diagnostics,
+            asmItem.span,
+            `"move" address-of source requires a 16-bit register destination.`,
+          );
+          return;
+        }
+        if (!ctx.pushEaAddress(src.expr, asmItem.span)) return;
+        if (!ctx.emitInstr('pop', [{ kind: 'Reg', span: asmItem.span, name: dst.name.toUpperCase() }], asmItem.span))
+          return;
+        ctx.syncToFlow();
+        return;
+      }
+      const moveAsLd: AsmInstructionNode = { ...asmItem, head: 'ld' };
+      if (ctx.lowerLdWithEa(moveAsLd)) {
+        ctx.syncToFlow();
+        return;
+      }
+      ctx.diagAt(ctx.diagnostics, asmItem.span, `"move" form is not supported.`);
+      return;
+    }
+
+    if (head === 'ld' && asmItem.operands.some(isTypedStorageLdOperand)) {
+      ctx.diagAt(
+        ctx.diagnostics,
+        asmItem.span,
+        `"ld" no longer accepts typed storage operands; use "move".`,
+      );
+      return;
     }
 
     if (ctx.lowerLdWithEa(asmItem)) {

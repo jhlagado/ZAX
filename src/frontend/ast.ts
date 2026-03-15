@@ -78,6 +78,7 @@ export type ModuleItemNode =
 export type SectionItemNode =
   | ConstDeclNode
   | EnumDeclNode
+  | RawDataDeclNode
   | DataDeclNode
   | DataBlockNode
   | VarBlockNode
@@ -253,6 +254,25 @@ export interface DataRecordFieldInitNode extends BaseNode {
 }
 
 /**
+ * Raw data declaration inside a named data section.
+ */
+export type RawDataDeclNode =
+  | {
+      kind: 'RawDataDecl';
+      span: SourceSpan;
+      name: string;
+      directive: 'db' | 'dw';
+      values: ImmExprNode[];
+    }
+  | {
+      kind: 'RawDataDecl';
+      span: SourceSpan;
+      name: string;
+      directive: 'ds';
+      size: ImmExprNode;
+    };
+
+/**
  * `bin` declaration: include raw bytes from an external file into a section.
  */
 export interface BinDeclNode extends BaseNode {
@@ -392,7 +412,7 @@ export type AsmControlNode =
   | { kind: 'Repeat'; span: SourceSpan }
   | { kind: 'Until'; span: SourceSpan; cc: string }
   | { kind: 'Select'; span: SourceSpan; selector: AsmOperandNode }
-  | { kind: 'Case'; span: SourceSpan; value: ImmExprNode }
+  | { kind: 'Case'; span: SourceSpan; value: ImmExprNode; end?: ImmExprNode }
   | { kind: 'SelectElse'; span: SourceSpan };
 
 /**
@@ -445,6 +465,7 @@ export type ImmExprNode =
  */
 export type EaExprNode =
   | { kind: 'EaName'; span: SourceSpan; name: string }
+  | { kind: 'EaReinterpret'; span: SourceSpan; typeExpr: TypeExprNode; base: EaExprNode }
   | { kind: 'EaField'; span: SourceSpan; base: EaExprNode; field: string }
   | { kind: 'EaIndex'; span: SourceSpan; base: EaExprNode; index: EaIndexNode }
   | { kind: 'EaAdd'; span: SourceSpan; base: EaExprNode; offset: ImmExprNode }
@@ -488,6 +509,7 @@ export type Node =
   | ProgramNode
   | ModuleFileNode
   | ModuleItemNode
+  | RawDataDeclNode
   | VarDeclNode
   | DataDeclNode
   | ParamNode

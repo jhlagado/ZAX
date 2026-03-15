@@ -1,0 +1,34 @@
+type Pair
+  x: byte
+  y: byte
+end
+
+type Header
+  pad: byte
+  flags: byte
+  pair: Pair
+end
+
+func touch_pair(p: Pair)
+  move a, p.y
+  inc a
+  move p.y, a
+end
+
+op bump(slot: ea)
+  move a, slot
+  inc a
+  move slot, a
+end
+
+export func main(ptr: addr)
+  move hl, ptr
+  move a, <Header>hl.flags
+
+  move de, ptr
+  ld a, 1
+  move <Header>de.flags, a
+
+  bump <Header>hl.flags
+  touch_pair <Header>ptr.pair
+end

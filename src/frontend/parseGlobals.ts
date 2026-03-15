@@ -10,11 +10,7 @@ import {
   looksLikeKeywordBodyDeclLine,
   parseVarDeclLine,
 } from './parseModuleCommon.js';
-
-function stripComment(line: string): string {
-  const semi = line.indexOf(';');
-  return semi >= 0 ? line.slice(0, semi) : line;
-}
+import { stripLineComment as stripComment } from './parseParserShared.js';
 
 type RawLine = {
   raw: string;
@@ -73,7 +69,7 @@ export function parseGlobalsBlock(
     }
     if (isTopLevelStart(t)) {
       const m = /^([A-Za-z_][A-Za-z0-9_]*)\s*[:=]\s*(.+)$/.exec(t);
-      if (m && TOP_LEVEL_KEYWORDS.has(m[1]!)) {
+      if (m && TOP_LEVEL_KEYWORDS.has(m[1]!.toLowerCase())) {
         diag(
           diagnostics,
           modulePath,

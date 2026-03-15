@@ -36,6 +36,26 @@ describe('PR476 asm statement parsing extraction', () => {
     expect(diagnostics).toEqual([]);
   });
 
+  it('parses grouped range case items without flattening the ranges away', () => {
+    const diagnostics: Diagnostic[] = [];
+    const controlStack: AsmControlFrame[] = [{ kind: 'Select', elseSeen: false, armSeen: false, openSpan: zeroSpan }];
+
+    const parsed = parseAsmStatement(file.path, "case 'A'..'Z', '_'", zeroSpan, diagnostics, controlStack);
+    const out: any[] = [];
+    appendParsedAsmStatement(out, parsed);
+
+    expect(out).toEqual([
+      {
+        kind: 'Case',
+        span: zeroSpan,
+        value: { kind: 'ImmLiteral', span: zeroSpan, value: 65 },
+        end: { kind: 'ImmLiteral', span: zeroSpan, value: 90 },
+      },
+      { kind: 'Case', span: zeroSpan, value: { kind: 'ImmLiteral', span: zeroSpan, value: 95 } },
+    ]);
+    expect(diagnostics).toEqual([]);
+  });
+
   it('keeps recovery markers intact', () => {
     const diagnostics: Diagnostic[] = [];
     const controlStack: AsmControlFrame[] = [];
@@ -51,6 +71,46 @@ describe('PR476 asm statement parsing extraction', () => {
     expect(controlStack).toHaveLength(1);
     expect(isRecoverOnlyControlFrame(controlStack[0]!)).toBe(true);
     expect(diagnostics[0]?.message).toContain('"if" expects a condition code');
+  });
+
+  it('validates structured-control condition codes at parse time', () => {
+    const diagnostics: Diagnostic[] = [];
+    const repeatStack: AsmControlFrame[] = [{ kind: 'Repeat', openSpan: zeroSpan }];
+
+    expect(parseAsmStatement(file.path, 'if nope', zeroSpan, diagnostics, [])).toMatchObject({
+      kind: 'If',
+      cc: '__missing__',
+    });
+    expect(
+      parseAsmStatement(file.path, 'while nope', zeroSpan, diagnostics, []),
+    ).toMatchObject({
+      kind: 'While',
+      cc: '__missing__',
+    });
+    expect(
+      parseAsmStatement(file.path, 'until nope', zeroSpan, diagnostics, repeatStack),
+    ).toMatchObject({
+      kind: 'Until',
+      cc: '__missing__',
+    });
+    expect(repeatStack).toHaveLength(0);
+    expect(diagnostics.map((d) => d.message)).toEqual([
+      'Invalid if condition code "nope": expected z, nz, c, nc, pe, po, m, p.',
+      'Invalid while condition code "nope": expected z, nz, c, nc, pe, po, m, p.',
+      'Invalid until condition code "nope": expected z, nz, c, nc, pe, po, m, p.',
+    ]);
+  });
+
+  it('allows symbolic condition placeholders when explicitly permitted', () => {
+    const diagnostics: Diagnostic[] = [];
+    const controlStack: AsmControlFrame[] = [];
+
+    const parsed = parseAsmStatement(file.path, 'if cond', zeroSpan, diagnostics, controlStack, {
+      allowedConditionIdentifiers: new Set(['cond']),
+    });
+
+    expect(parsed).toMatchObject({ kind: 'If', cc: 'cond' });
+    expect(diagnostics).toEqual([]);
   });
 
   it('falls back to instruction parsing for plain asm lines', () => {

@@ -7,11 +7,11 @@ end
 
 section code main at $0000
   export func main()
-    ld a, arr[idx]
-    ld a, arr[idxw]
-    ld a, arr[hl]
-    ld a, arr[(hl)]
-    ld a, grid[idx][0]
+    move a, arr[idx]
+    move a, arr[idxw]
+    move a, arr[hl]
+    move a, arr[(hl)]
+    move a, grid[idx][0]
     ret
   end
 end
