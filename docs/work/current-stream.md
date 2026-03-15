@@ -21,8 +21,8 @@ direction.
 1. Keep the spec, quick guide, and user-facing examples aligned with the
    implemented language.
 2. Continue parser/grammar convergence work.
-3. Implement the staged exact-size layout/indexing stream so semantic size no
-   longer depends on power-of-two rounding.
+3. Design and stage structured loop escape (`break`, likely `continue`).
+4. Design and stage named constants in local initializers.
 
 ### Deferred until re-planned
 

@@ -18,6 +18,8 @@ Active design work and review-target design records.
 Current active design docs:
 - `docs/design/grammar-parser-convergence-plan.md`
 - `docs/design/exact-size-layout-and-indexing.md`
+- `docs/design/structured-loop-escape.md`
+- `docs/design/named-constants-in-local-initializers.md`
 
 These documents are not normative language authority. They describe current direction, decisions, and unresolved design work.
 
