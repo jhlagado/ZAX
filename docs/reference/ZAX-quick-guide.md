@@ -1613,7 +1613,7 @@ loop:
 end
 ```
 
-The index here is `HL` holding a 0-based element number (0..15). The compiler emits the shift chain for `HL × sizeof(Sprite)` — three `ADD HL, HL` for a stride of 8 — then adds the field offset for `.x` (which is 0, so no extra add).
+The index here is `HL` holding a 0-based element number (0..15). The semantic stride is `sizeof(Sprite) = 5`. Power-of-two strides still use a pure shift chain; non-power-of-two runtime indexed lowering is being completed separately in GitHub issue #819.
 
 **`sizeof(Sprite[MaxSprites])` = 16 × 5 = 80 bytes.**
 
