@@ -17,13 +17,13 @@ describe('PR285 parser/AST closure: alias-init vs value-init', () => {
     expect(errors).toEqual([]);
   });
 
-  it('rejects typed alias form in function-local var blocks', async () => {
+  it('rejects non-constant names in typed local initializers', async () => {
     const entry = join(__dirname, 'fixtures', 'pr285_typed_alias_invalid_matrix.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     const messages = res.diagnostics.map((d) => d.message);
 
     expect(messages).toContain(
-      'Unsupported typed alias form for "bad_local": use "bad_local = base" for alias initialization.',
+      'Invalid local constant initializer for "bad_local": "base" is not a compile-time constant.',
     );
   });
 
