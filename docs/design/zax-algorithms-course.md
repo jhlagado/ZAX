@@ -771,7 +771,7 @@ author and the language — a record of what comes next.
 
 The course is written in tranches. Each tranche produces working, compiled
 example files, a style check against the `.asm` output, and a friction log
-feeding the roadmap companion document (`docs/planning/course-roadmap.md`).
+feeding the roadmap companion document (`docs/work/course-roadmap.md`).
 
 ### Tranche 1 — Unit 0: Foundations
 
@@ -864,7 +864,7 @@ exit gap, file the issue.
 
 ### Friction Log Protocol
 
-Every tranche must produce or update `docs/planning/course-roadmap.md` with
+Every tranche must produce or update `docs/work/course-roadmap.md` with
 any new friction entries. The format for each entry:
 
 ```
@@ -882,4 +882,4 @@ any new friction entries. The format for each entry:
 *This is the active execution document for the ZAX algorithms course. It
 defines the course structure, style rules, algorithm catalogue, and work
 sequence. For stream classification and issue-ready follow-up, see
-`docs/planning/course-roadmap.md`.*
+`docs/work/course-roadmap.md`.*
