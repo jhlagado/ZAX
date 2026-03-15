@@ -1,0 +1,77 @@
+; binary_search.zax
+;
+; Source/problem: binary search over a sorted byte array.
+; Unit 1 example: divide-and-conquer search on sorted storage.
+
+const LastIndex = 7
+
+section data vars at $8000
+  values: byte[8] = { 2, 4, 6, 8, 10, 12, 14, 16 }
+end
+
+func binary_search(target_value: byte): HL
+  var
+    low_index: word = 0
+    high_index: word = 0
+    mid_index: word = 0
+    probe_value: byte = 0
+  end
+
+  ld hl, LastIndex
+  move high_index, hl
+
+  ld a, 1
+  or a
+  while NZ
+    move hl, low_index
+    move de, high_index
+    xor a
+    sbc hl, de
+    if NC
+      if NZ
+        ld hl, $FFFF
+        ret
+      end
+    end
+
+    move hl, low_index
+    move de, high_index
+    add hl, de
+    srl h
+    rr l
+    move mid_index, hl
+
+    move hl, mid_index
+    move a, values[L]
+    move probe_value, a
+
+    move a, target_value
+    move b, probe_value
+    cp b
+    if Z
+      move hl, mid_index
+      ret
+    end
+    if C
+      move hl, mid_index
+      dec hl
+      move high_index, hl
+    end
+    if NC
+      if NZ
+        move hl, mid_index
+        inc hl
+        move low_index, hl
+      end
+    end
+
+    ld a, 1
+    or a
+  end
+
+  ld hl, $FFFF
+end
+
+export func main()
+  binary_search 12
+end

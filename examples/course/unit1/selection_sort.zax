@@ -1,0 +1,140 @@
+; selection_sort.zax
+;
+; Source/problem: selection sort over a small byte array.
+; Unit 1 example: select the minimum remaining element each pass.
+
+const ItemCount = 8
+const LastIndex = 7
+
+section data vars at $8000
+  values: byte[8] = { 8, 5, 2, 6, 9, 1, 4, 3 }
+end
+
+func swap_values(left_index: byte, right_index: byte)
+  var
+    left_value: byte = 0
+    right_value: byte = 0
+  end
+
+  move l, left_index
+  move a, values[L]
+  move left_value, a
+
+  move l, right_index
+  move a, values[L]
+  move right_value, a
+
+  move l, left_index
+  move a, right_value
+  move values[L], a
+
+  move l, right_index
+  move a, left_value
+  move values[L], a
+end
+
+func find_min_index(start_index: byte, last_index: byte): HL
+  var
+    best_index: byte = 0
+    current_index: byte = 0
+    best_value: byte = 0
+    current_value: byte = 0
+  end
+
+  move a, start_index
+  move best_index, a
+  move current_index, a
+
+  move l, start_index
+  move a, values[L]
+  move best_value, a
+
+  ld a, 1
+  or a
+  while NZ
+    move a, current_index
+    move b, last_index
+    cp b
+    if C
+      ; continue
+    end
+    if Z
+      ; include last_index once
+    end
+    if NC
+      if NZ
+        ld h, 0
+        move a, best_index
+        ld l, a
+        ret
+      end
+    end
+
+    move l, current_index
+    move a, values[L]
+    move current_value, a
+
+    move a, current_value
+    move b, best_value
+    cp b
+    if C
+      move a, current_index
+      move best_index, a
+      move a, current_value
+      move best_value, a
+    end
+
+    move a, current_index
+    inc a
+    move current_index, a
+
+    ld a, 1
+    or a
+  end
+
+  ld h, 0
+  move a, best_index
+  ld l, a
+end
+
+export func selection_sort()
+  var
+    outer_index: byte = 0
+    min_index: byte = 0
+  end
+
+  ld a, 1
+  or a
+  while NZ
+    move a, outer_index
+    cp LastIndex
+    if NC
+      ret
+    end
+
+    find_min_index outer_index, LastIndex
+    ld a, l
+    move min_index, a
+
+    move a, min_index
+    move b, outer_index
+    cp b
+    if Z
+      ; already in place
+    end
+    if NZ
+      swap_values outer_index, min_index
+    end
+
+    move a, outer_index
+    inc a
+    move outer_index, a
+
+    ld a, 1
+    or a
+  end
+end
+
+export func main()
+  selection_sort
+end
