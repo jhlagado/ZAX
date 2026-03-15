@@ -350,14 +350,12 @@ func update_sprite(idx: byte): void
 end
 ```
 
-Composite types use exact semantic sizes — the sum of their field sizes with no rounding. Use `sizeof` and `offsetof` for all layout constants; they update automatically when type definitions change:
+Composite types use exact semantic sizes. Use `sizeof` and `offsetof` for all layout constants; they update automatically when type definitions change:
 
 ```zax
 const SpriteSize  = sizeof(Sprite)           ; = 6 (pos: 4, tile: 1, flags: 1)
 const FlagsOffset = offsetof(Sprite, flags)  ; = 5 (after pos: 4, tile: 1)
 ```
-
-Power-of-two composite sizes remain a runtime performance consideration: when `sizeof(element)` is a power of two, array indexing can use a pure `ADD HL, HL` shift chain. For non-power-of-two strides the compiler uses a shift/add sequence. Explicit pad fields can be added to a record when a power-of-two total is required for performance or an external binary layout.
 
 Unions overlay fields at the same base address. All fields refer to the same memory; the programmer selects the interpretation in use:
 
