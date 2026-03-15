@@ -14,11 +14,7 @@ import type {
 } from '../frontend/ast.js';
 import { canonicalModuleId } from '../moduleIdentity.js';
 import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
-import {
-  offsetOfPathInTypeExpr,
-  preRoundSizeOfTypeExpr,
-  storageInfoForTypeDecl,
-} from './layout.js';
+import { offsetOfPathInTypeExpr, sizeOfTypeExpr } from './layout.js';
 import { visitDeclTree } from './declVisitor.js';
 
 /**
@@ -105,7 +101,7 @@ export function evalImmExpr(
       return undefined;
     }
     case 'ImmSizeof': {
-      return preRoundSizeOfTypeExpr(expr.typeExpr, env, diagnostics);
+      return sizeOfTypeExpr(expr.typeExpr, env, diagnostics);
     }
     case 'ImmOffsetof': {
       return offsetOfPathInTypeExpr(
@@ -184,7 +180,6 @@ export function evalImmExpr(
 }
 
 type BuildEnvOptions = {
-  typePaddingWarnings?: boolean;
   moduleIdRootDir?: string;
   resolvedImportGraph?: ReadonlyMap<string, ReadonlyArray<string>>;
 };
@@ -361,30 +356,6 @@ export function buildEnv(
     visibleEnums,
     visibleTypes,
   };
-
-  if (options?.typePaddingWarnings === true) {
-    for (const mf of program.files) {
-      const collected = collectedByFile.get(mf.path);
-      if (!collected) continue;
-      for (const item of collected.types) {
-        const info = storageInfoForTypeDecl(item, env, diagnostics);
-        if (!info) continue;
-        if (info.storageSize <= info.preRoundSize) continue;
-        const padding = info.storageSize - info.preRoundSize;
-        diagnostics.push({
-          id: DiagnosticIds.TypePaddingWarning,
-          severity: 'warning',
-          message:
-            `Type "${item.name}" size ${info.preRoundSize} padded to ${info.storageSize} ` +
-            `(${padding} byte${padding === 1 ? '' : 's'} padding). ` +
-            `Storage-visible size is used for layout, indexing, and sizeof.`,
-          file: item.span.file,
-          line: item.span.start.line,
-          column: item.span.start.column,
-        });
-      }
-    }
-  }
 
   for (const mf of program.files) {
     const collected = collectedByFile.get(mf.path);

@@ -69,10 +69,6 @@ function makeHelpers() {
         if (typeExpr.name === 'Header') return 2;
         return undefined;
       },
-      preRoundSizeOfTypeExpr: (typeExpr) => {
-        if (typeExpr.kind === 'TypeName' && typeExpr.name === 'byte') return 1;
-        return undefined;
-      },
       evalImmExpr: (expr) => (expr.kind === 'ImmLiteral' ? expr.value : undefined),
       evalImmNoDiag: (expr) => (expr.kind === 'ImmLiteral' ? expr.value : undefined),
       emitInstr: (_head: string, _operands: AsmOperandNode[]) => true,

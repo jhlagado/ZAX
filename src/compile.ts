@@ -356,7 +356,6 @@ export const compile: CompileFn = async (
   lintCaseStyle(program, sourceTexts, options.caseStyle ?? 'off', diagnostics);
 
   const env = buildEnv(program, diagnostics, {
-    typePaddingWarnings: options.typePaddingWarnings ?? false,
     moduleIdRootDir,
     resolvedImportGraph,
   });

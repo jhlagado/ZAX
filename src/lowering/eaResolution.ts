@@ -1,7 +1,7 @@
 import type { Diagnostic } from '../diagnostics/types.js';
 import type { EaExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
-import { preRoundSizeOfTypeExpr } from '../semantics/layout.js';
+import { sizeOfTypeExpr } from '../semantics/layout.js';
 
 export type EaResolution =
   | { kind: 'abs'; baseLower: string; addend: number; typeExpr?: TypeExprNode }
@@ -195,7 +195,7 @@ export function createEaResolutionHelpers(ctx: EaResolutionContext) {
               };
             }
             if (agg.kind === 'record') {
-              const sz = preRoundSizeOfTypeExpr(f.typeExpr, ctx.env, ctx.diagnostics);
+              const sz = sizeOfTypeExpr(f.typeExpr, ctx.env, ctx.diagnostics);
               if (sz === undefined) return undefined;
               off += sz;
             }

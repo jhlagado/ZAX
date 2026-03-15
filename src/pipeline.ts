@@ -35,8 +35,6 @@ export interface CompilerOptions {
   caseStyle?: CaseStyleMode;
   /** Optional op stack-policy static risk mode (`off` by default). */
   opStackPolicy?: OpStackPolicyMode;
-  /** Emit v0.2 type storage padding warnings for named composite types. */
-  typePaddingWarnings?: boolean;
   /** Emit warnings when raw `call` targets a typed callable symbol. */
   rawTypedCallWarnings?: boolean;
   /** Require a callable `main` entry symbol for runnable builds. */

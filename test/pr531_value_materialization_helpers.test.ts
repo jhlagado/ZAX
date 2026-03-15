@@ -31,7 +31,6 @@ function makeContext() {
     resolveScalarBinding: (_name: string) => undefined,
     resolveScalarKind: (_typeExpr: TypeExprNode) => undefined,
     sizeOfTypeExpr: (_typeExpr: TypeExprNode) => undefined,
-    preRoundSizeOfTypeExpr: (_typeExpr: TypeExprNode) => undefined,
     evalImmExpr: () => undefined,
     evalImmNoDiag: () => undefined,
     emitInstr: (head: string, operands: AsmOperandNode[]) => {

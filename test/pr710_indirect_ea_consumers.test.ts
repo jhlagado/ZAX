@@ -49,7 +49,6 @@ describe('#710 indirect ea consumers', () => {
           ? typeExpr.name
           : undefined,
       sizeOfTypeExpr: () => undefined,
-      preRoundSizeOfTypeExpr: () => undefined,
       evalImmExpr: () => undefined,
       evalImmNoDiag: () => undefined,
       emitInstr: (head, operands) => {
