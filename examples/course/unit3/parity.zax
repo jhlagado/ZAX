@@ -1,0 +1,47 @@
+; parity.zax
+;
+; Source/problem: compute odd parity for one byte.
+; Unit 3 example: toggle a parity bit while shifting through the source.
+
+export func parity_demo(): HL
+  var
+    working_value: byte = $D3
+    parity_value: byte = 0
+  end
+
+  ld a, 1
+  or a
+  while NZ
+    move a, working_value
+    or a
+    if Z
+      ld h, 0
+      move a, parity_value
+      ld l, a
+      ret
+    end
+
+    move a, working_value
+    and 1
+    if NZ
+      move a, parity_value
+      xor 1
+      move parity_value, a
+    end
+
+    move a, working_value
+    srl a
+    move working_value, a
+
+    ld a, 1
+    or a
+  end
+
+  ld h, 0
+  move a, parity_value
+  ld l, a
+end
+
+export func main()
+  parity_demo
+end
