@@ -1,7 +1,8 @@
 ; bst.zax
 ;
 ; Source/problem: search a binary search tree using addr-linked records.
-; Unit 7 example: pointer-typed traversal pressure with recursive descent.
+; Unit 7 example: recursive traversal using direct typed reinterpretation from
+; an addr parameter.
 
 type TreeNode
   value: byte
@@ -59,7 +60,7 @@ func bst_contains(node_ptr: addr, target_value: byte): HL
     ret
   end
 
-  move a, <TreeNode>hl.value
+  move a, <TreeNode>node_ptr.value
   move b, target_value
   cp b
   if Z
@@ -67,14 +68,12 @@ func bst_contains(node_ptr: addr, target_value: byte): HL
     ret
   end
   if C
-    move hl, node_ptr
-    move hl, <TreeNode>hl.right
+    move hl, <TreeNode>node_ptr.right
     bst_contains hl, target_value
     ret
   end
 
-  move hl, node_ptr
-  move hl, <TreeNode>hl.left
+  move hl, <TreeNode>node_ptr.left
   bst_contains hl, target_value
 end
 

@@ -1,7 +1,8 @@
 ; linked_list.zax
 ;
 ; Source/problem: traverse and sum a singly-linked list.
-; Unit 7 example: actual pointer typing through addr links plus typed reinterpretation.
+; Unit 7 example: addr-linked traversal using direct typed reinterpretation from
+; an addr local.
 
 type ListNode
   value: byte
@@ -55,15 +56,14 @@ export func list_sum(): HL
       ret
     end
 
-    move a, <ListNode>hl.value
+    move a, <ListNode>current_ptr.value
     ld e, a
     ld d, 0
     move hl, total_value
     add hl, de
     move total_value, hl
 
-    move hl, current_ptr
-    move hl, <ListNode>hl.next
+    move hl, <ListNode>current_ptr.next
     move current_ptr, hl
 
     ld a, 1
