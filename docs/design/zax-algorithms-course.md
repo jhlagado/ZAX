@@ -1,13 +1,13 @@
 # ZAX Algorithms Course — Outline, Goals, and Design Rationale
 
-*Status: proposal / designer briefing*
-*Audience: language designer, contributors, course authors*
+*Status: active — execution document*
+*Audience: course author, contributors*
 
 ---
 
 ## 1. Purpose
 
-This document proposes a structured course in ZAX built around classic short
+This document establishes a structured course in ZAX built around classic short
 algorithms from two foundational texts:
 
 - **Kernighan and Ritchie**, *The C Programming Language* (K&R)
@@ -389,8 +389,8 @@ const RingSize = 16
 const RingMask = RingSize - 1    ; = %00001111, assumes power-of-two
 
 type Ring
-  buf:  byte[16]    ; note: sizeof(Ring) = pow2(16+3) = 32 today;
-  head: byte        ;        exact-size layout (in progress) will give 19
+  buf:  byte[16]    ; sizeof(Ring) = 16 + 1 + 1 + 1 = 19 (exact-size layout)
+  head: byte
   tail: byte
   len:  byte
 end
@@ -407,11 +407,10 @@ end
 | Ring buffer pop | `select` on empty predicate, early return |
 | Ring buffer full/empty predicates | `func` returning `byte`, field compare |
 
-The ring buffer is also a good test for the exact-size layout stream: once
-power-of-two rounding is removed, `sizeof(Ring)` changes from 32 to 19, and
-any runtime-indexed array of rings will exercise the binary-decomposition
-multiply path. This makes the ring buffer a natural regression checkpoint for
-that stream.
+The ring buffer exercises exact-size layout directly: `sizeof(Ring) = 19`. A
+runtime-indexed array of rings uses the binary-decomposition multiply path
+(`×16 + ×2 + ×1` for stride 19). It is a concrete validation case for the
+exact-size lowering that landed in #817–820.
 
 #### 1F: Classic Puzzles and Recursion
 
@@ -639,7 +638,7 @@ than speculation.
 | Linked list, BST — untyped `ptr` fields, explicit casts, null-as-zero convention | Pointer-typing ergonomics — Tier 2 friction; self-referential record declarations would improve precision, not yet on roadmap |
 | Eight queens labeled exit | `break` / named exit — not yet on roadmap; course surfaces this |
 | Word frequency string ops | Standard `op` library — library workstream, separate from language/compiler roadmap |
-| Ring buffer with exact-size sizeof | Exact-size layout stream (#817–820) — active |
+| Ring buffer with exact-size sizeof | Exact-size layout stream (#817–820) — complete |
 
 Note: typed reinterpretation (`<Type>base.tail`) and grouped/ranged `select
 case` were roadmap items at course inception but are now implemented. The linked
@@ -717,11 +716,9 @@ end
 classic assembler interoperability and low-level interface tables. They are not
 for algorithm working data, which should always use typed declarations.
 
-**Exact-size layout is the accepted direction.** The compiler is migrating from
-power-of-two rounded `sizeof` to exact packed size. During the transition,
-examples should note where the sizeof of a composite type will change. Once the
-exact-size stream (#817–820) lands, `sizeof(Ring)` changes from 32 to 19 in
-the examples above.
+**Exact-size layout is implemented.** `sizeof` returns the exact packed size for
+all composite types. `sizeof(Ring)` = 19. Course examples use exact sizes
+directly.
 
 ---
 
@@ -751,7 +748,7 @@ expresses them awkwardly, the gap is precisely located.
 
 ---
 
-## 9. Course Structure (Proposed)
+## 9. Course Structure
 
 | Unit | Title | Algorithms | ZAX Constructs Introduced |
 |---|---|---|---|
@@ -770,30 +767,119 @@ author and the language — a record of what comes next.
 
 ---
 
-## 10. Next Steps
+## 10. Execution Plan
 
-1. **Write Unit 0 in full** — arithmetic and number theory. The existing
-   `examples/language-tour/02_fibonacci_args_locals.zax` sets the style
-   baseline. Unit 0 must match that style, use `move` throughout, and compile
-   clean against the current main.
+The course is written in tranches. Each tranche produces working, compiled
+example files, a style check against the `.asm` output, and a friction log
+feeding the roadmap companion document (`docs/planning/course-roadmap.md`).
 
-2. **Review Unit 0 examples against the compiler** — run every example, inspect
-   the `.asm` output, confirm that clean ZAX produces readable Z80.
+### Tranche 1 — Unit 0: Foundations
 
-3. **Document the first friction point** — whatever resists clean expression in
-   Unit 0 becomes the first roadmap input from the course.
+**Goal**: complete all Unit 0 arithmetic examples, establish the style baseline,
+confirm the compiler handles the unit cleanly.
 
-4. **Commission Unit 1** — once Unit 0 is stable, sorting and searching follow
-   as the first array-heavy unit.
+**Style baseline**: `examples/language-tour/02_fibonacci_args_locals.zax`.
+All Tranche 1 files must match that style: `move` throughout, explicit return
+registers, no unexplained register choices.
 
-Unit 0 is the right place to start because its algorithms are the simplest, the
-register contracts are clear, and the ZAX surface needed is fully implemented.
-Success in Unit 0 confirms the foundation; friction in Unit 0 means something
-more fundamental needs attention before the course can proceed.
+**Files to produce** under `examples/course/unit0/`:
+
+| File | Algorithm | Key ZAX surface |
+|---|---|---|
+| `power.zax` | Integer power (repeated multiply) | `func`, `while`, `word` params, return `HL` |
+| `gcd_iterative.zax` | Euclid GCD (iterative) | `while`, `if NZ`, subtraction remainder |
+| `gcd_recursive.zax` | Euclid GCD (recursive) | recursive `func`, IX frame across calls |
+| `sqrt_newton.zax` | Integer square root (Newton) | `while`, `sbc hl, de` convergence test |
+| `exp_squaring.zax` | Exponentiation by squaring | `if`, `sra` halving, shift-and-multiply |
+| `fibonacci.zax` | Fibonacci (iterative, extended) | `while`, two-variable rolling locals |
+| `digits.zax` | Decimal digit decomposition | division-by-10, `repeat`, character offset |
+
+Fibonacci already has a reference in `examples/language-tour/02_fibonacci_args_locals.zax`.
+The Unit 0 version extends it to a full table-generating form.
+
+**Support surface needed**: none beyond current main. Unit 0 is pure arithmetic —
+no `op` library, no arrays, no records.
+
+**Friction to log**: Unit 0 is expected to be clean. Any friction is a
+fundamental signal and should be logged before proceeding to Unit 1.
 
 ---
 
-*This document is a planning and design input. It is not a specification. It
-does not define language behavior. Its purpose is to orient the designer,
-inform contributors, and establish the course as a deliberate language feedback
-mechanism.*
+### Tranche 2 — Unit 1: Arrays and Loops
+
+**Goal**: produce the core sorting and searching examples. Introduce indexed
+array access and `select` ranges in context.
+
+**Files to produce** under `examples/course/unit1/`:
+
+| File | Algorithm |
+|---|---|
+| `insertion_sort.zax` | Insertion sort (byte array) |
+| `bubble_sort.zax` | Bubble sort with `swap op` |
+| `selection_sort.zax` | Selection sort |
+| `binary_search.zax` | Binary search (sorted byte array) |
+| `linear_search.zax` | Linear search with sentinel |
+| `prime_sieve.zax` | Eratosthenes sieve (`byte[256]`) |
+
+**Support surface needed**: a `swap op` for byte exchange will recur across
+sorting examples. Author it inline in `bubble_sort.zax` first; if it recurs
+in two or more files, factor it into a shared `ops.zax` for the unit.
+
+**Friction to log**: quicksort is intentionally deferred to Tranche 3 (Tier 2).
+If any Tranche 2 algorithm needs a software stack or multi-level loop exit,
+log it and defer — do not paper over the gap.
+
+---
+
+### Tranche 3 — Units 2 and 4: Strings and Records
+
+Unit 2 (strings) and Unit 4 (ring buffer) are coupled: both introduce the
+pointer-advance idiom and the first `op` library candidates. Build them
+together.
+
+Unit 2 surfaces `fetch_advance` as a reusable `op`. Unit 4 confirms
+`sizeof(Ring) = 19` and exercises the non-power-of-two indexing path.
+Any friction in Unit 4 with the exact-size lowering is a direct regression
+signal for #817–820.
+
+---
+
+### Tranche 4 — Units 3 and 5: Bits and Recursion
+
+Unit 3 (bit manipulation) is self-contained and validates `op` with `imm8`
+matchers. Unit 5 (Towers of Hanoi, recursive array operations) validates the IX
+frame under recursion. Both can proceed independently once Tranche 2 is stable.
+
+---
+
+### Tranche 5 — Units 6, 7, 8: Composition, Pointers, Gaps
+
+Unit 6 (RPN calculator) is the composition showcase — it uses every construct
+introduced to that point. Unit 7 (linked list, BST) is the friction showcase —
+write it clean and document the ergonomic gaps precisely. Unit 8 (Eight Queens)
+is the language-gap target — write it as close as possible, document the named
+exit gap, file the issue.
+
+---
+
+### Friction Log Protocol
+
+Every tranche must produce or update `docs/planning/course-roadmap.md` with
+any new friction entries. The format for each entry:
+
+```
+### [Unit X] [Algorithm name]
+
+**Workaround**: [what was actually written]
+**Desired expression**: [what you would write if the feature existed]
+**Gap type**: language / library / style
+**Recurrence**: [how many other examples share this gap]
+**Priority signal**: [one-off / common pattern / blocks multiple units]
+```
+
+---
+
+*This is the active execution document for the ZAX algorithms course. It
+defines the course structure, style rules, algorithm catalogue, and work
+sequence. For stream classification and issue-ready follow-up, see
+`docs/planning/course-roadmap.md`.*
