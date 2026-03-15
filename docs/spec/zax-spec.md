@@ -303,11 +303,10 @@ Type sizes (v0.1):
 - `sizeof(word)` = 2
 - `sizeof(addr)` = 2
 - `sizeof(ptr)` = 2
-- Composite storage sizes are rounded up to the next power of two.
-  - `pow2(n)` = smallest power of two ≥ `n` (and `pow2(0) = 0`).
-- `sizeof(T[n])` = `pow2(n * sizeof(T))`
-- `sizeof(record)` = `pow2(sum of field sizes)`
-- `sizeof(union)` = `pow2(max field size)`
+- Composite types use exact semantic sizes.
+- `sizeof(T[n])` = `n * sizeof(T)`
+- `sizeof(record)` = `sum of field sizes`
+- `sizeof(union)` = `max field size`
 
 ### 4.2 Type Aliases
 
@@ -380,8 +379,8 @@ export const Public = $8000
 Notes (v0.2):
 
 - `sizeof(Type)` and `offsetof(Type, fieldPath)` are compile-time built-ins.
-- `sizeof` returns storage size (power-of-2 for composites).
-- `offsetof` returns byte offset using storage-size field progression.
+- `sizeof` returns exact semantic size.
+- `offsetof` returns byte offset using exact-size field progression.
 
 ---
 
@@ -406,6 +405,7 @@ Layout:
 - Arrays are contiguous, row-major (C style).
 - Lowering computes `base + i * sizeof(T)` internally.
 - Lowering computes `base + r * sizeof(T[c]) + c * sizeof(T)` for nested arrays (row stride is `sizeof(T[c])`).
+- Semantic array stride is exact `sizeof(T)`. Current runtime-indexed composite lowering remains restricted to the implemented fast path until exact-scale lowering lands.
 
 Index forms (v0.1):
 
@@ -440,8 +440,8 @@ Layout rules:
 
 - Records must contain at least one field (empty records are a compile error in v0.1).
 - Fields are laid out in source order.
-- Each field occupies its full storage size (`sizeof(fieldType)`), which is power-of-2 rounded.
-- The record's total storage size is `pow2(sum of field sizes)`.
+- Each field occupies its exact semantic size (`sizeof(fieldType)`).
+- The record's total size is `sum of field sizes`.
 - `byte` fields are 1 byte; `word` fields are 2 bytes.
 - `addr` and `ptr` fields are 2 bytes (same as `word`).
 
@@ -483,7 +483,7 @@ Layout rules (v0.1):
 - Unions must contain at least one field (empty unions are a compile error in v0.1).
 - Union declarations are module-scope only.
 - All union fields start at offset 0 (overlay).
-- Union size is the maximum field size, rounded up to power-of-2: `sizeof(union) = pow2(max(sizeof(fieldType)))`.
+- Union size is the maximum field size: `sizeof(union) = max(sizeof(fieldType))`.
 
 Field access:
 
@@ -1416,17 +1416,17 @@ This section defines required source migration behavior for programs moving from
 
 ### 11.1 Required Source Updates
 
-1. Composite storage semantics (`array`/`record`/`union`) use power-of-2 storage sizes.
-   - Update any code that assumed packed composite sizes.
-   - `sizeof` and indexed addressing use storage size, not natural packed size.
+1. Composite semantic size (`array`/`record`/`union`) is exact packed size.
+   - Update any code that assumed power-of-two-rounded composite sizes.
+   - `sizeof` and field/array layout now use exact size.
 2. Runtime indexed addressing uses direct-register indexing for `arr[HL]`/`arr[DE]`/`arr[BC]`.
    - If legacy code intended indirect-byte indexing through `HL`, rewrite to `arr[(HL)]`.
 3. Typed scalar variables use value semantics in `LD` and typed call-argument positions.
    - Rewrite legacy scalar dereference forms (`(arg)`) to direct scalar forms (`arg`) for value loads/stores.
 4. Enum members require qualification.
    - Rewrite unqualified members (`Read`) to `EnumName.Member` (`Mode.Read`).
-5. `sizeof` and `offsetof` use storage-size rules.
-   - Recompute constants that depended on v0.1 packed-size assumptions.
+5. `sizeof` and `offsetof` use exact-size rules.
+   - Recompute constants that depended on earlier power-of-two composite sizing.
 6. Typed internal calls are preservation-safe at the language boundary.
    - `HL` is boundary-volatile for all typed calls (including `void`).
    - Non-`void` typed calls use the return-channel table (width drives preservation).
@@ -1460,7 +1460,7 @@ ld a, arg
 ld arg, a
 ```
 
-`sizeof` storage-size semantics:
+`sizeof` exact-size semantics:
 
 ```zax
 type Sprite
@@ -1470,8 +1470,7 @@ type Sprite
   flags: word
 end
 
-; v0.1 packed-oriented expectation would be 5
-; v0.2 storage-size result is 8
+; exact-size result is 5
 const SpriteBytes = sizeof(Sprite)
 ```
 
@@ -1493,7 +1492,7 @@ next_char
 - Compilers must emit an error for unqualified enum member references.
 - Compilers must emit an error when index expressions use unsupported forms for v0.2 grammar/semantics.
 - Compilers should emit diagnostics that distinguish typed-call boundary guarantees from raw Z80 `call` behavior.
-- Compilers may emit warnings when composite storage padding materially increases natural packed size.
+- Compilers may warn about non-power-of-two composite sizes only as a code-generation cost hint, not as a layout rule.
 - Compilers must emit an error for typed alias forms (`name: Type = rhs`) in function-local `var`.
 - Compilers must emit an error for non-scalar local storage declarations without alias initialization.
 
@@ -1622,12 +1621,12 @@ This appendix tracks migration-coverage status against the normative language ru
 
 ### C.1 Breaking Changes Checklist
 
-- [x] Composite storage semantics are power-of-2 for arrays/records/unions; padding is storage-visible for layout, `sizeof`, and indexing. (Sections 4.1, 5.1, 5.2, 5.3, 11.1)
+- [x] Composite semantic sizes are exact for arrays/records/unions; `sizeof` and layout use exact size. (Sections 4.1, 5.1, 5.2, 5.3, 11.1)
 - [x] Runtime index scaling is shift-only (`ADD HL,HL` chains); no multiply-based lowering for indexed composite access. (Sections 5.1, 11.1)
 - [x] `arr[HL]` is a 16-bit direct index; indirect byte-at-HL indexing uses `arr[(HL)]`. (Sections 5.1, 11.1, 11.2)
 - [x] Typed scalar variables use value semantics; legacy scalar paren-dereference examples are removed from normative guidance. (Sections 6.1, 7, 11.1, 11.2)
 - [x] Enum members require qualification (`EnumType.Member`); unqualified members are compile errors. (Sections 4.3, 11.1, 11.3)
-- [x] `sizeof` semantics are storage-size semantics (including composite padding), replacing v0.1 packed-oriented behavior. (Sections 4.1, 4.4, 11.1, 11.2)
+- [x] `sizeof` semantics are exact-size semantics for composites and scalars. (Sections 4.1, 4.4, 11.1, 11.2)
 - [x] `offsetof` rules are fully specified (records, nested constant-index paths, and union-member path behavior). (Sections 4.4, 5.2, 5.3)
 - [x] Typed internal call boundaries are preservation-safe with `HL` boundary-volatile for all typed calls; non-void returns publish via `HL`/`L`. (Sections 8.2, 11.1, 11.2)
 

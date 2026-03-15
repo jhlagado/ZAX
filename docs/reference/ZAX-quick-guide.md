@@ -116,7 +116,6 @@ Useful diagnostic options:
 | ----------------------- | ------------------------------------------------------------------- |
 | `--case-style <m>`      | Case-style lint: `off`, `upper`, `lower`, or `consistent`           |
 | `--op-stack-policy <m>` | Op stack-discipline diagnostics: `off`, `warn`, or `error`          |
-| `--type-padding-warn`   | Warn when composite type storage is padded to next power-of-2 size  |
 | `--raw-typed-call-warn` | Warn when raw `call` / `call cc,nn` targets a typed callable symbol |
 | `-I <dir>`              | Add import search path (repeatable)                                 |
 
@@ -203,15 +202,13 @@ A `data` block continues until the next module-scope declaration, directive, or 
 
 ### 2.4 Composite Storage Rule
 
-All composite storage — arrays, records, and unions — is rounded to the **next power of two**:
+Composite types use **exact semantic size**:
 
 ```
-sizeof(T[n])   = pow2(n × sizeof(T))
-sizeof(record) = pow2(sum of field storage sizes)
-sizeof(union)  = pow2(max field storage size)
+sizeof(T[n])   = n × sizeof(T)
+sizeof(record) = sum of field sizes
+sizeof(union)  = max field size
 ```
-
-where `pow2(n)` is the smallest power of two ≥ `n`, and `pow2(0) = 0`.
 
 Example:
 
@@ -222,25 +219,19 @@ type Sprite
   tile:  byte    ; 1 byte
   flags: word    ; 2 bytes
 end
-; field sum = 5, sizeof(Sprite) = pow2(5) = 8
-; 3 padding bytes follow flags
+; field sum = 5, sizeof(Sprite) = 5
 ```
 
-The padding bytes are present in the binary image. They are included in `sizeof` and in array stride computations. The compiler warns when implicit padding occurs (see `--type-padding-warn`). Designing fields to naturally sum to a power of two eliminates the padding.
+There is no implicit power-of-two padding in semantic layout. Power-of-two sizes still matter as a code-generation fast path, but not as a type-layout rule.
 
-### 2.5 Why This Rule Exists
+### 2.5 Why Power-of-Two Still Matters
 
-The Z80 has no hardware multiply instruction. Indexing into an array of composites requires computing `base + i × sizeof(element)`. When `sizeof(element)` is a power of two, that multiply is a chain of `ADD HL, HL` (left-shift-by-one) instructions — fast, compact, and requiring no helper routine:
+The Z80 has no hardware multiply instruction. Indexing into an array of composites requires computing `base + i × sizeof(element)`.
 
-| Element storage size | Shift chain to scale index |
-| -------------------- | -------------------------- |
-| 1                    | none                       |
-| 2                    | `ADD HL,HL` × 1            |
-| 4                    | `ADD HL,HL` × 2            |
-| 8                    | `ADD HL,HL` × 3            |
-| 16                   | `ADD HL,HL` × 4            |
+- When `sizeof(element)` is a power of two, lowering can use a pure shift chain (`ADD HL,HL`).
+- When `sizeof(element)` is not a power of two, lowering needs an exact shift/add sequence. That lowering work is staged separately; exact size is already the semantic rule.
 
-Non-power-of-two element sizes would require software multiplication at every indexed access site. The power-of-two rule makes indexed composite arrays practical without a multiply routine.
+So power-of-two sizes remain a performance consideration, but they are no longer part of semantic layout.
 
 ### 2.6 `sizeof` and `offsetof`
 
@@ -465,7 +456,7 @@ const BufferBytes  = sizeof(Sprite) * MaxSprites
 const BrXOff       = offsetof(Rect, bottomRight.x)   ; nested path
 ```
 
-`sizeof` returns storage size (power-of-2 rounded for composites). `offsetof` returns the byte offset of the named field using storage-size field progression.
+`sizeof` returns exact semantic size. `offsetof` returns the byte offset of the named field using exact-size field progression.
 
 ### 4.5 Enums as Compile-Time Constants
 
@@ -490,7 +481,7 @@ type MapAddr  addr        ; semantic alias for addr
 type Row      byte[32]    ; array type alias
 ```
 
-Aliases can be used as field types in records, parameter types in functions, and storage types in named `data` sections. An alias has the same storage size as its underlying type.
+Aliases can be used as field types in records, parameter types in functions, and storage types in named `data` sections. An alias has the same size as its underlying type.
 
 Inferred-length array aliases (`type T byte[]`) are **not** permitted. `T[]` is only valid in `data` declarations (with an initializer) and in function parameter position. It is not permitted in type aliases, record fields, local `var` declarations, or return types.
 
@@ -1507,11 +1498,10 @@ type Sprite
   tile:  byte     ; offset 2
   flags: word     ; offset 3
 end
-; field sum = 5, sizeof(Sprite) = pow2(5) = 8
-; 3 padding bytes follow flags in the 8-byte storage block
+; field sum = 5, sizeof(Sprite) = 5
 ```
 
-Fields are laid out in source order. Total storage size is rounded to the next power of two. The padding bytes are present in the binary and are included in `sizeof` and array stride computations.
+Fields are laid out in source order. Total record size is the exact sum of field sizes.
 
 Records must contain at least one field — an empty `type ... end` is a compile error.
 
@@ -1542,14 +1532,14 @@ source operand in `move rr, @path`.
 ### 9.3 `sizeof` and `offsetof` for Records
 
 ```zax
-const SpriteSize  = sizeof(Sprite)            ; = 8
+const SpriteSize  = sizeof(Sprite)            ; = 5
 const XOff        = offsetof(Sprite, x)       ; = 0
 const YOff        = offsetof(Sprite, y)       ; = 1
 const TileOff     = offsetof(Sprite, tile)    ; = 2
 const FlagsOff    = offsetof(Sprite, flags)   ; = 3
 ```
 
-`offsetof` is the byte offset of the named field from the start of the record, based on the sum of preceding field storage sizes. It does not include padding that might appear after the last field (padding is at the tail of the struct, contributing to `sizeof` but not to any field's offset).
+`offsetof` is the byte offset of the named field from the start of the record, based on the sum of preceding field sizes.
 
 Always use `sizeof` and `offsetof` in code. Never hardcode field offsets — if the record changes, the built-ins update automatically.
 
@@ -1562,13 +1552,13 @@ type Point
   x: word    ; 2 bytes
   y: word    ; 2 bytes
 end
-; sizeof(Point) = pow2(4) = 4
+; sizeof(Point) = 4
 
 type Rect
   topLeft:     Point    ; 4 bytes at offset 0
   bottomRight: Point    ; 4 bytes at offset 4
 end
-; sizeof(Rect) = pow2(8) = 8
+; sizeof(Rect) = 8
 
 section data vars at $8000
   viewport: Rect = { 0, 0, 320, 200 }   ; tl.x, tl.y, br.x, br.y
@@ -1600,7 +1590,7 @@ const BrYOff = offsetof(Rect, bottomRight.y)   ; = 6
 
 ### 9.5 Arrays of Records
 
-When you declare an array of a record type, the element stride is `sizeof(record)` — power-of-2 rounded. This keeps the shift-only index scaling rule intact:
+When you declare an array of a record type, the element stride is the exact `sizeof(record)`. Power-of-two sizes remain the fast path; exact-size runtime scaling is being completed as a lowering follow-up.
 
 ```zax
 const MaxSprites = 16
@@ -1625,14 +1615,14 @@ end
 
 The index here is `HL` holding a 0-based element number (0..15). The compiler emits the shift chain for `HL × sizeof(Sprite)` — three `ADD HL, HL` for a stride of 8 — then adds the field offset for `.x` (which is 0, so no extra add).
 
-**`sizeof(Sprite[MaxSprites])` = pow2(16 × 8) = pow2(128) = 128 bytes.** The array itself also follows the power-of-2 rule.
+**`sizeof(Sprite[MaxSprites])` = 16 × 5 = 80 bytes.**
 
 ### 9.6 Designing for Clean Sizes
 
-Implicit padding is legal but adds silent bytes to the binary. Design record fields to naturally sum to a power of two, and use explicit pad fields when you need to document the intent:
+Power-of-two field totals are still useful because indexed access is cheaper, but they are no longer required for correct layout. Use explicit pad fields only when you want a documented hardware or binary-layout gap:
 
 ```zax
-; Natural sum = 5 — implicitly padded to 8 (3 silent bytes)
+; Natural sum = 5 — exact size remains 5
 type SpriteSloppy
   x:     byte
   y:     byte
@@ -1640,7 +1630,7 @@ type SpriteSloppy
   flags: word
 end
 
-; Explicit pad fields — sum = 8, no implicit padding, intent clear
+; Explicit pad fields — sum = 8, intent clear when a fixed external layout needs it
 type SpriteClean
   x:     byte
   y:     byte
@@ -1650,21 +1640,21 @@ type SpriteClean
   pad1:  byte
   pad2:  byte
 end
-; sizeof(SpriteClean) = pow2(8) = 8 — same storage, zero waste
+; sizeof(SpriteClean) = 8
 ```
 
-Both have the same storage size. The `--type-padding-warn` option will warn for `SpriteSloppy` and not for `SpriteClean`.
+They now have different semantic sizes. Use explicit pad fields only when that larger size is intentional.
 
 ### 9.7 Unions
 
-A union overlays multiple field interpretations on the same memory region. All fields start at **offset 0**. The union's storage size is the maximum field size, rounded to the next power of two:
+A union overlays multiple field interpretations on the same memory region. All fields start at **offset 0**. The union's exact size is the maximum field size:
 
 ```zax
 union Overlay
   w:  word     ; 2 bytes at offset 0
   lo: byte     ; 1 byte  at offset 0 — same address as w's low byte
 end
-; sizeof(Overlay) = pow2(max(2,1)) = pow2(2) = 2
+; sizeof(Overlay) = max(2,1) = 2
 ```
 
 There are no runtime tags, no type narrowing, and no safety checking. A union is purely a layout description.
@@ -1739,7 +1729,7 @@ end
 - At least one field is required — an empty union is a compile error.
 - Union declarations are module-scope only.
 - All fields start at offset 0.
-- `sizeof(union) = pow2(max field storage size)`.
+- `sizeof(union) = max field size`.
 - `offsetof(union, field)` is always 0 for any field.
 - Unions may contain records as fields (as in `SplitWord` above). Records may contain unions as field types.
 
@@ -1753,7 +1743,7 @@ type MapAddr  addr         ; semantic alias for addr
 type ScanLine byte[40]     ; array type alias — 40-byte row
 ```
 
-Aliases can be used as field types in records, parameter types in functions, and storage types in named `data` sections. An alias has the same storage size as its underlying type.
+Aliases can be used as field types in records, parameter types in functions, and storage types in named `data` sections. An alias has the same size as its underlying type.
 
 Restrictions:
 
@@ -1766,7 +1756,7 @@ Restrictions:
 
 **Use unions for multi-width views of the same bytes.** The classic case is reading a 16-bit word either as a unit or as its two constituent bytes. A union of `word` and a `BytePair` record is the idiomatic form.
 
-**Design record fields to sum to a power of two.** Check `sizeof` against your field sum. If they differ, you have implicit padding — decide whether to accept it or add explicit pad fields to document the choice.
+**Prefer power-of-two composite sizes only when indexed-access cost matters.** Exact size is the semantic rule; power-of-two is only a performance heuristic.
 
 **Never hardcode field offsets.** Use `offsetof` everywhere layout arithmetic appears. A record refactor that changes field order or adds a field will silently break any hardcoded offset constant; `offsetof` updates automatically.
 
@@ -2094,7 +2084,7 @@ type UartRegs
   tx_data: byte     ; offset 2
   rx_data: byte     ; offset 3
 end
-; sizeof(UartRegs) = pow2(4) = 4
+; sizeof(UartRegs) = 4
 
 section data io at $FF80
   uart: UartRegs
@@ -2193,7 +2183,7 @@ type Entity
   active: byte
   speed:  byte
 end
-; sizeof(Entity) = pow2(4) = 4  — exactly a power of two, no padding
+; sizeof(Entity) = 4  — already a power of two, so indexing stays on the fast path
 
 const MaxEntities = 16
 
@@ -2225,7 +2215,7 @@ Key properties:
 
 - `HL` holds the 0-based element index, not a byte offset. The compiler emits the scaling shift chain (`sizeof(Entity) = 4` → two `ADD HL, HL` instructions) for each indexed access.
 - Field accesses inside the loop (`entities[HL].active`, `entities[HL].x`) use value semantics — the compiler emits the dereference.
-- Because `sizeof(Entity)` is exactly 4, there is no implicit padding and no surprise in `sizeof` or stride.
+- Because `sizeof(Entity)` is 4, indexing stays on the shift-only fast path.
 - `djnz` uses `B` as the counter. Keep `B` free inside the loop body; don't use it for arithmetic without saving first.
 
 ---
@@ -2385,7 +2375,7 @@ When deciding which tool to use:
 
 Working in ZAX means keeping the lowering predictable. A few habits help:
 
-- **Design record fields to sum to a power of two.** Implicit padding is legal but adds silent bytes. Either add explicit pad fields or redesign the record.
+- **Prefer power-of-two composite sizes only when access cost matters.** Exact size is authoritative; use explicit pad fields only when an external binary layout requires them.
 - **Keep index expressions within the valid index forms.** Only constant, 8-bit register, 16-bit register, `(HL)`, and `(IX/IY±d)` are valid inside `[...]`. Stage any pre-computation into a register first.
 - **Establish flags immediately before `if`/`while`/`until`.** The condition is tested at the keyword using whatever flags are current. A `ld` between your compare and your `if` will overwrite the flags silently on Z80.
 - **Keep `op` bodies small and mechanical.** If an op body is doing significant work, consider whether a `func` with its typed boundary guarantees would be clearer.
