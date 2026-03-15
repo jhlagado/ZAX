@@ -1,0 +1,63 @@
+; array_reverse_recursive.zax
+;
+; Source/problem: recursive in-place array reversal.
+; Unit 5 example: recurse toward the middle while swapping endpoints.
+
+const LastIndex = 5
+
+section data vars at $8000
+  numbers: byte[6] = { 1, 2, 3, 4, 5, 6 }
+end
+
+func swap_values(left_index: byte, right_index: byte)
+  var
+    left_value: byte = 0
+    right_value: byte = 0
+  end
+
+  move l, left_index
+  move a, numbers[L]
+  move left_value, a
+
+  move l, right_index
+  move a, numbers[L]
+  move right_value, a
+
+  move l, left_index
+  move a, right_value
+  move numbers[L], a
+
+  move l, right_index
+  move a, left_value
+  move numbers[L], a
+end
+
+func reverse_range(left_index: byte, right_index: byte)
+  var
+    next_left: byte = 0
+    next_right: byte = 0
+  end
+
+  move a, left_index
+  move b, right_index
+  cp b
+  if NC
+    ret
+  end
+
+  swap_values left_index, right_index
+
+  move a, left_index
+  inc a
+  move next_left, a
+
+  move a, right_index
+  dec a
+  move next_right, a
+
+  reverse_range next_left, next_right
+end
+
+export func main()
+  reverse_range 0, LastIndex
+end

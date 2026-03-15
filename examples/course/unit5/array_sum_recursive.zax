@@ -1,0 +1,43 @@
+; array_sum_recursive.zax
+;
+; Source/problem: recursive sum of a byte array.
+; Unit 5 example: recurse on the tail and add the current element on unwind.
+
+const ItemCount = 6
+
+section data vars at $8000
+  numbers: byte[6] = { 3, 1, 4, 1, 5, 9 }
+end
+
+func sum_from(index_value: byte): HL
+  var
+    next_index: byte = 0
+    current_value: byte = 0
+  end
+
+  move a, index_value
+  cp ItemCount
+  if Z
+    ld hl, 0
+    ret
+  end
+
+  move l, index_value
+  move a, numbers[L]
+  move current_value, a
+
+  move a, index_value
+  inc a
+  move next_index, a
+
+  sum_from next_index
+
+  move a, current_value
+  ld e, a
+  ld d, 0
+  add hl, de
+end
+
+export func main()
+  sum_from 0
+end
