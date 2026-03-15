@@ -1,0 +1,67 @@
+; atoi.zax
+;
+; Source/problem: parse decimal digits into a word value.
+; Unit 2 example: pointer walking plus repeated scaling by 10.
+
+section data vars at $8000
+  number_text: byte[6] = { '1', '2', '3', '4', 0, 0 }
+end
+
+func times_ten(value_word: word): HL
+  push de
+  move hl, value_word
+  ld d, h
+  ld e, l
+  add hl, hl
+  add hl, hl
+  add hl, de
+  add hl, hl
+  pop de
+end
+
+export func atoi_demo(): HL
+  var
+    scan_ptr: word = 0
+    result_value: word = 0
+    digit_value: byte = 0
+  end
+
+  move hl, @number_text
+  move scan_ptr, hl
+
+  ld a, 1
+  or a
+  while NZ
+    move hl, scan_ptr
+    ld a, (hl)
+    or a
+    if Z
+      move hl, result_value
+      ret
+    end
+
+    sub '0'
+    move digit_value, a
+
+    times_ten result_value
+
+    move a, digit_value
+    ld e, a
+    ld d, 0
+    add hl, de
+    move result_value, hl
+
+    move hl, scan_ptr
+    inc hl
+    move scan_ptr, hl
+
+    ld a, 1
+    or a
+  end
+
+  move hl, result_value
+end
+
+export func main()
+  atoi_demo
+end
