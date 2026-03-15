@@ -151,6 +151,52 @@ recurs across enough Unit 1/2 files.
 **Priority signal**: medium; likely a support-library candidate after Unit 1 is
 complete, but not before.
 
+### [Unit 2] Pointer-advance idiom
+
+**Workaround**: make the pattern explicit with a local helper `op`, e.g.
+`copy_and_advance(src_ptr: HL, dst_ptr: DE)` in `strcpy.zax`, while other files
+still spell out the raw `ld` / `inc` sequence inline.
+**Desired expression**: likely a small shared helper-op surface once recurrence
+across Unit 2 is fully measured.
+**Gap type**: library
+**Recurrence**: recurring across the string examples.
+**Priority signal**: medium-high; this is now concrete and should be reviewed
+as a likely support-library candidate after the tranche settles.
+
+### [Unit 2] Arithmetic helper recurrence in string conversion
+
+**Workaround**: keep helpers like `times_ten` and `div_u16` local to `atoi.zax`
+and `itoa.zax`.
+**Desired expression**: not a language feature; possibly a later shared helper
+surface if the same arithmetic scaffolding recurs outside string conversion.
+**Gap type**: library
+**Recurrence**: present in `atoi.zax` and `itoa.zax`, not yet broadly enough to
+justify extraction.
+**Priority signal**: medium-low; record it, but do not split it into a helper
+stream yet.
+
+### [Unit 2] Typed-storage `move` vs raw pointer/immediate work
+
+**Workaround**: use `move` for typed storage and raw `ld` for pointer-register
+and immediate work in the string loops.
+**Desired expression**: none established yet. This still reads as the intended
+language boundary, not a defect.
+**Gap type**: style
+**Recurrence**: recurring across Unit 2.
+**Priority signal**: low; teach it explicitly rather than open a language
+issue.
+
+### [Unit 4] Aggregate zero-initializer friction
+
+**Workaround**: rely on implicit zero initialization for `Entry[5]` instead of
+writing an explicit `= {}` aggregate initializer in the declaration.
+**Desired expression**: clarify or extend aggregate initializer support for this
+case if examples keep wanting explicit zero-initialized aggregate declarations.
+**Gap type**: language candidate / design clarification
+**Recurrence**: currently observed in `ring_buffer.zax`.
+**Priority signal**: medium-low; real example pressure exists, but only from one
+example so far.
+
 ---
 
 ## Issue-Ready Sequence
