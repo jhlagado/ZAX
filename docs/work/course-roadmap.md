@@ -56,14 +56,14 @@ The examples themselves, organized by tranche. This is the primary work queue.
 | Tranche | Unit | Files | Status |
 |---|---|---|---|
 | 1 | 0 — Foundations | `power`, `gcd_iterative`, `gcd_recursive`, `sqrt_newton`, `exp_squaring`, `fibonacci`, `digits` | complete |
-| 2 | 1 — Arrays and Loops | `insertion_sort`, `bubble_sort`, `selection_sort`, `binary_search`, `linear_search`, `prime_sieve` | in progress |
-| 3 | 2 — Strings | `strlen`, `strcpy`, `strcmp`, `strcat`, `str_reverse`, `atoi`, `itoa` | pending |
-| 3 | 4 — Records | `ring_buffer` (init, push, pop, predicates) | pending |
-| 4 | 3 — Bit Patterns | `popcount`, `bit_reverse`, `parity`, `getbits` | pending |
-| 4 | 5 — Recursion | `hanoi`, `array_sum_recursive`, `array_reverse_recursive` | pending |
-| 5 | 6 — Composition | `rpn_calculator` | pending |
-| 5 | 7 — Pointer Structures | `linked_list`, `bst` | pending |
-| 5 | 8 — Gaps and Futures | `eight_queens` | pending |
+| 2 | 1 — Arrays and Loops | `insertion_sort`, `bubble_sort`, `selection_sort`, `binary_search`, `linear_search`, `prime_sieve` | complete |
+| 3 | 2 — Strings | `strlen`, `strcpy`, `strcmp`, `strcat`, `str_reverse`, `atoi`, `itoa` | complete |
+| 3 | 4 — Records | `ring_buffer` (init, push, pop, predicates) | complete |
+| 4 | 3 — Bit Patterns | `popcount`, `bit_reverse`, `parity`, `getbits` | complete |
+| 4 | 5 — Recursion | `hanoi`, `array_sum_recursive`, `array_reverse_recursive` | complete |
+| 5 | 6 — Composition | `rpn_calculator` | complete |
+| 5 | 7 — Pointer Structures | `linked_list`, `bst` | complete |
+| 5 | 8 — Gaps and Futures | `eight_queens` | complete |
 
 ---
 
@@ -196,6 +196,43 @@ case if examples keep wanting explicit zero-initialized aggregate declarations.
 **Recurrence**: currently observed in `ring_buffer.zax`.
 **Priority signal**: medium-low; real example pressure exists, but only from one
 example so far.
+
+### [Unit 6] Software-stack storage-to-storage awkwardness
+
+**Workaround**: software-stack push/pop style movement often has to bounce
+through `HL` when moving values between typed stack storage and other storage
+locations.
+**Desired expression**: not settled yet. This is real pressure on software-stack
+idioms, but it is not yet clear whether the answer is a helper-op/library
+surface or a language feature.
+**Gap type**: language/library candidate
+**Recurrence**: clearly visible in `rpn_calculator.zax`.
+**Priority signal**: medium; concrete enough to keep watching, but not yet ready
+to harden into a specific solution.
+
+### [Unit 7] Pointer-heavy traversal verbosity
+
+**Workaround**: pointer traversal typically takes the form `move hl, ptr` then
+`<Type>hl.field`, repeating through each traversal step.
+**Desired expression**: measure whether pointer-typing ergonomics need language
+work, but do not jump straight to a solution. The current examples are honest
+and workable.
+**Gap type**: language candidate / ergonomics
+**Recurrence**: recurring across `linked_list.zax` and `bst.zax`.
+**Priority signal**: medium-high; this is now grounded in multiple real
+examples.
+
+### [Unit 8] Structured loop escape pressure (`break`, likely `continue`)
+
+**Workaround**: use explicit state and early returns to simulate structured loop
+escape in the backtracking search.
+**Desired expression**: ordinary structured `break`, and likely `continue` as
+well. The strongest pressure from this tranche is not named exit; it is basic
+loop escape.
+**Gap type**: language
+**Recurrence**: exposed most clearly by `eight_queens.zax`.
+**Priority signal**: high; this is the clearest new language issue candidate
+from the course so far.
 
 ---
 
