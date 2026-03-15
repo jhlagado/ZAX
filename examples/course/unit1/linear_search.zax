@@ -1,0 +1,55 @@
+; linear_search.zax
+;
+; Source/problem: linear search over a byte array.
+; Unit 1 example: scan until a matching element is found.
+
+const ItemCount = 8
+
+section data vars at $8000
+  values: byte[8] = { 9, 1, 4, 7, 3, 8, 2, 6 }
+end
+
+func linear_search(target_value: byte): HL
+  var
+    scan_index: byte = 0
+    probe_value: byte = 0
+  end
+
+  ld a, 1
+  or a
+  while NZ
+    move a, scan_index
+    cp ItemCount
+    if NC
+      ld hl, $FFFF
+      ret
+    end
+
+    move l, scan_index
+    move a, values[L]
+    move probe_value, a
+
+    move a, target_value
+    move b, probe_value
+    cp b
+    if Z
+      ld h, 0
+      move a, scan_index
+      ld l, a
+      ret
+    end
+
+    move a, scan_index
+    inc a
+    move scan_index, a
+
+    ld a, 1
+    or a
+  end
+
+  ld hl, $FFFF
+end
+
+export func main()
+  linear_search 8
+end

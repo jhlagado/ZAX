@@ -1,0 +1,81 @@
+; prime_sieve.zax
+;
+; Source/problem: sieve of Eratosthenes over a small flag array.
+; Unit 1 example: repeated marking of composite multiples.
+
+const Limit = 16
+const StopFactor = 5
+
+section data vars at $8000
+  is_prime: byte[16] = { 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
+end
+
+export func prime_sieve()
+  var
+    factor_index: byte = 2
+    multiple_index: byte = 0
+  end
+
+  ld a, 1
+  or a
+  while NZ
+    move a, factor_index
+    cp StopFactor
+    if NC
+      ret
+    end
+
+    move l, factor_index
+    move a, is_prime[L]
+    or a
+    if Z
+      move a, factor_index
+      inc a
+      move factor_index, a
+      ld a, 1
+      or a
+    end
+
+    if NZ
+      move a, factor_index
+      move b, factor_index
+      add a, b
+      move multiple_index, a
+
+      ld a, 1
+      or a
+      while NZ
+        move a, multiple_index
+        cp Limit
+        if NC
+          ld a, 0
+          or a
+        end
+        if C
+          move l, multiple_index
+          ld a, 0
+          move is_prime[L], a
+
+          move a, multiple_index
+          move b, factor_index
+          add a, b
+          move multiple_index, a
+
+          ld a, 1
+          or a
+        end
+      end
+
+      move a, factor_index
+      inc a
+      move factor_index, a
+
+      ld a, 1
+      or a
+    end
+  end
+end
+
+export func main()
+  prime_sieve
+end
