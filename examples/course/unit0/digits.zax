@@ -1,0 +1,72 @@
+; digits.zax
+;
+; Source/problem: decimal digit counting by repeated division.
+; Unit 0 foundations example: count decimal digits by repeated division.
+
+func div_u16(dividend: word, divisor: word): HL
+  var
+    quotient: word = 0
+    remainder: word = 0
+  end
+
+  move hl, dividend
+  move remainder, hl
+
+  while NZ
+    move hl, remainder
+    move de, divisor
+    xor a
+    sbc hl, de
+    if C
+      move hl, quotient
+      ret
+    end
+
+    move remainder, hl
+    move hl, quotient
+    inc hl
+    move quotient, hl
+
+    ld a, 1
+    or a
+  end
+
+  move hl, quotient
+end
+
+func decimal_digits(value: word): HL
+  var
+    remaining: word = 0
+    count: word = 1
+  end
+
+  move hl, value
+  move remaining, hl
+
+  while NZ
+    move hl, remaining
+    ld de, 10
+    xor a
+    sbc hl, de
+    if C
+      move hl, count
+      ret
+    end
+
+    div_u16 remaining, 10
+    move remaining, hl
+
+    move hl, count
+    inc hl
+    move count, hl
+
+    ld a, 1
+    or a
+  end
+
+  move hl, count
+end
+
+export func main()
+  decimal_digits 12345
+end
