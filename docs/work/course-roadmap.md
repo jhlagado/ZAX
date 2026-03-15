@@ -55,8 +55,8 @@ The examples themselves, organized by tranche. This is the primary work queue.
 
 | Tranche | Unit | Files | Status |
 |---|---|---|---|
-| 1 | 0 — Foundations | `power`, `gcd_iterative`, `gcd_recursive`, `sqrt_newton`, `exp_squaring`, `fibonacci`, `digits` | **next** |
-| 2 | 1 — Arrays and Loops | `insertion_sort`, `bubble_sort`, `selection_sort`, `binary_search`, `linear_search`, `prime_sieve` | pending |
+| 1 | 0 — Foundations | `power`, `gcd_iterative`, `gcd_recursive`, `sqrt_newton`, `exp_squaring`, `fibonacci`, `digits` | complete |
+| 2 | 1 — Arrays and Loops | `insertion_sort`, `bubble_sort`, `selection_sort`, `binary_search`, `linear_search`, `prime_sieve` | in progress |
 | 3 | 2 — Strings | `strlen`, `strcpy`, `strcmp`, `strcat`, `str_reverse`, `atoi`, `itoa` | pending |
 | 3 | 4 — Records | `ring_buffer` (init, push, pop, predicates) | pending |
 | 4 | 3 — Bit Patterns | `popcount`, `bit_reverse`, `parity`, `getbits` | pending |
@@ -101,7 +101,41 @@ instruction sequence with no unexpected spill/reload pairs.
 
 *Entries added as tranches are completed. Format defined in the course doc §10.*
 
-*(empty — no examples written yet)*
+### [Unit 1] Named-constant local initialization
+
+**Workaround**: local `var` initializers that wanted a named constant such as
+`LastIndex` were rewritten as imperative setup in the function body, e.g.
+`ld hl, LastIndex` / `move high_index, hl` or `ld a, LastIndex` /
+`move pass_last, a`.
+**Desired expression**: allow named constants in local `var` initializers, e.g.
+`high_index: word = LastIndex`.
+**Gap type**: language
+**Recurrence**: surfaced in at least `binary_search.zax` and `bubble_sort.zax`
+during Unit 1 authoring.
+**Priority signal**: common pattern; directly harms readability of algorithm
+setup.
+
+### [Unit 1] Typed-storage `move` vs immediate loads
+
+**Workaround**: keep raw `ld` for register/immediate loads and reserve `move`
+for typed storage, e.g. `ld a, LastIndex` followed by `move pass_last, a`.
+**Desired expression**: none established yet. This currently looks like the
+intended language boundary rather than a defect.
+**Gap type**: style
+**Recurrence**: recurring in Unit 1 array examples.
+**Priority signal**: low; teach the boundary explicitly rather than open a
+language issue now.
+
+### [Unit 1] Byte-array swap/load-store scaffolding
+
+**Workaround**: keep byte-array swap and load/store helper patterns inline in
+each sorting example instead of factoring shared helpers.
+**Desired expression**: a small shared `op` library if the same scaffolding
+recurs across enough Unit 1/2 files.
+**Gap type**: library
+**Recurrence**: recurring across the sorting examples.
+**Priority signal**: medium; likely a support-library candidate after Unit 1 is
+complete, but not before.
 
 ---
 
