@@ -56,17 +56,8 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
     }
   };
 
-  const getPow2ShiftCount = (elemSize: number | undefined): number | undefined => {
-    if (elemSize === undefined) return undefined;
-    let n = elemSize;
-    let shiftCount = 0;
-    while (n > 1 && (n & 1) === 0) {
-      n >>= 1;
-      shiftCount++;
-    }
-    if (n !== 1 || shiftCount < 1 || shiftCount > 15) return undefined;
-    return shiftCount;
-  };
+  const isValidExactSize = (elemSize: number | undefined): elemSize is number =>
+    elemSize !== undefined && Number.isInteger(elemSize) && elemSize >= 1;
 
   const buildEaBytePipeline = (ea: EaExprNode, span: SourceSpan): StepPipeline | null => {
     if (ea.kind === 'EaIndex') {
@@ -163,7 +154,7 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
       if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return null;
       if (baseResolved.kind === 'indirect') return null;
       const elemSize = ctx.sizeOfTypeExpr(baseType.element);
-      if (getPow2ShiftCount(elemSize) === undefined || elemSize === undefined) return null;
+      if (!isValidExactSize(elemSize)) return null;
       const wideElemSize = elemSize;
 
       if (ea.index.kind === 'IndexImm') {
@@ -241,7 +232,7 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
     const scalarKind = resolved.typeExpr ? ctx.resolveScalarKind(resolved.typeExpr) : undefined;
     const elemSize: number | undefined = (resolved as { elemSize?: number }).elemSize ?? 2;
     if (scalarKind !== 'word' && scalarKind !== 'addr') return null;
-    if (getPow2ShiftCount(elemSize) === undefined) return null;
+    if (!isValidExactSize(elemSize)) return null;
     if (resolved.kind === 'abs') return EAW_GLOB_CONST(resolved.baseLower, resolved.addend, elemSize);
     if (resolved.kind === 'stack') return EAW_FVAR_CONST(resolved.ixDisp, 0, elemSize);
     return null;
