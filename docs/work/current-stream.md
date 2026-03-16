@@ -21,9 +21,9 @@ direction.
 1. Keep the spec, quick guide, and user-facing examples aligned with the
    implemented language.
 2. Continue parser/grammar convergence work.
-3. Stage helper/library follow-up from the course before opening new language
-   streams.
-4. Keep post-course language work evidence-driven and narrow.
+3. Review assignment syntax as a clearer replacement for `move`.
+4. Stage helper/library follow-up from the course before opening broader
+   language streams.
 
 ### Deferred until re-planned
 
