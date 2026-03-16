@@ -407,7 +407,7 @@ export function parseAsmInstruction(
   }
 
   if (operands.some((op) => op.kind === 'Ea' && op.explicitAddressOf)) {
-    diag(diagnostics, filePath, `"@<path>" is only supported with "move" in this phase.`, {
+    diag(diagnostics, filePath, `"@<path>" is only supported with ":=" (legacy "move" also works) in this phase.`, {
       line: instrSpan.start.line,
       column: instrSpan.start.column,
     });
