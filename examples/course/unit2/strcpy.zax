@@ -16,8 +16,8 @@ section data vars at $8000
 end
 
 export func strcpy_demo()
-  move hl, @source_text
-  move de, @target_text
+  hl := @source_text
+  de := @target_text
 
   ld a, 1
   or a

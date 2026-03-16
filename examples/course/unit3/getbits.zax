@@ -15,20 +15,20 @@ export func getbits_demo(): HL
   ld a, 1
   or a
   while NZ
-    move a, offset_value
+    a := offset_value
     or a
     if Z
       ld a, 0
       or a
     end
     if NZ
-      move a, working_value
+      a := working_value
       srl a
-      move working_value, a
+      working_value := a
 
-      move a, offset_value
+      a := offset_value
       dec a
-      move offset_value, a
+      offset_value := a
 
       ld a, 1
       or a
@@ -38,42 +38,42 @@ export func getbits_demo(): HL
   ld a, 1
   or a
   while NZ
-    move a, width_value
+    a := width_value
     or a
     if Z
       ld h, 0
-      move a, result_value
+      a := result_value
       ld l, a
       ret
     end
 
-    move a, working_value
+    a := working_value
     and 1
     if NZ
-      move a, result_value
+      a := result_value
       move b, bit_mask
       or b
-      move result_value, a
+      result_value := a
     end
 
-    move a, working_value
+    a := working_value
     srl a
-    move working_value, a
+    working_value := a
 
-    move a, bit_mask
+    a := bit_mask
     add a, a
-    move bit_mask, a
+    bit_mask := a
 
-    move a, width_value
+    a := width_value
     dec a
-    move width_value, a
+    width_value := a
 
     ld a, 1
     or a
   end
 
   ld h, 0
-  move a, result_value
+  a := result_value
   ld l, a
 end
 

@@ -10,26 +10,26 @@ func hanoi_count(disks_count: byte, source_peg: byte, spare_peg: byte, target_pe
     right_count: word = 0
   end
 
-  move a, disks_count
+  a := disks_count
   or a
   if Z
     ld hl, 0
     ret
   end
 
-  move a, disks_count
+  a := disks_count
   dec a
-  move reduced_count, a
+  reduced_count := a
 
   hanoi_count reduced_count, source_peg, target_peg, spare_peg
-  move left_count, hl
+  left_count := hl
 
   hanoi_count reduced_count, spare_peg, source_peg, target_peg
-  move right_count, hl
+  right_count := hl
 
-  move hl, left_count
+  hl := left_count
   inc hl
-  move de, right_count
+  de := right_count
   add hl, de
 end
 

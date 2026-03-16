@@ -772,17 +772,17 @@ Conceptually, an `ea` is a base storage location plus a sequence of path segment
 
 Value semantics note (current):
 
-- Bare scalar variables use value semantics in ordinary `move` and call contexts.
-- `rec.field` and `arr[idx]` are storage-path expressions. In scalar value/store contexts (for example `move A, rec.field`, `move rec.field, A`), the compiler inserts the required load/store lowering.
+- Bare scalar variables use value semantics in ordinary `:=` assignment, transitional `move`, and call contexts.
+- `rec.field` and `arr[idx]` are storage-path expressions. In scalar value/store contexts (for example `a := rec.field`, `rec.field := a`), the compiler inserts the required load/store lowering.
 - `<Type>base.tail` is also a storage-path expression. It supplies the base
   type explicitly at the access site, then applies ordinary field/index
   traversal.
 - In aggregate contexts (for example passing an array/record parameter), the compiler passes the storage reference transparently.
-- `@path` is the source-level address-of form for typed storage paths. In v1 it is accepted only as the source operand in `move rr, @path`:
+- `@path` is the source-level address-of form for typed storage paths. In v1 it is accepted only on the source side of `rr := @path` (with transitional `move rr, @path` still supported):
 
   ```zax
-  move hl, @player.flags
-  move de, @sprites[bc].x
+  hl := @player.flags
+  de := @sprites[bc].x
   ```
 
 Precedence (v0.1):
@@ -2658,12 +2658,12 @@ This is permitted. Any save/restore discipline is explicitly authored in the op 
 
 ### 12.4 Calling Ops from Functions vs Calling Functions from Ops
 
-| Scenario                | Effect                                                                              |
-| ----------------------- | ----------------------------------------------------------------------------------- |
-| Function calls op       | Op expands inline; stack/register effects are exactly those of the emitted sequence |
+| Scenario                | Effect                                                                                         |
+| ----------------------- | ---------------------------------------------------------------------------------------------- |
+| Function calls op       | Op expands inline; stack/register effects are exactly those of the emitted sequence            |
 | Op calls function       | Full call sequence generated; typed call boundary remains preservation-safe for internal funcs |
-| Op calls op             | Nested inline expansion; no call overhead                                           |
-| Function calls function | Normal call/ret; stack frame management                                             |
+| Op calls op             | Nested inline expansion; no call overhead                                                      |
+| Function calls function | Normal call/ret; stack frame management                                                        |
 
 ---
 

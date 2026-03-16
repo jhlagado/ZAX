@@ -9,29 +9,29 @@ func div_u16(dividend: word, divisor: word): HL
     remainder: word = 0
   end
 
-  move hl, dividend
-  move remainder, hl
+  hl := dividend
+  remainder := hl
 
   while NZ
-    move hl, remainder
-    move de, divisor
+    hl := remainder
+    de := divisor
     xor a
     sbc hl, de
     if C
-      move hl, quotient
+      hl := quotient
       ret
     end
 
-    move remainder, hl
-    move hl, quotient
+    remainder := hl
+    hl := quotient
     inc hl
-    move quotient, hl
+    quotient := hl
 
     ld a, 1
     or a
   end
 
-  move hl, quotient
+  hl := quotient
 end
 
 func decimal_digits(value: word): HL
@@ -40,31 +40,31 @@ func decimal_digits(value: word): HL
     count: word = 1
   end
 
-  move hl, value
-  move remaining, hl
+  hl := value
+  remaining := hl
 
   while NZ
-    move hl, remaining
+    hl := remaining
     ld de, 10
     xor a
     sbc hl, de
     if C
-      move hl, count
+      hl := count
       ret
     end
 
     div_u16 remaining, 10
-    move remaining, hl
+    remaining := hl
 
-    move hl, count
+    hl := count
     inc hl
-    move count, hl
+    count := hl
 
     ld a, 1
     or a
   end
 
-  move hl, count
+  hl := count
 end
 
 export func main()

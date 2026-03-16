@@ -23,72 +23,72 @@ func place_row(row_index: byte)
     diff_index: byte = 0
   end
 
-  move a, found_solution
+  a := found_solution
   or a
   if NZ
     ret
   end
 
-  move a, row_index
+  a := row_index
   cp BoardSize
   if Z
     ld a, 1
-    move found_solution, a
+    found_solution := a
     ret
   end
 
   ld a, 0
-  move col_index, a
+  col_index := a
 
   ld a, 1
   or a
   while NZ
-    move a, col_index
+    a := col_index
     cp BoardSize
     if NC
       ret
     end
 
-    move a, row_index
+    a := row_index
     move b, col_index
     add a, b
-    move sum_index, a
+    sum_index := a
 
-    move a, row_index
+    a := row_index
     add a, DiagBias
     move b, col_index
     sub b
-    move diff_index, a
+    diff_index := a
 
     move l, col_index
-    move a, col_used[L]
+    a := col_used[L]
     or a
     if Z
       move l, sum_index
-      move a, diag_sum_used[L]
+      a := diag_sum_used[L]
       or a
       if Z
         move l, diff_index
-        move a, diag_diff_used[L]
+        a := diag_diff_used[L]
         or a
         if Z
           move l, row_index
-          move a, col_index
-          move queen_cols[L], a
+          a := col_index
+          queen_cols[L] := a
 
           move l, col_index
           ld a, 1
-          move col_used[L], a
+          col_used[L] := a
           move l, sum_index
-          move diag_sum_used[L], a
+          diag_sum_used[L] := a
           move l, diff_index
-          move diag_diff_used[L], a
+          diag_diff_used[L] := a
 
-          move a, row_index
+          a := row_index
           inc a
           place_row a
 
-          move a, found_solution
+          a := found_solution
           or a
           if NZ
             ret
@@ -96,18 +96,18 @@ func place_row(row_index: byte)
 
           move l, col_index
           ld a, 0
-          move col_used[L], a
+          col_used[L] := a
           move l, sum_index
-          move diag_sum_used[L], a
+          diag_sum_used[L] := a
           move l, diff_index
-          move diag_diff_used[L], a
+          diag_diff_used[L] := a
         end
       end
     end
 
-    move a, col_index
+    a := col_index
     inc a
-    move col_index, a
+    col_index := a
 
     ld a, 1
     or a
@@ -116,6 +116,6 @@ end
 
 export func main()
   ld a, 0
-  move found_solution, a
+  found_solution := a
   place_row 0
 end

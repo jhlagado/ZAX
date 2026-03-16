@@ -4,9 +4,9 @@ end
 
 section code boot at $0100
   export func word_glob_reg16(idx: word): HL
-    move hl, idx
-    move de, glob_words[hl]
-    move glob_words[hl], de
+    hl := idx
+    de := glob_words[hl]
+    glob_words[hl] := de
     ex de, hl
   end
 
