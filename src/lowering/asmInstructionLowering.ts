@@ -526,7 +526,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       ctx.diagAt(
         ctx.diagnostics,
         asmItem.span,
-        `"ld" no longer accepts typed storage operands; use "move".`,
+        `"ld" no longer accepts typed storage operands; use ":=".`,
       );
       return;
     }
