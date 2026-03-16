@@ -380,14 +380,14 @@ section data sprites_data at $8200
 end
 
 func step_sprite(idx: byte): void
-  move l, idx            ; put index in L (8-bit register)
+  l := idx            ; put index in L (8-bit register)
   a := sprites[L].x   ; read x field of sprites[L]
   inc a
   sprites[L].x := a   ; write back
 end
 ```
 
-The compiler emits the shift chain for the outer index (`sizeof(Sprite) = 8` → three `ADD HL, HL`), then adds the field offset for `.x` (which is 0, so no additional add is needed here). The partial-register load `move l, idx` stays on `move` in Stage 1 because `:=` is currently limited to whole-register destinations.
+The compiler emits the shift chain for the outer index (`sizeof(Sprite) = 8` → three `ADD HL, HL`), then adds the field offset for `.x` (which is 0, so no additional add is needed here).
 
 ### 3.7 Address Arithmetic
 
@@ -620,7 +620,7 @@ Use `repeat ... until` when:
 
 ```zax
 ; Decrement B from some value down to zero
-move b, count
+b := count
 repeat
   ; ... do work ...
   dec b             ; sets Z when B reaches 0
@@ -1016,7 +1016,7 @@ func sum_bytes(data: addr, count: byte): word
   hl := data
   ptr := hl
 
-  move b, count       ; loop counter in B
+  b := count       ; loop counter in B
   ld hl, 0            ; running total in HL
 
 loop:
@@ -1512,7 +1512,7 @@ Records must contain at least one field — an empty `type ... end` is a compile
 
 ### 9.2 Field Access and Value Semantics
 
-`rec.field` is a **place expression** — a typed field location. In value/store contexts (`:=`, transitional `move`, typed call arguments), the compiler inserts the required load or store automatically:
+`rec.field` is a **place expression** — a typed field location. In value/store contexts (`:=`, typed call arguments), the compiler inserts the required load or store automatically:
 
 ```zax
 section data vars at $8000
@@ -2115,13 +2115,13 @@ end
 
 func uart_send(ch: byte): void
   uart_wait_tx         ; inline poll — no call overhead
-  move uart.tx_data, ch  ; write via value semantics
+  uart.tx_data := ch  ; write via value semantics
   ret
 end
 
 func uart_recv(): byte
   uart_wait_rx
-  move l, uart.rx_data   ; result in L (byte return channel)
+  l := uart.rx_data   ; result in L (byte return channel)
   ret
 end
 ```

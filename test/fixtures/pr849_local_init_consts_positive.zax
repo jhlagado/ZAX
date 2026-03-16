@@ -6,6 +6,6 @@ export func main()
     high_index: word = LastIndex
     mask_value: byte = 1 << Shift
   end
-  move hl, high_index
+  hl := high_index
   ret
 end

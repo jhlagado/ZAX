@@ -13,12 +13,12 @@ section code boot at $0000
       localw: word
       localb: byte
     end
-    move hl, arg0
-    move localw, hl
-    move hl, localw
-    move gword, hl
-    move a, localb
-    move gbyte, a
+    hl := arg0
+    localw := hl
+    hl := localw
+    gword := hl
+    a := localb
+    gbyte := a
     touch gword
     ret
   end

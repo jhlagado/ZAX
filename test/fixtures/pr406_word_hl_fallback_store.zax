@@ -5,5 +5,5 @@ end
 
 export func main(): AF, BC, DE, HL
   ld hl, $1234
-  move arr_w[idx_word + 1], hl
+  arr_w[idx_word + 1] := hl
 end

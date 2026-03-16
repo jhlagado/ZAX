@@ -7,7 +7,7 @@ export func main()
     tmp: word = $1234
     local_ref = base
   end
-  move hl, tmp
-  move local_ref, hl
+  hl := tmp
+  local_ref := hl
   ret
 end

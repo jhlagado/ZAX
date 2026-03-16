@@ -3,8 +3,8 @@ export func main()
     slot: byte = 0
   end
 
-  move h, slot
-  move l, slot
-  move slot, h
-  move slot, l
+  h := slot
+  l := slot
+  slot := h
+  slot := l
 end

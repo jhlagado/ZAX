@@ -22,7 +22,7 @@ func sum_from(index_value: byte): HL
     ret
   end
 
-  move l, index_value
+  l := index_value
   a := numbers[L]
   current_value := a
 

@@ -101,7 +101,7 @@ export func itoa_demo()
       add a, '0'
       digit_value := a
 
-      move l, write_index
+      l := write_index
       a := digit_value
       reverse_digits[L] := a
 
@@ -123,7 +123,7 @@ export func itoa_demo()
     a := write_index
     or a
     if Z
-      move l, read_index
+      l := read_index
       ld a, 0
       output_text[L] := a
       ret
@@ -133,11 +133,11 @@ export func itoa_demo()
     dec a
     write_index := a
 
-    move l, write_index
+    l := write_index
     a := reverse_digits[L]
     digit_value := a
 
-    move l, read_index
+    l := read_index
     a := digit_value
     output_text[L] := a
 

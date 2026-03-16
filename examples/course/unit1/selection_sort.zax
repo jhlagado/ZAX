@@ -16,19 +16,19 @@ func swap_values(left_index: byte, right_index: byte)
     right_value: byte = 0
   end
 
-  move l, left_index
+  l := left_index
   a := values[L]
   left_value := a
 
-  move l, right_index
+  l := right_index
   a := values[L]
   right_value := a
 
-  move l, left_index
+  l := left_index
   a := right_value
   values[L] := a
 
-  move l, right_index
+  l := right_index
   a := left_value
   values[L] := a
 end
@@ -45,7 +45,7 @@ func find_min_index(start_index: byte, last_index: byte): HL
   best_index := a
   current_index := a
 
-  move l, start_index
+  l := start_index
   a := values[L]
   best_value := a
 
@@ -53,7 +53,7 @@ func find_min_index(start_index: byte, last_index: byte): HL
   or a
   while NZ
     a := current_index
-    move b, last_index
+    b := last_index
     cp b
     if C
       ; continue
@@ -70,12 +70,12 @@ func find_min_index(start_index: byte, last_index: byte): HL
       end
     end
 
-    move l, current_index
+    l := current_index
     a := values[L]
     current_value := a
 
     a := current_value
-    move b, best_value
+    b := best_value
     cp b
     if C
       a := current_index
@@ -117,7 +117,7 @@ export func selection_sort()
     min_index := a
 
     a := min_index
-    move b, outer_index
+    b := outer_index
     cp b
     if Z
       ; already in place

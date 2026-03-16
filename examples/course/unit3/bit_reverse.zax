@@ -31,7 +31,7 @@ export func bit_reverse_demo(): HL
     end
 
     a := reversed_value
-    move b, source_value
+    b := source_value
     append_low_bit a, b
     reversed_value := a
 

@@ -8,8 +8,8 @@ export func main()
     tmp: word = 1
     local_ref = base
   end
-  move hl, local_ref
-  move base, hl
-  move hl, base
+  hl := local_ref
+  base := hl
+  hl := base
   ret
 end

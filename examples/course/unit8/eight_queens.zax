@@ -50,38 +50,38 @@ func place_row(row_index: byte)
     end
 
     a := row_index
-    move b, col_index
+    b := col_index
     add a, b
     sum_index := a
 
     a := row_index
     add a, DiagBias
-    move b, col_index
+    b := col_index
     sub b
     diff_index := a
 
-    move l, col_index
+    l := col_index
     a := col_used[L]
     or a
     if Z
-      move l, sum_index
+      l := sum_index
       a := diag_sum_used[L]
       or a
       if Z
-        move l, diff_index
+        l := diff_index
         a := diag_diff_used[L]
         or a
         if Z
-          move l, row_index
+          l := row_index
           a := col_index
           queen_cols[L] := a
 
-          move l, col_index
+          l := col_index
           ld a, 1
           col_used[L] := a
-          move l, sum_index
+          l := sum_index
           diag_sum_used[L] := a
-          move l, diff_index
+          l := diff_index
           diag_diff_used[L] := a
 
           a := row_index
@@ -94,12 +94,12 @@ func place_row(row_index: byte)
             ret
           end
 
-          move l, col_index
+          l := col_index
           ld a, 0
           col_used[L] := a
-          move l, sum_index
+          l := sum_index
           diag_sum_used[L] := a
-          move l, diff_index
+          l := diff_index
           diag_diff_used[L] := a
         end
       end

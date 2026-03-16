@@ -6,7 +6,7 @@ end
 section code boot at $0100
   export func main()
     ld hl, $0001      ; index
-    move hl, arr_w[hl]  ; load word via runtime index
-    move tmp, hl        ; store word to global
+    hl := arr_w[hl]  ; load word via runtime index
+    tmp := hl        ; store word to global
   end
 end
