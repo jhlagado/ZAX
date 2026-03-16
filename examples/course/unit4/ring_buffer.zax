@@ -37,11 +37,11 @@ func enqueue(entry_value: byte, entry_stamp: word)
     ret
   end
 
-  move l, tail_slot
+  move b, tail_slot
   move a, entry_value
-  move entries[L].value, a
+  move entries[B].value, a
   move hl, entry_stamp
-  move entries[L].stamp, hl
+  move entries[B].stamp, hl
 
   next_slot tail_slot
   ld a, l
