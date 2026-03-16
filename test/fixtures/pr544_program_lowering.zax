@@ -8,7 +8,7 @@ end
 
 section code boot at $0100
   func helper(): HL
-    move a, arr[K - 2]
+    a := arr[K - 2]
     ld l, a
     ld h, 0
   end

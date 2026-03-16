@@ -6,11 +6,11 @@ section data vars at $1000
 end
 
 export func main()
-  move a, arr[idx]
-  move a, arr[idxw]
-  move a, arr[HL]
-  move a, arr[(HL)]
-  move a, grid[idx << 3]
+  a := arr[idx]
+  a := arr[idxw]
+  a := arr[HL]
+  a := arr[(HL)]
+  a := grid[idx << 3]
 
   select grid[idx << 3]
   case 0

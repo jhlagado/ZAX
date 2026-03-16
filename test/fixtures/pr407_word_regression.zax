@@ -10,15 +10,15 @@ export func main()
   end
 
   ; reg8 index load/store
-  move hl, gw[idx8]
-  move gw[idx8], hl
+  hl := gw[idx8]
+  gw[idx8] := hl
 
   ; reg16 index load/store (HL as index)
-  move hl, idxw
-  move de, gw[hl]
-  move gw[hl], de
+  hl := idxw
+  de := gw[hl]
+  gw[hl] := de
 
   ; store tmp via reg8 index
-  move hl, tmp
-  move gw[idx8], hl
+  hl := tmp
+  gw[idx8] := hl
 end

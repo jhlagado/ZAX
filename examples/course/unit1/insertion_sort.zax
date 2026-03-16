@@ -28,27 +28,27 @@ func insert_hole(scan_index: byte, hold_value: byte)
   dec a
   prior_index := a
 
-  move l, prior_index
+  l := prior_index
   a := values[L]
   left_value := a
 
   a := left_value
-  move b, hold_value
+  b := hold_value
   cp b
   if C
-    move l, scan_index
+    l := scan_index
     a := hold_value
     values[L] := a
     ret
   end
   if Z
-    move l, scan_index
+    l := scan_index
     a := hold_value
     values[L] := a
     ret
   end
 
-  move l, scan_index
+  l := scan_index
   a := left_value
   values[L] := a
 
@@ -70,7 +70,7 @@ export func insertion_sort()
       ret
     end
 
-    move l, outer_index
+    l := outer_index
     a := values[L]
     hold_value := a
 

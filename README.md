@@ -341,7 +341,7 @@ Field and array access compose as place expressions. The compiler lowers them to
 
 ```zax
 func update_sprite(idx: byte): void
-  move l, idx
+  l := idx
   a := sprites[L].flags    ; load flags field of sprites[idx]
   set 0, a
   sprites[L].flags := a    ; write back
@@ -503,7 +503,7 @@ Output is deterministic: given the same source and the same compiler flags, the 
 
 ZAX is under active development. The compiler is a Node.js CLI tool; the end-to-end pipeline (lex → parse → lower → encode → emit) is functional and produces `.bin`, `.hex`, `.d8dbg.json`, `.lst`, and `.asm` output.
 
-What works today: single and multi-module compilation, functions with typed parameters and locals, IX-anchored frame calling conventions, structured control flow, the op system, records/unions/arrays, named `section code`/`section data` blocks, typed storage via `:=` (with transitional `move`), `@path` address-of, `<Type>base.tail` typed reinterpretation, grouped and ranged `select case`, raw data directives (`db`/`dw`/`ds`), compile-time expressions, forward references and fixups, and a growing slice of the Z80 instruction set.
+What works today: single and multi-module compilation, functions with typed parameters and locals, IX-anchored frame calling conventions, structured control flow, the op system, records/unions/arrays, named `section code`/`section data` blocks, typed storage via `:=`, `@path` address-of, `<Type>base.tail` typed reinterpretation, grouped and ranged `select case`, raw data directives (`db`/`dw`/`ds`), compile-time expressions, forward references and fixups, and a growing slice of the Z80 instruction set.
 
 Active work: exact-size runtime indexing for non-power-of-two composite strides (issues #817–820), broader ISA coverage, and Debug80 integration.
 

@@ -15,19 +15,19 @@ func swap_values(left_index: byte, right_index: byte)
     right_value: byte = 0
   end
 
-  move l, left_index
+  l := left_index
   a := numbers[L]
   left_value := a
 
-  move l, right_index
+  l := right_index
   a := numbers[L]
   right_value := a
 
-  move l, left_index
+  l := left_index
   a := right_value
   numbers[L] := a
 
-  move l, right_index
+  l := right_index
   a := left_value
   numbers[L] := a
 end
@@ -39,7 +39,7 @@ func reverse_range(left_index: byte, right_index: byte)
   end
 
   a := left_index
-  move b, right_index
+  b := right_index
   cp b
   if NC
     ret
