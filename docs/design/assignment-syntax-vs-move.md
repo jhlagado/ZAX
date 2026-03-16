@@ -1,6 +1,6 @@
 # Assignment Syntax vs `move`
 
-Status: Stage 1 landed; reg8 expansion planned
+Status: Stage 1 and reg8 expansion landed; IX/IY follow-up planned
 
 ## Problem
 
@@ -162,18 +162,18 @@ Stage 1 is now implemented on `main`:
 
 ## Remaining blocker to removing `move`
 
-The main remaining `move` usage on live `main` is not whole-register transfer.
-It is typed byte transfer into partial 8-bit register destinations, especially:
+The reg8 expansion is now landed on `main`, so the previous `L` / `B` blocker is
+gone from live docs and examples.
 
-- `move l, idx`
-- `move b, count`
-- `move b, arr[idx]`
+The remaining code-level `move` holdout is whole-register transfer into index
+registers, specifically `IX` and `IY`.
 
-These forms are common in the current examples because indexed array code and
-loop counters frequently target `L` and `B`.
+The concrete remaining fixture case is:
 
-So `move` cannot be deprecated or removed until `:=` covers typed byte transfer
-to and from the ordinary 8-bit register set.
+- `move ix, arr_w[idx_word + 1]`
+
+So `move` still cannot be fully removed until `:=` covers bounded whole-register
+assignment into `IX` and `IY`.
 
 ## Migration plan
 
@@ -183,20 +183,30 @@ Landed on `main`.
 
 ### Stage 2
 
-Extend `:=` to typed byte transfer for 8-bit registers:
+Landed on `main`:
 
 - loads into `B`, `C`, `D`, `E`, `H`, `L` (`A` already landed in Stage 1)
 - stores from `B`, `C`, `D`, `E`, `H`, `L` (`A` already landed in Stage 1)
 - byte immediates into 8-bit registers
 
-This stage should continue to reject raw indirect forms like `(hl)` and should
-not broaden `:=` into a synonym for raw `ld`.
-
 ### Stage 3
+
+Extend `:=` to bounded whole-register assignment for `IX` and `IY`:
+
+- `ix := word_var`
+- `iy := @node.next`
+- `ix := arr_w[idx + 1]`
+- immediate and whole-register copy cases only where they fit the existing
+  whole-register assignment model
+
+This stage should continue to reject raw indirect forms like `(ix+d)` and
+should not broaden `:=` into a synonym for raw `ld`.
+
+### Stage 4
 
 Rewrite remaining live docs/examples to eliminate `move`.
 
-### Stage 4
+### Stage 5
 
 Deprecate `move` in docs and eventually consider warning on it, only after the
 live surface is broadly migrated away from it.
@@ -207,6 +217,8 @@ The following may be acceptable later, but are not required in the next slice:
 
 - `h := d`
 - `l := a`
+- `sp := hl`
+- `af := hl`
 
 They are less surprising than forbidding them outright, but they blur the line
 between whole-value assignment and byte-lane machine manipulation. The first
