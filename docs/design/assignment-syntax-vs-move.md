@@ -5,6 +5,7 @@ Status: proposed review record
 ## Problem
 
 `move` currently carries the main ZAX value-transfer surface for:
+
 - arguments and locals
 - globals
 - field access
@@ -27,12 +28,14 @@ assignment/value-transfer operations over ZAX storage paths and typed values.
 
 The problem is that `move` still looks like a pseudo-opcode. That hides an
 important language boundary:
+
 - raw Z80 transfer syntax should look raw
 - ZAX storage/value semantics should look like a language construct
 
 ## Why this matters
 
 ZAX already uses overt high-level syntax for other language features:
+
 - `if` / `else`
 - `while`
 - `repeat`
@@ -42,6 +45,7 @@ ZAX already uses overt high-level syntax for other language features:
 
 Against that background, `move` is visually misleading. It looks like part of
 the machine-language layer even when it is doing:
+
 - frame-slot loads and stores
 - typed field access
 - array indexing
@@ -77,6 +81,7 @@ add hl, de
 Use `:=` rather than `=`.
 
 Reason:
+
 - `=` already has declaration/init meaning in ZAX:
   - `const X = 1`
   - `name: Type = initializer`
@@ -97,6 +102,7 @@ The first step should stay tightly bounded, but it should be slightly broader
 than current `move`.
 
 `:=` should cover:
+
 - everything `move` means today
 - immediate-to-whole-register assignment
 - whole-register and whole-register-pair copies
@@ -122,6 +128,7 @@ without taking over raw Z80 transfer forms.
 ### Raw Z80 layer
 
 Keep under assembler syntax:
+
 - `ld`
 - arithmetic/logic ops
 - jumps
@@ -131,6 +138,7 @@ Keep under assembler syntax:
 ### ZAX layer
 
 Use assignment syntax for:
+
 - locals / args / globals
 - fields and indices
 - typed reinterpretation
@@ -160,10 +168,10 @@ Rewrite core examples and the quick guide to use `:=` as the preferred form.
 Deprecate `move` in docs and eventually consider warning on it, only after the
 surface has been broadly migrated.
 
-
 ## Deferred forms
 
 The following may be acceptable later, but are not required in the first slice:
+
 - `h := d`
 - `l := a`
 
@@ -174,6 +182,7 @@ slice should stay with whole-register destinations only.
 ## Non-goals
 
 Do not use this stream to:
+
 - take over raw indirect Z80 forms such as `(hl)` or `(ix+d)`
 - add general expression assignment beyond the accepted transfer cases
 - add chained assignment
@@ -184,6 +193,7 @@ Do not use this stream to:
 ## Decision
 
 Recommended direction:
+
 - replace `move` as the preferred surface with `:=`
 - keep `ld` visibly raw
 - stage this as a syntax migration, not a semantic redesign
