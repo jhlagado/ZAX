@@ -157,17 +157,11 @@ instr_line      = z80_instruction
 
 assign_stmt     = assign_target , ":=" , assign_source ;
 assign_target   = assign_reg | ea_expr ;
-assign_source   = assign_reg | ea_expr | move_addr | imm_expr ;
+assign_source   = assign_reg | ea_expr | assign_addr | imm_expr ;
 assign_reg      = "A" | "B" | "C" | "D" | "E" | "H" | "L"
                 | "IXH" | "IXL" | "IYH" | "IYL"
                 | "BC" | "DE" | "HL" | "IX" | "IY" ;
-
-move_stmt       = "move" , move_reg , "," , move_src
-                | "move" , move_path , "," , move_reg ;
-move_src        = move_addr | move_path ;
-move_path       = ea_expr ;
-move_reg        = reg8 | reg16 | "AF" | "SP" | "IXH" | "IXL" | "IYH" | "IYL" ;
-move_addr       = "@" , ea_expr ;  (* move_addr is only valid as the source operand in v1 *)
+assign_addr     = "@" , ea_expr ;  (* assign_addr is only valid as the source operand in v1 *)
 
 if_stmt         = "if" , cc_expr , newline , instr_stream ,
                   [ "else" , newline , instr_stream ] , "end" ;
@@ -242,7 +236,7 @@ These are semantic constraints enforced beyond pure grammar:
 - Variable declarations inside a `code` named section are a compile error.
 - Local non-scalar value-init declarations are invalid.
 - Local non-scalar declarations are alias-only (`name = rhs`).
-- `@path` is not a general expression operator. In v1 it is accepted only on the source side of `rr := @path` (with transitional `move rr, @path` still supported).
+- `@path` is not a general expression operator. In v1 it is accepted only on the source side of `rr := @path`.
 - Raw data directives (`db`/`dw`/`ds`) and `raw_label` are only valid inside `section data` blocks.
 - A `raw_label` must be followed by a raw directive; it cannot stand alone.
 - Typed reinterpretation requires at least one tail segment after the cast head.

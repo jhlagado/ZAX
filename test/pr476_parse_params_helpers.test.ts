@@ -73,12 +73,12 @@ describe('PR476 parameter parser extraction', () => {
     const diagnostics: Diagnostic[] = [];
     const program = parseProgram(
       file.path,
-      'func add(lhs: word, rhs: word): HL\n  ret\nend\n\nop move(dst: reg16, src: reg16)\n  ld dst, src\nend\n',
+      'func add(lhs: word, rhs: word): HL\n  ret\nend\n\nop copy16(dst: reg16, src: reg16)\n  ld dst, src\nend\n',
       diagnostics,
     );
 
     expect(diagnostics).toEqual([]);
     expect(program.files[0]?.items[0]).toMatchObject({ kind: 'FuncDecl', name: 'add' });
-    expect(program.files[0]?.items[1]).toMatchObject({ kind: 'OpDecl', name: 'move' });
+    expect(program.files[0]?.items[1]).toMatchObject({ kind: 'OpDecl', name: 'copy16' });
   });
 });

@@ -9,14 +9,14 @@ const parse = (text: string) => {
 };
 
 describe('PR798 address-of storage path parser', () => {
-  it('accepts move rr, @path forms', () => {
+  it('accepts := rr, @path forms', () => {
     const { diagnostics, program } = parse(`
 section code text at $0000
 export func main()
-  move hl, @x
-  move de, @array[i]
-  move bc, @record.field
-  move hl, @<Sprite>ix.flags
+  hl := @x
+  de := @array[i]
+  bc := @record.field
+  hl := @<Sprite>ix.flags
   ret
 end
 end
@@ -31,23 +31,23 @@ end
     const { diagnostics } = parse(`
 section code text at $0000
 export func main()
-  move @x, hl
+  @x := hl
   ret
 end
 end
     `);
     expect(diagnostics.length).toBeGreaterThan(0);
-    expect(diagnostics[0]?.message).toContain('source side');
+    expect(diagnostics[0]?.message).toContain('":="');
   });
 
   it('rejects nested or parenthesized @ forms', () => {
     const { diagnostics } = parse(`
 section code text at $0000
 export func main()
-  move hl, @@x
-  move hl, @(@x)
-  move hl, @(array[i])
-  move hl, array[@i]
+  hl := @@x
+  hl := @(@x)
+  hl := @(array[i])
+  hl := array[@i]
   ret
 end
 end
@@ -68,11 +68,11 @@ end
     expect(diagnostics.length).toBeGreaterThan(0);
   });
 
-  it('still accepts move rr, path', () => {
+  it('still accepts := rr, path', () => {
     const { diagnostics } = parse(`
 section code text at $0000
 export func main()
-  move hl, x
+  hl := x
   ret
 end
 end

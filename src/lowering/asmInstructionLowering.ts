@@ -460,33 +460,6 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       }
     }
 
-    if (head === 'move') {
-      const dst = asmItem.operands[0];
-      const src = asmItem.operands[1];
-      if (src?.kind === 'Ea' && src.explicitAddressOf) {
-        if (!dst || dst.kind !== 'Reg' || !ctx.reg16.has(dst.name.toUpperCase())) {
-          ctx.diagAt(
-            ctx.diagnostics,
-            asmItem.span,
-            `"move" address-of source requires a 16-bit register destination.`,
-          );
-          return;
-        }
-        if (!ctx.pushEaAddress(src.expr, asmItem.span)) return;
-        if (!ctx.emitInstr('pop', [{ kind: 'Reg', span: asmItem.span, name: dst.name.toUpperCase() }], asmItem.span))
-          return;
-        ctx.syncToFlow();
-        return;
-      }
-      const moveAsLd: AsmInstructionNode = { ...asmItem, head: 'ld' };
-      if (ctx.lowerLdWithEa(moveAsLd)) {
-        ctx.syncToFlow();
-        return;
-      }
-      ctx.diagAt(ctx.diagnostics, asmItem.span, `"move" form is not supported.`);
-      return;
-    }
-
     if (head === ':=') {
       const dst = asmItem.operands[0];
       const src = asmItem.operands[1];
@@ -538,7 +511,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     }
 
     if (head === 'ld' && asmItem.operands.some(isTypedStorageLdOperand)) {
-      ctx.diagAt(
+        ctx.diagAt(
         ctx.diagnostics,
         asmItem.span,
         `"ld" no longer accepts typed storage operands; use ":=".`,
