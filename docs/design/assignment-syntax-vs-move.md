@@ -93,19 +93,29 @@ statement style as well as `:=`.
 
 ## Initial semantic scope
 
-The first step should be surface-only.
+The first step should stay tightly bounded, but it should be slightly broader
+than current `move`.
 
-`:=` should mean exactly what `move` means today.
+`:=` should cover:
+- everything `move` means today
+- immediate-to-whole-register assignment
+- whole-register and whole-register-pair copies
+- width-aware zero-extension from byte sources into word-pair destinations
 
-That includes:
-- register <- scalar/path value
-- scalar/path <- register value
-- register <- `@path`
-- register <- reinterpretation path
-- all current `move` restrictions and diagnostics
+Examples:
 
-This is not the moment to redesign transfer semantics. It is a readability and
-language-boundary correction first.
+```zax
+hl := count
+total_value := hl
+a := sprites[L].x
+hl := @player.flags
+hl := a
+hl := 0
+hl := de
+```
+
+This keeps the new surface useful enough to reduce real noise in the examples
+without taking over raw Z80 transfer forms.
 
 ## Raw-vs-language boundary after the change
 
@@ -125,6 +135,9 @@ Use assignment syntax for:
 - fields and indices
 - typed reinterpretation
 - `@path` address acquisition
+- immediate-to-whole-register assignment
+- whole-register and whole-register-pair copies
+- width-aware whole-value widening such as `hl := a`
 
 This makes the mixed-language model visible instead of disguising it.
 
@@ -147,14 +160,26 @@ Rewrite core examples and the quick guide to use `:=` as the preferred form.
 Deprecate `move` in docs and eventually consider warning on it, only after the
 surface has been broadly migrated.
 
+
+## Deferred forms
+
+The following may be acceptable later, but are not required in the first slice:
+- `h := d`
+- `l := a`
+
+They are less surprising than forbidding them outright, but they blur the line
+between whole-value assignment and byte-lane machine manipulation. The first
+slice should stay with whole-register destinations only.
+
 ## Non-goals
 
 Do not use this stream to:
-- broaden `move`/assignment semantics
-- add general expression assignment
+- take over raw indirect Z80 forms such as `(hl)` or `(ix+d)`
+- add general expression assignment beyond the accepted transfer cases
 - add chained assignment
 - add declaration-time type inference changes
 - revisit raw `ld`
+- require partial-register copy forms such as `h := d` or `l := a` in the first slice
 
 ## Decision
 
