@@ -5,6 +5,7 @@ This directory is organized by role. New documents should be added only in the c
 ## Layout
 
 ### `docs/spec/`
+
 Authoritative current-language documents.
 
 - `docs/spec/zax-spec.md` — sole normative language specification
@@ -13,22 +14,27 @@ Authoritative current-language documents.
 If any other document conflicts with `docs/spec/zax-spec.md`, the spec wins.
 
 ### `docs/design/`
+
 Active design work and review-target design records.
 
 Current active design docs:
+
 - `docs/design/grammar-parser-convergence-plan.md`
 - `docs/design/exact-size-layout-and-indexing.md`
 - `docs/design/structured-loop-escape.md`
 - `docs/design/named-constants-in-local-initializers.md`
 - `docs/design/pointer-typing-ergonomics.md`
 - `docs/design/software-stack-helper-library.md`
+- `docs/design/assignment-syntax-vs-move.md`
 
 These documents are not normative language authority. They describe current direction, decisions, and unresolved design work.
 
 ### `docs/reference/`
+
 Current supporting references for users and contributors.
 
 Includes:
+
 - quick guide
 - contributor workflow
 - testing and verification flow
@@ -38,17 +44,21 @@ Includes:
 These documents may describe current implementation detail, but they do not override the spec.
 
 ### `docs/work/`
+
 Current work-in-progress support material.
 
 Use this area for:
+
 - current stream notes
 - deferred and backburner items
 - short operational documents that are neither normative specs nor active design proposals
 
 ### `docs/archive/`
+
 Cold storage for superseded, historical, or version-specific documents.
 
 This includes:
+
 - old version planning tracks
 - superseded audits
 - retired design anchors
