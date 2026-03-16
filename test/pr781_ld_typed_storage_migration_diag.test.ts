@@ -75,7 +75,7 @@ describe('PR781 ld typed-storage migration diagnostics', () => {
     ctx.helper.lowerAsmInstructionDispatcher(ldItem);
 
     expect(ctx.diagnostics.length).toBeGreaterThan(0);
-    expect(ctx.diagnostics[0]?.message).toContain('move');
+    expect(ctx.diagnostics[0]?.message).toContain(':=');
     expect(ctx.ldCalled).toBe(false);
   });
 
@@ -94,7 +94,7 @@ describe('PR781 ld typed-storage migration diagnostics', () => {
     ctx.helper.lowerAsmInstructionDispatcher(ldItem);
 
     expect(ctx.diagnostics.length).toBeGreaterThan(0);
-    expect(ctx.diagnostics[0]?.message).toContain('move');
+    expect(ctx.diagnostics[0]?.message).toContain(':=');
     expect(ctx.ldCalled).toBe(false);
   });
 });
