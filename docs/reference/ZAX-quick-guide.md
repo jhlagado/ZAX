@@ -256,6 +256,36 @@ const BrXOffset = offsetof(Rect, bottomRight.x)   ; = 4
 
 Use `sizeof` and `offsetof` everywhere instead of hand-computed constants. They update automatically when type definitions change.
 
+### 2.7 Raw Data Directives
+
+For lookup tables, jump tables, and binary blobs, three raw data directives are supported directly inside `data` sections:
+
+| Directive   | Description                                   |
+| ----------- | --------------------------------------------- |
+| `db <list>` | Emit one or more raw bytes                    |
+| `dw <list>` | Emit one or more 16-bit words (little-endian) |
+| `ds <n>`    | Emit `n` zero bytes (zero-fill / padding)     |
+
+`dw` accepts label addresses as operands, which makes it the natural way to build dispatch tables. Labels placed within raw data blocks are valid as jump targets elsewhere in the program and as operands in `dw` initializers.
+
+```zax
+section data assets at $0100
+  sine:
+  db $00, $19, $32, $4A, $61, $74, $84, $90   ; raw bytes
+
+  fibonacci:
+  db 1, 2, 3, 5, 8, 13, 21, 34               ; raw bytes (decimal)
+
+  dispatch:
+  dw handler_a, handler_b, handler_c          ; 16-bit words or label addresses
+
+  padding:
+  ds 8                                        ; 8 zero bytes
+end
+```
+
+Raw declarations coexist with typed storage declarations in the same `data` section. Mixing typed variables and raw directives in one section is normal practice — they lay out in source order.
+
 ---
 
 ## Chapter 3 — Addressing and Indexing
