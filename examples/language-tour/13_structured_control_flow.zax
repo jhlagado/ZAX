@@ -3,7 +3,7 @@ section data vars at $1000
 end
 
 func run_once()
-  move a, mode_value
+  a := mode_value
   or a
 
   if Z
@@ -21,7 +21,7 @@ func run_once()
     dec a
   until Z
 
-  move a, mode_value
+  a := mode_value
   select a
     case 0
       ld a, 10
@@ -31,7 +31,7 @@ func run_once()
       ld a, 30
   end
 
-  move mode_value, a
+  mode_value := a
 end
 
 export func main()

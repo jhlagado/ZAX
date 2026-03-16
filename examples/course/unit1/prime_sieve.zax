@@ -19,33 +19,33 @@ export func prime_sieve()
   ld a, 1
   or a
   while NZ
-    move a, factor_index
+    a := factor_index
     cp StopFactor
     if NC
       ret
     end
 
     move l, factor_index
-    move a, is_prime[L]
+    a := is_prime[L]
     or a
     if Z
-      move a, factor_index
+      a := factor_index
       inc a
-      move factor_index, a
+      factor_index := a
       ld a, 1
       or a
     end
 
     if NZ
-      move a, factor_index
+      a := factor_index
       move b, factor_index
       add a, b
-      move multiple_index, a
+      multiple_index := a
 
       ld a, 1
       or a
       while NZ
-        move a, multiple_index
+        a := multiple_index
         cp Limit
         if NC
           ld a, 0
@@ -54,21 +54,21 @@ export func prime_sieve()
         if C
           move l, multiple_index
           ld a, 0
-          move is_prime[L], a
+          is_prime[L] := a
 
-          move a, multiple_index
+          a := multiple_index
           move b, factor_index
           add a, b
-          move multiple_index, a
+          multiple_index := a
 
           ld a, 1
           or a
         end
       end
 
-      move a, factor_index
+      a := factor_index
       inc a
-      move factor_index, a
+      factor_index := a
 
       ld a, 1
       or a

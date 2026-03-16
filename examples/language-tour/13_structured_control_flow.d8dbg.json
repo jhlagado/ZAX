@@ -248,49 +248,63 @@
           "scope": "local"
         },
         {
-          "name": "__zax_case_8",
+          "name": "__zax_repeat_cond_6",
+          "kind": "label",
+          "address": 292,
+          "line": 22,
+          "scope": "local"
+        },
+        {
+          "name": "__zax_repeat_end_7",
+          "kind": "label",
+          "address": 295,
+          "line": 22,
+          "scope": "local"
+        },
+        {
+          "name": "__zax_case_10",
           "kind": "label",
           "address": 301,
           "line": 26,
           "scope": "local"
         },
         {
-          "name": "__zax_case_9",
+          "name": "__zax_case_11",
           "kind": "label",
           "address": 306,
           "line": 28,
           "scope": "local"
         },
         {
-          "name": "__zax_select_else_10",
+          "name": "__zax_select_else_12",
           "kind": "label",
           "address": 311,
           "line": 30,
           "scope": "local"
         },
         {
-          "name": "__zax_select_dispatch_6",
+          "name": "__zax_select_dispatch_8",
           "kind": "label",
           "address": 316,
           "line": 32,
           "scope": "local"
         },
         {
-          "name": "__zax_select_next_11",
+          "name": "__zax_select_next_13",
           "kind": "label",
           "address": 330,
           "line": 26,
           "scope": "local"
         },
         {
-          "name": "__zax_select_next_12",
+          "name": "__zax_select_next_14",
           "kind": "label",
           "address": 339,
           "line": 28,
           "scope": "local"
         },
         {
-          "name": "__zax_select_end_7",
+          "name": "__zax_select_end_9",
           "kind": "label",
           "address": 343,
           "line": 32,
@@ -311,7 +325,7 @@
           "scope": "global"
         },
         {
-          "name": "__zax_epilogue_13",
+          "name": "__zax_epilogue_15",
           "kind": "label",
           "address": 370,
           "line": 37,
@@ -396,7 +410,23 @@
       "scope": "local"
     },
     {
-      "name": "__zax_case_8",
+      "name": "__zax_repeat_cond_6",
+      "kind": "label",
+      "address": 292,
+      "file": "13_structured_control_flow.zax",
+      "line": 22,
+      "scope": "local"
+    },
+    {
+      "name": "__zax_repeat_end_7",
+      "kind": "label",
+      "address": 295,
+      "file": "13_structured_control_flow.zax",
+      "line": 22,
+      "scope": "local"
+    },
+    {
+      "name": "__zax_case_10",
       "kind": "label",
       "address": 301,
       "file": "13_structured_control_flow.zax",
@@ -404,7 +434,7 @@
       "scope": "local"
     },
     {
-      "name": "__zax_case_9",
+      "name": "__zax_case_11",
       "kind": "label",
       "address": 306,
       "file": "13_structured_control_flow.zax",
@@ -412,7 +442,7 @@
       "scope": "local"
     },
     {
-      "name": "__zax_select_else_10",
+      "name": "__zax_select_else_12",
       "kind": "label",
       "address": 311,
       "file": "13_structured_control_flow.zax",
@@ -420,7 +450,7 @@
       "scope": "local"
     },
     {
-      "name": "__zax_select_dispatch_6",
+      "name": "__zax_select_dispatch_8",
       "kind": "label",
       "address": 316,
       "file": "13_structured_control_flow.zax",
@@ -428,7 +458,7 @@
       "scope": "local"
     },
     {
-      "name": "__zax_select_next_11",
+      "name": "__zax_select_next_13",
       "kind": "label",
       "address": 330,
       "file": "13_structured_control_flow.zax",
@@ -436,7 +466,7 @@
       "scope": "local"
     },
     {
-      "name": "__zax_select_next_12",
+      "name": "__zax_select_next_14",
       "kind": "label",
       "address": 339,
       "file": "13_structured_control_flow.zax",
@@ -444,7 +474,7 @@
       "scope": "local"
     },
     {
-      "name": "__zax_select_end_7",
+      "name": "__zax_select_end_9",
       "kind": "label",
       "address": 343,
       "file": "13_structured_control_flow.zax",
@@ -468,7 +498,7 @@
       "scope": "global"
     },
     {
-      "name": "__zax_epilogue_13",
+      "name": "__zax_epilogue_15",
       "kind": "label",
       "address": 370,
       "file": "13_structured_control_flow.zax",

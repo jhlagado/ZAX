@@ -22,34 +22,34 @@ func mul_u16(left_word: word, right_word: word): HL
     repeat_count: word = 0
   end
 
-  move hl, right_word
-  move repeat_count, hl
+  hl := right_word
+  repeat_count := hl
 
   ld a, 1
   or a
   while NZ
-    move hl, repeat_count
+    hl := repeat_count
     ld a, h
     or l
     if Z
-      move hl, accum_value
+      hl := accum_value
       ret
     end
 
-    move hl, accum_value
-    move de, left_word
+    hl := accum_value
+    de := left_word
     add hl, de
-    move accum_value, hl
+    accum_value := hl
 
-    move hl, repeat_count
+    hl := repeat_count
     dec hl
-    move repeat_count, hl
+    repeat_count := hl
 
     ld a, 1
     or a
   end
 
-  move hl, accum_value
+  hl := accum_value
 end
 
 export func rpn_demo(): HL
@@ -61,63 +61,63 @@ export func rpn_demo(): HL
   end
 
   ld a, 0
-  move stack_depth, a
+  stack_depth := a
 
   ld a, 1
   or a
   while NZ
-    move a, token_index
+    a := token_index
     cp TokenCount
     if NC
       word_stack.pop_word value_stack, stack_depth
-      move stack_depth, a
+      stack_depth := a
       ret
     end
 
     move l, token_index
-    move a, token_kinds[L]
-    move current_kind, a
+    a := token_kinds[L]
+    current_kind := a
 
     select A
       case KindNumber
         move l, token_index
-        move hl, token_values[L]
+        hl := token_values[L]
         word_stack.push_word value_stack, stack_depth, hl
-        move stack_depth, a
+        stack_depth := a
       case KindAdd
         word_stack.pop_word value_stack, stack_depth
-        move stack_depth, a
-        move right_value, hl
+        stack_depth := a
+        right_value := hl
         word_stack.pop_word value_stack, stack_depth
-        move stack_depth, a
-        move left_value, hl
-        move hl, left_value
-        move de, right_value
+        stack_depth := a
+        left_value := hl
+        hl := left_value
+        de := right_value
         add hl, de
         word_stack.push_word value_stack, stack_depth, hl
-        move stack_depth, a
+        stack_depth := a
       case KindMultiply
         word_stack.pop_word value_stack, stack_depth
-        move stack_depth, a
-        move right_value, hl
+        stack_depth := a
+        right_value := hl
         word_stack.pop_word value_stack, stack_depth
-        move stack_depth, a
-        move left_value, hl
+        stack_depth := a
+        left_value := hl
         mul_u16 left_value, right_value
         word_stack.push_word value_stack, stack_depth, hl
-        move stack_depth, a
+        stack_depth := a
     end
 
-    move a, token_index
+    a := token_index
     inc a
-    move token_index, a
+    token_index := a
 
     ld a, 1
     or a
   end
 
   word_stack.pop_word value_stack, stack_depth
-  move stack_depth, a
+  stack_depth := a
 end
 
 export func main()

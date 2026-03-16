@@ -4,8 +4,8 @@ end
 
 section code boot at $0100
   export func byte_glob_fvar(idx_word: word): HL
-    move a, glob_bytes[idx_word]
-    move glob_bytes[idx_word], a
+    a := glob_bytes[idx_word]
+    glob_bytes[idx_word] := a
     ld h, 0
     ld l, a
   end

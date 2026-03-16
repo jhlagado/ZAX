@@ -144,6 +144,7 @@ matcher_type    = "reg8" | "reg16"
 instr_stream    = { instr_line } ;
 
 instr_line      = z80_instruction
+                | assign_stmt
                 | move_stmt
                 | op_invoke
                 | func_call
@@ -153,6 +154,11 @@ instr_line      = z80_instruction
                 | select_stmt
                 | asm_label
                 | local_jump ;
+
+assign_stmt     = assign_target , ":=" , assign_source ;
+assign_target   = assign_reg | ea_expr ;
+assign_source   = assign_reg | ea_expr | move_addr | imm_expr ;
+assign_reg      = "A" | "BC" | "DE" | "HL" ;   (* Stage 1 whole-register set only *)
 
 move_stmt       = "move" , move_reg , "," , move_src
                 | "move" , move_path , "," , move_reg ;
@@ -234,7 +240,7 @@ These are semantic constraints enforced beyond pure grammar:
 - Variable declarations inside a `code` named section are a compile error.
 - Local non-scalar value-init declarations are invalid.
 - Local non-scalar declarations are alias-only (`name = rhs`).
-- `@path` is not a general expression operator. In v1 it is accepted only as the source operand in `move rr, @path`.
+- `@path` is not a general expression operator. In v1 it is accepted only on the source side of `rr := @path` (with transitional `move rr, @path` still supported).
 - Raw data directives (`db`/`dw`/`ds`) and `raw_label` are only valid inside `section data` blocks.
 - A `raw_label` must be followed by a raw directive; it cannot stand alone.
 - Typed reinterpretation requires at least one tail segment after the cast head.

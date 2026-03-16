@@ -17,20 +17,20 @@ func swap_values(left_index: byte, right_index: byte)
   end
 
   move l, left_index
-  move a, values[L]
-  move left_value, a
+  a := values[L]
+  left_value := a
 
   move l, right_index
-  move a, values[L]
-  move right_value, a
+  a := values[L]
+  right_value := a
 
   move l, left_index
-  move a, right_value
-  move values[L], a
+  a := right_value
+  values[L] := a
 
   move l, right_index
-  move a, left_value
-  move values[L], a
+  a := left_value
+  values[L] := a
 end
 
 func find_min_index(start_index: byte, last_index: byte): HL
@@ -41,18 +41,18 @@ func find_min_index(start_index: byte, last_index: byte): HL
     current_value: byte = 0
   end
 
-  move a, start_index
-  move best_index, a
-  move current_index, a
+  a := start_index
+  best_index := a
+  current_index := a
 
   move l, start_index
-  move a, values[L]
-  move best_value, a
+  a := values[L]
+  best_value := a
 
   ld a, 1
   or a
   while NZ
-    move a, current_index
+    a := current_index
     move b, last_index
     cp b
     if C
@@ -64,36 +64,36 @@ func find_min_index(start_index: byte, last_index: byte): HL
     if NC
       if NZ
         ld h, 0
-        move a, best_index
+        a := best_index
         ld l, a
         ret
       end
     end
 
     move l, current_index
-    move a, values[L]
-    move current_value, a
+    a := values[L]
+    current_value := a
 
-    move a, current_value
+    a := current_value
     move b, best_value
     cp b
     if C
-      move a, current_index
-      move best_index, a
-      move a, current_value
-      move best_value, a
+      a := current_index
+      best_index := a
+      a := current_value
+      best_value := a
     end
 
-    move a, current_index
+    a := current_index
     inc a
-    move current_index, a
+    current_index := a
 
     ld a, 1
     or a
   end
 
   ld h, 0
-  move a, best_index
+  a := best_index
   ld l, a
 end
 
@@ -106,7 +106,7 @@ export func selection_sort()
   ld a, 1
   or a
   while NZ
-    move a, outer_index
+    a := outer_index
     cp LastIndex
     if NC
       ret
@@ -114,9 +114,9 @@ export func selection_sort()
 
     find_min_index outer_index, LastIndex
     ld a, l
-    move min_index, a
+    min_index := a
 
-    move a, min_index
+    a := min_index
     move b, outer_index
     cp b
     if Z
@@ -126,9 +126,9 @@ export func selection_sort()
       swap_values outer_index, min_index
     end
 
-    move a, outer_index
+    a := outer_index
     inc a
-    move outer_index, a
+    outer_index := a
 
     ld a, 1
     or a
