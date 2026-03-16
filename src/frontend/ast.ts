@@ -394,7 +394,7 @@ export interface AsmLabelNode extends BaseNode {
  */
 export interface AsmInstructionNode extends BaseNode {
   kind: 'AsmInstruction';
-  /** Canonical lower-case instruction mnemonic. */
+  /** Canonical lower-case instruction mnemonic or a built-in symbolic head like ":=". */
   head: string;
   operands: AsmOperandNode[];
 }
