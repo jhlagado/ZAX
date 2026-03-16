@@ -14,6 +14,13 @@ function expectRegex(pattern: RegExp, label: string): void {
 }
 
 describe('PR808 grammar drift checks', () => {
+  it('documents assignment grammar with the active register set', () => {
+    expectLine('assign_stmt     = assign_target , ":=" , assign_source ;');
+    expectLine('assign_reg      = "A" | "B" | "C" | "D" | "E" | "H" | "L"');
+    expectLine('                | "IXH" | "IXL" | "IYH" | "IYL"');
+    expectLine('                | "BC" | "DE" | "HL" | "IX" | "IY" ;');
+  });
+
   it('documents move grammar with restricted register/source forms', () => {
     expectLine('move_stmt       = "move" , move_reg , "," , move_src');
     expectLine('                | "move" , move_path , "," , move_reg ;');
