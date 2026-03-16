@@ -64,6 +64,61 @@ type Context = {
 };
 
 export function createAsmInstructionLoweringHelpers(ctx: Context) {
+  const emitAssignmentImmediateToRegister = (
+    dst: Extract<AsmOperandNode, { kind: 'Reg' }>,
+    src: Extract<AsmOperandNode, { kind: 'Imm' }>,
+    span: AsmInstructionNode['span'],
+  ): boolean => {
+    const dstName = dst.name.toUpperCase();
+    if (dstName === 'A' || dstName === 'BC' || dstName === 'DE' || dstName === 'HL') {
+      return ctx.emitInstr('ld', [{ ...dst, name: dstName }, src], span);
+    }
+    return false;
+  };
+
+  const emitZeroExtendReg8ToReg16 = (
+    dstName: 'BC' | 'DE' | 'HL',
+    srcName: string,
+    span: AsmInstructionNode['span'],
+  ): boolean => {
+    const hi = dstName === 'BC' ? 'B' : dstName === 'DE' ? 'D' : 'H';
+    const lo = dstName === 'BC' ? 'C' : dstName === 'DE' ? 'E' : 'L';
+    return (
+      ctx.emitInstr(
+        'ld',
+        [{ kind: 'Reg', span, name: hi }, { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }],
+        span,
+      ) &&
+      ctx.emitInstr('ld', [{ kind: 'Reg', span, name: lo }, { kind: 'Reg', span, name: srcName }], span)
+    );
+  };
+
+  const emitAssignmentRegisterTransfer = (
+    dst: Extract<AsmOperandNode, { kind: 'Reg' }>,
+    src: Extract<AsmOperandNode, { kind: 'Reg' }>,
+    span: AsmInstructionNode['span'],
+  ): boolean => {
+    const dstName = dst.name.toUpperCase();
+    const srcName = src.name.toUpperCase();
+    if (dstName === srcName) return true;
+    if (dstName === 'A' && srcName === 'A') return true;
+    if (dstName === 'A') return false;
+    if (dstName === 'BC' || dstName === 'DE' || dstName === 'HL') {
+      if (srcName === 'A') return emitZeroExtendReg8ToReg16(dstName, srcName, span);
+      const asLd: AsmInstructionNode = {
+        kind: 'AsmInstruction',
+        span,
+        head: 'ld',
+        operands: [
+          { kind: 'Reg', span, name: dstName },
+          { kind: 'Reg', span, name: srcName },
+        ],
+      };
+      return ctx.emitVirtualReg16Transfer(asLd);
+    }
+    return false;
+  };
+
   const isTypedStorageLdOperand = (op: AsmOperandNode): boolean => {
     if (op.kind === 'Ea') return true;
     if (op.kind === 'Imm' && op.expr.kind === 'ImmName') {
@@ -393,6 +448,57 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
         return;
       }
       ctx.diagAt(ctx.diagnostics, asmItem.span, `"move" form is not supported.`);
+      return;
+    }
+
+    if (head === ':=') {
+      const dst = asmItem.operands[0];
+      const src = asmItem.operands[1];
+      if (!dst || !src || asmItem.operands.length !== 2) {
+        ctx.diagAt(ctx.diagnostics, asmItem.span, `":=" expects exactly two operands.`);
+        return;
+      }
+      if (src.kind === 'Ea' && src.explicitAddressOf) {
+        if (dst.kind !== 'Reg' || !ctx.reg16.has(dst.name.toUpperCase())) {
+          ctx.diagAt(
+            ctx.diagnostics,
+            asmItem.span,
+            `":=" address-of source requires a 16-bit register destination.`,
+          );
+          return;
+        }
+        if (!ctx.pushEaAddress(src.expr, asmItem.span)) return;
+        if (!ctx.emitInstr('pop', [{ kind: 'Reg', span: asmItem.span, name: dst.name.toUpperCase() }], asmItem.span))
+          return;
+        ctx.syncToFlow();
+        return;
+      }
+      if (dst.kind === 'Ea' || src.kind === 'Ea') {
+        const assignAsLd: AsmInstructionNode = { ...asmItem, head: 'ld' };
+        if (ctx.lowerLdWithEa(assignAsLd)) {
+          ctx.syncToFlow();
+          return;
+        }
+        ctx.diagAt(ctx.diagnostics, asmItem.span, `":=" form is not supported.`);
+        return;
+      }
+      if (dst.kind === 'Reg' && src.kind === 'Imm') {
+        if (emitAssignmentImmediateToRegister(dst, src, asmItem.span)) {
+          ctx.syncToFlow();
+          return;
+        }
+        ctx.diagAt(ctx.diagnostics, asmItem.span, `":=" form is not supported.`);
+        return;
+      }
+      if (dst.kind === 'Reg' && src.kind === 'Reg') {
+        if (emitAssignmentRegisterTransfer(dst, src, asmItem.span)) {
+          ctx.syncToFlow();
+          return;
+        }
+        ctx.diagAt(ctx.diagnostics, asmItem.span, `":=" form is not supported.`);
+        return;
+      }
+      ctx.diagAt(ctx.diagnostics, asmItem.span, `":=" form is not supported.`);
       return;
     }
 
