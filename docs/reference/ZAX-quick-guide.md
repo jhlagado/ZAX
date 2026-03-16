@@ -362,13 +362,13 @@ address values:
 ```zax
 move a, <Sprite>hl.flags
 move hl, <Header>ptr.checksum
+move a, <ListNode>current_ptr.value
 ```
 
-The cast does not permanently type `HL` or `ptr`. It only supplies a typed
-storage base for the following field/index path.
-
-Implementation note: this surface is now part of the accepted language docs,
-but compiler support may lag while implementation work catches up.
+The cast does not permanently type `HL`, `ptr`, or `current_ptr`. It only
+supplies a typed storage base for the following field/index path. When the base
+is already held in an `addr` or `word` scalar, prefer the direct form above
+instead of first copying it through `HL`.
 
 ### 3.6 Combining Field Access and Indexing
 
