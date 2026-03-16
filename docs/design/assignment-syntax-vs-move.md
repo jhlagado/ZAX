@@ -1,6 +1,6 @@
 # Assignment Syntax vs `move`
 
-Status: proposed review record
+Status: Stage 1 landed; reg8 expansion planned
 
 ## Problem
 
@@ -149,28 +149,61 @@ Use assignment syntax for:
 
 This makes the mixed-language model visible instead of disguising it.
 
+## Current status
+
+Stage 1 is now implemented on `main`:
+
+- `:=` is available as the preferred assignment/value-transfer surface
+- whole-register immediates are supported
+- whole-register and whole-register-pair copies are supported
+- byte-to-pair widening is supported
+- `rr := @path` is supported
+- `move` still remains as a transitional surface
+
+## Remaining blocker to removing `move`
+
+The main remaining `move` usage on live `main` is not whole-register transfer.
+It is typed byte transfer into partial 8-bit register destinations, especially:
+
+- `move l, idx`
+- `move b, count`
+- `move b, arr[idx]`
+
+These forms are common in the current examples because indexed array code and
+loop counters frequently target `L` and `B`.
+
+So `move` cannot be deprecated or removed until `:=` covers typed byte transfer
+to and from the ordinary 8-bit register set.
+
 ## Migration plan
 
 ### Stage 1
 
-Add `:=` as an exact synonym for current `move`.
-
-- no semantic widening
-- no immediate removal of `move`
-- docs/examples may begin preferring `:=`
+Landed on `main`.
 
 ### Stage 2
 
-Rewrite core examples and the quick guide to use `:=` as the preferred form.
+Extend `:=` to typed byte transfer for 8-bit registers:
+
+- loads into `A`, `B`, `C`, `D`, `E`, `H`, `L`
+- stores from `A`, `B`, `C`, `D`, `E`, `H`, `L`
+- byte immediates into 8-bit registers
+
+This stage should continue to reject raw indirect forms like `(hl)` and should
+not broaden `:=` into a synonym for raw `ld`.
 
 ### Stage 3
 
+Rewrite remaining live docs/examples to eliminate `move`.
+
+### Stage 4
+
 Deprecate `move` in docs and eventually consider warning on it, only after the
-surface has been broadly migrated.
+live surface is broadly migrated away from it.
 
 ## Deferred forms
 
-The following may be acceptable later, but are not required in the first slice:
+The following may be acceptable later, but are not required in the next slice:
 
 - `h := d`
 - `l := a`
