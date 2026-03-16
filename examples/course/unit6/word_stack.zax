@@ -6,8 +6,8 @@
 export func push_word(stack_slots: word[], depth_count: byte, value_word: word): AF
   move a, depth_count
   ld l, a
-  move hl, value_word
-  move stack_slots[L], hl
+  move de, value_word
+  move stack_slots[L], de
 
   move a, depth_count
   inc a
@@ -18,5 +18,6 @@ export func pop_word(stack_slots: word[], depth_count: byte): HL, AF
   dec a
 
   ld l, a
-  move hl, stack_slots[L]
+  move de, stack_slots[L]
+  ex de, hl
 end
