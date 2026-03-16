@@ -74,13 +74,13 @@ export func rpn_demo(): HL
       ret
     end
 
-    move l, token_index
+    l := token_index
     a := token_kinds[L]
     current_kind := a
 
     select A
       case KindNumber
-        move l, token_index
+        l := token_index
         hl := token_values[L]
         word_stack.push_word value_stack, stack_depth, hl
         stack_depth := a

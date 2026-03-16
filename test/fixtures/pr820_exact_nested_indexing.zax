@@ -14,7 +14,7 @@ section data vars at $8000
 end
 
 func read_right_lo(row_index: word)
-  move hl, row_index
-  move a, rows[HL].right.lo
+  hl := row_index
+  a := rows[HL].right.lo
   ret
 end

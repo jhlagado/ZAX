@@ -51,7 +51,7 @@ export func getbits_demo(): HL
     and 1
     if NZ
       a := result_value
-      move b, bit_mask
+      b := bit_mask
       or b
       result_value := a
     end

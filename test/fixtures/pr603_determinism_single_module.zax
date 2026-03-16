@@ -4,7 +4,7 @@ end
 
 section code boot at $0000
   export func main()
-    move a, arr[0]
+    a := arr[0]
     ret
   end
 end

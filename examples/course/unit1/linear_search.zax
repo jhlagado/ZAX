@@ -25,12 +25,12 @@ func linear_search(target_value: byte): HL
       ret
     end
 
-    move l, scan_index
+    l := scan_index
     a := values[L]
     probe_value := a
 
     a := target_value
-    move b, probe_value
+    b := probe_value
     cp b
     if Z
       ld h, 0
