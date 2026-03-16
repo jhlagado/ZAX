@@ -1,6 +1,6 @@
 # ZAX Ergonomics Proposals
 
-**Status:** Draft for discussion
+**Status:** Draft — revised after designer review of PR #890
 **Based on:** Analysis of all language-tour and codegen-corpus examples after the `:=` migration
 
 ---
@@ -13,14 +13,14 @@ The language is best when this line stays clear:
 - **Z80 mnemonics** manage arithmetic, flags, and raw machine operations
 
 Expanding `:=` for better transfer ergonomics is coherent with that boundary.
-Adding a small counted `for` is coherent with that boundary.
+Lifting `inc` and `dec` onto typed paths is coherent with that boundary.
 Adding a general expression evaluator inside assignment is not.
 
 ---
 
 ## What the corpus shows
 
-After examining the full language-tour suite and the codegen corpus, one dominant noise pattern stands out above all others: the **register shuttle**.
+The dominant noise pattern after the `:=` migration is the **register shuttle**: load a typed value into a register, do one small thing or nothing, write it back to another typed path. The intermediate register contributes nothing to the programmer's intent.
 
 ```zax
 ; 02_fibonacci_args_locals.zax — four shuttles in a row:
@@ -32,21 +32,21 @@ move curr_value, hl      ; intent: curr_value := next_value
 ```
 
 ```zax
-; 11_records_and_fields.zax:
-move a, lo_value
-move pair_buf.lo, a      ; intent: pair_buf.lo := lo_value
+; Incrementing a named counter — three lines for one logical operation:
+move hl, count
+inc hl
+move count, hl
 ```
 
-The intermediate register contributes nothing to the programmer's intent. The code is ceremonial rather than communicative. This is the primary ergonomic problem. It is not a lack of arithmetic syntax.
+The biggest source noise is not a lack of arithmetic syntax. It is forced register shuttling for obvious typed transfers.
 
 ---
 
 ## Priority order
 
-1. Scalar storage-to-storage `:=` (path-to-path assignment)
-2. Richer scalar path expressions on both sides of `:=`
-3. Counted `for` loop (Pascal-style)
-4. General assignment expressions — no, for now
+1. Scalar path-to-path `:=`
+2. `inc` / `dec` on typed paths
+3. Counted `for` loop — design needs further work before implementation
 
 ---
 
@@ -54,11 +54,10 @@ The intermediate register contributes nothing to the programmer's intent. The co
 
 ### Rule
 
-`:=` may accept any scalar source expression that can be lowered as a typed value.
-`:=` may accept any scalar destination expression that can be lowered as a typed storage location.
-If both sides are paths, the compiler shuttles through a register internally.
-
-**Evaluation order is fixed:** RHS value is evaluated first, then the LHS destination is written. This is deterministic and must be documented.
+- `:=` may accept any scalar source expression that can be lowered as a typed value.
+- `:=` may accept any scalar destination expression that can be lowered as a typed storage location.
+- If both sides are paths, the compiler shuttles through a register internally.
+- Evaluation order is fixed: **RHS value is fully evaluated and loaded first, then LHS destination is written.** This is deterministic and normative.
 
 ### What becomes valid
 
@@ -72,7 +71,7 @@ arr[i] := arr[j]
 rec_a.inner.count := rec_b.inner.count
 ```
 
-With typed reinterpretation in the chain:
+Typed reinterpretation in the chain:
 
 ```zax
 <ListNode>dst_ptr.value := <ListNode>src_ptr.value
@@ -85,139 +84,100 @@ Nested paths:
 <Outer>dst_ptr.items[idx].count := <Outer>src_ptr.items[j].count
 ```
 
-These are all still fundamentally transfers between two scalar places. The compiler resolves each side to a storage location and emits the appropriate load/store sequence.
+These all remain fundamentally transfers between two scalar places.
+
+### Aliasing and self-copy
+
+`x := x` is valid. Because evaluation order is fixed (load RHS into register, then store to LHS), the scalar value is captured before the write. Self-copy is therefore a no-op in effect. Overlapping typed locations behave as "load scalar RHS value, then store scalar LHS value" — no special aliasing rules are needed beyond the fixed evaluation order.
+
+### Register conflict table
+
+The pipeline must choose an intermediate register that does not conflict with the index registers required by either path. "A never conflicts" is not correct — byte-indexed paths can use A as their index register.
+
+**Byte copies:**
+
+| Destination index | Source index | Safe intermediate | Rationale |
+|-------------------|-------------|-------------------|-----------|
+| not A             | any         | A                 | A is free for the value |
+| A                 | not A       | B                 | Dest needs A for addressing; load source into B |
+| A                 | A           | B                 | Both paths use A; hold value in B throughout |
+
+If B is also occupied as an index in one of the paths, promote to C (then D, E, in order). In practice, a single path cannot use more than one index register simultaneously, so one promotion level is sufficient.
+
+**Word copies:**
+
+| Destination index register | Safe intermediate | Rationale |
+|---------------------------|-------------------|-----------|
+| not L or H (or no register index) | HL | HL is free |
+| L or H                    | DE                | HL is in use for dest addressing; loading into HL clobbers L before the store |
+| L or H, and DE also in use | BC               | Both HL and DE occupied |
+
+The conflict that must be avoided for word copies: `LOAD_RP_FVAR` targeting HL uses `ex de, hl / ld e, (ix+d) / ld d, (ix+d+1) / ex de, hl`, which necessarily clobbers L. If the destination path indexes via L, the index is destroyed before the store can execute. This is the same register-overlap constraint documented in the existing bug-fix work.
 
 ### What stays out of scope
 
 ```zax
-; Not valid — arithmetic expression on RHS:
+; Not valid — arithmetic on RHS:
 x := a + b
 arr[i] := x + 1
-dst := foo(bar + baz, qux)
 ```
 
-These require hidden temporary selection, sequencing rules, possible spill behaviour, and much broader diagnostics. That is a different language tier.
-
-### Why this is the right boundary
-
-The compiler already knows how to:
-- find a storage location
-- load a scalar value from it
-- store a scalar value to it
-
-Broadening `:=` to cover both-path transfer is a natural extension. Allowing arithmetic expressions would add hidden register allocation, hidden evaluation order, and mini-compiler behaviour. That cuts against ZAX's current honesty.
-
-### Lowering
-
-For a scalar copy `dest_path := src_path`:
-
-1. Resolve the RHS path to a typed load target — produce `LOAD_xxx` steps into a chosen intermediate register.
-2. Resolve the LHS path to a typed store target — produce `STORE_xxx` steps from that register.
-3. Check for index-register conflict between the two paths and promote the intermediate if needed.
-
-**Register selection:**
-
-| Type  | Default intermediate | Promote if conflict    |
-|-------|---------------------|------------------------|
-| byte  | A                   | — (A never conflicts)  |
-| word  | HL                  | DE (then BC)           |
-
-The conflict rule for word copies: if the destination path uses L as its index register, `LOAD_RP_FVAR` to HL would clobber L before the store completes. Promote to DE. This is the same constraint already documented for the existing register-overlap bug class.
+These require hidden temporary selection, sequencing rules, and possible spill behaviour. That is a different language tier.
 
 ---
 
-## Proposal 2: Lift path complexity limits
+## Proposal 2: `inc` and `dec` on typed paths
 
-The right way to think about "more complex expressions" in ZAX is not arithmetic complexity — it is **storage-path complexity**.
+### Rule
 
-The compiler should permit increasingly deep scalar path expressions on both sides of `:=`, provided they still resolve to a single scalar value (byte or word):
+`inc path` and `dec path` are valid wherever `path` resolves to a scalar byte or word storage location. They lower as: load value into register, apply `inc`/`dec`, store back.
 
-- nested field chains: `rec.inner.outer.field`
-- typed reinterpretation in the chain: `<Type>reg.field`
-- indexed paths: `arr[idx].field`
-- address-of paths: `hl := @player.pos`
-- combinations thereof: `<Outer>ptr.items[idx].count`
-
-This is still a path/value-transfer problem. It does not change the philosophy.
-
-What is not on the table is relaxing the limit into free-form computation:
+### Examples
 
 ```zax
-; Bad: changes ZAX into an expression compiler
-dst := (a + b) ^ ((c << 1) - d)
+inc count          ; was: move hl, count / inc hl / move count, hl
+dec used_slots
+inc entries[B].version
 ```
-
----
-
-## Proposal 3: Pascal-style counted `for` loop
-
-### Why not C-style
-
-A C-style `for(init; cond; step)` is too broad. It drags in statement expressions, loop-local side effects, hidden sequencing rules, and a miniature control language in the header. That is not minimal.
-
-### Design
-
-A Pascal-like counted loop fits ZAX's character:
-
-```zax
-for idx := 0 to last_index
-  ; body — idx runs 0, 1, ..., last_index
-end
-
-for row := height downto 1
-  ; body — row runs height, height-1, ..., 1
-end
-```
-
-### Semantics (v1 — narrow)
-
-- Integer/register variable only
-- `to` (ascending) and `downto` (descending)
-- Bounds evaluated once on entry
-- Step fixed: `+1` for `to`, `-1` for `downto`
-- No arbitrary `step` — add later if needed
-- No C-style init/cond/increment clauses
 
 ### Lowering
 
-**`for reg := start to limit`:**
+| Type  | Register | Sequence emitted                               |
+|-------|----------|------------------------------------------------|
+| byte  | A        | `ld a, <path>` / `inc a` / `ld <path>, a`     |
+| word  | HL       | `ld hl, <path>` / `inc hl` / `ld <path>, hl`  |
 
-```
-ld <reg>, <start>
-@L:
-  ld a, <reg>
-  cp <limit+1>        ; or equivalent word comparison
-  jr z, @end
-  <body>
-  inc <reg>
-  jr @L
-@end:
-```
+The register is chosen by the same conflict rules as path-to-path assignment (promote if the path uses A or L as its index register).
 
-**`for reg := start downto 1` (byte register, reg is B):**
+### Flag behaviour
 
-```
-ld b, <start>
-@L:
-  <body>
-  djnz @L
+`ld` on Z80 does not alter flags. Therefore: the flags after `inc path` or `dec path` are exactly the flags set by `inc <reg>` or `dec <reg>`. The load and store do not interfere. This makes `inc path` / `dec path` composable with existing flag-driven control flow in the expected way.
+
+```zax
+inc count
+if Z
+  ; count wrapped to zero
+end
 ```
 
-**`for reg := start downto 1` (any other register):**
+### Disambiguation from raw Z80
 
+`inc` and `dec` already apply to registers and indirect addresses in raw Z80:
+
+```zax
+inc hl        ; raw Z80 — register
+inc (hl)      ; raw Z80 — indirect memory
 ```
-ld <reg>, <start>
-@L:
-  <body>
-  dec <reg>
-  jp nz, @L
-```
 
-The `downto` form with B is the Z80's native `DJNZ` loop. The compiler should recognise this case and emit the optimal instruction.
+`inc name` where `name` resolves to a ZAX typed path is the new form. The parser resolves this by checking whether the operand is a register name, a `(register)` indirect, or a named path expression. No grammar ambiguity arises.
 
-### Why this fits ZAX better than `while`
+---
 
-The existing counted-loop idiom:
+## Proposal 3: Counted `for` loop — design in progress
+
+### Motivation
+
+The DJNZ pattern appears throughout the corpus as raw labels:
 
 ```zax
 ld b, 10
@@ -226,11 +186,55 @@ loop:
   djnz loop
 ```
 
-uses raw labels and breaks the structured control flow model. A `for` construct makes the intent explicit, removes the label, and still lowers to the same instructions. The programmer retains full register visibility — they choose which register is the counter.
+This is the most common counted loop on Z80 and the only one without a structured form in ZAX. The motivation for a `for` construct is real.
 
-### What `for` does not cover
+### Problems with the current proposal
 
-Count-up loops that do not fit the simple `to` pattern remain `while`. This is appropriate: they require the programmer to be explicit about the comparison, which is consistent with ZAX's rule that the programmer sets flags.
+**Zero-count semantics are broken.** With a DJNZ-based lowering, `for B := 0` would execute 256 times (DJNZ decrements before testing). That is faithful to the hardware but is not a sane default for a structured high-level construct. A structured loop should have zero-trip semantics when the count is zero.
+
+Fixing this requires an entry guard:
+
+```
+ld b, <n>
+ld a, b
+or a
+jr z, @end      ; skip if n == 0
+@L:
+  <body>
+  djnz @L
+@end:
+```
+
+Once an entry guard is added, the lowering is no longer "just DJNZ" — it is DJNZ plus overhead. This is still fine but the design must commit to it explicitly.
+
+**Supporting arbitrary `reg8` weakens the proposal.** The only compelling hardware mapping is `B` + `DJNZ`. For other registers the lowering degrades to `dec reg / jp nz` with no special Z80 advantage. If the construct supports `for C := n` or `for L := n` it starts to look like a general loop rather than a structured idiom for a specific hardware pattern.
+
+### Options under consideration
+
+**Option A — honest DJNZ construct, narrow to B:**
+```zax
+repeat B := n
+  ; body — B counts from n down to 1; zero n skips body
+end
+```
+This communicates countdown/counter ownership clearly. Renaming it away from `for` avoids implying a general counted loop. The semantics are DJNZ with a zero-trip guard.
+
+**Option B — Pascal-style general counted loop:**
+```zax
+for idx := 0 to last_index
+  ; body
+end
+for row := height downto 1
+  ; body
+end
+```
+Bounds evaluated once on entry. Step fixed at +1 or −1. Zero-trip safe. Does not assume B or DJNZ. The `downto 1` form with B would emit DJNZ as an optimisation; all other forms emit `inc`/`dec` + compare.
+
+**Not under consideration:** C-style `for(init; cond; step)`. That is too broad and drags in statement expressions, loop-local side effects, and a miniature control language. It is not minimal.
+
+### Current recommendation
+
+Do not prioritise `for` ahead of proposals 1 and 2. The design requires an explicit decision between Option A and Option B, and a normative statement on zero-count behaviour, before implementation begins. This proposal is split out for separate design review.
 
 ---
 
@@ -238,25 +242,22 @@ Count-up loops that do not fit the simple `to` pattern remain `while`. This is a
 
 Not planned.
 
-Once arithmetic expressions are allowed on the RHS, the following become necessary:
+```zax
+; Not valid — different language tier:
+next_value := prev_value + curr_value
+dst := (a + b) ^ ((c << 1) - d)
+```
 
-- hidden temporary register selection
-- expression sequencing rules
-- possible spill behaviour when more intermediate values are live than there are registers
-- substantially broader diagnostics
-
-This is the domain of a compiler backend, not an assembler's macro expander. The step from "pipeline of typed load/store stages" to "expression evaluator" is non-trivial and changes the fundamental character of the language.
-
-The boundary stays: **path-to-path copies (no computation) are ZAX-layer. Arithmetic between loads and stores remains Z80-layer.**
+Allowing arithmetic on the RHS requires hidden temporary selection, sequencing rules, possible spill behaviour, and substantially broader diagnostics. That changes ZAX from a structured assembler into an expression compiler. The boundary stays: **path-to-path copies (no computation) are ZAX-layer; arithmetic between loads and stores remains Z80-layer.**
 
 ---
 
 ## Summary
 
-| Proposal                          | Priority | Direction         |
-|-----------------------------------|----------|-------------------|
-| Scalar path-to-path `:=`          | 1        | Yes — implement   |
-| Richer scalar path complexity     | 2        | Yes — extend      |
-| Pascal-style counted `for`        | 3        | Yes — design next |
-| General RHS arithmetic            | —        | No, for now       |
-| C-style `for`                     | —        | No                |
+| Proposal                         | Verdict              |
+|----------------------------------|----------------------|
+| Scalar path-to-path `:=`         | Yes — implement next |
+| `inc` / `dec` on typed paths     | Yes — implement      |
+| Pascal-style counted `for`       | Design review needed |
+| General RHS arithmetic           | No, for now          |
+| C-style `for`                    | No                   |
