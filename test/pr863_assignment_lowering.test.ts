@@ -97,7 +97,7 @@ describe('PR863 := lowering', () => {
     expect(diagnostics).toEqual([]);
     expect(loweredLd).toHaveLength(1);
     expect(loweredLd[0]).toMatchObject({
-      head: 'ld',
+      head: ':=',
       operands: [
         { kind: 'Reg', name: 'A' },
         { kind: 'Ea', expr: { kind: 'EaName', name: 'x' } },
