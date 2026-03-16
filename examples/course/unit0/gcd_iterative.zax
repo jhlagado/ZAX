@@ -9,44 +9,44 @@ func gcd_iterative(left_input: word, right_input: word): HL
     right: word = 0
   end
 
-  move hl, left_input
-  move left, hl
-  move hl, right_input
-  move right, hl
+  hl := left_input
+  left := hl
+  hl := right_input
+  right := hl
 
   while NZ
-    move hl, right
+    hl := right
     ld a, h
     or l
     if Z
-      move hl, left
+      hl := left
       ret
     end
 
-    move hl, left
-    move de, right
+    hl := left
+    de := right
     xor a
     sbc hl, de
     if Z
-      move hl, left
+      hl := left
       ret
     end
     if NC
-      move left, hl
+      left := hl
     end
     if C
-      move hl, right
-      move de, left
+      hl := right
+      de := left
       xor a
       sbc hl, de
-      move right, hl
+      right := hl
     end
 
     ld a, 1
     or a
   end
 
-  move hl, left
+  hl := left
 end
 
 export func main()

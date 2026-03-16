@@ -12,7 +12,7 @@ export func strlen_demo(): HL
     count_value: word = 0
   end
 
-  move hl, @sample_text
+  hl := @sample_text
 
   ld a, 1
   or a
@@ -20,21 +20,21 @@ export func strlen_demo(): HL
     ld a, (hl)
     or a
     if Z
-      move hl, count_value
+      hl := count_value
       ret
     end
 
     inc hl
 
-    move de, count_value
+    de := count_value
     inc de
-    move count_value, de
+    count_value := de
 
     ld a, 1
     or a
   end
 
-  move hl, count_value
+  hl := count_value
 end
 
 export func main()

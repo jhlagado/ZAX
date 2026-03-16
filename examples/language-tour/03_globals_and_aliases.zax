@@ -3,12 +3,12 @@ section data vars at $1000
 end
 
 func read_counter(): HL
-  move hl, counter
+  hl := counter
 end
 
 func write_counter(new_value: word)
-  move hl, new_value
-  move counter, hl
+  hl := new_value
+  counter := hl
 end
 
 export func main()
@@ -17,5 +17,5 @@ export func main()
   end
 
   write_counter 123
-  move hl, local_alias
+  hl := local_alias
 end

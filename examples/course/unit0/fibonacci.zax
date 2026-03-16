@@ -12,34 +12,34 @@ func fib(target_count: word): HL
   end
 
   while NZ
-    move hl, index_value
-    move de, target_count
+    hl := index_value
+    de := target_count
     xor a
     sbc hl, de
     if Z
-      move hl, prev_value
+      hl := prev_value
       ret
     end
 
-    move hl, prev_value
-    move de, curr_value
+    hl := prev_value
+    de := curr_value
     add hl, de
-    move next_value, hl
+    next_value := hl
 
-    move hl, curr_value
-    move prev_value, hl
-    move hl, next_value
-    move curr_value, hl
+    hl := curr_value
+    prev_value := hl
+    hl := next_value
+    curr_value := hl
 
-    move hl, index_value
+    hl := index_value
     inc hl
-    move index_value, hl
+    index_value := hl
 
     ld a, 1
     or a
   end
 
-  move hl, prev_value
+  hl := prev_value
 end
 
 export func main()

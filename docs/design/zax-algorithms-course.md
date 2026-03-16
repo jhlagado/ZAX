@@ -1,7 +1,7 @@
 # ZAX Algorithms Course — Outline, Goals, and Design Rationale
 
-*Status: active — execution document*
-*Audience: course author, contributors*
+_Status: active — execution document_
+_Audience: course author, contributors_
 
 ---
 
@@ -10,8 +10,8 @@
 This document establishes a structured course in ZAX built around classic short
 algorithms from two foundational texts:
 
-- **Kernighan and Ritchie**, *The C Programming Language* (K&R)
-- **Niklaus Wirth**, *Algorithms + Data Structures = Programs* (Wirth)
+- **Kernighan and Ritchie**, _The C Programming Language_ (K&R)
+- **Niklaus Wirth**, _Algorithms + Data Structures = Programs_ (Wirth)
 
 The goal is not to translate C or Pascal into assembly. The goal is to
 discover — through concrete, well-understood problems — what ZAX can say
@@ -156,11 +156,11 @@ end
 ```
 
 The `@path` address-of form produces the address of a typed storage path.
-It is valid only as the source operand of `move rr, @path`:
+It is valid only on the source side of `rr := @path`:
 
 ```zax
-move hl, @sprite.flags      ; HL = address of sprite.flags
-move de, @sprites[bc].x     ; DE = address of sprites[BC].x
+hl := @sprite.flags      ; HL = address of sprite.flags
+de := @sprites[bc].x     ; DE = address of sprites[BC].x
 ```
 
 Typed reinterpretation `<Type>base.tail` extends the place-expression model to
@@ -265,7 +265,7 @@ end
 
 Every `func` that returns a value must declare its return register in the
 signature. The compiler enforces the complementary callee-save set mechanically;
-comments should document algorithmic register *choices*, not preservation rules
+comments should document algorithmic register _choices_, not preservation rules
 the signature already declares.
 
 ```zax
@@ -310,15 +310,15 @@ surface: typed storage, `func`, `if`/`while`/`repeat`/`select` with ranges,
 
 #### 1A: Arithmetic and Number Theory
 
-| Algorithm | Source | ZAX Features Exercised |
-|---|---|---|
-| Integer power by repeated multiplication | K&R §1.2 | `func`, `while`, `word` params, return `HL` |
-| Euclid's GCD (iterative) | Wirth Ch.1 | `while`, `if NZ`, subtraction-loop remainder |
-| Euclid's GCD (recursive) | Wirth Ch.1 | recursive `func`, IX frame across calls |
-| Integer square root (Newton step) | Wirth Ch.1 | `while`, convergence test with `sbc hl, de` |
-| Exponentiation by squaring | Wirth Ch.1 | `if`, halving via `sra`, shift-and-multiply |
-| Fibonacci (iterative) | Wirth Ch.1 | `while`, two-variable rolling state in locals |
-| Decimal digit decomposition | K&R §1.2 | division-by-10, character offset, `repeat` |
+| Algorithm                                | Source     | ZAX Features Exercised                        |
+| ---------------------------------------- | ---------- | --------------------------------------------- |
+| Integer power by repeated multiplication | K&R §1.2   | `func`, `while`, `word` params, return `HL`   |
+| Euclid's GCD (iterative)                 | Wirth Ch.1 | `while`, `if NZ`, subtraction-loop remainder  |
+| Euclid's GCD (recursive)                 | Wirth Ch.1 | recursive `func`, IX frame across calls       |
+| Integer square root (Newton step)        | Wirth Ch.1 | `while`, convergence test with `sbc hl, de`   |
+| Exponentiation by squaring               | Wirth Ch.1 | `if`, halving via `sra`, shift-and-multiply   |
+| Fibonacci (iterative)                    | Wirth Ch.1 | `while`, two-variable rolling state in locals |
+| Decimal digit decomposition              | K&R §1.2   | division-by-10, character offset, `repeat`    |
 
 Note: a Fibonacci reference implementation already exists at
 `examples/language-tour/02_fibonacci_args_locals.zax`. That file is the style
@@ -326,17 +326,17 @@ baseline for Unit 0.
 
 #### 1B: Sorting and Searching
 
-| Algorithm | Source | ZAX Features Exercised |
-|---|---|---|
-| Insertion sort (byte array) | Wirth Ch.2 | `byte[]`, indexed write, `while NC` inner loop |
-| Shell sort (byte array) | Wirth Ch.2 | variable gap in local, nested `while`, in-place swap |
-| Selection sort | K&R §5.6 | `byte[]`, min-index tracking, exchange |
-| Bubble sort | baseline | nested `while`, swap `op`, pass-completion flag |
-| Counting sort | technique | `byte[]` two-pass, offset-index, no comparisons |
-| Prime sieve (Eratosthenes) | Wirth Ch.5 | `byte[256]`, nested `while`, constant-stride marking |
-| Linear search (byte array) | K&R §3.3 | `while`, early exit via `djnz` with label |
-| Binary search (sorted byte array) | K&R §3.3 | `word` lo/hi locals, midpoint via `sra`, `while` |
-| Sentinel linear search | Wirth Ch.2 | array with one extra cell, single-test `repeat` |
+| Algorithm                         | Source     | ZAX Features Exercised                               |
+| --------------------------------- | ---------- | ---------------------------------------------------- |
+| Insertion sort (byte array)       | Wirth Ch.2 | `byte[]`, indexed write, `while NC` inner loop       |
+| Shell sort (byte array)           | Wirth Ch.2 | variable gap in local, nested `while`, in-place swap |
+| Selection sort                    | K&R §5.6   | `byte[]`, min-index tracking, exchange               |
+| Bubble sort                       | baseline   | nested `while`, swap `op`, pass-completion flag      |
+| Counting sort                     | technique  | `byte[]` two-pass, offset-index, no comparisons      |
+| Prime sieve (Eratosthenes)        | Wirth Ch.5 | `byte[256]`, nested `while`, constant-stride marking |
+| Linear search (byte array)        | K&R §3.3   | `while`, early exit via `djnz` with label            |
+| Binary search (sorted byte array) | K&R §3.3   | `word` lo/hi locals, midpoint via `sra`, `while`     |
+| Sentinel linear search            | Wirth Ch.2 | array with one extra cell, single-test `repeat`      |
 
 Binary search midpoint calculation `(lo + hi) >> 1` has a natural Z80
 expression: `add hl, de` then `sra h` / `rr l` for arithmetic right-shift
@@ -344,15 +344,15 @@ of a 16-bit pair.
 
 #### 1C: String Operations
 
-| Algorithm | Source | ZAX Features Exercised |
-|---|---|---|
-| String length (`strlen`) | K&R §5.3 | `byte[]`, null-sentinel `repeat ... until Z` |
-| String copy (`strcpy`) | K&R §5.3 | two `addr` locals, dual-pointer `repeat` |
-| String compare (`strcmp`) | K&R §5.3 | character-by-character `while`, three-way result |
-| String concatenate (`strcat`) | K&R §5.3 | call `strlen` to find end, then copy |
-| String reverse (in-place) | K&R §1.9 | `addr` front/back, `while`, swap via `A` |
-| Atoi (string to integer) | K&R §2.7 | `select A` for digit test, 16-bit accumulate |
-| Itoa (integer to string) | K&R §3.6 | digit extraction loop, reverse result |
+| Algorithm                     | Source   | ZAX Features Exercised                           |
+| ----------------------------- | -------- | ------------------------------------------------ |
+| String length (`strlen`)      | K&R §5.3 | `byte[]`, null-sentinel `repeat ... until Z`     |
+| String copy (`strcpy`)        | K&R §5.3 | two `addr` locals, dual-pointer `repeat`         |
+| String compare (`strcmp`)     | K&R §5.3 | character-by-character `while`, three-way result |
+| String concatenate (`strcat`) | K&R §5.3 | call `strlen` to find end, then copy             |
+| String reverse (in-place)     | K&R §1.9 | `addr` front/back, `while`, swap via `A`         |
+| Atoi (string to integer)      | K&R §2.7 | `select A` for digit test, 16-bit accumulate     |
+| Itoa (integer to string)      | K&R §3.6 | digit extraction loop, reverse result            |
 
 String operations expose the recurrent Z80 pointer-advance idiom. The pattern
 `ld A, (HL)` / `inc HL` recurs throughout and is the natural `op fetch_advance`
@@ -367,13 +367,13 @@ end
 
 #### 1D: Bit Manipulation
 
-| Algorithm | Source | ZAX Features Exercised |
-|---|---|---|
-| Population count (byte) | K&R §2.9 | `while`, `rra` / carry test, accumulate in `B` |
-| Bit reversal (byte) | classic | `while`, `rla`/`rra` shift pair, 8-iteration loop |
-| Parity (byte) | classic | `xor` reduction, `op parity` over `reg8` |
-| Highest set bit position | classic | `while`, `srl A`, count-down in `B` |
-| Extract bit field | K&R §2.9 | `op getbits(val: reg8, offset: imm8, width: imm8)` |
+| Algorithm                | Source   | ZAX Features Exercised                             |
+| ------------------------ | -------- | -------------------------------------------------- |
+| Population count (byte)  | K&R §2.9 | `while`, `rra` / carry test, accumulate in `B`     |
+| Bit reversal (byte)      | classic  | `while`, `rla`/`rra` shift pair, 8-iteration loop  |
+| Parity (byte)            | classic  | `xor` reduction, `op parity` over `reg8`           |
+| Highest set bit position | classic  | `while`, `srl A`, count-down in `B`                |
+| Extract bit field        | K&R §2.9 | `op getbits(val: reg8, offset: imm8, width: imm8)` |
 
 The bit manipulation group is where `op` with `imm8` matchers pays off.
 `getbits` expands to a shift-and-mask sequence parameterized entirely at
@@ -400,12 +400,12 @@ section data io at $8200
 end
 ```
 
-| Algorithm | ZAX Features Exercised |
-|---|---|
-| Ring buffer init | `record`, `section data`, zero-initializer |
-| Ring buffer push | field `move`, `and RingMask` for wrap |
-| Ring buffer pop | `select` on empty predicate, early return |
-| Ring buffer full/empty predicates | `func` returning `byte`, field compare |
+| Algorithm                         | ZAX Features Exercised                     |
+| --------------------------------- | ------------------------------------------ |
+| Ring buffer init                  | `record`, `section data`, zero-initializer |
+| Ring buffer push                  | field `move`, `and RingMask` for wrap      |
+| Ring buffer pop                   | `select` on empty predicate, early return  |
+| Ring buffer full/empty predicates | `func` returning `byte`, field compare     |
 
 The ring buffer exercises exact-size layout directly: `sizeof(Ring) = 19`. A
 runtime-indexed array of rings uses the binary-decomposition multiply path
@@ -414,11 +414,11 @@ exact-size lowering that landed in #817–820.
 
 #### 1F: Classic Puzzles and Recursion
 
-| Algorithm | Source | ZAX Features Exercised |
-|---|---|---|
-| Towers of Hanoi | Wirth Ch.4 | recursive `func`, depth as `byte` param |
-| Recursive array sum | Wirth Ch.4 | base case test, recursive call, `HL` accumulator |
-| Recursive array reverse | Wirth Ch.4 | index passing, `@path` for address-of element |
+| Algorithm               | Source     | ZAX Features Exercised                           |
+| ----------------------- | ---------- | ------------------------------------------------ |
+| Towers of Hanoi         | Wirth Ch.4 | recursive `func`, depth as `byte` param          |
+| Recursive array sum     | Wirth Ch.4 | base case test, recursive call, `HL` accumulator |
+| Recursive array reverse | Wirth Ch.4 | index passing, `@path` for address-of element    |
 
 Towers of Hanoi with no local state beyond arguments makes the IX frame cost
 minimal and the recursion structure legible. The output action — recording or
@@ -632,13 +632,13 @@ than speculation.
 
 ### Known Roadmap Connections
 
-| Example Gap | Status |
-|---|---|
-| RPN calculator / quicksort software stack | Stack-typed local or push/pop op idiom — not yet on roadmap |
+| Example Gap                                                                      | Status                                                                                                                        |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| RPN calculator / quicksort software stack                                        | Stack-typed local or push/pop op idiom — not yet on roadmap                                                                   |
 | Linked list, BST — untyped `ptr` fields, explicit casts, null-as-zero convention | Pointer-typing ergonomics — Tier 2 friction; self-referential record declarations would improve precision, not yet on roadmap |
-| Eight queens labeled exit | `break` / named exit — not yet on roadmap; course surfaces this |
-| Word frequency string ops | Standard `op` library — library workstream, separate from language/compiler roadmap |
-| Ring buffer with exact-size sizeof | Exact-size layout stream (#817–820) — complete |
+| Eight queens labeled exit                                                        | `break` / named exit — not yet on roadmap; course surfaces this                                                               |
+| Word frequency string ops                                                        | Standard `op` library — library workstream, separate from language/compiler roadmap                                           |
+| Ring buffer with exact-size sizeof                                               | Exact-size layout stream (#817–820) — complete                                                                                |
 
 Note: typed reinterpretation (`<Type>base.tail`) and grouped/ranged `select
 case` were roadmap items at course inception but are now implemented. The linked
@@ -737,8 +737,8 @@ the course will understand:
 - what a programmer gains by accepting the discipline ZAX imposes
 
 This is how ZAX becomes a genuine contribution to the software field, even as a
-small project: not by being comprehensive, but by being *precise about what it
-is* — and by having a body of worked examples that demonstrate its scope and
+small project: not by being comprehensive, but by being _precise about what it
+is_ — and by having a body of worked examples that demonstrate its scope and
 limits honestly.
 
 The K&R and Wirth canon provides the calibration baseline. These algorithms are
@@ -750,17 +750,17 @@ expresses them awkwardly, the gap is precisely located.
 
 ## 9. Course Structure
 
-| Unit | Title | Algorithms | ZAX Constructs Introduced |
-|---|---|---|---|
-| 0 | Foundations | Arithmetic, power, Fibonacci, GCD | `func`, `const`, `while`, return register, `move` |
-| 1 | Arrays and Loops | Sorting (insertion, bubble, selection), binary search, prime sieve | `byte[]`, indexed access, `move arr[r], a`, `select` with ranges |
-| 2 | String Model | strlen, strcpy, strcmp, atoi/itoa | null-sentinel loops, `repeat`, `op fetch_advance`, `@path` |
-| 3 | Bit Patterns | Population count, bit reversal, parity, field extract | Shift idioms, `op` with `imm8` matchers |
-| 4 | Records | Ring buffer | `type`, `record`, `section data`, `sizeof`/`offsetof`, exact-size awareness |
-| 5 | Recursion | Towers of Hanoi, recursive sum, recursive reverse | Recursive `func`, IX frame discipline, `<Type>base.tail` |
-| 6 | Composition | RPN calculator | All of the above: `op`, `record`, `select` ranges, `func`, software stack |
-| 7 | Pointer Structures | Linked list, BST | `ptr` fields, `<Type>base.tail` traversal, null-sentinel convention, fixed-pool allocation |
-| 8 | Gaps and Futures | Eight queens | Specification target exercise; named exit / `break` — language gap documented |
+| Unit | Title              | Algorithms                                                         | ZAX Constructs Introduced                                                                  |
+| ---- | ------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| 0    | Foundations        | Arithmetic, power, Fibonacci, GCD                                  | `func`, `const`, `while`, return register, `move`                                          |
+| 1    | Arrays and Loops   | Sorting (insertion, bubble, selection), binary search, prime sieve | `byte[]`, indexed access, `move arr[r], a`, `select` with ranges                           |
+| 2    | String Model       | strlen, strcpy, strcmp, atoi/itoa                                  | null-sentinel loops, `repeat`, `op fetch_advance`, `@path`                                 |
+| 3    | Bit Patterns       | Population count, bit reversal, parity, field extract              | Shift idioms, `op` with `imm8` matchers                                                    |
+| 4    | Records            | Ring buffer                                                        | `type`, `record`, `section data`, `sizeof`/`offsetof`, exact-size awareness                |
+| 5    | Recursion          | Towers of Hanoi, recursive sum, recursive reverse                  | Recursive `func`, IX frame discipline, `<Type>base.tail`                                   |
+| 6    | Composition        | RPN calculator                                                     | All of the above: `op`, `record`, `select` ranges, `func`, software stack                  |
+| 7    | Pointer Structures | Linked list, BST                                                   | `ptr` fields, `<Type>base.tail` traversal, null-sentinel convention, fixed-pool allocation |
+| 8    | Gaps and Futures   | Eight queens                                                       | Specification target exercise; named exit / `break` — language gap documented              |
 
 Unit 8 is intentionally incomplete. It is a design dialogue between the course
 author and the language — a record of what comes next.
@@ -784,15 +784,15 @@ registers, no unexplained register choices.
 
 **Files to produce** under `examples/course/unit0/`:
 
-| File | Algorithm | Key ZAX surface |
-|---|---|---|
-| `power.zax` | Integer power (repeated multiply) | `func`, `while`, `word` params, return `HL` |
-| `gcd_iterative.zax` | Euclid GCD (iterative) | `while`, `if NZ`, subtraction remainder |
-| `gcd_recursive.zax` | Euclid GCD (recursive) | recursive `func`, IX frame across calls |
-| `sqrt_newton.zax` | Integer square root (Newton) | `while`, `sbc hl, de` convergence test |
-| `exp_squaring.zax` | Exponentiation by squaring | `if`, `sra` halving, shift-and-multiply |
-| `fibonacci.zax` | Fibonacci (iterative, extended) | `while`, two-variable rolling locals |
-| `digits.zax` | Decimal digit decomposition | division-by-10, `repeat`, character offset |
+| File                | Algorithm                         | Key ZAX surface                             |
+| ------------------- | --------------------------------- | ------------------------------------------- |
+| `power.zax`         | Integer power (repeated multiply) | `func`, `while`, `word` params, return `HL` |
+| `gcd_iterative.zax` | Euclid GCD (iterative)            | `while`, `if NZ`, subtraction remainder     |
+| `gcd_recursive.zax` | Euclid GCD (recursive)            | recursive `func`, IX frame across calls     |
+| `sqrt_newton.zax`   | Integer square root (Newton)      | `while`, `sbc hl, de` convergence test      |
+| `exp_squaring.zax`  | Exponentiation by squaring        | `if`, `sra` halving, shift-and-multiply     |
+| `fibonacci.zax`     | Fibonacci (iterative, extended)   | `while`, two-variable rolling locals        |
+| `digits.zax`        | Decimal digit decomposition       | division-by-10, `repeat`, character offset  |
 
 Fibonacci already has a reference in `examples/language-tour/02_fibonacci_args_locals.zax`.
 The Unit 0 version extends it to a full table-generating form.
@@ -812,14 +812,14 @@ array access and `select` ranges in context.
 
 **Files to produce** under `examples/course/unit1/`:
 
-| File | Algorithm |
-|---|---|
-| `insertion_sort.zax` | Insertion sort (byte array) |
-| `bubble_sort.zax` | Bubble sort with `swap op` |
-| `selection_sort.zax` | Selection sort |
-| `binary_search.zax` | Binary search (sorted byte array) |
-| `linear_search.zax` | Linear search with sentinel |
-| `prime_sieve.zax` | Eratosthenes sieve (`byte[256]`) |
+| File                 | Algorithm                         |
+| -------------------- | --------------------------------- |
+| `insertion_sort.zax` | Insertion sort (byte array)       |
+| `bubble_sort.zax`    | Bubble sort with `swap op`        |
+| `selection_sort.zax` | Selection sort                    |
+| `binary_search.zax`  | Binary search (sorted byte array) |
+| `linear_search.zax`  | Linear search with sentinel       |
+| `prime_sieve.zax`    | Eratosthenes sieve (`byte[256]`)  |
 
 **Support surface needed**: a `swap op` for byte exchange will recur across
 sorting examples. Author it inline in `bubble_sort.zax` first; if it recurs
@@ -879,7 +879,7 @@ any new friction entries. The format for each entry:
 
 ---
 
-*This is the active execution document for the ZAX algorithms course. It
+_This is the active execution document for the ZAX algorithms course. It
 defines the course structure, style rules, algorithm catalogue, and work
 sequence. For stream classification and issue-ready follow-up, see
-`docs/work/course-roadmap.md`.*
+`docs/work/course-roadmap.md`._

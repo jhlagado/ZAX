@@ -15,7 +15,7 @@ func sum_from(index_value: byte): HL
     current_value: byte = 0
   end
 
-  move a, index_value
+  a := index_value
   cp ItemCount
   if Z
     ld hl, 0
@@ -23,16 +23,16 @@ func sum_from(index_value: byte): HL
   end
 
   move l, index_value
-  move a, numbers[L]
-  move current_value, a
+  a := numbers[L]
+  current_value := a
 
-  move a, index_value
+  a := index_value
   inc a
-  move next_index, a
+  next_index := a
 
   sum_from next_index
 
-  move a, current_value
+  a := current_value
   ld e, a
   ld d, 0
   add hl, de

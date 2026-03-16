@@ -18,22 +18,22 @@ end
 
 func init_list()
   ld a, 4
-  move node_a.value, a
-  move hl, @node_b
-  move node_a.next, hl
+  node_a.value := a
+  hl := @node_b
+  node_a.next := hl
 
   ld a, 7
-  move node_b.value, a
-  move hl, @node_c
-  move node_b.next, hl
+  node_b.value := a
+  hl := @node_c
+  node_b.next := hl
 
   ld a, 2
-  move node_c.value, a
+  node_c.value := a
   ld hl, 0
-  move node_c.next, hl
+  node_c.next := hl
 
-  move hl, @node_a
-  move list_head, hl
+  hl := @node_a
+  list_head := hl
 end
 
 export func list_sum(): HL
@@ -42,35 +42,35 @@ export func list_sum(): HL
     total_value: word = 0
   end
 
-  move hl, list_head
-  move current_ptr, hl
+  hl := list_head
+  current_ptr := hl
 
   ld a, 1
   or a
   while NZ
-    move hl, current_ptr
+    hl := current_ptr
     ld a, h
     or l
     if Z
-      move hl, total_value
+      hl := total_value
       ret
     end
 
-    move a, <ListNode>current_ptr.value
+    a := <ListNode>current_ptr.value
     ld e, a
     ld d, 0
-    move hl, total_value
+    hl := total_value
     add hl, de
-    move total_value, hl
+    total_value := hl
 
-    move hl, <ListNode>current_ptr.next
-    move current_ptr, hl
+    hl := <ListNode>current_ptr.next
+    current_ptr := hl
 
     ld a, 1
     or a
   end
 
-  move hl, total_value
+  hl := total_value
 end
 
 export func main()

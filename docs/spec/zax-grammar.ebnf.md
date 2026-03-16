@@ -234,7 +234,7 @@ These are semantic constraints enforced beyond pure grammar:
 - Variable declarations inside a `code` named section are a compile error.
 - Local non-scalar value-init declarations are invalid.
 - Local non-scalar declarations are alias-only (`name = rhs`).
-- `@path` is not a general expression operator. In v1 it is accepted only as the source operand in `move rr, @path`.
+- `@path` is not a general expression operator. In v1 it is accepted only on the source side of `rr := @path` (with transitional `move rr, @path` still supported).
 - Raw data directives (`db`/`dw`/`ds`) and `raw_label` are only valid inside `section data` blocks.
 - A `raw_label` must be followed by a raw directive; it cannot stand alone.
 - Typed reinterpretation requires at least one tail segment after the cast head.

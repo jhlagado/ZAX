@@ -9,32 +9,32 @@ func mul_u16(lhs: word, rhs: word): HL
     count: word = 0
   end
 
-  move hl, rhs
-  move count, hl
+  hl := rhs
+  count := hl
 
   while NZ
-    move hl, count
+    hl := count
     ld a, h
     or l
     if Z
-      move hl, acc
+      hl := acc
       ret
     end
 
-    move hl, acc
-    move de, lhs
+    hl := acc
+    de := lhs
     add hl, de
-    move acc, hl
+    acc := hl
 
-    move hl, count
+    hl := count
     dec hl
-    move count, hl
+    count := hl
 
     ld a, 1
     or a
   end
 
-  move hl, acc
+  hl := acc
 end
 
 func power(base: word, exponent: word): HL
@@ -43,30 +43,30 @@ func power(base: word, exponent: word): HL
     remaining: word = 0
   end
 
-  move hl, exponent
-  move remaining, hl
+  hl := exponent
+  remaining := hl
 
   while NZ
-    move hl, remaining
+    hl := remaining
     ld a, h
     or l
     if Z
-      move hl, result
+      hl := result
       ret
     end
 
     mul_u16 result, base
-    move result, hl
+    result := hl
 
-    move hl, remaining
+    hl := remaining
     dec hl
-    move remaining, hl
+    remaining := hl
 
     ld a, 1
     or a
   end
 
-  move hl, result
+  hl := result
 end
 
 export func main()

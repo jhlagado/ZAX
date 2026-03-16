@@ -9,8 +9,8 @@ section data vars at $8000
 end
 
 export func strcat_demo()
-  move hl, @prefix_text
-  move de, @suffix_text
+  hl := @prefix_text
+  de := @suffix_text
 
   ld a, 1
   or a

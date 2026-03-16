@@ -7,22 +7,21 @@ direction.
 
 ### Current implementation state
 
-- Typed storage transfers now use `move` (typed-storage inside `ld` has been removed).
+- Typed storage transfers now prefer `:=`; `move` remains supported as a transitional surface.
 - Grouped and ranged `select case` values are implemented.
 - Parser/grammar convergence work is active again.
 - Typed reinterpretation syntax `<Type>base.tail` is now implemented on
   `main`, with parser and lowering landed.
 - Raw data directives and raw-label semantics are implemented on `main`.
 - `@path` address-of storage paths are implemented on `main` under
-  `move rr, @path`.
+  `rr := @path`.
 
 ### Immediate priority
 
-1. Keep the spec, quick guide, and user-facing examples aligned with the
-   implemented language.
+1. Keep the quick guide and user-facing examples aligned with the implemented
+   `:=` assignment surface.
 2. Continue parser/grammar convergence work.
-3. Review assignment syntax as a clearer replacement for `move`.
-4. Stage helper/library follow-up from the course before opening broader
+3. Stage helper/library follow-up from the course before opening broader
    language streams.
 
 ### Deferred until re-planned

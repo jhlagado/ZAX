@@ -9,7 +9,7 @@ end
 
 func times_ten(value_word: word): HL
   push de
-  move hl, value_word
+  hl := value_word
   ld d, h
   ld e, l
   add hl, hl
@@ -26,40 +26,40 @@ export func atoi_demo(): HL
     digit_value: byte = 0
   end
 
-  move hl, @number_text
-  move scan_ptr, hl
+  hl := @number_text
+  scan_ptr := hl
 
   ld a, 1
   or a
   while NZ
-    move hl, scan_ptr
+    hl := scan_ptr
     ld a, (hl)
     or a
     if Z
-      move hl, result_value
+      hl := result_value
       ret
     end
 
     sub '0'
-    move digit_value, a
+    digit_value := a
 
     times_ten result_value
 
-    move a, digit_value
+    a := digit_value
     ld e, a
     ld d, 0
     add hl, de
-    move result_value, hl
+    result_value := hl
 
-    move hl, scan_ptr
+    hl := scan_ptr
     inc hl
-    move scan_ptr, hl
+    scan_ptr := hl
 
     ld a, 1
     or a
   end
 
-  move hl, result_value
+  hl := result_value
 end
 
 export func main()
