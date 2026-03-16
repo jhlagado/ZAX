@@ -457,8 +457,8 @@ Example: arrays of records lower through storage-path access (informative):
 
 ; `sprites[C].x` is a scalar field access. The compiler performs the
 ; required address calculation internally, then loads/stores the value:
-move hl, sprites[C].x   ; load word at sprites[C].x
-move sprites[C].x, hl   ; store word to sprites[C].x
+hl := sprites[C].x   ; load word at sprites[C].x
+sprites[C].x := hl   ; store word to sprites[C].x
 
 ```
 
@@ -499,9 +499,9 @@ section data vars at $2000
 end
 
 func read_value_overlay()
-  move a, v.b  ; read low byte
-  move hl, v.w ; read word overlay
-  move de, v.p ; read pointer overlay
+  a := v.b  ; read low byte
+  hl := v.w ; read word overlay
+  de := v.p ; read pointer overlay
 end
 
 ```
@@ -813,9 +813,9 @@ Meaning:
 Examples:
 
 ```zax
-move a, <Sprite>hl.flags
-move hl, <Header>ptr.checksum
-move a, <TileMap>(map_base + 32)[row][col]
+a := <Sprite>hl.flags
+hl := <Header>ptr.checksum
+a := <TileMap>(map_base + 32)[row][col]
 ```
 
 Rules:
@@ -1439,13 +1439,13 @@ This section defines required source migration behavior for programs moving from
 
 ```zax
 ; v0.1 intent: index comes from byte at memory[HL]
-move a, arr[HL]
+a := arr[HL]
 
 ; v0.2 equivalent
-move a, arr[(HL)]
+a := arr[(HL)]
 
 ; v0.2 direct 16-bit register index
-move a, arr[HL]
+a := arr[HL]
 ```
 
 Scalar value semantics:

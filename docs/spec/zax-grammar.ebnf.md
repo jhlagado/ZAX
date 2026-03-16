@@ -144,6 +144,7 @@ matcher_type    = "reg8" | "reg16"
 instr_stream    = { instr_line } ;
 
 instr_line      = z80_instruction
+                | assign_stmt
                 | move_stmt
                 | op_invoke
                 | func_call
@@ -153,6 +154,11 @@ instr_line      = z80_instruction
                 | select_stmt
                 | asm_label
                 | local_jump ;
+
+assign_stmt     = assign_target , ":=" , assign_source ;
+assign_target   = assign_reg | ea_expr ;
+assign_source   = assign_reg | ea_expr | move_addr | imm_expr ;
+assign_reg      = "A" | "BC" | "DE" | "HL" ;   (* Stage 1 whole-register set only *)
 
 move_stmt       = "move" , move_reg , "," , move_src
                 | "move" , move_path , "," , move_reg ;
