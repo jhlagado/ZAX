@@ -15,8 +15,8 @@ func write_pair(lo_value: byte, hi_value: byte)
 end
 
 func read_pair_word(): HL
-  move l, pair_buf.lo
-  move h, pair_buf.hi
+  l := pair_buf.lo
+  h := pair_buf.hi
 end
 
 export func main()

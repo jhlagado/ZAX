@@ -61,7 +61,7 @@ func bst_contains(node_ptr: addr, target_value: byte): HL
   end
 
   a := <TreeNode>node_ptr.value
-  move b, target_value
+  b := target_value
   cp b
   if Z
     ld hl, 1

@@ -4,7 +4,7 @@ end
 
 export func main(): AF, BC, DE, HL
   ld a, $03
-  move b, arr_b[a]
+  b := arr_b[a]
   ld hl, $0002
-  move c, arr_b[hl]
+  c := arr_b[hl]
 end

@@ -46,7 +46,7 @@ func binary_search(target_value: byte): HL
     probe_value := a
 
     a := target_value
-    move b, probe_value
+    b := probe_value
     cp b
     if Z
       hl := mid_index

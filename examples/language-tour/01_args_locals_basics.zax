@@ -9,7 +9,7 @@ func bump_byte(input_byte: byte): HL
     temp_word: word = 0
   end
 
-  move l, input_byte
+  l := input_byte
   ld h, 0
   inc l
   temp_word := hl

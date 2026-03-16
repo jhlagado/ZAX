@@ -26,7 +26,7 @@ export func strcmp_demo(): HL
     right_char := a
 
     a := left_char
-    move b, right_char
+    b := right_char
     cp b
     if C
       ld hl, $FFFF

@@ -37,7 +37,7 @@ func enqueue(entry_value: byte, entry_stamp: word)
     ret
   end
 
-  move b, tail_slot
+  b := tail_slot
   a := entry_value
   entries[B].value := a
   hl := entry_stamp
@@ -64,7 +64,7 @@ func dequeue(): HL
     ret
   end
 
-  move l, head_slot
+  l := head_slot
   a := entries[L].value
   removed_value := a
 

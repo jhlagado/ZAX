@@ -9,15 +9,15 @@ end
 section code boot at $0000
   export func main()
     ld a, 1
-    move grid[idx], a
-    move arr[idx + 1], a
+    grid[idx] := a
+    arr[idx + 1] := a
 
-    move a, grid[idx]
+    a := grid[idx]
     ld hl, $1234
-    move mat[idx], hl
-    move hl, mat[idx]
+    mat[idx] := hl
+    hl := mat[idx]
 
-    move a, arr[idxw + 2]
+    a := arr[idxw + 2]
     ret
   end
 end
