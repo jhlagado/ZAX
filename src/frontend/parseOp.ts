@@ -134,7 +134,7 @@ export function parseTopLevelOpDecl(
     const contentStart = rawNoComment.indexOf(content);
     const contentSpan =
       contentStart >= 0 ? span(file, so + contentStart, so + rawNoComment.length) : fullSpan;
-    const labelMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:\s*(.*)$/.exec(content);
+    const labelMatch = /^([A-Za-z_][A-Za-z0-9_]*)\s*:(?!\=)\s*(.*)$/.exec(content);
     if (labelMatch) {
       const label = labelMatch[1]!;
       const remainder = labelMatch[2] ?? '';
