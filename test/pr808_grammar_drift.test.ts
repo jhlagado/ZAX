@@ -16,11 +16,16 @@ function expectRegex(pattern: RegExp, label: string): void {
 describe('PR808 grammar drift checks', () => {
   it('documents assignment grammar with the active register set', () => {
     expectLine('assign_stmt     = assign_target , ":=" , assign_source ;');
-    expectLine('assign_source   = assign_reg | ea_expr | assign_addr | imm_expr ;');
     expectLine('assign_reg      = "A" | "B" | "C" | "D" | "E" | "H" | "L"');
     expectLine('                | "IXH" | "IXL" | "IYH" | "IYL"');
     expectLine('                | "BC" | "DE" | "HL" | "IX" | "IY" ;');
-    expectLine('assign_addr     = "@" , ea_expr ;  (* assign_addr is only valid as the source operand in v1 *)');
+  });
+
+  it('documents move grammar with restricted register/source forms', () => {
+    expectLine('move_stmt       = "move" , move_reg , "," , move_src');
+    expectLine('                | "move" , move_path , "," , move_reg ;');
+    expectLine('move_src        = move_addr | move_path ;');
+    expectLine('move_addr       = "@" , ea_expr ;  (* move_addr is only valid as the source operand in v1 *)');
   });
 
   it('documents raw data directives and raw labels', () => {
@@ -37,8 +42,8 @@ describe('PR808 grammar drift checks', () => {
     expectLine('imm_name        = identifier , { "." , identifier } ;');
   });
 
-  it('states @path is assignment-only in v1', () => {
-    expectRegex(/@path\b[^\n]*rr := @path/i, 'missing assignment-only @path note');
+  it('states @path is move-only in v1', () => {
+    expectRegex(/@path\b[^\n]*move rr, @path/i, 'missing move-only @path note');
   });
 
   it('states raw data directives are section-data-only', () => {

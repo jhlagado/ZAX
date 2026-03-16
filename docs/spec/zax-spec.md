@@ -772,13 +772,13 @@ Conceptually, an `ea` is a base storage location plus a sequence of path segment
 
 Value semantics note (current):
 
-- Bare scalar variables use value semantics in ordinary `:=` assignment and call contexts.
+- Bare scalar variables use value semantics in ordinary `:=` assignment, transitional `move`, and call contexts.
 - `rec.field` and `arr[idx]` are storage-path expressions. In scalar value/store contexts (for example `a := rec.field`, `rec.field := a`), the compiler inserts the required load/store lowering.
 - `<Type>base.tail` is also a storage-path expression. It supplies the base
   type explicitly at the access site, then applies ordinary field/index
   traversal.
 - In aggregate contexts (for example passing an array/record parameter), the compiler passes the storage reference transparently.
-- `@path` is the source-level address-of form for typed storage paths. In v1 it is accepted only on the source side of `rr := @path`:
+- `@path` is the source-level address-of form for typed storage paths. In v1 it is accepted only on the source side of `rr := @path` (with transitional `move rr, @path` still supported):
 
   ```zax
   hl := @player.flags
@@ -846,7 +846,7 @@ Semantics:
   for further traversal or aggregate use.
 
 This feature extends the existing typed storage-path model. It works with the
-current `:=`-based typed storage surface, and it is not coupled to any
+current `move`-based typed storage surface, and it is not coupled to any
 source-language `addr` feature.
 
 ---
@@ -2375,34 +2375,34 @@ Note that this op clobbers `HL`, `B`, and `A` internally, plus flags. Because op
 
 ### 7.3 Overload Resolution in Action
 
-Consider a set of overloads for a hypothetical `copy` op:
+Consider a set of overloads for a hypothetical `move` op:
 
 ```
-op copy(dst: A, src: mem8)
+op move(dst: A, src: mem8)
   ld a, src
 end
 
-op copy(dst: reg8, src: mem8)
+op move(dst: reg8, src: mem8)
   push af
   ld a, src
   ld dst, a
   pop af
 end
 
-op copy(dst: reg8, src: imm8)
+op move(dst: reg8, src: imm8)
   ld dst, src
 end
 ```
 
 Now consider three call sites:
 
-`copy A, (flags)` — The first two overloads are both candidates (both have `mem8` in the second position, and both accept `A` in the first). But the first overload has a fixed `A` matcher, which is more specific than the `reg8` matcher in the second overload. The first overload wins. Expansion: `ld a, (flags)`.
+`move A, (flags)` — The first two overloads are both candidates (both have `mem8` in the second position, and both accept `A` in the first). But the first overload has a fixed `A` matcher, which is more specific than the `reg8` matcher in the second overload. The first overload wins. Expansion: `ld a, (flags)`.
 
-`copy B, (flags)` — Only the second overload is a candidate (the first requires `A`, the third requires `imm8`). Expansion: `push af; ld a, (flags); ld b, a; pop af`.
+`move B, (flags)` — Only the second overload is a candidate (the first requires `A`, the third requires `imm8`). Expansion: `push af; ld a, (flags); ld b, a; pop af`.
 
-`copy C, 42` — Only the third overload is a candidate. Expansion: `ld c, 42`.
+`move C, 42` — Only the third overload is a candidate. Expansion: `ld c, 42`.
 
-`copy A, 42` — The first overload does not match (`42` is not `mem8`). The second does not match either. The third matches (`A` satisfies `reg8`, `42` satisfies `imm8`). Expansion: `ld a, 42`.
+`move A, 42` — The first overload does not match (`42` is not `mem8`). The second does not match either. The third matches (`A` satisfies `reg8`, `42` satisfies `imm8`). Expansion: `ld a, 42`.
 
 ---
 
