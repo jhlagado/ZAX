@@ -66,7 +66,7 @@ function makeHelper(overrides: Partial<Parameters<typeof createAsmInstructionLow
       emittedInstrs.push(`virtual ${inst.operands.map((operand) => (operand.kind === 'Reg' ? operand.name : operand.kind)).join(',')}`);
       return true;
     },
-    reg16: new Set(['BC', 'DE', 'HL']),
+    reg16: new Set(['BC', 'DE', 'HL', 'IX', 'IY']),
     emitSyntheticEpilogue: false,
     epilogueLabel: '__zax_epilogue_0',
     emitJumpTo: () => {},
@@ -127,10 +127,20 @@ describe('PR863 := lowering', () => {
         { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 1 } },
       ],
     });
+    helper.lowerAsmInstructionDispatcher({
+      kind: 'AsmInstruction',
+      span,
+      head: ':=',
+      operands: [
+        { kind: 'Reg', span, name: 'IX' },
+        { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } },
+      ],
+    });
 
     expect(diagnostics).toEqual([]);
     expect(emittedInstrs).toContain('ld HL,0');
     expect(emittedInstrs).toContain('ld A,1');
+    expect(emittedInstrs).toContain('ld IX,0');
   });
 
   it('lowers pair copy and byte-to-pair widening', () => {
@@ -163,6 +173,15 @@ describe('PR863 := lowering', () => {
         { kind: 'Reg', span, name: 'A' },
       ],
     });
+    helper.lowerAsmInstructionDispatcher({
+      kind: 'AsmInstruction',
+      span,
+      head: ':=',
+      operands: [
+        { kind: 'Reg', span, name: 'IY' },
+        { kind: 'Reg', span, name: 'HL' },
+      ],
+    });
 
     expect(diagnostics).toEqual([]);
     expect(emittedInstrs).toContain('virtual HL,DE');
@@ -170,6 +189,8 @@ describe('PR863 := lowering', () => {
     expect(emittedInstrs).toContain('ld L,A');
     expect(emittedInstrs).toContain('ld D,0');
     expect(emittedInstrs).toContain('ld E,A');
+    expect(emittedInstrs).toContain('push HL');
+    expect(emittedInstrs).toContain('pop IY');
   });
 
   it('lowers register address-of rhs via push/pop address materialization', () => {
@@ -181,7 +202,7 @@ describe('PR863 := lowering', () => {
       span,
       head: ':=',
       operands: [
-        { kind: 'Reg', span, name: 'HL' },
+        { kind: 'Reg', span, name: 'IY' },
         {
           kind: 'Ea',
           span,
@@ -193,7 +214,7 @@ describe('PR863 := lowering', () => {
 
     expect(diagnostics).toEqual([]);
     expect(harness.pushedEa).toMatchObject({ kind: 'EaName', name: 'x' });
-    expect(emittedInstrs).toContain('pop HL');
+    expect(emittedInstrs).toContain('pop IY');
   });
 
   it('diagnoses unsupported parsed register combinations', () => {
