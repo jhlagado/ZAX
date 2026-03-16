@@ -16,7 +16,6 @@ section data vars at $8000
   value_stack: word[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }
   stack_depth: byte = 0
 end
-
 func mul_u16(left_word: word, right_word: word): HL
   var
     accum_value: word = 0
