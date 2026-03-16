@@ -173,53 +173,12 @@ inc (hl)      ; raw Z80 — indirect memory
 
 ---
 
-## Proposal 3: Counted `for` loop — design in progress
+## Proposal 3: Counted `for` loop
 
-### Motivation
+### Design
 
-The DJNZ pattern appears throughout the corpus as raw labels:
+Pascal-style counted iteration:
 
-```zax
-ld b, 10
-loop:
-  nop
-  djnz loop
-```
-
-This is the most common counted loop on Z80 and the only one without a structured form in ZAX. The motivation for a `for` construct is real.
-
-### Problems with the current proposal
-
-**Zero-count semantics are broken.** With a DJNZ-based lowering, `for B := 0` would execute 256 times (DJNZ decrements before testing). That is faithful to the hardware but is not a sane default for a structured high-level construct. A structured loop should have zero-trip semantics when the count is zero.
-
-Fixing this requires an entry guard:
-
-```
-ld b, <n>
-ld a, b
-or a
-jr z, @end      ; skip if n == 0
-@L:
-  <body>
-  djnz @L
-@end:
-```
-
-Once an entry guard is added, the lowering is no longer "just DJNZ" — it is DJNZ plus overhead. This is still fine but the design must commit to it explicitly.
-
-**Supporting arbitrary `reg8` weakens the proposal.** The only compelling hardware mapping is `B` + `DJNZ`. For other registers the lowering degrades to `dec reg / jp nz` with no special Z80 advantage. If the construct supports `for C := n` or `for L := n` it starts to look like a general loop rather than a structured idiom for a specific hardware pattern.
-
-### Options under consideration
-
-**Option A — honest DJNZ construct, narrow to B:**
-```zax
-repeat B := n
-  ; body — B counts from n down to 1; zero n skips body
-end
-```
-This communicates countdown/counter ownership clearly. Renaming it away from `for` avoids implying a general counted loop. The semantics are DJNZ with a zero-trip guard.
-
-**Option B — Pascal-style general counted loop:**
 ```zax
 for idx := 0 to last_index
   ; body
@@ -228,13 +187,36 @@ for row := height downto 1
   ; body
 end
 ```
-Bounds evaluated once on entry. Step fixed at +1 or −1. Zero-trip safe. Does not assume B or DJNZ. The `downto 1` form with B would emit DJNZ as an optimisation; all other forms emit `inc`/`dec` + compare.
 
-**Not under consideration:** C-style `for(init; cond; step)`. That is too broad and drags in statement expressions, loop-local side effects, and a miniature control language. It is not minimal.
+### Normative rules
 
-### Current recommendation
+- **Any register** may be the loop variable — `B`, `C`, `HL`, or any other scalar register.
+- **Bounds are evaluated once on entry.** Neither the start nor the end expression is re-evaluated on each iteration.
+- **Step is fixed:** `to` increments by 1; `downto` decrements by 1.
+- **Zero-trip safe.** An entry guard is emitted unconditionally: if the initial value already satisfies the termination condition the body is skipped entirely.
 
-Do not prioritise `for` ahead of proposals 1 and 2. The design requires an explicit decision between Option A and Option B, and a normative statement on zero-count behaviour, before implementation begins. This proposal is split out for separate design review.
+### Lowering
+
+The general lowering is: evaluate bounds on entry, emit an entry guard, then loop with `inc`/`dec` + compare. For example, `for row := height downto 1` with `row` in `B` lowers to:
+
+```
+ld b, <height>
+ld a, b
+or a
+jr z, @end      ; zero-trip guard
+@L:
+  <body>
+  djnz @L       ; DJNZ: optimisation for B + downto 1
+@end:
+```
+
+DJNZ is used as an **internal optimisation** when the loop variable happens to be `B` and the direction is `downto 1`. It is not the defining feature of the construct and it is not visible in the surface syntax. All other combinations emit `dec`/`inc` + conditional jump.
+
+**Not in scope:** C-style `for(init; cond; step)`. That is too broad and drags in statement expressions, loop-local side effects, and a miniature control language. It is not minimal.
+
+### Status
+
+Design is settled. Implement after proposals 1 and 2.
 
 ---
 
@@ -258,6 +240,6 @@ Allowing arithmetic on the RHS requires hidden temporary selection, sequencing r
 |----------------------------------|----------------------|
 | Scalar path-to-path `:=`         | Yes — implement next |
 | `inc` / `dec` on typed paths     | Yes — implement      |
-| Pascal-style counted `for`       | Design review needed |
+| Pascal-style counted `for`       | Yes — Pascal-style, implement after proposals 1 and 2 |
 | General RHS arithmetic           | No, for now          |
 | C-style `for`                    | No                   |
