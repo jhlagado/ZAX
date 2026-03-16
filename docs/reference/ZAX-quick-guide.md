@@ -295,6 +295,11 @@ Inside `arr[...]`, only the following forms are valid:
 
 Anything else inside `[...]` is a compile error. In particular: expressions involving arithmetic (`i + j`, `i * 2`, `i << 1`), arbitrary function calls, or other non-register forms are not valid index expressions. If you need a computed index, compute it into a register first.
 
+Register-pair overlap note: `B`/`C` are the byte halves of `BC`, `D`/`E` are
+the byte halves of `DE`, and `H`/`L` are the byte halves of `HL`. They are not
+independent registers. If you write to `L`, you are changing `HL`; if you write
+to `E`, you are changing `DE`; and so on.
+
 ### 3.3 The Critical Distinction: `arr[HL]` vs `arr[(HL)]`
 
 This is one of the most common indexing mistakes:
@@ -357,13 +362,13 @@ address values:
 ```zax
 move a, <Sprite>hl.flags
 move hl, <Header>ptr.checksum
+move a, <ListNode>current_ptr.value
 ```
 
-The cast does not permanently type `HL` or `ptr`. It only supplies a typed
-storage base for the following field/index path.
-
-Implementation note: this surface is now part of the accepted language docs,
-but compiler support may lag while implementation work catches up.
+The cast does not permanently type `HL`, `ptr`, or `current_ptr`. It only
+supplies a typed storage base for the following field/index path. When the base
+is already held in an `addr` or `word` scalar, prefer the direct form above
+instead of first copying it through `HL`.
 
 ### 3.6 Combining Field Access and Indexing
 
@@ -1017,11 +1022,11 @@ func sum_bytes(data: addr, count: byte): word
 loop:
   move de, ptr        ; load current pointer into DE
   ld a, (de)          ; read byte from memory
+  inc de              ; advance pointer while DE still holds it
+  move ptr, de        ; save advanced pointer
   ld e, a
   ld d, 0
   add hl, de          ; accumulate
-  inc de              ; advance pointer
-  move ptr, de        ; save advanced pointer
   djnz loop
 
   ; Return total: HL already holds the result
