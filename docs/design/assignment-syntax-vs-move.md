@@ -185,8 +185,8 @@ Landed on `main`.
 
 Extend `:=` to typed byte transfer for 8-bit registers:
 
-- loads into `A`, `B`, `C`, `D`, `E`, `H`, `L`
-- stores from `A`, `B`, `C`, `D`, `E`, `H`, `L`
+- loads into `B`, `C`, `D`, `E`, `H`, `L` (`A` already landed in Stage 1)
+- stores from `B`, `C`, `D`, `E`, `H`, `L` (`A` already landed in Stage 1)
 - byte immediates into 8-bit registers
 
 This stage should continue to reject raw indirect forms like `(hl)` and should
