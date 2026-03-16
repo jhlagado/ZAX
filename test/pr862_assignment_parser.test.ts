@@ -110,8 +110,8 @@ describe('PR862 := assignment parser/AST support', () => {
     });
   });
 
-  it('rejects indirect, partial, and unsupported assignment forms', () => {
-    for (const text of ['(hl) := a', 'a := (hl)', 'ixh := a', 'iyl := a', 'x := y', 'x := @y']) {
+  it('rejects indirect and unsupported assignment forms', () => {
+    for (const text of ['(hl) := a', 'a := (hl)', 'x := y', 'x := @y']) {
       const parsed = parse(text);
       expect(parsed.instr).toBeUndefined();
       expect(parsed.diagnostics.length).toBeGreaterThan(0);

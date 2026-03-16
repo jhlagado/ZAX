@@ -78,6 +78,10 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       dstName === 'E' ||
       dstName === 'H' ||
       dstName === 'L' ||
+      dstName === 'IXH' ||
+      dstName === 'IXL' ||
+      dstName === 'IYH' ||
+      dstName === 'IYL' ||
       dstName === 'BC' ||
       dstName === 'DE' ||
       dstName === 'HL' ||
@@ -113,9 +117,20 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
   ): boolean => {
     const dstName = dst.name.toUpperCase();
     const srcName = src.name.toUpperCase();
+    const halfIndexRegs = new Set(['IXH', 'IXL', 'IYH', 'IYL']);
     if (dstName === srcName) return true;
     if (dstName === 'A' && srcName === 'A') return true;
     if (dstName === 'A') return false;
+    if (halfIndexRegs.has(dstName) || halfIndexRegs.has(srcName)) {
+      return ctx.emitInstr(
+        'ld',
+        [
+          { kind: 'Reg', span, name: dstName },
+          { kind: 'Reg', span, name: srcName },
+        ],
+        span,
+      );
+    }
     const wideRegs = new Set(['BC', 'DE', 'HL', 'IX', 'IY']);
     if (dstName === 'BC' || dstName === 'DE' || dstName === 'HL') {
       if (srcName === 'A') return emitZeroExtendReg8ToReg16(dstName, srcName, span);

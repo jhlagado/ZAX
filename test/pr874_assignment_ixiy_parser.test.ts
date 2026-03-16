@@ -26,8 +26,8 @@ describe('PR874 := IX/IY parser support', () => {
     }
   });
 
-  it('keeps raw indirect and half-index-register forms rejected', () => {
-    for (const text of ['a := (ix+4)', '(ix+4) := a', 'ixh := a', 'ixl := a', 'iyh := a', 'iyl := a']) {
+  it('keeps raw indirect forms rejected', () => {
+    for (const text of ['a := (ix+4)', '(ix+4) := a']) {
       const parsed = parse(text);
       expect(parsed.instr).toBeUndefined();
       expect(parsed.diagnostics.length).toBeGreaterThan(0);

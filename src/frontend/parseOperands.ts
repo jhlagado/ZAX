@@ -24,6 +24,10 @@ const ASSIGNMENT_REGISTER_NAMES = new Set<string>([
   'E',
   'H',
   'L',
+  'IXH',
+  'IXL',
+  'IYH',
+  'IYL',
   'BC',
   'DE',
   'HL',
@@ -492,7 +496,7 @@ function parseAssignmentInstruction(
 
   if (target.kind === 'Ea') {
     if (source.kind !== 'Reg') {
-      diag(diagnostics, filePath, `":=" storage targets require a whole-register source`, {
+      diag(diagnostics, filePath, `":=" storage targets require an assignment-register source`, {
         line: instrSpan.start.line,
         column: instrSpan.start.column,
       });
@@ -526,7 +530,7 @@ function parseAssignmentTarget(
     return { kind: 'Reg', span: operandSpan, name: canonicalRegister };
   }
   if (ALL_REGISTER_NAMES.has(canonicalRegister)) {
-    diag(diagnostics, filePath, `":=" only supports whole-register destinations in this slice`, {
+    diag(diagnostics, filePath, `":=" only supports assignment-register destinations in this slice`, {
       line: operandSpan.start.line,
       column: operandSpan.start.column,
     });
@@ -589,7 +593,7 @@ function parseAssignmentSource(
     return { kind: 'Reg', span: operandSpan, name: canonicalRegister };
   }
   if (ALL_REGISTER_NAMES.has(canonicalRegister)) {
-    diag(diagnostics, filePath, `":=" only supports whole-register sources in this slice`, {
+    diag(diagnostics, filePath, `":=" only supports assignment-register sources in this slice`, {
       line: operandSpan.start.line,
       column: operandSpan.start.column,
     });
