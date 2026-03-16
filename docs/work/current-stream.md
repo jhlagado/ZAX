@@ -20,9 +20,11 @@ direction.
 
 1. Decide the `move` retirement path now that the full active assignment surface
    is covered by `:=`.
-2. Resolve the remaining compatibility/historical `move` cases consistently
-   with that retirement policy.
-3. Continue parser/grammar convergence work.
+2. Reduce remaining `move` usage to a minimal explicit compatibility subset.
+3. Decide whether the next step after that subset is:
+   - a deprecation warning phase
+   - or direct parser/lowering removal.
+4. Continue parser/grammar convergence work.
 
 ### Deferred until re-planned
 
