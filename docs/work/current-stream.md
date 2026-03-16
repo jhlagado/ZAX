@@ -18,11 +18,11 @@ direction.
 
 ### Immediate priority
 
-1. Keep the quick guide and user-facing examples aligned with the implemented
-   `:=` assignment surface.
-2. Continue parser/grammar convergence work.
-3. Stage helper/library follow-up from the course before opening broader
-   language streams.
+1. Extend `:=` to cover typed byte transfer for the ordinary 8-bit register
+   set so `move` can be fully removed from live examples and docs.
+2. Keep the quick guide and user-facing examples aligned with the implemented
+   assignment surface as that expansion lands.
+3. Continue parser/grammar convergence work.
 
 ### Deferred until re-planned
 
