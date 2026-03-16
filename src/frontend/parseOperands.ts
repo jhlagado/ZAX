@@ -488,14 +488,6 @@ function parseAssignmentInstruction(
     return { kind: 'AsmInstruction', span: instrSpan, head: ':=', operands: [target, source] };
   }
 
-  if (source.kind === 'Ea' && source.explicitAddressOf) {
-    diag(diagnostics, filePath, `":=" does not accept address-of operands in this slice`, {
-      line: instrSpan.start.line,
-      column: instrSpan.start.column,
-    });
-    return undefined;
-  }
-
   if (source.kind === 'Ea' || source.kind === 'Imm' || source.kind === 'Reg') {
     return { kind: 'AsmInstruction', span: instrSpan, head: ':=', operands: [target, source] };
   }
@@ -569,7 +561,10 @@ function parseAssignmentSource(
       });
       return undefined;
     }
-    diag(diagnostics, filePath, `":=" does not accept address-of operands in this slice`, {
+    const eaText = t.slice(1).trim();
+    const ea = parseEaExprFromText(filePath, eaText, operandSpan, diagnostics);
+    if (ea) return { kind: 'Ea', span: operandSpan, expr: ea, explicitAddressOf: true };
+    diag(diagnostics, filePath, `":=" address-of form must be "@<path>" with a storage path.`, {
       line: operandSpan.start.line,
       column: operandSpan.start.column,
     });

@@ -89,10 +89,29 @@ describe('PR862 := assignment parser/AST support', () => {
       head: ':=',
       operands: [{ kind: 'Reg', name: 'DE' }, { kind: 'Reg', name: 'A' }],
     });
+
+    parsed = parse('hl := @node.next');
+    expect(parsed.diagnostics).toEqual([]);
+    expect(parsed.instr).toMatchObject({
+      kind: 'AsmInstruction',
+      head: ':=',
+      operands: [
+        { kind: 'Reg', name: 'HL' },
+        {
+          kind: 'Ea',
+          explicitAddressOf: true,
+          expr: {
+            kind: 'EaField',
+            base: { kind: 'EaName', name: 'node' },
+            field: 'next',
+          },
+        },
+      ],
+    });
   });
 
   it('rejects indirect, partial, and unsupported assignment forms', () => {
-    for (const text of ['(hl) := a', 'a := (hl)', 'h := d', 'l := a', 'x := y', 'hl := @x']) {
+    for (const text of ['(hl) := a', 'a := (hl)', 'h := d', 'l := a', 'x := y', 'x := @y']) {
       const parsed = parse(text);
       expect(parsed.instr).toBeUndefined();
       expect(parsed.diagnostics.length).toBeGreaterThan(0);
