@@ -16,7 +16,7 @@ describe('PR862 := assignment parser/AST support', () => {
     return { instr, diagnostics };
   }
 
-  it('parses move-equivalent storage and register assignment forms', () => {
+  it('parses storage and register assignment forms', () => {
     let parsed = parse('x := a');
     expect(parsed.diagnostics).toEqual([]);
     expect(parsed.instr).toMatchObject({
@@ -119,16 +119,9 @@ describe('PR862 := assignment parser/AST support', () => {
     }
   });
 
-  it('keeps move parsing unchanged', () => {
+  it('rejects removed move syntax', () => {
     const parsed = parse('move x, a');
-    expect(parsed.diagnostics).toEqual([]);
-    expect(parsed.instr).toMatchObject({
-      kind: 'AsmInstruction',
-      head: 'move',
-      operands: [
-        { kind: 'Ea', expr: { kind: 'EaName', name: 'x' } },
-        { kind: 'Reg', name: 'A' },
-      ],
-    });
+    expect(parsed.instr).toBeUndefined();
+    expect(parsed.diagnostics.map((d) => d.message)).toContain('"move" has been removed; use ":=".');
   });
 });

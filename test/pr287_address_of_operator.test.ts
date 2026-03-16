@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 describe('PR287 explicit address-of operator (@place)', () => {
-  it('rejects @place outside move with a stable diagnostic', async () => {
+  it('rejects @place outside := with a stable diagnostic', async () => {
     const entry = join(__dirname, 'fixtures', 'pr287_address_of_positive.zax');
     const res = await compile(
       entry,
@@ -19,7 +19,7 @@ describe('PR287 explicit address-of operator (@place)', () => {
 
     const errors = res.diagnostics.filter((d) => d.severity === 'error');
     expect(errors.map((d) => d.message)).toContain(
-      '"@<path>" is only supported with ":=" (legacy "move" also works) in this phase.',
+      '"@<path>" is only supported with ":=" in this phase.',
     );
   });
 
