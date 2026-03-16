@@ -70,7 +70,18 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     span: AsmInstructionNode['span'],
   ): boolean => {
     const dstName = dst.name.toUpperCase();
-    if (dstName === 'A' || dstName === 'BC' || dstName === 'DE' || dstName === 'HL') {
+    if (
+      dstName === 'A' ||
+      dstName === 'B' ||
+      dstName === 'C' ||
+      dstName === 'D' ||
+      dstName === 'E' ||
+      dstName === 'H' ||
+      dstName === 'L' ||
+      dstName === 'BC' ||
+      dstName === 'DE' ||
+      dstName === 'HL'
+    ) {
       return ctx.emitInstr('ld', [{ ...dst, name: dstName }, src], span);
     }
     return false;
