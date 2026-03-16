@@ -19,7 +19,7 @@ describe('PR287 explicit address-of operator (@place)', () => {
 
     const errors = res.diagnostics.filter((d) => d.severity === 'error');
     expect(errors.map((d) => d.message)).toContain(
-      '"@<path>" is only supported with "move" in this phase.',
+      '"@<path>" is only supported with ":=" (legacy "move" also works) in this phase.',
     );
   });
 
