@@ -1,0 +1,22 @@
+; word_stack.zax
+;
+; Source/problem: minimal word-oriented software stack helpers for course examples.
+; Support module: fixed word-array backing store with byte depth tracking.
+
+export func push_word(stack_slots: word[], depth_count: byte, value_word: word): AF
+  move a, depth_count
+  ld l, a
+  move hl, value_word
+  move stack_slots[L], hl
+
+  move a, depth_count
+  inc a
+end
+
+export func pop_word(stack_slots: word[], depth_count: byte): HL, AF
+  move a, depth_count
+  dec a
+
+  ld l, a
+  move hl, stack_slots[L]
+end
