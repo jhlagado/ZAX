@@ -1,6 +1,6 @@
 # Assignment Syntax vs `move`
 
-Status: Stage 1 and reg8 expansion landed; IX/IY follow-up planned
+Status: Stage 1-4 landed; retirement plan pending
 
 ## Problem
 
@@ -162,18 +162,14 @@ Stage 1 is now implemented on `main`:
 
 ## Remaining blocker to removing `move`
 
-The reg8 expansion is now landed on `main`, so the previous `L` / `B` blocker is
-gone from live docs and examples.
+There is no longer a code-surface blocker in the active assignment model:
 
-The remaining code-level `move` holdout is whole-register transfer into index
-registers, specifically `IX` and `IY`.
+- reg8 assignment support is landed
+- `IX` / `IY` assignment support is landed
+- live docs/examples have already been swept to `:=`
 
-The concrete remaining fixture case is:
-
-- `move ix, arr_w[idx_word + 1]`
-
-So `move` still cannot be fully removed until `:=` covers bounded whole-register
-assignment into `IX` and `IY`.
+The remaining `move` uses on `main` are now compatibility and historical cases,
+not missing assignment-surface capability.
 
 ## Migration plan
 
@@ -191,25 +187,21 @@ Landed on `main`:
 
 ### Stage 3
 
-Extend `:=` to bounded whole-register assignment for `IX` and `IY`:
+Landed on `main`:
 
 - `ix := word_var`
 - `iy := @node.next`
 - `ix := arr_w[idx + 1]`
-- immediate and whole-register copy cases only where they fit the existing
-  whole-register assignment model
-
-This stage should continue to reject raw indirect forms like `(ix+d)` and
-should not broaden `:=` into a synonym for raw `ld`.
+- bounded whole-register `IX` / `IY` assignment only
 
 ### Stage 4
 
-Rewrite remaining live docs/examples to eliminate `move`.
+Landed on `main`.
 
 ### Stage 5
 
-Deprecate `move` in docs and eventually consider warning on it, only after the
-live surface is broadly migrated away from it.
+Deprecate `move` in docs, decide the compatibility-test policy, and consider a
+warning or removal path only after that policy is explicit.
 
 ## Deferred forms
 
