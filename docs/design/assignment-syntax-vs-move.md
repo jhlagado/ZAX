@@ -1,6 +1,6 @@
 # Assignment Syntax vs `move`
 
-Status: Stage 1-4 landed; retirement plan pending
+Status: Stage 1-4 landed; direct removal chosen
 
 ## Problem
 
@@ -200,8 +200,7 @@ Landed on `main`.
 
 ### Stage 5
 
-Deprecate `move` in docs, decide the compatibility-test policy, and consider a
-warning or removal path only after that policy is explicit.
+Remove `move` from parser/lowering/docs after compatibility cleanup.
 
 ## Retirement policy
 
@@ -214,13 +213,14 @@ The retirement path should now be:
    - stale ordinary coverage
 3. convert all stale ordinary coverage to `:=`
 4. keep only a narrow compatibility subset proving that legacy `move` still
-   aliases the same lowering behavior during the grace period
-5. after that, choose between:
-   - a deprecation warning phase
-   - direct parser/lowering removal
+   aliases the same lowering behavior during the cleanup phase
+5. then remove `move` directly from parser/lowering/docs
 
-The important rule is that no new active examples, docs, or ordinary coverage
-should be written with `move`.
+The important rules are:
+
+- no new active examples, docs, or ordinary coverage should be written with `move`
+- there will be no warning-only grace phase
+- the next step after compatibility cleanup is direct removal
 
 ## Deferred forms
 
