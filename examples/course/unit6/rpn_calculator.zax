@@ -16,12 +16,11 @@ section data vars at $8000
 end
 
 func push_value(value_word: word)
-  move a, stack_depth
-  ld l, a
   move hl, value_word
-  move value_stack[L], hl
-
   move a, stack_depth
+  ld b, a
+  move value_stack[B], hl
+
   inc a
   move stack_depth, a
 end
