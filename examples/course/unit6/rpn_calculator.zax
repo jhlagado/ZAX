@@ -3,6 +3,8 @@
 ; Source/problem: evaluate a small reverse-polish expression with a software stack.
 ; Unit 6 example: explicit push/pop discipline over typed stack storage.
 
+import "word_stack.zax"
+
 const TokenCount = 5
 const KindNumber = 1
 const KindAdd = 2
@@ -14,26 +16,6 @@ section data vars at $8000
   value_stack: word[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }
   stack_depth: byte = 0
 end
-
-func push_value(value_word: word)
-  move hl, value_word
-  move a, stack_depth
-  ld b, a
-  move value_stack[B], hl
-
-  inc a
-  move stack_depth, a
-end
-
-func pop_value(): HL
-  move a, stack_depth
-  dec a
-  move stack_depth, a
-
-  ld l, a
-  move hl, value_stack[L]
-end
-
 func mul_u16(left_word: word, right_word: word): HL
   var
     accum_value: word = 0
@@ -87,7 +69,8 @@ export func rpn_demo(): HL
     move a, token_index
     cp TokenCount
     if NC
-      pop_value
+      word_stack.pop_word value_stack, stack_depth
+      move stack_depth, a
       ret
     end
 
@@ -99,23 +82,30 @@ export func rpn_demo(): HL
       case KindNumber
         move l, token_index
         move hl, token_values[L]
-        push_value hl
+        word_stack.push_word value_stack, stack_depth, hl
+        move stack_depth, a
       case KindAdd
-        pop_value
+        word_stack.pop_word value_stack, stack_depth
+        move stack_depth, a
         move right_value, hl
-        pop_value
+        word_stack.pop_word value_stack, stack_depth
+        move stack_depth, a
         move left_value, hl
         move hl, left_value
         move de, right_value
         add hl, de
-        push_value hl
+        word_stack.push_word value_stack, stack_depth, hl
+        move stack_depth, a
       case KindMultiply
-        pop_value
+        word_stack.pop_word value_stack, stack_depth
+        move stack_depth, a
         move right_value, hl
-        pop_value
+        word_stack.pop_word value_stack, stack_depth
+        move stack_depth, a
         move left_value, hl
         mul_u16 left_value, right_value
-        push_value hl
+        word_stack.push_word value_stack, stack_depth, hl
+        move stack_depth, a
     end
 
     move a, token_index
@@ -126,7 +116,8 @@ export func rpn_demo(): HL
     or a
   end
 
-  pop_value
+  word_stack.pop_word value_stack, stack_depth
+  move stack_depth, a
 end
 
 export func main()
