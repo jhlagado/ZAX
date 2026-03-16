@@ -19,8 +19,8 @@ end
 ; Simple function that uses push/pop (net stack delta 0) around scratch usage.
 export func sum_words(a: word, b: word): word
   push de
-  move hl, a
-  move de, b
+  hl := a
+  de := b
   add hl, de
   pop de
 end
@@ -29,35 +29,35 @@ end
 export func bump_sprite_x(i: byte, dx: byte): void
   ; In v0.1, non-constant array indexing is limited to element sizes 1 and 2.
   ; Sprite is larger, so we dispatch on i and use constant indices.
-  move a, i
+  a := i
   select A
     case 0
-      move hl, sprites[0].x
-      move a, dx
+      hl := sprites[0].x
+      a := dx
       ld e, a
       ld d, 0
       add hl, de
-      move sprites[0].x, hl
+      sprites[0].x := hl
     case 1
-      move hl, sprites[1].x
-      move a, dx
+      hl := sprites[1].x
+      a := dx
       ld e, a
       ld d, 0
       add hl, de
-      move sprites[1].x, hl
+      sprites[1].x := hl
     case 2
-      move hl, sprites[2].x
-      move a, dx
+      hl := sprites[2].x
+      a := dx
       ld e, a
       ld d, 0
       add hl, de
-      move sprites[2].x, hl
+      sprites[2].x := hl
     case 3
-      move hl, sprites[3].x
-      move a, dx
+      hl := sprites[3].x
+      a := dx
       ld e, a
       ld d, 0
       add hl, de
-      move sprites[3].x, hl
+      sprites[3].x := hl
   end
 end

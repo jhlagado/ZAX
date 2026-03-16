@@ -24,34 +24,34 @@ func fib(target_count: word): HL
   ld a, 1
   or a                       ; establish NZ before entering loop
   while NZ
-    move hl, index_value
-    move de, target_count
+    hl := index_value
+    de := target_count
     xor a
     sbc hl, de
     if Z
-      move hl, prev_value    ; return early — epilogue handles frame cleanup
+      hl := prev_value    ; return early — epilogue handles frame cleanup
       ret
     end
 
-    move hl, prev_value
-    move de, curr_value
+    hl := prev_value
+    de := curr_value
     add hl, de
-    move next_value, hl
+    next_value := hl
 
-    move hl, curr_value
-    move prev_value, hl
-    move hl, next_value
-    move curr_value, hl
+    hl := curr_value
+    prev_value := hl
+    hl := next_value
+    curr_value := hl
 
-    move hl, index_value
+    hl := index_value
     inc hl
-    move index_value, hl
+    index_value := hl
 
     ld a, 1
     or a                     ; re-establish NZ for next iteration
   end
 
-  move hl, prev_value
+  hl := prev_value
 end
 
 export func main(): void
@@ -59,7 +59,7 @@ export func main(): void
 end
 ```
 
-`func fib(target_count: word): HL` declares a function with one parameter of type `word` and a return value in register `HL`. The `var` block allocates four `word`-sized locals in the IX-anchored stack frame, with initializers emitted at function entry. `move` reads and writes named locals and parameters by value — the compiler emits IX-relative loads and stores. `ld` and `or` are raw Z80 instructions. `while NZ` and `if Z` lower to compiler-managed conditional jumps; the programmer establishes the flags with `or a` or `xor a`/`sbc hl,de` before each test. `ret` inside the loop is routed through the compiler-generated epilogue, which restores the frame before returning.
+`func fib(target_count: word): HL` declares a function with one parameter of type `word` and a return value in register `HL`. The `var` block allocates four `word`-sized locals in the IX-anchored stack frame, with initializers emitted at function entry. `:=` reads and writes named locals and parameters by value — the compiler emits IX-relative loads and stores. `ld` and `or` are raw Z80 instructions. `while NZ` and `if Z` lower to compiler-managed conditional jumps; the programmer establishes the flags with `or a` or `xor a`/`sbc hl,de` before each test. `ret` inside the loop is routed through the compiler-generated epilogue, which restores the frame before returning.
 
 ---
 
@@ -75,9 +75,9 @@ Typical use cases: game engines, demoscene tools, firmware, ROM monitors, hardwa
 
 ---
 
-## Typed Storage and `move`
+## Typed Storage and `:=`
 
-Module-level storage is declared in named `data` sections. Function-local storage lives in `var` blocks. Both are accessed with `move` using value semantics:
+Module-level storage is declared in named `data` sections. Function-local storage lives in `var` blocks. Both are accessed with `:=` using value semantics:
 
 ```zax
 section data vars at $8000
@@ -90,26 +90,26 @@ func update(): void
   var
     delta: word = 10
   end
-  move hl, count     ; load word into HL
-  move de, delta     ; load local into DE
+  hl := count     ; load word into HL
+  de := delta     ; load local into DE
   add hl, de
-  move count, hl     ; store result back
+  count := hl     ; store result back
 
-  move a, mode       ; load byte into A
+  a := mode       ; load byte into A
   inc a
-  move mode, a       ; store back
+  mode := a       ; store back
 end
 ```
 
-For scalars, `move target, source` inserts the required load or store automatically — IX-relative for locals, absolute for module storage. Frame offsets are computed by the compiler.
+For scalars, `target := source` inserts the required load or store automatically — IX-relative for locals, absolute for module storage. Frame offsets are computed by the compiler.
 
 ### Address-of with `@path`
 
 `@path` takes the address of a typed storage path rather than its value:
 
 ```zax
-move hl, @player.flags     ; HL = address of the flags field
-move de, @sprites[bc].x    ; DE = address of sprites[BC].x
+hl := @player.flags     ; HL = address of the flags field
+de := @sprites[bc].x    ; DE = address of sprites[BC].x
 ```
 
 ### Typed Reinterpretation
@@ -118,9 +118,9 @@ move de, @sprites[bc].x    ; DE = address of sprites[BC].x
 
 ```zax
 ; HL holds a runtime pointer to a Header in memory
-move a, <Header>hl.flags       ; read the flags field via HL
+a := <Header>hl.flags       ; read the flags field via HL
 ld a, 1
-move <Header>hl.flags, a       ; write back
+<Header>hl.flags := a       ; write back
 bump <Header>hl.flags          ; op call with typed path
 ```
 
@@ -144,34 +144,34 @@ func fib(target_count: word): HL
   ld a, 1
   or a                       ; establish NZ to enter loop
   while NZ
-    move hl, index_value
-    move de, target_count
+    hl := index_value
+    de := target_count
     xor a
     sbc hl, de
     if Z
-      move hl, prev_value
+      hl := prev_value
       ret
     end
 
-    move hl, prev_value
-    move de, curr_value
+    hl := prev_value
+    de := curr_value
     add hl, de
-    move next_value, hl
+    next_value := hl
 
-    move hl, curr_value
-    move prev_value, hl
-    move hl, next_value
-    move curr_value, hl
+    hl := curr_value
+    prev_value := hl
+    hl := next_value
+    curr_value := hl
 
-    move hl, index_value
+    hl := index_value
     inc hl
-    move index_value, hl
+    index_value := hl
 
     ld a, 1
     or a
   end
 
-  move hl, prev_value
+  hl := prev_value
 end
 
 export func main(): void
@@ -220,7 +220,7 @@ end
 Flags must be established before entering. The body re-establishes them before the back-edge:
 
 ```zax
-move hl, count
+hl := count
 ld a, h
 or l              ; set NZ if count ≠ 0
 while NZ
@@ -250,7 +250,7 @@ until Z
 `select` dispatches by value equality. A single `case` line may list comma-separated values or inclusive ranges. There is no fallthrough:
 
 ```zax
-move a, mode_value
+a := mode_value
 select A
   case Mode.Idle, Mode.Stopped  ; two values, one body
     ld a, 0
@@ -342,11 +342,11 @@ Field and array access compose as place expressions. The compiler lowers them to
 ```zax
 func update_sprite(idx: byte): void
   move l, idx
-  move a, sprites[L].flags    ; load flags field of sprites[idx]
+  a := sprites[L].flags    ; load flags field of sprites[idx]
   set 0, a
-  move sprites[L].flags, a    ; write back
+  sprites[L].flags := a    ; write back
 
-  move hl, @sprites[L].pos    ; HL = address of the pos sub-record
+  hl := @sprites[L].pos    ; HL = address of the pos sub-record
 end
 ```
 
@@ -491,7 +491,7 @@ zax [options] <entry.zax>
 
 ## Design Notes
 
-The language surface is deliberately close to the Z80 instruction set. Register names, condition codes, and addressing modes appear directly in source. Constructs that require the programmer to specify a register (such as `select A` or `move hl, count`) are preferred over constructs that allocate registers implicitly.
+The language surface is deliberately close to the Z80 instruction set. Register names, condition codes, and addressing modes appear directly in source. Constructs that require the programmer to specify a register (such as `select A` or `hl := count`) are preferred over constructs that allocate registers implicitly.
 
 The compiler pipeline operates on an AST with typed nodes. There are no textual macros, no token re-scanning, and no string substitution. Name resolution, type checking, and code generation are distinct phases; errors are reported with source locations, not mangled token streams.
 
@@ -503,7 +503,7 @@ Output is deterministic: given the same source and the same compiler flags, the 
 
 ZAX is under active development. The compiler is a Node.js CLI tool; the end-to-end pipeline (lex → parse → lower → encode → emit) is functional and produces `.bin`, `.hex`, `.d8dbg.json`, `.lst`, and `.asm` output.
 
-What works today: single and multi-module compilation, functions with typed parameters and locals, IX-anchored frame calling conventions, structured control flow, the op system, records/unions/arrays, named `section code`/`section data` blocks, typed storage via `move`, `@path` address-of, `<Type>base.tail` typed reinterpretation, grouped and ranged `select case`, raw data directives (`db`/`dw`/`ds`), compile-time expressions, forward references and fixups, and a growing slice of the Z80 instruction set.
+What works today: single and multi-module compilation, functions with typed parameters and locals, IX-anchored frame calling conventions, structured control flow, the op system, records/unions/arrays, named `section code`/`section data` blocks, typed storage via `:=` (with transitional `move`), `@path` address-of, `<Type>base.tail` typed reinterpretation, grouped and ranged `select case`, raw data directives (`db`/`dw`/`ds`), compile-time expressions, forward references and fixups, and a growing slice of the Z80 instruction set.
 
 Active work: exact-size runtime indexing for non-power-of-two composite strides (issues #817–820), broader ISA coverage, and Debug80 integration.
 
