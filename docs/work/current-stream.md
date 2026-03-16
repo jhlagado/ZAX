@@ -18,10 +18,10 @@ direction.
 
 ### Immediate priority
 
-1. Extend `:=` to cover bounded whole-register assignment for `IX` / `IY` so
-   the remaining code-level `move` holdout can be removed.
-2. Decide the `move` retirement path once that final whole-register gap is
-   closed.
+1. Decide the `move` retirement path now that the full active assignment surface
+   is covered by `:=`.
+2. Resolve the remaining compatibility/historical `move` cases consistently
+   with that retirement policy.
 3. Continue parser/grammar convergence work.
 
 ### Deferred until re-planned
