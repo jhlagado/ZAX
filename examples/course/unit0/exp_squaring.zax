@@ -9,32 +9,32 @@ func mul_u16(lhs: word, rhs: word): HL
     count: word = 0
   end
 
-  move hl, rhs
-  move count, hl
+  hl := rhs
+  count := hl
 
   while NZ
-    move hl, count
+    hl := count
     ld a, h
     or l
     if Z
-      move hl, acc
+      hl := acc
       ret
     end
 
-    move hl, acc
-    move de, lhs
+    hl := acc
+    de := lhs
     add hl, de
-    move acc, hl
+    acc := hl
 
-    move hl, count
+    hl := count
     dec hl
-    move count, hl
+    count := hl
 
     ld a, 1
     or a
   end
 
-  move hl, acc
+  hl := acc
 end
 
 func exp_squaring(base: word, exponent: word): HL
@@ -44,41 +44,41 @@ func exp_squaring(base: word, exponent: word): HL
     remaining: word = 0
   end
 
-  move hl, base
-  move factor, hl
-  move hl, exponent
-  move remaining, hl
+  hl := base
+  factor := hl
+  hl := exponent
+  remaining := hl
 
   while NZ
-    move hl, remaining
+    hl := remaining
     ld a, h
     or l
     if Z
-      move hl, result
+      hl := result
       ret
     end
 
-    move hl, remaining
+    hl := remaining
     ld a, l
     and 1
     if NZ
       mul_u16 result, factor
-      move result, hl
+      result := hl
     end
 
     mul_u16 factor, factor
-    move factor, hl
+    factor := hl
 
-    move hl, remaining
+    hl := remaining
     srl h
     rr l
-    move remaining, hl
+    remaining := hl
 
     ld a, 1
     or a
   end
 
-  move hl, result
+  hl := result
 end
 
 export func main()

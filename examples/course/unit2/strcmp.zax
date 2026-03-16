@@ -14,18 +14,18 @@ export func strcmp_demo(): HL
     right_char: byte = 0
   end
 
-  move hl, @left_text
-  move de, @right_text
+  hl := @left_text
+  de := @right_text
 
   ld a, 1
   or a
   while NZ
     ld a, (hl)
-    move left_char, a
+    left_char := a
     ld a, (de)
-    move right_char, a
+    right_char := a
 
-    move a, left_char
+    a := left_char
     move b, right_char
     cp b
     if C
@@ -39,7 +39,7 @@ export func strcmp_demo(): HL
       end
     end
 
-    move a, left_char
+    a := left_char
     or a
     if Z
       ld hl, 0

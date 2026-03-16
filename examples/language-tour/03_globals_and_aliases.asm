@@ -27,49 +27,51 @@ push AF                        ; 011E: F5
 push BC                        ; 011F: C5
 push DE                        ; 0120: D5
 push HL                        ; 0121: E5
-ld E, (IX + $0004)             ; 0122: DD 5E 04
-ld D, (IX + $0005)             ; 0125: DD 56 05
-ld (counter), DE               ; 0128: ED 53 00 00
+ex DE, HL                      ; 0122: EB
+ld E, (IX + $0004)             ; 0123: DD 5E 04
+ld D, (IX + $0005)             ; 0126: DD 56 05
+ex DE, HL                      ; 0129: EB
+ld (counter), HL               ; 012A: 22 00 00
 __zax_epilogue_1:
-pop HL                         ; 012C: E1
-pop DE                         ; 012D: D1
-pop BC                         ; 012E: C1
-pop AF                         ; 012F: F1
-ld SP, IX                      ; 0130: DD F9
-pop IX                         ; 0132: DD E1
-ret                            ; 0134: C9
+pop HL                         ; 012D: E1
+pop DE                         ; 012E: D1
+pop BC                         ; 012F: C1
+pop AF                         ; 0130: F1
+ld SP, IX                      ; 0131: DD F9
+pop IX                         ; 0133: DD E1
+ret                            ; 0135: C9
 ; func main begin
 ; func write_counter end
 main:
-push IX                        ; 0135: DD E5
-ld IX, $0000                   ; 0137: DD 21 00 00
-add IX, SP                     ; 013B: DD 39
-push AF                        ; 013D: F5
-push BC                        ; 013E: C5
-push DE                        ; 013F: D5
-push HL                        ; 0140: E5
-ld HL, $007B                   ; 0141: 21 7B 00
-push HL                        ; 0144: E5
-call write_counter             ; 0145: CD 00 00
-inc SP                         ; 0148: 33
+push IX                        ; 0136: DD E5
+ld IX, $0000                   ; 0138: DD 21 00 00
+add IX, SP                     ; 013C: DD 39
+push AF                        ; 013E: F5
+push BC                        ; 013F: C5
+push DE                        ; 0140: D5
+push HL                        ; 0141: E5
+ld HL, $007B                   ; 0142: 21 7B 00
+push HL                        ; 0145: E5
+call write_counter             ; 0146: CD 00 00
 inc SP                         ; 0149: 33
-ld hl, (counter)               ; 014A: 2A 00 00
+inc SP                         ; 014A: 33
+ld hl, (counter)               ; 014B: 2A 00 00
 __zax_epilogue_2:
-pop HL                         ; 014D: E1
-pop DE                         ; 014E: D1
-pop BC                         ; 014F: C1
-pop AF                         ; 0150: F1
-ld SP, IX                      ; 0151: DD F9
-pop IX                         ; 0153: DD E1
-ret                            ; 0155: C9
+pop HL                         ; 014E: E1
+pop DE                         ; 014F: D1
+pop BC                         ; 0150: C1
+pop AF                         ; 0151: F1
+ld SP, IX                      ; 0152: DD F9
+pop IX                         ; 0154: DD E1
+ret                            ; 0156: C9
 ; func main end
 
 ; symbols:
 ; label read_counter = $0100
 ; label __zax_epilogue_0 = $010E
 ; label write_counter = $0116
-; label __zax_epilogue_1 = $012C
-; label main = $0135
-; label __zax_epilogue_2 = $014D
+; label __zax_epilogue_1 = $012D
+; label main = $0136
+; label __zax_epilogue_2 = $014E
 ; data counter = $1000
 ; label __zax_startup = $1002

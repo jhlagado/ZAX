@@ -8,8 +8,8 @@ section data vars at $8000
 end
 
 export func str_reverse_demo()
-  move hl, @text_value
-  move de, @text_value
+  hl := @text_value
+  de := @text_value
 
   ld a, 1
   or a

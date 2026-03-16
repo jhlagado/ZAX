@@ -18,7 +18,7 @@ func linear_search(target_value: byte): HL
   ld a, 1
   or a
   while NZ
-    move a, scan_index
+    a := scan_index
     cp ItemCount
     if NC
       ld hl, $FFFF
@@ -26,22 +26,22 @@ func linear_search(target_value: byte): HL
     end
 
     move l, scan_index
-    move a, values[L]
-    move probe_value, a
+    a := values[L]
+    probe_value := a
 
-    move a, target_value
+    a := target_value
     move b, probe_value
     cp b
     if Z
       ld h, 0
-      move a, scan_index
+      a := scan_index
       ld l, a
       ret
     end
 
-    move a, scan_index
+    a := scan_index
     inc a
-    move scan_index, a
+    scan_index := a
 
     ld a, 1
     or a

@@ -17,20 +17,20 @@ func swap_values(left_index: byte, right_index: byte)
   end
 
   move l, left_index
-  move a, values[L]
-  move left_value, a
+  a := values[L]
+  left_value := a
 
   move l, right_index
-  move a, values[L]
-  move right_value, a
+  a := values[L]
+  right_value := a
 
   move l, left_index
-  move a, right_value
-  move values[L], a
+  a := right_value
+  values[L] := a
 
   move l, right_index
-  move a, left_value
-  move values[L], a
+  a := left_value
+  values[L] := a
 end
 
 func bubble_pass(last_index: byte)
@@ -44,7 +44,7 @@ func bubble_pass(last_index: byte)
   ld a, 1
   or a
   while NZ
-    move a, inner_index
+    a := inner_index
     move b, last_index
     cp b
     if NC
@@ -52,18 +52,18 @@ func bubble_pass(last_index: byte)
     end
 
     move l, inner_index
-    move a, values[L]
-    move left_value, a
+    a := values[L]
+    left_value := a
 
-    move a, inner_index
+    a := inner_index
     inc a
-    move next_index, a
+    next_index := a
 
     move l, next_index
-    move a, values[L]
-    move right_value, a
+    a := values[L]
+    right_value := a
 
-    move a, left_value
+    a := left_value
     move b, right_value
     cp b
     if NC
@@ -72,9 +72,9 @@ func bubble_pass(last_index: byte)
       end
     end
 
-    move a, inner_index
+    a := inner_index
     inc a
-    move inner_index, a
+    inner_index := a
 
     ld a, 1
     or a
@@ -87,12 +87,12 @@ export func bubble_sort()
   end
 
   ld a, LastIndex
-  move pass_last, a
+  pass_last := a
 
   ld a, 1
   or a
   while NZ
-    move a, pass_last
+    a := pass_last
     or a
     if Z
       ret
@@ -100,9 +100,9 @@ export func bubble_sort()
 
     bubble_pass pass_last
 
-    move a, pass_last
+    a := pass_last
     dec a
-    move pass_last, a
+    pass_last := a
 
     ld a, 1
     or a

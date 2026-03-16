@@ -12,7 +12,7 @@ enum Mode Read, Write
 extern func bios_putc(ch: byte): void at $F003
 
 func print_mode(mode: byte): void
-  move a, mode
+  a := mode
   or a
   if Z
     ld a, 'R'

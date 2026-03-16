@@ -5,8 +5,8 @@ end
 
 section code boot at $0100
   export func word_fvar_glob(arr: word[]): HL
-    move hl, arr[glob_idx_word]
-    move arr[glob_idx_word], hl
+    hl := arr[glob_idx_word]
+    arr[glob_idx_word] := hl
   end
 
   export func main()

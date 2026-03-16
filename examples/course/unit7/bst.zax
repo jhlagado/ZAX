@@ -20,39 +20,39 @@ end
 
 func init_tree()
   ld a, 8
-  move root_node.value, a
-  move hl, @left_node
-  move root_node.left, hl
-  move hl, @right_node
-  move root_node.right, hl
+  root_node.value := a
+  hl := @left_node
+  root_node.left := hl
+  hl := @right_node
+  root_node.right := hl
 
   ld a, 3
-  move left_node.value, a
+  left_node.value := a
   ld hl, 0
-  move left_node.left, hl
-  move hl, @left_right_node
-  move left_node.right, hl
+  left_node.left := hl
+  hl := @left_right_node
+  left_node.right := hl
 
   ld a, 11
-  move right_node.value, a
+  right_node.value := a
   ld hl, 0
-  move right_node.left, hl
+  right_node.left := hl
   ld hl, 0
-  move right_node.right, hl
+  right_node.right := hl
 
   ld a, 6
-  move left_right_node.value, a
+  left_right_node.value := a
   ld hl, 0
-  move left_right_node.left, hl
+  left_right_node.left := hl
   ld hl, 0
-  move left_right_node.right, hl
+  left_right_node.right := hl
 
-  move hl, @root_node
-  move tree_root, hl
+  hl := @root_node
+  tree_root := hl
 end
 
 func bst_contains(node_ptr: addr, target_value: byte): HL
-  move hl, node_ptr
+  hl := node_ptr
   ld a, h
   or l
   if Z
@@ -60,7 +60,7 @@ func bst_contains(node_ptr: addr, target_value: byte): HL
     ret
   end
 
-  move a, <TreeNode>node_ptr.value
+  a := <TreeNode>node_ptr.value
   move b, target_value
   cp b
   if Z
@@ -68,17 +68,17 @@ func bst_contains(node_ptr: addr, target_value: byte): HL
     ret
   end
   if C
-    move hl, <TreeNode>node_ptr.right
+    hl := <TreeNode>node_ptr.right
     bst_contains hl, target_value
     ret
   end
 
-  move hl, <TreeNode>node_ptr.left
+  hl := <TreeNode>node_ptr.left
   bst_contains hl, target_value
 end
 
 export func main()
   init_tree
-  move hl, tree_root
+  hl := tree_root
   bst_contains hl, 6
 end
