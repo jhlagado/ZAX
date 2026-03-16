@@ -12,12 +12,13 @@ ZAX is not a high-level language targeting Z80. It is assembly with structure la
 
 ```zax
 func abs_diff(a_val: word, b_val: word): HL
-  hl := a_val
-  de := b_val
+  hl := b_val
+  de := a_val
   xor a
-  sbc hl, de
-  if C
-    ex de, hl
+  sbc hl, de        ; try b_val − a_val first
+  if C              ; b_val < a_val — subtract the other way
+    hl := a_val
+    de := b_val
     xor a
     sbc hl, de
   end
