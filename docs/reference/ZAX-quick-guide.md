@@ -295,6 +295,11 @@ Inside `arr[...]`, only the following forms are valid:
 
 Anything else inside `[...]` is a compile error. In particular: expressions involving arithmetic (`i + j`, `i * 2`, `i << 1`), arbitrary function calls, or other non-register forms are not valid index expressions. If you need a computed index, compute it into a register first.
 
+Register-pair overlap note: `B`/`C` are the byte halves of `BC`, `D`/`E` are
+the byte halves of `DE`, and `H`/`L` are the byte halves of `HL`. They are not
+independent registers. If you write to `L`, you are changing `HL`; if you write
+to `E`, you are changing `DE`; and so on.
+
 ### 3.3 The Critical Distinction: `arr[HL]` vs `arr[(HL)]`
 
 This is one of the most common indexing mistakes:
@@ -1017,11 +1022,11 @@ func sum_bytes(data: addr, count: byte): word
 loop:
   move de, ptr        ; load current pointer into DE
   ld a, (de)          ; read byte from memory
+  inc de              ; advance pointer while DE still holds it
+  move ptr, de        ; save advanced pointer
   ld e, a
   ld d, 0
   add hl, de          ; accumulate
-  inc de              ; advance pointer
-  move ptr, de        ; save advanced pointer
   djnz loop
 
   ; Return total: HL already holds the result
