@@ -203,6 +203,25 @@ Landed on `main`.
 Deprecate `move` in docs, decide the compatibility-test policy, and consider a
 warning or removal path only after that policy is explicit.
 
+## Retirement policy
+
+The retirement path should now be:
+
+1. keep `:=` as the only recommended user-facing surface
+2. classify remaining `move` uses into:
+   - explicit compatibility tests
+   - historical/design references
+   - stale ordinary coverage
+3. convert all stale ordinary coverage to `:=`
+4. keep only a narrow compatibility subset proving that legacy `move` still
+   aliases the same lowering behavior during the grace period
+5. after that, choose between:
+   - a deprecation warning phase
+   - direct parser/lowering removal
+
+The important rule is that no new active examples, docs, or ordinary coverage
+should be written with `move`.
+
 ## Deferred forms
 
 The following may be acceptable later, but are not required in the next slice:
