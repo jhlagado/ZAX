@@ -18,10 +18,10 @@ direction.
 
 ### Immediate priority
 
-1. Extend `:=` to cover typed byte transfer for the ordinary 8-bit register
-   set so `move` can be fully removed from live examples and docs.
-2. Keep the quick guide and user-facing examples aligned with the implemented
-   assignment surface as that expansion lands.
+1. Decide the `move` retirement path now that the full active assignment surface
+   is covered by `:=`.
+2. Resolve the remaining compatibility/historical `move` cases consistently
+   with that retirement policy.
 3. Continue parser/grammar convergence work.
 
 ### Deferred until re-planned

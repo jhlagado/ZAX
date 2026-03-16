@@ -1,6 +1,6 @@
 # Assignment Syntax vs `move`
 
-Status: Stage 1 landed; reg8 expansion planned
+Status: Stage 1-4 landed; retirement plan pending
 
 ## Problem
 
@@ -162,18 +162,14 @@ Stage 1 is now implemented on `main`:
 
 ## Remaining blocker to removing `move`
 
-The main remaining `move` usage on live `main` is not whole-register transfer.
-It is typed byte transfer into partial 8-bit register destinations, especially:
+There is no longer a code-surface blocker in the active assignment model:
 
-- `move l, idx`
-- `move b, count`
-- `move b, arr[idx]`
+- reg8 assignment support is landed
+- `IX` / `IY` assignment support is landed
+- live docs/examples have already been swept to `:=`
 
-These forms are common in the current examples because indexed array code and
-loop counters frequently target `L` and `B`.
-
-So `move` cannot be deprecated or removed until `:=` covers typed byte transfer
-to and from the ordinary 8-bit register set.
+The remaining `move` uses on `main` are now compatibility and historical cases,
+not missing assignment-surface capability.
 
 ## Migration plan
 
@@ -183,23 +179,29 @@ Landed on `main`.
 
 ### Stage 2
 
-Extend `:=` to typed byte transfer for 8-bit registers:
+Landed on `main`:
 
 - loads into `B`, `C`, `D`, `E`, `H`, `L` (`A` already landed in Stage 1)
 - stores from `B`, `C`, `D`, `E`, `H`, `L` (`A` already landed in Stage 1)
 - byte immediates into 8-bit registers
 
-This stage should continue to reject raw indirect forms like `(hl)` and should
-not broaden `:=` into a synonym for raw `ld`.
-
 ### Stage 3
 
-Rewrite remaining live docs/examples to eliminate `move`.
+Landed on `main`:
+
+- `ix := word_var`
+- `iy := @node.next`
+- `ix := arr_w[idx + 1]`
+- bounded whole-register `IX` / `IY` assignment only
 
 ### Stage 4
 
-Deprecate `move` in docs and eventually consider warning on it, only after the
-live surface is broadly migrated away from it.
+Landed on `main`.
+
+### Stage 5
+
+Deprecate `move` in docs, decide the compatibility-test policy, and consider a
+warning or removal path only after that policy is explicit.
 
 ## Deferred forms
 
@@ -207,6 +209,8 @@ The following may be acceptable later, but are not required in the next slice:
 
 - `h := d`
 - `l := a`
+- `sp := hl`
+- `af := hl`
 
 They are less surprising than forbidding them outright, but they blur the line
 between whole-value assignment and byte-lane machine manipulation. The first
