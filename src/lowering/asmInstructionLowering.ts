@@ -474,8 +474,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
         return;
       }
       if (dst.kind === 'Ea' || src.kind === 'Ea') {
-        const assignAsLd: AsmInstructionNode = { ...asmItem, head: 'ld' };
-        if (ctx.lowerLdWithEa(assignAsLd)) {
+        if (ctx.lowerLdWithEa(asmItem)) {
           ctx.syncToFlow();
           return;
         }
