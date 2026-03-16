@@ -233,7 +233,7 @@ export function emitProgram(
   const declaredBinNames = new Set<string>();
 
   const reg8 = new Set(['A', 'B', 'C', 'D', 'E', 'H', 'L']);
-  const reg16 = new Set(['BC', 'DE', 'HL']);
+  const reg16 = new Set(['BC', 'DE', 'HL', 'IX', 'IY']);
   const reg8Code = new Map([
     ['B', 0],
     ['C', 1],
