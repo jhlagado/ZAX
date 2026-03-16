@@ -16,7 +16,20 @@ import {
 import { parseDiag as diag, parseDiagAtWithId } from './parseDiagnostics.js';
 import { ALL_REGISTER_NAMES, INDEX_REG16_NAMES, INDEX_REG8_NAMES } from './grammarData.js';
 
-const ASSIGNMENT_REGISTER_NAMES = new Set<string>(['A', 'B', 'C', 'D', 'E', 'H', 'L', 'BC', 'DE', 'HL']);
+const ASSIGNMENT_REGISTER_NAMES = new Set<string>([
+  'A',
+  'B',
+  'C',
+  'D',
+  'E',
+  'H',
+  'L',
+  'BC',
+  'DE',
+  'HL',
+  'IX',
+  'IY',
+]);
 
 function parseBalancedContent(
   text: string,

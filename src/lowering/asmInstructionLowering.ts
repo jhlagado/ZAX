@@ -80,7 +80,9 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       dstName === 'L' ||
       dstName === 'BC' ||
       dstName === 'DE' ||
-      dstName === 'HL'
+      dstName === 'HL' ||
+      dstName === 'IX' ||
+      dstName === 'IY'
     ) {
       return ctx.emitInstr('ld', [{ ...dst, name: dstName }, src], span);
     }
@@ -114,6 +116,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     if (dstName === srcName) return true;
     if (dstName === 'A' && srcName === 'A') return true;
     if (dstName === 'A') return false;
+    const wideRegs = new Set(['BC', 'DE', 'HL', 'IX', 'IY']);
     if (dstName === 'BC' || dstName === 'DE' || dstName === 'HL') {
       if (srcName === 'A') return emitZeroExtendReg8ToReg16(dstName, srcName, span);
       const asLd: AsmInstructionNode = {
@@ -126,6 +129,13 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
         ],
       };
       return ctx.emitVirtualReg16Transfer(asLd);
+    }
+    if (dstName === 'IX' || dstName === 'IY') {
+      if (!wideRegs.has(srcName)) return false;
+      return (
+        ctx.emitInstr('push', [{ kind: 'Reg', span, name: srcName }], span) &&
+        ctx.emitInstr('pop', [{ kind: 'Reg', span, name: dstName }], span)
+      );
     }
     return false;
   };
