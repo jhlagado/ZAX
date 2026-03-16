@@ -73,14 +73,14 @@ The examples themselves, organized by tranche. This is the primary work queue.
 
 All files go under `examples/course/unit0/`. Each must:
 - compile clean against current `main`
-- use `move` throughout for typed storage
+- use `:=` throughout for typed storage
 - declare return registers explicitly
 - match the style of `examples/language-tour/02_fibonacci_args_locals.zax`
 - include a header comment stating algorithm source (K&R §x or Wirth Ch.x)
 
 **What can be expressed cleanly today**: everything in Unit 0. Pure arithmetic,
 no arrays, no records, no pointer operations. The entire current ZAX surface is
-available and none of it is required beyond `func`, `while`, `if`, `move`,
+available and none of it is required beyond `func`, `while`, `if`, `:=`,
 `const`, and basic Z80 arithmetic instructions.
 
 **What support surface is needed**: none. Unit 0 has no library dependencies.
@@ -105,8 +105,8 @@ instruction sequence with no unexpected spill/reload pairs.
 
 **Workaround**: local `var` initializers that wanted a named constant such as
 `LastIndex` were rewritten as imperative setup in the function body, e.g.
-`ld hl, LastIndex` / `move high_index, hl` or `ld a, LastIndex` /
-`move pass_last, a`.
+`ld hl, LastIndex` / `high_index := hl` or `ld a, LastIndex` /
+`pass_last := a`.
 **Desired expression**: allow named constants in local `var` initializers, e.g.
 `high_index: word = LastIndex`.
 **Gap type**: language
@@ -115,10 +115,10 @@ during Unit 1 authoring.
 **Priority signal**: common pattern; directly harms readability of algorithm
 setup.
 
-### [Unit 1] Typed-storage `move` vs immediate loads
+### [Unit 1] Typed-storage `:=` vs immediate loads
 
-**Workaround**: keep raw `ld` for register/immediate loads and reserve `move`
-for typed storage, e.g. `ld a, LastIndex` followed by `move pass_last, a`.
+**Workaround**: keep raw `ld` for register/immediate loads and reserve `:=`
+for typed storage, e.g. `ld a, LastIndex` followed by `pass_last := a`.
 **Desired expression**: none established yet. This currently looks like the
 intended language boundary rather than a defect.
 **Gap type**: style
@@ -126,15 +126,15 @@ intended language boundary rather than a defect.
 **Priority signal**: low; teach the boundary explicitly rather than open a
 language issue now.
 
-### [Unit 1] No `move` register-to-register conversion forms
+### [Unit 1] No broad `:=` register-to-register conversion forms
 
 **Workaround**: use raw `ld` when examples need register-to-register transfer.
 This is especially visible when promoting an 8-bit value into a 16-bit register
 pair or extracting the low byte of a pair into an 8-bit register.
-**Desired expression**: discuss whether a narrow `move` extension should exist
+**Desired expression**: discuss whether a narrow `:=` extension should exist
 for conversion-like forms only, e.g. 8-bit to 16-bit promotion with zeroing of
 the high byte, or 16-bit pair to 8-bit low-byte extraction. Do not broaden
-`move` into a general raw register-transfer replacement for `ld`.
+`:=` into a general raw register-transfer replacement for `ld`.
 **Gap type**: language candidate / design discussion
 **Recurrence**: present but not yet dominant in Unit 1.
 **Priority signal**: medium-low; worth recording and discussing, but not yet a
@@ -175,9 +175,9 @@ justify extraction.
 **Priority signal**: medium-low; record it, but do not split it into a helper
 stream yet.
 
-### [Unit 2] Typed-storage `move` vs raw pointer/immediate work
+### [Unit 2] Typed-storage `:=` vs raw pointer/immediate work
 
-**Workaround**: use `move` for typed storage and raw `ld` for pointer-register
+**Workaround**: use `:=` for typed storage and raw `ld` for pointer-register
 and immediate work in the string loops.
 **Desired expression**: none established yet. This still reads as the intended
 language boundary, not a defect.
@@ -212,7 +212,7 @@ to harden into a specific solution.
 
 ### [Unit 7] Pointer-heavy traversal verbosity
 
-**Workaround**: pointer traversal typically takes the form `move hl, ptr` then
+**Workaround**: pointer traversal typically takes the form `hl := ptr` then
 `<Type>hl.field`, repeating through each traversal step.
 **Desired expression**: measure whether pointer-typing ergonomics need language
 work, but do not jump straight to a solution. The current examples are honest
@@ -260,4 +260,4 @@ The course evidence now supports the following discussion order:
 5. **Lower-priority follow-ups**
    - aggregate zero-initializer clarification
    - software-stack direction
-   - narrow `move` conversion forms
+   - narrow `:=` conversion forms
