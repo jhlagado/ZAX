@@ -158,7 +158,9 @@ instr_line      = z80_instruction
 assign_stmt     = assign_target , ":=" , assign_source ;
 assign_target   = assign_reg | ea_expr ;
 assign_source   = assign_reg | ea_expr | move_addr | imm_expr ;
-assign_reg      = "A" | "BC" | "DE" | "HL" ;   (* Stage 1 whole-register set only *)
+assign_reg      = "A" | "B" | "C" | "D" | "E" | "H" | "L"
+                | "IXH" | "IXL" | "IYH" | "IYL"
+                | "BC" | "DE" | "HL" | "IX" | "IY" ;
 
 move_stmt       = "move" , move_reg , "," , move_src
                 | "move" , move_path , "," , move_reg ;
