@@ -190,10 +190,13 @@ end
 
 ### Normative rules
 
-- **Any register** may be the loop variable — `B`, `C`, `HL`, or any other scalar register.
+- **Loop variable class:** the loop variable is a scalar lvalue of type `byte` or `word`.
+  Initial implementation scope: named scalar variables and whole registers already accepted by `:=`.
+  Not included: partial registers (`IXH` / `IXL` / `IYH` / `IYL`), indirect operands, or composite paths.
 - **Bounds are evaluated once on entry.** Neither the start nor the end expression is re-evaluated on each iteration.
+- **Inclusive bounds:** `for idx := start to end` iterates over `start, start+1, ..., end`. `for idx := start downto end` iterates over `start, start-1, ..., end`.
 - **Step is fixed:** `to` increments by 1; `downto` decrements by 1.
-- **Zero-trip safe.** An entry guard is emitted unconditionally: if the initial value already satisfies the termination condition the body is skipped entirely.
+- **Zero-trip safe.** If the initial value already lies beyond the bound (`start > end` for `to`, `start < end` for `downto`), the body is skipped entirely.
 
 ### Lowering
 
