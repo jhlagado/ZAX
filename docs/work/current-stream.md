@@ -18,13 +18,11 @@ direction.
 
 ### Immediate priority
 
-1. Decide the `move` retirement path now that the full active assignment surface
-   is covered by `:=`.
-2. Reduce remaining `move` usage to a minimal explicit compatibility subset.
-3. Decide whether the next step after that subset is:
-   - a deprecation warning phase
-   - or direct parser/lowering removal.
-4. Continue parser/grammar convergence work.
+1. Remove `move` directly from parser/lowering/docs now that the active
+   assignment surface is fully covered by `:=`.
+2. Delete the remaining compatibility-only `move` subset as part of that
+   removal.
+3. Continue parser/grammar convergence work.
 
 ### Deferred until re-planned
 
