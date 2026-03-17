@@ -18,24 +18,26 @@ export func strcat_demo()
     ld a, (hl)
     or a
     if Z
-      ld a, 1
-      or a
-      while NZ
-        ld a, (de)
-        ld (hl), a
-        inc de
-        inc hl
-        or a
-        if Z
-          ret
-        end
-
-        ld a, 1
-        or a
-      end
+      break
     end
 
     inc hl
+
+    ld a, 1
+    or a
+  end
+
+  ld a, 1
+  or a
+  while NZ
+    ld a, (de)
+    ld (hl), a
+    inc de
+    inc hl
+    or a
+    if Z
+      break
+    end
 
     ld a, 1
     or a

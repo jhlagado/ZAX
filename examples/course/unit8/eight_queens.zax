@@ -46,7 +46,7 @@ func place_row(row_index: byte)
     a := col_index
     cp BoardSize
     if NC
-      ret
+      break
     end
 
     a := row_index
@@ -63,51 +63,58 @@ func place_row(row_index: byte)
     l := col_index
     a := col_used[L]
     or a
-    if Z
-      l := sum_index
-      a := diag_sum_used[L]
-      or a
-      if Z
-        l := diff_index
-        a := diag_diff_used[L]
-        or a
-        if Z
-          l := row_index
-          a := col_index
-          queen_cols[L] := a
-
-          l := col_index
-          ld a, 1
-          col_used[L] := a
-          l := sum_index
-          diag_sum_used[L] := a
-          l := diff_index
-          diag_diff_used[L] := a
-
-          a := row_index
-          inc a
-          place_row a
-
-          a := found_solution
-          or a
-          if NZ
-            ret
-          end
-
-          l := col_index
-          ld a, 0
-          col_used[L] := a
-          l := sum_index
-          diag_sum_used[L] := a
-          l := diff_index
-          diag_diff_used[L] := a
-        end
-      end
+    if NZ
+      succ col_index
+      continue
     end
 
+    l := sum_index
+    a := diag_sum_used[L]
+    or a
+    if NZ
+      succ col_index
+      continue
+    end
+
+    l := diff_index
+    a := diag_diff_used[L]
+    or a
+    if NZ
+      succ col_index
+      continue
+    end
+
+    l := row_index
     a := col_index
+    queen_cols[L] := a
+
+    l := col_index
+    ld a, 1
+    col_used[L] := a
+    l := sum_index
+    diag_sum_used[L] := a
+    l := diff_index
+    diag_diff_used[L] := a
+
+    a := row_index
     inc a
-    col_index := a
+    place_row a
+
+    a := found_solution
+    or a
+    if NZ
+      break
+    end
+
+    l := col_index
+    ld a, 0
+    col_used[L] := a
+    l := sum_index
+    diag_sum_used[L] := a
+    l := diff_index
+    diag_diff_used[L] := a
+
+    succ col_index
 
     ld a, 1
     or a
