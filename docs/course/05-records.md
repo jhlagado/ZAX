@@ -223,6 +223,16 @@ the mechanics.
 
 ---
 
+## What comes next
+
+Chapter 06 takes up recursion. Recursive functions in ZAX use the same `func`
+and `var` block syntax as everything else — no special forms — but the call
+stack becomes the active data structure. Reading the Towers of Hanoi and
+recursive array examples requires tracking the IX frame stack mentally, which
+is the natural next step after the structured record layout in this chapter.
+
+---
+
 ## Exercises
 
 1. `ring_buffer.zax` stores both a `value` and a `stamp` in each `Entry`. If you
