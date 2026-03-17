@@ -14,6 +14,7 @@ import { STARTUP_ENTRY_LABEL } from './lowering/startupInit.js';
 import type { Artifact } from './formats/types.js';
 import { collectNonBankedSectionKeys } from './sectionKeys.js';
 import { canonicalModuleId } from './moduleIdentity.js';
+import { validateAssignmentAcceptance } from './semantics/assignmentAcceptance.js';
 import { buildEnv } from './semantics/env.js';
 
 function hasErrors(diagnostics: Diagnostic[]): boolean {
@@ -359,6 +360,11 @@ export const compile: CompileFn = async (
     moduleIdRootDir,
     resolvedImportGraph,
   });
+  if (hasErrors(diagnostics)) {
+    return { diagnostics, artifacts: [] };
+  }
+
+  validateAssignmentAcceptance(program, env, diagnostics);
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };
   }

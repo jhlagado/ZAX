@@ -1,0 +1,113 @@
+import { describe, expect, it } from 'vitest';
+
+import type { Diagnostic } from '../src/diagnostics/types.js';
+import type { ProgramNode } from '../src/frontend/ast.js';
+import { parseModuleFile } from '../src/frontend/parser.js';
+import { validateAssignmentAcceptance } from '../src/semantics/assignmentAcceptance.js';
+import { buildEnv } from '../src/semantics/env.js';
+
+function parseProgram(modulePath: string, source: string): { program: ProgramNode; diagnostics: Diagnostic[] } {
+  const diagnostics: Diagnostic[] = [];
+  const moduleFile = parseModuleFile(modulePath, source, diagnostics);
+  const program: ProgramNode = {
+    kind: 'Program',
+    span: moduleFile.span,
+    entryFile: modulePath,
+    files: [moduleFile],
+  };
+  return { program, diagnostics };
+}
+
+describe('PR895 := scalar path-to-path acceptance', () => {
+  it('accepts scalar path-to-path and compatible @path assignments', () => {
+    const { program, diagnostics } = parseProgram(
+      'pr895_assignment_acceptance_positive.zax',
+      `
+type Pair
+  left: word
+  right: word
+end
+
+section data globals at $8000
+  arr1: byte[4]
+  arr2: byte[4]
+  src_word: word
+  dst: word
+  ptr: ptr
+end
+
+section code text at $0000
+func main()
+  arr2[0] := arr1[1]
+  dst := src_word
+  ptr := @arr1[1]
+  ret
+end
+end
+      `,
+    );
+
+    const env = buildEnv(program, diagnostics);
+    validateAssignmentAcceptance(program, env, diagnostics);
+
+    expect(diagnostics).toEqual([]);
+  });
+
+  it('rejects composite decay and composite-to-composite assignment', () => {
+    const { program, diagnostics } = parseProgram(
+      'pr895_assignment_acceptance_negative.zax',
+      `
+type Rec
+  x: byte
+  y: byte
+end
+
+section data globals at $8000
+  arr1: byte[4]
+  arr2: byte[4]
+  ptr: ptr
+  dst_rec: Rec
+  src_rec: Rec
+end
+
+section code text at $0000
+func main()
+  arr2[0] := arr1
+  dst_rec := src_rec
+  ptr := arr1
+  ret
+end
+end
+      `,
+    );
+
+    const env = buildEnv(program, diagnostics);
+    validateAssignmentAcceptance(program, env, diagnostics);
+
+    const messages = diagnostics.map((d) => d.message);
+    expect(messages).toContain('":=" path source must resolve to scalar storage; got byte[4]. Use "@path" for addresses.');
+    expect(messages).toContain('":=" path target must resolve to scalar storage; got Rec.');
+  });
+
+  it('rejects storage-target path forms inside ops in this slice', () => {
+    const { program, diagnostics } = parseProgram(
+      'pr895_assignment_acceptance_op_negative.zax',
+      `
+op copy_slot(dst: ea, src: ea)
+  dst := src
+end
+
+op bind_addr(dst: ea, src: ea)
+  dst := @src
+end
+      `,
+    );
+
+    const env = buildEnv(program, diagnostics);
+    validateAssignmentAcceptance(program, env, diagnostics);
+
+    const messages = diagnostics.map((d) => d.message);
+    expect(messages).toContain('":=" path-to-path storage-target forms are not supported inside ops in this slice.');
+    expect(messages).toContain('":=" address-of storage-target forms are not supported inside ops in this slice.');
+  });
+});
