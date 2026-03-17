@@ -69,7 +69,7 @@ The examples themselves, organized by tranche. This is the primary work queue.
 
 ## First Implementation Tranche
 
-**Tranche 1: Unit 0 — Foundations**
+**Tranche 1: Unit 1 — Foundations**
 
 All files go under `examples/course/unit1/`. Each must:
 - compile clean against current `main`
@@ -78,15 +78,15 @@ All files go under `examples/course/unit1/`. Each must:
 - match the style of `examples/language-tour/02_fibonacci_args_locals.zax`
 - include a header comment stating algorithm source (K&R §x or Wirth Ch.x)
 
-**What can be expressed cleanly today**: everything in Unit 0. Pure arithmetic,
+**What can be expressed cleanly today**: everything in Unit 1. Pure arithmetic,
 no arrays, no records, no pointer operations. The entire current ZAX surface is
 available and none of it is required beyond `func`, `while`, `if`, `move`,
 `const`, and basic Z80 arithmetic instructions.
 
-**What support surface is needed**: none. Unit 0 has no library dependencies.
+**What support surface is needed**: none. Unit 1 has no library dependencies.
 
 **What to log as friction**: anything that resists clean expression. Expected:
-nothing in Unit 0. If friction appears here, it is a fundamental signal.
+ nothing in Unit 1. If friction appears here, it is a fundamental signal.
 
 **Compiler validation**: after each file, run:
 ```sh

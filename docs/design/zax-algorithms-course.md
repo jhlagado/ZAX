@@ -322,7 +322,7 @@ surface: typed storage, `func`, `if`/`while`/`repeat`/`select` with ranges,
 
 Note: a Fibonacci reference implementation already exists at
 `examples/language-tour/02_fibonacci_args_locals.zax`. That file is the style
-baseline for Unit 0.
+baseline for Unit 1.
 
 #### 1B: Sorting and Searching
 
@@ -762,7 +762,7 @@ expresses them awkwardly, the gap is precisely located.
 | 7    | Pointer Structures | Linked list, BST                                                   | `ptr` fields, `<Type>base.tail` traversal, null-sentinel convention, fixed-pool allocation |
 | 8    | Gaps and Futures   | Eight queens                                                       | Specification target exercise; named exit / `break` — language gap documented              |
 
-Unit 8 is intentionally incomplete. It is a design dialogue between the course
+Unit 9 is intentionally incomplete. It is a design dialogue between the course
 author and the language — a record of what comes next.
 
 ---
@@ -773,9 +773,9 @@ The course is written in tranches. Each tranche produces working, compiled
 example files, a style check against the `.asm` output, and a friction log
 feeding the roadmap companion document (`docs/work/course-roadmap.md`).
 
-### Tranche 1 — Unit 0: Foundations
+### Tranche 1 — Unit 1: Foundations
 
-**Goal**: complete all Unit 0 arithmetic examples, establish the style baseline,
+**Goal**: complete all Unit 1 arithmetic examples, establish the style baseline,
 confirm the compiler handles the unit cleanly.
 
 **Style baseline**: `examples/language-tour/02_fibonacci_args_locals.zax`.
@@ -795,13 +795,13 @@ registers, no unexplained register choices.
 | `digits.zax`        | Decimal digit decomposition       | division-by-10, `repeat`, character offset  |
 
 Fibonacci already has a reference in `examples/language-tour/02_fibonacci_args_locals.zax`.
-The Unit 0 version extends it to a full table-generating form.
+The Unit 1 version extends it to a full table-generating form.
 
-**Support surface needed**: none beyond current main. Unit 0 is pure arithmetic —
+**Support surface needed**: none beyond current main. Unit 1 is pure arithmetic —
 no `op` library, no arrays, no records.
 
-**Friction to log**: Unit 0 is expected to be clean. Any friction is a
-fundamental signal and should be logged before proceeding to Unit 1.
+**Friction to log**: Unit 1 is expected to be clean. Any friction is a
+fundamental signal and should be logged before proceeding to Unit 2.
 
 ---
 
