@@ -17,9 +17,8 @@ func hanoi_count(disks_count: byte, source_peg: byte, spare_peg: byte, target_pe
     ret
   end
 
-  a := disks_count
-  dec a
-  reduced_count := a
+  reduced_count := disks_count
+  pred reduced_count
 
   hanoi_count reduced_count, source_peg, target_peg, spare_peg
   left_count := hl

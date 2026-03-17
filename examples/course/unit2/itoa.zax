@@ -30,9 +30,7 @@ func div_u16(dividend: word, divisor: word): HL
     end
 
     remainder_value := hl
-    hl := quotient_value
-    inc hl
-    quotient_value := hl
+    succ quotient_value
 
     ld a, 1
     or a
@@ -105,9 +103,7 @@ export func itoa_demo()
       a := digit_value
       reverse_digits[L] := a
 
-      a := write_index
-      inc a
-      write_index := a
+      succ write_index
 
       hl := quotient_value
       remaining_value := hl
@@ -129,9 +125,7 @@ export func itoa_demo()
       ret
     end
 
-    a := write_index
-    dec a
-    write_index := a
+    pred write_index
 
     l := write_index
     a := reverse_digits[L]
@@ -141,9 +135,7 @@ export func itoa_demo()
     a := digit_value
     output_text[L] := a
 
-    a := read_index
-    inc a
-    read_index := a
+    succ read_index
 
     ld a, 1
     or a
