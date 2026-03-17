@@ -130,18 +130,14 @@ end
 
 (From `examples/course/unit7/word_stack.zax`, lines 6–14.)
 
-Notice that the index is placed in L, not HL. The reason is precise: on the Z80,
-the array indexing path for `word[]` uses HL as the base-plus-index register. If
-the push loaded the depth into HL directly — `ld hl, a` is not a legal
-instruction, but the equivalent sequence `ld l, a` / `ld h, 0` would occupy HL —
-then loading `value_word` via `de := value_word` would need HL free for the
-address calculation. More directly, L is the low-byte index register for `arr[L]`
-accesses throughout the course examples. Loading the depth into L via `ld l, a`
-and leaving H implicitly zero (HL is set to the array base by the indexing
-machinery) is the established idiom. DE is used to hold the word being stored
-precisely because DE does not participate in the HL-based array address
-calculation, and `stack_slots[L] := de` emits a clean store without clobbering
-the index in L.
+Notice that the index is placed in L, not HL. `ld l, a` sets L to the current
+depth count — it does not zero H, and H's value is not meaningful here. L is the
+index token passed to the `arr[L]` path expression; HL itself is the compiler's
+internal address-building register and is not visible to user code. Because HL is
+reserved for address arithmetic, it cannot also hold the value being stored: if
+the value were in HL, the compiler's own address-building would clobber it. DE is
+therefore used to carry the word value (loaded via `de := value_word`), and
+`stack_slots[L] := de` emits a clean store without disturbing the index in L.
 
 This is a real design choice, not an accident of the implementation. When writing
 operations over word arrays, DE holds the value and L holds the index, and HL is
