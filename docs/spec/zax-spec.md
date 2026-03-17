@@ -363,6 +363,39 @@ Notes (v0.1):
 
 - Trailing commas are not permitted in enum member lists.
 
+### 4.3.1 `succ` and `pred`
+
+`succ` and `pred` are ZAX statement forms that mutate a typed scalar storage location in place. They are not expression forms and do not return a value.
+
+Syntax:
+
+```
+succ path
+pred path
+```
+
+where `path` is a typed scalar path: a named variable or a field/array element. Raw registers and index values are not valid targets.
+
+- `succ path` — increments the storage location named by `path` by one step, in place.
+- `pred path` — decrements the storage location named by `path` by one step, in place.
+
+Semantics:
+
+- Both statements mutate `path` directly; they do not produce a value and may not appear inside expressions or on the RHS of `:=`.
+- The compiler lowers each to the appropriate increment or decrement instruction(s); no raw `INC` or `DEC` mnemonic need appear in the source.
+- There is no wrap-around guarantee at the boundaries of a type's range; the programmer is responsible for range discipline.
+
+Example:
+
+```zax
+succ tail_slot
+pred used_slots
+```
+
+Notes (v0.1):
+
+- Using `succ`/`pred` on a path that is not a typed scalar is a compile error.
+
 ### 4.4 Consts
 
 Syntax:
@@ -1347,6 +1380,30 @@ Lowering (informative):
     - Do not rely on any particular case-test order or intermediate dispatch effects.
   - If the selector is a compile-time `imm` expression, the compiler may resolve the match at compile time and emit only the matching arm (or nothing).
     - The current compiler implementation folds the dispatch compare chain for compile-time `imm` selectors.
+
+### 10.2.2 `break` and `continue`
+
+`break` and `continue` provide early-exit and early-restart within loop bodies. They are valid inside `while` / `end` and `repeat` / `until` constructs only; using either outside a loop body is a compile error.
+
+#### `break`
+
+- Exits the immediately enclosing loop body and resumes execution after its closing `end` (for `while`) or `until` (for `repeat`).
+- Valid inside `while <cc> ... end` and `repeat ... until <cc>`.
+- The programmer must have established any flag state required by code that follows the loop before executing `break`.
+- Emits an unconditional jump to the loop's exit label (the label immediately after `end` / `until`).
+
+#### `continue`
+
+- Skips the remainder of the current loop body iteration and transfers control to the loop's condition re-evaluation point.
+  - For `while <cc> ... end`: jumps to the condition test at the top of the loop, which re-tests `<cc>` using the current flags. The programmer must have established the required flags before `continue` if the condition is to be re-evaluated correctly.
+  - For `repeat ... until <cc>`: jumps to the `until` condition test at the bottom of the loop, which tests `<cc>` using the current flags.
+- Valid inside `while <cc> ... end` and `repeat ... until <cc>`.
+- Emits an unconditional jump to the loop's re-entry or condition label.
+
+Notes:
+
+- In nested loops, `break` and `continue` affect the **immediately enclosing** loop only. There is no labeled-loop form in v0.1.
+- `break` and `continue` do not themselves set or clear any flags.
 
 ### 10.3 Examples
 
