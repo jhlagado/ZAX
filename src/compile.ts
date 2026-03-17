@@ -16,6 +16,7 @@ import { collectNonBankedSectionKeys } from './sectionKeys.js';
 import { canonicalModuleId } from './moduleIdentity.js';
 import { validateAssignmentAcceptance } from './semantics/assignmentAcceptance.js';
 import { buildEnv } from './semantics/env.js';
+import { validateSuccPredAcceptance } from './semantics/succPredAcceptance.js';
 
 function hasErrors(diagnostics: Diagnostic[]): boolean {
   return diagnostics.some((d) => d.severity === 'error');
@@ -365,6 +366,10 @@ export const compile: CompileFn = async (
   }
 
   validateAssignmentAcceptance(program, env, diagnostics);
+  if (hasErrors(diagnostics)) {
+    return { diagnostics, artifacts: [] };
+  }
+  validateSuccPredAcceptance(program, env, diagnostics);
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };
   }
