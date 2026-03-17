@@ -30,6 +30,8 @@ export func prime_sieve()
     or a
     if Z
       succ factor_index
+      ld a, 1
+      or a
       continue
     end
 
