@@ -381,6 +381,15 @@ See `examples/course/unit1/digits.zax`.
 
 ---
 
+## What comes next
+
+Chapter 02 extends the foundation with arrays and the full loop-control surface:
+`break` and `continue`. The algorithms there sort and search small byte arrays,
+which requires indexed storage, multi-pass loops, and early exits — three things
+that build directly on the typed storage and control flow introduced here.
+
+---
+
 ## Exercises
 
 1. In `gcd_iterative.zax`, both the iterative and recursive forms use the

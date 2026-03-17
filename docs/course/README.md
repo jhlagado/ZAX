@@ -12,6 +12,21 @@ where it still asks something of the programmer.
 
 ---
 
+## Where to Start
+
+**New to Z80?** This course assumes Z80 knowledge. Read a Z80 primer first,
+then return to Chapter 00.
+
+**Know Z80 but new to ZAX?** Start at Chapter 00 for the design rationale,
+then Chapter 01 for the first working code. If you want to dive straight into
+code, Chapter 01 is self-contained.
+
+**Already familiar with ZAX basics?** Jump to whichever chapter covers the
+pattern you are working with. Each chapter's "What This Unit Teaches" section
+gives a quick summary of what it covers.
+
+---
+
 ## How to Read This Course
 
 Each chapter is paired with example files under `examples/course/`. Read the
@@ -25,20 +40,40 @@ that needs them.
 
 ---
 
+## How to Compile and Run the Examples
+
+The examples require the ZAX compiler. To compile a single file:
+
+```
+npm run zax -- examples/course/unit1/power.zax
+```
+
+`npm run zax` builds the compiler from source and passes arguments to the CLI.
+Run `npm run build` once to pre-build, then invoke `node dist/src/cli.js`
+directly for subsequent runs. The compiler emits a flat binary, an optional
+Intel HEX file, a symbol listing, and a debug map — run it with `--help` to
+see output options.
+
+There is no test harness for the course examples; they are intended to be read,
+compiled, and inspected. The `.asm` output (if your build is configured to emit
+it) shows the generated assembly for each source file.
+
+---
+
 ## Chapter List
 
-| File | Chapter | Coverage |
-|------|---------|----------|
-| `00-introduction.md` | Introduction | What ZAX is and why it exists; the structured assembler philosophy; course overview. No code yet. |
-| `01-foundations.md` | Foundations | Variables, types, `:=` assignment, functions, basic control flow. Arithmetic and number-theory algorithms from unit 1. |
-| `02-arrays-and-loops.md` | Arrays and Loops | Array declaration and indexing, `while`/`repeat`, `break` and `continue`, the register-as-index convention. Sorting and searching algorithms from unit 2. |
-| `03-strings.md` | Strings | Pointer-based traversal, null-terminated scanning, `repeat`/`until`. String algorithms from unit 3. |
-| `04-bit-patterns.md` | Bit Patterns | Shift idioms, `op` with immediate matchers. Bit-manipulation algorithms from unit 4. |
-| `05-records.md` | Records | Typed aggregate state, field access, `sizeof`/`offsetof`. Ring buffer from unit 5. |
-| `06-recursion.md` | Recursion | Recursive functions, IX frame discipline, argument passing. Tower of Hanoi and recursive array operations from unit 6. |
-| `07-composition.md` | Composition | How a larger program assembles from helper routines, typed storage, and a support module. RPN calculator from unit 7. |
-| `08-pointer-structures.md` | Pointer Structures | Pointer fields, typed reinterpretation, traversal patterns, fixed-pool allocation. Linked list and BST from unit 8. |
-| `09-gaps-and-futures.md` | Gaps and Futures | Control-flow pressure, language limits, and what comes next. Eight queens from unit 9. |
+| File | Chapter | What it covers |
+|------|---------|----------------|
+| `00-introduction.md` | Introduction | What ZAX is, why it exists, the structured assembler philosophy. No code. |
+| `01-foundations.md` | Foundations | Variables, `:=` assignment, functions, `while`/`if`, `succ`/`pred`. Arithmetic and number-theory algorithms. |
+| `02-arrays-and-loops.md` | Arrays and Loops | Array indexing with register operands, `break` and `continue`, the register-as-index convention. Sorting and searching. |
+| `03-strings.md` | Strings | Pointer-based traversal, null-terminated scanning, `repeat`/`until`, local `op`. String algorithms. |
+| `04-bit-patterns.md` | Bit Patterns | Z80 shift and logic idioms, counter-driven loops, local `op` for recurring register patterns. Bit manipulation. |
+| `05-records.md` | Records | Typed aggregate state, field access, `sizeof`/`offsetof`, non-power-of-two strides. Ring buffer. |
+| `06-recursion.md` | Recursion | Recursive functions, IX frame per call, preserving return values across multiple calls. Hanoi, recursive sort and sum. |
+| `07-composition.md` | Composition | `import`, module-qualified calls, `select`/`case` dispatch, software-stack discipline. RPN calculator. |
+| `08-pointer-structures.md` | Pointer Structures | Typed reinterpretation (`<Type>local.field`), null-sentinel traversal, static pointer wiring. Linked list and BST. |
+| `09-gaps-and-futures.md` | Gaps and Futures | Control-flow pressure, recorded language gaps, design status. Eight queens capstone. |
 
 ---
 
