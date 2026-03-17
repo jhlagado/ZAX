@@ -156,7 +156,7 @@ export function createLdFormSelectionHelpers(ctx: LdFormSelectionContext) {
       srcScalarExact: scalarKindOfResolution(srcResolved),
       scalarMemToMem:
         dst.kind === 'Mem' && src.kind === 'Mem'
-          ? resolveScalarTypeForEa(dst.expr) ?? resolveScalarTypeForEa(src.expr) ?? undefined
+          ? resolveScalarTypeForLd(dst.expr) ?? resolveScalarTypeForLd(src.expr) ?? undefined
           : undefined,
       srcHasRegisterLikeEaBase: src.kind === 'Mem' ? hasRegisterLikeEaBase(src.expr) : false,
       dstHasRegisterLikeEaBase: dst.kind === 'Mem' ? hasRegisterLikeEaBase(dst.expr) : false,

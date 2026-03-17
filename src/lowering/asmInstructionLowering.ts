@@ -468,6 +468,14 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
         return;
       }
       if (src.kind === 'Ea' && src.explicitAddressOf) {
+        if (dst.kind === 'Ea') {
+          if (ctx.lowerLdWithEa(asmItem)) {
+            ctx.syncToFlow();
+            return;
+          }
+          ctx.diagAt(ctx.diagnostics, asmItem.span, `":=" form is not supported.`);
+          return;
+        }
         if (dst.kind !== 'Reg' || !ctx.reg16.has(dst.name.toUpperCase())) {
           ctx.diagAt(
             ctx.diagnostics,
