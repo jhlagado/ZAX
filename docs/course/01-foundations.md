@@ -153,32 +153,32 @@ base case. This is the standard Z80 null-check pattern: OR H with L, or OR A
 with itself to test A, then branch on Z or NZ.
 
 `while <cc>` tests the condition on entry and at the back edge after each
-iteration. If the condition is false on entry, the body never runs. The body
-must re-establish the flags before control reaches the back edge:
+iteration. If the condition is false on entry, the body never runs. The entry
+flag rule therefore always applies: flags must correctly represent the loop
+condition before the first `while` test, not only at the back edge. The body
+must also re-establish the flags before control reaches the back edge:
 
 ```zax
+    ld a, 1
+    or a            ; establish NZ before the first while test
     while NZ
-      ; ... loop body tests its own exit condition and ret if done ...
+      ; ... loop body ...
 
       ld a, 1
       or a            ; re-establish NZ for the next iteration
     end
 ```
 
-This is the recurring idiom for a loop that manages its own exit condition
-internally (via `ret` or a structured early exit). In unit 1, the loop body
-checks the termination condition directly (via `or l`, `xor a` / `sbc hl, de`,
-or similar) and returns early when the algorithm is done. The `ld a, 1` / `or a`
-at the back edge re-establishes NZ so that the loop continues rather than exits
-on the next iteration test. The entry flags before the first `while NZ` test do
-not matter in unit 1 because the loop always exits via `ret` inside the body
-rather than through the front-edge condition becoming false.
+`ld a, 1` / `or a` is the explicit, safe idiom for establishing NZ. It appears
+at the entry setup and at the back edge whenever the loop condition must be
+guaranteed.
 
-Unit 3 and later examples that need a genuine entry guard establish flags
-explicitly before the `while` keyword — both the initial setup and the back-edge
-re-establishment appear together. In unit 1, only the back-edge re-establishment
-is needed. It is verbose but transparent: the loop continues until the algorithm
-explicitly returns.
+Unit 1 examples use `ld a, 1` / `or a` at the back edge only; they are designed
+for non-zero arguments where the calling context provides appropriate entry
+conditions. Unit 3 and later examples always establish flags explicitly before
+the first `while` — both the initial setup and the back-edge re-establishment
+appear together. The entry-flag rule applies equally to both: if Z=1 on entry to
+a `while NZ` loop, the body never executes regardless of what is inside it.
 
 ---
 
