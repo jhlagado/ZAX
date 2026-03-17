@@ -812,20 +812,25 @@ export function emitProgram(
     resolveScalarKind,
     resolveEaTypeExpr,
     resolveScalarTypeForEa,
+    resolveScalarTypeForLd,
     resolveArrayType,
     typeDisplay,
     sameTypeShape,
   };
   const functionLoweringMaterializationContext: FunctionLoweringMaterializationContext = {
+    resolveEa,
     buildEaWordPipeline,
     enforceEaRuntimeAtomBudget,
     enforceDirectCallSiteEaBudget,
     pushEaAddress,
+    materializeEaAddressToHL,
     pushMemValue,
     pushImm16,
     pushZeroExtendedReg8,
     loadImm16ToHL,
     emitStepPipeline,
+    emitScalarWordLoad,
+    emitScalarWordStore,
     lowerLdWithEa,
   };
   const functionLoweringStorageContext: FunctionLoweringStorageContext = {
