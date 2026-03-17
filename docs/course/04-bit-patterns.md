@@ -264,7 +264,7 @@ counter-driven loops here, now over a struct array rather than a scalar.
 1. `popcount.zax` exits the loop when `working_value` reaches zero. This is
    efficient for sparse values (few set bits) but not for values with many set
    bits. Could you write a version that always runs exactly eight iterations using
-   `pred bit_count` and `pred bit_count` as the loop counter? Compare code size.
+   `pred bit_count` as the loop counter? Compare code size.
 
 2. In `parity.zax`, `xor 1` is used to toggle `parity_value`. The Z80 has a `CPL`
    instruction that inverts all bits of A. Could `CPL` be used instead of `xor 1`?
