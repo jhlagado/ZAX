@@ -453,6 +453,13 @@ function parseAssignmentInstruction(
       });
       return undefined;
     }
+    if (source.kind === 'Ea' && !source.explicitAddressOf && !isAssignmentStoragePath(source.expr)) {
+      diag(diagnostics, filePath, `":=" storage source must be a storage path, not an affine address expression`, {
+        line: instrSpan.start.line,
+        column: instrSpan.start.column,
+      });
+      return undefined;
+    }
     return { kind: 'AsmInstruction', span: instrSpan, head: ':=', operands: [target, source] };
   }
 
@@ -577,16 +584,7 @@ function parseAssignmentSource(
   }
 
   const ea = parseEaExprFromText(filePath, t, operandSpan, diagnostics);
-  if (ea) {
-    if (!isAssignmentStoragePath(ea)) {
-      diag(diagnostics, filePath, `":=" source path must be a storage path, not an affine address expression`, {
-        line: operandSpan.start.line,
-        column: operandSpan.start.column,
-      });
-      return undefined;
-    }
-    return { kind: 'Ea', span: operandSpan, expr: ea };
-  }
+  if (ea) return { kind: 'Ea', span: operandSpan, expr: ea };
 
   const expr = parseAssignmentImmediateExpr(filePath, t, operandSpan, diagnostics);
   if (expr) return { kind: 'Imm', span: operandSpan, expr };
