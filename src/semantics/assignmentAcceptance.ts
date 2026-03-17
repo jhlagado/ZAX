@@ -4,6 +4,7 @@ import type {
   AsmInstructionNode,
   EaExprNode,
   FuncDeclNode,
+  OpDeclNode,
   ProgramNode,
   SourceSpan,
   TypeExprNode,
@@ -204,6 +205,22 @@ function validateFunctionAssignments(
   }
 }
 
+function validateOpAssignments(item: OpDeclNode, diagnostics: Diagnostic[]): void {
+  for (const asmItem of item.body.items) {
+    if (asmItem.kind !== 'AsmInstruction' || asmItem.head !== ':=' || asmItem.operands.length !== 2) continue;
+    const [dst, src] = asmItem.operands;
+    if (dst?.kind !== 'Ea') continue;
+    if (src?.kind === 'Ea') {
+      const detail = src.explicitAddressOf ? 'address-of' : 'path-to-path';
+      diagAt(
+        diagnostics,
+        asmItem.span,
+        `":=" ${detail} storage-target forms are not supported inside ops in this slice.`,
+      );
+    }
+  }
+}
+
 export function validateAssignmentAcceptance(
   program: ProgramNode,
   env: CompileEnv,
@@ -213,15 +230,20 @@ export function validateAssignmentAcceptance(
 
   for (const file of program.files) {
     visitDeclTree(file.items, (item) => {
-      if (item.kind !== 'FuncDecl') return;
-      validateFunctionAssignments(
-        item,
-        env,
-        storageTypes,
-        rawAddressSymbols,
-        moduleAliasTargets,
-        diagnostics,
-      );
+      if (item.kind === 'FuncDecl') {
+        validateFunctionAssignments(
+          item,
+          env,
+          storageTypes,
+          rawAddressSymbols,
+          moduleAliasTargets,
+          diagnostics,
+        );
+        return;
+      }
+      if (item.kind === 'OpDecl') {
+        validateOpAssignments(item, diagnostics);
+      }
     });
   }
 }
