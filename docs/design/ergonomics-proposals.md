@@ -13,7 +13,7 @@ The language is best when this line stays clear:
 - **Z80 mnemonics** manage arithmetic, flags, and raw machine operations
 
 Expanding `:=` for better transfer ergonomics is coherent with that boundary.
-Lifting `inc` and `dec` onto typed paths is coherent with that boundary.
+Adding dedicated ZAX built-ins for successor / predecessor on typed paths is coherent with that boundary.
 Adding a general expression evaluator inside assignment is not.
 
 ---
@@ -45,8 +45,8 @@ The biggest source noise is not a lack of arithmetic syntax. It is forced regist
 ## Priority order
 
 1. Scalar path-to-path `:=`
-2. `inc` / `dec` on typed paths
-3. Counted `for` loop — design needs further work before implementation
+2. `succ` / `pred` on typed paths
+3. Pascal-style counted `for`
 
 ---
 
@@ -58,6 +58,7 @@ The biggest source noise is not a lack of arithmetic syntax. It is forced regist
 - `:=` may accept any scalar destination expression that can be lowered as a typed storage location.
 - If both sides are paths, the compiler shuttles through a register internally.
 - Evaluation order is fixed: **RHS value is fully evaluated and loaded first, then LHS destination is written.** This is deterministic and normative.
+- The hidden transfer register is compiler-owned, not programmer-owned. Therefore path-to-path `:=` must preserve programmer-visible registers around the transfer sequence.
 
 ### What becomes valid
 
@@ -90,9 +91,12 @@ These all remain fundamentally transfers between two scalar places.
 
 `x := x` is valid. Because evaluation order is fixed (load RHS into register, then store to LHS), the scalar value is captured before the write. Self-copy is therefore a no-op in effect. Overlapping typed locations behave as "load scalar RHS value, then store scalar LHS value" — no special aliasing rules are needed beyond the fixed evaluation order.
 
-### Register conflict table
+### Hidden transfer registers and conflict table
 
-The pipeline must choose an intermediate register that does not conflict with the index registers required by either path. "A never conflicts" is not correct — byte-indexed paths can use A as their index register.
+The pipeline must choose an intermediate register that does not conflict with the index registers required by either path. The transfer register is hidden compiler state and therefore must be preserved before use and restored afterward. The cheapest hidden transfer register is not the same for byte and word values.
+
+**Byte copies default to `A`.**
+For plain assignment this is acceptable because `AF` can be preserved around the transfer sequence. The compiler should prefer the shortest direct load/store shape first and only promote away from `A` when the path itself needs `A` for indexing.
 
 **Byte copies:**
 
@@ -104,15 +108,37 @@ The pipeline must choose an intermediate register that does not conflict with th
 
 If B is also occupied as an index in one of the paths, promote to C (then D, E, in order). In practice, a single path cannot use more than one index register simultaneously, so one promotion level is sufficient.
 
+**Word copies default to `DE`, not `HL`.**
+This is an important codegen choice. In the current lowering, `HL` is primarily the effective-address register. Loading or storing a word frame variable through `HL` is more expensive than using `DE`, because `LOAD_RP_FVAR('HL', ...)` and `STORE_RP_FVAR('HL', ...)` have to shuttle through `DE` with `ex de, hl`. `BC` is a valid fallback. `HL` should be treated as the EA-building register first and only as a hidden value register in narrow direct-access fast paths.
+
 **Word copies:**
 
 | Destination index register | Safe intermediate | Rationale |
 |---------------------------|-------------------|-----------|
-| not L or H (or no register index) | HL | HL is free |
-| L or H                    | DE                | HL is in use for dest addressing; loading into HL clobbers L before the store |
-| L or H, and DE also in use | BC               | Both HL and DE occupied |
+| DE free                   | DE                | Natural hidden value pair; avoids HL shuttle cost |
+| DE conflicts              | BC                | Valid whole-pair fallback |
+| direct scalar fast path only | HL             | Use only when demonstrably cheaper than DE/BC |
 
-The conflict that must be avoided for word copies: `LOAD_RP_FVAR` targeting HL uses `ex de, hl / ld e, (ix+d) / ld d, (ix+d+1) / ex de, hl`, which necessarily clobbers L. If the destination path indexes via L, the index is destroyed before the store can execute. This is the same register-overlap constraint documented in the existing bug-fix work.
+The conflict that must be avoided for word copies: `LOAD_RP_FVAR` targeting `HL` uses `ex de, hl / ld e, (ix+d) / ld d, (ix+d+1) / ex de, hl`, which necessarily clobbers `L`. If the destination path indexes via `L`, the index is destroyed before the store can execute. This is why `DE` is the natural hidden transfer pair and `HL` is not.
+
+### Codegen shape
+
+For direct scalar locations, the feature should compile to the shortest direct load/store sequence plus preservation of the hidden transfer register. Example:
+
+```zax
+arr2[0] := arr1[1]
+```
+
+ideal lowering:
+
+```z80
+push af
+ld a, (arr1 + 1)
+ld (arr2), a
+pop af
+```
+
+For EA-shaped transfers, the compiler may still need the existing staged EA pipelines, but the same principle holds: preserve the hidden transfer register, build each side through the current step system, and avoid unnecessary re-materialization when a direct scalar accessor exists.
 
 ### What stays out of scope
 
@@ -126,50 +152,96 @@ These require hidden temporary selection, sequencing rules, and possible spill b
 
 ---
 
-## Proposal 2: `inc` and `dec` on typed paths
+## Proposal 2: `succ` and `pred` on typed paths
 
 ### Rule
 
-`inc path` and `dec path` are valid wherever `path` resolves to a scalar byte or word storage location. They lower as: load value into register, apply `inc`/`dec`, store back.
+`succ path` and `pred path` are valid wherever `path` resolves to a scalar byte or word storage location.
+
+These are **ZAX built-ins**, not overloads of the raw Z80 `inc` / `dec` mnemonics.
+
+They lower as a read-modify-write sequence over typed storage:
+- load value into a hidden register
+- apply increment / decrement
+- store back to the same place
+- leave a meaningful final `Z` flag based on the resulting value
+
+The built-ins preserve programmer-visible registers. They do **not** promise full flag parity with Z80 `inc` / `dec`; they promise a meaningful final `Z` only.
 
 ### Examples
 
 ```zax
-inc count          ; was: move hl, count / inc hl / move count, hl
-dec used_slots
-inc entries[B].version
+succ count
+pred used_slots
+succ entries[B].version
 ```
 
 ### Lowering
 
-| Type  | Register | Sequence emitted                               |
-|-------|----------|------------------------------------------------|
-| byte  | A        | `ld a, <path>` / `inc a` / `ld <path>, a`     |
-| word  | HL       | `ld hl, <path>` / `inc hl` / `ld <path>, hl`  |
+| Type  | Hidden value register | Notes |
+|-------|------------------------|-------|
+| byte  | `E`                    | Avoids `AF` save/restore problem; `inc e` / `dec e` sets flags directly |
+| word  | `DE`                   | Natural hidden word pair; `A` is used only for final zero test |
 
-The register is chosen by the same conflict rules as path-to-path assignment (promote if the path uses A or L as its index register).
+For byte paths, the preferred pattern is:
+
+```z80
+push de
+ld e, <value>
+inc e        ; or dec e
+ld <place>, e
+pop de
+```
+
+For word paths, the preferred pattern is:
+
+1. preserve `BC`
+2. save old `A` in `B` or `C`
+3. preserve `DE`
+4. load word value into `DE`
+5. `inc de` / `dec de`
+6. store `DE` back
+7. set final `Z` with `ld a, e / or d`
+8. restore `A` from the saved byte register with `ld a, b` or `ld a, c` (this does not change flags)
+9. restore `DE`
+10. restore `BC`
+
+This avoids `push af` / `pop af`, which would incorrectly restore old flags.
 
 ### Flag behaviour
 
-`ld` on Z80 does not alter flags. Therefore: the flags after `inc path` or `dec path` are exactly the flags set by `inc <reg>` or `dec <reg>`. The load and store do not interfere. This makes `inc path` / `dec path` composable with existing flag-driven control flow in the expected way.
+The final `Z` flag is meaningful:
+- `succ path` leaves `Z` set iff the resulting value is zero
+- `pred path` leaves `Z` set iff the resulting value is zero
+
+This makes the built-ins composable with existing flag-driven control flow without pretending to reproduce the full Z80 flag model for all scalar sizes.
 
 ```zax
-inc count
+succ count
 if Z
   ; count wrapped to zero
 end
 ```
 
-### Disambiguation from raw Z80
+### Single-EA read-modify-write
 
-`inc` and `dec` already apply to registers and indirect addresses in raw Z80:
+For EA-shaped paths, the effective address should be calculated once and kept live across the whole read-modify-write sequence. The compiler should not recalculate the same effective address for the store.
+
+So for something like:
 
 ```zax
-inc hl        ; raw Z80 — register
-inc (hl)      ; raw Z80 — indirect memory
+succ arr[L]
 ```
 
-`inc name` where `name` resolves to a ZAX typed path is the new form. The parser resolves this by checking whether the operand is a register name, a `(register)` indirect, or a named path expression. No grammar ambiguity arises.
+the lowering model is:
+
+1. compute EA into `HL`
+2. load value from `(HL)` into the hidden value register
+3. update the hidden value register
+4. store back through the same `HL`
+5. establish final `Z`
+
+This is a distinct lowering shape from path-to-path `:=`, which usually has separate source and destination plans.
 
 ---
 
@@ -242,7 +314,7 @@ Allowing arithmetic on the RHS requires hidden temporary selection, sequencing r
 | Proposal                         | Verdict              |
 |----------------------------------|----------------------|
 | Scalar path-to-path `:=`         | Yes — implement next |
-| `inc` / `dec` on typed paths     | Yes — implement      |
+| `succ` / `pred` on typed paths   | Yes — implement      |
 | Pascal-style counted `for`       | Yes — Pascal-style, implement after proposals 1 and 2 |
 | General RHS arithmetic           | No, for now          |
 | C-style `for`                    | No                   |
