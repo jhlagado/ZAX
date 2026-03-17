@@ -55,15 +55,15 @@ The examples themselves, organized by tranche. This is the primary work queue.
 
 | Tranche | Unit | Files | Status |
 |---|---|---|---|
-| 1 | 0 — Foundations | `power`, `gcd_iterative`, `gcd_recursive`, `sqrt_newton`, `exp_squaring`, `fibonacci`, `digits` | complete |
-| 2 | 1 — Arrays and Loops | `insertion_sort`, `bubble_sort`, `selection_sort`, `binary_search`, `linear_search`, `prime_sieve` | complete |
-| 3 | 2 — Strings | `strlen`, `strcpy`, `strcmp`, `strcat`, `str_reverse`, `atoi`, `itoa` | complete |
-| 3 | 4 — Records | `ring_buffer` (init, push, pop, predicates) | complete |
-| 4 | 3 — Bit Patterns | `popcount`, `bit_reverse`, `parity`, `getbits` | complete |
-| 4 | 5 — Recursion | `hanoi`, `array_sum_recursive`, `array_reverse_recursive` | complete |
-| 5 | 6 — Composition | `rpn_calculator` | complete |
-| 5 | 7 — Pointer Structures | `linked_list`, `bst` | complete |
-| 5 | 8 — Gaps and Futures | `eight_queens` | complete |
+| 1 | 1 — Foundations | `power`, `gcd_iterative`, `gcd_recursive`, `sqrt_newton`, `exp_squaring`, `fibonacci`, `digits` | complete |
+| 2 | 2 — Arrays and Loops | `insertion_sort`, `bubble_sort`, `selection_sort`, `binary_search`, `linear_search`, `prime_sieve` | complete |
+| 3 | 3 — Strings | `strlen`, `strcpy`, `strcmp`, `strcat`, `str_reverse`, `atoi`, `itoa` | complete |
+| 3 | 5 — Records | `ring_buffer` (init, push, pop, predicates) | complete |
+| 4 | 4 — Bit Patterns | `popcount`, `bit_reverse`, `parity`, `getbits` | complete |
+| 4 | 6 — Recursion | `hanoi`, `array_sum_recursive`, `array_reverse_recursive` | complete |
+| 5 | 7 — Composition | `rpn_calculator` | complete |
+| 5 | 8 — Pointer Structures | `linked_list`, `bst` | complete |
+| 5 | 9 — Gaps and Futures | `eight_queens` | complete |
 
 ---
 

@@ -752,15 +752,15 @@ expresses them awkwardly, the gap is precisely located.
 
 | Unit | Title              | Algorithms                                                         | ZAX Constructs Introduced                                                                  |
 | ---- | ------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| 0    | Foundations        | Arithmetic, power, Fibonacci, GCD                                  | `func`, `const`, `while`, return register, `move`                                          |
-| 1    | Arrays and Loops   | Sorting (insertion, bubble, selection), binary search, prime sieve | `byte[]`, indexed access, `move arr[r], a`, `select` with ranges                           |
-| 2    | String Model       | strlen, strcpy, strcmp, atoi/itoa                                  | null-sentinel loops, `repeat`, `op fetch_advance`, `@path`                                 |
-| 3    | Bit Patterns       | Population count, bit reversal, parity, field extract              | Shift idioms, `op` with `imm8` matchers                                                    |
-| 4    | Records            | Ring buffer                                                        | `type`, `record`, `section data`, `sizeof`/`offsetof`, exact-size awareness                |
-| 5    | Recursion          | Towers of Hanoi, recursive sum, recursive reverse                  | Recursive `func`, IX frame discipline, `<Type>base.tail`                                   |
-| 6    | Composition        | RPN calculator                                                     | All of the above: `op`, `record`, `select` ranges, `func`, software stack                  |
-| 7    | Pointer Structures | Linked list, BST                                                   | `ptr` fields, `<Type>base.tail` traversal, null-sentinel convention, fixed-pool allocation |
-| 8    | Gaps and Futures   | Eight queens                                                       | Specification target exercise; named exit / `break` — language gap documented              |
+| 1    | Foundations        | Arithmetic, power, Fibonacci, GCD                                  | `func`, `const`, `while`, return register, `:=`                                            |
+| 2    | Arrays and Loops   | Sorting (insertion, bubble, selection), binary search, prime sieve | `byte[]`, indexed access, scalar path updates, `break` / `continue`                        |
+| 3    | String Model       | strlen, strcpy, strcmp, atoi/itoa                                  | null-sentinel loops, `repeat`, `op fetch_advance`, `@path`                                 |
+| 4    | Bit Patterns       | Population count, bit reversal, parity, field extract              | Shift idioms, `op` with `imm8` matchers                                                    |
+| 5    | Records            | Ring buffer                                                        | `type`, `record`, `section data`, `sizeof`/`offsetof`, exact-size awareness                |
+| 6    | Recursion          | Towers of Hanoi, recursive sum, recursive reverse                  | Recursive `func`, IX frame discipline, `<Type>base.tail`                                   |
+| 7    | Composition        | RPN calculator                                                     | All of the above: `op`, `record`, `select` ranges, `func`, software stack                  |
+| 8    | Pointer Structures | Linked list, BST                                                   | `ptr` fields, `<Type>base.tail` traversal, null-sentinel convention, fixed-pool allocation |
+| 9    | Gaps and Futures   | Eight queens                                                       | Control-flow pressure case; `break` / `continue` now available, future design pressure remains |
 
 Unit 9 is intentionally incomplete. It is a design dialogue between the course
 author and the language — a record of what comes next.
@@ -852,13 +852,13 @@ frame under recursion. Both can proceed independently once Tranche 2 is stable.
 
 ---
 
-### Tranche 5 — Units 6, 7, 8: Composition, Pointers, Gaps
+### Tranche 5 — Units 7, 8, 9: Composition, Pointers, Gaps
 
 Unit 7 (RPN calculator) is the composition showcase — it uses every construct
 introduced to that point. Unit 8 (linked list, BST) is the friction showcase —
 write it clean and document the ergonomic gaps precisely. Unit 9 (Eight Queens)
-is the language-gap target — write it as close as possible, document the named
-exit gap, file the issue.
+is the language-gap target — write it as close as possible, document the loop
+control-flow pressure, file the issue.
 
 ---
 
