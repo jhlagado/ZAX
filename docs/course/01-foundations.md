@@ -77,7 +77,7 @@ the same function body, and they sit next to each other naturally:
     end
 ```
 
-(From `examples/course/unit1/exp_squaring.zax`, lines 58–63.)
+(From `examples/course/unit1/exp_squaring.zax`, lines 56–62.)
 
 The raw `ld a, l` and `and 1` test the low bit of a 16-bit value. That is
 pure Z80 work. The `:=` assignments on either side are typed storage transfers.
@@ -146,7 +146,7 @@ the correct flags with a Z80 instruction immediately before the condition:
     end
 ```
 
-(From `examples/course/unit1/gcd_iterative.zax`, lines 18–23.)
+(From `examples/course/unit1/gcd_iterative.zax`, lines 18–24.)
 
 The `or l` instruction sets Z if HL is zero. The `if Z` block then handles the
 base case. This is the standard Z80 null-check pattern: OR H with L, or OR A
@@ -157,24 +157,28 @@ iteration. If the condition is false on entry, the body never runs. The body
 must re-establish the flags before control reaches the back edge:
 
 ```zax
-    ld a, 1
-    or a              ; establish NZ to enter the loop
     while NZ
-      ; ... loop body ...
+      ; ... loop body tests its own exit condition and ret if done ...
 
       ld a, 1
-      or a            ; re-establish NZ to continue
+      or a            ; re-establish NZ for the next iteration
     end
 ```
 
 This is the recurring idiom for a loop that manages its own exit condition
-internally (via `ret` or a structured early exit). The `ld a, 1` / `or a`
-sequence before `while` establishes the entry condition; the same sequence at
-the bottom of each iteration re-establishes it. The actual exits happen via
-early `ret` statements inside the body.
+internally (via `ret` or a structured early exit). In unit 1, the loop body
+checks the termination condition directly (via `or l`, `xor a` / `sbc hl, de`,
+or similar) and returns early when the algorithm is done. The `ld a, 1` / `or a`
+at the back edge re-establishes NZ so that the loop continues rather than exits
+on the next iteration test. The entry flags before the first `while NZ` test do
+not matter in unit 1 because the loop always exits via `ret` inside the body
+rather than through the front-edge condition becoming false.
 
-You will see this pattern in nearly every unit 1 function. It is verbose but
-transparent: the loop continues until the algorithm explicitly returns.
+Unit 3 and later examples that need a genuine entry guard establish flags
+explicitly before the `while` keyword — both the initial setup and the back-edge
+re-establishment appear together. In unit 1, only the back-edge re-establishment
+is needed. It is verbose but transparent: the loop continues until the algorithm
+explicitly returns.
 
 ---
 
@@ -360,8 +364,11 @@ See `examples/course/unit1/digits.zax`.
 - Functions declare their return register. The compiler enforces the
   complementary preservation set. Callers can rely on those registers surviving
   a typed call.
-- `while NZ` with an explicit `ld a, 1` / `or a` idiom is the basic loop
-  form when the loop body manages its own termination via early `ret`.
+- `while NZ` is the basic loop form when the loop body manages its own
+  termination via early `ret`. In unit 1, the `ld a, 1` / `or a` idiom appears
+  at the back edge of each iteration to re-establish NZ; the initial entry flags
+  before the first `while` test are not meaningful because exit always happens
+  via `ret` inside the body.
 - `succ` and `pred` are the idiomatic scalar increment and decrement operators.
   They appear wherever a loop counter or accumulator needs stepping.
 - Recursive functions look and work like non-recursive ones. The compiler

@@ -48,7 +48,7 @@ handles it. The indexing syntax is the same as for any array:
   entries[B].stamp := entry_stamp
 ```
 
-(From `examples/course/unit5/ring_buffer.zax`, lines 41–43.)
+(From `examples/course/unit5/ring_buffer.zax`, lines 40–43.)
 
 `entries[B].value` is a typed path expression: take the `B`-th element of the
 `entries` array, then access its `value` field. On the left side of `:=`, it is
