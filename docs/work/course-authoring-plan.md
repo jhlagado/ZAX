@@ -101,6 +101,7 @@ Examples:
 Purpose:
 - show indexed storage, loop structure, and small algorithmic invariants over arrays
 - introduce the strongest early examples of `succ`, `pred`, and `break` / `continue` in ordinary search and sort code
+- explicitly explain `break` and `continue` in this chapter, because this is where the reader first sees them as part of ordinary loop structure
 
 Examples:
 - `examples/course/unit1/insertion_sort.zax`
@@ -271,6 +272,9 @@ Write these first:
 
 This phase is the style and structure checkpoint.
 Do not write the rest of the course before this phase is reviewed.
+
+Specific requirement for phase 1:
+- `docs/course/02-arrays-and-loops.md` must explicitly explain `break` and `continue` as part of the loop discussion, using current course examples rather than abstract syntax-only prose.
 
 ### Phase 2
 
