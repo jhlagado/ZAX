@@ -73,6 +73,27 @@ Chapter numbers are offset from example unit numbers because `00-introduction.md
 - ...
 - Chapter `09` maps to `examples/course/unit9/`
 
+## Current example inventory on `main`
+
+This authoring brief is tied to the currently checked-in example corpus.
+Do not assume there are additional course examples beyond the files listed below.
+
+- `examples/course/unit1/` — 7 examples
+- `examples/course/unit2/` — 6 examples
+- `examples/course/unit3/` — 7 examples
+- `examples/course/unit4/` — 4 examples
+- `examples/course/unit5/` — 1 example
+- `examples/course/unit6/` — 3 examples
+- `examples/course/unit7/` — 1 lesson example plus 1 support module
+- `examples/course/unit8/` — 2 examples
+- `examples/course/unit9/` — 1 example
+
+Practical implication for the writer:
+
+- `unit5/` is intentionally a single-example chapter built around `ring_buffer.zax`
+- `unit7/word_stack.zax` is support code, not a separate lesson
+- `unit9/` is a capstone chapter centered on `eight_queens.zax`, not a multi-example survey unit
+
 ### 00 Introduction
 
 Purpose:
@@ -144,6 +165,10 @@ Purpose:
 - show typed aggregate state and field-oriented update in a compact example
 - explain how records change the feel of low-level code without hiding the machine
 
+Inventory note:
+- this chapter currently has one canonical example on `main`
+- do not invent extra example references here unless the corpus actually grows later
+
 Examples:
 - `examples/course/unit5/ring_buffer.zax`
 
@@ -186,6 +211,9 @@ Purpose:
 - use `eight_queens` as the capstone reading for control-flow pressure and design limits
 - explain which parts of the program are now clearer because of `break` / `continue`
 - connect the example back to the friction log and future language/library questions without turning the chapter into a roadmap dump
+
+Inventory note:
+- this chapter is intentionally centered on one example file, not a bundle of smaller examples
 
 Examples:
 - `examples/course/unit9/eight_queens.zax`
