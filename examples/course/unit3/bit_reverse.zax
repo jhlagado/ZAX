@@ -39,9 +39,7 @@ export func bit_reverse_demo(): HL
     srl a
     source_value := a
 
-    a := bit_count
-    dec a
-    bit_count := a
+    pred bit_count
 
     ld a, 1
     or a

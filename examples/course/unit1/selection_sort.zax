@@ -112,9 +112,7 @@ export func selection_sort()
       swap_values outer_index, min_index
     end
 
-    a := outer_index
-    inc a
-    outer_index := a
+    succ outer_index
 
     ld a, 1
     or a
