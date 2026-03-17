@@ -130,14 +130,7 @@ end
 
 (From `examples/course/unit7/word_stack.zax`, lines 6–14.)
 
-Notice that the index is placed in L, not HL. `ld l, a` sets L to the current
-depth count — it does not zero H, and H's value is not meaningful here. L is the
-index token passed to the `arr[L]` path expression; HL itself is the compiler's
-internal address-building register and is not visible to user code. Because HL is
-reserved for address arithmetic, it cannot also hold the value being stored: if
-the value were in HL, the compiler's own address-building would clobber it. DE is
-therefore used to carry the word value (loaded via `de := value_word`), and
-`stack_slots[L] := de` emits a clean store without disturbing the index in L.
+`word_stack.zax` loads the depth count into L with `ld l, a` — L is the index token for the `arr[L]` path expression — while DE carries the word value via `de := value_word`. `stack_slots[L] := de` then stores it cleanly. This is the established ZAX idiom for word-array access with an 8-bit index: index in L, value in DE.
 
 This is a real design choice, not an accident of the implementation. When writing
 operations over word arrays, DE holds the value and L holds the index, and HL is
