@@ -249,6 +249,16 @@ idiom, and unit 4 shows it at its most concentrated.
 
 ---
 
+## What comes next
+
+Chapter 05 introduces typed aggregate state: records and arrays of records.
+The byte and word scalars that have carried algorithm state throughout the
+course are grouped into named types with automatic offset computation. The
+ring buffer example applies the same modular-index discipline used in the
+counter-driven loops here, now over a struct array rather than a scalar.
+
+---
+
 ## Exercises
 
 1. `popcount.zax` exits the loop when `working_value` reaches zero. This is

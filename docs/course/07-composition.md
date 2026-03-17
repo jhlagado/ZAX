@@ -184,6 +184,15 @@ the right operand is saved, the left operand is popped, the operation is applied
 
 ---
 
+## What comes next
+
+Chapter 08 works with pointer fields and typed reinterpretation. The linked
+list and binary search tree examples require following stored addresses rather
+than advancing an index — a structurally different traversal from the software
+stack here, but using the same typed-path and null-sentinel discipline.
+
+---
+
 ## Exercises
 
 1. The `KindMultiply` case calls the helper `mul_u16`. `mul_u16` uses a

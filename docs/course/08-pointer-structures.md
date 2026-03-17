@@ -257,6 +257,16 @@ grounded in the evidence from `linked_list.zax` and `bst.zax`.
 
 ---
 
+## What comes next
+
+Chapter 09 closes the course with the eight-queens problem — a backtracking
+search that puts maximum pressure on the loop-escape surface. It also functions
+as a design review: after nine chapters of examples, the chapter maps which
+language gaps remain, which have been addressed, and what the current design
+work is targeting.
+
+---
+
 ## Exercises
 
 1. `list_sum` initialises `total_value` to zero and accumulates into it.

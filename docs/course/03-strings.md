@@ -265,6 +265,16 @@ See `examples/course/unit3/itoa.zax`.
 
 ---
 
+## What comes next
+
+Chapter 04 returns to tight, register-level work: bit manipulation using Z80
+shift and logic instructions. The loop structures are the same `while NZ` idiom
+from Chapter 01 — counter-driven rather than sentinel-driven — and the local
+`op` pattern introduced in this chapter's `strcpy.zax` reappears in
+`bit_reverse.zax`.
+
+---
+
 ## Exercises
 
 1. `strlen.zax` increments `count_value` by loading into DE, incrementing DE, and

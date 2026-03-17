@@ -476,6 +476,16 @@ See `examples/course/unit2/prime_sieve.zax`.
 
 ---
 
+## What comes next
+
+Chapter 03 moves from indexed arrays to pointer-walked memory. The string
+algorithms there advance HL and DE directly rather than loading an index into L
+— a different traversal discipline built on the same `while NZ` loop structure
+used here. `break` reappears in the scan-to-terminator pattern; `continue` does
+not, because string traversal rarely needs to skip iterations rather than exit.
+
+---
+
 ## Exercises
 
 1. In `prime_sieve.zax`, the `continue` before the inner loop requires

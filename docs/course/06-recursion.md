@@ -217,6 +217,16 @@ See `examples/course/unit6/array_reverse_recursive.zax`.
 
 ---
 
+## What comes next
+
+Chapter 07 shows how a larger program is assembled from multiple source files.
+The RPN calculator imports a support module and dispatches on token kind using
+`select`. The pattern of storing intermediate results into typed locals before
+the next call — visible in `hanoi.zax` here — reappears throughout the
+calculator's operator arms.
+
+---
+
 ## Exercises
 
 1. `hanoi_count` stores both recursive results in `word` locals before combining
