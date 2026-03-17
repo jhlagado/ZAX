@@ -73,9 +73,31 @@ Chapter numbers are offset from example unit numbers because `00-introduction.md
 - ...
 - Chapter `09` maps to `examples/course/unit9/`
 
+## Current example inventory on `main`
+
+This authoring brief is tied to the currently checked-in example corpus.
+Do not assume there are additional course examples beyond the files listed below.
+
+- `examples/course/unit1/` — 7 examples
+- `examples/course/unit2/` — 6 examples
+- `examples/course/unit3/` — 7 examples
+- `examples/course/unit4/` — 4 examples
+- `examples/course/unit5/` — 1 example
+- `examples/course/unit6/` — 3 examples
+- `examples/course/unit7/` — 1 lesson example plus 1 support module
+- `examples/course/unit8/` — 2 examples
+- `examples/course/unit9/` — 1 example
+
+Practical implication for the writer:
+
+- `unit5/` is intentionally a single-example chapter built around `ring_buffer.zax`
+- `unit7/word_stack.zax` is support code, not a separate lesson
+- `unit9/` is a capstone chapter centered on `eight_queens.zax`, not a multi-example survey unit
+
 ### 00 Introduction
 
 Purpose:
+
 - explain what ZAX is
 - explain what this course is and is not
 - explain the audience and assumptions
@@ -84,10 +106,12 @@ Purpose:
 ### 01 Foundations
 
 Purpose:
+
 - establish the basic voice of ZAX through arithmetic, iteration, and small helper routines
 - show assignment, scalar locals, and structured control before arrays and records
 
 Examples:
+
 - `examples/course/unit1/digits.zax`
 - `examples/course/unit1/exp_squaring.zax`
 - `examples/course/unit1/fibonacci.zax`
@@ -99,11 +123,13 @@ Examples:
 ### 02 Arrays and Loops
 
 Purpose:
+
 - show indexed storage, loop structure, and small algorithmic invariants over arrays
 - introduce the strongest early examples of `succ`, `pred`, and `break` / `continue` in ordinary search and sort code
 - explicitly explain `break` and `continue` in this chapter, because this is where the reader first sees them as part of ordinary loop structure
 
 Examples:
+
 - `examples/course/unit2/insertion_sort.zax`
 - `examples/course/unit2/bubble_sort.zax`
 - `examples/course/unit2/selection_sort.zax`
@@ -114,10 +140,12 @@ Examples:
 ### 03 Strings
 
 Purpose:
+
 - show pointer-like traversal over byte arrays and zero-terminated data
 - explain where ZAX stays close to Z80 in raw memory-walking code
 
 Examples:
+
 - `examples/course/unit3/strlen.zax`
 - `examples/course/unit3/strcpy.zax`
 - `examples/course/unit3/strcmp.zax`
@@ -129,10 +157,12 @@ Examples:
 ### 04 Bit Patterns
 
 Purpose:
+
 - show bitwise algorithms where the machine model is very visible
 - keep the prose focused on algorithm shape rather than opcode-by-opcode narration
 
 Examples:
+
 - `examples/course/unit4/popcount.zax`
 - `examples/course/unit4/bit_reverse.zax`
 - `examples/course/unit4/parity.zax`
@@ -141,19 +171,28 @@ Examples:
 ### 05 Records
 
 Purpose:
+
 - show typed aggregate state and field-oriented update in a compact example
 - explain how records change the feel of low-level code without hiding the machine
 
+Inventory note:
+
+- this chapter currently has one canonical example on `main`
+- do not invent extra example references here unless the corpus actually grows later
+
 Examples:
+
 - `examples/course/unit5/ring_buffer.zax`
 
 ### 06 Recursion
 
 Purpose:
+
 - show recursive decomposition and argument/local discipline over the IX frame model
 - make the prose focus on structure and invariants, not just call mechanics
 
 Examples:
+
 - `examples/course/unit6/hanoi.zax`
 - `examples/course/unit6/array_sum_recursive.zax`
 - `examples/course/unit6/array_reverse_recursive.zax`
@@ -161,10 +200,12 @@ Examples:
 ### 07 Composition
 
 Purpose:
+
 - show how larger behavior emerges from helper routines, typed storage, and a support module
 - keep the lesson centered on the calculator example, not the helper internals
 
 Examples:
+
 - main lesson: `examples/course/unit7/rpn_calculator.zax`
 - support module reference only: `examples/course/unit7/word_stack.zax`
 
@@ -173,21 +214,29 @@ Examples:
 ### 08 Pointer Structures
 
 Purpose:
+
 - show linked and tree-shaped data with explicit addresses, casts, and traversal
 - explain both what works well and what still feels verbose in pointer-heavy ZAX
 
 Examples:
+
 - `examples/course/unit8/linked_list.zax`
 - `examples/course/unit8/bst.zax`
 
 ### 09 Gaps and Futures
 
 Purpose:
+
 - use `eight_queens` as the capstone reading for control-flow pressure and design limits
 - explain which parts of the program are now clearer because of `break` / `continue`
 - connect the example back to the friction log and future language/library questions without turning the chapter into a roadmap dump
 
+Inventory note:
+
+- this chapter is intentionally centered on one example file, not a bundle of smaller examples
+
 Examples:
+
 - `examples/course/unit9/eight_queens.zax`
 
 ## Writing model
@@ -195,11 +244,13 @@ Examples:
 The course must be prose-oriented.
 
 It is not:
+
 - a reference manual
 - a Z80 tutorial
 - a sequence of full source listings with light commentary
 
 It is:
+
 - an algorithm-driven explanation of how ZAX expresses real programs
 - a guided reading of the example corpus
 - an editorial layer over the source files
@@ -237,12 +288,14 @@ Excerpts should support the prose, not replace it.
 ## Tone and style rules
 
 The prose should be:
+
 - clear
 - deliberate
 - explanatory
 - concrete
 
 The prose should not be:
+
 - chatty
 - tutorialized down to instruction-by-instruction narration
 - overloaded with reference-style syntax detail
@@ -265,6 +318,7 @@ structure, not what a single opcode does.
 ### Phase 1
 
 Write these first:
+
 - `docs/course/README.md`
 - `docs/course/00-introduction.md`
 - `docs/course/01-foundations.md`
@@ -274,11 +328,13 @@ This phase is the style and structure checkpoint.
 Do not write the rest of the course before this phase is reviewed.
 
 Specific requirement for phase 1:
+
 - `docs/course/02-arrays-and-loops.md` must explicitly explain `break` and `continue` as part of the loop discussion, using current course examples rather than abstract syntax-only prose.
 
 ### Phase 2
 
 Write:
+
 - `docs/course/03-strings.md`
 - `docs/course/04-bit-patterns.md`
 - `docs/course/05-records.md`
@@ -287,6 +343,7 @@ Write:
 ### Phase 3
 
 Write:
+
 - `docs/course/07-composition.md`
 - `docs/course/08-pointer-structures.md`
 - `docs/course/09-gaps-and-futures.md`
@@ -296,6 +353,7 @@ For `09-gaps-and-futures.md`, explicitly use the friction log in `docs/work/cour
 ### Phase 4
 
 Editorial pass:
+
 - consistency of tone
 - cross-links between chapters
 - example-file references checked
@@ -304,6 +362,7 @@ Editorial pass:
 ## Writer handoff summary
 
 The writer should be told:
+
 - the output is a prose-first course under `docs/course/`
 - phase 1 is the first deliverable
 - current examples on `main` are the source truth for what is being taught
