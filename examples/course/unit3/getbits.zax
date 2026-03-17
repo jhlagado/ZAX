@@ -26,9 +26,7 @@ export func getbits_demo(): HL
       srl a
       working_value := a
 
-      a := offset_value
-      dec a
-      offset_value := a
+      pred offset_value
 
       ld a, 1
       or a
@@ -64,9 +62,7 @@ export func getbits_demo(): HL
     add a, a
     bit_mask := a
 
-    a := width_value
-    dec a
-    width_value := a
+    pred width_value
 
     ld a, 1
     or a
