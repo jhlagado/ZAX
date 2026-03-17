@@ -88,4 +88,26 @@ end
     expect(messages).toContain('":=" path source must resolve to scalar storage; got byte[4]. Use "@path" for addresses.');
     expect(messages).toContain('":=" path target must resolve to scalar storage; got Rec.');
   });
+
+  it('rejects storage-target path forms inside ops in this slice', () => {
+    const { program, diagnostics } = parseProgram(
+      'pr895_assignment_acceptance_op_negative.zax',
+      `
+op copy_slot(dst: ea, src: ea)
+  dst := src
+end
+
+op bind_addr(dst: ea, src: ea)
+  dst := @src
+end
+      `,
+    );
+
+    const env = buildEnv(program, diagnostics);
+    validateAssignmentAcceptance(program, env, diagnostics);
+
+    const messages = diagnostics.map((d) => d.message);
+    expect(messages).toContain('":=" path-to-path storage-target forms are not supported inside ops in this slice.');
+    expect(messages).toContain('":=" address-of storage-target forms are not supported inside ops in this slice.');
+  });
 });
