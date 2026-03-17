@@ -41,7 +41,8 @@ back to the root call.
 
 ## `break` and `continue` in Practice
 
-The column loop in `place_row` uses both `break` and `continue`:
+The column loop in `place_row` uses both `break` and `continue` (introduced in
+Chapter 02, `prime_sieve.zax`):
 
 ```zax
     l := col_index
@@ -192,6 +193,24 @@ The eight-queens example is a good place to end. It is a real program. It
 compiles, it runs, it finds a solution. The flag variable is there; so is the
 clean use of `break` and `continue`. The gap and the progress both show up in
 the same source file. That is an accurate picture of where ZAX is.
+
+---
+
+## What This Unit Teaches About ZAX
+
+- `break` and `continue` are implemented and available on the current surface.
+  The eight-queens column loop shows both in a single algorithm: `continue`
+  skips failed constraint checks cleanly; `break` exits on a found solution.
+- An explicit flag variable is still the necessary mechanism for propagating a
+  found result across recursive frames. ZAX has no named exit from nested
+  structures; this is a recorded gap, not a design oversight.
+- Pointer-typing ergonomics (the `<Type>local.field` repetition from Chapter 08)
+  and software-stack verbosity (the `pop_word`/`stack_depth` bouncing from
+  Chapter 07) are both grounded, open design issues. See `docs/design/` for
+  current work.
+- The `.asm` output is deterministic and inspectable throughout. The compiler
+  adds no hidden passes or runtime system. That design position is deliberate
+  and unchanged.
 
 ---
 

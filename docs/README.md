@@ -81,6 +81,13 @@ Recently completed design records now live under:
 - `work/` is for operational WIP and deferred items.
 - `archive/` is not active guidance.
 
+### `docs/course/`
+
+A guided course teaching ZAX through classic algorithms. Start at
+`docs/course/README.md`. Each chapter is paired with compilable example files
+under `examples/course/`. The intended reader knows Z80 assembly and is new to
+ZAX.
+
 ## Current priority
 
 Keep the reviewer-facing core as small as possible. The primary review path should be:
