@@ -65,6 +65,8 @@ func place_row(row_index: byte)
     or a
     if NZ
       succ col_index
+      ld a, 1
+      or a
       continue
     end
 
@@ -73,6 +75,8 @@ func place_row(row_index: byte)
     or a
     if NZ
       succ col_index
+      ld a, 1
+      or a
       continue
     end
 
@@ -81,6 +85,8 @@ func place_row(row_index: byte)
     or a
     if NZ
       succ col_index
+      ld a, 1
+      or a
       continue
     end
 
