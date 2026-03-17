@@ -262,30 +262,36 @@ end
 
 ### Normative rules
 
-- **Loop variable class:** the loop variable is a scalar lvalue of type `byte` or `word`.
-  Initial implementation scope: named scalar variables and whole registers already accepted by `:=`.
-  Not included: partial registers (`IXH` / `IXL` / `IYH` / `IYL`), indirect operands, or composite paths.
-- **Bounds are evaluated once on entry.** Neither the start nor the end expression is re-evaluated on each iteration.
+- **Loop variable class:** the loop variable is a named scalar lvalue of type `byte` or `word`.
+  Allowed: local variables, parameters, and globals.
+  Not included: registers, partial registers (`IXH` / `IXL` / `IYH` / `IYL`), indirect operands, or composite paths.
+- **Bounds are evaluated once on entry.** Neither the start nor the end expression is re-evaluated on each iteration. Both `start` and `end` may be variables or other scalar expressions of compatible width.
 - **Inclusive bounds:** `for idx := start to end` iterates over `start, start+1, ..., end`. `for idx := start downto end` iterates over `start, start-1, ..., end`.
 - **Step is fixed:** `to` increments by 1; `downto` decrements by 1.
 - **Zero-trip safe.** If the initial value already lies beyond the bound (`start > end` for `to`, `start < end` for `downto`), the body is skipped entirely.
+- **Direction is explicit.** `to` and `downto` are part of the syntax. Direction is not inferred from runtime bound values.
+- **Captured bounds do not drift.** If variables used in `start` or `end` are modified inside the loop body, the running loop is unaffected because the bound and initial value were already captured on entry.
+- **Loop-variable mutation inside the body is not part of the model.** The loop variable is controlled by the loop construct itself. Direct assignment to it inside the body should be rejected when practical; otherwise it is unsupported.
 
 ### Lowering
 
-The general lowering is: evaluate bounds on entry, emit an entry guard, then loop with `inc`/`dec` + compare. For example, `for row := height downto 1` with `row` in `B` lowers to:
+The canonical lowering uses one shared compare block so the entry test and back-edge test are not duplicated:
 
 ```
-ld b, <height>
-ld a, b
-or a
-jr z, @end      ; zero-trip guard
+idx := start
+limit := end
+jp @compare
 @L:
   <body>
-  djnz @L       ; DJNZ: optimisation for B + downto 1
-@end:
+  succ/pred idx
+@compare:
+  if idx <= limit: goto @L     ; `to`
+  if idx >= limit: goto @L     ; `downto`
 ```
 
-DJNZ is used as an **internal optimisation** when the loop variable happens to be `B` and the direction is `downto 1`. It is not the defining feature of the construct and it is not visible in the surface syntax. All other combinations emit `dec`/`inc` + conditional jump.
+This is conceptually closer to a counted `while` than to `repeat ... until`: initialization happens before the loop, control jumps into a shared compare block, and the body executes zero times when the initial value is already outside the inclusive range.
+
+`DJNZ` remains an internal optimisation opportunity only in narrow cases. It is not part of the surface design and it does not define the loop semantics.
 
 **Not in scope:** C-style `for(init; cond; step)`. That is too broad and drags in statement expressions, loop-local side effects, and a miniature control language. It is not minimal.
 
