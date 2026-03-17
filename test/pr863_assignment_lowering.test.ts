@@ -51,6 +51,9 @@ function makeHelper(overrides: Partial<Parameters<typeof createAsmInstructionLow
     symbolicTargetFromExpr: () => undefined,
     evalImmExpr: () => undefined,
     resolveScalarBinding: () => undefined,
+    resolveScalarTypeForEa: () => undefined,
+    resolveScalarTypeForLd: () => undefined,
+    resolveEa: () => undefined,
     diagIfRetStackImbalanced: () => {},
     diagIfCallStackUnverifiable: () => {},
     warnIfRawCallTargetsTypedCallable: () => {},
@@ -62,6 +65,9 @@ function makeHelper(overrides: Partial<Parameters<typeof createAsmInstructionLow
       pushedEa = ea;
       return true;
     },
+    materializeEaAddressToHL: () => false,
+    emitScalarWordLoad: () => false,
+    emitScalarWordStore: () => false,
     emitVirtualReg16Transfer: (inst) => {
       emittedInstrs.push(`virtual ${inst.operands.map((operand) => (operand.kind === 'Reg' ? operand.name : operand.kind)).join(',')}`);
       return true;

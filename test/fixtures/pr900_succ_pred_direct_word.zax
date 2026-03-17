@@ -1,0 +1,18 @@
+section data vars at $1000
+  total: word = $ffff
+end
+
+export func main()
+  var
+    local_total: word = $ffff
+  end
+
+  succ local_total
+  jr z, local_done
+local_done:
+
+  pred total
+  jr z, global_done
+global_done:
+  ret
+end
