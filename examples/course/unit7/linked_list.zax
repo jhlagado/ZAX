@@ -19,21 +19,18 @@ end
 func init_list()
   ld a, 4
   node_a.value := a
-  hl := @node_b
-  node_a.next := hl
+  node_a.next := @node_b
 
   ld a, 7
   node_b.value := a
-  hl := @node_c
-  node_b.next := hl
+  node_b.next := @node_c
 
   ld a, 2
   node_c.value := a
   ld hl, 0
   node_c.next := hl
 
-  hl := @node_a
-  list_head := hl
+  list_head := @node_a
 end
 
 export func list_sum(): HL
@@ -42,8 +39,7 @@ export func list_sum(): HL
     total_value: word = 0
   end
 
-  hl := list_head
-  current_ptr := hl
+  current_ptr := list_head
 
   ld a, 1
   or a
@@ -63,8 +59,7 @@ export func list_sum(): HL
     add hl, de
     total_value := hl
 
-    hl := <ListNode>current_ptr.next
-    current_ptr := hl
+    current_ptr := <ListNode>current_ptr.next
 
     ld a, 1
     or a

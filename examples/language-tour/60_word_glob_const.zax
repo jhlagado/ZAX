@@ -4,8 +4,8 @@ end
 
 section code boot at $0100
   export func word_glob_const(): HL
-    hl := glob_words[1]
-    glob_words[2] := hl
+    glob_words[2] := glob_words[1]
+    hl := glob_words[2]
   end
 
   export func main()
