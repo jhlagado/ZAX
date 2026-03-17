@@ -55,18 +55,9 @@ func find_min_index(start_index: byte, last_index: byte): HL
     a := current_index
     b := last_index
     cp b
-    if C
-      ; continue
-    end
-    if Z
-      ; include last_index once
-    end
     if NC
       if NZ
-        ld h, 0
-        a := best_index
-        ld l, a
-        ret
+        break
       end
     end
 
@@ -117,9 +108,6 @@ export func selection_sort()
     a := min_index
     b := outer_index
     cp b
-    if Z
-      ; already in place
-    end
     if NZ
       swap_values outer_index, min_index
     end

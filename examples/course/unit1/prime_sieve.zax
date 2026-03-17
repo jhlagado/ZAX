@@ -22,7 +22,7 @@ export func prime_sieve()
     a := factor_index
     cp StopFactor
     if NC
-      ret
+      break
     end
 
     l := factor_index
@@ -32,43 +32,40 @@ export func prime_sieve()
       succ factor_index
       ld a, 1
       or a
+      continue
     end
 
-    if NZ
-      a := factor_index
+    a := factor_index
+    b := factor_index
+    add a, b
+    multiple_index := a
+
+    ld a, 1
+    or a
+    while NZ
+      a := multiple_index
+      cp Limit
+      if NC
+        break
+      end
+
+      l := multiple_index
+      ld a, 0
+      is_prime[L] := a
+
+      a := multiple_index
       b := factor_index
       add a, b
       multiple_index := a
 
       ld a, 1
       or a
-      while NZ
-        a := multiple_index
-        cp Limit
-        if NC
-          ld a, 0
-          or a
-        end
-        if C
-          l := multiple_index
-          ld a, 0
-          is_prime[L] := a
-
-          a := multiple_index
-          b := factor_index
-          add a, b
-          multiple_index := a
-
-          ld a, 1
-          or a
-        end
-      end
-
-      succ factor_index
-
-      ld a, 1
-      or a
     end
+
+    succ factor_index
+
+    ld a, 1
+    or a
   end
 end
 
