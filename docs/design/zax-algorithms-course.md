@@ -322,7 +322,7 @@ surface: typed storage, `func`, `if`/`while`/`repeat`/`select` with ranges,
 
 Note: a Fibonacci reference implementation already exists at
 `examples/language-tour/02_fibonacci_args_locals.zax`. That file is the style
-baseline for Unit 0.
+baseline for Unit 2.
 
 #### 1B: Sorting and Searching
 
@@ -752,17 +752,17 @@ expresses them awkwardly, the gap is precisely located.
 
 | Unit | Title              | Algorithms                                                         | ZAX Constructs Introduced                                                                  |
 | ---- | ------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| 0    | Foundations        | Arithmetic, power, Fibonacci, GCD                                  | `func`, `const`, `while`, return register, `move`                                          |
-| 1    | Arrays and Loops   | Sorting (insertion, bubble, selection), binary search, prime sieve | `byte[]`, indexed access, `move arr[r], a`, `select` with ranges                           |
-| 2    | String Model       | strlen, strcpy, strcmp, atoi/itoa                                  | null-sentinel loops, `repeat`, `op fetch_advance`, `@path`                                 |
-| 3    | Bit Patterns       | Population count, bit reversal, parity, field extract              | Shift idioms, `op` with `imm8` matchers                                                    |
-| 4    | Records            | Ring buffer                                                        | `type`, `record`, `section data`, `sizeof`/`offsetof`, exact-size awareness                |
-| 5    | Recursion          | Towers of Hanoi, recursive sum, recursive reverse                  | Recursive `func`, IX frame discipline, `<Type>base.tail`                                   |
-| 6    | Composition        | RPN calculator                                                     | All of the above: `op`, `record`, `select` ranges, `func`, software stack                  |
-| 7    | Pointer Structures | Linked list, BST                                                   | `ptr` fields, `<Type>base.tail` traversal, null-sentinel convention, fixed-pool allocation |
-| 8    | Gaps and Futures   | Eight queens                                                       | Specification target exercise; named exit / `break` — language gap documented              |
+| 1    | Foundations        | Arithmetic, power, Fibonacci, GCD                                  | `func`, `const`, `while`, return register, `:=`                                            |
+| 2    | Arrays and Loops   | Sorting (insertion, bubble, selection), binary search, prime sieve | `byte[]`, indexed access, scalar path updates, `break` / `continue`                        |
+| 3    | String Model       | strlen, strcpy, strcmp, atoi/itoa                                  | null-sentinel loops, `repeat`, `op fetch_advance`, `@path`                                 |
+| 4    | Bit Patterns       | Population count, bit reversal, parity, field extract              | Shift idioms, `op` with `imm8` matchers                                                    |
+| 5    | Records            | Ring buffer                                                        | `type`, `record`, `section data`, `sizeof`/`offsetof`, exact-size awareness                |
+| 6    | Recursion          | Towers of Hanoi, recursive sum, recursive reverse                  | Recursive `func`, IX frame discipline, `<Type>base.tail`                                   |
+| 7    | Composition        | RPN calculator                                                     | All of the above: `op`, `record`, `select` ranges, `func`, software stack                  |
+| 8    | Pointer Structures | Linked list, BST                                                   | `ptr` fields, `<Type>base.tail` traversal, null-sentinel convention, fixed-pool allocation |
+| 9    | Gaps and Futures   | Eight queens                                                       | Control-flow pressure case; `break` / `continue` now available, future design pressure remains |
 
-Unit 8 is intentionally incomplete. It is a design dialogue between the course
+Unit 9 is intentionally incomplete. It is a design dialogue between the course
 author and the language — a record of what comes next.
 
 ---
@@ -773,16 +773,16 @@ The course is written in tranches. Each tranche produces working, compiled
 example files, a style check against the `.asm` output, and a friction log
 feeding the roadmap companion document (`docs/work/course-roadmap.md`).
 
-### Tranche 1 — Unit 0: Foundations
+### Tranche 1 — Unit 2: Foundations
 
-**Goal**: complete all Unit 0 arithmetic examples, establish the style baseline,
+**Goal**: complete all Unit 2 arithmetic examples, establish the style baseline,
 confirm the compiler handles the unit cleanly.
 
 **Style baseline**: `examples/language-tour/02_fibonacci_args_locals.zax`.
-All Tranche 1 files must match that style: `move` throughout, explicit return
+All Tranche 1 files must match that style: current typed-storage syntax, explicit return
 registers, no unexplained register choices.
 
-**Files to produce** under `examples/course/unit0/`:
+**Files to produce** under `examples/course/unit1/`:
 
 | File                | Algorithm                         | Key ZAX surface                             |
 | ------------------- | --------------------------------- | ------------------------------------------- |
@@ -795,22 +795,22 @@ registers, no unexplained register choices.
 | `digits.zax`        | Decimal digit decomposition       | division-by-10, `repeat`, character offset  |
 
 Fibonacci already has a reference in `examples/language-tour/02_fibonacci_args_locals.zax`.
-The Unit 0 version extends it to a full table-generating form.
+The Unit 2 version extends it to a full table-generating form.
 
-**Support surface needed**: none beyond current main. Unit 0 is pure arithmetic —
+**Support surface needed**: none beyond current main. Unit 2 is pure arithmetic —
 no `op` library, no arrays, no records.
 
-**Friction to log**: Unit 0 is expected to be clean. Any friction is a
-fundamental signal and should be logged before proceeding to Unit 1.
+**Friction to log**: Unit 2 is expected to be clean. Any friction is a
+fundamental signal and should be logged before proceeding to Unit 3.
 
 ---
 
-### Tranche 2 — Unit 1: Arrays and Loops
+### Tranche 2 — Unit 2: Arrays and Loops
 
 **Goal**: produce the core sorting and searching examples. Introduce indexed
 array access and `select` ranges in context.
 
-**Files to produce** under `examples/course/unit1/`:
+**Files to produce** under `examples/course/unit2/`:
 
 | File                 | Algorithm                         |
 | -------------------- | --------------------------------- |
@@ -833,32 +833,32 @@ log it and defer — do not paper over the gap.
 
 ### Tranche 3 — Units 2 and 4: Strings and Records
 
-Unit 2 (strings) and Unit 4 (ring buffer) are coupled: both introduce the
+Unit 3 (strings) and Unit 5 (ring buffer) are coupled: both introduce the
 pointer-advance idiom and the first `op` library candidates. Build them
 together.
 
-Unit 2 surfaces `fetch_advance` as a reusable `op`. Unit 4 confirms
+Unit 3 surfaces `fetch_advance` as a reusable `op`. Unit 5 confirms
 `sizeof(Ring) = 19` and exercises the non-power-of-two indexing path.
-Any friction in Unit 4 with the exact-size lowering is a direct regression
+Any friction in Unit 5 with the exact-size lowering is a direct regression
 signal for #817–820.
 
 ---
 
 ### Tranche 4 — Units 3 and 5: Bits and Recursion
 
-Unit 3 (bit manipulation) is self-contained and validates `op` with `imm8`
-matchers. Unit 5 (Towers of Hanoi, recursive array operations) validates the IX
+Unit 4 (bit manipulation) is self-contained and validates `op` with `imm8`
+matchers. Unit 6 (Towers of Hanoi, recursive array operations) validates the IX
 frame under recursion. Both can proceed independently once Tranche 2 is stable.
 
 ---
 
-### Tranche 5 — Units 6, 7, 8: Composition, Pointers, Gaps
+### Tranche 5 — Units 7, 8, 9: Composition, Pointers, Gaps
 
-Unit 6 (RPN calculator) is the composition showcase — it uses every construct
-introduced to that point. Unit 7 (linked list, BST) is the friction showcase —
-write it clean and document the ergonomic gaps precisely. Unit 8 (Eight Queens)
-is the language-gap target — write it as close as possible, document the named
-exit gap, file the issue.
+Unit 7 (RPN calculator) is the composition showcase — it uses every construct
+introduced to that point. Unit 8 (linked list, BST) is the friction showcase —
+write it clean and document the ergonomic gaps precisely. Unit 9 (Eight Queens)
+is the language-gap target — write it as close as possible, document the loop
+control-flow pressure, file the issue.
 
 ---
 
