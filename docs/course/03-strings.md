@@ -46,19 +46,8 @@ found.
 
 `strlen_demo` in `strlen.zax` counts bytes from a fixed string until it reaches
 the zero terminator. HL holds the current address. The count lives in a typed word
-local `count_value`, which cannot be incremented in place directly through a
-16-bit register — the example loads it into DE, increments DE, and stores back:
-
-```zax
-  de := count_value
-  inc de
-  count_value := de
-```
-
-This is a recognisable friction point documented in the roadmap: there is no
-direct `succ`-style increment for a `word` local through a 16-bit path without
-routing through a register pair. The `de := count_value` / `inc de` /
-`count_value := de` sequence is the current idiom.
+local `count_value`, which is incremented with `succ count_value` — the same
+`succ`/`pred` path that works on any typed scalar local, byte or word:
 
 See `examples/course/unit3/strlen.zax`.
 

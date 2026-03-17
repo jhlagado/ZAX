@@ -56,7 +56,7 @@ and combines the results:
   reduced_count := disks_count
   pred reduced_count
 
-  hanoi_count reduced_count, source_peg, spare_peg, target_peg
+  hanoi_count reduced_count, source_peg, target_peg, spare_peg
   left_count := hl
 
   hanoi_count reduced_count, spare_peg, source_peg, target_peg
