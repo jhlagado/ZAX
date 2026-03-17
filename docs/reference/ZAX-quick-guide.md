@@ -788,6 +788,69 @@ Rules:
 - For relative branches (`jr`, `djnz`), if the displacement falls outside `-128..127`, it is a compile error.
 - Resolution order inside a body: local labels take precedence over locals/args, which take precedence over global symbols.
 
+### 5.9 `break` and `continue`
+
+`break` exits the immediately enclosing loop; `continue` restarts from the loop's condition check. Both are valid only inside `while` / `end` and `repeat` / `until` bodies.
+
+| Construct  | Transfers control to                                                      |
+| ---------- | ------------------------------------------------------------------------- |
+| `break`    | immediately after the loop's closing `end` or `until`                    |
+| `continue` | the condition test (`while`: top of loop; `repeat`: `until` at bottom)   |
+
+Both emit an unconditional jump to the compiler-generated loop label. Neither sets or clears flags.
+
+```zax
+; stop early when A hits zero, skip the store when the value is $FF
+ld b, 16
+or b              ; establish NZ for entry
+while NZ
+  ld a, (hl)
+  or a
+  if Z
+    break         ; A == 0: exit loop immediately
+  end
+  cp $FF
+  if Z
+    inc hl
+    dec b
+    ld a, b
+    or a
+    continue      ; skip the store, re-test condition
+  end
+  ld (de), a
+  inc hl
+  inc de
+  dec b
+  ld a, b
+  or a
+end
+```
+
+In nested loops `break` and `continue` affect the **immediately enclosing** loop only. There is no labeled-loop form in v0.1.
+
+For `while`, if you use `continue`, ensure the flags are correct for the condition re-test at the top of the loop before the `continue` executes.
+
+---
+
+### 5.10 Idiom: always-enter loop with internal exit (`while NZ`)
+
+**Named idiom: "always-enter loop with internal exit"**
+
+Use this pattern when the exit condition is managed inside the loop body (e.g., via `ret` or `break`) rather than at the top.
+
+```zax
+ld a, 1
+or a           ; set NZ to ensure entry
+while NZ
+  ; ... loop body ...
+  ; exit via: ret, or set Z and continue, or break
+end
+```
+
+The `ld a, 1` / `or a` sequence loads a non-zero value into `A` and ORs it with itself, which sets the NZ flag. This guarantees the loop is entered on the first iteration regardless of what flags were set by earlier code. Once inside, the loop body is responsible for all exit decisions — typically via `ret`, `break`, or a `continue` that sets Z before looping back.
+
+This idiom is common for scanner loops, state-machine drivers, and any loop whose termination is naturally expressed inside the body.
+
 ---
 
 ## Chapter 6 — Functions and Call Boundaries
@@ -1517,6 +1580,24 @@ and multiple enums may use the same member names without collision:
 enum StateA   Idle, Running
 enum StateB   Idle, Stopped    ; 'Idle' and 'Idle' are fine — accessed as StateA.Idle, StateB.Idle
 ```
+
+### 8.8 `succ` and `pred`
+
+`succ` and `pred` are ZAX statement forms that increment or decrement a typed scalar storage location in place. They are not expression forms; they do not return a value and may not appear inside expressions or on the RHS of `:=`. The compiler lowers each to the appropriate increment or decrement instruction(s).
+
+| Statement   | Meaning                                          |
+| ----------- | ------------------------------------------------ |
+| `succ path` | increment the typed scalar at `path` by one step |
+| `pred path` | decrement the typed scalar at `path` by one step |
+
+`path` must be a typed scalar path — a named variable or a field/array element. Raw registers (e.g. `hl`, `a`) are not valid targets.
+
+```zax
+succ tail_slot    ; tail_slot := tail_slot + 1 (typed, in place)
+pred used_slots   ; used_slots := used_slots - 1 (typed, in place)
+```
+
+The programmer is responsible for range discipline at type boundaries — `succ` past the maximum and `pred` past the minimum are not automatically clamped.
 
 ---
 
