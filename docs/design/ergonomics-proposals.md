@@ -342,7 +342,7 @@ This is conceptually closer to a counted `while` than to `repeat ... until`: ini
 
 ### Status
 
-Design is settled. Implement after proposals 1 and 2.
+Design is settled but deferred. It is not part of the current implementation priority.
 
 ---
 
@@ -366,6 +366,6 @@ Allowing arithmetic on the RHS requires hidden temporary selection, sequencing r
 |----------------------------------|----------------------|
 | Scalar path-to-path `:=`         | Yes — implement next |
 | `succ` / `pred` on typed paths   | Yes — implement      |
-| Pascal-style counted `for`       | Yes — Pascal-style, implement after proposals 1 and 2 |
+| Pascal-style counted `for`       | Deferred — design settled, not active work |
 | General RHS arithmetic           | No, for now          |
 | C-style `for`                    | No                   |
