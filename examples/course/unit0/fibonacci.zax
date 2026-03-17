@@ -26,14 +26,10 @@ func fib(target_count: word): HL
     add hl, de
     next_value := hl
 
-    hl := curr_value
-    prev_value := hl
-    hl := next_value
-    curr_value := hl
+    prev_value := curr_value
+    curr_value := next_value
 
-    hl := index_value
-    inc hl
-    index_value := hl
+    succ index_value
 
     ld a, 1
     or a

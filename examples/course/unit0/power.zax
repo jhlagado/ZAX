@@ -9,8 +9,7 @@ func mul_u16(lhs: word, rhs: word): HL
     count: word = 0
   end
 
-  hl := rhs
-  count := hl
+  count := rhs
 
   while NZ
     hl := count
@@ -26,9 +25,7 @@ func mul_u16(lhs: word, rhs: word): HL
     add hl, de
     acc := hl
 
-    hl := count
-    dec hl
-    count := hl
+    pred count
 
     ld a, 1
     or a
@@ -43,8 +40,7 @@ func power(base: word, exponent: word): HL
     remaining: word = 0
   end
 
-  hl := exponent
-  remaining := hl
+  remaining := exponent
 
   while NZ
     hl := remaining
@@ -58,9 +54,7 @@ func power(base: word, exponent: word): HL
     mul_u16 result, base
     result := hl
 
-    hl := remaining
-    dec hl
-    remaining := hl
+    pred remaining
 
     ld a, 1
     or a

@@ -8,10 +8,8 @@ section data vars at $1000
 end
 
 func write_pair(lo_value: byte, hi_value: byte)
-  a := lo_value
-  pair_buf.lo := a
-  a := hi_value
-  pair_buf.hi := a
+  pair_buf.lo := lo_value
+  pair_buf.hi := hi_value
 end
 
 func read_pair_word(): HL

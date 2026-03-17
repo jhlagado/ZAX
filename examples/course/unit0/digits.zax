@@ -9,8 +9,7 @@ func div_u16(dividend: word, divisor: word): HL
     remainder: word = 0
   end
 
-  hl := dividend
-  remainder := hl
+  remainder := dividend
 
   while NZ
     hl := remainder
@@ -23,9 +22,7 @@ func div_u16(dividend: word, divisor: word): HL
     end
 
     remainder := hl
-    hl := quotient
-    inc hl
-    quotient := hl
+    succ quotient
 
     ld a, 1
     or a
@@ -40,8 +37,7 @@ func decimal_digits(value: word): HL
     count: word = 1
   end
 
-  hl := value
-  remaining := hl
+  remaining := value
 
   while NZ
     hl := remaining
@@ -56,9 +52,7 @@ func decimal_digits(value: word): HL
     div_u16 remaining, 10
     remaining := hl
 
-    hl := count
-    inc hl
-    count := hl
+    succ count
 
     ld a, 1
     or a
