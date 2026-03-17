@@ -46,8 +46,12 @@ found.
 
 `strlen_demo` in `strlen.zax` counts bytes from a fixed string until it reaches
 the zero terminator. HL holds the current address. The count lives in a typed word
-local `count_value`, which is incremented with `succ count_value` — the same
-`succ`/`pred` path that works on any typed scalar local, byte or word:
+local `count_value`, which is incremented using the explicit load-increment-store
+idiom: `de := count_value`, `inc de`, `count_value := de`. Because `inc` on a
+16-bit pair is a direct Z80 instruction (not IX-relative), the function loads the
+local into DE, uses `inc de`, and stores back. This is the word-local increment
+pattern for cases where the compiler cannot emit `inc` directly against the frame
+slot.
 
 See `examples/course/unit3/strlen.zax`.
 
