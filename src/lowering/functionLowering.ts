@@ -23,6 +23,7 @@ import type {
 } from './loweringTypes.js';
 import type { OpOverloadSelection } from './opMatching.js';
 import type { OpStackSummary } from './opStackAnalysis.js';
+import type { EaResolution } from './eaResolution.js';
 import type { ScalarKind } from './typeResolution.js';
 import { createAsmInstructionLoweringHelpers } from './asmInstructionLowering.js';
 import { createAsmBodyOrchestrationHelpers } from './asmBodyOrchestration.js';
@@ -132,21 +133,34 @@ export type FunctionLoweringTypeContext = {
   resolveScalarKind: (typeExpr: TypeExprNode) => ScalarKind | undefined;
   resolveEaTypeExpr: (ea: EaExprNode) => TypeExprNode | undefined;
   resolveScalarTypeForEa: (ea: EaExprNode) => ScalarKind | undefined;
+  resolveScalarTypeForLd: (ea: EaExprNode) => ScalarKind | undefined;
   resolveArrayType: (typeExpr: TypeExprNode, env?: CompileEnv) => ResolvedArrayType | undefined;
   typeDisplay: (typeExpr: TypeExprNode) => string;
   sameTypeShape: (left: TypeExprNode, right: TypeExprNode) => boolean;
 };
 
 export type FunctionLoweringMaterializationContext = {
+  resolveEa: (ea: EaExprNode, span: SourceSpan) => EaResolution | undefined;
   buildEaWordPipeline: (ea: EaExprNode, span: SourceSpan) => StepPipeline | null;
   enforceEaRuntimeAtomBudget: (operand: AsmOperandNode, context: string) => boolean;
   enforceDirectCallSiteEaBudget: (operand: AsmOperandNode, calleeName: string) => boolean;
   pushEaAddress: (ea: EaExprNode, span: SourceSpan) => boolean;
+  materializeEaAddressToHL: (ea: EaExprNode, span: SourceSpan) => boolean;
   pushMemValue: (ea: EaExprNode, want: 'byte' | 'word', span: SourceSpan) => boolean;
   pushImm16: (value: number, span: SourceSpan) => boolean;
   pushZeroExtendedReg8: (regName: string, span: SourceSpan) => boolean;
   loadImm16ToHL: (value: number, span: SourceSpan) => boolean;
   emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
+  emitScalarWordLoad: (
+    target: 'HL' | 'DE' | 'BC',
+    resolved: EaResolution | undefined,
+    span: SourceSpan,
+  ) => boolean;
+  emitScalarWordStore: (
+    source: 'HL' | 'DE' | 'BC',
+    resolved: EaResolution | undefined,
+    span: SourceSpan,
+  ) => boolean;
   lowerLdWithEa: (asmItem: AsmInstructionNode) => boolean;
 };
 
@@ -273,15 +287,23 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const { conditionOpcodeFromName, conditionNameFromOpcode, callConditionOpcodeFromName } = ctx;
   const { jrConditionOpcodeFromName, conditionOpcode, inverseConditionName, symbolicTargetFromExpr } = ctx;
   const { evalImmExpr, env, resolveScalarBinding, resolveScalarKind, resolveEaTypeExpr } = ctx;
-  const { resolveScalarTypeForEa, resolveArrayType, buildEaWordPipeline } = ctx;
+  const { resolveScalarTypeForEa, resolveScalarTypeForLd, resolveArrayType, buildEaWordPipeline } = ctx;
   const { enforceEaRuntimeAtomBudget, enforceDirectCallSiteEaBudget } = ctx;
-  const { pushEaAddress, pushMemValue, pushImm16, pushZeroExtendedReg8, loadImm16ToHL } = ctx;
+  const {
+    resolveEa,
+    pushEaAddress,
+    materializeEaAddressToHL,
+    pushMemValue,
+    pushImm16,
+    pushZeroExtendedReg8,
+    loadImm16ToHL,
+  } = ctx;
   const { stackSlotOffsets, stackSlotTypes, localAliasTargets, storageTypes } = ctx;
   const { rawTypedCallWarningsEnabled, resolveCallable, resolveOpCandidates, opStackPolicyMode } = ctx;
   const { formatAsmOperandForOpDiag, selectOpOverload, summarizeOpStackEffect } = ctx;
   const { cloneImmExpr, cloneEaExpr, cloneOperand } = ctx;
   const { flattenEaDottedName, normalizeFixedToken, reg8, reg16, generatedLabelCounterRef } = ctx;
-  const { typeDisplay, sameTypeShape, emitStepPipeline, lowerLdWithEa } = ctx;
+  const { typeDisplay, sameTypeShape, emitStepPipeline, emitScalarWordLoad, emitScalarWordStore, lowerLdWithEa } = ctx;
   let currentCodeSegmentTag = currentCodeSegmentTagRef.current;
   const setCurrentCodeSegmentTag = (tag: SourceSegmentTag | undefined): void => {
     currentCodeSegmentTag = tag;
@@ -696,6 +718,9 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     symbolicTargetFromExpr,
     evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
     resolveScalarBinding,
+    resolveScalarTypeForEa,
+    resolveScalarTypeForLd,
+    resolveEa,
     diagIfRetStackImbalanced: (span, mnemonic) => {
       if (emitSyntheticEpilogue) return;
       if (trackedSp.valid && trackedSp.delta !== 0) {
@@ -767,6 +792,9 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     },
     lowerLdWithEa,
     pushEaAddress,
+    materializeEaAddressToHL,
+    emitScalarWordLoad,
+    emitScalarWordStore,
     emitVirtualReg16Transfer,
     reg16,
     emitSyntheticEpilogue,

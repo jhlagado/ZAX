@@ -1,5 +1,7 @@
 import type { Diagnostic } from '../diagnostics/types.js';
-import type { AsmInstructionNode, AsmOperandNode, EaExprNode } from '../frontend/ast.js';
+import type { AsmInstructionNode, AsmOperandNode, EaExprNode, SourceSpan } from '../frontend/ast.js';
+import type { EaResolution } from './eaResolution.js';
+import type { ScalarKind } from './typeResolution.js';
 
 type DiagAt = (diagnostics: Diagnostic[], span: AsmInstructionNode['span'], message: string) => void;
 
@@ -41,6 +43,9 @@ type Context = {
   ) => { baseLower: string; addend: number } | undefined;
   evalImmExpr: (expr: Extract<AsmOperandNode, { kind: 'Imm' }>['expr']) => number | undefined;
   resolveScalarBinding: (name: string) => 'byte' | 'word' | 'addr' | undefined;
+  resolveScalarTypeForEa: (ea: EaExprNode) => ScalarKind | undefined;
+  resolveScalarTypeForLd: (ea: EaExprNode) => ScalarKind | undefined;
+  resolveEa: (ea: EaExprNode, span: SourceSpan) => EaResolution | undefined;
   diagIfRetStackImbalanced: (span: AsmInstructionNode['span'], mnemonic?: string) => void;
   diagIfCallStackUnverifiable: (options: {
     span: AsmInstructionNode['span'];
@@ -53,6 +58,17 @@ type Context = {
   ) => void;
   lowerLdWithEa: (asmItem: AsmInstructionNode) => boolean;
   pushEaAddress: (ea: EaExprNode, span: AsmInstructionNode['span']) => boolean;
+  materializeEaAddressToHL: (ea: EaExprNode, span: AsmInstructionNode['span']) => boolean;
+  emitScalarWordLoad: (
+    target: 'HL' | 'DE' | 'BC',
+    resolved: EaResolution | undefined,
+    span: AsmInstructionNode['span'],
+  ) => boolean;
+  emitScalarWordStore: (
+    source: 'HL' | 'DE' | 'BC',
+    resolved: EaResolution | undefined,
+    span: AsmInstructionNode['span'],
+  ) => boolean;
   emitVirtualReg16Transfer: (asmItem: AsmInstructionNode) => boolean;
   reg16: Set<string>;
   emitSyntheticEpilogue: boolean;
@@ -64,6 +80,47 @@ type Context = {
 };
 
 export function createAsmInstructionLoweringHelpers(ctx: Context) {
+  const regOperand = (name: string, span: AsmInstructionNode['span']): AsmOperandNode => ({
+    kind: 'Reg',
+    span,
+    name,
+  });
+
+  const hlMemOperand = (span: AsmInstructionNode['span']): AsmOperandNode => ({
+    kind: 'Mem',
+    span,
+    expr: { kind: 'EaName', span, name: 'HL' },
+  });
+
+  const ixDispMemOperand = (disp: number, span: AsmInstructionNode['span']): AsmOperandNode => ({
+    kind: 'Mem',
+    span,
+    expr:
+      disp === 0
+        ? { kind: 'EaName', span, name: 'IX' }
+        : disp > 0
+          ? {
+              kind: 'EaAdd',
+              span,
+              base: { kind: 'EaName', span, name: 'IX' },
+              offset: { kind: 'ImmLiteral', span, value: disp },
+            }
+          : {
+              kind: 'EaSub',
+              span,
+              base: { kind: 'EaName', span, name: 'IX' },
+              offset: { kind: 'ImmLiteral', span, value: Math.abs(disp) },
+            },
+  });
+
+  const restoreWordFlagsAndA = (span: AsmInstructionNode['span'], restoreHl: boolean): boolean => {
+    if (restoreHl && !ctx.emitInstr('pop', [regOperand('HL', span)], span)) return false;
+    if (!ctx.emitInstr('pop', [regOperand('BC', span)], span)) return false;
+    if (!ctx.emitInstr('ld', [regOperand('A', span), regOperand('B', span)], span)) return false;
+    if (!ctx.emitInstr('pop', [regOperand('BC', span)], span)) return false;
+    return ctx.emitInstr('pop', [regOperand('DE', span)], span);
+  };
+
   const emitAssignmentImmediateToRegister = (
     dst: Extract<AsmOperandNode, { kind: 'Reg' }>,
     src: Extract<AsmOperandNode, { kind: 'Imm' }>,
@@ -164,6 +221,82 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       return ctx.resolveScalarBinding(op.name) !== undefined;
     }
     return false;
+  };
+
+  const lowerSuccPredOnTypedPath = (
+    asmItem: AsmInstructionNode,
+    head: 'succ' | 'pred',
+    operand: Extract<AsmOperandNode, { kind: 'Ea' }>,
+  ): boolean => {
+    if (operand.explicitAddressOf) {
+      ctx.diagAt(ctx.diagnostics, asmItem.span, `"${head}" does not support address-of operands.`);
+      return true;
+    }
+
+    const scalar = ctx.resolveScalarTypeForLd(operand.expr);
+    if (scalar !== 'byte' && scalar !== 'word') {
+      ctx.diagAt(ctx.diagnostics, asmItem.span, `"${head}" only supports byte and word scalar paths.`);
+      return true;
+    }
+
+    const mutateHead = head === 'succ' ? 'inc' : 'dec';
+    const resolved = ctx.resolveEa(operand.expr, asmItem.span);
+
+    if (scalar === 'byte') {
+      if (!ctx.emitInstr('push', [regOperand('DE', asmItem.span)], asmItem.span)) return false;
+      if (resolved?.kind === 'stack' && resolved.ixDisp >= -0x80 && resolved.ixDisp <= 0x7f) {
+        const mem = ixDispMemOperand(resolved.ixDisp, asmItem.span);
+        if (!ctx.emitInstr('ld', [regOperand('E', asmItem.span), mem], asmItem.span)) return false;
+        if (!ctx.emitInstr(mutateHead, [regOperand('E', asmItem.span)], asmItem.span)) return false;
+        if (!ctx.emitInstr('ld', [mem, regOperand('E', asmItem.span)], asmItem.span)) return false;
+        return ctx.emitInstr('pop', [regOperand('DE', asmItem.span)], asmItem.span);
+      }
+
+      if (!ctx.emitInstr('push', [regOperand('HL', asmItem.span)], asmItem.span)) return false;
+      if (!ctx.materializeEaAddressToHL(operand.expr, asmItem.span)) return false;
+      if (!ctx.emitInstr('ld', [regOperand('E', asmItem.span), hlMemOperand(asmItem.span)], asmItem.span))
+        return false;
+      if (!ctx.emitInstr(mutateHead, [regOperand('E', asmItem.span)], asmItem.span)) return false;
+      if (!ctx.emitInstr('ld', [hlMemOperand(asmItem.span), regOperand('E', asmItem.span)], asmItem.span))
+        return false;
+      if (!ctx.emitInstr('pop', [regOperand('HL', asmItem.span)], asmItem.span)) return false;
+      return ctx.emitInstr('pop', [regOperand('DE', asmItem.span)], asmItem.span);
+    }
+
+    const directWord = !!resolved && (resolved.kind === 'stack' || (resolved.kind === 'abs' && resolved.addend === 0));
+    if (!ctx.emitInstr('push', [regOperand('DE', asmItem.span)], asmItem.span)) return false;
+    if (!ctx.emitInstr('push', [regOperand('BC', asmItem.span)], asmItem.span)) return false;
+    if (!ctx.emitInstr('push', [regOperand('AF', asmItem.span)], asmItem.span)) return false;
+
+    if (directWord) {
+      if (!ctx.emitScalarWordLoad('DE', resolved, asmItem.span)) return false;
+    } else {
+      if (!ctx.emitInstr('push', [regOperand('HL', asmItem.span)], asmItem.span)) return false;
+      if (!ctx.materializeEaAddressToHL(operand.expr, asmItem.span)) return false;
+      if (!ctx.emitInstr('ld', [regOperand('E', asmItem.span), hlMemOperand(asmItem.span)], asmItem.span))
+        return false;
+      if (!ctx.emitInstr('inc', [regOperand('HL', asmItem.span)], asmItem.span)) return false;
+      if (!ctx.emitInstr('ld', [regOperand('D', asmItem.span), hlMemOperand(asmItem.span)], asmItem.span))
+        return false;
+      if (!ctx.emitInstr('dec', [regOperand('HL', asmItem.span)], asmItem.span)) return false;
+    }
+
+    if (!ctx.emitInstr(mutateHead, [regOperand('DE', asmItem.span)], asmItem.span)) return false;
+
+    if (directWord) {
+      if (!ctx.emitScalarWordStore('DE', resolved, asmItem.span)) return false;
+    } else {
+      if (!ctx.emitInstr('ld', [hlMemOperand(asmItem.span), regOperand('E', asmItem.span)], asmItem.span))
+        return false;
+      if (!ctx.emitInstr('inc', [regOperand('HL', asmItem.span)], asmItem.span)) return false;
+      if (!ctx.emitInstr('ld', [hlMemOperand(asmItem.span), regOperand('D', asmItem.span)], asmItem.span))
+        return false;
+    }
+
+    if (!ctx.emitInstr('ld', [regOperand('A', asmItem.span), regOperand('D', asmItem.span)], asmItem.span))
+      return false;
+    if (!ctx.emitInstr('or', [regOperand('E', asmItem.span)], asmItem.span)) return false;
+    return restoreWordFlagsAndA(asmItem.span, !directWord);
   };
 
   const emitRel8FromOperand = (
@@ -295,6 +428,16 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
 
     if (head === 'call') {
       ctx.diagIfCallStackUnverifiable({ span: asmItem.span });
+    }
+    if ((head === 'succ' || head === 'pred') && asmItem.operands.length === 1) {
+      const operand = asmItem.operands[0];
+      if (!operand || operand.kind !== 'Ea') {
+        ctx.diagAt(ctx.diagnostics, asmItem.span, `"${head}" expects one typed-path operand.`);
+        return;
+      }
+      if (!lowerSuccPredOnTypedPath(asmItem, head, operand)) return;
+      ctx.syncToFlow();
+      return;
     }
     if (head === 'rst' && asmItem.operands.length === 1) {
       ctx.diagIfCallStackUnverifiable({ span: asmItem.span, mnemonic: 'rst' });
