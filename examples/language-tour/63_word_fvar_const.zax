@@ -4,8 +4,8 @@ end
 
 section code boot at $0100
   export func word_fvar_const(arr: word[]): HL
-    hl := arr[2]
-    arr[3] := hl
+    arr[3] := arr[2]
+    hl := arr[3]
   end
 
   export func main()

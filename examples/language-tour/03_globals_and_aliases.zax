@@ -7,8 +7,7 @@ func read_counter(): HL
 end
 
 func write_counter(new_value: word)
-  hl := new_value
-  counter := hl
+  counter := new_value
 end
 
 export func main()
