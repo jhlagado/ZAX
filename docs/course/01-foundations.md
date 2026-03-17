@@ -364,11 +364,12 @@ See `examples/course/unit1/digits.zax`.
 - Functions declare their return register. The compiler enforces the
   complementary preservation set. Callers can rely on those registers surviving
   a typed call.
-- `while NZ` is the basic loop form when the loop body manages its own
-  termination via early `ret`. In unit 1, the `ld a, 1` / `or a` idiom appears
-  at the back edge of each iteration to re-establish NZ; the initial entry flags
-  before the first `while` test are not meaningful because exit always happens
-  via `ret` inside the body.
+- `while NZ` is the basic loop form. Entry flags always matter: a stale Z=1
+  on entry skips the loop body entirely before any `ret` inside it can execute.
+  The safe, explicit idiom is `ld a, 1` / `or a` before the `while`; unit 3 and
+  later always use it. Unit 1 examples omit it because they rely on the calling
+  context having left appropriate entry flags — that is not the same as saying
+  entry flags are irrelevant.
 - `succ` and `pred` are the idiomatic scalar increment and decrement operators.
   They appear wherever a loop counter or accumulator needs stepping.
 - Recursive functions look and work like non-recursive ones. The compiler
