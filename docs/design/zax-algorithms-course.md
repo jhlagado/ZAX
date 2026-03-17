@@ -322,7 +322,7 @@ surface: typed storage, `func`, `if`/`while`/`repeat`/`select` with ranges,
 
 Note: a Fibonacci reference implementation already exists at
 `examples/language-tour/02_fibonacci_args_locals.zax`. That file is the style
-baseline for Unit 1.
+baseline for Unit 2.
 
 #### 1B: Sorting and Searching
 
@@ -773,13 +773,13 @@ The course is written in tranches. Each tranche produces working, compiled
 example files, a style check against the `.asm` output, and a friction log
 feeding the roadmap companion document (`docs/work/course-roadmap.md`).
 
-### Tranche 1 — Unit 1: Foundations
+### Tranche 1 — Unit 2: Foundations
 
-**Goal**: complete all Unit 1 arithmetic examples, establish the style baseline,
+**Goal**: complete all Unit 2 arithmetic examples, establish the style baseline,
 confirm the compiler handles the unit cleanly.
 
 **Style baseline**: `examples/language-tour/02_fibonacci_args_locals.zax`.
-All Tranche 1 files must match that style: `move` throughout, explicit return
+All Tranche 1 files must match that style: current typed-storage syntax, explicit return
 registers, no unexplained register choices.
 
 **Files to produce** under `examples/course/unit1/`:
@@ -795,17 +795,17 @@ registers, no unexplained register choices.
 | `digits.zax`        | Decimal digit decomposition       | division-by-10, `repeat`, character offset  |
 
 Fibonacci already has a reference in `examples/language-tour/02_fibonacci_args_locals.zax`.
-The Unit 1 version extends it to a full table-generating form.
+The Unit 2 version extends it to a full table-generating form.
 
-**Support surface needed**: none beyond current main. Unit 1 is pure arithmetic —
+**Support surface needed**: none beyond current main. Unit 2 is pure arithmetic —
 no `op` library, no arrays, no records.
 
-**Friction to log**: Unit 1 is expected to be clean. Any friction is a
-fundamental signal and should be logged before proceeding to Unit 2.
+**Friction to log**: Unit 2 is expected to be clean. Any friction is a
+fundamental signal and should be logged before proceeding to Unit 3.
 
 ---
 
-### Tranche 2 — Unit 1: Arrays and Loops
+### Tranche 2 — Unit 2: Arrays and Loops
 
 **Goal**: produce the core sorting and searching examples. Introduce indexed
 array access and `select` ranges in context.
@@ -833,30 +833,30 @@ log it and defer — do not paper over the gap.
 
 ### Tranche 3 — Units 2 and 4: Strings and Records
 
-Unit 2 (strings) and Unit 4 (ring buffer) are coupled: both introduce the
+Unit 3 (strings) and Unit 5 (ring buffer) are coupled: both introduce the
 pointer-advance idiom and the first `op` library candidates. Build them
 together.
 
-Unit 2 surfaces `fetch_advance` as a reusable `op`. Unit 4 confirms
+Unit 3 surfaces `fetch_advance` as a reusable `op`. Unit 5 confirms
 `sizeof(Ring) = 19` and exercises the non-power-of-two indexing path.
-Any friction in Unit 4 with the exact-size lowering is a direct regression
+Any friction in Unit 5 with the exact-size lowering is a direct regression
 signal for #817–820.
 
 ---
 
 ### Tranche 4 — Units 3 and 5: Bits and Recursion
 
-Unit 3 (bit manipulation) is self-contained and validates `op` with `imm8`
-matchers. Unit 5 (Towers of Hanoi, recursive array operations) validates the IX
+Unit 4 (bit manipulation) is self-contained and validates `op` with `imm8`
+matchers. Unit 6 (Towers of Hanoi, recursive array operations) validates the IX
 frame under recursion. Both can proceed independently once Tranche 2 is stable.
 
 ---
 
 ### Tranche 5 — Units 6, 7, 8: Composition, Pointers, Gaps
 
-Unit 6 (RPN calculator) is the composition showcase — it uses every construct
-introduced to that point. Unit 7 (linked list, BST) is the friction showcase —
-write it clean and document the ergonomic gaps precisely. Unit 8 (Eight Queens)
+Unit 7 (RPN calculator) is the composition showcase — it uses every construct
+introduced to that point. Unit 8 (linked list, BST) is the friction showcase —
+write it clean and document the ergonomic gaps precisely. Unit 9 (Eight Queens)
 is the language-gap target — write it as close as possible, document the named
 exit gap, file the issue.
 

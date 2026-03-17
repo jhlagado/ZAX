@@ -19,9 +19,9 @@ written examples before an issue is filed.
 
 | Gap | Evidence | Tranche where it surfaces |
 |---|---|---|
-| Named exit / `break` from nested loop | Eight Queens backtracking requires an explicit flag variable to exit a nested `while` | Tranche 5 (Unit 8) |
-| Pointer-typing ergonomics — `ptr<T>` or self-referential records | Linked list and BST require explicit `<Node>hl.next` cast at every traversal site; `next: ptr` carries no type information | Tranche 5 (Unit 7) |
-| Software stack type or `stack` construct | RPN calculator (Unit 6) implements push/pop over a global `word[]` with manual index; verbose and error-prone. Quicksort (Tier 2) exposes the same gap but is not in the current tranche plan. | Tranche 5 (Unit 6); Tranche 2 if quicksort is added |
+| Named exit / `break` from nested loop | Eight Queens backtracking requires an explicit flag variable to exit a nested `while` | Tranche 5 (Unit 9) |
+| Pointer-typing ergonomics — `ptr<T>` or self-referential records | Linked list and BST require explicit `<Node>hl.next` cast at every traversal site; `next: ptr` carries no type information | Tranche 5 (Unit 8) |
+| Software stack type or `stack` construct | RPN calculator (Unit 7) implements push/pop over a global `word[]` with manual index; verbose and error-prone. Quicksort (Tier 2) exposes the same gap but is not in the current tranche plan. | Tranche 5 (Unit 7); Tranche 2 if quicksort is added |
 
 **Process rule**: do not file a language issue based on this table alone. The
 issue is filed when the written example exists and the workaround is documented
@@ -37,11 +37,11 @@ in a separate library workstream, not in the compiler or spec.
 
 | Gap | Form | Surfaces in |
 |---|---|---|
-| Pointer-advance idiom | `op fetch_advance(dst: reg8)` — `ld dst, (hl)` / `inc hl` | Unit 2 (strings) |
-| 16-bit add to non-HL pair | `op add16(dst: DE, ...)` / `op add16(dst: BC, ...)` | Unit 1 (sorting) |
-| Byte swap | `op swap_bytes(a: reg8, b: reg8)` | Unit 1 (bubble sort) |
-| Null-sentinel convention | Convention doc / named constant `NULL = 0` | Unit 7 (linked list) |
-| Fixed-pool allocator | `op pool_alloc` / bump-allocator pattern over a typed array | Unit 7 (linked list, BST) |
+| Pointer-advance idiom | `op fetch_advance(dst: reg8)` — `ld dst, (hl)` / `inc hl` | Unit 3 (strings) |
+| 16-bit add to non-HL pair | `op add16(dst: DE, ...)` / `op add16(dst: BC, ...)` | Unit 2 (sorting) |
+| Byte swap | `op swap_bytes(a: reg8, b: reg8)` | Unit 2 (bubble sort) |
+| Null-sentinel convention | Convention doc / named constant `NULL = 0` | Unit 8 (linked list) |
+| Fixed-pool allocator | `op pool_alloc` / bump-allocator pattern over a typed array | Unit 8 (linked list, BST) |
 
 These `op` definitions are course-local until they recur across enough examples
 to justify a shared module. The library workstream is separate from the
@@ -69,24 +69,24 @@ The examples themselves, organized by tranche. This is the primary work queue.
 
 ## First Implementation Tranche
 
-**Tranche 1: Unit 1 — Foundations**
+**Tranche 1: Unit 2 — Foundations**
 
 All files go under `examples/course/unit1/`. Each must:
 - compile clean against current `main`
-- use `move` throughout for typed storage
+- use the current `main` surface for typed storage and raw Z80 operations
 - declare return registers explicitly
 - match the style of `examples/language-tour/02_fibonacci_args_locals.zax`
 - include a header comment stating algorithm source (K&R §x or Wirth Ch.x)
 
-**What can be expressed cleanly today**: everything in Unit 1. Pure arithmetic,
+**What can be expressed cleanly today**: everything in Unit 2. Pure arithmetic,
 no arrays, no records, no pointer operations. The entire current ZAX surface is
-available and none of it is required beyond `func`, `while`, `if`, `move`,
+available and none of it is required beyond `func`, `while`, `if`, `:=`,
 `const`, and basic Z80 arithmetic instructions.
 
-**What support surface is needed**: none. Unit 1 has no library dependencies.
+**What support surface is needed**: none. Unit 2 has no library dependencies.
 
 **What to log as friction**: anything that resists clean expression. Expected:
- nothing in Unit 1. If friction appears here, it is a fundamental signal.
+ nothing in Unit 2. If friction appears here, it is a fundamental signal.
 
 **Compiler validation**: after each file, run:
 ```sh
@@ -101,7 +101,7 @@ instruction sequence with no unexpected spill/reload pairs.
 
 *Entries added as tranches are completed. Format defined in the course doc §10.*
 
-### [Unit 1] Named-constant local initialization
+### [Unit 2] Named-constant local initialization
 
 **Workaround**: local `var` initializers that wanted a named constant such as
 `LastIndex` were rewritten as imperative setup in the function body, e.g.
@@ -111,22 +111,22 @@ instruction sequence with no unexpected spill/reload pairs.
 `high_index: word = LastIndex`.
 **Gap type**: language
 **Recurrence**: surfaced in at least `binary_search.zax` and `bubble_sort.zax`
-during Unit 1 authoring.
+during Unit 2 authoring.
 **Priority signal**: common pattern; directly harms readability of algorithm
 setup.
 
-### [Unit 1] Typed-storage `move` vs immediate loads
+### [Unit 2] Typed-storage `move` vs immediate loads
 
 **Workaround**: keep raw `ld` for register/immediate loads and reserve `move`
 for typed storage, e.g. `ld a, LastIndex` followed by `move pass_last, a`.
 **Desired expression**: none established yet. This currently looks like the
 intended language boundary rather than a defect.
 **Gap type**: style
-**Recurrence**: recurring in Unit 1 array examples.
+**Recurrence**: recurring in Unit 2 array examples.
 **Priority signal**: low; teach the boundary explicitly rather than open a
 language issue now.
 
-### [Unit 1] No `move` register-to-register conversion forms
+### [Unit 2] No `move` register-to-register conversion forms
 
 **Workaround**: use raw `ld` when examples need register-to-register transfer.
 This is especially visible when promoting an 8-bit value into a 16-bit register
@@ -136,34 +136,34 @@ for conversion-like forms only, e.g. 8-bit to 16-bit promotion with zeroing of
 the high byte, or 16-bit pair to 8-bit low-byte extraction. Do not broaden
 `move` into a general raw register-transfer replacement for `ld`.
 **Gap type**: language candidate / design discussion
-**Recurrence**: present but not yet dominant in Unit 1.
+**Recurrence**: present but not yet dominant in Unit 2.
 **Priority signal**: medium-low; worth recording and discussing, but not yet a
 clear issue candidate.
 
-### [Unit 1] Byte-array swap/load-store scaffolding
+### [Unit 2] Byte-array swap/load-store scaffolding
 
 **Workaround**: keep byte-array swap and load/store helper patterns inline in
 each sorting example instead of factoring shared helpers.
 **Desired expression**: a small shared `op` library if the same scaffolding
-recurs across enough Unit 1/2 files.
+recurs across enough Unit 2/2 files.
 **Gap type**: library
 **Recurrence**: recurring across the sorting examples.
-**Priority signal**: medium; likely a support-library candidate after Unit 1 is
+**Priority signal**: medium; likely a support-library candidate after Unit 2 is
 complete, but not before.
 
-### [Unit 2] Pointer-advance idiom
+### [Unit 3] Pointer-advance idiom
 
 **Workaround**: make the pattern explicit with a local helper `op`, e.g.
 `copy_and_advance(src_ptr: HL, dst_ptr: DE)` in `strcpy.zax`, while other files
 still spell out the raw `ld` / `inc` sequence inline.
 **Desired expression**: likely a small shared helper-op surface once recurrence
-across Unit 2 is fully measured.
+across Unit 3 is fully measured.
 **Gap type**: library
 **Recurrence**: recurring across the string examples.
 **Priority signal**: medium-high; this is now concrete and should be reviewed
 as a likely support-library candidate after the tranche settles.
 
-### [Unit 2] Arithmetic helper recurrence in string conversion
+### [Unit 3] Arithmetic helper recurrence in string conversion
 
 **Workaround**: keep helpers like `times_ten` and `div_u16` local to `atoi.zax`
 and `itoa.zax`.
@@ -175,18 +175,18 @@ justify extraction.
 **Priority signal**: medium-low; record it, but do not split it into a helper
 stream yet.
 
-### [Unit 2] Typed-storage `move` vs raw pointer/immediate work
+### [Unit 3] Typed-storage `move` vs raw pointer/immediate work
 
 **Workaround**: use `move` for typed storage and raw `ld` for pointer-register
 and immediate work in the string loops.
 **Desired expression**: none established yet. This still reads as the intended
 language boundary, not a defect.
 **Gap type**: style
-**Recurrence**: recurring across Unit 2.
+**Recurrence**: recurring across Unit 3.
 **Priority signal**: low; teach it explicitly rather than open a language
 issue.
 
-### [Unit 4] Aggregate zero-initializer friction
+### [Unit 5] Aggregate zero-initializer friction
 
 **Workaround**: rely on implicit zero initialization for `Entry[5]` instead of
 writing an explicit `= {}` aggregate initializer in the declaration.
@@ -197,7 +197,7 @@ case if examples keep wanting explicit zero-initialized aggregate declarations.
 **Priority signal**: medium-low; real example pressure exists, but only from one
 example so far.
 
-### [Unit 6] Software-stack storage-to-storage awkwardness
+### [Unit 7] Software-stack storage-to-storage awkwardness
 
 **Workaround**: software-stack push/pop style movement often has to bounce
 through `HL` when moving values between typed stack storage and other storage
@@ -210,7 +210,7 @@ surface or a language feature.
 **Priority signal**: medium; concrete enough to keep watching, but not yet ready
 to harden into a specific solution.
 
-### [Unit 7] Pointer-heavy traversal verbosity
+### [Unit 8] Pointer-heavy traversal verbosity
 
 **Workaround**: pointer traversal typically takes the form `move hl, ptr` then
 `<Type>hl.field`, repeating through each traversal step.
@@ -222,7 +222,7 @@ and workable.
 **Priority signal**: medium-high; this is now grounded in multiple real
 examples.
 
-### [Unit 8] Structured loop escape pressure (`break`, likely `continue`)
+### [Unit 9] Structured loop escape pressure (`break`, likely `continue`)
 
 **Workaround**: use explicit state and early returns to simulate structured loop
 escape in the backtracking search.
