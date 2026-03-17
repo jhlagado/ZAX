@@ -47,13 +47,11 @@ func reverse_range(left_index: byte, right_index: byte)
 
   swap_values left_index, right_index
 
-  a := left_index
-  inc a
-  next_left := a
+  next_left := left_index
+  succ next_left
 
-  a := right_index
-  dec a
-  next_right := a
+  next_right := right_index
+  pred next_right
 
   reverse_range next_left, next_right
 end

@@ -51,9 +51,7 @@ export func atoi_demo(): HL
     add hl, de
     result_value := hl
 
-    hl := scan_ptr
-    inc hl
-    scan_ptr := hl
+    succ scan_ptr
 
     ld a, 1
     or a

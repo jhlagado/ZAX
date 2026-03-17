@@ -55,9 +55,8 @@ func bubble_pass(last_index: byte)
     a := values[L]
     left_value := a
 
-    a := inner_index
-    inc a
-    next_index := a
+    next_index := inner_index
+    succ next_index
 
     l := next_index
     a := values[L]
@@ -72,9 +71,7 @@ func bubble_pass(last_index: byte)
       end
     end
 
-    a := inner_index
-    inc a
-    inner_index := a
+    succ inner_index
 
     ld a, 1
     or a
@@ -100,9 +97,7 @@ export func bubble_sort()
 
     bubble_pass pass_last
 
-    a := pass_last
-    dec a
-    pass_last := a
+    pred pass_last
 
     ld a, 1
     or a
