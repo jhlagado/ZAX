@@ -93,9 +93,10 @@ extensively. The two loop forms are:
   false; stops when it is true.
 
 The `repeat`/`until` form is natural when the loop body must execute once
-before any test makes sense — a common pattern for null-terminated string
-scanning (Chapter 03). The unit 2 sorting and searching examples use `while`
-because the loop bounds are checked upfront.
+before any test makes sense. The unit 2 sorting and searching examples use
+`while` because the loop bounds are checked upfront. Chapter 03 uses `while NZ`
+with early `break` for string scanning — a natural fit when the exit condition
+can occur mid-body rather than only at the top or bottom of the loop.
 
 Both forms require the programmer to establish the correct flag state. `while`
 requires flags to be correct at the point of the `while` keyword and again at
