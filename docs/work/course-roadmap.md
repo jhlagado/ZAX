@@ -71,7 +71,7 @@ The examples themselves, organized by tranche. This is the primary work queue.
 
 **Tranche 1: Unit 0 — Foundations**
 
-All files go under `examples/course/unit0/`. Each must:
+All files go under `examples/course/unit1/`. Each must:
 - compile clean against current `main`
 - use `move` throughout for typed storage
 - declare return registers explicitly
@@ -90,7 +90,7 @@ nothing in Unit 0. If friction appears here, it is a fundamental signal.
 
 **Compiler validation**: after each file, run:
 ```sh
-npm run zax -- examples/course/unit0/<file>.zax
+npm run zax -- examples/course/unit1/<file>.zax
 ```
 Inspect the `.asm` output. A clean example should produce a readable Z80
 instruction sequence with no unexpected spill/reload pairs.

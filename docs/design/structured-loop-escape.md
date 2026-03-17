@@ -9,7 +9,7 @@
 
 Course examples now show real pressure for ordinary structured loop escape.
 
-The clearest case is `examples/course/unit8/eight_queens.zax`, where the current
+The clearest case is `examples/course/unit9/eight_queens.zax`, where the current
 language can express the search, but only by threading explicit state and early
 returns through loops that would read more directly with `break` and likely
 `continue`.

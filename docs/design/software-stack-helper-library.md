@@ -4,7 +4,7 @@ Status: proposed review record for course follow-up
 
 ## Problem
 
-`examples/course/unit6/rpn_calculator.zax` shows a real ergonomic issue in current
+`examples/course/unit7/rpn_calculator.zax` shows a real ergonomic issue in current
 ZAX: software-stack code is expressible, but push/pop style movement is noisy
 because values must shuttle through registers and the stack protocol is repeated
 inline.
