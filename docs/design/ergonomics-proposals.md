@@ -87,6 +87,35 @@ Nested paths:
 
 These all remain fundamentally transfers between two scalar places.
 
+### Compatibility boundary
+
+Path-to-path `:=` is a **scalar transfer** feature, not a general object-copy or implicit-address feature.
+
+Accepted in this slice:
+
+```zax
+arr2[0] := arr1[1]               ; scalar byte -> scalar byte
+dst_word := src_word             ; scalar word -> scalar word
+ptr_slot := @arr1[1]             ; explicit address acquisition into compatible scalar
+```
+
+Rejected in this slice:
+
+```zax
+arr2[0] := arr1                  ; invalid: composite object on RHS
+dst_rec := src_rec               ; invalid: composite copy is out of scope
+ptr_slot := arr1                 ; invalid: no implicit object-to-address decay
+```
+
+So the rule is:
+
+- valid: scalar destination `:=` scalar value source
+- invalid: scalar destination `:=` composite path
+- invalid: implicit array/record/union-to-address decay
+- valid only with explicit `@`: address acquisition into a compatible scalar destination
+
+This keeps the language explicit and avoids C-style array decay.
+
 ### Aliasing and self-copy
 
 `x := x` is valid. Because evaluation order is fixed (load RHS into register, then store to LHS), the scalar value is captured before the write. Self-copy is therefore a no-op in effect. Overlapping typed locations behave as "load scalar RHS value, then store scalar LHS value" — no special aliasing rules are needed beyond the fixed evaluation order.
@@ -139,6 +168,22 @@ pop af
 ```
 
 For EA-shaped transfers, the compiler may still need the existing staged EA pipelines, but the same principle holds: preserve the hidden transfer register, build each side through the current step system, and avoid unnecessary re-materialization when a direct scalar accessor exists.
+
+### Implementation staging
+
+Implementation should be split into two slices:
+
+1. **Acceptance slice**
+   - allow scalar `Ea := Ea`
+   - reject composite RHS paths
+   - reject implicit object-to-address decay
+   - keep arithmetic RHS out of scope
+
+2. **Lowering slice**
+   - implement hidden-register-preserving scalar transfer
+   - prefer direct scalar accessors first
+   - fall back to staged EA pipelines second
+   - add regression coverage for source/destination index conflicts, self-copy, and explicit `@` forms
 
 ### What stays out of scope
 
