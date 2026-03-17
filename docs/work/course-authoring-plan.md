@@ -68,10 +68,10 @@ Recommended file set:
 Chapter numbers are offset from example unit numbers because `00-introduction.md` is a course introduction chapter, not an example unit.
 
 - Chapter `00` = course introduction
-- Chapter `01` maps to `examples/course/unit0/`
-- Chapter `02` maps to `examples/course/unit1/`
+- Chapter `01` maps to `examples/course/unit1/`
+- Chapter `02` maps to `examples/course/unit2/`
 - ...
-- Chapter `09` maps to `examples/course/unit8/`
+- Chapter `09` maps to `examples/course/unit9/`
 
 ### 00 Introduction
 
@@ -88,13 +88,13 @@ Purpose:
 - show assignment, scalar locals, and structured control before arrays and records
 
 Examples:
-- `examples/course/unit0/digits.zax`
-- `examples/course/unit0/exp_squaring.zax`
-- `examples/course/unit0/fibonacci.zax`
-- `examples/course/unit0/gcd_iterative.zax`
-- `examples/course/unit0/gcd_recursive.zax`
-- `examples/course/unit0/power.zax`
-- `examples/course/unit0/sqrt_newton.zax`
+- `examples/course/unit1/digits.zax`
+- `examples/course/unit1/exp_squaring.zax`
+- `examples/course/unit1/fibonacci.zax`
+- `examples/course/unit1/gcd_iterative.zax`
+- `examples/course/unit1/gcd_recursive.zax`
+- `examples/course/unit1/power.zax`
+- `examples/course/unit1/sqrt_newton.zax`
 
 ### 02 Arrays and Loops
 
@@ -104,12 +104,12 @@ Purpose:
 - explicitly explain `break` and `continue` in this chapter, because this is where the reader first sees them as part of ordinary loop structure
 
 Examples:
-- `examples/course/unit1/insertion_sort.zax`
-- `examples/course/unit1/bubble_sort.zax`
-- `examples/course/unit1/selection_sort.zax`
-- `examples/course/unit1/binary_search.zax`
-- `examples/course/unit1/linear_search.zax`
-- `examples/course/unit1/prime_sieve.zax`
+- `examples/course/unit2/insertion_sort.zax`
+- `examples/course/unit2/bubble_sort.zax`
+- `examples/course/unit2/selection_sort.zax`
+- `examples/course/unit2/binary_search.zax`
+- `examples/course/unit2/linear_search.zax`
+- `examples/course/unit2/prime_sieve.zax`
 
 ### 03 Strings
 
@@ -118,13 +118,13 @@ Purpose:
 - explain where ZAX stays close to Z80 in raw memory-walking code
 
 Examples:
-- `examples/course/unit2/strlen.zax`
-- `examples/course/unit2/strcpy.zax`
-- `examples/course/unit2/strcmp.zax`
-- `examples/course/unit2/strcat.zax`
-- `examples/course/unit2/str_reverse.zax`
-- `examples/course/unit2/atoi.zax`
-- `examples/course/unit2/itoa.zax`
+- `examples/course/unit3/strlen.zax`
+- `examples/course/unit3/strcpy.zax`
+- `examples/course/unit3/strcmp.zax`
+- `examples/course/unit3/strcat.zax`
+- `examples/course/unit3/str_reverse.zax`
+- `examples/course/unit3/atoi.zax`
+- `examples/course/unit3/itoa.zax`
 
 ### 04 Bit Patterns
 
@@ -133,10 +133,10 @@ Purpose:
 - keep the prose focused on algorithm shape rather than opcode-by-opcode narration
 
 Examples:
-- `examples/course/unit3/popcount.zax`
-- `examples/course/unit3/bit_reverse.zax`
-- `examples/course/unit3/parity.zax`
-- `examples/course/unit3/getbits.zax`
+- `examples/course/unit4/popcount.zax`
+- `examples/course/unit4/bit_reverse.zax`
+- `examples/course/unit4/parity.zax`
+- `examples/course/unit4/getbits.zax`
 
 ### 05 Records
 
@@ -145,7 +145,7 @@ Purpose:
 - explain how records change the feel of low-level code without hiding the machine
 
 Examples:
-- `examples/course/unit4/ring_buffer.zax`
+- `examples/course/unit5/ring_buffer.zax`
 
 ### 06 Recursion
 
@@ -154,9 +154,9 @@ Purpose:
 - make the prose focus on structure and invariants, not just call mechanics
 
 Examples:
-- `examples/course/unit5/hanoi.zax`
-- `examples/course/unit5/array_sum_recursive.zax`
-- `examples/course/unit5/array_reverse_recursive.zax`
+- `examples/course/unit6/hanoi.zax`
+- `examples/course/unit6/array_sum_recursive.zax`
+- `examples/course/unit6/array_reverse_recursive.zax`
 
 ### 07 Composition
 
@@ -165,8 +165,8 @@ Purpose:
 - keep the lesson centered on the calculator example, not the helper internals
 
 Examples:
-- main lesson: `examples/course/unit6/rpn_calculator.zax`
-- support module reference only: `examples/course/unit6/word_stack.zax`
+- main lesson: `examples/course/unit7/rpn_calculator.zax`
+- support module reference only: `examples/course/unit7/word_stack.zax`
 
 `word_stack.zax` is not a standalone lesson chapter. It is support code that the prose may reference briefly when explaining how the calculator is assembled.
 
@@ -177,8 +177,8 @@ Purpose:
 - explain both what works well and what still feels verbose in pointer-heavy ZAX
 
 Examples:
-- `examples/course/unit7/linked_list.zax`
-- `examples/course/unit7/bst.zax`
+- `examples/course/unit8/linked_list.zax`
+- `examples/course/unit8/bst.zax`
 
 ### 09 Gaps and Futures
 
@@ -188,7 +188,7 @@ Purpose:
 - connect the example back to the friction log and future language/library questions without turning the chapter into a roadmap dump
 
 Examples:
-- `examples/course/unit8/eight_queens.zax`
+- `examples/course/unit9/eight_queens.zax`
 
 ## Writing model
 
