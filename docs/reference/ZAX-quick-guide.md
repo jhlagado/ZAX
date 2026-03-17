@@ -1583,26 +1583,21 @@ enum StateB   Idle, Stopped    ; 'Idle' and 'Idle' are fine — accessed as Stat
 
 ### 8.8 `succ` and `pred`
 
-`succ(x)` and `pred(x)` are ZAX built-in constructs that step one position forward or backward in a sequence. They are not raw Z80 mnemonics; the compiler lowers them to the appropriate increment or decrement instruction(s).
+`succ` and `pred` are ZAX statement forms that increment or decrement a typed scalar storage location in place. They are not expression forms; they do not return a value and may not appear inside expressions or on the RHS of `:=`. The compiler lowers each to the appropriate increment or decrement instruction(s).
 
-| Form      | Meaning                                      | Emits            |
-| --------- | -------------------------------------------- | ---------------- |
-| `succ(x)` | next value in the sequence (x + 1 step)      | increment on `x` |
-| `pred(x)` | previous value in the sequence (x − 1 step)  | decrement on `x` |
+| Statement   | Meaning                                          |
+| ----------- | ------------------------------------------------ |
+| `succ path` | increment the typed scalar at `path` by one step |
+| `pred path` | decrement the typed scalar at `path` by one step |
 
-Both are valid for enum-style types and for register or index values used as sequence positions.
+`path` must be a typed scalar path — a named variable or a field/array element. Raw registers (e.g. `hl`, `a`) are not valid targets.
 
 ```zax
-enum Direction North, East, South, West
-
-func next_dir(d: byte): byte
-  a := d
-  a := succ(a)      ; advance one step in Direction sequence
-  ret               ; returns Direction value + 1
-end
+succ tail_slot    ; tail_slot := tail_slot + 1 (typed, in place)
+pred used_slots   ; used_slots := used_slots - 1 (typed, in place)
 ```
 
-The programmer is responsible for range discipline at enum boundaries — `succ` of the last member and `pred` of the first member are not automatically clamped.
+The programmer is responsible for range discipline at type boundaries — `succ` past the maximum and `pred` past the minimum are not automatically clamped.
 
 ---
 

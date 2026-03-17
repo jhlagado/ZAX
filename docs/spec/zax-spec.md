@@ -365,22 +365,36 @@ Notes (v0.1):
 
 ### 4.3.1 `succ` and `pred`
 
-`succ(x)` and `pred(x)` are ZAX built-in constructs, not raw Z80 mnemonics.
+`succ` and `pred` are ZAX statement forms that mutate a typed scalar storage location in place. They are not expression forms and do not return a value.
 
-- `succ(x)` — returns the next value in a sequence: the value of `x` incremented by one step. Valid for enum-style types and for register/index values used as sequence positions.
-- `pred(x)` — returns the previous value in a sequence: the value of `x` decremented by one step.
+Syntax:
+
+```
+succ path
+pred path
+```
+
+where `path` is a typed scalar path: a named variable or a field/array element. Raw registers and index values are not valid targets.
+
+- `succ path` — increments the storage location named by `path` by one step, in place.
+- `pred path` — decrements the storage location named by `path` by one step, in place.
 
 Semantics:
 
-- `succ(x)` emits an increment of the value `x` by 1.
-- `pred(x)` emits a decrement of the value `x` by 1.
-- Both are defined over the same domain as sequential enum members and over any integral value that admits a +1 / −1 step.
-- There is no wrap-around guarantee at the boundaries of an enum's declared range; the programmer is responsible for range discipline.
+- Both statements mutate `path` directly; they do not produce a value and may not appear inside expressions or on the RHS of `:=`.
+- The compiler lowers each to the appropriate increment or decrement instruction(s); no raw `INC` or `DEC` mnemonic need appear in the source.
+- There is no wrap-around guarantee at the boundaries of a type's range; the programmer is responsible for range discipline.
+
+Example:
+
+```zax
+succ tail_slot
+pred used_slots
+```
 
 Notes (v0.1):
 
-- `succ` and `pred` are ZAX-level constructs. The compiler lowers them to the appropriate increment or decrement instruction(s); no raw `INC` or `DEC` mnemonic need appear in the source.
-- Using `succ`/`pred` on a value that has no well-defined successor or predecessor (e.g., a non-sequential type) is a compile error.
+- Using `succ`/`pred` on a path that is not a typed scalar is a compile error.
 
 ### 4.4 Consts
 
