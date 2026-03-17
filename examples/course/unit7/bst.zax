@@ -21,17 +21,14 @@ end
 func init_tree()
   ld a, 8
   root_node.value := a
-  hl := @left_node
-  root_node.left := hl
-  hl := @right_node
-  root_node.right := hl
+  root_node.left := @left_node
+  root_node.right := @right_node
 
   ld a, 3
   left_node.value := a
   ld hl, 0
   left_node.left := hl
-  hl := @left_right_node
-  left_node.right := hl
+  left_node.right := @left_right_node
 
   ld a, 11
   right_node.value := a
@@ -47,8 +44,7 @@ func init_tree()
   ld hl, 0
   left_right_node.right := hl
 
-  hl := @root_node
-  tree_root := hl
+  tree_root := @root_node
 end
 
 func bst_contains(node_ptr: addr, target_value: byte): HL

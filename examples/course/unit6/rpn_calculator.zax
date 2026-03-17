@@ -22,8 +22,7 @@ func mul_u16(left_word: word, right_word: word): HL
     repeat_count: word = 0
   end
 
-  hl := right_word
-  repeat_count := hl
+  repeat_count := right_word
 
   ld a, 1
   or a
@@ -41,9 +40,7 @@ func mul_u16(left_word: word, right_word: word): HL
     add hl, de
     accum_value := hl
 
-    hl := repeat_count
-    dec hl
-    repeat_count := hl
+    pred repeat_count
 
     ld a, 1
     or a
@@ -108,9 +105,7 @@ export func rpn_demo(): HL
         stack_depth := a
     end
 
-    a := token_index
-    inc a
-    token_index := a
+    succ token_index
 
     ld a, 1
     or a

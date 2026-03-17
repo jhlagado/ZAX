@@ -9,8 +9,7 @@ func div_u16(dividend: word, divisor: word): HL
     remainder: word = 0
   end
 
-  hl := dividend
-  remainder := hl
+  remainder := dividend
 
   while NZ
     hl := remainder
@@ -23,9 +22,7 @@ func div_u16(dividend: word, divisor: word): HL
     end
 
     remainder := hl
-    hl := quotient
-    inc hl
-    quotient := hl
+    succ quotient
 
     ld a, 1
     or a
@@ -79,12 +76,9 @@ func sqrt_newton(value: word): HL
       next_guess := hl
     end
 
-    hl := next_guess
-    guess := hl
+    guess := next_guess
 
-    hl := remaining_iters
-    dec hl
-    remaining_iters := hl
+    pred remaining_iters
 
     ld a, 1
     or a

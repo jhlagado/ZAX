@@ -4,8 +4,8 @@ end
 
 section code boot at $0100
   export func byte_fvar_const(arr: byte[]): HL
+    arr[3] := arr[2]
     a := arr[2]
-    arr[3] := a
     ld h, 0
     ld l, a
   end

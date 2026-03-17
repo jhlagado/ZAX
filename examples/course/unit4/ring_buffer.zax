@@ -40,16 +40,13 @@ func enqueue(entry_value: byte, entry_stamp: word)
   b := tail_slot
   a := entry_value
   entries[B].value := a
-  hl := entry_stamp
-  entries[B].stamp := hl
+  entries[B].stamp := entry_stamp
 
   next_slot tail_slot
   ld a, l
   tail_slot := a
 
-  a := used_slots
-  inc a
-  used_slots := a
+  succ used_slots
 end
 
 func dequeue(): HL
@@ -72,9 +69,7 @@ func dequeue(): HL
   ld a, l
   head_slot := a
 
-  a := used_slots
-  dec a
-  used_slots := a
+  pred used_slots
 
   ld h, 0
   a := removed_value
