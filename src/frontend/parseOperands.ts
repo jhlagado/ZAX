@@ -446,8 +446,8 @@ function parseAssignmentInstruction(
   if (!target || !source) return undefined;
 
   if (target.kind === 'Ea') {
-    if (source.kind !== 'Reg') {
-      diag(diagnostics, filePath, `":=" storage targets require an assignment-register source`, {
+    if (source.kind !== 'Reg' && source.kind !== 'Ea') {
+      diag(diagnostics, filePath, `":=" storage targets require an assignment-register or path source`, {
         line: instrSpan.start.line,
         column: instrSpan.start.column,
       });
@@ -503,7 +503,16 @@ function parseAssignmentTarget(
   }
 
   const ea = parseEaExprFromText(filePath, t, operandSpan, diagnostics);
-  if (ea) return { kind: 'Ea', span: operandSpan, expr: ea };
+  if (ea) {
+    if (!isAssignmentStoragePath(ea)) {
+      diag(diagnostics, filePath, `":=" target must be a storage path, not an affine address expression`, {
+        line: operandSpan.start.line,
+        column: operandSpan.start.column,
+      });
+      return undefined;
+    }
+    return { kind: 'Ea', span: operandSpan, expr: ea };
+  }
 
   diag(diagnostics, filePath, `Invalid ":=" target operand "${t}"`, {
     line: operandSpan.start.line,
@@ -531,7 +540,16 @@ function parseAssignmentSource(
     }
     const eaText = t.slice(1).trim();
     const ea = parseEaExprFromText(filePath, eaText, operandSpan, diagnostics);
-    if (ea) return { kind: 'Ea', span: operandSpan, expr: ea, explicitAddressOf: true };
+    if (ea) {
+      if (!isAssignmentStoragePath(ea)) {
+        diag(diagnostics, filePath, `":=" address-of form must be "@<path>" with a storage path.`, {
+          line: operandSpan.start.line,
+          column: operandSpan.start.column,
+        });
+        return undefined;
+      }
+      return { kind: 'Ea', span: operandSpan, expr: ea, explicitAddressOf: true };
+    }
     diag(diagnostics, filePath, `":=" address-of form must be "@<path>" with a storage path.`, {
       line: operandSpan.start.line,
       column: operandSpan.start.column,
@@ -559,7 +577,16 @@ function parseAssignmentSource(
   }
 
   const ea = parseEaExprFromText(filePath, t, operandSpan, diagnostics);
-  if (ea) return { kind: 'Ea', span: operandSpan, expr: ea };
+  if (ea) {
+    if (!isAssignmentStoragePath(ea)) {
+      diag(diagnostics, filePath, `":=" source path must be a storage path, not an affine address expression`, {
+        line: operandSpan.start.line,
+        column: operandSpan.start.column,
+      });
+      return undefined;
+    }
+    return { kind: 'Ea', span: operandSpan, expr: ea };
+  }
 
   const expr = parseAssignmentImmediateExpr(filePath, t, operandSpan, diagnostics);
   if (expr) return { kind: 'Imm', span: operandSpan, expr };
@@ -580,4 +607,20 @@ function parseAssignmentImmediateExpr(
   const t = operandText.trim();
   if (/^[A-Za-z_][A-Za-z0-9_]*(?:\s*[+-].*)?$/.test(t)) return undefined;
   return parseImmExprFromText(filePath, t, operandSpan, diagnostics, false);
+}
+
+function isAssignmentStoragePath(ea: EaExprNode): boolean {
+  switch (ea.kind) {
+    case 'EaName':
+      return true;
+    case 'EaReinterpret':
+      return isAssignmentStoragePath(ea.base);
+    case 'EaField':
+      return isAssignmentStoragePath(ea.base);
+    case 'EaIndex':
+      return isAssignmentStoragePath(ea.base);
+    case 'EaAdd':
+    case 'EaSub':
+      return false;
+  }
 }
