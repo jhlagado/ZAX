@@ -142,7 +142,7 @@ a loop over B counts is to copy B into A and `or a`:
 ```zax
 ld b, 10
 ld a, b           ; copy B into A
-or a              ; A | A = A, sets Z if A is zero, sets NZ if A is non-zero
+or a              ; sets Z if A is zero, NZ if non-zero (see Chapter 03)
 while NZ
   dec b
   ld a, b
@@ -150,11 +150,9 @@ while NZ
 end
 ```
 
-Chapter 04 covered the `or a` idiom for flag-establishment in loop-entry guards
-(`or a / jr z, skip_loop`). The same reasoning applies here: `or a` ORs A with
-itself, producing the same value in A, but setting the Z flag based on whether A
-is zero. Use `ld a, b / or a` to convert a register value into a flag state
-before `while`.
+The `or a` idiom for flag-establishment was introduced in Chapter 03 and applied
+to loop-entry guards in Chapter 04. The same reasoning applies here. Use
+`ld a, b / or a` to convert a register value into a flag state before `while`.
 
 The back edge of a `while` loop also tests the condition. Every `continue` or
 fall-through to the `end` line re-runs the condition test. That means the loop
