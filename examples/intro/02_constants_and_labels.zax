@@ -1,0 +1,29 @@
+; Chapter 02 example: EQU-style constants, named storage, load/store via labels
+
+const MaxCount  = 10             ; a named constant: value 10
+const BaseAddr  = $8000          ; a named constant: an address value
+
+section data vars at $8000
+  count:   byte = 0              ; one byte of RAM
+  scratch: word = 0              ; one word (two bytes) of RAM
+end
+
+export func main(): void
+  ; Load a constant value into A and store it to named RAM (bare-name form)
+  ld a, MaxCount                 ; A = 10  (const: value substituted directly)
+  ld count, a                    ; count = 10  (bare name: write typed scalar)
+
+  ; Load a 16-bit constant into HL and read back via (HL) — explicit dereference
+  ; This demonstrates the pointer / address-dereference form deliberately:
+  ; HL holds the address $8000, and (hl) reads the byte at that address.
+  ld hl, BaseAddr                ; HL = $8000 (the address of count)
+  ld a, (hl)                     ; A = byte at address HL  — explicit dereference
+
+  ; Store a word value into named word storage and read it back (bare-name form)
+  ld hl, $1234
+  ld scratch, hl                 ; scratch = $1234  (bare name: write typed word)
+
+  ld hl, scratch                 ; HL = $1234  (bare name: read typed word)
+
+  ret
+end
