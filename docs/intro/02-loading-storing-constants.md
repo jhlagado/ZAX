@@ -275,6 +275,51 @@ named typed storage location.
 
 ---
 
+## Exchanging register pairs
+
+`ex de, hl` swaps the contents of DE and HL in a single instruction. After it
+executes, the old value of HL is in DE and the old value of DE is in HL.
+
+This is the canonical way to move a 16-bit value between these two register
+pairs. Without `ex de, hl` you would need three instructions using a scratch
+register:
+
+```zax
+; Without ex de, hl: copy HL -> DE via three register-to-register ld
+ld d, h
+ld e, l
+; DE now holds the old HL, but HL is also still its old value
+
+; With ex de, hl: one instruction, swaps both directions simultaneously
+ld hl, $1234   ; HL = $1234, DE = (whatever it held before)
+ld de, $5678   ; HL = $1234, DE = $5678
+ex de, hl      ; HL = $5678, DE = $1234
+```
+
+After `ex de, hl`: HL holds `$5678` and DE holds `$1234`. Both registers carry
+the exchanged values. This makes `ex de, hl` useful any time you need to swap
+the addresses or values held in these two pairs — for example, after a loop
+that built a result in HL and you want to pass it to the next step in DE.
+
+Two other exchange instructions exist. They are noted here for completeness but
+belong to more advanced usage patterns covered later in the course.
+
+`ex af, af'` swaps the AF register pair with its shadow counterpart AF'. The Z80
+has a second set of registers — the shadow registers — that are separate storage
+locations with the same names, accessed by swapping. The shadow registers are
+introduced in Chapter 06. The practical use of `ex af, af'` is saving and
+restoring A and the flags temporarily, without using the stack.
+
+`exx` swaps BC, DE, and HL all at once with their shadow counterparts BC', DE',
+HL'. Like `ex af, af'`, this relies on the shadow registers and is most
+commonly used in interrupt handlers and time-critical routines where spilling
+to the stack is too slow.
+
+For Phase A and Phase B code, `ex de, hl` is the exchange instruction you will
+encounter regularly. The others exist and will appear in later volumes.
+
+---
+
 ## What This Chapter Teaches
 
 - `ld` copies a value from source to destination; it does not perform
