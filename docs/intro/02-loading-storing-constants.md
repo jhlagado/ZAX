@@ -280,26 +280,44 @@ named typed storage location.
 `ex de, hl` swaps the contents of DE and HL in a single instruction. After it
 executes, the old value of HL is in DE and the old value of DE is in HL.
 
-This is the canonical way to move a 16-bit value between these two register
-pairs. Without `ex de, hl` you would need three instructions using a scratch
-register:
+It is worth being precise about what "swap" means here versus a one-way copy.
+
+A one-way copy from HL into DE takes two instructions and leaves HL unchanged:
 
 ```zax
-; Without ex de, hl: copy HL -> DE via three register-to-register ld
+; One-way copy: HL -> DE (two instructions, HL still holds its old value)
 ld d, h
 ld e, l
-; DE now holds the old HL, but HL is also still its old value
-
-; With ex de, hl: one instruction, swaps both directions simultaneously
-ld hl, $1234   ; HL = $1234, DE = (whatever it held before)
-ld de, $5678   ; HL = $1234, DE = $5678
-ex de, hl      ; HL = $5678, DE = $1234
+; DE now holds old HL; HL is unchanged
 ```
 
-After `ex de, hl`: HL holds `$5678` and DE holds `$1234`. Both registers carry
-the exchanged values. This makes `ex de, hl` useful any time you need to swap
-the addresses or values held in these two pairs — for example, after a loop
-that built a result in HL and you want to pass it to the next step in DE.
+This works if you only need HL's value in DE and no longer care about DE's old
+value. But if you need to truly exchange the two — so that DE gets HL's value
+and HL gets DE's old value simultaneously — you must save one of them first.
+Using A as scratch, that is six instructions:
+
+```zax
+; True swap without ex de, hl: six instructions, A used as scratch
+ld a, h
+ld h, d
+ld d, a     ; D now holds old H
+ld a, l
+ld l, e
+ld e, a     ; E now holds old L — swap complete, A clobbered
+```
+
+`ex de, hl` replaces all six with one instruction and leaves A untouched:
+
+```zax
+ld hl, $1234
+ld de, $5678
+ex de, hl      ; HL = $5678, DE = $1234 — true bidirectional swap in one step
+```
+
+After `ex de, hl`: HL holds `$5678` and DE holds `$1234`. This makes
+`ex de, hl` useful any time you need to swap the addresses or values held in
+these two pairs — for example, after a loop that built a result in HL and you
+want to pass it to the next step in DE.
 
 Two other exchange instructions exist. They are noted here for completeness but
 belong to more advanced usage patterns covered later in the course.
@@ -340,6 +358,9 @@ encounter regularly. The others exist and will appear in later volumes.
 - Parentheses in instruction operands always mean dereference, whether the
   operand is a register (`(hl)`), a name (`(count)`), or a literal address
   (`($8000)`).
+- `ex de, hl` performs a true bidirectional swap of DE and HL in one
+  instruction. A one-way copy (HL→DE) takes two instructions; a manual swap
+  without `ex de, hl` takes six and clobbers a scratch register.
 
 ## What Comes Next
 
