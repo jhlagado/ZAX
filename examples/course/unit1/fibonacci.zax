@@ -1,7 +1,7 @@
 ; fibonacci.zax
 ;
 ; Source/problem: Fibonacci sequence, iterative local-state form.
-; Unit 0 foundations example: iterative Fibonacci with local state.
+; Unit 1 foundations example: iterative Fibonacci with local state.
 
 func fib(target_count: word): HL
   var

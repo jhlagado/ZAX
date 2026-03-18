@@ -131,7 +131,7 @@ zax [options] <entry.zax>
 | ------------------------------------------------ | ---------------------------------------------------------------- |
 | `docs/reference/ZAX-quick-guide.md`              | Practical quick-start — recommended first read after this README |
 | `docs/spec/zax-spec.md`                          | Normative language specification                                 |
-| `docs/design/zax-algorithms-course.md`           | Algorithm course — classic CS problems in ZAX                    |
+| `docs/course/README.md`                          | Algorithm course — classic CS problems in ZAX                    |
 | `docs/reference/testing-verification-guide.md`   | Testing and verification flow                                    |
 | `docs/reference/zax-dev-playbook.md`             | Contributor workflow and review hygiene                          |
 

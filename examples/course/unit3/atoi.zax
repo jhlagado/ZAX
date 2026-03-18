@@ -1,7 +1,7 @@
 ; atoi.zax
 ;
 ; Source/problem: parse decimal digits into a word value.
-; Unit 2 example: pointer walking plus repeated scaling by 10.
+; Unit 3 example: pointer walking plus repeated scaling by 10.
 
 section data vars at $8000
   number_text: byte[6] = { '1', '2', '3', '4', 0, 0 }
