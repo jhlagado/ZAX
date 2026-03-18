@@ -37,6 +37,4 @@ loop_top:
   ld (counter), a                ; counter++
   dec b                          ; B--; sets Z when B reaches 0
   jp nz, loop_top                ; repeat while B != 0
-
-  ret
 end

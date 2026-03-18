@@ -226,7 +226,6 @@ find_max_loop:
 find_max_no_update:
   inc hl
   djnz find_max_loop
-  ret
 end
 ```
 
@@ -255,7 +254,6 @@ func find_max_cf(): AF
     or a
   end
   a := running_max
-  ret
 end
 ```
 
@@ -300,7 +298,6 @@ count_above_skip:
   inc hl
   djnz count_above_loop
   ld a, d
-  ret
 end
 ```
 
@@ -332,7 +329,6 @@ func count_above_cf(): AF
     or a
   end
   a := cnt
-  ret
 end
 ```
 

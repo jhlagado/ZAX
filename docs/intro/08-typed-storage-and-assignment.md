@@ -44,7 +44,6 @@ func example(): void
     total: word = 0
   end
   ; instructions follow
-  ret
 end
 ```
 
@@ -160,7 +159,6 @@ find_max_loop:
 find_max_no_update:
   inc hl
   djnz find_max_loop
-  ret
 end
 ```
 
@@ -184,7 +182,6 @@ find_max_no_update:
   inc hl
   djnz find_max_loop
   a := running_max               ; load result for caller
-  ret
 end
 ```
 
@@ -211,7 +208,6 @@ count_above_skip:
   inc hl
   djnz count_above_loop
   ld a, d
-  ret
 end
 ```
 
@@ -237,7 +233,6 @@ count_above_skip:
   inc hl
   djnz count_above_loop
   a := cnt
-  ret
 end
 ```
 

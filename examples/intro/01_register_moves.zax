@@ -18,6 +18,4 @@ export func main(): void
   ; Copy HL to DE using register-to-register moves
   ld d, h                        ; D = H = $12
   ld e, l                        ; E = L = $34
-
-  ret
 end

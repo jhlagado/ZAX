@@ -58,6 +58,4 @@ flag_loop:
   djnz flag_loop                 ; else continue while table bytes remain
 flag_done:
   ld (flagval), a                ; flagval = sum at the point the loop exited
-
-  ret
 end
