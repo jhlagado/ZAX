@@ -1,20 +1,25 @@
-# ZAX Course Authoring Plan
+# ZAX Algorithms Course Authoring Plan
 
-Status: active writing brief
+Status: active writing brief for the algorithms/data-structures volume
 Audience: course author, writer, editor
 
 ## Purpose
 
-This document consolidates the current course-writing plan into one operational brief.
-It is the canonical handoff for prose-first course writing.
+This document consolidates the current writing plan for the **algorithms
+volume** into one operational brief. It is the canonical handoff for
+prose-first writing of the existing `docs/course/` material.
 
 Use this document together with the current example sources. Do not reconstruct the
 course shape from scattered design notes.
+
+This document does **not** define the planned beginner-facing "Learn Z80
+Programming in ZAX" volume. That planning now lives separately.
 
 ## Canonical sources
 
 Use these as the authority for course planning and current syntax:
 
+- `docs/design/z80-programming-with-zax.md` — broader two-volume teaching direction and reader model
 - `docs/design/zax-algorithms-course.md` — course rationale, goals, style direction
 - `docs/work/course-roadmap.md` — unit inventory, tranche status, and friction log
 - `docs/spec/zax-spec.md` — normative language surface
@@ -26,12 +31,15 @@ examples and wording in some sections. Use it for rationale and course intent, n
 syntax model. For actual language surface, current `main` examples plus the spec and quick
 guide are authoritative.
 
+The beginner-facing introductory volume is now planned separately. This document
+only governs the current algorithms/data-structures volume under `docs/course/`.
+
 If older design prose disagrees with the current examples/spec/reference, the current
 examples/spec/reference win.
 
 ## Current language assumptions for the course
 
-The course should assume the current active surface on `main`:
+This algorithms volume should assume the current active surface on `main`:
 
 - `:=` is the assignment surface
 - scalar path-to-path `:=` is available
@@ -241,7 +249,7 @@ Examples:
 
 ## Writing model
 
-The course must be prose-oriented.
+The algorithms volume must be prose-oriented.
 
 It is not:
 

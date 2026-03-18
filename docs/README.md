@@ -26,6 +26,7 @@ Current active design docs:
 - `docs/design/pointer-typing-ergonomics.md`
 - `docs/design/software-stack-helper-library.md`
 - `docs/design/assignment-syntax-vs-move.md`
+- `docs/design/z80-programming-with-zax.md`
 
 These documents are not normative language authority. They describe current direction, decisions, and unresolved design work.
 
@@ -52,6 +53,7 @@ Use this area for:
 - current stream notes
 - deferred and backburner items
 - short operational documents that are neither normative specs nor active design proposals
+- authoring and planning briefs for course-writing streams
 
 ### `docs/archive/`
 
@@ -83,10 +85,10 @@ Recently completed design records now live under:
 
 ### `docs/course/`
 
-A guided course teaching ZAX through classic algorithms. Start at
+The current algorithms-and-data-structures volume. Start at
 `docs/course/README.md`. Each chapter is paired with compilable example files
-under `examples/course/`. The intended reader knows Z80 assembly and is new to
-ZAX.
+under `examples/course/`. This is a second-stage course, not the planned
+beginner-first introduction to Z80 programming in ZAX.
 
 ## Current priority
 

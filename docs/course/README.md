@@ -1,21 +1,31 @@
 # ZAX Algorithms Course
 
+Status: Volume 2 / second-stage course
+
 This course teaches ZAX through classic short algorithms drawn from Kernighan
 and Ritchie's _The C Programming Language_ and Niklaus Wirth's _Algorithms +
 Data Structures = Programs_. It is not a language reference and not a Z80
 tutorial. It is a guided reading of real ZAX programs, organised around
 problems rather than features.
 
-The intended reader knows Z80 assembly. They are new to ZAX and want to
-understand what the structured assembler model offers, where it pays off, and
-where it still asks something of the programmer.
+This is not the first-learning path for someone new to programming or new to
+the Z80. It is the second-stage companion: a book of substantial examples for a
+reader who already understands the basic machine model and wants to see how ZAX
+expresses real programs cleanly.
+
+The intended reader either:
+
+- already knows Z80 assembly and is learning ZAX, or
+- has completed the planned introductory "Learn Z80 Programming in ZAX" volume
+  and is ready for larger examples.
 
 ---
 
 ## Where to Start
 
-**New to Z80?** This course assumes Z80 knowledge. Read a Z80 primer first,
-then return to Chapter 00.
+**New to programming or new to Z80?** This is not the right first stop. The
+planned introductory volume will teach machine model, registers, flags, memory,
+stack, subroutines, and raw Z80 programming in ZAX from the beginning.
 
 **Know Z80 but new to ZAX?** Start at Chapter 00 for the design rationale,
 then Chapter 01 for the first working code. If you want to dive straight into
@@ -34,9 +44,9 @@ chapter prose first, then open the source files it references. The prose
 explains the algorithm, the data model, and the ZAX idioms in play; the source
 files show how that all looks in a complete, compilable program.
 
-The chapters introduce syntax as it becomes necessary. They do not survey the
-language top-to-bottom. Features earn their introduction by appearing in code
-that needs them.
+The chapters do not try to teach the Z80 from first principles. They assume the
+reader already understands the basics of machine-level programming. Features
+earn their introduction by appearing in code that needs them.
 
 ---
 
