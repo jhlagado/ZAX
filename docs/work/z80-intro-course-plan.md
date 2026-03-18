@@ -14,14 +14,26 @@ It is the first-stage course.
 
 The existing `docs/course/` material remains the second-stage algorithms volume.
 
+Planned output location:
+
+- `docs/intro/`
+
 ## Target reader
 
-The intended reader:
+Primary reader:
 
-- may be new to programming or only lightly experienced
-- does not assume prior Z80 knowledge
-- may have never used assembly language before
-- wants to understand how programs run at the machine level
+- the hobbyist / retro learner with limited prior low-level experience
+
+Secondary reader:
+
+- the determined absolute beginner
+
+The volume should therefore assume:
+
+- little or no Z80 knowledge
+- little or no assembly-language experience
+- some willingness to learn technical concepts progressively
+- interest in understanding how programs run at the machine level
 
 The course should therefore teach:
 
@@ -56,6 +68,8 @@ By the end of Volume 1, the reader should be able to:
   - `:=`
   - `if`
   - `while`
+  - `break` / `continue`
+  - `succ` / `pred`
   - functions
   - `op`
 
@@ -104,6 +118,8 @@ This is the current planning shape, not final prose:
 - sentinel loops
 - hand-written branch loops
 - then structured `while` / `repeat`
+- later in the chapter: `break` / `continue` as structured relief from manual
+  branch scaffolding
 
 ### 06 — Memory layout and simple data
 
@@ -130,14 +146,20 @@ This is the current planning shape, not final prose:
 
 - typed storage
 - `:=`
+- `succ` / `pred`
 - functions with locals/parameters
 - `if`, `while`
+- `break` / `continue` revisited in the structured surface
+- `op` as the next step after repeated raw instruction sequences
 - why these are better than handwritten offsets and labels
 
-### 10 — Transition to larger examples
+### 10 — Bridge to the algorithms volume
 
-- small integrative examples
-- explicit handoff to the algorithms volume
+- one or two integrative programs larger than the earlier teaching fragments
+- explicit comparison between the raw-first style from early chapters and the
+  structured ZAX style the reader can now use
+- direct handoff to `docs/course/README.md`
+- clear statement of what Volume 2 assumes and why the reader is now ready for it
 
 ## Example style
 
@@ -173,7 +195,6 @@ Volume 2 should be referenced explicitly as:
 ## Immediate next actions
 
 1. Review and settle the chapter skeleton.
-2. Decide whether to write the beginner volume under a new docs location or as
-   a new subtree alongside `docs/course/`.
+2. Create the output subtree under `docs/intro/`.
 3. Choose the first tranche of beginner examples.
 4. Audit the current language surface for any raw-first teaching blockers.
