@@ -29,7 +29,7 @@ end
 ; Inputs:  B = first byte, C = second byte
 ; Outputs: A = B + C
 ; Preserves: BC, DE, HL
-func add_bytes(): void
+func add_bytes(): AF
   ld a, b                        ; A = B
   add a, c                       ; A = B + C  (flags set by add)
   ret
@@ -38,18 +38,18 @@ end
 ; max_word: return the larger of two 16-bit values.
 ; Inputs:  HL = first value, DE = second value
 ; Outputs: HL = the larger of HL and DE
-; Preserves: BC, DE, AF on entry are not preserved (A used internally)
-; Note: DE unchanged only if HL was already >= DE.
-func max_word(): void
-  push de                        ; save DE — we compare against it and want
-                                 ; the caller to see the original values
+; Preserves: BC; DE restored to caller's value; AF clobbered
+func max_word(): HL
+  push de                        ; save DE — we need the original value if DE wins
   ; Compare HL with DE: subtract DE from HL using 16-bit arithmetic.
-  ; SBC HL,DE sets the sign flag if HL < DE.
+  ; SBC HL,DE sets the carry flag if HL < DE (unsigned borrow).
   or a                           ; clear carry before SBC
-  sbc hl, de                     ; HL - DE; S set if result is negative (HL < DE)
+  sbc hl, de                     ; HL = HL - DE; carry set if HL < DE (unsigned)
   pop de                         ; restore DE to original value
-  jr nc, max_is_hl               ; if no borrow (HL >= DE), HL is already larger
-  ex de, hl                      ; HL was smaller; swap so HL = DE (the bigger one)
-max_is_hl:
-  ret                            ; HL = max(original HL, original DE)
+  jr c, max_is_de                ; if carry set, HL was smaller — DE is the max
+  add hl, de                     ; HL >= DE: restore HL to its original value
+  ret                            ; HL = original HL (the larger value)
+max_is_de:
+  ex de, hl                      ; HL < DE: put DE (the larger value) into HL
+  ret                            ; HL = original DE (the larger value)
 end

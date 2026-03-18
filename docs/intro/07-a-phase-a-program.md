@@ -48,6 +48,26 @@ program will process. The vars section at `$8020` holds the two result bytes.
 
 ---
 
+## The return clause and register survival
+
+In ZAX, the return clause on a `func` declaration controls which registers the
+compiler saves and restores. A `func name(): void` declaration causes ZAX to
+save AF, BC, DE, and HL on entry and restore them before `ret`. That means any
+value placed in A inside the function is wiped out by `pop AF` before the caller
+sees it.
+
+Subroutines that return a result in a register must declare that register in the
+return clause:
+
+- `func name(): AF` — A holds the result; AF is not saved/restored, so the
+  value in A survives to the caller.
+- `func name(): HL` — HL holds the result; HL is live on return.
+
+This is the Phase A idiom for register-passing subroutines. Both `find_max` and
+`count_above` return their result in A, so both are declared `func ...: AF`.
+
+---
+
 ## `main`: the calling sequence
 
 ```zax
@@ -83,7 +103,7 @@ to enforce or signal that.
 ## `find_max`: a simple counted loop with a conditional update
 
 ```zax
-func find_max(): void
+func find_max(): AF
   ld a, 0
 find_max_loop:
   ld c, (hl)
@@ -113,7 +133,7 @@ modified by the time the function returns.
 ## `count_above`: the cost of manual register discipline
 
 ```zax
-func count_above(): void
+func count_above(): AF
   push bc
   ld d, 0
   pop bc
@@ -236,9 +256,13 @@ programmer-managed label. The intent — "execute this block if no carry" — is
 visible in the source rather than embedded in the target name of a jump.
 
 **Structured `while`** replaces the loop-top label, the loop body, and the
-branch-back jump. `while NZ / ... / end` produces the same code as
-`loop_top: / ... / jr nz, loop_top`, without the programmer needing to name
-the top-of-loop label or ensure the branch targets it correctly.
+branch-back jump. `while NZ / ... / end` is a pre-tested loop: the flags are
+checked on entry and the body runs zero or more times depending on the condition.
+This is equivalent to the pattern with the branch at the top:
+`jp Z, exit / body / jp loop_top / exit:`. The `jr nz, loop_top` form placed
+at the bottom of a loop is a post-tested loop — the body always runs at least
+once — which is a different semantic. `while NZ` removes the need to name the
+top-of-loop label or manage the exit label by hand.
 
 None of these constructs hide the machine. They each lower to the same Z80
 instructions that Phase A programs use. The difference is that the structured

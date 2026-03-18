@@ -94,7 +94,7 @@ Example documentation pattern:
 ; Inputs:  B = first byte, C = second byte
 ; Outputs: A = B + C
 ; Preserves: BC, DE, HL
-func add_bytes(): void
+func add_bytes(): AF
   ld a, b
   add a, c
   ret
@@ -103,6 +103,33 @@ end
 
 The word `Preserves` means those registers hold the same values after the call
 that they held before. The caller can rely on them being intact.
+
+### The return clause tells ZAX which registers carry the result
+
+A `func` declaration ends with a return clause that names the register or
+registers that carry the result back to the caller. ZAX uses this to decide
+which registers to save and restore around the function frame:
+
+- **`func name(): void`** — no result; ZAX saves and restores AF, BC, DE, and
+  HL. Any value placed in A inside the function is destroyed by the `pop AF`
+  before `ret`.
+- **`func name(): AF`** — A (and flags) hold the result; ZAX does NOT save or
+  restore AF, so the value in A survives to the caller.
+- **`func name(): HL`** — HL holds the result; AF, BC, and DE are saved and
+  restored; HL is live on return.
+
+The Phase A idiom for a subroutine that returns a byte result in A is:
+
+```zax
+func my_sub(): AF
+  ; ... compute result in A ...
+  ret          ; A reaches the caller intact
+end
+```
+
+Declaring `: void` when the function leaves a meaningful value in A is a bug:
+the compiler's `pop AF` will overwrite A before returning, and the caller sees
+stale flag values rather than the computed result.
 
 ---
 
@@ -187,16 +214,18 @@ The program has a `main` function and two helper subroutines.
 **`add_bytes`: the simplest subroutine.**
 
 ```zax
-func add_bytes(): void
+func add_bytes(): AF
   ld a, b
   add a, c
   ret
 end
 ```
 
-`add_bytes` reads B and C, adds them, and leaves the result in A. It modifies
-only A, so it naturally preserves BC, DE, and HL. The caller (`main`) passes
-20 in B and 10 in C:
+`add_bytes` reads B and C, adds them, and leaves the result in A. The return
+clause `: AF` tells ZAX that A carries the result, so AF is not saved and
+restored — the computed sum in A reaches the caller intact. It modifies only A,
+so BC, DE, and HL are naturally preserved. The caller (`main`) passes 20 in B
+and 10 in C:
 
 ```zax
 ld b, $14
@@ -210,32 +239,45 @@ After the call, `result_add` holds 30 (`$1E`).
 **`max_word`: push/pop for preservation.**
 
 ```zax
-func max_word(): void
+func max_word(): HL
   push de
   or a
   sbc hl, de
   pop de
-  jr nc, max_is_hl
+  jr c, max_is_de
+  add hl, de
+  ret
+max_is_de:
   ex de, hl
-max_is_hl:
   ret
 end
 ```
 
 `max_word` receives two 16-bit values in HL and DE and returns the larger one in
-HL. Internally it uses `sbc hl, de` to compare them, which overwrites HL. The
-original DE value is needed after the subtraction (to put back into HL if DE
-was larger), so the function preserves it with `push de` at entry and `pop de`
-after the subtraction.
+HL. Because it returns a result in HL, its declaration is `func max_word(): HL`.
+ZAX saves and restores AF, BC, and DE, but leaves HL live for the caller.
+
+Internally the function uses `sbc hl, de` to compare HL with DE, which
+overwrites HL. The original DE value is needed after the subtraction (to put
+back into HL if DE was larger), so it is saved with `push de` at entry and
+restored with `pop de` immediately after the subtract.
 
 The `or a` before `sbc hl, de` clears the carry flag. `sbc hl, de` subtracts
-DE from HL including the carry bit, so carry must be clear for a pure
-subtraction.
+DE from HL including the carry bit, so carry must be clear before the
+instruction for a pure 16-bit subtraction.
 
-`jr nc, max_is_hl` tests the carry from the subtraction. If HL was greater than
-or equal to DE, carry is clear (no borrow), and HL is already the larger value.
-If HL was smaller, carry is set, and `ex de, hl` swaps DE (the original larger
-value, just restored by `pop de`) into HL.
+After `sbc hl, de`, the carry flag indicates the comparison result:
+
+- **Carry clear** — HL was greater than or equal to DE (no unsigned borrow).
+  HL now holds `original_HL - DE`, which is not the result we want. `add hl, de`
+  restores HL to its original value, and the function returns with that value.
+- **Carry set** — HL was less than DE (unsigned borrow occurred). DE is the
+  larger value. `ex de, hl` puts DE into HL and returns.
+
+The `or a / sbc hl, de / add hl, de` restore pattern is the standard way to do
+an unsigned 16-bit comparison in Z80 when you need the original HL after the
+test. `sbc hl, de` is destructive; `add hl, de` undoes the subtraction when the
+result was that HL was the larger value.
 
 The caller passes 80 (`$0050`) in HL and 200 (`$00C8`) in DE:
 
@@ -249,8 +291,9 @@ ld (result_max), hl
 After the call, `result_max` holds 200.
 
 **Stack balance in `max_word`.** The function has one `push de` and one `pop de`.
-The pop occurs before `jr nc, max_is_hl`, which means DE is restored regardless
-of which branch the conditional takes. The stack is clean for `ret` in all cases.
+The pop occurs before `jr c, max_is_de`, which means DE is restored regardless
+of which branch the conditional takes. The stack is clean for both `ret`
+paths.
 
 ---
 

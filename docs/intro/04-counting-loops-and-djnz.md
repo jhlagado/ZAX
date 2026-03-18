@@ -39,9 +39,9 @@ The Z80 has a single instruction that fuses those two operations.
 2. If B is now non-zero, jump to `label`.
 3. If B is now zero, fall through to the next instruction.
 
-The single instruction replaces `dec b / jp nz, label`. It is two bytes smaller
-than the `dec b / jr nz` form and one byte smaller than `dec b / jp nz`. On a
-tight Z80, that matters.
+The single instruction replaces `dec b / jp nz, label`. It is one byte smaller
+than the `dec b / jr nz` form (2 bytes vs 3) and two bytes smaller than
+`dec b / jp nz` (2 bytes vs 4). On a tight Z80, that matters.
 
 `djnz` is a relative jump, like `jr`. Its target must be within approximately
 128 bytes backward or 127 bytes forward. If the loop body is too long for that
@@ -187,6 +187,13 @@ section data rom at $8010
 end
 ```
 
+The `section data` declaration takes a user-chosen name. Earlier chapters used
+`vars` to indicate mutable RAM storage. Here, `rom` is a conventional name
+meaning the data lives in read-only or program memory. Neither `vars` nor `rom`
+is a ZAX keyword — the name is yours to choose. Pick a name that describes
+where the data lives on your target system (`vars`, `rom`, `heap`, and `bss` are
+all valid).
+
 The program runs three loop forms side by side over the same five-element table.
 
 **Part 1 — DJNZ counted loop.**
@@ -278,7 +285,8 @@ when to stop.
 
 - `djnz label` decrements B and jumps to `label` if B is non-zero; it falls
   through when B reaches zero.
-- `djnz` replaces `dec b / jp nz` in one instruction. Its reach is limited to
+- `djnz` replaces `dec b / jp nz` in one instruction and is smaller: 2 bytes
+  vs 3 for `dec b / jr nz`, or 4 for `dec b / jp nz`. Its reach is limited to
   roughly 128 bytes backward; use `dec b / jp nz` for longer loops.
 - A DJNZ loop has three parts: init (load B), body, and branch-back (djnz).
 - The zero-count hardware semantic: B = 0 before `djnz` gives 256 iterations,
