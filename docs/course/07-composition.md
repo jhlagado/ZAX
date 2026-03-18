@@ -132,10 +132,7 @@ end
 
 `word_stack.zax` loads the depth count into L with `ld l, a` — L is the index token for the `arr[L]` path expression — while DE carries the word value via `de := value_word`. `stack_slots[L] := de` then stores it cleanly. This is the established ZAX idiom for word-array access with an 8-bit index: index in L, value in DE.
 
-This is a real design choice, not an accident of the implementation. When writing
-operations over word arrays, DE holds the value and L holds the index, and HL is
-the working address register. `word_stack.zax` is short enough to read in its
-entirety — the full source is in `examples/course/unit7/word_stack.zax`.
+This is a real design choice, not an accident of the implementation. The programmer writes `ld l, a` to set the index, `de := value_word` to hold the value, and `stack_slots[L] := de` to store it — that is all that appears in the source. `word_stack.zax` is short enough to read in its entirety — the full source is in `examples/course/unit7/word_stack.zax`.
 
 ---
 

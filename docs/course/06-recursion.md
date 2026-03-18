@@ -210,8 +210,8 @@ See `examples/course/unit6/array_reverse_recursive.zax`.
 ## Examples in This Unit
 
 - `examples/course/unit6/hanoi.zax` — Towers of Hanoi move count, double recursion
-- `examples/course/unit6/array_sum_recursive.zax` — array sum by tail recursion
-  and accumulation on unwind
+- `examples/course/unit6/array_sum_recursive.zax` — array sum by linear recursion
+  with accumulation on unwind
 - `examples/course/unit6/array_reverse_recursive.zax` — in-place reversal by
   structural recursion on a shrinking index range
 
