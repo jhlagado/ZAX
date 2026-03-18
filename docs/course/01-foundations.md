@@ -173,12 +173,11 @@ must also re-establish the flags before control reaches the back edge:
 at the entry setup and at the back edge whenever the loop condition must be
 guaranteed.
 
-Unit 1 examples use `ld a, 1` / `or a` at the back edge only; they are designed
-for non-zero arguments where the calling context provides appropriate entry
-conditions. Unit 3 and later examples always establish flags explicitly before
-the first `while` — both the initial setup and the back-edge re-establishment
-appear together. The entry-flag rule applies equally to both: if Z=1 on entry to
-a `while NZ` loop, the body never executes regardless of what is inside it.
+All unit 1 examples establish flags explicitly before entry with `ld a, 1` /
+`or a`, and the same idiom re-establishes NZ at the back edge of each iteration.
+This is the consistent rule: every `while NZ` has explicit entry flag setup.
+If Z=1 on entry to a `while NZ` loop, the body never executes regardless of
+what is inside it.
 
 ---
 
@@ -366,10 +365,10 @@ See `examples/course/unit1/digits.zax`.
   a typed call.
 - `while NZ` is the basic loop form. Entry flags always matter: a stale Z=1
   on entry skips the loop body entirely before any `ret` inside it can execute.
-  The safe, explicit idiom is `ld a, 1` / `or a` before the `while`; unit 3 and
-  later always use it. Unit 1 examples omit it because they rely on the calling
-  context having left appropriate entry flags — that is not the same as saying
-  entry flags are irrelevant.
+  All unit 1 examples establish flags explicitly before the `while` with
+  `ld a, 1` / `or a`, and the same idiom re-establishes NZ at the back edge.
+  This is the consistent rule throughout: every `while NZ` has explicit entry
+  flag setup.
 - `succ` and `pred` are the idiomatic scalar increment and decrement operators.
   They appear wherever a loop counter or accumulator needs stepping.
 - Recursive functions look and work like non-recursive ones. The compiler
