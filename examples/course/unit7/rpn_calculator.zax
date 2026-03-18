@@ -1,7 +1,7 @@
 ; rpn_calculator.zax
 ;
 ; Source/problem: evaluate a small reverse-polish expression with a software stack.
-; Unit 6 example: explicit push/pop discipline over typed stack storage.
+; Unit 7 example: explicit push/pop discipline over typed stack storage.
 
 import "word_stack.zax"
 

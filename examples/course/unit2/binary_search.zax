@@ -1,7 +1,7 @@
 ; binary_search.zax
 ;
 ; Source/problem: binary search over a sorted byte array.
-; Unit 1 example: divide-and-conquer search on sorted storage.
+; Unit 2 example: divide-and-conquer search on sorted storage.
 
 const LastIndex = 7
 
