@@ -93,9 +93,10 @@ beginner-first introduction to Z80 programming in ZAX.
 
 ### `docs/intro/`
 
-Reserved for the planned beginner-facing "Learn Z80 Programming in ZAX" volume.
-That volume is not written yet; see `docs/work/z80-intro-course-plan.md` for the
-current planning brief.
+The planned beginner-facing "Learn Z80 Programming in ZAX" volume. Start at
+`docs/intro/README.md`. The prose course is not written yet; see
+`docs/work/z80-intro-course-plan.md` for the current planning brief and
+`docs/work/intro-authoring-plan.md` for the writer handoff.
 
 ## Current priority
 
