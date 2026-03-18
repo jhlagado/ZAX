@@ -22,6 +22,27 @@ instruction streams hiding behind a label convention. It sits in a specific and
 defensible position: a structured assembler, one level above raw assembly, with
 the machine model fully visible throughout.
 
+## What This Volume Is
+
+This volume is not a first introduction to programming, and it is not a first
+introduction to the Z80. It is the algorithms-and-data-structures volume of a
+larger teaching direction.
+
+That matters because the examples in this book assume the reader can already
+follow:
+
+- register-level data movement
+- flag-driven control flow
+- subroutine calls and returns
+- stack-frame concepts
+- the difference between code, data, ROM, RAM, and addresses
+
+If the reader does not yet have those foundations, the right course is a
+beginner-facing "Learn Z80 Programming in ZAX" volume that starts from machine
+model concepts and builds upward. That introductory volume is the missing first
+half of the teaching program. This book is the second half: what ZAX looks like
+when it is used to solve substantial problems.
+
 ## The Problem It Solves
 
 Z80 assembly is expressive. Every addressing mode, every flag condition, every
@@ -71,6 +92,13 @@ see both in almost every example in this course.
 This course is organised around algorithms, not features. Each chapter
 introduces ZAX constructs in the context of a real problem. Features earn their
 place by being needed.
+
+That is the right structure for a second-stage book. It is not the right
+structure for a beginner's first encounter with machine programming. A beginner
+volume would need chapters on the machine model itself — bytes, two's
+complement, registers, flags, memory maps, ports, branching, looping, and
+subroutines — before it reached this material. The existence of this book does
+not remove that need; it confirms it.
 
 The algorithm corpus is drawn from two foundational texts: Kernighan and
 Ritchie's _The C Programming Language_ and Niklaus Wirth's _Algorithms + Data
