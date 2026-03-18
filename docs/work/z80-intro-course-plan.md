@@ -48,6 +48,28 @@ The course should therefore teach:
 All draft prose for this volume must satisfy the stricter editorial criteria in
 `docs/work/course-writing-standard.md`.
 
+## Teaching principle
+
+The teaching arc for Volume 1 is now explicit:
+
+- start with the raw machine-facing subset of ZAX
+- teach labels, jumps, calls, constants, `db`, `dw`, and ordinary register use
+  before higher-level conveniences
+- introduce structured ZAX only after the reader has seen the bookkeeping cost
+  of the raw form
+- make each higher-level construct earn its place by solving a problem the
+  earlier raw technique created
+
+This means the course should not present structured forms as arbitrary syntax
+upgrades. It should present them as relief from specific sources of confusion or
+bookkeeping the reader has already experienced.
+
+The early chapters therefore need an explicit contract with the reader:
+
+- the book will first show the raw form
+- then show where it becomes awkward
+- then introduce the ZAX form that solves that awkwardness
+
 ## Teaching position
 
 The beginner volume should teach ZAX as the normal assembler surface, not as an
@@ -59,6 +81,9 @@ That means:
 - raw Z80 mnemonics are still taught directly
 - labels, low-level control flow, and raw data layout are still taught directly
 - but the notation, examples, and idioms should be written in ZAX
+- early chapters should stay deliberately close to conventional assembly style
+- later chapters should introduce ZAX structure as a justified improvement, not
+  as a replacement the reader must accept on faith
 
 ## Learning outcomes
 
@@ -118,15 +143,18 @@ This is the current planning shape, not final prose:
 - Z, C, NZ, NC
 - `cp`, `or a`, arithmetic-driven tests
 - labels and jump-based control flow first
+- confirm and demonstrate raw label targets with `jp`, `jr`, `djnz`, and `call`
 
 ### 05 — Loops
 
-- count-controlled loops
-- sentinel loops
-- hand-written branch loops
-- then structured `while` / `repeat`
-- later in the chapter: `break` / `continue` as structured relief from manual
-  branch scaffolding
+- count-controlled loops via `djnz` first
+- explain the `djnz` zero-count behaviour as a real hardware semantic
+- sentinel loops and hand-written branch loops
+- then structured `while` as the first high-level loop relief
+- `repeat ... until` only if the example corpus produces a clean must-run-once
+  case; otherwise leave it out of Book 1
+- `break` / `continue` as later structured relief from manual branch scaffolding
+- note that a structured `for` loop is deferred and does not exist yet
 
 ### 06 — Memory layout and simple data
 
@@ -154,11 +182,13 @@ This is the current planning shape, not final prose:
 - typed storage
 - `:=`
 - `succ` / `pred`
-- functions with locals/parameters
-- `if`, `while`
+- `if` and structured `while` as relief from jump-heavy control flow
+- functions with locals/parameters introduced late, after raw calling
+  conventions are already understood
 - `break` / `continue` revisited in the structured surface
 - `op` as the next step after repeated raw instruction sequences
-- why these are better than handwritten offsets and labels
+- why these are better than handwritten offsets, labels, and repeated load/store
+  bookkeeping
 
 ### 10 — Bridge to the algorithms volume
 
@@ -190,18 +220,42 @@ Volume 2 should be referenced explicitly as:
 - the algorithms-and-data-structures companion
 - the next stage after the machine-model foundations are in place
 
+## Planning consequences and language checks
+
+The following points are now explicitly part of the plan and must not be lost:
+
+1. Raw label/jump support must be confirmed before drafting the early chapters.
+   The course depends on clean support for user-defined labels with raw forms
+   such as `jp label`, `jr NZ, label`, `djnz label`, and `call label`. Any gap
+   here is a language or implementation issue, not a writing-time surprise.
+2. A text-level `include` facility is now a tracked candidate language feature
+   for Book 1. The existing module `import` system serves later, more structured
+   code well, but early chapters may need a simpler way to share constants or
+   raw definitions without introducing the module system too early.
+3. `repeat ... until` is not part of the core Book 1 promise. It appears only
+   if the example corpus produces a clean must-run-once case where it is clearly
+   better than `while`.
+4. A structured `for` loop remains deferred. Book 1 may mention the idea when
+   discussing `djnz` and counted loops, but must not present `for` as an
+   available language feature.
+
 ## Open planning questions
 
 1. How much raw data syntax (`db`, `dw`, `ds`) should be taught before typed
    storage becomes the default?
-2. How early should structured forms appear relative to label-based raw loops?
-3. Do any raw-first examples expose language rough edges that need design work?
+2. What is the cleanest early example set for raw labels, jumps, and `djnz`?
+3. Do the early-chapter teaching needs justify a text-level `include` feature,
+   or can the examples stay clean without it?
 4. Should the beginner volume be written as one book or split into smaller
    staged parts?
 
 ## Immediate next actions
 
-1. Review and settle the chapter skeleton.
-2. Create the output subtree under `docs/intro/`.
-3. Choose the first tranche of beginner examples.
-4. Audit the current language surface for any raw-first teaching blockers.
+1. Confirm raw label/jump support for `jp`, `jr`, `djnz`, and `call` with
+   user-defined labels.
+2. Review whether a text-level `include` feature is needed for the early
+   examples and record the answer in design work.
+3. Review and settle the chapter skeleton.
+4. Create the output subtree under `docs/intro/`.
+5. Choose the first tranche of beginner examples.
+6. Audit the current language surface for any other raw-first teaching blockers.
