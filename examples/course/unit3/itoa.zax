@@ -1,7 +1,7 @@
 ; itoa.zax
 ;
 ; Source/problem: convert a word value into decimal digits.
-; Unit 2 example: divide-by-10, reverse buffer, then forward copy.
+; Unit 3 example: divide-by-10, reverse buffer, then forward copy.
 
 section data vars at $8000
   reverse_digits: byte[6] = { 0, 0, 0, 0, 0, 0 }

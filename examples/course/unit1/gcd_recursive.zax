@@ -1,7 +1,7 @@
 ; gcd_recursive.zax
 ;
 ; Source/problem: Euclid's algorithm, recursive subtraction form.
-; Unit 0 foundations example: recursive Euclid subtraction.
+; Unit 1 foundations example: recursive Euclid subtraction.
 
 func gcd_recursive(left_input: word, right_input: word): HL
   var
