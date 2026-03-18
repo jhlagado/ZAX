@@ -22,7 +22,9 @@ Mandatory companion standard:
 
 - `docs/work/course-writing-standard.md`
 
-## Target reader
+---
+
+## Target Reader
 
 Primary reader:
 
@@ -34,7 +36,7 @@ Secondary reader:
 
 The volume should therefore assume:
 
-- little or no Z80 knowledge
+- little or no Z80 knowledge at the start
 - little or no assembly-language experience
 - some willingness to learn technical concepts progressively
 - interest in understanding how programs run at the machine level
@@ -43,165 +45,323 @@ The course should therefore teach:
 
 - machine model first
 - assembly reasoning second
-- structured ZAX power gradually
+- structured ZAX features gradually, and only after raw friction is felt
 
 All draft prose for this volume must satisfy the stricter editorial criteria in
 `docs/work/course-writing-standard.md`.
 
-## Teaching position
+---
 
-The beginner volume should teach ZAX as the normal assembler surface, not as an
-optional improvement layered on top of a different assembler the reader is
-expected to know already.
+## Teaching Principle
 
-That means:
+**First show the raw problem. Then show the ZAX relief. Never introduce
+abstraction before the reader can feel the need for it.**
 
-- raw Z80 mnemonics are still taught directly
-- labels, low-level control flow, and raw data layout are still taught directly
-- but the notation, examples, and idioms should be written in ZAX
+Every structured ZAX construct introduced in Phase B must be preceded — in
+Phase A — by a raw Z80 version of the same problem that makes the pain visible.
+The reader must arrive at Phase B already dissatisfied with what Phase A
+required. If the reader is not dissatisfied, the abstraction has not earned
+its place.
 
-## Learning outcomes
+This principle governs every chapter that introduces a structured construct.
+If a structured form cannot be justified by felt friction from a prior raw
+version, it is introduced too early.
+
+---
+
+## Learning Outcomes
 
 By the end of Volume 1, the reader should be able to:
 
 - explain bytes, words, addresses, ROM, RAM, and memory maps
 - explain two's complement and flag behaviour
 - use the Z80 register set and register pairs
-- write small loops, branches, and subroutines
+- write small loops, branches, and subroutines in raw Z80
 - understand stack use and call/return discipline
 - read and write small raw assembly routines in ZAX
-- understand why and when to use structured ZAX features such as:
-  - typed storage
-  - `:=`
-  - `if`
+- understand why and when to use structured ZAX features:
+  - typed storage and `:=`
+  - `if` / `else`
   - `while`
   - `break` / `continue`
   - `succ` / `pred`
-  - functions
+  - functions with arguments and locals
   - `op`
+- understand what module `import` is and why it is a Book 2 topic
 
 At that point the reader is ready for the algorithms volume.
 
-## Proposed chapter skeleton
+---
 
-This is the current planning shape, not final prose:
+## Two-Phase Structure
 
-### 00 — What a computer is doing
+Book 1 is organised in two phases inside a single volume.
 
+### Phase A — Raw-first Z80 in ZAX (chapters 00–07)
+
+Phase A programs are almost entirely raw Z80. ZAX is present as the assembler
+surface — the file structure, label scoping, constant definitions, the `call`
+and `ret` forms — but the program content is Z80 mnemonics: `ld`, jumps,
+arithmetic operations, flag tests, stack manipulation, and DJNZ.
+
+Phase A teaches:
+
+- bytes, words, registers, flags, and the memory map
+- labels and EQU-style constants
+- raw Z80 instructions: `ld`, `add`, `sub`, `and`, `or`, `cp`, `xor`,
+  `bit`, `res`, `set`, `rl`, `rr`, `sla`, `sra`
+- conditional and unconditional jumps: `jp`, `jr`, `djnz`, flag conditions
+- the hardware stack: `push`, `pop`, stack discipline
+- `call`, `ret`, `ret cc` and raw subroutine structure
+- DJNZ as the counting-loop primitive in Book 1
+- simple data tables: `db`, `dw`, indexed access via HL and IX
+- flag discipline: Z, C, S, P/V — how to read them and use them
+
+The reader is writing Z80 programs that live in ZAX files. The ZAX module
+shell is present but almost invisible. By chapter 07 the reader has written
+real programs; they have also accumulated enough raw friction to want relief.
+
+### Phase B — Structured ZAX as improvement (chapters 08–10)
+
+Phase B introduces the ZAX structured surface. Each construct is introduced
+after Phase A has produced a version of the same problem that is visibly
+awkward. The reader should already want what Phase B provides.
+
+Phase B introduces:
+
+- typed locals and local variable declarations
+- function arguments in the ZAX style
+- typed storage and `:=` as the assignment surface
+- `succ` / `pred` for typed scalar update
+- `if` / `else` replacing manual flag-test-and-jump sequences
+- `while` replacing manual loop-label structures
+- `break` / `continue` for loop escape and continuation
+- `op` as a lightweight named-operation construct
+
+Phase B does not hide the machine. Every construct maps to Z80 output the
+reader can inspect. The structured layer is a readability and maintainability
+improvement, not an opaque abstraction.
+
+---
+
+## Deferred to Phase B or Book 2
+
+The following constructs must not appear in Phase A chapters. This table is
+the hard boundary. Its purpose is to prevent scope creep and to give the
+author a clear line.
+
+| Construct | Deferred to | Note |
+|---|---|---|
+| typed locals and local variable declarations | Phase B | |
+| function arguments (ZAX style) | Phase B | |
+| typed storage and `:=` | Phase B | |
+| structured control flow (`if`, `while`) | Phase B | |
+| `succ` / `pred` | Phase B | |
+| `break` / `continue` | Phase B | introduce after `while` |
+| `op` | Phase B or Book 2 | depending on depth needed |
+| module `import` system | Book 2 | |
+| `for` loop | Book 2 or later | see note below |
+| `repeat...until` | Phase B or Book 2 | see note below |
+| text-level `include` | pending design | see open questions |
+
+### Note on `for`
+
+`for` is deferred. DJNZ is the counting-loop primitive in Book 1. Phase A
+teaches DJNZ as the canonical bounded-iteration form for Z80 programs. Phase B
+teaches `while` with explicit termination as the structured replacement where
+needed. The `for` construct will come later, when the language has it and the
+reader has enough `while` experience to appreciate the narrower form. Do not
+present `for` as part of the current teaching surface.
+
+### Note on `repeat...until`
+
+`repeat...until` is in the language and is not being removed. It should not,
+however, be placed in the core Phase A or Phase B loop plan. Introduce it in
+Book 1 only if a later chapter produces a genuinely clear natural example
+where it is better than a `while` with a leading flag test. If no such example
+appears organically, leave `repeat...until` for Book 2. Do not force an
+example to justify early introduction.
+
+---
+
+## Chapter Skeleton
+
+The chapter list below maps the Phase A / Phase B split explicitly. Chapter
+numbers and topics are the current plan; titles are working titles.
+
+### Phase A — Raw Z80 in ZAX (chapters 00–07)
+
+**Chapter 00 — What a Computer Is Doing**
 - machine code vs assembly language
-- bytes and words
-- memory as addressed storage
-- code vs data
+- bytes and words; memory as addressed storage
+- code vs data; ROM vs RAM
+- what ZAX is and what it adds to raw assembly
+- a first minimal ZAX file: the module shell around a bare entry point
 
-### 01 — Numbers and two's complement
+**Chapter 01 — Numbers and the Z80 Register Set**
+- unsigned vs signed interpretation; binary and hexadecimal
+- two's complement; overflow intuition
+- the Z80 registers: A, B, C, D, E, H, L, and the register pairs
+- HL as the common working pair; IX, IY, SP, PC at a conceptual level
+- why flags matter; Z, C, S, P/V in the flag register
 
-- unsigned vs signed interpretation
-- binary and hexadecimal
-- overflow intuition
-- why flags matter
+**Chapter 02 — Loading, Storing, and Simple Constants**
+- raw `ld` in all its addressing modes
+- labels as named addresses and named storage
+- EQU-style constants and hardware address names
+- first small data-moving programs written in ZAX
 
-### 02 — The Z80 register set
+**Chapter 03 — Flags, Comparisons, and Jumps**
+- `cp`, `or a`, and arithmetic-driven flag tests
+- `jp`, `jr`, and conditional jump forms
+- structured thinking with labels: entry, test, body, exit
+- example: a decision-loop using raw flag tests and explicit jumps
 
-- A, general registers, register pairs
-- HL as the common working pair
-- SP, PC, IX, IY at a conceptual level
+**Chapter 04 — Counting Loops and DJNZ**
+- DJNZ as the counting-loop primitive for Book 1
+- loop structure with explicit labels: init, body, branch-back
+- sentinel loops and flag-exit loops
+- raw `while`-equivalent patterns using labels and jumps
+- example: counted iteration and sentinel iteration side by side
 
-### 03 — Loading, storing, and moving data
+**Chapter 05 — Data Tables and Indexed Access**
+- `db`, `dw` and in-ROM data tables
+- HL-based and IX-based indexed access
+- reading a table entry in a loop
+- example: a table-lookup program using raw indexed addressing
 
-- raw `ld`
-- labels and named storage
-- simple constants
-- first small data-moving programs
+**Chapter 06 — Stack and Subroutines**
+- `call`, `ret`, `ret cc`: mechanics of subroutine calls
+- passing values through registers: the Z80 calling convention
+- the hardware stack: `push`, `pop`, stack depth discipline
+- saving and restoring registers around calls
+- example: a small program with helper subroutines using raw `call`/`ret`
 
-### 04 — Flags, comparisons, and branches
+**Chapter 07 — A Phase A Program**
+- a complete program using only Phase A constructs
+- explicit label structure, DJNZ loops, raw calls, flag-conditional jumps
+- reading and understanding the Z80 output
+- honest review: where the raw approach is direct and where it is
+  laborious
+- the laborious parts are left as deliberate entry points for Phase B
 
-- Z, C, NZ, NC
-- `cp`, `or a`, arithmetic-driven tests
-- labels and jump-based control flow first
+---
 
-### 05 — Loops
+### Phase B — Structured ZAX (chapters 08–10)
 
-- count-controlled loops
-- sentinel loops
-- hand-written branch loops
-- then structured `while` / `repeat`
-- later in the chapter: `break` / `continue` as structured relief from manual
-  branch scaffolding
+**Chapter 08 — Typed Storage and Assignment**
+- what typed storage is and why Phase A programs avoided it
+- local variable declarations and `:=` as the assignment surface
+- `succ` / `pred` as language-level scalar update
+- why `:=` is not just `ld`: what the type system checks
+- rewriting a Phase A example with typed storage: what improves, what
+  costs more, what stays the same
 
-### 06 — Memory layout and simple data
+**Chapter 09 — Structured Control Flow**
+- `if` / `else` as a replacement for flag-test-and-jump sequences
+- `while` as a replacement for manual loop-label structures
+- `break` and `continue` for loop escape and continuation
+- comparing the Phase A and Phase B versions of the same loop side by
+  side
+- example: a Phase A program rewritten using `if` and `while`
 
-- `db`, `dw`, simple tables
-- strings as bytes
-- ROM constants vs RAM variables
-- first clear bridge into typed storage
+**Chapter 10 — Subroutines, Arguments, and `op`**
+- function arguments in the ZAX style: named parameters, passing discipline
+- `op` as a named-operation construct: lightweight, close to assembly
+- when to use `op` and when to use a full function declaration
+- a Phase B program that integrates typed storage, structured control flow,
+  and named subroutines
+- honest assessment: what ZAX costs vs raw assembly and what it buys
 
-### 07 — Stack and subroutines
+---
 
-- `call`, `ret`, stack growth
-- saving registers
-- simple reusable routines
-- first function-shaped ZAX code
+## Relationship to Volume 2 (Algorithms Course)
 
-### 08 — Ports, I/O, and restart conventions
+Volume 2 (`docs/course/README.md`, grounded by
+`docs/design/zax-algorithms-course.md`) assumes the reader can write ZAX
+programs at the Phase B level. It does not re-teach ZAX syntax or Z80
+mechanics. It uses the full structured surface immediately — typed storage,
+`:=`, `if`, `while`, `break`, `continue`, `succ`/`pred` — as a given.
 
-- ports
-- `in` / `out`
-- ROM entry points
-- restart instructions
+Book 1 is the prerequisite for Volume 2. A reader who has completed Book 1
+through Chapter 10 should be able to open any Volume 2 example and follow it
+without encountering unfamiliar ZAX constructs.
 
-### 09 — Structured ZAX as relief from bookkeeping
+The module `import` system appears in some Volume 2 examples (for example, the
+RPN calculator's `word_stack` module). Book 1 prepares the reader for `import`
+by naming it and explaining that it is a separate concept from text-level
+inclusion, then deferring its full treatment.
 
-- typed storage
-- `:=`
-- `succ` / `pred`
-- functions with locals/parameters
-- `if`, `while`
-- `break` / `continue` revisited in the structured surface
-- `op` as the next step after repeated raw instruction sequences
-- why these are better than handwritten offsets and labels
+---
 
-### 10 — Bridge to the algorithms volume
+## Example Style Guidance
 
-- one or two integrative programs larger than the earlier teaching fragments
-- explicit comparison between the raw-first style from early chapters and the
-  structured ZAX style the reader can now use
-- direct handoff to `docs/course/README.md`
-- clear statement of what Volume 2 assumes and why the reader is now ready for it
+Book 1 examples should:
 
-## Example style
+- be complete programs that compile and produce inspectable Z80 output
+- target a concrete, familiar Z80 context so that hardware constants and
+  entry points are real, not placeholder pseudocode
+- be shorter than Volume 2 examples — concept scaffolding, not maximal
+  density
+- in Phase A: look like real Z80 programs that happen to live in a ZAX file
+- in Phase B: look like ZAX programs that happen to run on a Z80
 
-The beginner volume should use:
+Phase A examples should use raw mnemonics throughout. Phase B examples should
+show the structured forms and include explicit comparison with their Phase A
+counterparts where this illuminates the improvement.
 
-- smaller examples than the algorithms volume
-- more single-purpose programs
-- more direct hardware and machine-model exposition
-- fewer large algorithm jumps early on
+---
 
-The goal is concept scaffolding, not maximal density.
+## Open Planning Questions
 
-## Relationship to Volume 2
+The following questions are open. They should not block authoring but must be
+settled before the relevant chapters are finalised.
 
-After Volume 1, the reader should be ready for:
+**1. Target hardware platform**
 
-- `docs/course/README.md`
+Should Book 1 target a specific Z80 platform (ZX Spectrum ROM monitor, RC2014,
+CP/M)? A concrete platform makes hardware constants and entry points real and
+testable. A platform should be chosen and held to throughout the volume.
+Decision needed before Chapter 00 is drafted.
 
-Volume 2 should be referenced explicitly as:
+**2. Compiler output format**
 
-- the algorithms-and-data-structures companion
-- the next stage after the machine-model foundations are in place
+Phase A examples should produce inspectable Z80 output. The author needs to
+know what format Book 1 targets (raw binary, Intel HEX, listing file). This
+affects how example programs are presented and verified.
 
-## Open planning questions
+**3. Text-level `include` directive**
 
-1. How much raw data syntax (`db`, `dw`, `ds`) should be taught before typed
-   storage becomes the default?
-2. How early should structured forms appear relative to label-based raw loops?
-3. Do any raw-first examples expose language rough edges that need design work?
-4. Should the beginner volume be written as one book or split into smaller
-   staged parts?
+A text-level source inclusion mechanism — `include "filename.zax"` or
+`#include "filename.zax"` — is a design candidate. See
+`docs/design/text-include.md` for the full design note.
 
-## Immediate next actions
+Early Phase A chapters want to share hardware constants, ROM entry-point
+labels, and simple definitions across multiple example files without
+introducing the module `import` system. If `include` is available, a common
+hardware definitions file can serve all Phase A examples cleanly. If it is
+not available, each example must repeat its definitions or use a workaround.
 
-1. Review and settle the chapter skeleton.
-2. Create the output subtree under `docs/intro/`.
-3. Choose the first tranche of beginner examples.
-4. Audit the current language surface for any raw-first teaching blockers.
+Record this now. Do not block authoring on it. If early chapter drafts expose
+genuine friction from repeated constant definitions, that is the signal to
+prioritise the implementation decision. This is a design candidate, not a
+committed feature.
+
+**4. Phase A / Phase B balance**
+
+The current split puts eight chapters in Phase A and three in Phase B. Review
+this balance after Chapter 07 is drafted to confirm that Phase B is not
+rushed and that each Phase B construct has a clear Phase A predecessor to
+justify it.
+
+**5. How much raw data syntax before typed storage becomes the default?**
+
+The transition point between raw `db`/`dw` and typed storage is a teaching
+decision. Phase A establishes raw data layout; Phase B introduces typed
+storage. The author should flag examples where the boundary feels unnatural.
+
+**6. Glossary and reference appendix**
+
+Book 1 may need a Z80 register/flag reference and a ZAX syntax summary as
+appendices. These are production decisions. Flag for the editor when chapter
+drafts reach review.
