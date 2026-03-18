@@ -83,6 +83,42 @@ baseline. This matters for tone:
 
 That is the best compromise between accessibility and momentum.
 
+## Teaching arc for Volume 1
+
+The beginner-facing volume should now be planned around a deliberate two-phase
+arc:
+
+### Phase A — raw-first Z80 programming in ZAX
+
+Start with the machine-facing subset of the language:
+
+- raw mnemonics
+- constants
+- labels
+- raw jumps and calls
+- `db`, `dw`, and simple data layout
+- loops built from branch instructions and hardware primitives such as `djnz`
+
+The student needs to feel the bookkeeping cost of these raw forms before the
+structured ZAX features can make persuasive sense.
+
+### Phase B — structured ZAX as justified relief
+
+Only after the reader has written and followed raw control flow should the book
+introduce:
+
+- `if` as relief from label-heavy conditional blocks
+- `while` as relief from manual loop heads and back-edges
+- typed storage and `:=` as relief from handwritten offset bookkeeping
+- `succ` / `pred` as relief from scalar update shuttling
+- locals, parameters, and `op` after the raw calling and repetition model are
+  already understood
+
+The key rule is simple:
+
+- do not introduce an abstraction before the reader can feel the problem it is
+  solving
+
 ## Core decision
 
 The teaching program should now be split into two volumes:
@@ -107,7 +143,8 @@ It should teach:
 - stack, calls, returns, and subroutines
 - ports, I/O, and restart instructions
 - raw data and simple low-level layout
-- then, gradually, the structured power of ZAX
+- then, only after the raw forms have been used enough to feel awkward, the
+  structured power of ZAX
 
 ZAX should be presented here as the **correct assembler surface** for learning
 and writing this style of code, not as an advanced alternative layered on top of
@@ -158,6 +195,26 @@ The current course should be explicitly repositioned as:
 This preserves the value of the existing work while making room for the correct
 beginner-facing teaching path.
 
+## Specific planning consequences
+
+Several concrete consequences follow from this teaching direction:
+
+1. Raw label and jump support is a hard prerequisite for Book 1. The early
+   chapters need clean support for user-defined labels with forms such as `jp`,
+   `jr`, `djnz`, and `call`.
+2. `djnz` should be treated as the natural counted-loop entry point. Its real
+   zero-count hardware behaviour is a teaching advantage, and it helps justify
+   why any future structured `for` loop must have different zero-trip semantics.
+3. `repeat ... until` is not automatically part of the Book 1 surface. It
+   should only appear if the example corpus produces a clear must-run-once case
+   where it is better than `while`.
+4. A structured `for` loop remains deferred. The beginner volume may mention the
+   idea, but must not present it as an implemented surface.
+5. A text-level `include` is now a tracked candidate language addition for the
+   beginner course. It serves a different teaching purpose from the existing
+   module `import` system and may be needed for early constant and definition
+   sharing.
+
 ## Implications for the language
 
 This direction does **not** automatically imply new language features.
@@ -171,6 +228,8 @@ Most likely:
 
 - yes, mostly
 - but it may expose rough edges in the raw-first teaching path
+- one concrete candidate already identified is a text-level `include` facility
+  for early-book constant and definition sharing
 
 So the right sequence is:
 
