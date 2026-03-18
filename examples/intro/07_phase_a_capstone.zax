@@ -30,8 +30,6 @@ export func main(): void
   ld c, 64                       ; threshold
   call count_above               ; A = 3  (91, 67, 88 are all > 64)
   ld (above_64), a               ; store the count
-
-  ret
 end
 
 ; find_max: scan a byte table and return the largest value.
@@ -48,7 +46,6 @@ find_max_loop:
 find_max_no_update:
   inc hl                         ; advance to next entry
   djnz find_max_loop             ; B--; loop while B != 0
-  ret                            ; A = maximum value
 end
 
 ; count_above: count table entries strictly greater than a threshold byte.
@@ -78,5 +75,4 @@ count_above_skip:
   inc hl
   djnz count_above_loop
   ld a, d                        ; A = final count
-  ret
 end

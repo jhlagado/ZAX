@@ -42,8 +42,6 @@ export func main(): void
   count_above_f values, TableLen, 64
   ld a, l                          ; byte result is in L (H = 0)
   ld (cnt_val), a
-
-  ret
 end
 
 ; find_max_f: return the maximum byte in a table.

@@ -29,8 +29,6 @@ export func main(): void
   ld c, 64
   call count_above_cf
   ld (above_64), a
-
-  ret
 end
 
 ; find_max_cf: scan a byte table and return the maximum byte value.
@@ -64,7 +62,6 @@ func find_max_cf(): AF
   end
 
   a := running_max
-  ret
 end
 
 ; count_above_cf: count table entries strictly greater than a threshold.
@@ -98,5 +95,4 @@ func count_above_cf(): AF
   end
 
   a := cnt
-  ret
 end

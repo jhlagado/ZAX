@@ -103,6 +103,12 @@ ret
 For a void function that preserves BC, DE, HL, and AF, the epilogue also emits
 the register restore sequence before the final `ret`.
 
+**A ZAX `func` does not need a final `ret`.** The compiler emits the epilogue
+and `ret` automatically when it reaches `end`. Use `ret` inside a `func` only
+for early exits — places in the body where you want to return before `end` is
+reached. Conditional returns (`ret cc`) are also early exits and remain valid
+wherever they are needed.
+
 That is six instructions of overhead — three prologue, three epilogue — plus
 the register save/restore pushes. A raw `call` and `ret` are two instructions
 total with no frame at all.
@@ -303,6 +309,10 @@ Each generation removes one source of bookkeeping:
 - Chapter 08 → Chapter 09: label scaffolding replaced by `if`/`while`.
 - Chapter 09 → Chapter 10: register-passing conventions replaced by typed parameters.
 
+Across all Phase B chapters, the compiler also handles frame setup, frame
+teardown, register preservation, and the final `ret` at `end`. A ZAX `func`
+never needs a trailing `ret` — that bookkeeping is automatic.
+
 The Z80 machine model has not changed. Registers, flags, the stack, and indexed
 addressing are all still present in Chapter 10's programs. What has changed is
 how much of the bookkeeping the compiler manages.
@@ -319,6 +329,9 @@ how much of the bookkeeping the compiler manages.
 - The function frame costs a three-instruction prologue and a three-instruction
   epilogue plus register saves/restores. A frameless function (no params, no
   locals) has none of this overhead.
+- The compiler emits the epilogue and `ret` automatically at `end`. A ZAX
+  `func` does not need a trailing `ret`. Use `ret` only for early exits inside
+  the function body.
 - The return clause controls which registers carry results and which the compiler
   saves/restores. Declaring `: void` when the function leaves a result in A
   causes the epilogue to overwrite it before the caller sees it.
