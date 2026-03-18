@@ -1,7 +1,7 @@
 ; str_reverse.zax
 ;
 ; Source/problem: reverse a zero-terminated string in place.
-; Unit 2 example: inward-moving left/right pointers.
+; Unit 3 example: inward-moving left/right pointers.
 
 section data vars at $8000
   text_value: byte[9] = { 'A', 'L', 'G', 'O', 'R', 'I', 'T', 'H', 0 }

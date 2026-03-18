@@ -1,7 +1,7 @@
 ; power.zax
 ;
 ; Source/problem: SICP-style repeated multiplication baseline for integer power.
-; Unit 0 foundations example: naive integer power by repeated multiplication.
+; Unit 1 foundations example: naive integer power by repeated multiplication.
 
 func mul_u16(lhs: word, rhs: word): HL
   var

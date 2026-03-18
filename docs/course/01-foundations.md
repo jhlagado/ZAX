@@ -77,7 +77,7 @@ the same function body, and they sit next to each other naturally:
     end
 ```
 
-(From `examples/course/unit1/exp_squaring.zax`, lines 56–62.)
+(From `examples/course/unit1/exp_squaring.zax`, lines 60–66.)
 
 The raw `ld a, l` and `and 1` test the low bit of a 16-bit value. That is
 pure Z80 work. The `:=` assignments on either side are typed storage transfers.
@@ -146,7 +146,7 @@ the correct flags with a Z80 instruction immediately before the condition:
     end
 ```
 
-(From `examples/course/unit1/gcd_iterative.zax`, lines 18–24.)
+(From `examples/course/unit1/gcd_iterative.zax`, lines 20–26.)
 
 The `or l` instruction sets Z if HL is zero. The `if Z` block then handles the
 base case. This is the standard Z80 null-check pattern: OR H with L, or OR A
@@ -173,12 +173,11 @@ must also re-establish the flags before control reaches the back edge:
 at the entry setup and at the back edge whenever the loop condition must be
 guaranteed.
 
-Unit 1 examples use `ld a, 1` / `or a` at the back edge only; they are designed
-for non-zero arguments where the calling context provides appropriate entry
-conditions. Unit 3 and later examples always establish flags explicitly before
-the first `while` — both the initial setup and the back-edge re-establishment
-appear together. The entry-flag rule applies equally to both: if Z=1 on entry to
-a `while NZ` loop, the body never executes regardless of what is inside it.
+All unit 1 examples establish entry flags with `ld a, 1` / `or a` before the
+first `while NZ`, and the same idiom re-establishes NZ at the back edge. There
+is no unit 1 / unit 3+ distinction on this point: every `while NZ` loop in the
+unit 1 corpus uses the explicit entry-setup idiom. If Z=1 on entry to a
+`while NZ` loop, the body never executes regardless of what is inside it.
 
 ---
 
@@ -211,7 +210,7 @@ counting and iteration.
 `power.zax` builds integer power by repeated multiplication of `base`, using
 a helper function `mul_u16` to multiply two `word` values by repeated addition.
 Both functions share the same loop structure: a `while NZ` loop that counts
-down a `remaining` local, returning early when the count reaches zero.
+down a countdown local, returning early when the count reaches zero.
 
 The `pred` built-in decrements `remaining` at the bottom of each iteration.
 This is the first example of a common unit 1 pattern: a counting loop with an
@@ -250,7 +249,7 @@ for the three cases (right is zero, values are equal, one is larger):
     end
 ```
 
-(From `examples/course/unit1/gcd_iterative.zax`, lines 26–43.)
+(From `examples/course/unit1/gcd_iterative.zax`, lines 28–45.)
 
 `xor a` clears the carry before `sbc hl, de`, so the subtraction result is
 exact (no borrow from a prior carry). After the subtraction, C is set if
@@ -284,7 +283,7 @@ from the sum of the current pair, then the pair advances one position:
     succ index_value
 ```
 
-(From `examples/course/unit1/fibonacci.zax`, lines 24–32.)
+(From `examples/course/unit1/fibonacci.zax`, lines 26–34.)
 
 The `add hl, de` computes the next Fibonacci number. The two `:=` assignments
 advance the rolling state. `succ index_value` steps the counter. The loop
@@ -331,7 +330,7 @@ halve the exponent:
     remaining := hl
 ```
 
-(From `examples/course/unit1/exp_squaring.zax`, lines 56–72.)
+(From `examples/course/unit1/exp_squaring.zax`, lines 60–74.)
 
 The 16-bit right shift uses `srl h` / `rr l`: shift H right with zero fill,
 rotate L right through carry (which carries the bit from H). This is the
@@ -366,10 +365,10 @@ See `examples/course/unit1/digits.zax`.
   a typed call.
 - `while NZ` is the basic loop form. Entry flags always matter: a stale Z=1
   on entry skips the loop body entirely before any `ret` inside it can execute.
-  The safe, explicit idiom is `ld a, 1` / `or a` before the `while`; unit 3 and
-  later always use it. Unit 1 examples omit it because they rely on the calling
-  context having left appropriate entry flags — that is not the same as saying
-  entry flags are irrelevant.
+  All unit 1 examples establish entry flags with `ld a, 1` / `or a` before the
+  first `while NZ`, and the same idiom re-establishes NZ at the back edge. This
+  is the consistent rule throughout the corpus — there is no special-casing by
+  unit.
 - `succ` and `pred` are the idiomatic scalar increment and decrement operators.
   They appear wherever a loop counter or accumulator needs stepping.
 - Recursive functions look and work like non-recursive ones. The compiler

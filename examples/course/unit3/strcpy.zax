@@ -1,7 +1,7 @@
 ; strcpy.zax
 ;
 ; Source/problem: copy a zero-terminated string byte by byte.
-; Unit 2 example: walk source and destination pointers together.
+; Unit 3 example: walk source and destination pointers together.
 
 op copy_and_advance(src_ptr: HL, dst_ptr: DE)
   ld a, (hl)

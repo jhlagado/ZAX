@@ -1,7 +1,7 @@
 ; strcmp.zax
 ;
 ; Source/problem: lexicographic comparison of two zero-terminated strings.
-; Unit 2 example: dual-pointer scan with byte comparison.
+; Unit 3 example: dual-pointer scan with byte comparison.
 
 section data vars at $8000
   left_text: byte[6] = { 'A', 'L', 'P', 'H', 'A', 0 }
