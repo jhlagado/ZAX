@@ -1,7 +1,7 @@
 ; ring_buffer.zax
 ;
 ; Source/problem: fixed-capacity ring buffer over exact-size records.
-; Unit 4 example: record layout plus non-power-of-two indexed access.
+; Unit 5 example: record layout plus non-power-of-two indexed access.
 
 const Capacity = 5
 

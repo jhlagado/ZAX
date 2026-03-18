@@ -1,7 +1,7 @@
 ; bst.zax
 ;
 ; Source/problem: search a binary search tree using addr-linked records.
-; Unit 7 example: recursive traversal using direct typed reinterpretation from
+; Unit 8 example: recursive traversal using direct typed reinterpretation from
 ; an addr parameter.
 
 type TreeNode

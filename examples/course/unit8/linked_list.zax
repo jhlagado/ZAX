@@ -1,7 +1,7 @@
 ; linked_list.zax
 ;
 ; Source/problem: traverse and sum a singly-linked list.
-; Unit 7 example: addr-linked traversal using direct typed reinterpretation from
+; Unit 8 example: addr-linked traversal using direct typed reinterpretation from
 ; an addr local.
 
 type ListNode

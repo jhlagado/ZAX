@@ -1,7 +1,7 @@
 ; bubble_sort.zax
 ;
 ; Source/problem: bubble sort over a small byte array.
-; Unit 1 example: repeated adjacent swaps through shrinking passes.
+; Unit 2 example: repeated adjacent swaps through shrinking passes.
 
 const ItemCount = 8
 const LastIndex = 7
