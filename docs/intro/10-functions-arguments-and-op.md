@@ -278,8 +278,9 @@ caller holds. Decrementing `len` each iteration is valid; the caller's value is
 already on the stack and this function's frame slot is a copy.
 
 The `op load_and_or` appears at both the loop entry and the back edge. This is
-intentional: the while condition is re-tested at the back edge using the same
-flag state, so the same setup must be correct at both points.
+intentional: the while condition is re-tested at the back edge (as established
+in Chapter 09) using the same flag state, so the same setup must be correct at
+both points.
 
 Notice that the call passes `B`, not `len`. This is required: `op` parameters
 typed `reg8` accept only physical register names at the call site. The frame

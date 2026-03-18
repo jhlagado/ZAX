@@ -50,21 +50,10 @@ program will process. The vars section at `$8020` holds the two result bytes.
 
 ## The return clause and register survival
 
-In ZAX, the return clause on a `func` declaration controls which registers the
-compiler saves and restores. A `func name(): void` declaration causes ZAX to
-save AF, BC, DE, and HL on entry and restore them before `ret`. That means any
-value placed in A inside the function is wiped out by `pop AF` before the caller
-sees it.
-
-Subroutines that return a result in a register must declare that register in the
-return clause:
-
-- `func name(): AF` — A holds the result; AF is not saved/restored, so the
-  value in A survives to the caller.
-- `func name(): HL` — HL holds the result; HL is live on return.
-
-This is the Phase A idiom for register-passing subroutines. Both `find_max` and
-`count_above` return their result in A, so both are declared `func ...: AF`.
+Chapter 06 established that the return clause on a `func` declaration controls
+which registers the compiler saves and restores. Both `find_max` and
+`count_above` return their result in A, so both are declared `func ...: AF` —
+which tells ZAX not to save and restore AF, leaving A intact for the caller.
 
 ---
 
