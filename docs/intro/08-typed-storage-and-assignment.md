@@ -278,6 +278,17 @@ Notice what remains unchanged between Phase A and Phase B:
 Phase B adds names and types to persistent values. It does not change how
 arithmetic and pointer manipulation are expressed.
 
+**Raw Z80 instructions accept typed local names directly.** In the Phase B
+version, `cp running_max` uses the typed local name as an operand to a raw Z80
+instruction — not a `:=` assignment. This is valid: the ZAX compiler recognises
+typed local names in raw instruction operand positions and lowers them to the
+correct `(IX±d)` addressing form automatically. Writing `cp running_max` emits
+`cp (ix-N)` where N is the frame offset of `running_max`. The name refers to
+the same frame slot as it does in `:=` — but the access form here is an
+instruction operand, not a typed assignment. This is different from writing
+`a := running_max` (which generates a register load sequence) but refers to the
+same underlying storage.
+
 ---
 
 ## What This Chapter Teaches

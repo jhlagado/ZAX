@@ -44,16 +44,24 @@ they have:
 func find_max_f(tbl: addr, len: byte): HL
 ```
 
-`tbl: addr` and `len: byte` are the parameters. When the caller writes:
+`tbl: addr` and `len: byte` are the parameters. A function call is a standalone
+statement — the function name appears alone on the line with its arguments:
 
 ```zax
-a := find_max_f values, TableLen
+find_max_f values, TableLen
+ld a, l          ; byte result is in L after the call (H = 0 by convention)
 ```
 
-the compiler emits the pushes for `values` (the address of the table) and
+The compiler emits the pushes for `values` (the address of the table) and
 `TableLen` (the count), the `call`, and the stack cleanup after return. The
 caller does not load HL or B. The compiler matches the arguments to the
-parameters, checks types, and generates the call sequence.
+parameters, checks types, and generates the call sequence. The result is read
+from the return register — L for a byte result from a `: HL` function — in the
+next instruction.
+
+There is no `a := func_name args` syntax in ZAX. A call cannot appear on the
+right-hand side of a `:=` assignment. Write the call as a standalone statement,
+then read from the return register explicitly.
 
 Inside the function, parameters are accessed by name using `:=`, just like
 typed locals:
@@ -115,20 +123,33 @@ directly.
 The return clause on a function declaration controls which registers carry the
 result and which registers the compiler saves and restores around the frame.
 
-| Declaration | What caller receives | What compiler preserves |
-|-------------|----------------------|-------------------------|
-| `func f(): void` | nothing | AF, BC, DE, HL all saved/restored |
-| `func f(): AF` | A (and flags) | BC, DE, HL saved/restored; AF is not |
-| `func f(): HL` | HL (16-bit) | AF, BC, DE saved/restored; HL is not |
+| Declaration | Meaning | What compiler preserves |
+|-------------|---------|-------------------------|
+| `func f(): void` | no return value | AF, BC, DE, HL all saved/restored |
+| `func f(): AF` | Phase A idiom: AF not saved/restored, A survives if left there | BC, DE, HL saved/restored; AF is not |
+| `func f(): HL` | typed byte/word return in HL (byte in L, H = 0) | AF, BC, DE saved/restored; HL is not |
+
+**Important distinction — Phase A vs Phase B return patterns:**
+
+`: AF` does **not** deliver A through the typed call mechanism. What it does is
+remove AF from the compiler's save/restore set: the epilogue does not emit
+`pop AF`, so whatever value A held at function exit reaches the caller through
+raw register survival. This is the **Phase A idiom** from Chapter 06 — the
+caller and callee agree by convention that A carries the result, and the
+declaration `: AF` tells the compiler not to clobber it.
+
+`: HL` is the **Phase B pattern** for typed returns. The compiler treats HL as
+the return channel: byte values go in L (with H set to zero), word values fill
+all of HL. The caller reads the result from L (for bytes) or HL (for words)
+after the call returns.
+
+`find_max_f` and `count_above_f` use `: HL`. They place their byte result in L
+(with H = 0) just before returning. The caller retrieves it with `ld a, l`
+after the standalone call statement.
 
 Declaring `: void` when the function places a meaningful value in A is a bug.
 The compiler's `pop AF` in the epilogue overwrites A before the caller sees it.
 Chapter 06 established this rule; it applies to all three Phase B chapters.
-
-`find_max_f` and `count_above_f` in the example are declared `: HL`. They return
-their byte result in the low byte of HL (H is set to zero). The caller reads it
-with `a := find_max_f ...` — the `:=` on the return path extracts the result
-from HL into A at the call site.
 
 ---
 
@@ -160,8 +181,23 @@ The example file uses `load_and_or` to name the repeated "copy register into A
 and OR to establish flags" pattern that appears before every `while NZ` loop and
 at every back edge. In Phase A, that pattern was copied by hand in every place
 it appeared. With the `op`, it appears once in the declaration and once at each
-invocation. The reader sees `load_and_or len` and knows immediately what
+invocation. The reader sees `load_and_or B` and knows immediately what
 instruction pair will appear there.
+
+**`reg8` parameters accept only physical register names.** At the call site, a
+`reg8` parameter must be passed as one of the seven physical registers: `A`,
+`B`, `C`, `D`, `E`, `H`, or `L`. A frame-slot name like `len` or a local like
+`count` is not a valid `reg8` operand. The reason is structural: an `op` has no
+frame of its own, so it cannot emit IX-relative loads inside the expanded body.
+The compiler substitutes the register token directly into the body instruction
+— `ld a, B` — and that substitution only makes sense if the operand is a
+register. If the value you want to pass lives in a frame slot, load it into a
+register first and pass that register:
+
+```zax
+b := len       ; load frame slot into B
+load_and_or B  ; now B is a physical register token — valid reg8 operand
+```
 
 ---
 
@@ -199,15 +235,19 @@ The example file contains `main`, `find_max_f`, `count_above_f`, and the op
 The `main` function now calls with argument expressions:
 
 ```zax
-a := find_max_f values, TableLen
+find_max_f values, TableLen
+ld a, l                    ; byte result is in L (H = 0)
 ld (max_val), a
 
-a := count_above_f values, TableLen, 64
+count_above_f values, TableLen, 64
+ld a, l                    ; byte result is in L (H = 0)
 ld (cnt_val), a
 ```
 
 No register pre-loading. No `ld hl, values / ld b, TableLen` before each call.
 The caller names the arguments in the call; the compiler emits the pushes.
+After the call returns, the caller reads the result from L (since both functions
+are declared `: HL` and return a byte value in L with H set to zero).
 
 Inside `find_max_f`, the parameter `tbl` is loaded into HL to walk the table,
 and `ptr` is a typed local that persists the current pointer across loop
@@ -217,7 +257,8 @@ iterations:
 hl := tbl
 ptr := hl
 
-load_and_or len
+b := len           ; load frame slot into B — op reg8 params require a physical register
+load_and_or B      ; establish flags from B before while
 while NZ
   hl := ptr
   ld a, (hl)
@@ -227,7 +268,7 @@ while NZ
   b := len
   dec b
   len := b
-  load_and_or len
+  load_and_or B    ; B still holds the decremented value; re-establish flags
 end
 ```
 
@@ -239,6 +280,12 @@ already on the stack and this function's frame slot is a copy.
 The `op load_and_or` appears at both the loop entry and the back edge. This is
 intentional: the while condition is re-tested at the back edge using the same
 flag state, so the same setup must be correct at both points.
+
+Notice that the call passes `B`, not `len`. This is required: `op` parameters
+typed `reg8` accept only physical register names at the call site. The frame
+slot `len` is not a register token — the compiler cannot substitute it into the
+`ld a, src` body of the op. Load the frame slot into a register first, then
+pass the register to the op.
 
 ---
 

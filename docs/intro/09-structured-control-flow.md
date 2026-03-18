@@ -270,6 +270,20 @@ already handles the branch-back. `djnz` was the Phase A idiom for "decrement B
 and loop." With `while`, the explicit loop structure is already present; `dec b`
 alone is enough.
 
+**Flag behavior: `djnz` vs `dec b`.** `djnz` does not affect the Z flag — it
+uses its own internal decrement-and-branch without touching the flag register.
+`dec b`, by contrast, does set the Z flag (as well as S, H, and P/V). When
+using `dec b` to drive a `while NZ` loop, the `dec b / ld a, b / or a`
+back-edge sequence is needed because `or a` re-establishes the Z flag from the
+current value of A (which was just loaded from B). This extra step is required
+because `dec b` alone sets Z correctly, but the back-edge test in the `while`
+loop reads the flags at the `end` line, and any instruction between `dec b` and
+`end` may have changed them. The `ld a, b / or a` sequence ensures the final
+flag state before the back-edge test reflects B's value, not whatever a previous
+instruction left in the flags. Phase A-aware readers will notice that `djnz`
+cannot be directly replaced by `dec b / jr nz` in a `while` loop without this
+extra flag-establishment step.
+
 **`count_above` — Phase A:**
 
 ```zax
