@@ -1,4 +1,4 @@
-# Chapter 10 — Functions, Arguments, and `op`
+# Chapter 11 — Functions, Arguments, and `op`
 
 This chapter introduces typed function parameters, typed return values, and the
 `op` construct. After reading it you will be able to write a ZAX `func` with
@@ -233,7 +233,7 @@ generates the save/restore sequence.
 
 ---
 
-## The example: `examples/intro/10_functions_and_op.zax`
+## The example: `examples/intro/11_functions_and_op.zax`
 
 The example file contains `main`, `find_max_f`, `count_above_f`, and the op
 `load_and_or`. It produces the same results as all previous capstone versions.
@@ -285,7 +285,7 @@ already on the stack and this function's frame slot is a copy.
 
 The `op load_and_or` appears at both the loop entry and the back edge. This is
 intentional: the while condition is re-tested at the back edge (as established
-in Chapter 09) using the same flag state, so the same setup must be correct at
+in Chapter 10) using the same flag state, so the same setup must be correct at
 both points.
 
 Notice that the call passes `B`, not `len`. This is required: `op` parameters
@@ -299,22 +299,22 @@ pass the register to the op.
 ## Comparing the three generations
 
 `06_subroutines.zax` — raw Phase A with register conventions in comments.
-`07_phase_a_capstone.zax` — raw Phase A with DJNZ, push/pop, double-cp.
-`09_structured_control.zax` — Phase B locals + structured control, still registers for arguments.
-`10_functions_and_op.zax` — full Phase B: typed parameters, typed return, op, structured control.
+`08_phase_a_capstone.zax` — raw Phase A with DJNZ, push/pop, double-cp.
+`10_structured_control.zax` — Phase B locals + structured control, still registers for arguments.
+`11_functions_and_op.zax` — full Phase B: typed parameters, typed return, op, structured control.
 
 Each generation removes one source of bookkeeping:
 
-- Phase A → Chapter 08: registers-as-variables replaced by typed locals.
-- Chapter 08 → Chapter 09: label scaffolding replaced by `if`/`while`.
-- Chapter 09 → Chapter 10: register-passing conventions replaced by typed parameters.
+- Phase A → Chapter 09: registers-as-variables replaced by typed locals.
+- Chapter 09 → Chapter 10: label scaffolding replaced by `if`/`while`.
+- Chapter 10 → Chapter 11: register-passing conventions replaced by typed parameters.
 
 Across all Phase B chapters, the compiler also handles frame setup, frame
 teardown, register preservation, and the final `ret` at `end`. A ZAX `func`
 never needs a trailing `ret` — that bookkeeping is automatic.
 
 The Z80 machine model has not changed. Registers, flags, the stack, and indexed
-addressing are all still present in Chapter 10's programs. What has changed is
+addressing are all still present in Chapter 11's programs. What has changed is
 how much of the bookkeeping the compiler manages.
 
 ---
@@ -384,7 +384,7 @@ Volume 2 covers the constructs and patterns needed for larger programs:
   linked-list and tree traversal using `addr` locals
 - **`select`/`case`** — dispatch on a value, the ZAX alternative to jump tables
 
-A reader who has finished Volume 1 through Chapter 10 can open any Volume 2
+A reader who has finished Volume 1 through Chapter 11 can open any Volume 2
 example file and follow it without encountering unfamiliar ZAX syntax. The
 structures will be new; the language surface will not.
 

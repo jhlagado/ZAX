@@ -238,7 +238,11 @@ numbers and topics are the current plan; titles are working titles.
 - saving and restoring registers around calls
 - example: a small program with helper subroutines using raw `call`/`ret`
 
-**Chapter 07 — A Phase A Program**
+**Chapter 07 — I/O and Ports**
+
+Covers the Z80 I/O address space, `in` and `out` instructions, immediate and register-addressed port forms, and abstract port numbers.
+
+**Chapter 08 — A Phase A Program**
 - a complete program using only Phase A constructs
 - explicit label structure, DJNZ loops, raw calls, flag-conditional jumps
 - reading and understanding the Z80 output
@@ -250,7 +254,7 @@ numbers and topics are the current plan; titles are working titles.
 
 ### Phase B — Structured ZAX (chapters 08–10)
 
-**Chapter 08 — Typed Storage and Assignment**
+**Chapter 09 — Typed Storage and Assignment**
 - what typed storage is and why Phase A programs avoided it
 - local variable declarations and `:=` as the assignment surface
 - `succ` / `pred` as language-level scalar update
@@ -258,7 +262,7 @@ numbers and topics are the current plan; titles are working titles.
 - rewriting a Phase A example with typed storage: what improves, what
   costs more, what stays the same
 
-**Chapter 09 — Structured Control Flow**
+**Chapter 10 — Structured Control Flow**
 - `if` / `else` as a replacement for flag-test-and-jump sequences
 - `while` as a replacement for manual loop-label structures
 - `break` and `continue` for loop escape and continuation
@@ -266,7 +270,7 @@ numbers and topics are the current plan; titles are working titles.
   side
 - example: a Phase A program rewritten using `if` and `while`
 
-**Chapter 10 — Subroutines, Arguments, and `op`**
+**Chapter 11 — Subroutines, Arguments, and `op`**
 - function arguments in the ZAX style: named parameters, passing discipline
 - `op` as a named-operation construct: lightweight, close to assembly
 - when to use `op` and when to use a full function declaration
@@ -285,7 +289,7 @@ mechanics. It uses the full structured surface immediately — typed storage,
 `:=`, `if`, `while`, `break`, `continue`, `succ`/`pred` — as a given.
 
 Book 1 is the prerequisite for Volume 2. A reader who has completed Book 1
-through Chapter 10 should be able to open any Volume 2 example and follow it
+through Chapter 11 should be able to open any Volume 2 example and follow it
 without encountering unfamiliar ZAX constructs.
 
 The module `import` system appears in some Volume 2 examples (for example, the

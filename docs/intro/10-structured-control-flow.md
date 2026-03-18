@@ -1,4 +1,4 @@
-# Chapter 09 — Structured Control Flow
+# Chapter 10 — Structured Control Flow
 
 This chapter introduces `if`/`else`, `while`, `break`, and `continue`. After
 reading it you will be able to replace raw flag-test-and-jump sequences with
@@ -11,7 +11,7 @@ Prerequisites: Chapters 00–08 (all Phase A constructs, typed locals, `:=`).
 
 ## The cost that Phase B is removing
 
-Chapter 07 identified two specific costs of the raw approach.
+Chapter 08 identified two specific costs of the raw approach.
 
 The first: label scaffolding. Every branch in Phase A requires at least one
 label. `find_max` needed `find_max_loop:` and `find_max_no_update:`. `count_above`
@@ -276,8 +276,8 @@ from the case labels.
 
 ## Phase A vs Phase B: the same two loops
 
-The example file `examples/intro/09_structured_control.zax` rewrites
-`find_max` and `count_above` from Chapter 07 using `while` and `if`. Here are
+The example file `examples/intro/10_structured_control.zax` rewrites
+`find_max` and `count_above` from Chapter 08 using `while` and `if`. Here are
 the two versions side by side.
 
 **`find_max` — Phase A:**
@@ -407,10 +407,10 @@ count it." The skip label is gone.
 
 ---
 
-## The example: `examples/intro/09_structured_control.zax`
+## The example: `examples/intro/10_structured_control.zax`
 
 The example file contains `main`, `find_max_cf`, and `count_above_cf`. It uses
-the same table and produces the same results as `07_phase_a_capstone.zax`:
+the same table and produces the same results as `08_phase_a_capstone.zax`:
 maximum = 91, above-64 count = 3. The only difference is in how the subroutine
 bodies are written.
 
@@ -451,7 +451,7 @@ carries it.
 
 ## What Comes Next
 
-Chapter 10 introduces function arguments in the ZAX style and the `op`
+Chapter 11 introduces function arguments in the ZAX style and the `op`
 construct. The reader will see how typed parameters remove the register-passing
 conventions that Phase A programs document in comments, and how `op` provides
 a lightweight named-operation form that expands inline without a function frame.
