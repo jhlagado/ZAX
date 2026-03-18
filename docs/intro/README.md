@@ -57,14 +57,18 @@ Only later chapters introduce the higher-level ZAX surface:
 
 ## Before drafting begins
 
-The following must be settled or confirmed before Phase A chapter drafting opens:
+The following have now been settled or confirmed for the first tranche:
 
-- target hardware platform for the beginner examples
-- smoke-test confirmation that raw user-defined labels work cleanly with:
+- Phase A uses a generic / abstract Z80 target rather than a machine-specific
+  ROM environment
+- raw user-defined labels work cleanly with:
   - `jp`
   - `jr`
   - `djnz`
   - `call`
+
+Still open for later review:
+
 - whether a text-level `include` feature is needed for early example sharing
 
 ## Relationship to Volume 2

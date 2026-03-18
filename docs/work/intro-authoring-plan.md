@@ -98,12 +98,19 @@ Before Chapters `03` and `04` are drafted, these must be true:
    - `jr`
    - `djnz`
    - `call`
-2. the target hardware platform for Phase A examples is chosen
+2. the target hardware platform decision is recorded
 
-Before cross-file early examples are drafted, this must be settled:
+Current recorded decision:
 
-3. whether a text-level `include` feature is required, or whether the examples
-   can stay clean without it
+- Phase A uses a generic / abstract Z80 target rather than a machine-specific
+  ROM or monitor environment
+- examples demonstrate results through register state, memory state, and
+  generated output
+
+Before cross-file early examples are drafted, this may need review:
+
+3. whether a text-level `include` feature is actually needed, or whether the
+   examples stay clean without it on the generic platform plan
 
 ## Writer contract per chapter
 
