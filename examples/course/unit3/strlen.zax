@@ -1,7 +1,7 @@
 ; strlen.zax
 ;
 ; Source/problem: count bytes until a zero terminator.
-; Unit 2 example: the basic HL pointer-advance idiom.
+; Unit 3 example: the basic HL pointer-advance idiom.
 
 section data vars at $8000
   sample_text: byte[6] = { 'H', 'E', 'L', 'L', 'O', 0 }

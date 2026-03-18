@@ -1,7 +1,7 @@
 ; digits.zax
 ;
 ; Source/problem: decimal digit counting by repeated division.
-; Unit 0 foundations example: count decimal digits by repeated division.
+; Unit 1 foundations example: count decimal digits by repeated division.
 
 func div_u16(dividend: word, divisor: word): HL
   var

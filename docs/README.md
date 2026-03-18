@@ -74,7 +74,7 @@ Recently completed design records now live under:
 ## Rules
 
 - Do not add new top-level files under `docs/` except `docs/README.md`.
-- Every new document must live under exactly one of: `spec`, `design`, `reference`, `work`, `archive`.
+- Every new document must live under exactly one of: `spec`, `design`, `reference`, `work`, `archive`, `course`.
 - `spec/` is authoritative.
 - `design/` is for active proposals, decisions, and near-term design sequencing.
 - `reference/` is for current supporting material.
