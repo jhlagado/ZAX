@@ -11,6 +11,8 @@ func div_u16(dividend: word, divisor: word): HL
 
   remainder := dividend
 
+  ld a, 1
+  or a
   while NZ
     hl := remainder
     de := divisor
@@ -49,6 +51,8 @@ func sqrt_newton(value: word): HL
 
   guess := hl
 
+  ld a, 1
+  or a
   while NZ
     hl := remaining_iters
     ld a, h
