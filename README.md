@@ -131,7 +131,9 @@ zax [options] <entry.zax>
 | ------------------------------------------------ | ---------------------------------------------------------------- |
 | `docs/reference/ZAX-quick-guide.md`              | Practical quick-start — recommended first read after this README |
 | `docs/spec/zax-spec.md`                          | Normative language specification                                 |
-| `docs/course/README.md`                          | Algorithms volume — substantial ZAX programs and data structures |
+| `docs/intro/README.md`                           | Planned beginner-first volume — learn Z80 programming in ZAX |
+| `docs/work/intro-authoring-plan.md`              | Writer brief for the beginner-first volume |
+| `docs/course/README.md`                          | Advanced practical-programming volume — substantial ZAX programs and data structures |
 | `docs/work/z80-intro-course-plan.md`             | Planning brief for the beginner-facing "Learn Z80 Programming in ZAX" volume (`docs/intro/`) |
 | `docs/reference/testing-verification-guide.md`   | Testing and verification flow                                    |
 | `docs/reference/zax-dev-playbook.md`             | Contributor workflow and review hygiene                          |
