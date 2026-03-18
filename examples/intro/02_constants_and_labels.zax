@@ -24,6 +24,4 @@ export func main(): void
   ld scratch, hl                 ; scratch = $1234  (bare name: write typed word)
 
   ld hl, scratch                 ; HL = $1234  (bare name: read typed word)
-
-  ret
 end

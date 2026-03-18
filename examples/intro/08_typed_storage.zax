@@ -30,8 +30,6 @@ export func main(): void
   ld c, 64
   call count_above_b
   ld (above_64), a
-
-  ret
 end
 
 ; find_max_b: scan a byte table and return the maximum value.
@@ -57,7 +55,6 @@ find_max_no_update:
   djnz find_max_loop
 
   a := running_max             ; load result into A for the caller
-  ret
 end
 
 ; count_above_b: count table entries strictly greater than a threshold.
@@ -84,5 +81,4 @@ count_above_skip:
   djnz count_above_loop
 
   a := cnt                     ; load final count into A for the caller
-  ret
 end

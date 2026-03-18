@@ -97,7 +97,6 @@ Example documentation pattern:
 func add_bytes(): AF
   ld a, b
   add a, c
-  ret
 end
 ```
 
@@ -118,18 +117,30 @@ which registers to save and restore around the function frame:
 - **`func name(): HL`** — HL holds the result; AF, BC, and DE are saved and
   restored; HL is live on return.
 
-The Phase A idiom for a subroutine that returns a byte result in A is:
+### ZAX `func` blocks emit `ret` automatically
+
+A ZAX `func` block does **not** require a final `ret`. When control reaches
+`end`, the compiler emits the frame epilogue and `ret` automatically. Only use
+`ret` inside a `func` for **early exits** — places in the function body where
+you want to return before reaching `end`.
 
 ```zax
 func my_sub(): AF
   ; ... compute result in A ...
-  ret          ; A reaches the caller intact
+  ; No explicit ret needed: ZAX emits ret at end.
 end
 ```
 
+This is different from raw labeled subroutines (Phase A code reached by `call
+label` but not wrapped in a ZAX `func`). Raw subroutines are plain Z80 — the
+assembler does not insert any epilogue — so they **do** require an explicit
+`ret`. Chapter 07 shows several Phase A subroutines that must keep their `ret`.
+In Phase B (Chapters 08–10), you write ZAX `func` blocks exclusively, and the
+compiler handles the return for you.
+
 Declaring `: void` when the function leaves a meaningful value in A is a bug:
-the compiler's `pop AF` will overwrite A before returning, and the caller sees
-stale flag values rather than the computed result.
+the compiler's `pop AF` in the epilogue will overwrite A before returning, and
+the caller sees stale flag values rather than the computed result.
 
 ---
 
@@ -149,15 +160,14 @@ internally. The pattern:
 func example(): void
   push bc          ; save caller's BC on entry
   ; ... use BC for internal work ...
-  pop bc           ; restore caller's BC before ret
-  ret
+  pop bc           ; restore caller's BC before returning
 end
 ```
 
 The critical rule: every `push` in a subroutine must have exactly one matching
-`pop` before `ret`. If a subroutine pushes twice and pops once, the stack has
-an extra word on it when `ret` runs. `ret` will then read that extra word as the
-return address and jump to garbage.
+`pop` before the function returns. If a subroutine pushes twice and pops once,
+the stack has an extra word on it when `ret` runs. `ret` will then read that
+extra word as the return address and jump to garbage.
 
 Stack depth discipline: count your pushes and pops. They must be balanced.
 
@@ -174,14 +184,17 @@ This is useful for early-exit patterns:
 ```zax
 func check_nonzero(): void
   or a          ; test A for zero
-  ret z         ; return early if A is zero
+  ret z         ; early exit: return immediately if A is zero
   ; ... rest of the function runs only when A != 0 ...
-  ret
+  ; No explicit ret needed at the end: ZAX emits it automatically.
 end
 ```
 
+`ret z` here is an **early exit** — it returns before `end` is reached.
+ZAX still emits the epilogue and final `ret` at `end` for the normal path.
+
 When using `ret cc`, the stack must be balanced at the conditional return point
-just as it must be at the final `ret`. If the function pushed a register before
+just as it must be at the final return. If the function pushed a register before
 the test, it must pop before `ret z` as well.
 
 ---
@@ -246,10 +259,9 @@ func max_word(): HL
   pop de
   jr c, max_is_de
   add hl, de
-  ret
+  ret                ; early exit: HL holds the original HL (the larger value)
 max_is_de:
-  ex de, hl
-  ret
+  ex de, hl          ; HL < DE: put DE (the larger value) into HL
 end
 ```
 
@@ -307,12 +319,16 @@ paths.
   16-bit word, BC and DE for secondary values. Document which registers carry
   inputs and which carry outputs.
 - `push rr` saves a register pair; `pop rr` restores it. Every push must have
-  a matching pop before `ret`.
+  a matching pop before the function returns.
 - Unbalanced push/pop causes `ret` to jump to garbage, because the wrong bytes
   are at the top of the stack when `ret` reads the return address.
 - `ret cc` returns conditionally; the stack must be balanced at that point too.
 - Subroutines can call other subroutines. Each call pushes a return address;
   each ret pops one. The stack depth grows with each nested call.
+- A ZAX `func` block emits the epilogue and `ret` automatically at `end`. A
+  trailing `ret` is not needed. Use `ret` inside a `func` only for early exits.
+  Raw labeled subroutines (Phase A code reached by `call label` outside a ZAX
+  `func`) are plain Z80 and do require an explicit `ret`.
 
 ## What Comes Next
 

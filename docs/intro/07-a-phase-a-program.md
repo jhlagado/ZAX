@@ -71,8 +71,6 @@ export func main(): void
   ld c, 64
   call count_above
   ld (above_64), a
-
-  ret
 end
 ```
 
@@ -102,7 +100,6 @@ find_max_loop:
 find_max_no_update:
   inc hl
   djnz find_max_loop
-  ret
 end
 ```
 
@@ -137,7 +134,6 @@ count_above_skip:
   inc hl
   djnz count_above_loop
   ld a, d
-  ret
 end
 ```
 

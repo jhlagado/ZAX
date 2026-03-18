@@ -63,6 +63,4 @@ no_new_max:
   ld (rec1_id), a                ; rec1_id = $02
   ld a, (ix+2)                   ; A = lo field  (offset 2)
   ld (rec1_lo), a                ; rec1_lo = $B0
-
-  ret
 end
