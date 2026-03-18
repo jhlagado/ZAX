@@ -103,6 +103,8 @@ requires flags to be correct at the point of the `while` keyword and again at
 the back edge after each iteration. `until` requires flags to be correct at the
 `until` keyword, using whatever state the loop body left behind.
 
+For the formal semantics of `repeat`/`until`, see `docs/spec/zax-spec.md`.
+
 ---
 
 ## `break` and `continue`
@@ -234,7 +236,7 @@ scan loop once it has passed the last valid index:
   end
 ```
 
-(From `examples/course/unit2/selection_sort.zax`, lines 53–82, condensed.)
+(From `examples/course/unit2/selection_sort.zax`, lines 54–82, condensed.)
 
 The condition `if NC` / `if NZ` tests for `current_index > last_index`: `cp b`
 sets NC when A >= B, and the nested `if NZ` excludes the equal case. When
@@ -346,7 +348,7 @@ the outer loop swaps the minimum into position if it is not already there:
     succ outer_index
 ```
 
-(From `examples/course/unit2/selection_sort.zax`, lines 103–115.)
+(From `examples/course/unit2/selection_sort.zax`, lines 104–115.)
 
 The `if NZ` skips the swap when the minimum is already at `outer_index` (no
 work needed). This is a common ZAX idiom: compare, then conditionally call a
