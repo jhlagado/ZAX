@@ -1,7 +1,7 @@
 ; bit_reverse.zax
 ;
 ; Source/problem: reverse the bit order of one byte.
-; Unit 3 example: a local op for the append-low-bit idiom.
+; Unit 4 example: a local op for the append-low-bit idiom.
 
 op append_low_bit(reversed_reg: A, source_reg: B)
   add a, a

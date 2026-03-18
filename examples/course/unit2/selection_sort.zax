@@ -1,7 +1,7 @@
 ; selection_sort.zax
 ;
 ; Source/problem: selection sort over a small byte array.
-; Unit 1 example: select the minimum remaining element each pass.
+; Unit 2 example: select the minimum remaining element each pass.
 
 const ItemCount = 8
 const LastIndex = 7

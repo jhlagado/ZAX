@@ -1,7 +1,7 @@
 ; getbits.zax
 ;
 ; Source/problem: extract a bit-field from one byte.
-; Unit 3 example: shift down, then rebuild the requested width.
+; Unit 4 example: shift down, then rebuild the requested width.
 
 export func getbits_demo(): HL
   var

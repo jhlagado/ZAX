@@ -1,7 +1,7 @@
 ; array_sum_recursive.zax
 ;
 ; Source/problem: recursive sum of a byte array.
-; Unit 5 example: recurse on the tail and add the current element on unwind.
+; Unit 6 example: recurse on the tail and add the current element on unwind.
 
 const ItemCount = 6
 

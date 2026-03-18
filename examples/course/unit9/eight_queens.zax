@@ -1,7 +1,7 @@
 ; eight_queens.zax
 ;
 ; Source/problem: first-solution search for the eight queens puzzle.
-; Unit 8 example: recursive backtracking with an explicit found flag to simulate named exit.
+; Unit 9 example: recursive backtracking with an explicit found flag to simulate named exit.
 
 const BoardSize = 8
 const LastRow = 7
