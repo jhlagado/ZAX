@@ -1,5 +1,9 @@
 # ZAX Algorithms Course — Outline, Goals, and Design Rationale
 
+Status note: this document now describes the algorithms/data-structures course
+as the second-stage volume in a broader ZAX teaching program. It is not the
+beginner-first introduction to Z80 programming.
+
 _Status: active — execution document_
 _Audience: course author, contributors_
 
@@ -21,6 +25,10 @@ This is a **language design feedback instrument** as much as it is a course.
 The algorithm examples should be treated as probes. Each algorithm that resists
 clean ZAX expression is a signal: either the language is missing a construct,
 or a current construct has the wrong shape.
+
+This document should now be read as the rationale for the **algorithms volume**
+of the teaching program — the part that assumes the reader already knows the
+basic Z80 machine model and is ready to study larger programs in ZAX.
 
 ---
 
@@ -63,6 +71,18 @@ The course is not organized around ZAX features. It is organized around
 **problems**. Feature coverage emerges from the demands of the algorithms.
 This prevents the course from becoming a reference manual in disguise, and
 ensures that each feature is introduced in a context where it earns its place.
+
+### 2.4 Relationship to the planned introductory volume
+
+The broader teaching direction now has two distinct targets:
+
+- a beginner-facing "Learn Z80 Programming in ZAX" volume
+- this algorithms-and-data-structures volume
+
+The beginner volume should teach machine-model concepts first: bytes, two's
+complement, registers, flags, memory maps, ports, branching, looping, stack,
+and subroutines. This algorithms volume should remain the second-stage book that
+uses substantial problems to show how ZAX carries real programs.
 
 ---
 
