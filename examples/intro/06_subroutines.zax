@@ -1,0 +1,55 @@
+; Chapter 06 example: call/ret, register passing, and push/pop preservation
+
+section data vars at $8000
+  result_add:  byte = 0          ; byte sum returned from add_bytes
+  result_max:  word = 0          ; word maximum returned from max_word
+end
+
+export func main(): void
+  ; --- Call 1: add_bytes ---
+  ; Pass two byte values in B and C; receive result in A.
+  ld b, $14                      ; first operand: 20
+  ld c, $0A                      ; second operand: 10
+  call add_bytes                 ; A = B + C = 30 ($1E)
+  ld (result_add), a             ; store result
+
+  ; --- Call 2: max_word ---
+  ; Pass two 16-bit values in HL and DE; receive larger value back in HL.
+  ; add_bytes left A = 30 and modified no other registers (it preserved BC).
+  ; We now use B to drive a DJNZ loop that calls max_word three times.
+  ld hl, $0050                   ; first candidate: 80
+  ld de, $00C8                   ; second candidate: 200
+  call max_word                  ; HL = max($0050, $00C8) = $00C8
+  ld (result_max), hl            ; result_max = 200
+
+  ret
+end
+
+; add_bytes: add B and C, return result in A.
+; Inputs:  B = first byte, C = second byte
+; Outputs: A = B + C
+; Preserves: BC, DE, HL
+func add_bytes(): void
+  ld a, b                        ; A = B
+  add a, c                       ; A = B + C  (flags set by add)
+  ret
+end
+
+; max_word: return the larger of two 16-bit values.
+; Inputs:  HL = first value, DE = second value
+; Outputs: HL = the larger of HL and DE
+; Preserves: BC, DE, AF on entry are not preserved (A used internally)
+; Note: DE unchanged only if HL was already >= DE.
+func max_word(): void
+  push de                        ; save DE — we compare against it and want
+                                 ; the caller to see the original values
+  ; Compare HL with DE: subtract DE from HL using 16-bit arithmetic.
+  ; SBC HL,DE sets the sign flag if HL < DE.
+  or a                           ; clear carry before SBC
+  sbc hl, de                     ; HL - DE; S set if result is negative (HL < DE)
+  pop de                         ; restore DE to original value
+  jr nc, max_is_hl               ; if no borrow (HL >= DE), HL is already larger
+  ex de, hl                      ; HL was smaller; swap so HL = DE (the bigger one)
+max_is_hl:
+  ret                            ; HL = max(original HL, original DE)
+end
