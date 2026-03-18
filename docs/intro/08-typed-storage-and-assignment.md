@@ -107,21 +107,11 @@ compiler-managed. You do not write it; you write `hl := count`.
 
 ## Bare-name access vs address dereference
 
-In Phase A, a named storage location like `count` could appear in two ways:
-
-```zax
-ld a, count      ; bare name: load the value stored at count
-ld a, (count)    ; parentheses: dereference — same result for a byte scalar
-```
-
-Both produce the same machine code for a simple byte scalar because the address
-is fixed and the instruction encodes it directly. Chapter 02 established the
-rule: the bare form means "the typed value at this location" and `(name)` means
-"memory at this address."
-
-With typed locals, the bare form is the only form used for `:=`. Typed locals
-live at IX-relative offsets, not at fixed absolute addresses; the dereference
-form `(count)` would mean "memory at the address value stored in the count slot,"
+Chapter 02 established the bare-name rule: the bare form means "the typed value
+at this location" and `(name)` means "memory at this address." With typed
+locals, the bare form is the only form used for `:=`. Typed locals live at
+IX-relative offsets, not at fixed absolute addresses; the dereference form
+`(count)` would mean "memory at the address value stored in the count slot,"
 which is not the same thing. Use bare names with `:=` for all reads and writes
 of typed locals.
 
