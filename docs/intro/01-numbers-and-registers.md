@@ -156,7 +156,9 @@ bytes.
 `ld d, a` copies the current value of A into D. No immediate value is involved;
 this is a register-to-register move. After this instruction D holds `$FF`.
 
-`ld hl, $1234` loads a 16-bit immediate into the register pair HL. H receives
+`ld hl, $1234` loads a 16-bit immediate into the register pair HL. Note that
+later in the example `ld de, $5678` overwrites D and E: D becomes `$56` and E
+becomes `$78`, replacing the `$FF` that was in D after the register copy above. H receives
 the high byte `$12` and L receives the low byte `$34`. The instruction encodes
 as three bytes: the opcode followed by the two bytes of the value in
 little-endian order (`$34` then `$12`).

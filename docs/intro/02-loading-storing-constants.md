@@ -47,8 +47,7 @@ values before doing any work.
 ## Register-to-register mode
 
 `ld b, a` copies the current value of A into B. Neither operand is a memory
-address; both are register names. This is the fastest `ld` form on the Z80 and
-takes one machine cycle.
+address; both are register names. No memory access is involved.
 
 Any pair of the 8-bit registers A, B, C, D, E, H, L can be combined:
 `ld d, h`, `ld l, c`, and so on. You cannot use `ld reg, reg` to copy between
@@ -87,6 +86,10 @@ read, increment HL, repeat.
 The 16-bit form `ld hl, ($8000)` reads a word (two bytes) from address `$8000`
 and `$8001` and places the result in HL.
 
+The parentheses always mean **memory dereference**: treat the value inside as
+an address and read or write the byte (or word) at that location. This is the
+same meaning as `(hl)` — the parens signal "go to this address in memory."
+
 Writing bare numbers like `$8000` in instructions is inconvenient and error-
 prone. If the address appears in ten instructions and you later move the storage
 to `$8100`, you must change all ten. Labels solve this.
@@ -112,13 +115,21 @@ end
 ```
 
 The assembler places one byte at address `$8000` and records that the name
-`count` refers to `$8000`. Every instruction that mentions `count` will use the
-address `$8000`. If the section is later moved to `$9000`, all those instructions
-update automatically.
+`count` refers to typed scalar storage at `$8000`. Every instruction that
+mentions `count` will use that storage. If the section is later moved to
+`$9000`, all those instructions update automatically.
 
-`ld a, (count)` reads the byte at the address of `count`. `ld (count), a` writes
-A to that address. The parentheses indicate a memory access, exactly as with
-`(hl)`.
+**The bare-name form is the standard way to access named scalar storage in
+ZAX.** `ld a, count` reads the value of `count` into A. `ld count, a` (or the
+store form, depending on the instruction) writes A to `count`. The name
+directly refers to the typed storage value — no extra notation is needed.
+
+`ld a, (count)` is the **explicit memory dereference** form. The parentheses
+mean "treat `count` as a memory address and load the byte at that address." For
+typed scalar storage this produces the same result as the bare form, but the
+meaning is subtly different: bare name = the stored value; `(name)` = memory at
+that address. In Phase A code, prefer the bare form for named scalar reads and
+writes.
 
 ---
 
@@ -147,6 +158,30 @@ placement.
 
 ---
 
+## Bare name vs parentheses: the rule stated once
+
+Three different things can appear as a `ld` operand, and the notation
+distinguishes them:
+
+| Notation | What it means |
+|----------|---------------|
+| `ld a, MaxCount` | `MaxCount` is a `const`: the assembler substitutes the value directly. No memory access. |
+| `ld a, count` | `count` is a named scalar storage location: read the typed value stored there. |
+| `ld a, (count)` | Explicit memory dereference: read the byte at the address that `count` labels. |
+
+The rule: **parentheses always mean "treat this as a memory address and
+dereference it."** A `const` name without parens is substituted as a value.
+A storage name without parens reads or writes the typed scalar value at that
+location. Only when you specifically want to express "go to this address in
+memory" do you write parentheses.
+
+For named scalar storage (`byte`, `word`), the bare form and the paren form
+produce the same machine code — the difference is in how you reason about the
+code. Use the bare form as your default; reach for `(name)` only when you are
+deliberately working at the address level.
+
+---
+
 ## Named byte and word storage
 
 The `section data` block declares named storage at a specific address. You can
@@ -160,14 +195,34 @@ end
 ```
 
 The assembler places `count` at `$8000` (one byte, initial value 0) and
-`scratch` at `$8001` (two bytes, initial value 0). The names `count` and
-`scratch` behave exactly like labels: they refer to their respective addresses.
+`scratch` at `$8001` (two bytes, initial value 0).
 
-`ld hl, $1234` followed by `ld (scratch), hl` writes the word `$1234` to
-addresses `$8001` (low byte `$34`) and `$8002` (high byte `$12`).
+Reading and writing named byte storage with the bare form:
 
-`ld hl, (scratch)` reads back from the same two addresses and reconstructs
-the word `$1234` in HL.
+```zax
+ld a, count       ; A = value of count
+ld count, a       ; count = A  (store form)
+```
+
+Reading and writing named word storage with the bare form:
+
+```zax
+ld hl, $1234
+ld scratch, hl    ; scratch = $1234
+
+ld hl, scratch    ; HL = $1234 (read back)
+```
+
+The same operations written with explicit dereference:
+
+```zax
+ld hl, $1234
+ld (scratch), hl  ; identical effect — (scratch) dereferences the address
+
+ld hl, (scratch)  ; identical effect
+```
+
+Both forms are legal; the bare form is preferred for typed scalar storage.
 
 ---
 
@@ -184,36 +239,39 @@ end
 
 export func main(): void
   ld a, MaxCount
-  ld (count), a
+  ld count, a
 
   ld hl, BaseAddr
   ld a, (hl)
 
   ld hl, $1234
-  ld (scratch), hl
+  ld scratch, hl
 
-  ld hl, (scratch)
+  ld hl, scratch
 
   ret
 end
 ```
 
-`ld a, MaxCount` uses immediate mode with a named constant. After this
-instruction, A = 10.
+`ld a, MaxCount` uses immediate mode with a named constant. The assembler
+substitutes the value `10` directly. After this instruction, A = 10.
 
-`ld (count), a` uses direct address mode via a label. The assembler replaces
-`count` with `$8000`. After this instruction, the byte at `$8000` contains 10.
+`ld count, a` uses the bare-name form to store A into the typed scalar storage
+`count`. After this instruction, `count` holds 10.
 
 `ld hl, BaseAddr` loads the constant value `$8000` into HL. Notice that
 `BaseAddr` and the address of `count` are the same value — `$8000`. This is
 intentional: the next instruction uses HL as a pointer to that address.
 
-`ld a, (hl)` uses indirect mode through HL. Since HL now holds `$8000`, this
-reads the byte at `$8000`, which we just wrote as 10. After this instruction,
-A = 10 again.
+`ld a, (hl)` uses indirect mode through HL. The parentheses here are the
+explicit memory dereference: since HL holds `$8000`, this reads the byte at
+address `$8000` — the same byte `count` names. After this instruction, A = 10
+again. This demonstrates why `(hl)` needs parens: HL holds an address, and we
+are dereferencing it.
 
-`ld (scratch), hl` uses direct address mode to write the word in HL to the
-two-byte storage at `scratch`. Then `ld hl, (scratch)` reads it back.
+`ld scratch, hl` uses the bare-name form to store the word in HL into `scratch`.
+`ld hl, scratch` reads it back. Both use the bare form because `scratch` is a
+named typed storage location.
 
 ---
 
@@ -229,8 +287,14 @@ two-byte storage at `scratch`. Then `ld hl, (scratch)` reads it back.
   label appears.
 - `const` names a fixed value; it produces no output bytes.
 - `section data ... end` declares named byte or word storage at a known address.
-- `ld (name), a` and `ld a, (name)` access named byte storage through its label.
-- `ld (name), hl` and `ld hl, (name)` access named word storage.
+- The bare-name form (`ld a, count`, `ld count, a`) is the standard way to read
+  and write named scalar storage in ZAX. The name refers directly to the typed
+  value.
+- The paren form (`ld a, (count)`) is an explicit memory dereference: "read the
+  byte at the address of `count`." Use it when working at the address level.
+- Parentheses in instruction operands always mean dereference, whether the
+  operand is a register (`(hl)`), a name (`(count)`), or a literal address
+  (`($8000)`).
 
 ## What Comes Next
 

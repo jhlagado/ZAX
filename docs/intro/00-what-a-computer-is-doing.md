@@ -131,8 +131,9 @@ known addresses — that a Z80 processor can load and execute.
 ## The module shell
 
 Every ZAX file is a **module**. The `export func main(): void ... end` block is
-the module's entry point: the address the program starts running from. The word
-`export` marks this function as visible outside the module. The words `func` and
+the top-level function the program starts in — exactly how the loader enters it
+depends on your target platform. The word `export` marks this function as
+visible outside the module. The words `func` and
 `end` delimit the function body. Inside the body are the raw Z80 instructions,
 one per line.
 

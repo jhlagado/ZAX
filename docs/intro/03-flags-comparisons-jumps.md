@@ -78,7 +78,8 @@ or a       ; Z is clear because A is non-zero
 ```
 
 `or a` does not require knowing what value to compare against; it simply
-reflects whether A is currently zero. It is shorter and faster than `cp 0`.
+reflects whether A is currently zero. It is shorter than `cp 0` (one byte vs
+two bytes), and both take the same number of T-states.
 
 ---
 
@@ -228,7 +229,14 @@ have branched to `not_equal:`, and `found` would have been set to 0.
 **Part 2 — zero test with `or a`.** `ld a, 0` loads zero. `or a` sets Z because
 A is zero. `jp z, was_zero` branches because Z is set. The instruction
 `ld a, $AA` executes as the "zero was detected" branch; this marks the register
-so you can verify in a debugger or simulator that this path ran.
+so you can verify in a debugger or simulator that this path ran. `jp skip_zero`
+then skips past the end of the zero-branch.
+
+This pair — `jp z, was_zero` / `jp skip_zero` — is the raw conditional branch
+pattern defined in "Label-based control flow structure" above: set a flag, use a
+conditional jump to enter or skip a consequence block, and place an exit label
+after it. The only difference from the `cp`-based Part 1 is that `or a` sets
+the flag here instead of `cp`.
 
 **Part 3 — counted loop with `dec` / `jp nz`.** `ld b, Limit` initializes B to
 5. At `loop_top:`, the body reads `counter` from RAM, increments it, and stores
