@@ -54,6 +54,7 @@ Use this area for:
 - deferred and backburner items
 - short operational documents that are neither normative specs nor active design proposals
 - authoring and planning briefs for course-writing streams
+- editorial standards for course-writing and review
 
 ### `docs/archive/`
 
@@ -76,7 +77,7 @@ Recently completed design records now live under:
 ## Rules
 
 - Do not add new top-level files under `docs/` except `docs/README.md`.
-- Every new document must live under exactly one of: `spec`, `design`, `reference`, `work`, `archive`, `course`.
+- Every new document must live under exactly one of: `spec`, `design`, `reference`, `work`, `archive`, `course`, `intro`.
 - `spec/` is authoritative.
 - `design/` is for active proposals, decisions, and near-term design sequencing.
 - `reference/` is for current supporting material.
