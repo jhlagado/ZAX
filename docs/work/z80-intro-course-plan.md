@@ -18,6 +18,10 @@ Planned output location:
 
 - `docs/intro/`
 
+Mandatory companion standard:
+
+- `docs/work/course-writing-standard.md`
+
 ## Target reader
 
 Primary reader:
@@ -40,6 +44,9 @@ The course should therefore teach:
 - machine model first
 - assembly reasoning second
 - structured ZAX power gradually
+
+All draft prose for this volume must satisfy the stricter editorial criteria in
+`docs/work/course-writing-standard.md`.
 
 ## Teaching position
 
