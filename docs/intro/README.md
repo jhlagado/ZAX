@@ -29,14 +29,14 @@ directly for subsequent runs.
 
 The volume is split into two phases.
 
-**Phase A** (Chapters 00–07) stays close to ordinary Z80 programming. The
+**Phase A** (Chapters 00–08) stays close to ordinary Z80 programming. The
 reader writes raw instructions, manages registers by hand, invents loop labels,
 and calls subroutines with register-passing conventions documented only in
-comments. Chapter 07 is the Phase A capstone: a complete program that uses
-every Phase A construct and names the points where the raw approach creates
-overhead.
+comments. Chapter 07 covers the Z80 I/O model (`in`/`out` and ports).
+Chapter 08 is the Phase A capstone: a complete program that uses every Phase A
+construct and names the points where the raw approach creates overhead.
 
-**Phase B** (Chapters 08–10) introduces the higher-level ZAX surface as
+**Phase B** (Chapters 09–11) introduces the higher-level ZAX surface as
 justified relief from that overhead. Each Phase B construct is introduced by
 showing exactly which Phase A cost it removes. The machine model does not
 change; the compiler takes on more of the bookkeeping.
@@ -52,16 +52,17 @@ change; the compiler takes on more of the bookkeeping.
 | 04 | `04-counting-loops-and-djnz.md` | A | `djnz`, sentinel loops, flag-exit loops, zero-count edge case |
 | 05 | `05-data-tables-and-indexed-access.md` | A | Byte/word tables, HL sequential access, IX+d displaced access |
 | 06 | `06-stack-and-subroutines.md` | A | `call`/`ret`, the hardware stack, `push`/`pop`, register conventions |
-| 07 | `07-a-phase-a-program.md` | A | Phase A capstone; names Phase A costs that Phase B will address |
-| 08 | `08-typed-storage-and-assignment.md` | B | Typed locals, `:=` assignment, `succ`/`pred` |
-| 09 | `09-structured-control-flow.md` | B | `if`/`else`, `while`, `break`, `continue` |
-| 10 | `10-functions-arguments-and-op.md` | B | Typed parameters, typed return values, `op` |
+| 07 | `07-io-and-ports.md` | A | Z80 I/O space, `in`/`out`, immediate and register-addressed port forms |
+| 08 | `08-a-phase-a-program.md` | A | Phase A capstone; names Phase A costs that Phase B will address |
+| 09 | `09-typed-storage-and-assignment.md` | B | Typed locals, `:=` assignment, `succ`/`pred` |
+| 10 | `10-structured-control-flow.md` | B | `if`/`else`, `while`, `break`, `continue` |
+| 11 | `11-functions-arguments-and-op.md` | B | Typed parameters, typed return values, `op` |
 
 Example files live under `examples/intro/` and are numbered to match their
-chapter: `00_first_program.zax` through `10_functions_and_op.zax`.
+chapter: `00_first_program.zax` through `11_functions_and_op.zax`.
 
 ## Relationship to Volume 2
 
-After completing Chapter 10, the reader is ready to start Volume 2:
+After completing Chapter 11, the reader is ready to start Volume 2:
 
 - `docs/course/README.md`
