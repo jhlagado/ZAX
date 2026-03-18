@@ -1,7 +1,7 @@
 ; popcount.zax
 ;
 ; Source/problem: count the set bits in one byte.
-; Unit 3 example: bit tests plus repeated right shifts.
+; Unit 4 example: bit tests plus repeated right shifts.
 
 export func popcount_demo(): HL
   var

@@ -1,7 +1,7 @@
 ; parity.zax
 ;
 ; Source/problem: compute odd parity for one byte.
-; Unit 3 example: toggle a parity bit while shifting through the source.
+; Unit 4 example: toggle a parity bit while shifting through the source.
 
 export func parity_demo(): HL
   var

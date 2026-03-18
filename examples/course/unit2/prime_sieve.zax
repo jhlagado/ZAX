@@ -1,7 +1,7 @@
 ; prime_sieve.zax
 ;
 ; Source/problem: sieve of Eratosthenes over a small flag array.
-; Unit 1 example: repeated marking of composite multiples.
+; Unit 2 example: repeated marking of composite multiples.
 
 const Limit = 16
 const StopFactor = 5

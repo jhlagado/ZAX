@@ -1,7 +1,7 @@
 ; linear_search.zax
 ;
 ; Source/problem: linear search over a byte array.
-; Unit 1 example: scan until a matching element is found.
+; Unit 2 example: scan until a matching element is found.
 
 const ItemCount = 8
 

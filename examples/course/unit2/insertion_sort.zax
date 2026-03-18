@@ -1,7 +1,7 @@
 ; insertion_sort.zax
 ;
 ; Source/problem: insertion sort over a small byte array.
-; Unit 1 example: sorted insertion into a growing prefix.
+; Unit 2 example: sorted insertion into a growing prefix.
 
 const ItemCount = 8
 
