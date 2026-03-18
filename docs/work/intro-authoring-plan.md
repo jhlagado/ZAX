@@ -20,6 +20,7 @@ Writers and reviewers must use these documents together:
 - `docs/work/course-writing-standard.md` — editorial and review gate
 - `docs/work/z80-intro-course-plan.md` — course structure and chapter scope
 - `docs/design/z80-programming-with-zax.md` — reader model and two-volume direction
+- `docs/work/platform-course-strategy.md` — broader platform and media direction
 
 If these documents disagree, `docs/work/z80-intro-course-plan.md` is the
 operational plan and `docs/work/course-writing-standard.md` is the editorial

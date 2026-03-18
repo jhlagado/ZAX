@@ -21,6 +21,7 @@ Planned output location:
 Mandatory companion standard:
 
 - `docs/work/course-writing-standard.md`
+- `docs/work/platform-course-strategy.md`
 
 ---
 
