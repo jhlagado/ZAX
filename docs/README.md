@@ -90,6 +90,12 @@ The current algorithms-and-data-structures volume. Start at
 under `examples/course/`. This is a second-stage course, not the planned
 beginner-first introduction to Z80 programming in ZAX.
 
+### `docs/intro/`
+
+Reserved for the planned beginner-facing "Learn Z80 Programming in ZAX" volume.
+That volume is not written yet; see `docs/work/z80-intro-course-plan.md` for the
+current planning brief.
+
 ## Current priority
 
 Keep the reviewer-facing core as small as possible. The primary review path should be:

@@ -63,6 +63,26 @@ They want to learn ZAX specifically.
 
 The current algorithms course fits this reader well.
 
+## Primary reader decision
+
+The beginner-facing volume should be calibrated primarily for:
+
+- the hobbyist / retro learner with limited prior low-level experience
+
+This reader is not assumed to know Z80 assembly, but is assumed to be able to
+follow a practical machine-level explanation without requiring a full
+computer-science-from-zero treatment.
+
+The absolute beginner remains a supported secondary reader, but not the pacing
+baseline. This matters for tone:
+
+- concepts must still be introduced clearly and progressively
+- but the prose can assume curiosity, patience, and some prior exposure to
+  programming ideas
+- the volume should not expand into a general introduction to all computing
+
+That is the best compromise between accessibility and momentum.
+
 ## Core decision
 
 The teaching program should now be split into two volumes:
@@ -70,6 +90,10 @@ The teaching program should now be split into two volumes:
 ### Volume 1 — Learn Z80 Programming in ZAX
 
 This is the beginner-first book.
+
+Its planned output location is:
+
+- `docs/intro/`
 
 It should teach:
 
