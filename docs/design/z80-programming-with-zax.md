@@ -3,6 +3,8 @@
 Status: active design brief
 Audience: course author, contributors, reviewers
 
+Related strategy note: `docs/work/platform-course-strategy.md`
+
 ## Purpose
 
 This document defines the new teaching direction for ZAX.
