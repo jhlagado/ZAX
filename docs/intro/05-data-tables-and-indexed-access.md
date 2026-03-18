@@ -235,6 +235,62 @@ and `rec1_lo` receives `$B0`.
 
 ---
 
+## Block operations: LDIR and friends
+
+The Z80 has hardware instructions for copying or scanning ranges of memory. The
+most useful is `ldir`.
+
+`ldir` copies BC bytes from the address in HL to the address in DE. After each
+byte is copied, HL and DE are both incremented and BC is decremented. The
+instruction repeats until BC reaches zero. One `ldir` replaces an entire copy
+loop.
+
+Compare the two forms for copying 4 bytes:
+
+```zax
+; Without ldir: a manual copy loop
+ld hl, source     ; HL = source address
+ld de, dest       ; DE = destination address
+ld b, 4           ; B = byte count
+copy_loop:
+  ld a, (hl)      ; A = byte from source
+  ld (de), a      ; write to destination
+  inc hl
+  inc de
+  djnz copy_loop
+
+; With ldir: one instruction
+ld hl, source     ; HL = source address
+ld de, dest       ; DE = destination address
+ld bc, 4          ; BC = byte count (note: BC, not just B)
+ldir              ; copy 4 bytes, HL and DE advance, BC reaches 0
+```
+
+Both forms copy 4 bytes from `source` to `dest`. After `ldir`, HL points one
+byte past the last source byte, DE points one byte past the last destination
+byte, and BC holds zero.
+
+`ldir` uses BC as a 16-bit counter, so it can copy up to 65535 bytes in one
+instruction. The loop form above used B (8-bit), which would need a different
+structure for counts larger than 255.
+
+Three related instructions exist. `lddr` copies in the decrementing direction —
+HL and DE are decremented after each byte rather than incremented. This is
+useful when source and destination overlap and copying forward would overwrite
+source bytes before they are read.
+
+`cpir` scans memory for a byte value. It reads bytes from (HL), compares each
+to A, and stops when it finds a match or exhausts BC bytes. After `cpir`, Z is
+set if a match was found, and HL points one past the matching byte. `cpdr` is
+the same scan in the decrementing direction.
+
+`ldir`, `lddr`, `cpir`, and `cpdr` are raw Z80 mnemonics used directly in ZAX,
+exactly like `djnz`. There is no ZAX-typed construct wrapping them. When you
+see `ldir` in code, it is the hardware instruction itself, not a ZAX function
+call.
+
+---
+
 ## What This Chapter Teaches
 
 - A `byte[n]` or `word[n]` declaration in a `section data` block lays out n

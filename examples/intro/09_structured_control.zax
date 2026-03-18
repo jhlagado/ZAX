@@ -6,8 +6,14 @@
 ; Phase B uses:  while loop + if/else (find_max_cf, count_above_cf)
 ;
 ; Read both files side by side to see what each construct replaces.
+;
+; Also demonstrates select/case: a byte in A is tested against two values.
+; This replaces what would otherwise be two cp + jp Z pairs.
 
 const TableLen = 8
+
+const TagAlpha = $41    ; 'A' — first tag value
+const TagBeta  = $42    ; 'B' — second tag value
 
 section data rom at $8000
   values: byte[8] = { 23, 47, 91, 5, 67, 12, 88, 34 }
@@ -16,6 +22,7 @@ end
 section data vars at $8020
   max_val:   byte = 0
   above_64:  byte = 0
+  tag_result: byte = 0
 end
 
 export func main(): void
@@ -29,6 +36,11 @@ export func main(): void
   ld c, 64
   call count_above_cf
   ld (above_64), a
+
+  ; select/case demonstration: dispatch on a tag byte in A
+  ld a, TagBeta
+  call classify_tag
+  ld (tag_result), a
 end
 
 ; find_max_cf: scan a byte table and return the maximum byte value.
@@ -95,4 +107,20 @@ func count_above_cf(): AF
   end
 
   a := cnt
+end
+
+; classify_tag: return a code byte based on the tag value in A.
+; Demonstrates select/case replacing two cp + jp Z pairs.
+;
+; Input:  A = tag byte (TagAlpha, TagBeta, or other)
+; Output: A = 1 if TagAlpha, 2 if TagBeta, 0 otherwise
+func classify_tag(): AF
+  select A
+    case TagAlpha
+      ld a, 1
+    case TagBeta
+      ld a, 2
+    else
+      ld a, 0
+  end
 end

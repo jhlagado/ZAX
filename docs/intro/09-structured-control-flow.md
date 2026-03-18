@@ -207,6 +207,73 @@ in the current language.
 
 ---
 
+## Multi-way branching: `select` and `case`
+
+`if`/`else` handles two branches: the condition is true or it is not. When you
+need to branch on three or more distinct values, chained `if`/`else` becomes a
+ladder of `cp` + conditional jump pairs. `select` is the structured alternative.
+
+`select` takes a register (or other selector value), tests it against a series
+of `case` constants, and runs the matching body. If no case matches and an
+`else` arm is present, the `else` body runs. After any arm finishes, control
+transfers to after the enclosing `end`. There is no fallthrough between cases.
+
+The comparison in Phase A, using `cp` + `jp Z`:
+
+```zax
+; Phase A: test A against three operator characters
+ld a, (op_byte)
+cp 0x2B              ; '+'
+jp z, handle_plus
+cp 0x2D              ; '-'
+jp z, handle_minus
+jp unknown_op
+handle_plus:
+  ; ...
+  jp after_dispatch
+handle_minus:
+  ; ...
+  jp after_dispatch
+unknown_op:
+  ; ...
+after_dispatch:
+```
+
+The same logic as a `select`:
+
+```zax
+; Phase B: select on A
+ld a, (op_byte)
+select A
+  case 0x2B          ; '+'
+    ; handle +
+  case 0x2D          ; '-'
+    ; handle -
+  else
+    ; unknown operator
+end
+```
+
+The `select` form names the intent directly: "dispatch on the value of A."
+Each `case` line states the value being tested. The `else` arm handles the
+no-match case. No jump targets, no labels.
+
+Three rules from the spec apply here. First, `select` evaluates the selector
+once at the `select` keyword. The selector is not re-evaluated for each case.
+Second, each `case` must be a compile-time constant or range — runtime
+expressions are not allowed. Third, when the selector is `A`, the compiler's
+dispatch sequence may modify A and flags, so do not rely on A still holding
+the selector value inside a case body. When the selector is any other register,
+that register is preserved across dispatch.
+
+For a real-world example of `select` in a larger program, see
+`examples/course/unit7/rpn_calculator.zax`. That file (Volume 2 material)
+dispatches on token kind constants using `select A` with three `case` arms,
+one for each operator type. The structure of the dispatch is directly readable
+from the case labels.
+
+---
+
 ## Phase A vs Phase B: the same two loops
 
 The example file `examples/intro/09_structured_control.zax` rewrites
