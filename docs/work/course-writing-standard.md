@@ -174,6 +174,36 @@ Example shape:
 
 That is enough. Do not surround it with atmospheric prose.
 
+## Worked example: bad paragraph to acceptable paragraph
+
+Bad version:
+
+> ZAX is not a macro assembler in the traditional sense, nor is it a modern
+> systems language with hidden machinery. It sits in an honest middle ground
+> where the machine remains visible while the language offers more structure.
+
+Why this fails:
+
+- it defines ZAX by negation
+- it assumes the reader already understands the contrasted categories
+- words like "honest" and "structure" are not explained
+- the reader learns no rule they can apply when reading code
+
+Acceptable rewrite:
+
+> ZAX lets you write raw Z80 instructions directly, but it also gives names to
+> storage, structured control flow, and compiler-checked function frames. In
+> practice that means you can still write `ld a, (hl)` when you need a raw load,
+> but you can also write `count := hl` when you want to store a word into a
+> named local. This volume studies larger programs built from that combination.
+
+Why this passes:
+
+- it defines ZAX positively
+- it names the concrete features that matter
+- it gives a code-level contrast the reader can recognize
+- it tells the reader what this volume will do next
+
 ## Section-level standard
 
 Every section should answer:
@@ -374,7 +404,7 @@ The writer should assume:
 This standard applies to:
 
 - the planned beginner-facing `docs/intro/` volume
-- the current `docs/course/` algorithms volume
+- the current `docs/course/` advanced practical-programming volume
 
 The standard is especially important for introductions, bridges, and chapter
 openings, where LLM-generated padding is most likely to appear.
