@@ -1,149 +1,83 @@
 # Chapter 00 — Introduction
 
-## What ZAX Is
+## What This Volume Is For
 
-ZAX is a structured assembler for the Z80 family. It compiles directly to
-machine code — no external linker, no object format, no runtime system. The
-output is a flat binary image alongside optional Intel HEX, a symbol listing,
-and a debug map.
+This volume is the second stage of the ZAX course.
 
-It is still assembly. You choose registers, manage flags, and decide what lives
-in ROM versus RAM. The Z80 instruction set is fully available, mnemonics and
-all. What ZAX adds is structure and names: typed storage declarations,
-functions with stack-frame discipline, structured control flow, and a system
-for defining inline macro-instructions (`op`) with compiler-level operand
-matching.
+It assumes you already know the basic machine model: registers, flags, memory,
+subroutines, and ordinary loop structure on the Z80. The planned beginner
+volume under `docs/intro/` is the place for learning those foundations from the
+ground up. This volume starts later. Its job is to show how larger ZAX
+programs are organised once those basics are already familiar.
 
-That is the whole bargain. ZAX is not a systems language in the modern sense —
-there is no type inference, no allocation model, no garbage collector, no
-runtime exception system. It is not a macro assembler in the traditional sense
-either — there are no textual substitutions, no include-time tricks, no flat
-instruction streams hiding behind a label convention. It sits in a specific and
-defensible position: a structured assembler, one level above raw assembly, with
-the machine model fully visible throughout.
+The chapters are built around practical programs. They cover arrays, strings,
+bit manipulation, records, recursion, composition, pointer structures, and a
+capstone search problem. The point is not to admire named algorithms as museum
+pieces. The point is to study real ZAX code that solves non-trivial problems
+and to learn how the language helps keep that code readable.
 
-## What This Volume Is
+## What ZAX Gives You Here
 
-This volume is not a first introduction to programming, and it is not a first
-introduction to the Z80. It is the algorithms-and-data-structures volume of a
-larger teaching direction.
+ZAX is still close to the machine. Raw Z80 instructions are always available,
+and the programmer still decides what the registers, flags, and memory layout
+mean. What changes is the amount of bookkeeping you have to do by hand.
 
-That matters because the examples in this book assume the reader can already
-follow:
+In these chapters you will keep seeing the same pattern. Raw instructions are
+used when the machine detail matters directly. ZAX surface features are used
+when the programmer's intent is clearer than the mechanical load/store sequence.
+A byte can still be loaded with `ld a, (hl)`. A typed local can be updated with
+`count := hl` or `succ index_value`. The language does not remove machine-level
+thinking. It removes repeated clerical work so the program structure is easier
+to follow.
 
-- register-level data movement
-- flag-driven control flow
-- subroutine calls and returns
-- stack-frame concepts
-- the difference between code, data, ROM, RAM, and addresses
+## What This Volume Assumes
 
-If the reader does not yet have those foundations, the right course is a
-beginner-facing "Learn Z80 Programming in ZAX" volume that starts from machine
-model concepts and builds upward. That introductory volume is the missing first
-half of the teaching program. This book is the second half: what ZAX looks like
-when it is used to solve substantial problems.
+You should already be comfortable with:
 
-## The Problem It Solves
+- the Z80 register set and register pairs
+- flag-driven branching and loop entry conditions
+- `call`, `ret`, and the idea of stack-based local state
+- the difference between ROM data, RAM data, and addresses
+- reading short Z80 sequences without opcode-by-opcode commentary
 
-Z80 assembly is expressive. Every addressing mode, every flag condition, every
-clever register assignment is available to you directly. The problem is
-bookkeeping: which registers are live at this point? What is the offset of this
-field into that structure? Which label marks the entry to this inner loop? What
-does "count" mean in this context versus the `count` in the function three
-screens up?
+You do not need prior knowledge of C, Pascal, or any other high-level language.
+This volume explains each program in its own terms. What it does assume is that
+you are ready to read multi-step code and follow a program invariant across more
+than a few instructions.
 
-As a program grows, that bookkeeping noise accumulates. Comments explain what
-an `ld` instruction does rather than why the algorithm does it. Field offsets
-are hardcoded constants that silently break when a struct changes. Functions
-share conventions only by discipline, not by enforcement.
+## How To Use The Chapters
 
-ZAX handles the bookkeeping. Typed storage declarations give names to memory
-and let the compiler compute offsets. Functions declare their return registers
-and the compiler generates the preservation epilogue. Structured control flow
-replaces conditional jumps to ad-hoc labels. The `:=` assignment operator reads
-and writes typed storage paths — the compiler emits the IX-relative load/store
-sequence, not the programmer.
+Each chapter should be read in the same order:
 
-You remain responsible for the algorithmic decisions: which register holds
-what, why this loop structure, what invariant this sequence maintains. That is
-the work that produces readable code. ZAX removes the mechanical layer so that
-work can show clearly.
+1. read the prose for the chapter's main idea
+2. open the cited `.zax` example files
+3. follow the code with the chapter's explanation beside it
+4. compile the example if you want to inspect the generated output
 
-## Two Kinds of Transfer
+Do not try to memorize every line. The useful question is simpler: what problem
+is this code solving, and which parts are raw Z80 detail versus ZAX structure?
+That distinction is what the rest of the volume keeps reinforcing.
 
-A central ZAX idiom is the distinction between `:=` and raw Z80 `ld`.
+## What You Will Study
 
-`:=` is typed storage transfer. `count := hl` writes the value of HL into the
-typed local `count`. `hl := count` reads it back. The compiler emits the
-IX-relative load or store — typically a two-instruction EX/LD sequence because
-of the Z80's constraint that H and L cannot be used directly with IX-relative
-addressing. You write the intent; the compiler handles the mechanics.
+Working through this volume, you will study programs that implement:
 
-`ld` is the raw Z80 instruction. `ld hl, $FF00` loads an immediate into HL.
-`ld a, (hl)` dereferences HL. These are assembly mnemonics and they mean
-exactly what they say. They have no knowledge of typed storage symbols.
+- arithmetic and number processing
+- search and sort over arrays
+- string traversal and conversion
+- bit-level transformations
+- typed record state
+- recursive decomposition
+- a composed calculator with helper routines
+- linked structures and tree traversal
+- a capstone control-flow-heavy search problem
 
-The two forms coexist naturally in the same function body. Typed variable
-access uses `:=`; raw machine-level work uses Z80 mnemonics directly. You will
-see both in almost every example in this course.
+These are practical programs, not isolated syntax drills. They are large enough
+to show where naming, typed storage, structured control flow, and helper
+abstractions start to matter.
 
-## Why Algorithms
+## What Comes Next
 
-This course is organised around algorithms, not features. Each chapter
-introduces ZAX constructs in the context of a real problem. Features earn their
-place by being needed.
-
-That is the right structure for a second-stage book. It is not the right
-structure for a beginner's first encounter with machine programming. A beginner
-volume would need chapters on the machine model itself — bytes, two's
-complement, registers, flags, memory maps, ports, branching, looping, and
-subroutines — before it reached this material. The existence of this book does
-not remove that need; it confirms it.
-
-The algorithm corpus is drawn from two foundational texts: Kernighan and
-Ritchie's _The C Programming Language_ and Niklaus Wirth's _Algorithms + Data
-Structures = Programs_. These are not arbitrary choices. These algorithms are
-short enough to hold in your head, varied enough to cover the key patterns of
-structured programming, and well-understood enough that you can judge whether a
-given ZAX expression is clean or awkward.
-
-The course is also a language design instrument. Where an algorithm resists
-clean ZAX expression, the friction is recorded honestly — in the prose and in
-the friction log that feeds the language roadmap. A reader who completes the
-course will understand both what ZAX can do cleanly and where the current
-surface still asks something extra of the programmer.
-
-## What You Will Build
-
-Working through the course, you will read and understand ZAX programs
-implementing:
-
-- arithmetic and number theory: power, GCD, Fibonacci, integer square root,
-  exponentiation by squaring, decimal digit decomposition
-- sorting and searching: insertion sort, bubble sort, selection sort, binary
-  search, linear search, the prime sieve of Eratosthenes
-- string operations: string length, copy, compare, concatenate, reverse,
-  integer-to-string and string-to-integer conversion
-- bit manipulation: population count, bit reversal, parity, field extraction
-- a ring buffer using exact-size record layout
-- recursive algorithms: Towers of Hanoi, recursive array sum and reverse
-- a complete RPN calculator assembled from helper routines
-- linked list and binary search tree traversal using typed pointer fields
-- the eight-queens problem as a capstone for control-flow structure
-
-None of these are toy programs. Each one is a real implementation that
-compiles and runs on Z80 hardware or a simulator. Together they constitute a
-body of non-trivial ZAX code that you can study, modify, and build from.
-
-## Assumptions
-
-You know the Z80 instruction set and register model. You understand flags,
-addressing modes, and the calling conventions of raw assembly. You have written
-non-trivial Z80 programs before.
-
-You do not need to know C, Pascal, or any high-level language. The algorithm
-descriptions in each chapter are self-contained. Familiarity with the K&R and
-Wirth texts is useful context but not required.
-
-The next chapter begins where ZAX code begins: variables, types, functions, and
-the first small programs.
+Chapter 01 starts with small numerical programs and simple control flow. That
+chapter establishes the working voice of the volume: concrete code first,
+explanation second, and no abstraction that is not paid for by a real example.
