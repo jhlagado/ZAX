@@ -299,8 +299,9 @@ inclusion, then deferring its full treatment.
 Book 1 examples should:
 
 - be complete programs that compile and produce inspectable Z80 output
-- target a concrete, familiar Z80 context so that hardware constants and
-  entry points are real, not placeholder pseudocode
+- target a generic Z80 execution model rather than a specific machine ROM
+- demonstrate results through register state, memory state, listings, or binary
+  output rather than through a platform-specific screen or monitor API
 - be shorter than Volume 2 examples — concept scaffolding, not maximal
   density
 - in Phase A: look like real Z80 programs that happen to live in a ZAX file
@@ -312,49 +313,68 @@ counterparts where this illuminates the improvement.
 
 ---
 
+## Settled prerequisites
+
+**Target hardware platform**
+
+Book 1 will use a generic / abstract Z80 target rather than a specific machine
+ROM or monitor environment.
+
+That means:
+
+- Phase A examples stay platform-neutral
+- examples demonstrate behaviour through register state, memory state, and
+  generated output rather than machine-specific screen or ROM calls
+- the reader is free to load the same examples into any Z80 system or emulator
+  they prefer
+
+This weakens the immediate need for shared hardware-definition files in Phase A.
+It also means the text-level `include` design remains a candidate convenience,
+not a prerequisite for starting the book.
+
+**Raw label/jump support**
+
+The raw-control-flow prerequisite has been smoke-tested and confirmed for
+user-defined labels with:
+
+- `jp`
+- `jr`
+- `djnz`
+- `call`
+
+These forms compile cleanly in ZAX and are safe to use in the early raw-first
+chapters.
+
 ## Open Planning Questions
 
-The following questions are open. They should not block authoring but must be
-settled before the relevant chapters are finalised.
+The following questions remain open. They do not block the first tranche, but
+should be revisited as the book grows.
 
-**1. Target hardware platform**
-
-Should Book 1 target a specific Z80 platform (ZX Spectrum ROM monitor, RC2014,
-CP/M)? A concrete platform makes hardware constants and entry points real and
-testable. A platform should be chosen and held to throughout the volume.
-Decision needed before Chapter 00 is drafted.
-
-**2. Compiler output format**
+**1. Compiler output format**
 
 Phase A examples should produce inspectable Z80 output. The author needs to
-know what format Book 1 targets (raw binary, Intel HEX, listing file). This
-affects how example programs are presented and verified.
+know what format Book 1 targets operationally in the prose (raw binary, Intel
+HEX, listing file, or some combination). This affects how example programs are
+presented and verified.
 
-**3. Text-level `include` directive**
+**2. Text-level `include` directive**
 
 A text-level source inclusion mechanism — `include "filename.zax"` or
-`#include "filename.zax"` — is a design candidate. See
+`#include "filename.zax"` — remains a design candidate. See
 `docs/design/text-include.md` for the full design note.
 
-Early Phase A chapters want to share hardware constants, ROM entry-point
-labels, and simple definitions across multiple example files without
-introducing the module `import` system. If `include` is available, a common
-hardware definitions file can serve all Phase A examples cleanly. If it is
-not available, each example must repeat its definitions or use a workaround.
+With a generic platform target, the primary motivation is weaker than it would
+be for a machine-specific hardware definitions file. Do not treat `include` as
+a prerequisite for the first tranche. Revisit it only if real early examples
+start accumulating noisy repeated constants or definitions.
 
-Record this now. Do not block authoring on it. If early chapter drafts expose
-genuine friction from repeated constant definitions, that is the signal to
-prioritise the implementation decision. This is a design candidate, not a
-committed feature.
-
-**4. Phase A / Phase B balance**
+**3. Phase A / Phase B balance**
 
 The current split puts eight chapters in Phase A and three in Phase B. Review
-this balance after Chapter 07 is drafted to confirm that Phase B is not
-rushed and that each Phase B construct has a clear Phase A predecessor to
-justify it.
+this balance after Chapter 07 is drafted to confirm that Phase B is not rushed
+and that each Phase B construct has a clear Phase A predecessor to justify it.
 
-**5. How much raw data syntax before typed storage becomes the default?**
+**4. How much raw data syntax before typed storage becomes the default?**
 
 The transition point between raw `db`/`dw` and typed storage is a teaching
 decision. Phase A establishes raw data layout; Phase B introduces typed
