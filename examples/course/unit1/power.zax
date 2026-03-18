@@ -11,6 +11,8 @@ func mul_u16(lhs: word, rhs: word): HL
 
   count := rhs
 
+  ld a, 1
+  or a
   while NZ
     hl := count
     ld a, h
@@ -42,6 +44,8 @@ func power(base: word, exponent: word): HL
 
   remaining := exponent
 
+  ld a, 1
+  or a
   while NZ
     hl := remaining
     ld a, h

@@ -147,10 +147,14 @@ is implemented and available on the current surface. The course examples use it.
   examples. Same classification: library candidate once the pattern is measured
   across enough examples.
 
+**Language gaps, not library gaps**:
+
 - Local named-constant initialization: `var` block initializers cannot currently
   reference named constants by name. This is a real readability gap, grounded
-  specifically in `binary_search.zax` and `bubble_sort.zax`. It is a focused
-  language issue, not yet opened at the time of writing.
+  specifically in `binary_search.zax` and `bubble_sort.zax`. It requires a
+  language change — the compiler must resolve constant names at `var`-block init
+  time — and is not addressable by a library or idiom. Not yet opened at the
+  time of writing.
 
 **Style observations**:
 
