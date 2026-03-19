@@ -5,10 +5,10 @@
 This volume is the second stage of the ZAX course.
 
 It assumes you already know the basic machine model: registers, flags, memory,
-subroutines, and ordinary loop structure on the Z80. The planned beginner
-volume under `docs/intro/` is the place for learning those foundations from the
-ground up. This volume starts later. Its job is to show how larger ZAX
-programs are organised once those basics are already familiar.
+subroutines, and ordinary loop structure on the Z80. Volume 1 under
+`docs/intro/` covers those foundations from the ground up. This volume starts
+later. Its job is to show how larger ZAX programs are organised once those
+basics are already familiar.
 
 The chapters are built around practical programs. They cover arrays, strings,
 bit manipulation, records, recursion, composition, pointer structures, and a
@@ -58,26 +58,9 @@ Do not try to memorize every line. The useful question is simpler: what problem
 is this code solving, and which parts are raw Z80 detail versus ZAX structure?
 That distinction is what the rest of the volume keeps reinforcing.
 
-## What You Will Study
-
-Working through this volume, you will study programs that implement:
-
-- arithmetic and number processing
-- search and sort over arrays
-- string traversal and conversion
-- bit-level transformations
-- typed record state
-- recursive decomposition
-- a composed calculator with helper routines
-- linked structures and tree traversal
-- a capstone control-flow-heavy search problem
-
-These are practical programs, not isolated syntax drills. They are large enough
-to show where naming, typed storage, structured control flow, and helper
-abstractions start to matter.
-
 ## What Comes Next
 
-Chapter 01 starts with small numerical programs and simple control flow. That
-chapter establishes the working voice of the volume: concrete code first,
-explanation second, and no abstraction that is not paid for by a real example.
+Chapter 01 starts with arithmetic and number-theory algorithms: power, GCD,
+Fibonacci, square root, and decimal digit count. These are small programs with
+no arrays or records — just functions, typed locals, and structured control
+flow. They establish the working patterns that every later chapter builds on.

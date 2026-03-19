@@ -16,15 +16,14 @@ expresses real programs cleanly.
 The intended reader either:
 
 - already knows Z80 assembly and is learning ZAX, or
-- has completed the planned introductory "Learn Z80 Programming in ZAX" volume
-  and is ready for larger examples.
+- has completed Volume 1 (`docs/intro/`) and is ready for larger examples.
 
 ---
 
 ## Where to Start
 
-**New to programming or new to Z80?** This is not the right first stop. The
-planned introductory volume will teach machine model, registers, flags, memory,
+**New to programming or new to Z80?** This is not the right first stop.
+Volume 1 (`docs/intro/`) teaches machine model, registers, flags, memory,
 stack, subroutines, and raw Z80 programming in ZAX from the beginning.
 
 **Know Z80 but new to ZAX?** Start at Chapter 00 for the design rationale,
@@ -32,7 +31,7 @@ then Chapter 01 for the first working code. If you want to dive straight into
 code, Chapter 01 is self-contained.
 
 **Already familiar with ZAX basics?** Jump to whichever chapter covers the
-pattern you are working with. Each chapter's "What This Unit Teaches" section
+pattern you are working with. Each chapter's "What This Chapter Teaches" section
 gives a quick summary of what it covers.
 
 ---
