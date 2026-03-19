@@ -293,7 +293,7 @@ call.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - A `byte[n]` or `word[n]` declaration in a `section data` block lays out n
   bytes or words of initialized storage at the section's base address.

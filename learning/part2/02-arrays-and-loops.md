@@ -452,7 +452,7 @@ See `learning/part2/examples/unit2/prime_sieve.zax`.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - Arrays are declared with exact sizes. There is no hidden padding. A `byte[8]`
   is eight bytes.

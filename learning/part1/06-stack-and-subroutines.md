@@ -231,7 +231,6 @@ The program has a `main` function and two helper subroutines.
 func add_bytes(): AF
   ld a, b
   add a, c
-  ret
 end
 ```
 
@@ -310,7 +309,7 @@ paths.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - `call label` pushes the return address onto the stack and jumps to `label`.
 - `ret` pops the return address and jumps to it, returning to the call site.

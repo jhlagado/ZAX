@@ -319,7 +319,7 @@ of the repetitive work the compiler does for you.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - Typed function parameters move the register-passing protocol into the
   compiler. The caller names the arguments; the compiler emits the pushes and

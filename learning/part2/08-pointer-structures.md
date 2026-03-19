@@ -284,7 +284,7 @@ gaps from the course.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - `type RecordName` / `field: type` / `end` defines a record. Fields have
   explicit types; the compiler tracks offsets.

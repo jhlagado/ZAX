@@ -1,6 +1,6 @@
 [Part 1](README.md) | [Numbers and Registers →](01-numbers-and-registers.md)
 
-# Chapter 00 — What a Computer Is Doing
+# Chapter 00 — Machine Code and the Assembler
 
 This chapter explains the ground that every later chapter builds on: what bytes
 and addresses are, how memory holds both code and data, and what an assembler
@@ -113,7 +113,6 @@ end
 export func main(): void
   ld a, StoredValue
   ld (result), a
-  ret
 end
 ```
 
@@ -153,7 +152,7 @@ You do not need to understand every keyword yet. The important points are:
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - Machine code is a sequence of bytes the CPU reads as instructions.
 - An assembler converts human-readable mnemonics into those bytes.

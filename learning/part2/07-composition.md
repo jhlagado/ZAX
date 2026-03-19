@@ -185,7 +185,7 @@ operand is popped, the operation is applied.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - `import "module.zax"` makes exported functions available under the module
   name. Calls are qualified: `word_stack.push_word`.

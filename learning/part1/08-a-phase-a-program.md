@@ -246,7 +246,7 @@ Chapter 09 starts there.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - A complete ZAX program has a data section, a vars section, a `main` function,
   and one or more helper subroutines.
