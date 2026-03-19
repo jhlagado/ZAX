@@ -28,7 +28,7 @@ previous one. When the base case returns, the innermost frame is popped and the
 previous frame's IX is restored. Each level sees its own `var` block values,
 completely independent.
 
-The Chapter 01 chapter noted that recursive functions look and work like non-recursive
+Chapter 01 noted that recursive functions look and work like non-recursive
 ones. Chapter 06 demonstrates this at greater depth: `hanoi_count` calls itself twice
 per invocation and stores both results in frame locals, `array_sum_recursive`
 calls itself once and adds to the result on unwind, and `array_reverse_recursive`
