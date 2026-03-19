@@ -273,7 +273,7 @@ to the same stored value.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - A `var` block inside a function declares typed locals. The compiler puts them
   on the stack and tracks the offsets; you use their names.

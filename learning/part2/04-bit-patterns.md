@@ -223,7 +223,7 @@ actual bit work — is what ZAX code looks like at its most concentrated.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - Bit algorithms are expressed using Z80 bit-manipulation instructions directly:
   `srl`, `rr`, `and`, `or`, `xor`, `bit`. ZAX provides no higher-level bitwise

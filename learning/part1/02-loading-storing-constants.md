@@ -249,8 +249,6 @@ export func main(): void
   ld scratch, hl
 
   ld hl, scratch
-
-  ret
 end
 ```
 
@@ -339,7 +337,7 @@ encounter regularly. The others exist and will appear in later volumes.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - `ld` copies a value from source to destination; it does not perform
   arithmetic.

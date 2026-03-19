@@ -189,7 +189,7 @@ See `learning/part2/examples/unit6/array_reverse_recursive.zax`.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - Recursive functions use no special syntax. Each call — self or otherwise —
   generates a fresh IX frame with independent locals. The call stack depth is the

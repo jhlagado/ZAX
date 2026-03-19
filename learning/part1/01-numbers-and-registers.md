@@ -147,7 +147,6 @@ export func main(): void
   ld bc, $0064
   ld d, h
   ld e, l
-  ret
 end
 ```
 
@@ -174,7 +173,7 @@ the example shows it now so you recognise it when you see it later.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - A byte holds 8 bits; two hex digits describe it. A word holds 16 bits; four
   hex digits describe it.

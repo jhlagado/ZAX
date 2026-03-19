@@ -201,7 +201,7 @@ the mechanics.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - A `type` declaration groups named fields. `sizeof` and `offsetof` compute layout
   automatically using exact field sizes. There is no padding.

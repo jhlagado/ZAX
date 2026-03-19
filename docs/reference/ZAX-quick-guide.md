@@ -40,7 +40,6 @@ ZAX is not a high-level language. It is still assembly.
 ```zax
 export func main(): void
   ld a, 'A'
-  ret
 end
 ```
 
@@ -780,7 +779,6 @@ scan:
   ret
 found:
   ; HL points to the matching byte
-  ret
 end
 ```
 
@@ -1509,7 +1507,6 @@ func at_max(p: byte): byte
   else
     ld l, 0
   end
-  ret
 end
 ```
 
@@ -1561,7 +1558,6 @@ func is_stop(sig: byte): byte
     ret
   end
   ld l, $FF                            ; unreachable if all cases covered
-  ret
 end
 ```
 
@@ -1699,7 +1695,6 @@ func clip_right(x: word): word
   hl := vp.bottomRight.x  ; load the word value of bottomRight.x
   sbc hl, de
   ; result in HL
-  ret
 end
 ```
 
@@ -1731,7 +1726,6 @@ loop:
 
   inc hl                ; advance to next index
   djnz loop
-  ret
 end
 ```
 
@@ -2193,7 +2187,6 @@ func tick(): void
     ld a, DeviceState.Idle
     state := a
   end
-  ret
 end
 ```
 
@@ -2244,13 +2237,11 @@ end
 func uart_send(ch: byte): void
   uart_wait_tx         ; inline poll — no call overhead
   uart.tx_data := ch  ; write via value semantics
-  ret
 end
 
 func uart_recv(): byte
   uart_wait_rx
   l := uart.rx_data   ; result in L (byte return channel)
-  ret
 end
 ```
 
@@ -2292,7 +2283,6 @@ func handle_command(cmd: byte): byte
     ; unknown command — return error code
     ld l, $FF
   end
-  ret
 end
 ```
 
@@ -2340,7 +2330,6 @@ loop:
 
   inc hl                ; advance index
   djnz loop
-  ret
 end
 ```
 
@@ -2399,7 +2388,6 @@ func vector_add(ax: word, ay: word, bx: word, by: word): void
   de := ay
   bc := by
   add16 DE, BC          ; DE = ay + by
-  ret
 end
 ```
 
