@@ -346,6 +346,8 @@ export function parseAsmOperand(
     const inner = t.slice(1, -1).trim();
     const ea = parseEaExprFromText(filePath, inner, operandSpan, diagnostics);
     if (ea) return { kind: 'Mem', span: operandSpan, expr: ea };
+    const imm = parseImmExprFromText(filePath, inner, operandSpan, diagnostics, emitDiagnostics);
+    if (imm) return { kind: 'Mem', span: operandSpan, expr: { kind: 'EaImm', span: operandSpan, expr: imm } };
   }
   if (t.includes('.') || t.includes('[')) {
     const ea = parseEaExprFromText(filePath, t, operandSpan, diagnostics);
@@ -678,6 +680,8 @@ function isAssignmentStoragePath(ea: EaExprNode): boolean {
   switch (ea.kind) {
     case 'EaName':
       return true;
+    case 'EaImm':
+      return false;
     case 'EaReinterpret':
       return isAssignmentStoragePath(ea.base);
     case 'EaField':
