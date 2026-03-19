@@ -24,7 +24,6 @@ Use these as the authority for course planning and current syntax:
 
 - `docs/design/z80-programming-with-zax.md` — broader two-volume teaching direction and reader model
 - `docs/design/zax-algorithms-course.md` — course rationale, goals, style direction
-- `docs/work/course-roadmap.md` — unit inventory, tranche status, and friction log
 - `docs/work/course-writing-standard.md` — mandatory editorial and review standard for all course prose
 - `docs/spec/zax-spec.md` — normative language surface
 - `docs/reference/ZAX-quick-guide.md` — practical syntax reference
@@ -360,7 +359,7 @@ Write:
 - `docs/course/08-pointer-structures.md`
 - `docs/course/09-gaps-and-futures.md`
 
-For `09-gaps-and-futures.md`, explicitly use the friction log in `docs/work/course-roadmap.md` as source material. The chapter should connect `eight_queens` and the pointer/composition units back to real design pressure already recorded there.
+For `09-gaps-and-futures.md`, connect `eight_queens` and the pointer/composition units back to real design pressure recorded in `docs/design/`.
 
 ### Phase 4
 
