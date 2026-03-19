@@ -27,6 +27,22 @@ There is no padding. If you write `word[4]`, you get exactly eight bytes: four
 two-byte elements. The compiler tracks exact sizes and uses them to compute
 element strides for indexed access.
 
+The Chapter 02 examples give these sizes names rather than repeating the
+literal everywhere:
+
+```zax
+const ItemCount = 8
+const LastIndex = ItemCount - 1
+```
+
+`const` values are compile-time expressions. They can reference other `const`
+names and use standard arithmetic and bitwise operators. The compiler resolves
+them before generating any code. `LastIndex = ItemCount - 1` is not a
+subtraction at runtime — it is a constant folded to `7` at compile time.
+`const` names can appear in raw instruction operands (`ld b, LastIndex`,
+`ld hl, ItemCount`) and inside other `const` expressions. Array size
+declarations (`byte[8]`) currently require literal values.
+
 Declaring an array as a function local is not directly supported for variable-
 length storage — function `var` blocks only hold scalars. Working arrays for
 Chapter 02 algorithms live in named `data` sections at module scope, which is the
@@ -438,6 +454,10 @@ See `examples/course/unit2/prime_sieve.zax`.
 
 - Arrays are declared with exact sizes. There is no hidden padding. A `byte[8]`
   is eight bytes.
+- `const` values are compile-time expressions. They can reference other `const`
+  names and use arithmetic operators. `const LastIndex = ItemCount - 1` folds
+  to a literal at compile time; the subtraction does not appear in the emitted
+  code.
 - The index inside `[...]` must be a register. Load the index into a register
   before the access. L is the natural choice for 8-bit indexing into `byte[]`
   arrays.
