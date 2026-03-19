@@ -208,5 +208,5 @@ stack here, but using the same typed-path and null-sentinel discipline.
 
 4. `pop_word` returns its result in HL and the new depth in A simultaneously
    (`HL, AF` return declaration). After each pop in the calculator, `stack_depth
-   := a` captures the new depth. What would happen if this assignment were
+:= a` captures the new depth. What would happen if this assignment were
    omitted for the second of the two pops in the `KindAdd` arm?
