@@ -4,7 +4,7 @@
 ; Unit 2 example: select the minimum remaining element each pass.
 
 const ItemCount = 8
-const LastIndex = 7
+const LastIndex = ItemCount - 1
 
 section data vars at $8000
   values: byte[8] = { 8, 5, 2, 6, 9, 1, 4, 3 }

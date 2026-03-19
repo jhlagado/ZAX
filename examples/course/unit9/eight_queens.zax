@@ -4,9 +4,9 @@
 ; Unit 9 example: recursive backtracking with an explicit found flag to simulate named exit.
 
 const BoardSize = 8
-const LastRow = 7
-const LastColumn = 7
-const DiagBias = 7
+const LastRow = BoardSize - 1
+const LastColumn = BoardSize - 1
+const DiagBias = BoardSize - 1
 
 section data vars at $8000
   queen_cols: byte[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }
