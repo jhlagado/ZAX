@@ -8,23 +8,64 @@ Audience: writer, editor, reviewer, designer
 This document defines the writing, editing, and review standard for
 educational prose in the ZAX course materials.
 
-It exists to prevent a predictable failure mode:
+It exists to prevent two failure modes that often occur together:
 
 - vague, rhetorical, LLM-style prose that sounds intelligent but does not teach
+- accurate but compressed prose that is technically correct and exhausting to read
 
-The standard is intentionally strict. The writer is expected to use it as a
-skeletal discipline and then produce clear, concrete prose on top of it.
+The standard is intentionally strict. It tells the writer not just what to
+remove but what to aim for.
+
+---
+
+## The teacher and the student
+
+This is the most important section. Everything else follows from it.
+
+The writer is a teacher. The reader is a student. That is not a metaphor — it
+is the actual relationship. The student wants to learn how to use ZAX to write
+Z80 programs. The teacher's job is to make that happen in a way that keeps the
+student engaged and leaves them feeling capable, not confused.
+
+**Who the student is.** The student is a beginner. They are curious and
+motivated, but they do not come in with a background in machine code, Z80, or
+assembly language. They may know very little about programming at all. They
+chose to work at this level — close to the hardware — but that does not mean
+they find it easy yet. They need things explained, not gestured at.
+
+**What the student needs.** They need to understand what they are looking at
+before they are told how it works. They need to know why something matters
+before they can care about the mechanism. They need to feel that the material
+is within their reach. And they need enough momentum — enough sense of progress
+— to keep going when a concept is hard.
+
+**What the teacher is trying to do.** In every section, the teacher is trying
+to do one thing: take the student from not-knowing to knowing, without losing
+them in the process. That means:
+
+- setting up each idea before introducing it
+- explaining one thing at a time
+- acknowledging when something takes a moment to see
+- sounding like a person who is pleased to explain this, not a person filing a report
+
+**What the teacher is not trying to do.** The teacher is not trying to sound
+impressive. The teacher is not producing a reference document. The teacher is
+not compressed for efficiency. The teacher wants the student to come away from
+each chapter knowing something they did not know before, and feeling good about
+having learned it.
+
+**The single test.** After writing a section, ask: if a motivated beginner read
+this right now, would they come away knowing what I wanted them to know — and
+would they feel like continuing? If the answer is no to either part, the
+section is not finished.
 
 ---
 
 ## Who the writer is
 
-Before writing anything, be clear about who is writing and why.
-
-The writer is someone who likes Z80 and finds ZAX genuinely useful. They want
-to share that. They are not producing documentation for an organization. They
-are not writing in a neutral, institutional voice. They are a person talking
-to another person who wants to learn.
+The writer is someone who likes Z80 and finds ZAX genuinely useful. They are
+not producing documentation for an organization. They are a person talking to
+another person who wants to learn.
 
 **Motive**: The writer wants the reader to understand how this works and feel
 the satisfaction of it clicking into place. Not to admire the language from a
@@ -81,6 +122,45 @@ something is good without showing why.
 
 ---
 
+## Explanatory generosity
+
+Removing jargon is not the same as being readable. A chapter can pass every
+voice and tone check and still feel like reading cleaned-up notes — technically
+correct, no bad words, but terse and effortful. This section addresses that
+failure mode.
+
+**Background before mechanics.** Before explaining how something works, say
+what problem it solves. Before describing the lowering detail of `:=`, say what
+a programmer is trying to do and why a plain `ld` doesn't cover it. The reader
+needs to care before they can absorb.
+
+**One idea at a time.** Do not compress three new concepts into one paragraph
+because they are technically related. If the reader needs to understand A before
+B makes sense, give them A first and B second. A paragraph that introduces two
+unfamiliar mechanisms at once will be reread or skipped.
+
+**The first-read test.** Ask: could the intended reader understand this paragraph
+on a single reading? If the answer is probably not — even if every sentence is
+accurate — the paragraph is too compressed. Slow it down. Add one explanatory
+sentence. Give one more example. Earn the next step.
+
+**Terminology burden.** Count the unfamiliar technical terms in a paragraph. One
+or two is fine. Three or more means the paragraph is trying to do too much.
+Delay some terms to a later sentence or section, or define them before use.
+
+**Warmth without fluff.** The writer should sound like they want the reader to
+get it. Not performed enthusiasm — just the small signals that come from someone
+who actually cares whether the explanation works: anticipating confusion,
+offering a second way to say a hard thing, acknowledging when something takes a
+moment to see. These do not require extra words. They require presence.
+
+**The pleasantness test.** After writing a section, ask: does this feel like
+being taught by a person, or like reading an accurate but impersonal summary?
+The goal is not entertainment. The goal is that the reader feels accompanied
+through the material, not handed a document to process alone.
+
+---
+
 ## Non-negotiable rule
 
 Every paragraph must measurably advance the target reader's understanding.
@@ -94,6 +174,34 @@ If a paragraph does not clearly do that, it should be:
 Do not keep prose because it sounds polished, balanced, philosophical, or
 "nicely introductory." Keep it only if it helps the reader understand the
 subject more clearly.
+
+## Terms before use
+
+Every term the student might not know must be explained before it is used,
+not after. This applies to:
+
+- Z80-specific terms (`flag`, `register pair`, `carry`, `stack`, `opcode`)
+- ZAX-specific terms (`func`, `var`, `:=`, `section data`, `op`)
+- General programming terms if the reader level does not guarantee familiarity
+  (`frame`, `local variable`, `call stack`, `unsigned`)
+- Notation that has not yet appeared (`$` for hex, `0x` prefix, binary bit
+  notation)
+
+The test is simple: if the intended reader could plausibly not know this term,
+it needs a definition on first use. Not a paragraph — often one clause is
+enough: "the carry flag (a single bit the CPU sets when an addition overflows)."
+
+Technical jargon is unavoidable in a course about machine code. The problem is
+not jargon itself. The problem is jargon used without introduction, or jargon
+that sounds technical but carries no information ("assembler surface",
+"ergonomic cost"). The distinction:
+
+- **Introduce and use**: acceptable. "The Z flag is set when the result is zero.
+  The `if Z` block runs when Z is set."
+- **Use without introduction**: not acceptable. A term the reader has not
+  encountered should not appear naked in a sentence.
+- **Bureaucratic jargon**: not acceptable. Words that sound like they mean
+  something but do not help the reader read or write code.
 
 ## Reader-first rule
 
@@ -405,7 +513,34 @@ The reviewer should explicitly look for:
 - After each section, what does the reader now know?
 - If the answer is unclear, the section is weak.
 
-### 6. Voice and tone
+### 6. Pacing and readability
+
+These checks catch prose that has been cleaned of jargon but is still too
+compressed to teach well. A chapter can pass all the voice checks and still
+feel like edited notes rather than instruction.
+
+**Compression check**: Is any section trying to introduce too many new ideas
+at once? If a paragraph contains more than one or two unfamiliar mechanisms,
+it is probably compressed past readability.
+
+**Background check**: Does the reader know why this matters before the mechanics
+begin? Find the first sentence in each section that explains mechanism. Is there
+a sentence before it that explains the problem? If not, add one.
+
+**First-read check**: Read each paragraph as the intended reader would, once.
+Would they likely understand it without rereading? If the answer is no — even
+if every sentence is accurate — the paragraph needs to slow down.
+
+**Teacher-presence check**: Does the prose sound like a teacher helping someone
+through material, or like accurate notes someone cleaned up? If it feels
+impersonal, look for places to acknowledge what is hard, offer a second angle,
+or simply say what to expect before saying what to do.
+
+**Term-density check**: Count the unfamiliar technical terms in each paragraph.
+More than two in a single paragraph is usually too many. Delay some or define
+them before use.
+
+### 7. Voice and tone
 
 This is the most commonly missed failure mode. Check each of the following
 explicitly — do not assume good prose style passes automatically.
