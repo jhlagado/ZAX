@@ -240,16 +240,12 @@ func lo_byte_of(input_word: word): HL
 end
 ```
 
-(From `examples/course/unit8/reg_pair.zax`, lines 13–26.)
+(From `examples/course/unit8/reg_pair.zax`, lines 13–27.)
 
 The union variable is declared without an initializer; it is zero-initialized by
 default. `scratch.full_word := input_word` stores the two-byte argument at
 `$8000`. `a := scratch.lo_byte` loads the single byte at `$8000` — the low
 byte. The result is zero-extended into HL before returning.
-
-The same idiom in registers would use `LD L, L` (HL already holds the value
-from a call) or `AND $FF` to isolate the low byte. The union makes the intent
-explicit at the storage level and names the two interpretations.
 
 Union declarations are module-scope. Every union field starts at offset 0;
 there is no padding between fields, because they all overlap. Unions have no
