@@ -169,9 +169,8 @@ little-endian order (`$34` then `$12`).
 a time. After both instructions DE holds `$1234` — a copy of HL.
 
 There is no single `ld de, hl` instruction on the Z80. Copying a full register
-pair into another always takes two separate 8-bit moves. This is an example of
-the bookkeeping cost that raw Z80 programming imposes, and it is visible in this
-example on purpose.
+pair into another always takes two separate 8-bit moves. This is deliberate:
+the example shows it now so you recognise it when you see it later.
 
 ---
 

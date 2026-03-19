@@ -1,4 +1,4 @@
-[← A Phase A Program](08-a-phase-a-program.md) | [Part 1](README.md) | [Structured Control Flow →](10-structured-control-flow.md)
+[← A Complete Program](08-a-phase-a-program.md) | [Part 1](README.md) | [Structured Control Flow →](10-structured-control-flow.md)
 
 # Chapter 09 — Typed Storage and Assignment
 
@@ -7,8 +7,8 @@ After reading it you will be able to declare a typed local inside a function,
 read and write it with `:=`, use `succ` and `pred` to increment or decrement it,
 and explain what the compiler does differently from a raw `ld` instruction.
 
-Prerequisites: Chapters 00–07 (all Phase A constructs, especially the register-
-naming friction identified in Chapter 08).
+Prerequisites: Chapters 00–07 (especially Chapter 08, which names the specific
+problems that typed variables address).
 
 ---
 
@@ -20,17 +20,17 @@ allocates a slot for it in the function's stack frame. The variable is referred
 to by name throughout the function body. No register is permanently assigned to
 hold its value.
 
-In Phase A, a value that needed to persist across iterations of a loop had to
-live in a register — B for a loop counter, D for a running count, and so on.
-The choice of register was the programmer's responsibility, and it was a source
-of naming pressure: when two values needed to persist simultaneously, two
-registers had to be reserved, and any function that modified those registers had
-to save and restore them with `push` and `pop`. Chapter 08 named this cost
-explicitly in `count_above`: the `push bc / ld d, 0 / pop bc` block existed
-only because D needed to be initialized in a register-conscious way, not because
-the save and restore carried any logical meaning.
+In raw Z80, a value that needs to persist across loop iterations has to live in
+a register — B for a loop counter, D for a running count, and so on. You choose
+the register. When two values need to persist at the same time, two registers
+have to be reserved, and any function that modifies those registers has to save
+and restore them with `push` and `pop`. Chapter 08 showed this in `count_above`:
+the `push bc / ld d, 0 / pop bc` block existed only because D needed to be
+initialized without disturbing B and C. The save and restore carried no logical
+meaning — it was just register traffic management.
 
-Typed locals remove that pressure. The compiler decides where to put the value.
+Typed locals remove that problem. You name the value; the compiler decides
+where to put it.
 
 ---
 
@@ -51,16 +51,16 @@ end
 
 `count: byte = 0` declares a one-byte local named `count`, initialized to zero.
 `total: word = 0` declares a two-byte local named `total`, initialized to zero.
-Both are allocated as 16-bit slots in the IX-anchored frame that ZAX builds for
-the function.
+Both are allocated as 16-bit slots in the block of stack memory ZAX reserves
+for the function's local variables.
 
 A local initialized to zero does not need the `= 0` clause — uninitialized
 scalar locals start at zero by default — but writing it explicitly states the
 intent.
 
 Only scalar types are valid in `var` blocks: `byte`, `word`, `addr`, and `ptr`.
-Non-scalar types (arrays, records) may appear as aliases but do not allocate
-frame slots. This chapter uses only `byte` and `word` locals.
+Arrays and records can appear as aliases but do not get stack slots of their own.
+This chapter uses only `byte` and `word` locals.
 
 ---
 
@@ -78,21 +78,19 @@ total := hl     ; store HL into 'total'
 ```
 
 The direction is left-to-right: the destination is on the left, the source on
-the right. This matches the visual direction of `ld destination, source` from
-Phase A.
+the right — the same direction as `ld destination, source`.
 
-`:=` is not just another spelling of `ld`. The difference is what the compiler
-checks and what it emits. `ld` is a raw Z80 instruction: the programmer chooses
-the operand form and the assembler encodes it. `:=` is a typed assignment: the
-compiler checks that the left-hand side is writable typed storage, checks that
-the right-hand side is a compatible value, and then emits the correct load or
-store sequence, including any multi-instruction lowering the target requires.
+`:=` is not just another spelling of `ld`. `ld` is a raw Z80 instruction: you
+choose the operand form and the assembler encodes it exactly as written. `:=`
+is a typed assignment: the compiler checks that the left side is writable
+storage, checks that the right side is a compatible value, and emits whatever
+instruction sequence is needed to make the transfer happen correctly.
 
-For frame slots, the lowering is non-trivial on the Z80. The IX-anchored frame
-addresses locals through `(IX±offset)` forms. Because the Z80 does not allow
-`ld h, (ix+d)` or `ld l, (ix+d)`, word-sized frame slot transfers require the
-compiler to use DE as a shuttle register and emit `ex de, hl` around the load or
-store. When you write `hl := count`, the compiler may emit:
+For word-sized stack variables, this is not a single instruction on the Z80.
+Stack locals are addressed through `(IX±offset)`, and the Z80 does not allow
+`ld h, (ix+d)` or `ld l, (ix+d)`. So the compiler uses DE as an intermediate
+register and wraps the load in `ex de, hl`. When you write `hl := count`, the
+compiler emits:
 
 ```asm
 ex de, hl
@@ -143,12 +141,12 @@ for range discipline.
 
 ---
 
-## Phase A vs Phase B: the same two loops
+## Before and after: the same two loops
 
-The Chapter 08 capstone — finding the maximum value and counting entries above a
-threshold — illustrates the change clearly. Here are both versions side by side.
+The Chapter 08 program — finding the maximum value and counting entries above a
+threshold — shows the difference clearly. Here are both versions side by side.
 
-**Phase A — `find_max` from `08_phase_a_capstone.zax`:**
+**Without typed variables (`08_phase_a_capstone.zax`):**
 
 ```zax
 func find_max(): AF
@@ -164,11 +162,11 @@ find_max_no_update:
 end
 ```
 
-The running maximum lives in A throughout. A temporary register C is used to
-hold each table byte. Neither name says what the value means — `a` and `c` are
-structural choices, not semantic names.
+The running maximum lives in A throughout. A temporary register C holds each
+table byte. Neither name says what the value means — `a` and `c` are just
+whatever registers were free.
 
-**Phase B — `find_max_b` from `09_typed_storage.zax`:**
+**With typed variables (`09_typed_storage.zax`):**
 
 ```zax
 func find_max_b(): AF
@@ -188,11 +186,11 @@ end
 ```
 
 `running_max` is a named variable. Its name says what it holds. The compiler
-places it in a frame slot; the programmer does not need to choose a register for
-it. The logic at the end — `a := running_max` — makes explicit what Phase A
-left implicit: the result must be loaded into A before the function returns.
+places it on the stack; you do not choose a register. The `a := running_max` at
+the end makes explicit what the raw version left implicit: the result has to be
+in A before returning.
 
-**Phase A — `count_above` from `08_phase_a_capstone.zax`:**
+**Without typed variables (`08_phase_a_capstone.zax`):**
 
 ```zax
 func count_above(): AF
@@ -213,12 +211,12 @@ count_above_skip:
 end
 ```
 
-The `push bc / ld d, 0 / pop bc` block is pure bookkeeping. D must be zero
-before the loop, but B and C carry inputs and cannot be clobbered. The push/pop
-pair preserves them while D is initialized. The push/pop is not part of the
-algorithm; it is register management overhead.
+The `push bc / ld d, 0 / pop bc` block has nothing to do with the algorithm.
+D must be zero before the loop, but B and C already hold inputs. The push/pop
+saves them temporarily so D can be set. It is there because there are no named
+variables — just registers that have to be juggled.
 
-**Phase B — `count_above_b` from `09_typed_storage.zax`:**
+**With typed variables (`09_typed_storage.zax`):**
 
 ```zax
 func count_above_b(): AF
@@ -247,13 +245,12 @@ an input.
 
 ## The example: `learning/part1/examples/09_typed_storage.zax`
 
-The example file rewrites the two Phase A subroutines above and demonstrates
-them called from the same `main` as Chapter 08. The data and expected results
-are identical — the table `{ 23, 47, 91, 5, 67, 12, 88, 34 }` produces a
-maximum of 91 and a count of 3 entries above 64 — so the reader can compare the
-outputs directly.
+The example file rewrites the two subroutines above and calls them from the same
+`main` as Chapter 08. The data and expected results are identical — the table
+`{ 23, 47, 91, 5, 67, 12, 88, 34 }` produces a maximum of 91 and a count of 3
+entries above 64 — so you can compare the two directly.
 
-Notice what remains unchanged between Phase A and Phase B:
+Notice what stays the same:
 
 - The `djnz` loop structure is kept. DJNZ is still the right counted-loop
   primitive for a table of known length.
@@ -262,48 +259,44 @@ Notice what remains unchanged between Phase A and Phase B:
 - The `ld a, (hl)` inside the loop body is kept. Reading through a raw pointer
   into a register is still written as raw Z80.
 
-Phase B adds names and types to persistent values. It does not change how
-arithmetic and pointer manipulation are expressed.
+Typed variables add names to values that need to persist. They do not change
+how arithmetic and pointer manipulation work.
 
-**Raw Z80 instructions accept typed local names directly.** In the Phase B
+**Raw Z80 instructions can use typed local names directly.** In the typed
 version, `cp running_max` uses the typed local name as an operand to a raw Z80
-instruction — not a `:=` assignment. This is valid: the ZAX compiler recognises
-typed local names in raw instruction operand positions and lowers them to the
-correct `(IX±d)` addressing form automatically. Writing `cp running_max` emits
-`cp (ix-N)` where N is the frame offset of `running_max`. The name refers to
-the same frame slot as it does in `:=` — but the access form here is an
-instruction operand, not a typed assignment. This is different from writing
-`a := running_max` (which generates a register load sequence) but refers to the
-same underlying storage.
+instruction — not a `:=` assignment. The compiler recognises typed local names
+in raw instruction operand positions and translates them to the correct
+`(IX±d)` addressing form. Writing `cp running_max` emits `cp (ix-N)` where N
+is the offset of `running_max` in the stack frame. This is different from
+`a := running_max` (which generates a register load sequence), but both refer
+to the same stored value.
 
 ---
 
 ## What This Chapter Teaches
 
-- A `var` block inside a function declares typed locals. Scalars get IX-relative
-  frame slots; the compiler allocates them and manages the frame.
-- `:=` assigns a value from the right side to the left side. It is a typed
-  assignment: the compiler checks types and emits the correct lowered sequence.
-- `:=` is not `ld`. For IX-relative word slots, the compiler emits a multi-
-  instruction DE-shuttle sequence. The programmer writes one line; the compiler
-  produces the correct Z80.
+- A `var` block inside a function declares typed locals. The compiler puts them
+  on the stack and tracks the offsets; you use their names.
+- `:=` assigns a value from the right side to the left side. The compiler checks
+  that the types are compatible and generates whatever Z80 sequence is needed.
+- `:=` is not `ld`. For word-sized stack variables, the compiler emits a
+  multi-instruction sequence using DE as an intermediate. You write one line;
+  the compiler figures out the rest.
 - Bare names refer to the typed value. Do not use `(name)` for typed locals —
-  that would mean "memory at the address stored in the slot."
+  that would mean "memory at the address stored in the slot," which is different.
 - `succ path` increments a typed scalar in place. `pred path` decrements it.
   Neither returns a value or guarantees flag state.
-- The push/pop overhead from Phase A's `count_above` is eliminated by giving the
-  counter a typed local name, removing the register naming pressure entirely.
-- The DJNZ loop, `cp` comparison, and `ld a, (hl)` pointer-read are Phase A
-  constructs that Phase B does not replace. Typed storage is a complement to
-  raw Z80, not a replacement for it.
+- The push/pop from Chapter 08's `count_above` disappears because `cnt` is a
+  named variable that does not occupy a register — so there is nothing to protect.
+- The DJNZ loop, `cp` comparison, and `ld a, (hl)` stay exactly as they were.
+  Typed variables are an addition to raw Z80, not a replacement for it.
 
 ## What Comes Next
 
-Chapter 10 introduces structured control flow: `if`/`else` as a replacement for
-flag-test-and-jump sequences, and `while` as a replacement for manual loop-label
-structures. The `count_above` pattern — two `jr` instructions to separate less-
-than and equal-to from greater-than — will be rewritten as a readable `if` chain.
+Chapter 10 introduces `if`/`else` and `while`. The `count_above` double-`cp`
+pattern — two `jr` instructions just to distinguish less-than from greater-than
+— gets replaced with a readable `if` chain.
 
 ---
 
-[← A Phase A Program](08-a-phase-a-program.md) | [Part 1](README.md) | [Structured Control Flow →](10-structured-control-flow.md)
+[← A Complete Program](08-a-phase-a-program.md) | [Part 1](README.md) | [Structured Control Flow →](10-structured-control-flow.md)

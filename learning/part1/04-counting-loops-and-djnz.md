@@ -67,7 +67,7 @@ loop_top:
 ```
 
 The label `loop_top` sits at the first instruction of the body, not before the
-`ld b` initializer. DJNZ does not initialize B; that is the programmer's
+`ld b` initializer. DJNZ does not initialize B; that is your
 responsibility. If you forget the `ld b` init, B holds whatever was there from
 the previous instruction, and the loop runs for an unpredictable number of
 iterations.
@@ -277,9 +277,9 @@ A flag-exit loop is right when the stopping condition is "some computed quantity
 has crossed a threshold." It exits on an arithmetic result, with DJNZ again
 serving only as the overrun guard.
 
-In practice, most Phase A loops are counted loops with DJNZ as the primary exit.
-The sentinel and flag-exit forms appear when the content or computation determines
-when to stop.
+In practice, most raw Z80 loops are counted loops with DJNZ as the primary
+exit. The sentinel and flag-exit forms appear when the content or computation
+determines when to stop.
 
 ---
 

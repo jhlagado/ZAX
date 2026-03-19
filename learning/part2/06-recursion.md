@@ -3,12 +3,12 @@
 # Chapter 06 — Recursion
 
 The Chapter 06 examples show recursive decomposition using the same `func` construct
-that has appeared throughout the course. There is nothing structurally new in how
-ZAX handles recursion: every `func` call — whether the callee is a different
-function or the same function calling itself — generates a fresh IX frame. The
-compiler does not distinguish recursive from non-recursive calls. The disciplined
-consequence is that each invocation has its own independent locals, and the
-programmer does not need to think about saving state across the recursive boundary.
+that has appeared throughout the course. ZAX handles recursion the same way it
+handles any other call: every `func` call — whether the callee is a different
+function or the same function calling itself — gets a fresh stack frame. The
+compiler does not distinguish recursive from non-recursive calls. Each invocation
+has its own independent locals, and you do not need to save state manually across
+the recursive boundary.
 
 What changes in Chapter 06 is the algorithmic shape. These examples do not loop over
 a flat array or advance a pointer; they reduce a problem into a smaller version of
@@ -22,8 +22,8 @@ stack load-bearing in a way it was not in the iterative examples.
 
 Every `func` with a `var` block gets a fresh IX frame on entry. The compiler emits
 `push ix` / `ld ix, 0` / `add ix, sp` to anchor the frame, allocates space for
-the declared locals below IX, then emits the callee-save pushes for the registers
-the function will clobber.
+the declared locals below IX, then emits the register-save pushes for the
+registers the function will clobber.
 
 In a recursive function, each call to itself pushes a new frame on top of the
 previous one. When the base case returns, the innermost frame is popped and the
@@ -123,7 +123,7 @@ element to the running total as the call stack unwinds.
 
 The zero-extension — `ld e, a` / `ld d, 0` — is a recurring Z80 pattern for
 promoting an 8-bit byte value into a 16-bit DE pair for use with `add hl, de`.
-There is no ZAX operator for this; the two raw instructions are the idiom.
+There is no ZAX operator for this; the two raw instructions are the way to do it.
 
 The base case returns `ld hl, 0` when `index_value == ItemCount`, providing the
 zero that the deepest level adds to. Every other level adds one element to that
@@ -170,9 +170,9 @@ end
 
 (From `learning/part2/examples/unit6/array_reverse_recursive.zax`, lines 41–56.)
 
-The termination test uses `cp b` with `if NC`: `cp b` subtracts B from A and sets
-NC when A >= B. This is the same signed comparison idiom seen throughout the
-course. When `left_index >= right_index`, the function returns without doing work.
+The termination test uses `cp b` with `if NC`: `cp b` subtracts B from A, and
+NC (no carry) is set when A >= B. When `left_index >= right_index`, the indices
+have met or crossed, so the function returns without doing any more work.
 
 The helper `swap_values` is a separate `func` that reads both elements into locals
 and writes them back in reversed positions. It has its own IX frame and its own
@@ -200,12 +200,12 @@ See `learning/part2/examples/unit6/array_reverse_recursive.zax`.
 - `succ` and `pred` on frame locals correctly advance arguments for the recursive
   call. The incremented value is computed and stored before it is passed, not
   computed in place inside the argument list.
-- `ld e, a` / `ld d, 0` is the idiom for zero-extending a byte into DE for use
-  with `add hl, de`. This appears wherever an 8-bit element value needs to be
-  added into a 16-bit accumulator in HL.
+- `ld e, a` / `ld d, 0` zero-extends a byte into DE for use with `add hl, de`.
+  This appears wherever an 8-bit element value needs to be added into a 16-bit
+  accumulator in HL.
 - The recursion depth is bounded by the algorithm. `hanoi_count 4` produces four
   levels of double-recursive calls. On a real Z80, the stack must be large enough
-  to hold all frames. That is the programmer's responsibility.
+  to hold all frames. That is your responsibility to ensure.
 
 ---
 

@@ -24,7 +24,7 @@ ld  destination, source
 `ld` never performs arithmetic; it only copies. The source value is placed in
 the destination unchanged.
 
-The four source/destination combinations you will use in Phase A are:
+The four source/destination combinations you will use most often are:
 
 1. **Immediate**: the value is a literal number in the instruction.
 2. **Register to register**: copy from one register to another.
@@ -130,8 +130,7 @@ directly refers to the typed storage value — no extra notation is needed.
 mean "treat `count` as a memory address and load the byte at that address." For
 typed scalar storage this produces the same result as the bare form, but the
 meaning is subtly different: bare name = the stored value; `(name)` = memory at
-that address. In Phase A code, prefer the bare form for named scalar reads and
-writes.
+that address. Prefer the bare form for named scalar reads and writes.
 
 ---
 
@@ -335,7 +334,7 @@ HL'. Like `ex af, af'`, this relies on the shadow registers and is most
 commonly used in interrupt handlers and time-critical routines where spilling
 to the stack is too slow.
 
-For Phase A and Phase B code, `ex de, hl` is the exchange instruction you will
+Throughout this course, `ex de, hl` is the exchange instruction you will
 encounter regularly. The others exist and will appear in later volumes.
 
 ---

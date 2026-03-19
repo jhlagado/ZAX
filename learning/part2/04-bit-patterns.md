@@ -6,7 +6,7 @@ The Chapter 04 examples stay close to the machine. The Z80 bit-manipulation
 instructions — `srl`, `rr`, `and`, `or`, `xor`, `bit` — appear directly as
 mnemonics in ZAX source. What ZAX adds is the surrounding structure: typed
 locals that carry algorithm state between steps, `if` blocks that branch on
-bit tests, and the `while NZ` loop idiom used throughout the course.
+bit tests, and the `while NZ` loop form used throughout the course.
 
 Each of the four examples is a single loop that shifts through a byte, testing
 or transforming one bit per iteration. Reading them requires knowing what each
@@ -71,8 +71,7 @@ on each set bit. The toggle uses `xor 1` to invert the low bit of `parity_value`
 (From `learning/part2/examples/unit4/parity.zax`, lines 24–34.)
 
 The `xor 1` flips the low bit of A (which holds `parity_value`) each time a set
-bit is encountered. This is the classic XOR-toggle idiom: repeated XOR with 1
-alternates between 0 and 1. When the loop ends, `parity_value` is 1 if an odd
+bit is encountered. Repeated XOR with 1 alternates between 0 and 1. When the loop ends, `parity_value` is 1 if an odd
 number of bits were set, 0 if even — odd parity as a single-bit result.
 
 The loop structure in `parity.zax` is nearly identical to `popcount.zax`. Both
@@ -160,7 +159,7 @@ extract `width` bits from that aligned value.
 (From `learning/part2/examples/unit4/getbits.zax`, lines 16–34, condensed.)
 
 The second `while NZ` loop extracts `width` bits using a growing bit mask. On
-each iteration, `bit_mask` doubles via `add a, a` (the same left-shift idiom from
+each iteration, `bit_mask` doubles via `add a, a` (the same left-shift technique from
 `bit_reverse.zax`), and the corresponding bit is ORed into `result_value`:
 
 ```zax
@@ -203,7 +202,7 @@ positions, shifting a working value right by one at each step and acting on the
 low bit. The loop body is a few instructions around `srl a`, `and 1`, and a
 conditional action.
 
-**The `while NZ` idiom with a counter.** Counting loops in Chapter 04 use `while NZ`
+**The `while NZ` form with a counter.** Counting loops in Chapter 04 use `while NZ`
 with a byte counter decremented by `pred`. The loop exits when the counter reaches
 zero — the `or a` on the counter value sets Z, which terminates the loop. This
 is the same counter-driven `while NZ` pattern introduced in Chapter 01.
@@ -219,8 +218,8 @@ example, the algorithmic state — the working value, the counter, the accumulat
 result — lives in typed byte locals in the `var` block. The actual bit operations
 (`srl`, `and`, `xor`, `bit`, `or`) operate on A and B directly. The `:=`
 assignments move values between the typed locals and the register file as needed.
-This boundary between typed storage and raw instruction work is the central ZAX
-idiom, and Chapter 04 shows it at its most concentrated.
+This split — typed storage for algorithm state, raw Z80 instructions for the
+actual bit work — is what ZAX code looks like at its most concentrated.
 
 ---
 
@@ -229,8 +228,8 @@ idiom, and Chapter 04 shows it at its most concentrated.
 - Bit algorithms are expressed using Z80 bit-manipulation instructions directly:
   `srl`, `rr`, `and`, `or`, `xor`, `bit`. ZAX provides no higher-level bitwise
   abstractions. The instructions appear as mnemonics.
-- The `while NZ` idiom with `pred` decrement works for counting loops just as
-  well as for sentinel loops. When the counter hits zero, `or a` sets Z and the
+- `while NZ` with `pred` decrement works for counting loops just as well as for
+  sentinel loops. When the counter hits zero, `or a` sets Z and the
   loop exits.
 - A local `op` captures a recurring register-level pattern without function call
   overhead. The compiler verifies that the operand register bindings at call sites
@@ -251,11 +250,11 @@ idiom, and Chapter 04 shows it at its most concentrated.
 
 ## What Comes Next
 
-Chapter 05 introduces typed aggregate state: records and arrays of records.
-The byte and word scalars that have carried algorithm state throughout the
-course are grouped into named types with automatic offset computation. The
-ring buffer example applies the same modular-index discipline used in the
-counter-driven loops here, now over a struct array rather than a scalar.
+Chapter 05 introduces records and arrays of records. The byte and word scalars
+that have carried algorithm state throughout the course get grouped into named
+types with automatic offset computation. The ring buffer example applies the
+same modular-index technique used in the counter-driven loops here, now over a
+struct array rather than a scalar.
 
 ---
 
@@ -276,8 +275,7 @@ counter-driven loops here, now over a struct array rather than a scalar.
    readable? What does the op definition buy you?
 
 4. `getbits.zax` uses two separate `while NZ` loops for the two phases. Could both
-   phases be combined into one loop? What invariant would the combined loop need
-   to maintain?
+   phases be combined into one loop? What would the combined loop need to track?
 
 ---
 
