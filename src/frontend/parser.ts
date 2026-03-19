@@ -102,91 +102,6 @@ function splitTopLevelComma(text: string): string[] {
   return parts;
 }
 
-function splitBackslashStatements(
-  modulePath: string,
-  sourceText: string,
-  diagnostics: Diagnostic[],
-): string {
-  const lines = sourceText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-  const out: string[] = [];
-
-  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-    const raw = lines[lineIndex] ?? '';
-    let segment = '';
-    let inChar = false;
-    let inString = false;
-    let escaped = false;
-
-    for (let i = 0; i < raw.length; i++) {
-      const ch = raw[i]!;
-
-      if (inChar || inString) {
-        if (escaped) {
-          escaped = false;
-          segment += ch;
-          continue;
-        }
-        if (ch === '\\') {
-          escaped = true;
-          segment += ch;
-          continue;
-        }
-        if (inChar && ch === "'") {
-          inChar = false;
-          segment += ch;
-          continue;
-        }
-        if (inString && ch === '"') {
-          inString = false;
-          segment += ch;
-          continue;
-        }
-        segment += ch;
-        continue;
-      }
-
-      if (ch === ';') {
-        segment += raw.slice(i);
-        break;
-      }
-
-      if (ch === "'") {
-        inChar = true;
-        segment += ch;
-        continue;
-      }
-
-      if (ch === '"') {
-        inString = true;
-        segment += ch;
-        continue;
-      }
-
-      if (ch === '\\') {
-        const rest = raw.slice(i + 1);
-        const nonSpaceIndex = rest.search(/[^\s]/);
-        const nextToken = nonSpaceIndex >= 0 ? rest[nonSpaceIndex] : '';
-        if (nonSpaceIndex === -1 || nextToken === ';') {
-          diag(diagnostics, modulePath, 'Trailing backslash must be followed by another statement.', {
-            line: lineIndex + 1,
-            column: i + 1,
-          });
-          continue;
-        }
-        out.push(segment);
-        segment = '';
-        continue;
-      }
-
-      segment += ch;
-    }
-
-    out.push(segment);
-  }
-
-  return out.join('\n');
-}
-
 /**
  * Parse a single `.zax` module file from an in-memory source string.
  *
@@ -199,17 +114,106 @@ export function parseModuleFile(
   sourceText: string,
   diagnostics: Diagnostic[],
 ): ModuleFileNode {
-  const normalizedSource = splitBackslashStatements(modulePath, sourceText, diagnostics);
-  const file = makeSourceFile(modulePath, normalizedSource);
-  const lineCount = file.lineStarts.length;
+  const file = makeSourceFile(modulePath, sourceText);
 
-  function getRawLine(lineIndex: number): { raw: string; startOffset: number; endOffset: number } {
-    const startOffset = file.lineStarts[lineIndex] ?? 0;
-    const nextStart = file.lineStarts[lineIndex + 1] ?? file.text.length;
+  type LogicalLine = {
+    raw: string;
+    startOffset: number;
+    endOffset: number;
+    lineNo: number;
+  };
+
+  const logicalLines: LogicalLine[] = [];
+
+  for (let i = 0; i < file.lineStarts.length; i++) {
+    const startOffset = file.lineStarts[i] ?? 0;
+    const nextStart = file.lineStarts[i + 1] ?? file.text.length;
     let rawWithEol = file.text.slice(startOffset, nextStart);
     if (rawWithEol.endsWith('\n')) rawWithEol = rawWithEol.slice(0, -1);
     if (rawWithEol.endsWith('\r')) rawWithEol = rawWithEol.slice(0, -1);
-    return { raw: rawWithEol, startOffset, endOffset: startOffset + rawWithEol.length };
+
+    const raw = rawWithEol;
+    const lineNo = i + 1;
+    let segmentStart = 0;
+    let inChar = false;
+    let inString = false;
+    let escaped = false;
+
+    for (let j = 0; j < raw.length; j++) {
+      const ch = raw[j]!;
+
+      if (inChar || inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === '\\') {
+          escaped = true;
+          continue;
+        }
+        if (inChar && ch === "'") {
+          inChar = false;
+          continue;
+        }
+        if (inString && ch === '"') {
+          inString = false;
+          continue;
+        }
+        continue;
+      }
+
+      if (ch === ';') {
+        break;
+      }
+
+      if (ch === "'") {
+        inChar = true;
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (ch === '\\') {
+        const rest = raw.slice(j + 1);
+        const hasWhitespace = rest.length > 0 && /[ \t]/.test(rest[0]!);
+        if (!hasWhitespace && rest.length > 0) continue;
+
+        const nonSpaceIndex = rest.search(/[^\s]/);
+        const nextToken = nonSpaceIndex >= 0 ? rest[nonSpaceIndex] : '';
+        if (nonSpaceIndex === -1 || nextToken === ';') {
+          diag(diagnostics, modulePath, 'Trailing backslash must be followed by another statement.', {
+            line: lineNo,
+            column: j + 1,
+          });
+          continue;
+        }
+        const segment = raw.slice(segmentStart, j);
+        logicalLines.push({
+          raw: segment,
+          startOffset: startOffset + segmentStart,
+          endOffset: startOffset + j,
+          lineNo,
+        });
+        segmentStart = j + 1;
+      }
+    }
+
+    logicalLines.push({
+      raw: raw.slice(segmentStart),
+      startOffset: startOffset + segmentStart,
+      endOffset: startOffset + raw.length,
+      lineNo,
+    });
+  }
+
+  const lineCount = logicalLines.length;
+
+  function getRawLine(lineIndex: number): { raw: string; startOffset: number; endOffset: number } {
+    const logical = logicalLines[lineIndex] ?? { raw: '', startOffset: 0, endOffset: 0, lineNo: 1 };
+    return { raw: logical.raw, startOffset: logical.startOffset, endOffset: logical.endOffset };
   }
 
   const items: ModuleItemNode[] = [];
@@ -846,7 +850,7 @@ export function parseModuleFile(
   function parseModuleItem(index: number, ctx: ParseItemContext): ParseItemResult {
     const { raw, startOffset: lineStartOffset, endOffset: lineEndOffset } = getRawLine(index);
     const text = stripComment(raw).trim();
-    const lineNo = index + 1;
+    const lineNo = logicalLines[index]?.lineNo ?? index + 1;
     if (text.length === 0) {
       if (ctx.scope === 'section') {
         return { nextIndex: index + 1 };
