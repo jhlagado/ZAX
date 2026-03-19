@@ -4,7 +4,7 @@ ZAX is a structured assembler for Z80-family processors. It compiles source dire
 
 The language adds typed storage, named functions, structured control flow, a typed macro system, and explicit modules on top of raw Z80 assembly. Register selection, flag management, and memory layout stay the programmer's responsibility throughout.
 
-ZAX is not a high-level language targeting Z80. It is assembly with structure layered on top.
+Typical targets: game engines, demoscene tools, firmware, ROM monitors, hardware drivers, systems programming education.
 
 ---
 
@@ -51,25 +51,24 @@ Functions have typed parameters, a declared return register, and local variables
 **Records, unions, and arrays**
 Types describe memory layout with no runtime metadata. Field and element accesses compose as path expressions. `sizeof` and `offsetof` update automatically when a type changes.
 
-**Modules**
-Programs compose from modules with explicit imports. Symbols are private by default; `export` makes them visible across module boundaries.
+**Modules and includes**
+Programs compose from modules with explicit imports. Symbols are private by default; `export` makes them visible across module boundaries. `include` inserts a file as literal text before parsing — no module semantics, useful for shared constants and op definitions.
 
 **Compile-time expressions**
 Constants, enums, `sizeof`, and `offsetof` resolve at compile time with full arithmetic, bitwise ops, and forward references.
 
 ---
 
-The dividing line is consistent throughout: anything that crosses a type boundary or manages a name goes through a ZAX construct. Anything that touches a register or flag directly stays raw Z80.
+## Where to Start
 
----
+**New to Z80 programming?**
+Start with [`docs/intro/README.md`](docs/intro/README.md). That volume teaches Z80 from scratch — registers, memory, flags, control flow, the stack — using ZAX as the assembler surface throughout. No prior assembly experience assumed.
 
-## Motivation
+**Already know Z80 assembly?**
+Start with [`docs/reference/ZAX-quick-guide.md`](docs/reference/ZAX-quick-guide.md) for a practical tour of the full language surface. Then read [`docs/course/README.md`](docs/course/README.md) for algorithms and data structures in ZAX.
 
-Traditional Z80 assemblers provide mnemonics and text macros. Text macros operate on token streams — they have no concept of operand types and no way to reason about what a macro does to machine state. In non-trivial projects this accumulates into a layer of fragile, context-dependent definitions.
-
-ZAX replaces that layer with a proper compiler: names resolve across the full module graph, data layouts are computed from type declarations, and macros expand with typed operand matching. Errors report source locations and clear diagnostics. The output is deterministic — same source, same flags, same binary.
-
-Typical use cases: game engines, demoscene tools, firmware, ROM monitors, hardware drivers, systems programming education.
+**Contributing?**
+See [`docs/reference/zax-dev-playbook.md`](docs/reference/zax-dev-playbook.md) for the contributor workflow and review process.
 
 ---
 
@@ -129,12 +128,10 @@ zax [options] <entry.zax>
 
 | Document                                         | Purpose                                                          |
 | ------------------------------------------------ | ---------------------------------------------------------------- |
-| `docs/reference/ZAX-quick-guide.md`              | Practical quick-start — recommended first read after this README |
+| `docs/reference/ZAX-quick-guide.md`              | Full language surface in practical terms — recommended first read for existing Z80 programmers |
 | `docs/spec/zax-spec.md`                          | Normative language specification                                 |
-| `docs/intro/README.md`                           | Planned beginner-first volume — learn Z80 programming in ZAX |
-| `docs/work/intro-authoring-plan.md`              | Writer brief for the beginner-first volume |
-| `docs/course/README.md`                          | Advanced practical-programming volume — substantial ZAX programs and data structures |
-| `docs/work/z80-intro-course-plan.md`             | Planning brief for the beginner-facing "Learn Z80 Programming in ZAX" volume (`docs/intro/`) |
+| `docs/intro/README.md`                           | Volume 1 — Learn Z80 Programming in ZAX (beginner-first)        |
+| `docs/course/README.md`                          | Volume 2 — Algorithms and Data Structures in ZAX                 |
 | `docs/reference/testing-verification-guide.md`   | Testing and verification flow                                    |
 | `docs/reference/zax-dev-playbook.md`             | Contributor workflow and review hygiene                          |
 
@@ -154,6 +151,7 @@ ZAX is under active development. The end-to-end pipeline is functional.
 - Typed storage via `:=`, address-of (`@path`), and typed reinterpretation (`<Type>base`)
 - Raw data directives (`db` / `dw` / `ds`)
 - Compile-time expressions with forward references
+- Text-only `include` directive for pre-parse file insertion
 - Multiple output formats: `.bin`, `.hex`, `.lst`, `.asm`, `.d8dbg.json`
 
 **Active work:**
