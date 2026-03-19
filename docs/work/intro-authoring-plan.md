@@ -6,11 +6,11 @@ Audience: course author, writer, editor, reviewer
 ## Purpose
 
 This document is the operational handoff for writing the beginner-facing course
-under `docs/intro/`.
+under `learning/part1/`.
 
 It governs Volume 1 only.
 
-The advanced practical-programming volume remains under `docs/course/` and is
+The advanced practical-programming volume remains under `learning/part2/` and is
 covered separately by `docs/work/course-authoring-plan.md`.
 
 ## Mandatory standards
@@ -30,23 +30,23 @@ gate.
 
 All prose for Volume 1 lives under:
 
-- `docs/intro/`
+- `learning/part1/`
 
 Planned file set:
 
-- `docs/intro/README.md`
-- `docs/intro/00-what-a-computer-is-doing.md`
-- `docs/intro/01-numbers-and-registers.md`
-- `docs/intro/02-loading-storing-constants.md`
-- `docs/intro/03-flags-comparisons-jumps.md`
-- `docs/intro/04-counting-loops-and-djnz.md`
-- `docs/intro/05-data-tables-and-indexed-access.md`
-- `docs/intro/06-stack-and-subroutines.md`
-- `docs/intro/07-io-and-ports.md`
-- `docs/intro/08-a-phase-a-program.md`
-- `docs/intro/09-typed-storage-and-assignment.md`
-- `docs/intro/10-structured-control-flow.md`
-- `docs/intro/11-functions-arguments-and-op.md`
+- `learning/part1/README.md`
+- `learning/part1/00-what-a-computer-is-doing.md`
+- `learning/part1/01-numbers-and-registers.md`
+- `learning/part1/02-loading-storing-constants.md`
+- `learning/part1/03-flags-comparisons-jumps.md`
+- `learning/part1/04-counting-loops-and-djnz.md`
+- `learning/part1/05-data-tables-and-indexed-access.md`
+- `learning/part1/06-stack-and-subroutines.md`
+- `learning/part1/07-io-and-ports.md`
+- `learning/part1/08-a-phase-a-program.md`
+- `learning/part1/09-typed-storage-and-assignment.md`
+- `learning/part1/10-structured-control-flow.md`
+- `learning/part1/11-functions-arguments-and-op.md`
 
 ## Canonical sources
 
@@ -197,25 +197,25 @@ Covers Z80 I/O ports. Phase A.
 
 ### Phase 1
 
-- `docs/intro/README.md`
-- `docs/intro/00-what-a-computer-is-doing.md`
-- `docs/intro/01-numbers-and-registers.md`
-- `docs/intro/02-loading-storing-constants.md`
-- `docs/intro/03-flags-comparisons-jumps.md`
+- `learning/part1/README.md`
+- `learning/part1/00-what-a-computer-is-doing.md`
+- `learning/part1/01-numbers-and-registers.md`
+- `learning/part1/02-loading-storing-constants.md`
+- `learning/part1/03-flags-comparisons-jumps.md`
 
 ### Phase 2
 
-- `docs/intro/04-counting-loops-and-djnz.md`
-- `docs/intro/05-data-tables-and-indexed-access.md`
-- `docs/intro/06-stack-and-subroutines.md`
-- `docs/intro/07-io-and-ports.md`
-- `docs/intro/08-a-phase-a-program.md`
+- `learning/part1/04-counting-loops-and-djnz.md`
+- `learning/part1/05-data-tables-and-indexed-access.md`
+- `learning/part1/06-stack-and-subroutines.md`
+- `learning/part1/07-io-and-ports.md`
+- `learning/part1/08-a-phase-a-program.md`
 
 ### Phase 3
 
-- `docs/intro/09-typed-storage-and-assignment.md`
-- `docs/intro/10-structured-control-flow.md`
-- `docs/intro/11-functions-arguments-and-op.md`
+- `learning/part1/09-typed-storage-and-assignment.md`
+- `learning/part1/10-structured-control-flow.md`
+- `learning/part1/11-functions-arguments-and-op.md`
 
 ## Verification expectations
 

@@ -802,7 +802,7 @@ confirm the compiler handles the unit cleanly.
 All Tranche 1 files must match that style: current typed-storage syntax, explicit return
 registers, no unexplained register choices.
 
-**Files to produce** under `examples/course/unit1/`:
+**Files to produce** under `learning/part2/examples/unit1/`:
 
 | File                | Algorithm                         | Key ZAX surface                             |
 | ------------------- | --------------------------------- | ------------------------------------------- |
@@ -830,7 +830,7 @@ fundamental signal and should be logged before proceeding to Unit 3.
 **Goal**: produce the core sorting and searching examples. Introduce indexed
 array access and `select` ranges in context.
 
-**Files to produce** under `examples/course/unit2/`:
+**Files to produce** under `learning/part2/examples/unit2/`:
 
 | File                 | Algorithm                         |
 | -------------------- | --------------------------------- |

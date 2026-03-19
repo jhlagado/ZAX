@@ -131,7 +131,7 @@ This is the beginner-first book.
 
 Its planned output location is:
 
-- `docs/intro/`
+- `learning/part1/`
 
 It should teach:
 
@@ -154,7 +154,7 @@ some other "real" assembler.
 
 ### Volume 2 — Algorithms and Data Structures in ZAX
 
-This is the current `docs/course/` material.
+This is the current `learning/part2/` material.
 
 It should stay focused on:
 
@@ -245,7 +245,7 @@ Do not assume the language must change before the teaching plan is clear.
 
 The docs should now reflect:
 
-- `docs/course/` is the algorithms volume
+- `learning/part2/` is the algorithms volume
 - the beginner-facing volume is planned but not yet written
 - existing algorithms planning docs should be described as Volume 2 material
 
