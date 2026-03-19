@@ -175,9 +175,9 @@ little-endian order (`$34` then `$12`).
 `ld d, h` and `ld e, l` copy the high and low bytes of HL into DE, one byte at
 a time. After both instructions DE holds `$1234` — a copy of HL.
 
-There is no single `ld de, hl` instruction on the Z80. Copying a full register
-pair into another always takes two separate 8-bit moves. This is deliberate:
-the example shows it now so you recognise it when you see it later.
+There is no native `ld de, hl` instruction in the Z80 instruction set. Copying
+a register pair in raw Z80 always takes two separate 8-bit moves. The example
+shows that two-step pattern so you recognise it when you see it later.
 
 ---
 
@@ -197,8 +197,8 @@ the example shows it now so you recognise it when you see it later.
   managed indirectly.
 - `ld reg, imm` loads an immediate value; `ld reg, reg` copies between
   registers; `ld rr, imm16` loads a 16-bit immediate into a pair.
-- Copying HL to DE requires two separate 8-bit moves because `ld de, hl` does
-  not exist.
+- Copying HL to DE in raw Z80 requires two separate 8-bit moves; there is no
+  native `ld de, hl` instruction.
 
 ## What Comes Next
 
