@@ -202,6 +202,61 @@ See `examples/course/unit8/bst.zax`.
 
 ---
 
+## Unions: Named Field Overlay
+
+The `<Type>local.field` syntax reinterprets a stored address at the use site.
+A union does something structurally different: it declares that the same fixed
+storage can be read or written as any of several named fields, where every field
+starts at offset 0. The overlay is in the type declaration, not at the use site.
+
+The `RegPair` union from `reg_pair.zax` has two fields:
+
+```zax
+union RegPair
+  full_word: word
+  lo_byte: byte
+end
+```
+
+`sizeof(RegPair)` is 2 — the size of the largest field. `full_word` and
+`lo_byte` both start at byte offset 0. Writing through `full_word` stores two
+bytes; reading through `lo_byte` reads the first of those two bytes.
+
+This is useful when you need to access the low byte of a 16-bit value without
+arithmetic. Z80 stores words little-endian: the low byte is at the lower
+address, which is offset 0. Writing `$0134` through `full_word` puts `$34` at
+offset 0 and `$01` at offset 1. Reading `lo_byte` reads offset 0 — `$34`:
+
+```zax
+section data vars at $8000
+  scratch: RegPair
+end
+
+func lo_byte_of(input_word: word): HL
+  scratch.full_word := input_word
+  a := scratch.lo_byte
+  ld l, a
+  ld h, 0
+end
+```
+
+(From `examples/course/unit8/reg_pair.zax`, lines 13–27.)
+
+The union variable is declared without an initializer; it is zero-initialized by
+default. `scratch.full_word := input_word` stores the two-byte argument at
+`$8000`. `a := scratch.lo_byte` loads the single byte at `$8000` — the low
+byte. The result is zero-extended into HL before returning.
+
+Union declarations are module-scope. Every union field starts at offset 0;
+there is no padding between fields, because they all overlap. Unions have no
+tags and no runtime checks — the programmer chooses which field to use at each
+access site. The compiler does not enforce that you read through the same field
+you wrote.
+
+See `examples/course/unit8/reg_pair.zax`.
+
+---
+
 ## The Verbosity of Pointer Traversal
 
 Both examples follow the same pattern at every pointer access site: load the
@@ -244,6 +299,10 @@ open gaps from the course.
   initialised with the compile-time addresses of the target nodes.
 - Linked traversal uses a `while` loop; tree traversal uses recursion. The
   control-flow shape follows the data structure's shape.
+- `union TypeName` / `field: type` / `end` declares an overlay type. All
+  fields start at offset 0; `sizeof(union)` is the largest field size. Writing
+  through one field and reading through another reinterprets the same bytes
+  without arithmetic.
 
 ---
 
@@ -253,6 +312,8 @@ open gaps from the course.
   pointer traversal and null-sentinel termination
 - `examples/course/unit8/bst.zax` — binary search tree search using recursive
   typed-pointer traversal
+- `examples/course/unit8/reg_pair.zax` — union overlay: write a 16-bit word,
+  read the low byte without arithmetic
 
 ---
 
@@ -285,3 +346,8 @@ work is targeting.
    field assignment, rather than with `@someNode`. In `init_tree`, the
    right child of `left_node` is set to `@left_right_node`. What would the
    traversal do if that field were mistakenly left as zero?
+
+5. `reg_pair.zax` reads `lo_byte` (offset 0) to get the low byte of
+   `full_word`. How would you read the high byte — the byte at offset 1 —
+   using only ZAX structured code? What raw Z80 register sequence would you
+   use after loading `full_word` into HL?
