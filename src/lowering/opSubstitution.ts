@@ -150,6 +150,9 @@ export function createOpSubstitutionHelpers(ctx: OpSubstitutionContext) {
         if (mapped) return { kind: 'EaName', span: ea.span, name: mapped };
         return { ...ea };
       }
+      if (ea.kind === 'EaImm') {
+        return { ...ea, expr: substituteImmWithOpLabels(ea.expr, localLabelMap) };
+      }
       if (ea.kind === 'EaField') {
         return { ...ea, base: substituteEaWithOpLabels(ea.base) };
       }

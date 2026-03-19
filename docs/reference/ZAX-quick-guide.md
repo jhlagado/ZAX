@@ -51,6 +51,12 @@ When compiled and executed:
 
 This function has no parameters and no `var` block, so no frame is generated. The `ret` is emitted directly — no synthetic epilogue.
 
+You can separate multiple statements on one physical line with `\`:
+
+```zax
+ld a, 1 \ or a \ jr nz, loop
+```
+
 ### 1.4 A Slightly Larger Example
 
 ```zax
@@ -362,7 +368,7 @@ func example(): void
 end
 ```
 
-Explicit parentheses on scalar symbols are still accepted but are redundant. Parentheses continue to mean memory dereference for non-scalar expressions and for explicit indirection where the context demands it.
+Explicit parentheses on scalar symbols are still accepted but are redundant. In operand position, parentheses always mean memory dereference and may enclose a full `imm` expression, e.g. `ld a, (3 + 2)`.
 
 ### 3.5 Field and Element Access
 

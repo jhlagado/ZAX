@@ -249,6 +249,8 @@ export function createOpMatchingHelpers(ctx: Context) {
     switch (ea.kind) {
       case 'EaName':
         return ea.name;
+      case 'EaImm':
+        return `(${formatImmExprForOpDiag(ea.expr)})`;
       case 'EaField':
         return `${formatEaExprForOpDiag(ea.base)}.${ea.field}`;
       case 'EaAdd':

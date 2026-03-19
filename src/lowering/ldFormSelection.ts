@@ -108,6 +108,8 @@ export function createLdFormSelectionHelpers(ctx: LdFormSelectionContext) {
     switch (ea.kind) {
       case 'EaName':
         return isRegisterToken(ea.name) && !isBoundEaName(ea.name);
+      case 'EaImm':
+        return false;
       case 'EaReinterpret':
         return false;
       case 'EaField':

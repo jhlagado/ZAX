@@ -165,6 +165,8 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
       switch (ea.kind) {
         case 'EaName':
           return names.has(ea.name.toUpperCase());
+        case 'EaImm':
+          return immExprUsesAnyRegister(ea.expr, names);
         case 'EaReinterpret':
           return eaUsesAnyRegister(ea.base, names);
         case 'EaField':
