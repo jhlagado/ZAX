@@ -1,11 +1,11 @@
 # Chapter 05 — Records
 
-The unit 5 examples introduce typed aggregate state. Up to this point, every
+The Chapter 05 examples introduce typed aggregate state. Up to this point, every
 algorithm has worked with scalars — individual bytes and words. A record collects
 multiple named fields into a single compound value, and an array of records brings
 both structured access and interesting layout questions together.
 
-The unit 5 example corpus is a single file: `ring_buffer.zax`. It is compact, but
+The Chapter 05 example corpus is a single file: `ring_buffer.zax`. It is compact, but
 it covers a lot of ground. It defines a record type, declares an array of that
 record type at a non-power-of-two size, stores and retrieves field values through
 typed paths, and implements a bounded FIFO queue with a modular index.
@@ -56,7 +56,7 @@ a store — the compiler emits the address calculation for `entries + B * 3 + 0`
 and a `ld` instruction to write A there. On the right side, it would be a load.
 The same path notation works for both read and write.
 
-This is one of the clearest ZAX benefits in the unit 5 example: the field access
+This is one of the clearest ZAX benefits in the Chapter 05 example: the field access
 reads as `entries[B].value` rather than as a hand-computed offset load. When the
 `Entry` type definition changes, the offsets update automatically.
 
@@ -199,7 +199,7 @@ the mechanics.
 
 ---
 
-## What This Unit Teaches About ZAX
+## What This Chapter Teaches
 
 - A `type` declaration groups named fields. `sizeof` and `offsetof` compute layout
   automatically using exact field sizes. There is no padding.
@@ -216,14 +216,14 @@ the mechanics.
 
 ---
 
-## Examples in This Unit
+## Examples in This Chapter
 
 - `examples/course/unit5/ring_buffer.zax` — FIFO queue over an `Entry[5]` array
   with modular index advance
 
 ---
 
-## What comes next
+## What Comes Next
 
 Chapter 06 takes up recursion. Recursive functions in ZAX use the same `func`
 and `var` block syntax as everything else — no special forms — but the call

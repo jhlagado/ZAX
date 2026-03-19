@@ -1,6 +1,6 @@
 # Chapter 06 — Recursion
 
-The unit 6 examples show recursive decomposition using the same `func` construct
+The Chapter 06 examples show recursive decomposition using the same `func` construct
 that has appeared throughout the course. There is nothing structurally new in how
 ZAX handles recursion: every `func` call — whether the callee is a different
 function or the same function calling itself — generates a fresh IX frame. The
@@ -8,7 +8,7 @@ compiler does not distinguish recursive from non-recursive calls. The discipline
 consequence is that each invocation has its own independent locals, and the
 programmer does not need to think about saving state across the recursive boundary.
 
-What changes in unit 6 is the algorithmic shape. These examples do not loop over
+What changes in Chapter 06 is the algorithmic shape. These examples do not loop over
 a flat array or advance a pointer; they reduce a problem into a smaller version of
 itself, recurse, and combine the result on the way back. That "on the way back"
 structure — work done after the recursive call returns — is what makes the call
@@ -28,8 +28,8 @@ previous one. When the base case returns, the innermost frame is popped and the
 previous frame's IX is restored. Each level sees its own `var` block values,
 completely independent.
 
-The unit 1 chapter noted that recursive functions look and work like non-recursive
-ones. Unit 6 demonstrates this at greater depth: `hanoi_count` calls itself twice
+Chapter 01 noted that recursive functions look and work like non-recursive
+ones. Chapter 06 demonstrates this at greater depth: `hanoi_count` calls itself twice
 per invocation and stores both results in frame locals, `array_sum_recursive`
 calls itself once and adds to the result on unwind, and `array_reverse_recursive`
 calls itself with a narrower range at each level. None of these require any
@@ -187,7 +187,7 @@ See `examples/course/unit6/array_reverse_recursive.zax`.
 
 ---
 
-## What This Unit Teaches About ZAX
+## What This Chapter Teaches
 
 - Recursive functions use no special syntax. Each call — self or otherwise —
   generates a fresh IX frame with independent locals. The call stack depth is the
@@ -207,7 +207,7 @@ See `examples/course/unit6/array_reverse_recursive.zax`.
 
 ---
 
-## Examples in This Unit
+## Examples in This Chapter
 
 - `examples/course/unit6/hanoi.zax` — Towers of Hanoi move count, double recursion
 - `examples/course/unit6/array_sum_recursive.zax` — array sum by linear recursion
@@ -217,7 +217,7 @@ See `examples/course/unit6/array_reverse_recursive.zax`.
 
 ---
 
-## What comes next
+## What Comes Next
 
 Chapter 07 shows how a larger program is assembled from multiple source files.
 The RPN calculator imports a support module and dispatches on token kind using

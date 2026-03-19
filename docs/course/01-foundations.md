@@ -1,10 +1,9 @@
 # Chapter 01 — Foundations
 
-The unit 1 examples establish the basic voice of ZAX through arithmetic and
-number-theory algorithms. No arrays, no records, no pointer operations — just
-functions, typed locals, and structured control flow over integer computations.
-That constraint is deliberate: it lets you see the core idioms clearly before
-the surface gets wider.
+The Chapter 01 examples work with arithmetic and number-theory algorithms.
+There are no arrays, records, or pointer operations — just functions, typed
+locals, and structured control flow over integer computations. That scope
+keeps the core idioms visible before the surface grows wider.
 
 ---
 
@@ -12,7 +11,7 @@ the surface gets wider.
 
 ZAX has four scalar storage types: `byte` (8-bit unsigned), `word` (16-bit
 unsigned), `addr` (16-bit, signals a memory address), and `ptr` (16-bit,
-signals a pointer to something). In the unit 1 examples only `byte` and `word`
+signals a pointer to something). In the Chapter 01 examples only `byte` and `word`
 appear — the others become relevant when dealing with arrays and records.
 
 Storage exists in two places: named `data` sections at module scope, and `var`
@@ -65,7 +64,7 @@ means an EX DE,HL / LD-through-DE / EX DE,HL pattern, because H and L cannot
 be used directly with IX-relative addressing on the Z80.
 
 You write the intent; the compiler handles the lowering. Both forms appear in
-the same function body, and they sit next to each other naturally:
+the same function body:
 
 ```zax
     hl := remaining     ; typed load: read frame local into HL
@@ -87,7 +86,7 @@ Both are idiomatic ZAX.
 
 ## Functions
 
-Every computation in the unit 1 examples lives inside a `func`. The declaration
+Every computation in the Chapter 01 examples lives inside a `func`. The declaration
 names the function, lists its parameters with types, and declares the return
 register:
 
@@ -95,32 +94,23 @@ register:
 func gcd_iterative(left_input: word, right_input: word): HL
 ```
 
-The return register declaration — `: HL` here — is load-bearing. It tells the
-compiler two things: HL is the value channel through which the result comes
-back, and the compiler should preserve AF, BC, and DE across the call. If
-you declare `: HL,DE`, the compiler preserves AF and BC; if you declare no
-return clause at all, the compiler preserves all four of AF, BC, DE, and HL.
+The return register declaration — `: HL` here — tells the compiler two things:
+HL carries the result back to the caller, and AF, BC, and DE must be preserved
+across the call. Declaring `: HL,DE` narrows the preservation set to AF and BC;
+omitting the clause entirely preserves all four pairs.
 
-The caller receives the return value in HL and can rely on BC and DE having
-survived the call. That guarantee is mechanical and enforced — not a convention
-you maintain by hand.
+Inside the callee, parameter names resolve to IX-relative frame slots. You
+write the name; the compiler emits the addressing.
 
-Parameters are passed on the stack, pushed right-to-left before the call,
-cleaned up by the caller after return. Inside the callee, parameter names are
-frame-bound: `left_input` reads the first argument from `IX+4`, `right_input`
-from `IX+6`, and so on. You write parameter names in expressions; the compiler
-emits the IX-relative addressing.
-
-A function call looks like this:
+A call with arguments looks like this:
 
 ```zax
     mul_u16 result, factor
     result := hl
 ```
 
-The first line calls `mul_u16` with two arguments passed by value (each a
-`word` local, read from the frame and pushed). The result comes back in HL.
-The second line stores it into `result`.
+`mul_u16` is called with two `word` arguments. The result comes back in HL;
+the `:=` stores it into the local `result`.
 
 ---
 
@@ -170,14 +160,9 @@ must also re-establish the flags before control reaches the back edge:
 ```
 
 `ld a, 1` / `or a` is the explicit, safe idiom for establishing NZ. It appears
-at the entry setup and at the back edge whenever the loop condition must be
-guaranteed.
-
-All unit 1 examples establish entry flags with `ld a, 1` / `or a` before the
-first `while NZ`, and the same idiom re-establishes NZ at the back edge. There
-is no unit 1 / unit 3+ distinction on this point: every `while NZ` loop in the
-unit 1 corpus uses the explicit entry-setup idiom. If Z=1 on entry to a
-`while NZ` loop, the body never executes regardless of what is inside it.
+at entry and at the back edge whenever the loop condition must be guaranteed.
+If Z=1 on entry to a `while NZ` loop, the body never executes regardless of
+what is inside it.
 
 ---
 
@@ -197,13 +182,13 @@ These are not function calls; they lower to an efficient read-increment-write
 `succ` and `pred` instead of a manual HL-roundtrip sequence keeps the code
 concise and the intent visible.
 
-In the unit 1 examples, `succ` and `pred` are the standard way to advance or
+In the Chapter 01 examples, `succ` and `pred` are the standard way to advance or
 retreat a counter local. You will see them throughout the loops that drive
 counting and iteration.
 
 ---
 
-## The Unit 1 Programs
+## The Chapter 01 Programs
 
 ### Power: repeated multiplication
 
@@ -213,7 +198,7 @@ Both functions share the same loop structure: a `while NZ` loop that counts
 down a countdown local, returning early when the count reaches zero.
 
 The `pred` built-in decrements `remaining` at the bottom of each iteration.
-This is the first example of a common unit 1 pattern: a counting loop with an
+This is the first example of a common Chapter 01 pattern: a counting loop with an
 explicit zero check at the top and a `pred` decrement at the bottom.
 
 See `examples/course/unit1/power.zax`.
@@ -356,7 +341,7 @@ See `examples/course/unit1/digits.zax`.
 
 ---
 
-## What This Unit Teaches About ZAX
+## What This Chapter Teaches
 
 - `:=` is the interface between typed storage and the Z80 register file. It
   appears constantly alongside raw Z80 mnemonics in the same function body.
@@ -364,11 +349,8 @@ See `examples/course/unit1/digits.zax`.
   complementary preservation set. Callers can rely on those registers surviving
   a typed call.
 - `while NZ` is the basic loop form. Entry flags always matter: a stale Z=1
-  on entry skips the loop body entirely before any `ret` inside it can execute.
-  All unit 1 examples establish entry flags with `ld a, 1` / `or a` before the
-  first `while NZ`, and the same idiom re-establishes NZ at the back edge. This
-  is the consistent rule throughout the corpus — there is no special-casing by
-  unit.
+  on entry skips the loop body entirely. Establish NZ with `ld a, 1` / `or a`
+  before the first `while NZ`, and re-establish it at the back edge.
 - `succ` and `pred` are the idiomatic scalar increment and decrement operators.
   They appear wherever a loop counter or accumulator needs stepping.
 - Recursive functions look and work like non-recursive ones. The compiler
@@ -376,7 +358,7 @@ See `examples/course/unit1/digits.zax`.
 
 ---
 
-## Examples in This Unit
+## Examples in This Chapter
 
 - `examples/course/unit1/power.zax` — integer power by repeated multiplication
 - `examples/course/unit1/gcd_iterative.zax` — Euclid's algorithm, iterative
@@ -388,7 +370,7 @@ See `examples/course/unit1/digits.zax`.
 
 ---
 
-## What comes next
+## What Comes Next
 
 Chapter 02 extends the foundation with arrays and the full loop-control surface:
 `break` and `continue`. The algorithms there sort and search small byte arrays,
