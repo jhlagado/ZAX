@@ -35,7 +35,7 @@ All prose for Volume 1 lives under:
 Planned file set:
 
 - `learning/part1/README.md`
-- `learning/part1/00-what-a-computer-is-doing.md`
+- `learning/part1/00-machine-code-and-the-assembler.md`
 - `learning/part1/01-numbers-and-registers.md`
 - `learning/part1/02-loading-storing-constants.md`
 - `learning/part1/03-flags-comparisons-jumps.md`
@@ -129,7 +129,7 @@ If any of the three is unclear, the chapter is not ready to draft.
 
 ## Chapter intent map
 
-### `00-what-a-computer-is-doing.md`
+### `00-machine-code-and-the-assembler.md`
 
 - explain what machine code, assembly language, bytes, words, and memory are
 - establish the reader model and how Volume 1 differs from Volume 2
@@ -198,7 +198,7 @@ Covers Z80 I/O ports. Phase A.
 ### Phase 1
 
 - `learning/part1/README.md`
-- `learning/part1/00-what-a-computer-is-doing.md`
+- `learning/part1/00-machine-code-and-the-assembler.md`
 - `learning/part1/01-numbers-and-registers.md`
 - `learning/part1/02-loading-storing-constants.md`
 - `learning/part1/03-flags-comparisons-jumps.md`
