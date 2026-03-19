@@ -126,16 +126,18 @@ word — `$12` — in D.
 
 ## Why HL is the common working pair
 
-HL is the most useful 16-bit register on the Z80 for one specific reason: it
-can be used as a **memory pointer** in indirect addressing. The instruction
-`ld a, (hl)` reads the byte from the memory address currently held in HL.
-No other general-purpose register pair provides this in a single instruction for
-byte loads and stores.
+HL is the most useful 16-bit register on the Z80 for memory access. It can be
+used as a **memory pointer** in indirect addressing: `ld a, (hl)` reads the
+byte from the address held in HL, and `ld (hl), a` writes a byte there.
 
-DE and BC can hold 16-bit values and participate in certain 16-bit arithmetic,
-but they do not provide the same direct one-instruction byte-read-from-memory
-form that HL does. You will load an address into HL, then use `(hl)` to read or
-write at that address. This pattern appears in almost every Z80 program.
+BC and DE also have indirect forms, but only with A: `ld a, (bc)` and
+`ld a, (de)` read one byte into A; `ld (bc), a` and `ld (de), a` write A to
+memory. What makes HL different is that it works with any byte register, not
+just A. `ld b, (hl)`, `ld c, (hl)`, `ld (hl), d` — any combination is valid.
+HL also supports `inc (hl)` and `dec (hl)` to modify a byte in place, and it
+is the base for indexed addressing with the IX and IY registers. You will load
+an address into HL, then use `(hl)` to read or write at that address. This
+pattern appears in almost every Z80 program.
 
 ---
 
