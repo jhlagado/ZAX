@@ -6,12 +6,11 @@
 import "word_stack.zax"
 
 const TokenCount = 5
-const KindNumber = 1
-const KindAdd = 2
-const KindMultiply = 3
+
+enum TokenKind Number, Add, Multiply
 
 section data vars at $8000
-  token_kinds: byte[5] = { KindNumber, KindNumber, KindAdd, KindNumber, KindMultiply }
+  token_kinds: byte[5] = { TokenKind.Number, TokenKind.Number, TokenKind.Add, TokenKind.Number, TokenKind.Multiply }
   token_values: word[5] = { 7, 3, 0, 2, 0 }
   value_stack: word[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }
   stack_depth: byte = 0
@@ -76,12 +75,12 @@ export func rpn_demo(): HL
     current_kind := a
 
     select A
-      case KindNumber
+      case TokenKind.Number
         l := token_index
         hl := token_values[L]
         word_stack.push_word value_stack, stack_depth, hl
         stack_depth := a
-      case KindAdd
+      case TokenKind.Add
         word_stack.pop_word value_stack, stack_depth
         stack_depth := a
         right_value := hl
@@ -93,7 +92,7 @@ export func rpn_demo(): HL
         add hl, de
         word_stack.push_word value_stack, stack_depth, hl
         stack_depth := a
-      case KindMultiply
+      case TokenKind.Multiply
         word_stack.pop_word value_stack, stack_depth
         stack_depth := a
         right_value := hl
