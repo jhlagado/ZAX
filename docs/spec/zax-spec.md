@@ -160,7 +160,7 @@ ZAX treats the following as **reserved** (case-insensitive):
 - Register names: `A F AF B C D E H L HL DE BC SP IX IY I R`.
 - Condition codes used by structured control flow: `Z NZ C NC PO PE M P`.
 - Structured-control keywords: `if`, `else`, `while`, `repeat`, `until`, `select`, `case`, `end`.
-- Declaration keywords: `import`, `type`, `union`, `enum`, `const`, `var`, `data`, `bin`, `hex`, `extern`, `func`, `op`, `export`, `section`, `align`, `at`, `from`, `in`.
+- Declaration keywords: `include`, `import`, `type`, `union`, `enum`, `const`, `var`, `data`, `bin`, `hex`, `extern`, `func`, `op`, `export`, `section`, `align`, `at`, `from`, `in`.
   - `var` is reserved for function-local variable blocks.
 
 User-defined identifiers (module-scope symbols, locals/args, and labels) must not collide with any reserved name, ignoring case.
@@ -175,6 +175,7 @@ In addition, the compiler reserves the prefix `__zax_` for internal temporaries 
 
 A compilation unit is a module file containing:
 
+- zero or more `include` lines (text-only insertion)
 - zero or more `import` lines
 - zero or more module-scope directives: `section`, `align`
 - module-scope declarations: `import`, named `section ... end`, `align`, `type`, `union`, `enum`, `const`, `bin`, `hex`, `extern`, `func`, `op`
@@ -241,6 +242,16 @@ include the `.zax` extension and are resolved relative to the importing file
 
 Each resolved import contributes a direct import edge. Those direct import edges
 determine which module qualifiers are visible in the importing file.
+
+### 3.1.1 Text-Only Includes
+
+ZAX also supports a text-only include directive:
+
+- `include "<path>"`
+
+`include` performs a **literal text insertion** before parsing. It has no module
+semantics and is not limited to module scope. The path resolution rules are the
+same as `import "<path>"` (relative to the including file, then via search paths).
 
 ### 3.2 Visibility and Collisions
 
