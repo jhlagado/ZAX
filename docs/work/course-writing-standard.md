@@ -403,8 +403,8 @@ The writer should assume:
 
 This standard applies to:
 
-- the planned beginner-facing `docs/intro/` volume
-- the current `docs/course/` advanced practical-programming volume
+- the planned beginner-facing `learning/part1/` volume
+- the current `learning/part2/` advanced practical-programming volume
 
 The standard is especially important for introductions, bridges, and chapter
 openings, where LLM-generated padding is most likely to appear.

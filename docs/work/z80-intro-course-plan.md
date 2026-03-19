@@ -12,11 +12,11 @@ volume:
 
 It is the first-stage course.
 
-The existing `docs/course/` material remains the second-stage algorithms volume.
+The existing `learning/part2/` material remains the second-stage algorithms volume.
 
 Planned output location:
 
-- `docs/intro/`
+- `learning/part1/`
 
 Mandatory companion standard:
 
@@ -307,7 +307,7 @@ Covers the Z80 I/O address space, `in` and `out` instructions, immediate and reg
 
 ## Relationship to Volume 2 (Algorithms Course)
 
-Volume 2 (`docs/course/README.md`, grounded by
+Volume 2 (`learning/part2/README.md`, grounded by
 `docs/design/zax-algorithms-course.md`) assumes the reader can write ZAX
 programs at the Phase B level. It does not re-teach ZAX syntax or Z80
 mechanics. It uses the full structured surface immediately — typed storage,
