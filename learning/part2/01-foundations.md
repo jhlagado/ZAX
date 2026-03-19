@@ -50,7 +50,8 @@ the `ld` instruction yourself, with the exact register and address. That works,
 but it means you always have to know the address, remember which register holds
 what, and keep those details consistent by hand.
 
-`:=` is a shorthand that handles this automatically. When you write:
+`:=` is the way you read or write a named variable without spelling out the
+load or store sequence yourself. When you write:
 
 ```zax
 remaining := exponent

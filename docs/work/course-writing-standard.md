@@ -483,6 +483,15 @@ Before handing off a chapter, the writer should check:
 - Are there sentences that merely sound good?
 - Are there sentences that would confuse a beginner because they assume hidden background?
 
+### Pacing and compression
+
+- For each section: is there a sentence that explains the problem before the
+  mechanism is introduced?
+- Does each new concept get its own sentence, or am I stacking them?
+- Would the intended reader understand each paragraph on first reading?
+- Are there more than two unfamiliar terms in any single paragraph?
+- Would a motivated beginner finish this section feeling capable, or overwhelmed?
+
 ## Review checklist for the editor/reviewer
 
 The reviewer should explicitly look for:
