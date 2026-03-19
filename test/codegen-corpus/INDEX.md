@@ -23,10 +23,10 @@ Canonical ownership is split:
 
 This folder is the side-by-side review mirror:
 
-- `examples/codegen-corpus/*.zax`
-- `examples/codegen-corpus/*.asm`
-- `examples/codegen-corpus/*.bin`
-- `examples/codegen-corpus/*.hex`
+- `test/codegen-corpus/*.zax`
+- `test/codegen-corpus/*.asm`
+- `test/codegen-corpus/*.bin`
+- `test/codegen-corpus/*.hex`
 
 ## Supported regeneration
 
@@ -42,5 +42,5 @@ Do not regenerate curated files one by one by hand.
 
 Read `test/fixtures/corpus/manifest.json` for the supported list.
 
-For future expansion, prefer `examples/language-tour/30+` for addressing/codegen
+For future expansion, prefer `test/language-tour/30+` for addressing/codegen
 cases and use this folder for synthetic non-teaching cases.

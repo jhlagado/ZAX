@@ -13,9 +13,9 @@ const __dirname = dirname(__filename);
 describe('PR452: conditional jump trace placeholders', () => {
   it('emits concrete condition names in structured-control traces', async () => {
     const entries = [
-      join(__dirname, '..', 'examples', 'codegen-corpus', 'basic_control_flow.zax'),
-      join(__dirname, '..', 'examples', 'codegen-corpus', 'pr222_locals_retcc_and_ret.zax'),
-      join(__dirname, '..', 'examples', 'codegen-corpus', 'pr258_op_cc_matcher.zax'),
+      join(__dirname, '..', 'test', 'codegen-corpus', 'basic_control_flow.zax'),
+      join(__dirname, '..', 'test', 'codegen-corpus', 'pr222_locals_retcc_and_ret.zax'),
+      join(__dirname, '..', 'test', 'codegen-corpus', 'pr258_op_cc_matcher.zax'),
     ];
 
     const asmTexts: string[] = [];
@@ -41,9 +41,9 @@ describe('PR452: conditional jump trace placeholders', () => {
 
   it('removes jp cc placeholders from the touched checked-in traces', async () => {
     const traces = [
-      join(__dirname, '..', 'examples', 'codegen-corpus', 'basic_control_flow.asm'),
-      join(__dirname, '..', 'examples', 'codegen-corpus', 'pr222_locals_retcc_and_ret.asm'),
-      join(__dirname, '..', 'examples', 'codegen-corpus', 'pr258_op_cc_matcher.asm'),
+      join(__dirname, '..', 'test', 'codegen-corpus', 'basic_control_flow.asm'),
+      join(__dirname, '..', 'test', 'codegen-corpus', 'pr222_locals_retcc_and_ret.asm'),
+      join(__dirname, '..', 'test', 'codegen-corpus', 'pr258_op_cc_matcher.asm'),
       join(__dirname, '..', 'test', 'fixtures', 'corpus', 'golden', 'basic_control_flow.asm'),
     ];
 

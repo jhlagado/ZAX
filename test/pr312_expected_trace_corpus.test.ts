@@ -45,7 +45,7 @@ async function expectLanguageTourTrace(
   exampleStem: string,
   expectedFixture: string,
 ): Promise<void> {
-  const entry = join(__dirname, '..', 'examples', 'language-tour', `${exampleStem}.zax`);
+  const entry = join(__dirname, '..', 'test', 'language-tour', `${exampleStem}.zax`);
   const expectedPath = join(__dirname, 'fixtures', expectedFixture);
   const expected = await readFile(expectedPath, 'utf8');
 

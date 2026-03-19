@@ -18,7 +18,7 @@ That manifest is the single source of truth for:
 - where canonical generated fixtures live
 - where the inspectable mirror output lives
 
-Additional files in `examples/codegen-corpus/` may exist for ad hoc inspection,
+Additional files in `test/codegen-corpus/` may exist for ad hoc inspection,
 but they are not part of the supported curated workflow unless they are added to
 the manifest.
 
@@ -31,8 +31,8 @@ Each entry declares:
 
 This allows the curated set to include:
 
-- `examples/language-tour/30+` addressing/codegen cases
-- `examples/codegen-corpus/` synthetic non-teaching cases
+- `test/language-tour/30+` addressing/codegen cases
+- `test/codegen-corpus/` synthetic non-teaching cases
 - future explicitly curated sources if needed
 
 ## Ownership
@@ -45,7 +45,7 @@ Canonical ownership is split:
 
 Inspectable mirror output lives in:
 
-- `examples/codegen-corpus/`
+- `test/codegen-corpus/`
 
 The mirror is committed so the curated source files and generated `.asm` /
 `.bin` / `.hex` artifacts can be reviewed side by side. The automated golden
@@ -66,11 +66,11 @@ That command:
 3. resolves each curated source path explicitly from the manifest
 4. regenerates curated positive-case artifacts into a temporary stable folder
 5. updates:
-   - `examples/codegen-corpus/*.zax` when the manifest source lives outside the
+   - `test/codegen-corpus/*.zax` when the manifest source lives outside the
      mirror
-   - `examples/codegen-corpus/*.asm`
-   - `examples/codegen-corpus/*.bin`
-   - `examples/codegen-corpus/*.hex`
+   - `test/codegen-corpus/*.asm`
+   - `test/codegen-corpus/*.bin`
+   - `test/codegen-corpus/*.hex`
    - `test/fixtures/corpus/golden/*.asm`
    - `test/fixtures/corpus/opcode_expected/*.hex`
 6. leaves negative source-only cases untouched; they remain source-only checks
@@ -93,4 +93,4 @@ The workflow is expected to be deterministic for a fixed compiler revision:
   workflow only.
 - For addressing/codegen expansion under `#303`, prefer `examples/language-tour`
   `30+` as the primary teaching-backed input set, and use
-  `examples/codegen-corpus/` for non-teaching synthetic cases.
+  `test/codegen-corpus/` for non-teaching synthetic cases.

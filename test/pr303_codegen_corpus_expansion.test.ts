@@ -39,16 +39,16 @@ describe('PR303: curated codegen corpus expansion', () => {
     );
 
     expect(languageTourEntries.get('30_scalar_byte_glob')).toBe(
-      'examples/language-tour/30_scalar_byte_glob.zax',
+      'test/language-tour/30_scalar_byte_glob.zax',
     );
     expect(languageTourEntries.get('31_scalar_byte_frame')).toBe(
-      'examples/language-tour/31_scalar_byte_frame.zax',
+      'test/language-tour/31_scalar_byte_frame.zax',
     );
     expect(languageTourEntries.get('32_scalar_word_glob')).toBe(
-      'examples/language-tour/32_scalar_word_glob.zax',
+      'test/language-tour/32_scalar_word_glob.zax',
     );
     expect(languageTourEntries.get('33_scalar_word_frame')).toBe(
-      'examples/language-tour/33_scalar_word_frame.zax',
+      'test/language-tour/33_scalar_word_frame.zax',
     );
   });
 
