@@ -112,6 +112,7 @@ Entry-point selection is outside v0.1 scope. A typical convention is `export fun
 - In module/declaration regions, **newlines terminate** declarations and directives.
 - In instruction streams (function bodies and `op` bodies), newlines terminate instructions/keywords.
 - Spaces/tabs separate tokens.
+- The backslash (`\`) can also separate statements when written as a visible separator (followed by whitespace); it is treated as a newline-equivalent separator outside of string/char literals and comments.
 - The backslash (`\`) can also separate statements; it is treated as a newline-equivalent statement separator outside of string/char literals and comments.
 
 Multi-line constructs (v0.1):

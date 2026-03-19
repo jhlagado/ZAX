@@ -65,4 +65,25 @@ describe('PR922: parenthesized imm indirection and backslash separators', () => 
     );
     expect(diagnostics.some((d) => d.message.includes('Trailing backslash must be followed'))).toBe(true);
   });
+
+  it('keeps physical line numbers for diagnostics after backslash separators', () => {
+    const diagnostics: Diagnostic[] = [];
+    parseProgram(
+      'pr922_backslash_line_map.zax',
+      ['export func main()', '  ld a, 1 \\ ld a, ?', 'end', ''].join('\n'),
+      diagnostics,
+    );
+    const bad = diagnostics.find((d) => d.message.includes('Unsupported operand'));
+    expect(bad?.line).toBe(2);
+  });
+
+  it('does not treat a tight backslash as a separator', () => {
+    const diagnostics: Diagnostic[] = [];
+    parseProgram(
+      'pr922_backslash_tight.zax',
+      ['export func main()', '  ld a, 1\\or a', 'end', ''].join('\n'),
+      diagnostics,
+    );
+    expect(diagnostics.length).toBeGreaterThan(0);
+  });
 });
