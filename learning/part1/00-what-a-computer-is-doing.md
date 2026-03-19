@@ -16,9 +16,11 @@ Prerequisites: none. This is the first chapter.
 
 The Z80 processor reads bytes from memory one at a time and acts on them. Each
 byte, or short sequence of bytes, is a single instruction — one thing the CPU
-knows how to do. The byte value 62 tells the processor to load the following
-byte into register A. The byte value 118 tells the processor to halt. That
-sequence of bytes — one instruction after another — is called **machine code**.
+knows how to do. A byte is a number from 0 to 255. The byte value 62 (written
+here in plain decimal, the number system you use every day) tells the processor
+to load the following byte into register A. The byte value 118 tells the
+processor to halt. That sequence of bytes — one instruction after another — is
+called **machine code**.
 
 Writing programs directly as numbers is possible but painful. Each value must be
 looked up in the CPU manual, and nothing in the file shows what any sequence is
@@ -31,8 +33,9 @@ for byte 62 followed by byte 66 is `ld a, 66`. The assembler turns that text
 into the two bytes; you write names, not numbers.
 
 ZAX is an assembler. You write instructions in a `.zax` source file and ZAX
-produces the machine code. Later in this chapter, once hex notation is
-introduced, the examples will use it — for now, plain decimal is clearer.
+produces the machine code. Later in this chapter, hex notation is introduced
+and the examples switch to it — for now, plain decimal values are easier to
+follow.
 
 ---
 

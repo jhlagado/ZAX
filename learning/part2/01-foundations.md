@@ -45,28 +45,43 @@ prologue.
 
 ## The `:=` Assignment Operator
 
-`:=` is the typed storage transfer operator. It reads or writes typed storage
-paths: module symbols, function locals, record fields, array elements.
+In raw Z80, moving a value between a register and a named location means writing
+the `ld` instruction yourself, with the exact register and address. That works,
+but it means you always have to know the address, remember which register holds
+what, and keep those details consistent by hand.
+
+`:=` is a shorthand that handles this automatically. When you write:
 
 ```zax
-remaining := exponent    ; write argument value into local
-hl := result             ; read local into HL
-result := hl             ; write HL back into local
+remaining := exponent
 ```
 
-The left-hand side and the right-hand side are typed storage paths and
-registers. The compiler resolves the IX-relative addressing for frame slots and
-emits the required load or store instruction sequence.
+you are telling the compiler: "put the value of `exponent` into `remaining`."
+The compiler figures out where both of those live (in the function's stack frame,
+in a specific register, as a named constant) and emits the right instruction
+sequence. You write the intent; the compiler does the mechanical part.
 
-This is what distinguishes `:=` from `ld`. When you write `ld hl, $FF00` you
-are issuing a Z80 instruction directly. When you write `hl := remaining` you
-are asking the compiler to emit whatever instruction sequence is required to
-transfer the value of `remaining` into HL — which for a frame-local `word`
-means an EX DE,HL / LD-through-DE / EX DE,HL pattern, because H and L cannot
-be used directly with IX-relative addressing on the Z80.
+`:=` works in both directions. You can read a local into a register:
 
-You write the intent; the compiler handles the lowering. Both forms appear in
-the same function body:
+```zax
+hl := result             ; load the local 'result' into HL
+```
+
+Or write a register back into a local:
+
+```zax
+result := hl             ; store HL into the local 'result'
+```
+
+This is different from `ld`. When you write `ld hl, $FF00` you are writing a
+specific Z80 instruction — "load HL with this constant." When you write
+`hl := result` you are describing a transfer between a named storage location
+and a register, and the compiler works out the instruction to use. For a local
+`word` variable, that might take more than one instruction internally, because
+the Z80's indexed addressing has constraints. You do not need to know the
+details — that is the point.
+
+In practice, both `:=` and `ld` appear in the same function body:
 
 ```zax
     hl := remaining     ; typed load: read frame local into HL
@@ -80,39 +95,46 @@ the same function body:
 
 (From `learning/part2/examples/unit1/exp_squaring.zax`, lines 60–66.)
 
-The raw `ld a, l` and `and 1` test the low bit of a 16-bit value. That is
-pure Z80 work. The `:=` assignments on either side are typed storage transfers.
-Both appear throughout ZAX programs.
+The `ld a, l` and `and 1` are raw Z80 instructions — testing a specific bit
+of a specific register. The `:=` lines on either side are named transfers to
+and from the local `remaining`. Both appear naturally together. Raw instructions
+when you are doing register-level work; `:=` when you want to read or write a
+named local without tracking the address yourself.
 
 ---
 
 ## Functions
 
-Every computation in the Chapter 01 examples lives inside a `func`. The declaration
-names the function, lists its parameters with types, and declares the return
-register:
+Every computation in the Chapter 01 examples lives inside a `func`. You have
+seen `func` in Volume 1 — here is a quick recap of the parts that matter most
+in these examples.
+
+A function declaration names the function, lists its parameters with types, and
+says which register carries the result:
 
 ```zax
 func gcd_iterative(left_input: word, right_input: word): HL
 ```
 
-The return register declaration — `: HL` here — tells the compiler two things:
-HL carries the result back to the caller, and AF, BC, and DE must be preserved
-across the call. Declaring `: HL,DE` narrows the preservation set to AF and BC;
-omitting the clause entirely preserves all four pairs.
+`left_input` and `right_input` are the inputs. Both are `word` — a 16-bit
+unsigned value. The `: HL` at the end says two things: HL will carry the result
+when the function returns, and the compiler will automatically save and restore
+AF, BC, and DE around the function body so the caller does not have to worry
+about them.
 
-Inside the callee, parameter names resolve to IX-relative frame slots. You
-write the name; the compiler emits the addressing.
+Inside the function, you use the parameter names directly — `left_input`,
+`right_input` — with `:=` to read or write them. The compiler handles the
+addressing; you just use the name.
 
-A call with arguments looks like this:
+Calling a function with arguments looks like this:
 
 ```zax
     mul_u16 result, factor
     result := hl
 ```
 
-`mul_u16` is called with two `word` arguments. The result comes back in HL;
-the `:=` stores it into the local `result`.
+`mul_u16` takes two `word` arguments. After it returns, the result is in HL.
+The `:=` then stores it into the local `result`.
 
 ---
 

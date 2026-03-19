@@ -170,9 +170,9 @@ end
 
 (From `learning/part2/examples/unit6/array_reverse_recursive.zax`, lines 41–56.)
 
-The termination test uses `cp b` with `if NC`: `cp b` subtracts B from A and sets
-NC when A >= B. This is the same signed comparison pattern seen throughout the
-course. When `left_index >= right_index`, the function returns without doing work.
+The termination test uses `cp b` with `if NC`: `cp b` subtracts B from A, and
+NC (no carry) is set when A >= B. When `left_index >= right_index`, the indices
+have met or crossed, so the function returns without doing any more work.
 
 The helper `swap_values` is a separate `func` that reads both elements into locals
 and writes them back in reversed positions. It has its own IX frame and its own
