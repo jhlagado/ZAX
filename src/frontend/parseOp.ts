@@ -20,6 +20,8 @@ type RawLine = {
   raw: string;
   startOffset: number;
   endOffset: number;
+  lineNo: number;
+  filePath: string;
 };
 
 type ParseOpContext = {
@@ -99,9 +101,16 @@ export function parseTopLevelOpDecl(
   let terminated = false;
   let interruptedByKeyword: string | undefined;
   let interruptedByLine: number | undefined;
+  let interruptedByFilePath: string | undefined;
   let opEndOffset = file.text.length;
   while (index < lineCount) {
-    const { raw: rawLine, startOffset: so, endOffset: eo } = getRawLine(index);
+    const {
+      raw: rawLine,
+      startOffset: so,
+      endOffset: eo,
+      lineNo: bodyLineNo,
+      filePath: bodyFilePath,
+    } = getRawLine(index);
     const rawNoComment = stripComment(rawLine);
     const content = rawNoComment.trim();
     const contentLower = content.toLowerCase();
@@ -110,8 +119,8 @@ export function parseTopLevelOpDecl(
       continue;
     }
     if (bodyItems.length === 0 && controlStack.length === 0 && contentLower === 'asm') {
-      diag(diagnostics, modulePath, `Unexpected "asm" in op body (op bodies are implicit)`, {
-        line: index + 1,
+      diag(diagnostics, bodyFilePath, `Unexpected "asm" in op body (op bodies are implicit)`, {
+        line: bodyLineNo,
         column: 1,
       });
       index++;
@@ -126,7 +135,8 @@ export function parseTopLevelOpDecl(
     const topKeyword = topLevelStartKeyword(content);
     if (topKeyword !== undefined) {
       interruptedByKeyword = topKeyword;
-      interruptedByLine = index + 1;
+      interruptedByLine = bodyLineNo;
+      interruptedByFilePath = bodyFilePath;
       break;
     }
 
@@ -141,7 +151,7 @@ export function parseTopLevelOpDecl(
       bodyItems.push({ kind: 'AsmLabel', span: fullSpan, name: label });
       if (remainder.trim().length > 0) {
         const stmt = parseAsmStatement(
-          modulePath,
+          bodyFilePath,
           remainder,
           contentSpan,
           diagnostics,
@@ -154,7 +164,7 @@ export function parseTopLevelOpDecl(
       continue;
     }
 
-    const stmt = parseAsmStatement(modulePath, content, contentSpan, diagnostics, controlStack, {
+    const stmt = parseAsmStatement(bodyFilePath, content, contentSpan, diagnostics, controlStack, {
       allowedConditionIdentifiers,
     });
     appendParsedAsmStatement(bodyItems, stmt);
@@ -170,14 +180,14 @@ export function parseTopLevelOpDecl(
           frame.kind === 'Repeat'
             ? `"repeat" without matching "until <cc>"`
             : `"${frame.kind.toLowerCase()}" without matching "end"`;
-        diag(diagnostics, modulePath, msg, {
+        diag(diagnostics, frameSpan.file, msg, {
           line: frameSpan.start.line,
           column: frameSpan.start.column,
         });
       }
       diag(
         diagnostics,
-        modulePath,
+        interruptedByFilePath ?? modulePath,
         `Unterminated op "${name}": expected "end" before "${interruptedByKeyword}"`,
         {
           line: interruptedByLine,
@@ -192,7 +202,7 @@ export function parseTopLevelOpDecl(
           frame.kind === 'Repeat'
             ? `"repeat" without matching "until <cc>"`
             : `"${frame.kind.toLowerCase()}" without matching "end"`;
-        diag(diagnostics, modulePath, msg, {
+        diag(diagnostics, frameSpan.file, msg, {
           line: frameSpan.start.line,
           column: frameSpan.start.column,
         });

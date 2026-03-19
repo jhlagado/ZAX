@@ -16,6 +16,8 @@ type RawLine = {
   raw: string;
   startOffset: number;
   endOffset: number;
+  lineNo: number;
+  filePath: string;
 };
 
 type ParseGlobalsContext = {
@@ -61,7 +63,13 @@ export function parseGlobalsBlock(
   const declNamesLower = new Set<string>();
 
   while (index < lineCount) {
-    const { raw: rawDecl, startOffset: so, endOffset: eo } = getRawLine(index);
+    const {
+      raw: rawDecl,
+      startOffset: so,
+      endOffset: eo,
+      lineNo: declLineNo,
+      filePath: declFilePath,
+    } = getRawLine(index);
     const t = stripComment(rawDecl).trim();
     if (t.length === 0) {
       index++;
@@ -72,9 +80,9 @@ export function parseGlobalsBlock(
       if (m && TOP_LEVEL_KEYWORDS.has(m[1]!.toLowerCase())) {
         diag(
           diagnostics,
-          modulePath,
+          declFilePath,
           `Invalid globals declaration name "${m[1]!}": collides with a top-level keyword.`,
-          { line: index + 1, column: 1 },
+          { line: declLineNo, column: 1 },
         );
         index++;
         continue;
@@ -82,11 +90,11 @@ export function parseGlobalsBlock(
       if (looksLikeKeywordBodyDeclLine(t)) {
         diagInvalidBlockLine(
           diagnostics,
-          modulePath,
+          declFilePath,
           blockDeclKind,
           t,
           '<name>: <type>',
-          index + 1,
+          declLineNo,
         );
         index++;
         continue;
@@ -94,20 +102,20 @@ export function parseGlobalsBlock(
       break;
     }
     const declSpan = span(file, so, eo);
-    const parsed = parseVarDeclLine(t, declSpan, index + 1, 'globals', {
+    const parsed = parseVarDeclLine(t, declSpan, declLineNo, 'globals', {
       diagnostics,
-      modulePath,
+      modulePath: declFilePath,
       isReservedTopLevelName,
     });
     if (!parsed) {
       if (/^globals\b/i.test(t)) {
         diagInvalidBlockLine(
           diagnostics,
-          modulePath,
+          declFilePath,
           blockDeclKind,
           t,
           blockHeaderExpected,
-          index + 1,
+          declLineNo,
         );
       }
       index++;
@@ -115,8 +123,8 @@ export function parseGlobalsBlock(
     }
     const nameLower = parsed.name.toLowerCase();
     if (declNamesLower.has(nameLower)) {
-      diag(diagnostics, modulePath, `Duplicate globals declaration name "${parsed.name}".`, {
-        line: index + 1,
+      diag(diagnostics, declFilePath, `Duplicate globals declaration name "${parsed.name}".`, {
+        line: declLineNo,
         column: 1,
       });
       index++;
@@ -125,10 +133,10 @@ export function parseGlobalsBlock(
     if (nameLower === 'globals') {
       diag(
         diagnostics,
-        modulePath,
+        declFilePath,
         `Invalid globals declaration name "${parsed.name}": collides with a top-level keyword.`,
         {
-          line: index + 1,
+          line: declLineNo,
           column: 1,
         },
       );

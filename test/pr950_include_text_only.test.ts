@@ -28,4 +28,15 @@ describe('PR950: text-only include directive', () => {
     );
     expect(res.diagnostics.some((d) => d.message.includes('Failed to resolve include'))).toBe(true);
   });
+
+  it('preserves provenance for included diagnostics', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr950_bad_include_entry.zax');
+    const res = await compile(
+      entry,
+      { emitAsm: false, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+      { formats: defaultFormatWriters },
+    );
+    const bad = res.diagnostics.find((d) => d.message.includes('Unsupported operand'));
+    expect(bad?.file).toContain('pr950_bad_include.inc');
+  });
 });
