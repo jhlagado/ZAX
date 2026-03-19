@@ -113,7 +113,6 @@ end
 export func main(): void
   ld a, StoredValue
   ld (result), a
-  ret
 end
 ```
 
@@ -153,7 +152,7 @@ You do not need to understand every keyword yet. The important points are:
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - Machine code is a sequence of bytes the CPU reads as instructions.
 - An assembler converts human-readable mnemonics into those bytes.

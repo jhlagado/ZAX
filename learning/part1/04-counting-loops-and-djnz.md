@@ -283,7 +283,7 @@ determines when to stop.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - `djnz label` decrements B and jumps to `label` if B is non-zero; it falls
   through when B reaches zero.

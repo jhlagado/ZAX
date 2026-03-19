@@ -249,7 +249,7 @@ three before the call.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - The Z80 has a separate I/O address space of 256 ports. `in` and `out` are the
   only instructions that access it; all other instructions use memory.

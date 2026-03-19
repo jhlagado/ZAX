@@ -424,7 +424,7 @@ jump. In the structured version, each is expressed by the keyword that carries i
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - `if <cc> ... end` tests the current flags at `if`. If the condition is true,
   the body executes. `else` provides an alternative body. No user labels are

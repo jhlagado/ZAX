@@ -7,7 +7,6 @@ Use named section blocks as the structural unit:
 ```zax
 section code app at $0100
   export func main()
-    ret
   end
 end
 

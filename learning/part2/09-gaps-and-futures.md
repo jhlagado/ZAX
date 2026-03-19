@@ -154,7 +154,7 @@ the same source file.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - `break` and `continue` are implemented and available on the current surface.
   The eight-queens column loop shows both in a single algorithm: `continue`
