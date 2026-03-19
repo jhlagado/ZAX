@@ -21,7 +21,7 @@ than hard-coding a byte offset. The next section shows the syntax directly.
 
 ## Typed Reinterpretation: `<Type>local.field`
 
-The core idiom is `<Type>local.field`, where `local` holds an address and
+The syntax is `<Type>local.field`, where `local` holds an address and
 `Type` is the record type you want to interpret it as. The compiler resolves
 `field` against `Type`'s declaration and emits the appropriate IX-relative load
 or constant-offset dereference.
@@ -251,9 +251,8 @@ byte. The result is zero-extended into HL before returning.
 
 Union declarations are module-scope. Every union field starts at offset 0;
 there is no padding between fields, because they all overlap. Unions have no
-tags and no runtime checks — the programmer chooses which field to use at each
-access site. The compiler does not enforce that you read through the same field
-you wrote.
+tags and no runtime checks — you choose which field to use at each access site.
+The compiler does not enforce that you read through the same field you wrote.
 
 See `learning/part2/examples/unit8/reg_pair.zax`.
 
@@ -277,12 +276,11 @@ step. `ptr` fields carry no type information: `next: addr` says that `next`
 holds an address, but not that it is the address of another `ListNode`. That
 annotation must be written at the use site, every time, as `<ListNode>`.
 
-This is a real ergonomic cost. You always know exactly what the machine is
-doing — but for deeply linked structures, the repeated type annotation adds
-noise that obscures the algorithm's shape. This is the pointer-typing
-ergonomics gap grounded in the evidence from `linked_list.zax` and `bst.zax`,
-and it is an open design issue. Chapter 09 records it alongside the other
-open gaps from the course.
+The cost is real. You always know exactly what the machine is doing — but for
+deeply linked structures, the repeated type annotation adds noise that obscures
+the algorithm's shape. This is a genuine limitation, and it shows up clearly in
+`linked_list.zax` and `bst.zax`. Chapter 09 records it alongside the other open
+gaps from the course.
 
 ---
 

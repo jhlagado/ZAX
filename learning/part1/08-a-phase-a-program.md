@@ -1,15 +1,15 @@
 [← I/O and Ports](07-io-and-ports.md) | [Part 1](README.md) | [Typed Storage and Assignment →](09-typed-storage-and-assignment.md)
 
-# Chapter 08 — A Phase A Program
+# Chapter 08 — A Complete Program
 
-This chapter builds a complete Phase A program using every construct from
-Chapters 00–06: a data table, a DJNZ loop, subroutines called from the loop,
-conditional branches, and push/pop register preservation. After reading it you
-will be able to follow and write a complete raw Z80 program in ZAX. You will
-also be able to identify the points where the raw approach imposes bookkeeping
-overhead that Phase B will later remove.
+This chapter builds a complete program using everything from Chapters 00–06:
+a data table, a DJNZ loop, subroutines called from the loop, conditional
+branches, and push/pop register preservation. By the end you will be able to
+follow and write a complete raw Z80 program in ZAX. You will also be able to
+see the specific places where writing raw Z80 gets unwieldy — which is exactly
+what Chapters 09–11 address.
 
-Prerequisites: Chapters 00–06 (all Phase A constructs).
+Prerequisites: Chapters 00–06.
 
 ---
 
@@ -21,9 +21,9 @@ The capstone program solves two related problems on the same byte table:
 2. Count how many entries are strictly greater than 64.
 
 These two problems are separate enough to justify two subroutines, but share
-the same data, which demonstrates the full Phase A pattern: a data table in
-ROM, subroutines that receive a table pointer and length, results stored to
-named RAM, and a `main` that orchestrates the calls.
+the same data. The structure — a data table, subroutines that receive a pointer
+and a length, results stored to named RAM, a `main` that orchestrates the calls
+— is what a complete raw Z80 program looks like.
 
 The example is `learning/part1/examples/08_phase_a_capstone.zax`.
 
@@ -83,9 +83,9 @@ explicit: every register used to pass arguments is loaded immediately before eac
 
 The table base address `values` must be loaded into HL again before each call
 because `find_max` advances HL past the end of the table. HL holds different
-values after each call. This is typical of Phase A programs: the caller must
-reload any register that the callee modified, and there is no language mechanism
-to enforce or signal that.
+values after each call. Nothing in the language tells the caller that HL was modified —
+you find out by reading the function, or by running the program and getting
+wrong results. The caller has to handle it manually.
 
 ---
 
@@ -145,17 +145,14 @@ in C. It counts entries strictly greater than C and returns the count in A.
 It needs a separate counter, D, to accumulate the count. But D must be
 initialized to zero before the loop. This creates a problem: the only way to
 zero D without disturbing B and C — which carry the function's inputs — is to
-do it before the loop touches B. The `push bc / ld d, 0 / pop bc` block is the
-Phase A solution to this problem. It saves B and C, performs the initialization,
-and restores them.
+do it before the loop touches B. The `push bc / ld d, 0 / pop bc` block saves
+B and C, performs the initialization, and restores them.
 
 In this specific case, `ld d, 0` does not actually disturb B or C, so the
-push/pop buys nothing mechanically. But this pattern is extremely common in
-Phase A programs: a subroutine needs to initialize a register, the programmer
-is uncertain which registers are live, and the safest move is to save and
-restore. The push/pop pair exists because the programmer cannot name their
-variables and cannot see at a glance which registers are in use for which
-purpose.
+push/pop buys nothing mechanically. But the push/pop is here because you cannot
+name your variables in raw Z80 — you have to pick a register, and you cannot
+easily see at a glance which registers are already in use for what. When you
+cannot name things, you save everything and hope.
 
 The double `cp c` in the loop body is another cost. A single `cp c` sets carry
 when A < C and clears it when A >= C, but "greater than" requires distinguishing
@@ -165,7 +162,7 @@ is performed twice for each element.
 
 ---
 
-## Where Phase A is direct
+## What works well
 
 The program has real strengths at the raw level:
 
@@ -183,101 +180,92 @@ programmer can count those pushes. There is no invisible calling machinery.
 
 For a short, performance-sensitive routine — a counted loop over a small table
 — the raw approach produces code that maps directly to Z80 instructions with
-no overhead between what the programmer wrote and what the CPU executes.
+no overhead between what you wrote and what the CPU executes.
 
 ---
 
-## Where Phase A is laborious
+## What gets harder as programs grow
 
-These are not complaints. They are the specific points where Phase A imposes
-costs that Phase B addresses.
+These are not complaints about the Z80. They are the specific things that get
+tedious once programs grow past a handful of subroutines.
 
-**Label scaffolding is bookkeeping the programmer manages manually.** Every
-loop needs a minimum of two labels: the top-of-loop label and the skip label
-for the conditional update. Every if-like branch needs at least one label for
-the not-taken path. A loop with an early-exit condition needs three labels.
-None of these labels carry meaning about what the code does — they are
-structural markers that exist to give jumps a target. The programmer must invent
-names for them, place them correctly, and ensure that every branch targets the
-right one.
+**Label names are structural noise.** Every loop needs at least two labels: the
+top-of-loop label and the skip label for the conditional update. Every
+if-like branch needs at least one label for the not-taken path. None of these
+carry meaning about what the code is doing — they are just targets for jumps.
+The programmer has to invent names for them, place them correctly, and make sure
+every branch reaches the right one. In a ten-line subroutine this is fine. In a
+program with twenty subroutines it becomes work that has nothing to do with the
+actual problem.
 
-**The push/pop pair in `count_above` exists only because of register naming
-pressure.** The subroutine needs to set D to zero, but it is receiving inputs
-in B and C and cannot afford to disturb them. The push/pop pair is the tool
-available. A language that lets the programmer name a variable — `count` —
-independently of a specific register would make the initialization straightforward
-and would not require saving and restoring a register that was already holding
-the right value.
+**The push/pop in `count_above` is there because registers have no names.**
+The subroutine needs to set D to zero, but B and C already hold inputs. The push/
+pop saves B and C temporarily so D can be initialized safely. What you really
+want is a variable called `count` that belongs to this function and does not
+collide with anything else. Without named variables, registers are shared
+workspace, and sharing means saving.
 
-**Re-loading HL before the second call is necessary but invisible.** `find_max`
-advances HL as a side effect. Nothing in the function signature says "HL is
-clobbered." The caller finds out only by reading the function body, or by
-running the program and observing that the second call produced wrong results.
-A language that tracks which registers a function modifies would make this
-explicit at the call site.
+**Re-loading HL before the second call is invisible until it breaks.** `find_max`
+walks HL through the table and leaves it pointing past the end. Nothing in the
+call interface tells the caller this will happen. You find out by reading the
+function body carefully, or by running the program and seeing wrong output.
 
-**The double `cp c` in the body is a symptom of not having a greater-than test.**
-`cp` produces less-than and equal information through the C and Z flags. Strictly
-greater-than requires combining both. A language with a structured comparison —
-`if A > threshold` — would lower this to the correct two-instruction sequence
-automatically, and the programmer would see the intent rather than the
-implementation.
+**The double `cp c` exists because there is no greater-than test.** `cp` gives
+you less-than (carry flag) and equal (zero flag). To test strictly greater-than,
+you need both. So the comparison runs twice. A structured `if value > threshold`
+would generate the same two instructions automatically, and the reader would see
+the intent instead of the mechanism.
 
 ---
 
-## What Phase B solves
+## What the next three chapters address
 
-Phase B introduces three constructs that each address one or more of the costs
-above.
+Chapters 09–11 introduce three things that each fix one of the problems above.
 
-**Typed storage and `:=`** let the programmer name a variable — `count`,
-`running_max` — and assign values to it without choosing a register. The compiler
-assigns the storage. The push/pop pair in `count_above` exists because D had to
-be initialized in a register-conscious way; with named typed storage, the
-initialization is `count := 0` and the compiler handles placement.
+**Typed variables and `:=`** let you name a value — `count`, `running_max` —
+without tying it to a specific register. You write `count := 0` and the compiler
+puts it somewhere. No push/pop needed to protect inputs while you initialize
+something else.
 
-**Structured `if`** replaces the label-test-jump skeleton for conditional blocks.
-`if NC / ... / end` emits the same flag test and conditional branch that
-`cp c / jr nc, skip_label / ... / skip_label:` produces, but without the
-programmer-managed label. The intent — "execute this block if no carry" — is
-visible in the source rather than embedded in the target name of a jump.
+**Structured `if`** replaces the label-test-jump pattern. `if NC / ... / end`
+generates the same flag test and conditional branch as `cp c / jr nc, label /
+... / label:`, but you do not write the label. The source shows what the code
+is doing, not where jumps are going.
 
-**Structured `while`** replaces the loop-top label, the loop body, and the
-branch-back jump. `while NZ / ... / end` is a pre-tested loop: the flags are
-checked on entry and the body runs zero or more times depending on the condition.
-This is equivalent to the pattern with the branch at the top:
-`jp Z, exit / body / jp loop_top / exit:`. The `jr nz, loop_top` form placed
-at the bottom of a loop is a post-tested loop — the body always runs at least
-once — which is a different semantic. `while NZ` removes the need to name the
-top-of-loop label or manage the exit label by hand.
+**Structured `while`** replaces the loop-top label, the body, and the
+branch-back jump. `while NZ / ... / end` is a loop that tests flags before
+entering: if the condition is already false, the body does not run. This is
+different from the `jr nz, loop_top` form at the bottom of a loop, which always
+runs the body at least once. The label management disappears.
 
-None of these constructs hide the machine. They each lower to the same Z80
-instructions that Phase A programs use. The difference is that the structured
-forms carry the intent in the source, and the compiler manages the scaffolding.
+None of this hides the machine. Everything translates to the same Z80
+instructions as before. What changes is that the source shows the intent, and
+the compiler writes the scaffolding.
 
-Phase B starts in Chapter 09.
+Chapter 09 starts there.
 
 ---
 
 ## What This Chapter Teaches
 
-- A complete Phase A ZAX program has a data section, a vars section, a `main`
-  function, and one or more helper subroutines.
+- A complete ZAX program has a data section, a vars section, a `main` function,
+  and one or more helper subroutines.
 - Subroutines receive inputs in registers and return results in registers.
   Document which registers each function reads and which it modifies.
 - The caller must reload any register that the callee modified before the next
-  call. Nothing enforces this; the programmer is responsible.
-- Label scaffolding (loop-top labels, skip labels) is mechanical bookkeeping
-  with no semantic content. The programmer must manage it correctly.
-- Push/pop pairs appear in subroutines to resolve register naming pressure
-  when a function needs to initialize a register that also carries an input.
-- Phase B — typed storage, `if`, and `while` — addresses each of these costs
-  while producing the same Z80 output.
+  call. Nothing enforces this.
+- Loop labels, skip labels, and conditional branch labels are structural noise:
+  they give jumps a target, but carry no meaning about what the code does. The
+  programmer has to manage them correctly.
+- Push/pop pairs appear when a function needs to initialize a register that
+  already holds an input. The real problem is not having named variables.
+- Chapters 09–11 — typed storage, `if`, and `while` — each address one of these
+  problems, while generating the same Z80 output.
 
 ## What Comes Next
 
-Chapter 09 introduces typed storage and `:=`, the first Phase B construct, and
-shows how it eliminates register-naming pressure for local values.
+Chapter 09 introduces typed variables and `:=`: named storage that the compiler
+places on the stack, with no register chosen by hand.
 
 ---
 

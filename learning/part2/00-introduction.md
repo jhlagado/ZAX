@@ -21,12 +21,12 @@ and to learn how the language helps keep that code readable.
 ## What ZAX Gives You Here
 
 ZAX is still close to the machine. Raw Z80 instructions are always available,
-and the programmer still decides what the registers, flags, and memory layout
-mean. What changes is the amount of bookkeeping you have to do by hand.
+and you still decide what the registers, flags, and memory layout mean. What
+changes is the amount of repetitive work you have to do by hand.
 
 In these chapters you will keep seeing the same pattern. Raw instructions are
-used when the machine detail matters directly. ZAX surface features are used
-when the programmer's intent is clearer than the mechanical load/store sequence.
+used when the machine detail matters directly. ZAX features are used when your
+intent is clearer than the mechanical load/store sequence.
 A byte can still be loaded with `ld a, (hl)`. A typed local can be updated with
 `count := hl` or `succ index_value`. The language does not remove machine-level
 thinking. It removes repeated clerical work so the program structure is easier
@@ -44,8 +44,8 @@ You should already be comfortable with:
 
 You do not need prior knowledge of C, Pascal, or any other high-level language.
 This volume explains each program in its own terms. What it does assume is that
-you are ready to read multi-step code and follow a program invariant across more
-than a few instructions.
+you are ready to read multi-step code and follow what a program is doing across
+more than a few instructions.
 
 ## How To Use The Chapters
 

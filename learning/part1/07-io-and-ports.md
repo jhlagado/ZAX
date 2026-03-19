@@ -1,4 +1,4 @@
-[← Stack and Subroutines](06-stack-and-subroutines.md) | [Part 1](README.md) | [A Phase A Program →](08-a-phase-a-program.md)
+[← Stack and Subroutines](06-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](08-a-phase-a-program.md)
 
 # Chapter 07 — I/O and Ports
 
@@ -24,8 +24,8 @@ N receives a byte back from it. The CPU makes the distinction between memory and
 I/O transactions visible on its address and control buses; peripherals are wired
 to respond to one or the other, not both.
 
-From the programmer's perspective, `in` and `out` are the only instructions that
-access I/O space. All other Z80 instructions — `ld`, `add`, `cp`, `jp`, `call`,
+From your perspective, `in` and `out` are the only instructions that access I/O
+space. All other Z80 instructions — `ld`, `add`, `cp`, `jp`, `call`,
 everything else — operate on memory or registers. I/O and memory do not overlap.
 
 ---
@@ -57,7 +57,7 @@ out (C), a       ; write A to the same port
 The register-addressed form uses C as the port selector regardless of what other
 register supplies the data. On some Z80 platforms B is visible on the high byte
 of the address bus during `out (C), r`, which some hardware uses as a secondary
-selector; this is a hardware detail, not a programming concern in Phase A.
+selector; this is a hardware detail, not something you need to worry about here.
 
 ---
 
@@ -97,7 +97,7 @@ input is zero, use `in a, (C)` and then `or a` to establish flags, or use
 
 ## Polling a port in a loop
 
-A common Phase A pattern is to poll a status port until a condition is met, then
+A common pattern is to poll a status port until a condition is met, then
 read or write a data port. The example below spins waiting for bit 0 of a status
 port to become 1, then reads from the data port:
 
@@ -129,9 +129,9 @@ difference is where the port number comes from.
 ## Sending a block of bytes
 
 A counted loop can send a sequence of bytes to a port one at a time. HL points
-to the data; BC holds the count; C holds the port number. This is Phase A — no
-block-copy instruction for I/O exists on the standard Z80, unlike the `ldir`
-memory copy from Chapter 05.
+to the data; BC holds the count; C holds the port number. There is no
+block-copy instruction for I/O on the Z80 (unlike the `ldir` memory copy from
+Chapter 05), so you write the loop yourself.
 
 ```zax
 func send_block()
@@ -261,15 +261,15 @@ three before the call.
   P/V) are set based on the value read.
 - A polling loop tests a status port in a loop until a ready condition is met,
   then reads the data port.
-- Port numbers are platform-defined; Phase A examples use abstract constants
+- Port numbers are platform-defined. The examples here use abstract constants
   and demonstrate the instructions themselves, not any specific hardware.
 
 ## What Comes Next
 
-Chapter 08 is the Phase A capstone: a complete program that draws on every
-instruction form covered in Chapters 00–07. It names the specific friction
-points that the raw approach creates, setting up Phase B.
+Chapter 08 brings everything together: a complete program that uses every
+instruction form from Chapters 00–07. It also names the specific places where
+raw Z80 starts to get tedious — which sets up what Chapters 09–11 address.
 
 ---
 
-[← Stack and Subroutines](06-stack-and-subroutines.md) | [Part 1](README.md) | [A Phase A Program →](08-a-phase-a-program.md)
+[← Stack and Subroutines](06-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](08-a-phase-a-program.md)

@@ -6,9 +6,7 @@ Two volumes. Read them in order.
 
 ## [Part 1 — Learn Z80 Programming in ZAX](part1/README.md)
 
-Starts from scratch. Teaches the Z80 machine model — bytes, registers, flags, memory, the stack, subroutines, I/O — using ZAX as the assembler surface from chapter one. No prior assembly experience assumed.
-
-Phase A (Chapters 00–08) uses raw Z80 instructions. Phase B (Chapters 09–11) introduces the structured ZAX surface as justified relief from the Phase A bookkeeping cost.
+No prior assembly experience needed. Starts from scratch — bytes, registers, memory, the stack, subroutines — and works up to ZAX's higher-level features over 12 chapters.
 
 → [Start here if you are new to Z80 programming](part1/README.md)
 

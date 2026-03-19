@@ -8,14 +8,14 @@ named typed parameters and a typed return value, write a zero-parameter `op`,
 and explain the difference in cost between a typed `func` call and a raw `call`
 or an `op` expansion.
 
-Prerequisites: Chapters 00–09 (all Phase A and Phase B constructs to this point).
+Prerequisites: Chapters 00–09.
 
 ---
 
-## What the Phase A calling convention required
+## What raw subroutines required
 
-Phase A subroutines passed all values through registers. The conventions were
-chosen by the programmer and documented only in comments:
+Raw subroutines passed all values through registers. The conventions were
+chosen by you and documented only in comments:
 
 ```zax
 ; find_max: scan a byte table and return the largest value.
@@ -79,11 +79,10 @@ load/store sequence as accessing a local.
 
 ---
 
-## The IX-anchored frame: what it costs
+## The function frame: what it costs
 
-A framed function — one with parameters or locals — carries setup overhead that
-a raw subroutine does not. The compiler emits a three-instruction prologue at
-function entry:
+A function with parameters or locals carries setup overhead that a raw
+subroutine does not. The compiler emits three setup instructions at entry:
 
 ```asm
 push ix
@@ -94,7 +93,7 @@ add  ix, sp
 This saves the caller's IX and makes IX point to the current top of stack. Every
 local and every parameter is then accessible as a signed byte offset from IX.
 
-At function exit, the compiler emits a corresponding epilogue:
+At function exit, the compiler emits matching cleanup instructions:
 
 ```asm
 ld  sp, ix
@@ -134,22 +133,22 @@ result and which registers the compiler saves and restores around the frame.
 | Declaration | Meaning | What compiler preserves |
 |-------------|---------|-------------------------|
 | `func f(): void` | no return value | AF, BC, DE, HL all saved/restored |
-| `func f(): AF` | Phase A idiom: AF not saved/restored, A survives if left there | BC, DE, HL saved/restored; AF is not |
+| `func f(): AF` | A survives if left there; AF not saved/restored by compiler | BC, DE, HL saved/restored; AF is not |
 | `func f(): HL` | typed byte/word return in HL (byte in L, H = 0) | AF, BC, DE saved/restored; HL is not |
 
-**Important distinction — Phase A vs Phase B return patterns:**
+**Important distinction — two return patterns:**
 
 `: AF` does **not** deliver A through the typed call mechanism. What it does is
-remove AF from the compiler's save/restore set: the epilogue does not emit
-`pop AF`, so whatever value A held at function exit reaches the caller through
-raw register survival. This is the **Phase A idiom** from Chapter 06 — the
-caller and callee agree by convention that A carries the result, and the
+remove AF from the compiler's save/restore set: the compiler does not emit
+`pop AF` before returning, so whatever value A held at function exit reaches the
+caller through raw register survival. This is the pattern from Chapter 06 —
+the caller and callee agree by convention that A carries the result, and the
 declaration `: AF` tells the compiler not to clobber it.
 
-`: HL` is the **Phase B pattern** for typed returns. The compiler treats HL as
-the return channel: byte values go in L (with H set to zero), word values fill
-all of HL. The caller reads the result from L (for bytes) or HL (for words)
-after the call returns.
+`: HL` is the typed return pattern. The compiler treats HL as the return
+channel: byte values go in L (with H set to zero), word values fill all of HL.
+The caller reads the result from L (for bytes) or HL (for words) after the
+call returns.
 
 `find_max_f` and `count_above_f` use `: HL`. They place their byte result in L
 (with H = 0) just before returning. The caller retrieves it with `ld a, l`
@@ -157,7 +156,7 @@ after the standalone call statement.
 
 Declaring `: void` when the function places a meaningful value in A is a bug.
 The compiler's `pop AF` in the epilogue overwrites A before the caller sees it.
-Chapter 06 established this rule; it applies to all three Phase B chapters.
+Chapter 06 established this rule; it applies to all three chapters.
 
 ---
 
@@ -187,9 +186,8 @@ exactly as if those two instructions were written at that position in the source
 
 The example file uses `load_and_or` to name the repeated "copy register into A
 and OR to establish flags" pattern that appears before every `while NZ` loop and
-at every back edge. In Phase A, that pattern was copied by hand in every place
-it appeared. With the `op`, it appears once in the declaration and once at each
-invocation. The reader sees `load_and_or B` and knows immediately what
+at every back edge. Without `op`, that pattern is copied by hand in every place it appears. With
+the `op`, it appears once in the declaration and once at each invocation. The reader sees `load_and_or B` and knows immediately what
 instruction pair will appear there.
 
 **`reg8` parameters accept only physical register names.** At the call site, a
@@ -298,26 +296,26 @@ pass the register to the op.
 
 ---
 
-## Comparing the three generations
+## Comparing the four versions
 
-`06_subroutines.zax` — raw Phase A with register conventions in comments.
-`08_phase_a_capstone.zax` — raw Phase A with DJNZ, push/pop, double-cp.
-`10_structured_control.zax` — Phase B locals + structured control, still registers for arguments.
-`11_functions_and_op.zax` — full Phase B: typed parameters, typed return, op, structured control.
+`06_subroutines.zax` — raw subroutines, register conventions in comments.
+`08_phase_a_capstone.zax` — raw Z80 with DJNZ, push/pop, double-cp.
+`10_structured_control.zax` — typed locals and structured control, still raw register-passing for arguments.
+`11_functions_and_op.zax` — typed parameters, typed return, op, structured control.
 
-Each generation removes one source of bookkeeping:
+Each step removes one manual task:
 
-- Phase A → Chapter 09: registers-as-variables replaced by typed locals.
-- Chapter 09 → Chapter 10: label scaffolding replaced by `if`/`while`.
+- Chapter 08 → Chapter 09: registers-as-variables replaced by typed locals.
+- Chapter 09 → Chapter 10: label management replaced by `if`/`while`.
 - Chapter 10 → Chapter 11: register-passing conventions replaced by typed parameters.
 
-Across all Phase B chapters, the compiler also handles frame setup, frame
-teardown, register preservation, and the final `ret` at `end`. A ZAX `func`
-never needs a trailing `ret` — that bookkeeping is automatic.
+Across Chapters 09–11, the compiler also handles frame setup, frame teardown,
+register preservation, and the final `ret` at `end`. A ZAX `func` never needs a
+trailing `ret`.
 
 The Z80 machine model has not changed. Registers, flags, the stack, and indexed
-addressing are all still present in Chapter 11's programs. What has changed is
-how much of the bookkeeping the compiler manages.
+addressing are all still present in Chapter 11. What has changed is how much
+of the repetitive work the compiler does for you.
 
 ---
 
@@ -361,20 +359,20 @@ By this point you can:
 - write `if`/`else` and `while` loops with `break` and `continue`
 - write a ZAX `func` with typed parameters and a typed return value
 - write an `op` for inline named instruction sequences
-- explain what each Phase B construct costs and what it replaces from Phase A
+- explain what each construct in Chapters 09–11 does and what it replaces
 
 **Volume 2: `learning/part2/`**
 
-The algorithms course (`learning/part2/README.md`) is the second stage. It takes
-the full Phase B surface as a given — typed storage, `:=`, `if`, `while`,
-`break`, `continue`, `succ`/`pred`, typed functions, and `op` — and uses it
-immediately from the first chapter.
+The algorithms course (`learning/part2/README.md`) is the second stage. It
+assumes everything from Part 1 — typed storage, `:=`, `if`, `while`, `break`,
+`continue`, `succ`/`pred`, typed functions, and `op` — and uses it from the
+first chapter.
 
 Volume 2 covers the constructs and patterns needed for larger programs:
 
 - **Arrays and indexing** — typed arrays declared in `section data`, indexed
   with register operands, 0-based with no runtime bounds checks
-- **Records** — typed aggregate state, field access with `.`, `sizeof` and
+- **Records** — struct-like types, field access with `.`, `sizeof` and
   `offsetof` for layout arithmetic
 - **Strings** — null-terminated byte arrays, sentinel traversal with `while NZ`
   and `break`
