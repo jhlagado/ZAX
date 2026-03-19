@@ -71,6 +71,8 @@ type RawLine = {
   raw: string;
   startOffset: number;
   endOffset: number;
+  lineNo: number;
+  filePath: string;
 };
 
 type ParseDataContext = {
@@ -257,12 +259,13 @@ export function parseDataDeclLine(opts: ParseDataDeclOptions): DataDeclNode | un
 
 export function parseDataBlock(startIndex: number, ctx: ParseDataContext): ParsedDataBlock {
   const { file, lineCount, diagnostics, modulePath, getRawLine, stopOnEnd = false } = ctx;
+  const { lineNo: headerLineNo, filePath: headerFilePath } = getRawLine(startIndex);
   if (!stopOnEnd) {
     diag(
       diagnostics,
-      modulePath,
+      headerFilePath ?? modulePath,
       'Legacy top-level "data ... end" blocks are removed; use direct declarations inside named data sections.',
-      { line: startIndex + 1, column: 1 },
+      { line: headerLineNo, column: 1 },
     );
   }
   const blockStart = getRawLine(startIndex).startOffset;
@@ -271,7 +274,13 @@ export function parseDataBlock(startIndex: number, ctx: ParseDataContext): Parse
   const declNamesLower = new Set<string>();
 
   while (index < lineCount) {
-    const { raw: rawDecl, startOffset: so, endOffset: eo } = getRawLine(index);
+    const {
+      raw: rawDecl,
+      startOffset: so,
+      endOffset: eo,
+      lineNo: declLineNo,
+      filePath: declFilePath,
+    } = getRawLine(index);
     const t = stripComment(rawDecl).trim();
     if (t.length === 0) {
       index++;
@@ -283,9 +292,9 @@ export function parseDataBlock(startIndex: number, ctx: ParseDataContext): Parse
       if (m && TOP_LEVEL_KEYWORDS.has(m[1]!.toLowerCase())) {
         diag(
           diagnostics,
-          modulePath,
+          declFilePath,
           `Invalid data declaration name "${m[1]!}": collides with a top-level keyword.`,
-          { line: index + 1, column: 1 },
+          { line: declLineNo, column: 1 },
         );
         index++;
         continue;
@@ -293,11 +302,11 @@ export function parseDataBlock(startIndex: number, ctx: ParseDataContext): Parse
       if (looksLikeKeywordBodyDeclLine(t)) {
         diagInvalidBlockLine(
           diagnostics,
-          modulePath,
+          declFilePath,
           'data declaration',
           t,
           '<name>: <type> = <initializer>',
-          index + 1,
+          declLineNo,
         );
         index++;
         continue;
@@ -309,9 +318,9 @@ export function parseDataBlock(startIndex: number, ctx: ParseDataContext): Parse
     const decl = parseDataDeclLine({
       allowOmittedInitializer: false,
       allowInferredArrayLength: true,
-      modulePath,
+      modulePath: declFilePath,
       diagnostics,
-      lineNo: index + 1,
+      lineNo: declLineNo,
       text: t,
       span: lineSpan,
       seenNames: declNamesLower,

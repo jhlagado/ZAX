@@ -17,6 +17,8 @@ type RawLine = {
   raw: string;
   startOffset: number;
   endOffset: number;
+  lineNo: number;
+  filePath: string;
 };
 
 type ParseTypeContext = {
@@ -50,6 +52,7 @@ function parseRecordFields(
   endOffset: number;
   interruptedByKeyword?: string;
   interruptedByLine?: number;
+  interruptedByFilePath?: string;
 } {
   const { file, lineCount, diagnostics, modulePath, getRawLine, isReservedTopLevelName } = ctx;
   const fields: RecordFieldNode[] = [];
@@ -57,11 +60,18 @@ function parseRecordFields(
   let terminated = false;
   let interruptedByKeyword: string | undefined;
   let interruptedByLine: number | undefined;
+  let interruptedByFilePath: string | undefined;
   let endOffset = file.text.length;
   let index = startIndex;
 
   while (index < lineCount) {
-    const { raw: rawField, startOffset: so, endOffset: eo } = getRawLine(index);
+    const {
+      raw: rawField,
+      startOffset: so,
+      endOffset: eo,
+      lineNo: fieldLineNo,
+      filePath: fieldFilePath,
+    } = getRawLine(index);
     const t = stripComment(rawField).trim();
     const tLower = t.toLowerCase();
     if (t.length === 0) {
@@ -82,17 +92,18 @@ function parseRecordFields(
         if (looksLikeKeywordBodyDeclLine(t)) {
           diagInvalidBlockLine(
             diagnostics,
-            modulePath,
+            fieldFilePath,
             `${name} field declaration`,
             t,
             '<name>: <type>',
-            index + 1,
+            fieldLineNo,
           );
           index++;
           continue;
         }
         interruptedByKeyword = topKeyword;
-        interruptedByLine = index + 1;
+        interruptedByLine = fieldLineNo;
+        interruptedByFilePath = fieldFilePath;
         break;
       }
     }
@@ -101,11 +112,11 @@ function parseRecordFields(
     if (!m) {
       diagInvalidBlockLine(
         diagnostics,
-        modulePath,
+        fieldFilePath,
         `${name} field declaration`,
         t,
         '<name>: <type>',
-        index + 1,
+        fieldLineNo,
       );
       index++;
       continue;
@@ -115,9 +126,9 @@ function parseRecordFields(
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(fieldName)) {
       diag(
         diagnostics,
-        modulePath,
+        fieldFilePath,
         `Invalid ${name} field name ${formatIdentifierToken(fieldName)}: expected <identifier>.`,
-        { line: index + 1, column: 1 },
+        { line: fieldLineNo, column: 1 },
       );
       index++;
       continue;
@@ -134,8 +145,8 @@ function parseRecordFields(
     }
     const fieldNameLower = fieldName.toLowerCase();
     if (fieldNamesLower.has(fieldNameLower)) {
-      diag(diagnostics, modulePath, `Duplicate ${name} field name "${fieldName}".`, {
-        line: index + 1,
+      diag(diagnostics, fieldFilePath, `Duplicate ${name} field name "${fieldName}".`, {
+        line: fieldLineNo,
         column: 1,
       });
       index++;
@@ -149,8 +160,8 @@ function parseRecordFields(
     });
     if (!typeExpr) {
       if (
-        diagIfInferredArrayLengthNotAllowed(diagnostics, modulePath, typeText, {
-          line: index + 1,
+        diagIfInferredArrayLengthNotAllowed(diagnostics, fieldFilePath, typeText, {
+          line: fieldLineNo,
           column: 1,
         })
       ) {
@@ -159,11 +170,11 @@ function parseRecordFields(
       }
       diagInvalidBlockLine(
         diagnostics,
-        modulePath,
+        fieldFilePath,
         `${name} field declaration`,
         t,
         '<name>: <type>',
-        index + 1,
+        fieldLineNo,
       );
       index++;
       continue;
@@ -185,6 +196,7 @@ function parseRecordFields(
     endOffset,
     ...(interruptedByKeyword !== undefined ? { interruptedByKeyword } : {}),
     ...(interruptedByLine !== undefined ? { interruptedByLine } : {}),
+    ...(interruptedByFilePath !== undefined ? { interruptedByFilePath } : {}),
   };
 }
 
@@ -261,10 +273,14 @@ export function parseTypeDecl(
 
   const record = parseRecordFields('record', false, startIndex + 1, ctx);
   if (!record.terminated) {
-    if (record.interruptedByKeyword !== undefined && record.interruptedByLine !== undefined) {
+    if (
+      record.interruptedByKeyword !== undefined &&
+      record.interruptedByLine !== undefined &&
+      record.interruptedByFilePath !== undefined
+    ) {
       diag(
         diagnostics,
-        modulePath,
+        record.interruptedByFilePath,
         `Unterminated type "${name}": expected "end" before "${record.interruptedByKeyword}"`,
         { line: record.interruptedByLine, column: 1 },
       );
@@ -341,10 +357,14 @@ export function parseUnionDecl(
   const record = parseRecordFields('union', true, startIndex + 1, ctx);
 
   if (!record.terminated) {
-    if (record.interruptedByKeyword !== undefined && record.interruptedByLine !== undefined) {
+    if (
+      record.interruptedByKeyword !== undefined &&
+      record.interruptedByLine !== undefined &&
+      record.interruptedByFilePath !== undefined
+    ) {
       diag(
         diagnostics,
-        modulePath,
+        record.interruptedByFilePath,
         `Unterminated union "${name}": expected "end" before "${record.interruptedByKeyword}"`,
         { line: record.interruptedByLine, column: 1 },
       );

@@ -33,6 +33,8 @@ type RawLine = {
   raw: string;
   startOffset: number;
   endOffset: number;
+  lineNo: number;
+  filePath: string;
 };
 
 type ParseFuncContext = {
@@ -123,8 +125,9 @@ export function parseTopLevelFuncDecl(
   let asmStartOffset: number | undefined;
   let interruptedBeforeBodyKeyword: string | undefined;
   let interruptedBeforeBodyLine: number | undefined;
+  let interruptedBeforeBodyFilePath: string | undefined;
   while (index < lineCount) {
-    const { raw: raw2, startOffset: so2 } = getRawLine(index);
+    const { raw: raw2, startOffset: so2, lineNo: lineNo2, filePath: filePath2 } = getRawLine(index);
     const t2 = stripComment(raw2).trim();
     const t2Lower = t2.toLowerCase();
     if (t2.length === 0) {
@@ -134,7 +137,8 @@ export function parseTopLevelFuncDecl(
     const t2TopKeyword = topLevelStartKeyword(t2);
     if (t2TopKeyword !== undefined && t2Lower !== 'var') {
       interruptedBeforeBodyKeyword = t2TopKeyword;
-      interruptedBeforeBodyLine = index + 1;
+      interruptedBeforeBodyLine = lineNo2;
+      interruptedBeforeBodyFilePath = filePath2;
       break;
     }
 
@@ -146,7 +150,13 @@ export function parseTopLevelFuncDecl(
       let varTerminated = false;
 
       while (index < lineCount) {
-        const { raw: rawDecl, startOffset: soDecl, endOffset: eoDecl } = getRawLine(index);
+        const {
+          raw: rawDecl,
+          startOffset: soDecl,
+          endOffset: eoDecl,
+          lineNo: declLineNo,
+          filePath: declFilePath,
+        } = getRawLine(index);
         const tDecl = stripComment(rawDecl).trim();
         const tDeclLower = tDecl.toLowerCase();
         if (tDecl.length === 0) {
@@ -167,9 +177,9 @@ export function parseTopLevelFuncDecl(
         if (tDeclLower === 'asm') {
           diag(
             diagnostics,
-            modulePath,
+            declFilePath,
             `Function-local var block must end with "end" before function body`,
-            { line: index + 1, column: 1 },
+            { line: declLineNo, column: 1 },
           );
           locals = {
             kind: 'VarBlock',
@@ -186,17 +196,18 @@ export function parseTopLevelFuncDecl(
           if (looksLikeKeywordBodyDeclLine(tDecl)) {
             diagInvalidBlockLine(
               diagnostics,
-              modulePath,
+              declFilePath,
               'var declaration',
               tDecl,
               '<name>: <type>',
-              index + 1,
+              declLineNo,
             );
             index++;
             continue;
           }
           interruptedBeforeBodyKeyword = tDeclTopKeyword;
-          interruptedBeforeBodyLine = index + 1;
+          interruptedBeforeBodyLine = declLineNo;
+          interruptedBeforeBodyFilePath = declFilePath;
           locals = {
             kind: 'VarBlock',
             span: span(file, varStart, soDecl),
@@ -207,9 +218,9 @@ export function parseTopLevelFuncDecl(
         }
 
         const declSpan = span(file, soDecl, eoDecl);
-        const parsed = parseVarDeclLine(tDecl, declSpan, index + 1, 'var', {
+        const parsed = parseVarDeclLine(tDecl, declSpan, declLineNo, 'var', {
           diagnostics,
-          modulePath,
+          modulePath: declFilePath,
           isReservedTopLevelName,
         });
         if (!parsed) {
@@ -218,8 +229,8 @@ export function parseTopLevelFuncDecl(
         }
         const localNameLower = parsed.name.toLowerCase();
         if (declNamesLower.has(localNameLower)) {
-          diag(diagnostics, modulePath, `Duplicate var declaration name "${parsed.name}".`, {
-            line: index + 1,
+          diag(diagnostics, declFilePath, `Duplicate var declaration name "${parsed.name}".`, {
+            line: declLineNo,
             column: 1,
           });
           index++;
@@ -257,7 +268,7 @@ export function parseTopLevelFuncDecl(
     if (interruptedBeforeBodyKeyword !== undefined && interruptedBeforeBodyLine !== undefined) {
       diag(
         diagnostics,
-        modulePath,
+        interruptedBeforeBodyFilePath ?? modulePath,
         `Unterminated func "${name}": expected function body before "${interruptedBeforeBodyKeyword}"`,
         { line: interruptedBeforeBodyLine, column: 1 },
       );
@@ -275,8 +286,15 @@ export function parseTopLevelFuncDecl(
   let terminated = false;
   let interruptedByKeyword: string | undefined;
   let interruptedByLine: number | undefined;
+  let interruptedByFilePath: string | undefined;
   while (index < lineCount) {
-    const { raw: rawLine, startOffset: lineOffset, endOffset } = getRawLine(index);
+    const {
+      raw: rawLine,
+      startOffset: lineOffset,
+      endOffset,
+      lineNo: bodyLineNo,
+      filePath: bodyFilePath,
+    } = getRawLine(index);
     const withoutComment = stripComment(rawLine);
     const content = withoutComment.trim();
     const contentLower = content.toLowerCase();
@@ -287,9 +305,9 @@ export function parseTopLevelFuncDecl(
     if (contentLower === 'asm' && asmControlStack.length === 0 && asmItems.length === 0) {
       diag(
         diagnostics,
-        modulePath,
+        bodyFilePath,
         `Unexpected "asm" in function body (function bodies are implicit)`,
-        { line: index + 1, column: 1 },
+        { line: bodyLineNo, column: 1 },
       );
       index++;
       continue;
@@ -327,7 +345,8 @@ export function parseTopLevelFuncDecl(
     const topKeyword = topLevelStartKeyword(content);
     if (topKeyword !== undefined) {
       interruptedByKeyword = topKeyword;
-      interruptedByLine = index + 1;
+      interruptedByLine = bodyLineNo;
+      interruptedByFilePath = bodyFilePath;
       break;
     }
 
@@ -346,7 +365,7 @@ export function parseTopLevelFuncDecl(
       asmItems.push(labelNode);
       if (remainder.trim().length > 0) {
         const stmtNode = parseAsmStatement(
-          modulePath,
+          bodyFilePath,
           remainder,
           contentSpan,
           diagnostics,
@@ -359,7 +378,7 @@ export function parseTopLevelFuncDecl(
     }
 
     const stmtNode = parseAsmStatement(
-      modulePath,
+      bodyFilePath,
       content,
       contentSpan,
       diagnostics,
@@ -377,14 +396,14 @@ export function parseTopLevelFuncDecl(
         frame.kind === 'Repeat'
           ? `"repeat" without matching "until <cc>"`
           : `"${frame.kind.toLowerCase()}" without matching "end"`;
-      diag(diagnostics, modulePath, msg, {
+      diag(diagnostics, frameSpan.file, msg, {
         line: frameSpan.start.line,
         column: frameSpan.start.column,
       });
     }
     diag(
       diagnostics,
-      modulePath,
+      interruptedByFilePath ?? modulePath,
       `Unterminated func "${name}": expected "end" before "${interruptedByKeyword}"`,
       { line: interruptedByLine, column: 1 },
     );
@@ -397,7 +416,7 @@ export function parseTopLevelFuncDecl(
       frame.kind === 'Repeat'
         ? `"repeat" without matching "until <cc>"`
         : `"${frame.kind.toLowerCase()}" without matching "end"`;
-    diag(diagnostics, modulePath, msg, {
+    diag(diagnostics, frameSpan.file, msg, {
       line: frameSpan.start.line,
       column: frameSpan.start.column,
     });

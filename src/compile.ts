@@ -8,6 +8,8 @@ import type { CompileFn, CompilerOptions, CompileResult, PipelineDeps } from './
 import type { ModuleItemNode, ProgramNode, SectionItemNode } from './frontend/ast.js';
 import type { ImportNode, ModuleFileNode } from './frontend/ast.js';
 import { parseModuleFile } from './frontend/parser.js';
+import { makeSourceFile } from './frontend/source.js';
+import { stripLineComment } from './frontend/parseParserShared.js';
 import { lintCaseStyle } from './lint/case_style.js';
 import { emitProgram } from './lowering/emit.js';
 import { STARTUP_ENTRY_LABEL } from './lowering/startupInit.js';
@@ -17,7 +19,6 @@ import { canonicalModuleId } from './moduleIdentity.js';
 import { validateAssignmentAcceptance } from './semantics/assignmentAcceptance.js';
 import { buildEnv } from './semantics/env.js';
 import { validateSuccPredAcceptance } from './semantics/succPredAcceptance.js';
-import { stripLineComment } from './frontend/parseParserShared.js';
 
 function hasErrors(diagnostics: Diagnostic[]): boolean {
   return diagnostics.some((d) => d.severity === 'error');
@@ -124,13 +125,17 @@ async function loadProgram(
   const includeDirs = (options.includeDirs ?? []).map(normalizePath);
   const moduleIdRootDir = dirname(entryPath);
 
+  type ExpandedSource = { text: string; lineFiles: string[]; lineBaseLines: number[] };
+
   const expandIncludes = async (
     modulePath: string,
     sourceText: string,
     includeStack: string[],
-  ): Promise<string | undefined> => {
+  ): Promise<ExpandedSource | undefined> => {
     const lines = sourceText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
     const out: string[] = [];
+    const lineFiles: string[] = [];
+    const lineBaseLines: number[] = [];
 
     for (let i = 0; i < lines.length; i++) {
       const raw = lines[i] ?? '';
@@ -139,6 +144,8 @@ async function loadProgram(
       const match = /^\s*include\s+"([^"]+)"\s*$/.exec(stripped);
       if (!match) {
         out.push(raw);
+        lineFiles.push(modulePath);
+        lineBaseLines.push(lineNo);
         continue;
       }
 
@@ -187,6 +194,8 @@ async function loadProgram(
           column: raw.indexOf('include') + 1 || 1,
         });
         out.push(raw);
+        lineFiles.push(modulePath);
+        lineBaseLines.push(lineNo);
         continue;
       }
 
@@ -200,15 +209,22 @@ async function loadProgram(
           column: raw.indexOf('include') + 1 || 1,
         });
         out.push(raw);
+        lineFiles.push(modulePath);
+        lineBaseLines.push(lineNo);
         continue;
       }
 
       const expanded = await expandIncludes(resolved, resolvedText, [...includeStack, resolved]);
       if (expanded === undefined) return undefined;
-      out.push(expanded);
+      const expandedLines = expanded.text.split('\n');
+      for (let j = 0; j < expandedLines.length; j++) {
+        out.push(expandedLines[j]!);
+        lineFiles.push(expanded.lineFiles[j] ?? resolved);
+        lineBaseLines.push(expanded.lineBaseLines[j] ?? j + 1);
+      }
     }
 
-    return out.join('\n');
+    return { text: out.join('\n'), lineFiles, lineBaseLines };
   };
 
   const loadModule = async (
@@ -234,12 +250,15 @@ async function loadProgram(
       return;
     }
 
-    const expandedText = await expandIncludes(p, sourceText, [p]);
-    if (expandedText === undefined) return;
+    const expanded = await expandIncludes(p, sourceText, [p]);
+    if (expanded === undefined) return;
 
     let moduleFile: ModuleFileNode;
     try {
-      moduleFile = parseModuleFile(p, expandedText, diagnostics);
+      const sourceFile = makeSourceFile(p, expanded.text);
+      sourceFile.lineFiles = expanded.lineFiles;
+      sourceFile.lineBaseLines = expanded.lineBaseLines;
+      moduleFile = parseModuleFile(p, expanded.text, diagnostics, sourceFile);
     } catch (err) {
       diagnostics.push({
         id: DiagnosticIds.InternalParseError,
@@ -251,7 +270,7 @@ async function loadProgram(
     }
 
     modules.set(p, moduleFile);
-    sourceTexts.set(p, expandedText);
+    sourceTexts.set(p, expanded.text);
     edges.set(p, new Map());
 
     for (const imp of importTargets(moduleFile)) {
