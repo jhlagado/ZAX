@@ -1,17 +1,15 @@
 # Chapter 04 — Bit Patterns
 
-The unit 4 examples stay close to the machine. Bit manipulation is an area where
-the Z80's instruction set is both expressive and directly visible in code: `srl`,
-`rr`, `and`, `or`, `xor`, `bit` — these are Z80 mnemonics, and they appear in ZAX
-source files without ceremony. What ZAX adds is the surrounding structure: typed
-locals that carry the algorithm's state between steps, `if` blocks that branch on
-specific bit tests, and the same `while NZ` loop idiom used throughout the course.
+The Chapter 04 examples stay close to the machine. The Z80 bit-manipulation
+instructions — `srl`, `rr`, `and`, `or`, `xor`, `bit` — appear directly as
+mnemonics in ZAX source. What ZAX adds is the surrounding structure: typed
+locals that carry algorithm state between steps, `if` blocks that branch on
+bit tests, and the `while NZ` loop idiom used throughout the course.
 
-The four unit 4 examples are small in code size but dense in algorithm content.
-Each one is essentially a single loop that shifts through a byte, testing or
-transforming one bit per iteration. Reading them requires understanding what each
-Z80 instruction does to the flags and to the registers — the prose here focuses on
-the algorithmic structure that those instructions serve.
+Each of the four examples is a single loop that shifts through a byte, testing
+or transforming one bit per iteration. Reading them requires knowing what each
+Z80 instruction does to the flags and registers. The prose explains the
+algorithm built on top of those instructions.
 
 ---
 
@@ -196,35 +194,35 @@ See `examples/course/unit4/getbits.zax`.
 
 ## Patterns Common to All Four Examples
 
-Looking across the unit 4 examples, several ZAX patterns recur:
+Looking across the Chapter 04 examples, several ZAX patterns recur:
 
 **The shift-and-test skeleton.** Every example loops over a fixed number of bit
 positions, shifting a working value right by one at each step and acting on the
 low bit. The loop body is a few instructions around `srl a`, `and 1`, and a
 conditional action.
 
-**The `while NZ` idiom with a counter.** Counting loops in unit 4 use `while NZ`
+**The `while NZ` idiom with a counter.** Counting loops in Chapter 04 use `while NZ`
 with a byte counter decremented by `pred`. The loop exits when the counter reaches
 zero — the `or a` on the counter value sets Z, which terminates the loop. This
-is the same counter-driven `while NZ` pattern introduced in unit 1.
+is the same counter-driven `while NZ` pattern introduced in Chapter 01.
 
 **Local `op` for a recurring register step.** Both `bit_reverse.zax` and
-`strcpy.zax` (unit 3) define local `op` definitions for a recurring two-or-three
+`strcpy.zax` (Chapter 03) define local `op` definitions for a recurring two-or-three
 instruction sequence that operates on named registers. The `op` form is the right
 tool when a small sequence has a clear input/output register contract and appears
 in a tight loop.
 
-**Typed locals as algorithm state, raw Z80 for the bit work.** In every unit 4
+**Typed locals as algorithm state, raw Z80 for the bit work.** In every Chapter 04
 example, the algorithmic state — the working value, the counter, the accumulating
 result — lives in typed byte locals in the `var` block. The actual bit operations
 (`srl`, `and`, `xor`, `bit`, `or`) operate on A and B directly. The `:=`
 assignments move values between the typed locals and the register file as needed.
 This boundary between typed storage and raw instruction work is the central ZAX
-idiom, and unit 4 shows it at its most concentrated.
+idiom, and Chapter 04 shows it at its most concentrated.
 
 ---
 
-## What This Unit Teaches About ZAX
+## What This Chapter Teaches
 
 - Bit algorithms are expressed using Z80 bit-manipulation instructions directly:
   `srl`, `rr`, `and`, `or`, `xor`, `bit`. ZAX provides no higher-level bitwise
@@ -240,7 +238,7 @@ idiom, and unit 4 shows it at its most concentrated.
 
 ---
 
-## Examples in This Unit
+## Examples in This Chapter
 
 - `examples/course/unit4/popcount.zax` — count set bits by shift and test
 - `examples/course/unit4/parity.zax` — XOR-toggle odd parity
@@ -249,7 +247,7 @@ idiom, and unit 4 shows it at its most concentrated.
 
 ---
 
-## What comes next
+## What Comes Next
 
 Chapter 05 introduces typed aggregate state: records and arrays of records.
 The byte and word scalars that have carried algorithm state throughout the
