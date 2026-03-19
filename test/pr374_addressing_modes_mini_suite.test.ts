@@ -76,9 +76,9 @@ function canonicalProgramAsm(text: string): string {
 describe('PR374: addressing mini-suite fixtures stay locked', () => {
   for (const stem of miniSuite) {
     it(`${stem} matches checked-in asm and d8dbg fixtures`, async () => {
-      const entry = join(__dirname, '..', 'examples', 'language-tour', `${stem}.zax`);
-      const asmPath = join(__dirname, '..', 'examples', 'language-tour', `${stem}.asm`);
-      const d8Path = join(__dirname, '..', 'examples', 'language-tour', `${stem}.d8dbg.json`);
+      const entry = join(__dirname, '..', 'test', 'language-tour', `${stem}.zax`);
+      const asmPath = join(__dirname, '..', 'test', 'language-tour', `${stem}.asm`);
+      const d8Path = join(__dirname, '..', 'test', 'language-tour', `${stem}.d8dbg.json`);
 
       const [expectedAsm, expectedD8Text] = await Promise.all([
         readFile(asmPath, 'utf8'),

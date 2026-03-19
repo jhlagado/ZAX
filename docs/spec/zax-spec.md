@@ -1572,8 +1572,9 @@ next_char
 This specification keeps its embedded examples short. For working, end-to-end source examples, see:
 
 - `examples/hello.zax`
-- `examples/stack_and_structs.zax`
-- `examples/control_flow_and_labels.zax`
+- `test/language-tour/` — feature-by-feature source and generated trace pairs
+- `learning/part1/examples/` — Volume 1 example programs
+- `learning/part2/examples/` — Volume 2 example programs
 
 All examples are non-normative; the normative rules are the numbered sections above.
 

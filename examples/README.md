@@ -1,23 +1,7 @@
-# Examples
+# examples/
 
-Developer-facing examples. These are compiler regression fixtures and language-tour sources, not course material.
+Contains `hello.zax` — a minimal end-to-end smoke demo compiled by `test/examples_compile.test.ts`.
 
-**Course examples** (Part 1 and Part 2) live under [`learning/`](../learning/README.md).
+Compiler regression fixtures and feature traces are under `test/language-tour/` and `test/codegen-corpus/`.
 
----
-
-## Contents
-
-### `language-tour/`
-
-Side-by-side `.zax` source and generated `.asm` traces, organised by language feature. Reference material for contributors and users exploring the generated output. Referenced by corpus expansion tests.
-
-### `codegen-corpus/`
-
-Compiler regression fixtures used by code-generation tests. Not intended as reading material.
-
-### Top-level files
-
-`hello.zax`, `control_flow_and_labels.zax`, `stack_and_structs.zax` — minimal self-contained demos. The top-level `.zax` files here are compiled by `test/examples_compile.test.ts`.
-
-Files prefixed `legacy_` are kept for reference and are not part of the current ZAX test surface.
+Course examples are under `learning/part1/examples/` and `learning/part2/examples/`.

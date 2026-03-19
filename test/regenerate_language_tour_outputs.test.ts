@@ -6,7 +6,7 @@ const skipTour = process.env.SKIP_LANGUAGE_TOUR === '1';
 
 (skipTour ? describe.skip : describe)('language-tour regeneration artifacts', () => {
   it('emits only asm and d8dbg files (no bin/hex/lst)', async () => {
-    const dir = join(process.cwd(), 'examples', 'language-tour');
+    const dir = join(process.cwd(), 'test', 'language-tour');
     const files = await readdir(dir);
     const hasBinHexLst = files.some((f) => f.match(/\.(bin|hex|lst)$/));
     expect(hasBinHexLst).toBe(false);
