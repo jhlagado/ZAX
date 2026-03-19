@@ -4,7 +4,7 @@
 ; Unit 2 example: repeated adjacent swaps through shrinking passes.
 
 const ItemCount = 8
-const LastIndex = 7
+const LastIndex = ItemCount - 1
 
 section data vars at $8000
   values: byte[8] = { 9, 4, 6, 2, 8, 1, 7, 3 }

@@ -3,7 +3,8 @@
 ; Source/problem: recursive in-place array reversal.
 ; Unit 6 example: recurse toward the middle while swapping endpoints.
 
-const LastIndex = 5
+const ItemCount = 6
+const LastIndex = ItemCount - 1
 
 section data vars at $8000
   numbers: byte[6] = { 1, 2, 3, 4, 5, 6 }

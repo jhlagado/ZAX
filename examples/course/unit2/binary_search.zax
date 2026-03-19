@@ -3,7 +3,8 @@
 ; Source/problem: binary search over a sorted byte array.
 ; Unit 2 example: divide-and-conquer search on sorted storage.
 
-const LastIndex = 7
+const ItemCount = 8
+const LastIndex = ItemCount - 1
 
 section data vars at $8000
   values: byte[8] = { 2, 4, 6, 8, 10, 12, 14, 16 }
