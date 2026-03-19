@@ -7,7 +7,7 @@ Audience: course author, writer, editor
 
 This document consolidates the current writing plan for the **algorithms
 volume** into one operational brief. It is the canonical handoff for
-prose-first writing of the existing `docs/course/` material.
+prose-first writing of the existing `learning/part2/` material.
 
 Use this document together with the current example sources. Do not reconstruct the
 course shape from scattered design notes.
@@ -27,7 +27,7 @@ Use these as the authority for course planning and current syntax:
 - `docs/work/course-writing-standard.md` — mandatory editorial and review standard for all course prose
 - `docs/spec/zax-spec.md` — normative language surface
 - `docs/reference/ZAX-quick-guide.md` — practical syntax reference
-- `examples/course/` — canonical course example corpus on `main`
+- `learning/part2/examples/` — canonical course example corpus on `main`
 
 Important warning: `docs/design/zax-algorithms-course.md` still contains old `move`-era
 examples and wording in some sections. Use it for rationale and course intent, not as a
@@ -35,7 +35,7 @@ syntax model. For actual language surface, current `main` examples plus the spec
 guide are authoritative.
 
 The beginner-facing introductory volume is now planned separately. This document
-only governs the current algorithms/data-structures volume under `docs/course/`.
+only governs the current algorithms/data-structures volume under `learning/part2/`.
 
 If older design prose disagrees with the current examples/spec/reference, the current
 examples/spec/reference win.
@@ -67,46 +67,46 @@ Do not use older `move`-era prose as teaching guidance.
 
 All prose course material should live under:
 
-- `docs/course/`
+- `learning/part2/`
 
 Recommended file set:
 
-- `docs/course/README.md`
-- `docs/course/00-introduction.md`
-- `docs/course/01-foundations.md`
-- `docs/course/02-arrays-and-loops.md`
-- `docs/course/03-strings.md`
-- `docs/course/04-bit-patterns.md`
-- `docs/course/05-records.md`
-- `docs/course/06-recursion.md`
-- `docs/course/07-composition.md`
-- `docs/course/08-pointer-structures.md`
-- `docs/course/09-gaps-and-futures.md`
+- `learning/part2/README.md`
+- `learning/part2/00-introduction.md`
+- `learning/part2/01-foundations.md`
+- `learning/part2/02-arrays-and-loops.md`
+- `learning/part2/03-strings.md`
+- `learning/part2/04-bit-patterns.md`
+- `learning/part2/05-records.md`
+- `learning/part2/06-recursion.md`
+- `learning/part2/07-composition.md`
+- `learning/part2/08-pointer-structures.md`
+- `learning/part2/09-gaps-and-futures.md`
 
 ## Unit mapping
 
 Chapter numbers are offset from example unit numbers because `00-introduction.md` is a course introduction chapter, not an example unit.
 
 - Chapter `00` = course introduction
-- Chapter `01` maps to `examples/course/unit1/`
-- Chapter `02` maps to `examples/course/unit2/`
+- Chapter `01` maps to `learning/part2/examples/unit1/`
+- Chapter `02` maps to `learning/part2/examples/unit2/`
 - ...
-- Chapter `09` maps to `examples/course/unit9/`
+- Chapter `09` maps to `learning/part2/examples/unit9/`
 
 ## Current example inventory on `main`
 
 This authoring brief is tied to the currently checked-in example corpus.
 Do not assume there are additional course examples beyond the files listed below.
 
-- `examples/course/unit1/` — 7 examples
-- `examples/course/unit2/` — 6 examples
-- `examples/course/unit3/` — 7 examples
-- `examples/course/unit4/` — 4 examples
-- `examples/course/unit5/` — 1 example
-- `examples/course/unit6/` — 3 examples
-- `examples/course/unit7/` — 1 lesson example plus 1 support module
-- `examples/course/unit8/` — 2 examples
-- `examples/course/unit9/` — 1 example
+- `learning/part2/examples/unit1/` — 7 examples
+- `learning/part2/examples/unit2/` — 6 examples
+- `learning/part2/examples/unit3/` — 7 examples
+- `learning/part2/examples/unit4/` — 4 examples
+- `learning/part2/examples/unit5/` — 1 example
+- `learning/part2/examples/unit6/` — 3 examples
+- `learning/part2/examples/unit7/` — 1 lesson example plus 1 support module
+- `learning/part2/examples/unit8/` — 2 examples
+- `learning/part2/examples/unit9/` — 1 example
 
 Practical implication for the writer:
 
@@ -132,13 +132,13 @@ Purpose:
 
 Examples:
 
-- `examples/course/unit1/digits.zax`
-- `examples/course/unit1/exp_squaring.zax`
-- `examples/course/unit1/fibonacci.zax`
-- `examples/course/unit1/gcd_iterative.zax`
-- `examples/course/unit1/gcd_recursive.zax`
-- `examples/course/unit1/power.zax`
-- `examples/course/unit1/sqrt_newton.zax`
+- `learning/part2/examples/unit1/digits.zax`
+- `learning/part2/examples/unit1/exp_squaring.zax`
+- `learning/part2/examples/unit1/fibonacci.zax`
+- `learning/part2/examples/unit1/gcd_iterative.zax`
+- `learning/part2/examples/unit1/gcd_recursive.zax`
+- `learning/part2/examples/unit1/power.zax`
+- `learning/part2/examples/unit1/sqrt_newton.zax`
 
 ### 02 Arrays and Loops
 
@@ -150,12 +150,12 @@ Purpose:
 
 Examples:
 
-- `examples/course/unit2/insertion_sort.zax`
-- `examples/course/unit2/bubble_sort.zax`
-- `examples/course/unit2/selection_sort.zax`
-- `examples/course/unit2/binary_search.zax`
-- `examples/course/unit2/linear_search.zax`
-- `examples/course/unit2/prime_sieve.zax`
+- `learning/part2/examples/unit2/insertion_sort.zax`
+- `learning/part2/examples/unit2/bubble_sort.zax`
+- `learning/part2/examples/unit2/selection_sort.zax`
+- `learning/part2/examples/unit2/binary_search.zax`
+- `learning/part2/examples/unit2/linear_search.zax`
+- `learning/part2/examples/unit2/prime_sieve.zax`
 
 ### 03 Strings
 
@@ -166,13 +166,13 @@ Purpose:
 
 Examples:
 
-- `examples/course/unit3/strlen.zax`
-- `examples/course/unit3/strcpy.zax`
-- `examples/course/unit3/strcmp.zax`
-- `examples/course/unit3/strcat.zax`
-- `examples/course/unit3/str_reverse.zax`
-- `examples/course/unit3/atoi.zax`
-- `examples/course/unit3/itoa.zax`
+- `learning/part2/examples/unit3/strlen.zax`
+- `learning/part2/examples/unit3/strcpy.zax`
+- `learning/part2/examples/unit3/strcmp.zax`
+- `learning/part2/examples/unit3/strcat.zax`
+- `learning/part2/examples/unit3/str_reverse.zax`
+- `learning/part2/examples/unit3/atoi.zax`
+- `learning/part2/examples/unit3/itoa.zax`
 
 ### 04 Bit Patterns
 
@@ -183,10 +183,10 @@ Purpose:
 
 Examples:
 
-- `examples/course/unit4/popcount.zax`
-- `examples/course/unit4/bit_reverse.zax`
-- `examples/course/unit4/parity.zax`
-- `examples/course/unit4/getbits.zax`
+- `learning/part2/examples/unit4/popcount.zax`
+- `learning/part2/examples/unit4/bit_reverse.zax`
+- `learning/part2/examples/unit4/parity.zax`
+- `learning/part2/examples/unit4/getbits.zax`
 
 ### 05 Records
 
@@ -202,7 +202,7 @@ Inventory note:
 
 Examples:
 
-- `examples/course/unit5/ring_buffer.zax`
+- `learning/part2/examples/unit5/ring_buffer.zax`
 
 ### 06 Recursion
 
@@ -213,9 +213,9 @@ Purpose:
 
 Examples:
 
-- `examples/course/unit6/hanoi.zax`
-- `examples/course/unit6/array_sum_recursive.zax`
-- `examples/course/unit6/array_reverse_recursive.zax`
+- `learning/part2/examples/unit6/hanoi.zax`
+- `learning/part2/examples/unit6/array_sum_recursive.zax`
+- `learning/part2/examples/unit6/array_reverse_recursive.zax`
 
 ### 07 Composition
 
@@ -226,8 +226,8 @@ Purpose:
 
 Examples:
 
-- main lesson: `examples/course/unit7/rpn_calculator.zax`
-- support module reference only: `examples/course/unit7/word_stack.zax`
+- main lesson: `learning/part2/examples/unit7/rpn_calculator.zax`
+- support module reference only: `learning/part2/examples/unit7/word_stack.zax`
 
 `word_stack.zax` is not a standalone lesson chapter. It is support code that the prose may reference briefly when explaining how the calculator is assembled.
 
@@ -245,8 +245,8 @@ Purpose:
 
 Examples:
 
-- `examples/course/unit8/linked_list.zax`
-- `examples/course/unit8/bst.zax`
+- `learning/part2/examples/unit8/linked_list.zax`
+- `learning/part2/examples/unit8/bst.zax`
 
 ### 09 Gaps and Futures
 
@@ -262,7 +262,7 @@ Inventory note:
 
 Examples:
 
-- `examples/course/unit9/eight_queens.zax`
+- `learning/part2/examples/unit9/eight_queens.zax`
 
 ## Writing model
 
@@ -350,34 +350,34 @@ structure, not what a single opcode does.
 
 Write these first:
 
-- `docs/course/README.md`
-- `docs/course/00-introduction.md`
-- `docs/course/01-foundations.md`
-- `docs/course/02-arrays-and-loops.md`
+- `learning/part2/README.md`
+- `learning/part2/00-introduction.md`
+- `learning/part2/01-foundations.md`
+- `learning/part2/02-arrays-and-loops.md`
 
 This phase is the style and structure checkpoint.
 Do not write the rest of the course before this phase is reviewed.
 
 Specific requirement for phase 1:
 
-- `docs/course/02-arrays-and-loops.md` must explicitly explain `break` and `continue` as part of the loop discussion, using current course examples rather than abstract syntax-only prose.
+- `learning/part2/02-arrays-and-loops.md` must explicitly explain `break` and `continue` as part of the loop discussion, using current course examples rather than abstract syntax-only prose.
 
 ### Phase 2
 
 Write:
 
-- `docs/course/03-strings.md`
-- `docs/course/04-bit-patterns.md`
-- `docs/course/05-records.md`
-- `docs/course/06-recursion.md`
+- `learning/part2/03-strings.md`
+- `learning/part2/04-bit-patterns.md`
+- `learning/part2/05-records.md`
+- `learning/part2/06-recursion.md`
 
 ### Phase 3
 
 Write:
 
-- `docs/course/07-composition.md`
-- `docs/course/08-pointer-structures.md`
-- `docs/course/09-gaps-and-futures.md`
+- `learning/part2/07-composition.md`
+- `learning/part2/08-pointer-structures.md`
+- `learning/part2/09-gaps-and-futures.md`
 
 For `09-gaps-and-futures.md`, connect `eight_queens` and the pointer/composition units back to real design pressure recorded in `docs/design/`.
 
@@ -394,7 +394,7 @@ Editorial pass:
 
 The writer should be told:
 
-- the output is a prose-first course under `docs/course/`
+- the output is a prose-first course under `learning/part2/`
 - phase 1 is the first deliverable
 - current examples on `main` are the source truth for what is being taught
 - `for` is deferred and must stay out of the active teaching surface

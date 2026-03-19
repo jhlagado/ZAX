@@ -1,163 +1,113 @@
 # ZAX
 
-ZAX is a structured assembler for Z80-family processors. It compiles source directly to machine code — no separate linker, no object format, no runtime.
+A structured assembler for Z80-family processors.
 
-The language adds typed storage, named functions, structured control flow, a typed macro system, and explicit modules on top of raw Z80 assembly. Register selection, flag management, and memory layout stay the programmer's responsibility throughout.
+ZAX compiles directly to machine code. No linker. No runtime. No object files.
 
-Typical targets: game engines, demoscene tools, firmware, ROM monitors, hardware drivers, systems programming education.
+You write raw Z80 instructions. ZAX gives you named storage, typed functions, structured control flow, and a typed macro system on top. The machine stays visible throughout.
 
 ---
 
-## A First Look
+## What it looks like
+
+This function computes the absolute difference of two 16-bit values:
 
 ```zax
-func abs_diff(a_val: word, b_val: word): HL
-  hl := b_val
-  de := a_val
+func abs_diff(a: word, b: word): HL
+  hl := b
+  de := a
   xor a
-  sbc hl, de        ; try b_val − a_val first
-  if C              ; b_val < a_val — subtract the other way
-    hl := a_val
-    de := b_val
+  sbc hl, de        ; try b − a
+  if C              ; b < a, subtract the other way
+    hl := a
+    de := b
     xor a
     sbc hl, de
   end
 end
 ```
 
-- `func abs_diff(a_val: word, b_val: word): HL` — typed parameters, declared return register
-- `:=` — reads or writes a named variable; the compiler emits the required load or store
-- `xor a / sbc hl, de` — raw Z80 instructions, emitted exactly as written
-- `if C` — structured control flow; the programmer sets flags immediately before each test
+- `hl := b` — load named parameter into HL; the compiler emits the correct load
+- `xor a \ sbc hl, de` — raw Z80 instructions, passed through unchanged
+- `if C` — structured branch on carry flag; no label to invent
+- `: HL` — declares the return register; compiler preserves the rest
 
-ZAX constructs and raw Z80 instructions intermix freely in the same instruction stream.
-
----
-
-## What ZAX Adds
-
-**Typed storage and `:=`**
-Variables are declared with types in `section data` blocks or `var` locals. `:=` reads or writes them — the compiler handles the load or store. No address arithmetic to write by hand.
-
-**Functions with scoped locals**
-Functions have typed parameters, a declared return register, and local variables with optional initializers. The compiler manages the stack frame and register preservation.
-
-**Structured control flow**
-`if` / `else`, `while`, `repeat` / `until`, and `select` / `case` — all condition-code driven. The programmer sets flags with a Z80 instruction; ZAX provides the structure around it.
-
-**The op system**
-`op` declarations are named, typed inline macros. Multiple overloads of the same name are resolved by operand type at the call site. Ops expand inline — no call instruction, no return.
-
-**Records, unions, and arrays**
-Types describe memory layout with no runtime metadata. Field and element accesses compose as path expressions. `sizeof` and `offsetof` update automatically when a type changes.
-
-**Modules and includes**
-Programs compose from modules with explicit imports. Symbols are private by default; `export` makes them visible across module boundaries. `include` inserts a file as literal text before parsing — no module semantics, useful for shared constants and op definitions.
-
-**Compile-time expressions**
-Constants, enums, `sizeof`, and `offsetof` resolve at compile time with full arithmetic, bitwise ops, and forward references.
+ZAX constructs and raw Z80 instructions mix freely. The machine model does not change.
 
 ---
 
-## Where to Start
+## Where to start
 
-**New to Z80 programming?**
-Start with [`docs/intro/README.md`](docs/intro/README.md). That volume teaches Z80 from scratch — registers, memory, flags, control flow, the stack — using ZAX as the assembler surface throughout. No prior assembly experience assumed.
+**New to Z80?**
+[Part 1 — Learn Z80 Programming in ZAX](learning/part1/README.md) starts from scratch: bytes, registers, flags, memory, the stack, subroutines, I/O. No assembly experience needed.
 
 **Already know Z80 assembly?**
-Start with [`docs/reference/ZAX-quick-guide.md`](docs/reference/ZAX-quick-guide.md) for a practical tour of the full language surface. Then read [`docs/course/README.md`](docs/course/README.md) for algorithms and data structures in ZAX.
+[Part 2 — Algorithms and Data Structures in ZAX](learning/part2/README.md) teaches ZAX through real programs — sorting, searching, strings, recursion, records, and more. Start at Chapter 00 or dive straight into the chapter you need.
+
+**Want the language reference?**
+[ZAX Quick Guide](docs/reference/ZAX-quick-guide.md) — full syntax in practical terms.
+[ZAX Language Spec](docs/spec/zax-spec.md) — normative specification.
 
 **Contributing?**
-See [`docs/reference/zax-dev-playbook.md`](docs/reference/zax-dev-playbook.md) for the contributor workflow and review process.
+[Dev Playbook](docs/reference/zax-dev-playbook.md) — workflow, review, and testing.
 
 ---
 
-## Getting Started
+## Install
 
-### Requirements
-
-Node.js 20+
-
-### Install
+Requires Node.js 20+.
 
 ```sh
 git clone https://github.com/jhlagado/zax.git
 cd zax
 npm install
+npm run zax -- examples/hello.zax
 ```
 
-### Compile
+Output files for each compiled source:
 
-```sh
-npm run zax -- examples/language-tour/02_fibonacci_args_locals.zax
-```
-
-### Output Files
-
-| File            | Contents                             |
-| --------------- | ------------------------------------ |
-| `.bin`          | Flat binary image                    |
-| `.hex`          | Intel HEX                            |
-| `.lst`          | Byte dump with symbol table          |
-| `.d8dbg.json`   | Debug80-compatible debug map         |
-| `.asm`          | Lowered instruction trace            |
-
-### CLI Options
+| Extension      | Contents               |
+|----------------|------------------------|
+| `.hex`         | Intel HEX              |
+| `.bin`         | Flat binary            |
+| `.lst`         | Byte dump + symbols    |
+| `.asm`         | Lowered instruction trace |
+| `.d8dbg.json`  | Debug80 map            |
 
 ```
 zax [options] <entry.zax>
 
-  -o, --output <file>    Output path (default: <entry>.hex)
-  -t, --type <type>      Output type: hex, bin (default: hex)
-  -n, --nolist           Suppress .lst output
-  --nobin                Suppress .bin output
-  --nohex                Suppress .hex output
-  --nod8m                Suppress .d8dbg.json output
-  --noasm                Suppress .asm output
-  -I, --include <dir>    Add import search path (repeatable)
-  --case-style <m>       Case-style lint: off, upper, lower, consistent
-  --op-stack-policy <m>  Op stack-discipline diagnostics: off, warn, error
-  --type-padding-warn    Warn on padded composite types
-  -V, --version          Print version
-  -h, --help             Print help
+  -o, --output <file>    Output base path
+  -I, --include <dir>    Add search path (repeatable)
+  --case-style <m>       Lint: off, upper, lower, consistent
+  -V, --version
+  -h, --help
 ```
 
 ---
 
-## Documentation
+## Language features
 
-| Document                                         | Purpose                                                          |
-| ------------------------------------------------ | ---------------------------------------------------------------- |
-| `docs/reference/ZAX-quick-guide.md`              | Full language surface in practical terms — recommended first read for existing Z80 programmers |
-| `docs/spec/zax-spec.md`                          | Normative language specification                                 |
-| `docs/intro/README.md`                           | Volume 1 — Learn Z80 Programming in ZAX (beginner-first)        |
-| `docs/course/README.md`                          | Volume 2 — Algorithms and Data Structures in ZAX                 |
-| `docs/reference/testing-verification-guide.md`   | Testing and verification flow                                    |
-| `docs/reference/zax-dev-playbook.md`             | Contributor workflow and review hygiene                          |
+| Feature | What it does |
+|---------|-------------|
+| `:=` typed storage | Named variables in `section data` or `var` locals; compiler emits the load or store |
+| Functions | Typed parameters, declared return register, compiler-managed stack frame |
+| Structured control flow | `if`/`else`, `while`, `repeat`/`until`, `select`/`case` — all flag-driven |
+| `op` macros | Named inline macros with typed operands; overload-resolved at the call site |
+| Records, unions, arrays | Memory layout with no runtime metadata; `sizeof`/`offsetof` computed at compile time |
+| Enums and constants | Compile-time integers with full arithmetic and forward references |
+| Modules | Explicit imports; private by default; `export` for cross-module visibility |
+| `include` | Pre-parse text insertion for shared constants and op definitions |
 
 ---
 
-## Project Status
+## Project status
 
-ZAX is under active development. The end-to-end pipeline is functional.
+Under active development. The end-to-end pipeline is functional.
 
-**Working today:**
-- Single and multi-module compilation
-- Functions with typed parameters, locals, and stack-frame calling conventions
-- Structured control flow (`if` / `else`, `while`, `repeat` / `until`, `select` / `case`)
-- The op system — typed inline macros with overload resolution
-- Records, unions, arrays, and nested types
-- Named `section code` / `section data` blocks
-- Typed storage via `:=`, address-of (`@path`), and typed reinterpretation (`<Type>base`)
-- Raw data directives (`db` / `dw` / `ds`)
-- Compile-time expressions with forward references
-- Text-only `include` directive for pre-parse file insertion
-- Multiple output formats: `.bin`, `.hex`, `.lst`, `.asm`, `.d8dbg.json`
+**Working:** single and multi-module compilation, typed functions with stack frames, all structured control flow forms, the op system with overload resolution, records/unions/arrays/enums, compile-time expressions, text `include`, all output formats.
 
-**Active work:**
-- Exact-size runtime indexing for non-power-of-two composite strides
-- Broader Z80 ISA coverage
-- Debug80 integration
+**In progress:** exact-size runtime indexing for non-power-of-two strides, broader ISA coverage, Debug80 integration.
 
 ---
 

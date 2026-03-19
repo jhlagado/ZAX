@@ -27,8 +27,8 @@ These layers are related, but they do not have to mature at the same speed.
 
 The current order remains correct:
 
-- Book 1 (`docs/intro/`) stays generic and platform-neutral
-- Book 2 (`docs/course/`) stays the advanced practical-programming volume
+- Book 1 (`learning/part1/`) stays generic and platform-neutral
+- Book 2 (`learning/part2/`) stays the advanced practical-programming volume
 - platform-specific material comes later, once the generic teaching core is stable
 
 This is a sequencing decision, not a denial of platform importance.
