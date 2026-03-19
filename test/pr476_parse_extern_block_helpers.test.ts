@@ -23,13 +23,21 @@ describe('PR476 extern block parser extraction', () => {
       raw: string;
       startOffset: number;
       endOffset: number;
+      lineNo: number;
+      filePath: string;
     } {
       const startOffset = file.lineStarts[lineIndex] ?? 0;
       const nextStart = file.lineStarts[lineIndex + 1] ?? file.text.length;
       let rawWithEol = file.text.slice(startOffset, nextStart);
       if (rawWithEol.endsWith('\n')) rawWithEol = rawWithEol.slice(0, -1);
       if (rawWithEol.endsWith('\r')) rawWithEol = rawWithEol.slice(0, -1);
-      return { raw: rawWithEol, startOffset, endOffset: startOffset + rawWithEol.length };
+      return {
+        raw: rawWithEol,
+        startOffset,
+        endOffset: startOffset + rawWithEol.length,
+        lineNo: lineIndex + 1,
+        filePath: file.path,
+      };
     }
 
     const parsed = parseTopLevelExternDecl('Math', 'extern Math', span(file, 0, 11), 1, 0, {

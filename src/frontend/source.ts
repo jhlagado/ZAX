@@ -10,6 +10,14 @@ export interface SourceFile {
    * 0-based byte offsets for the start of each line. The first entry is always 0.
    */
   lineStarts: number[];
+  /**
+   * Optional per-line file mapping for include-aware source locations.
+   */
+  lineFiles?: string[];
+  /**
+   * Optional per-line line number mapping for include-aware source locations.
+   */
+  lineBaseLines?: number[];
 }
 
 /**
@@ -48,15 +56,33 @@ export function posAtOffset(file: SourceFile, offset: number): SourcePosition {
     }
   }
   const lineStart = file.lineStarts[lo] ?? 0;
-  return { line: lo + 1, column: clamped - lineStart + 1, offset: clamped };
+  const mappedLine = file.lineBaseLines?.[lo] ?? lo + 1;
+  return { line: mappedLine, column: clamped - lineStart + 1, offset: clamped };
 }
 
 /**
  * Construct a {@link SourceSpan} for a half-open offset range `[startOffset, endOffset]`.
  */
 export function span(file: SourceFile, startOffset: number, endOffset: number): SourceSpan {
+  const resolveLineIndex = (off: number): number => {
+    const clamped = Math.max(0, Math.min(off, file.text.length));
+    let lo = 0;
+    let hi = file.lineStarts.length - 1;
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi + 1) / 2);
+      const midStart = file.lineStarts[mid] ?? 0;
+      if (midStart <= clamped) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    return lo;
+  };
+
+  const startIndex = resolveLineIndex(startOffset);
   return {
-    file: file.path,
+    file: file.lineFiles?.[startIndex] ?? file.path,
     start: posAtOffset(file, startOffset),
     end: posAtOffset(file, endOffset),
   };

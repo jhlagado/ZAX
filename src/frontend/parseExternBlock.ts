@@ -19,6 +19,8 @@ type RawLine = {
   raw: string;
   startOffset: number;
   endOffset: number;
+  lineNo: number;
+  filePath: string;
 };
 
 type ParseExternBlockContext = {
@@ -184,11 +186,18 @@ export function parseTopLevelExternDecl(
   let terminated = false;
   let interruptedByKeyword: string | undefined;
   let interruptedByLine: number | undefined;
+  let interruptedByFilePath: string | undefined;
   let blockEndOffset = file.text.length;
   let index = startIndex + 1;
 
   while (index < lineCount) {
-    const { raw: rawDecl, startOffset: so, endOffset: eo } = getRawLine(index);
+    const {
+      raw: rawDecl,
+      startOffset: so,
+      endOffset: eo,
+      lineNo: declLineNo,
+      filePath: declFilePath,
+    } = getRawLine(index);
     const t = stripComment(rawDecl).trim();
     const tLower = t.toLowerCase();
     if (t.length === 0) {
@@ -206,17 +215,18 @@ export function parseTopLevelExternDecl(
       if (looksLikeKeywordBodyDeclLine(t)) {
         diagInvalidBlockLine(
           diagnostics,
-          modulePath,
+          declFilePath,
           'extern func declaration',
           t,
           'func <name>(...): <retType> at <imm16>',
-          index + 1,
+          declLineNo,
         );
         index++;
         continue;
       }
       interruptedByKeyword = topKeyword;
-      interruptedByLine = index + 1;
+      interruptedByLine = declLineNo;
+      interruptedByFilePath = declFilePath;
       break;
     }
 
@@ -224,19 +234,19 @@ export function parseTopLevelExternDecl(
     if (funcTail === undefined) {
       diagInvalidBlockLine(
         diagnostics,
-        modulePath,
+        declFilePath,
         'extern func declaration',
         t,
         'func <name>(...): <retType> at <imm16>',
-        index + 1,
+        declLineNo,
       );
       index++;
       continue;
     }
 
-    const fn = parseExternFuncFromTail(funcTail, span(file, so, eo), index + 1, {
+    const fn = parseExternFuncFromTail(funcTail, span(file, so, eo), declLineNo, {
       diagnostics,
-      modulePath,
+      modulePath: declFilePath,
       isReservedTopLevelName,
       parseParamsFromText,
     });
@@ -249,7 +259,7 @@ export function parseTopLevelExternDecl(
     if (interruptedByKeyword !== undefined && interruptedByLine !== undefined) {
       diag(
         diagnostics,
-        modulePath,
+        interruptedByFilePath ?? modulePath,
         `Unterminated extern${namePart}: expected "end" before "${interruptedByKeyword}"`,
         { line: interruptedByLine, column: 1 },
       );
