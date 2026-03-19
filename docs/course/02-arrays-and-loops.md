@@ -36,12 +36,12 @@ const LastIndex = ItemCount - 1
 ```
 
 `const` values are compile-time expressions. They can reference other `const`
-names, use the full arithmetic and bitwise operators (`+`, `-`, `*`, `/`, `%`,
-`&`, `|`, `^`, `<<`, `>>`), and group with parentheses. The compiler resolves
+names and use standard arithmetic and bitwise operators. The compiler resolves
 them before generating any code. `LastIndex = ItemCount - 1` is not a
 subtraction at runtime — it is a constant folded to `7` at compile time.
-`const` names can appear anywhere an immediate value is expected: `ld b,
-LastIndex`, `ld hl, ItemCount`, or in another `const` expression.
+`const` names can appear in raw instruction operands (`ld b, LastIndex`,
+`ld hl, ItemCount`) and inside other `const` expressions. Array size
+declarations (`byte[8]`) currently require literal values.
 
 Declaring an array as a function local is not directly supported for variable-
 length storage — function `var` blocks only hold scalars. Working arrays for

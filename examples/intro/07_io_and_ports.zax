@@ -3,8 +3,8 @@
 ; Port numbers are abstract: inspect the Z80 output, not hardware behavior.
 
 const OUT_PORT    = $10
-const IN_PORT     = OUT_PORT + 1
-const STATUS_PORT = OUT_PORT + 2
+const IN_PORT     = $11
+const STATUS_PORT = $12
 
 ; send_byte: write A to OUT_PORT using the immediate port form
 func send_byte()
