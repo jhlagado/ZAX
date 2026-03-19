@@ -243,7 +243,7 @@ include the `.zax` extension and are resolved relative to the importing file
 Each resolved import contributes a direct import edge. Those direct import edges
 determine which module qualifiers are visible in the importing file.
 
-### 3.1.1 Text-Only Includes
+### 3.2 Text-Only Includes
 
 ZAX also supports a text-only include directive:
 
@@ -253,7 +253,7 @@ ZAX also supports a text-only include directive:
 semantics and is not limited to module scope. The path resolution rules are the
 same as `import "<path>"` (relative to the including file, then via search paths).
 
-### 3.2 Visibility and Collisions
+### 3.3 Visibility and Collisions
 
 This section defines the current imported-visibility model.
 

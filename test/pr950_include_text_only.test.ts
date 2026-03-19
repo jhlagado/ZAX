@@ -29,6 +29,20 @@ describe('PR950: text-only include directive', () => {
     expect(res.diagnostics.some((d) => d.message.includes('Failed to resolve include'))).toBe(true);
   });
 
+  it('resolves includes via -I search paths', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr950_include_searchpath_entry.zax');
+    const includeDir = join(__dirname, 'fixtures', 'includes');
+    const res = await compile(
+      entry,
+      { includeDirs: [includeDir], emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+      { formats: defaultFormatWriters },
+    );
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
+    expect(asm).toBeDefined();
+    expect(asm!.text.toUpperCase()).toContain('LD A, $0002');
+  });
+
   it('preserves provenance for included diagnostics', async () => {
     const entry = join(__dirname, 'fixtures', 'pr950_bad_include_entry.zax');
     const res = await compile(
