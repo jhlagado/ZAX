@@ -52,6 +52,15 @@ This algorithms volume should assume the current active surface on `main`:
 
 Why `for` is deferred: current course examples are intentionally written with `while`, `break`, and `continue` because that is the settled, implemented loop surface on `main`. Do not imply that bounded iteration currently has a first-class `for` form.
 
+`include` is part of the language surface (shipped PR #951). Key facts for the writer:
+
+- `include "path"` performs a literal pre-parse text insertion. It has no module semantics.
+- It is not a module mechanism. It creates no qualified names, no module graph edges, no export relationships.
+- Including the same file twice inserts the text twice. There are no include-once semantics.
+- Preferred use: shared hardware constants, shared op definitions, repeated low-level definitions that are implementation detail rather than public API.
+- Not preferred for: program logic, API-style module boundaries, anything that wants exports or qualified names.
+- Teaching order: introduce `import` first when multi-file composition is introduced. Introduce `include` immediately after, as an explicit contrast. Do not introduce `include` before `import`.
+
 Do not use older `move`-era prose as teaching guidance.
 
 ## Course output location
@@ -222,6 +231,11 @@ Examples:
 
 `word_stack.zax` is not a standalone lesson chapter. It is support code that the prose may reference briefly when explaining how the calculator is assembled.
 
+When `import` is introduced in this chapter, contrast it with `include` explicitly.
+Use the contrast to establish the distinction once, clearly, so the reader understands
+both mechanisms and when to reach for each. The contrast paragraph should appear after
+`import` is explained, not before.
+
 ### 08 Pointer Structures
 
 Purpose:
@@ -323,6 +337,12 @@ structure, not what a single opcode does.
 - do not copy old design-doc examples without checking current `main`
 - do not treat support files such as `word_stack.zax` as standalone lessons unless
   the prose explicitly frames them as support material
+- use `import` for module composition; use `include` only for shared constant,
+  type, or op definitions that do not need export or qualified names
+- do not introduce `include` before `import` — `import` is the module mechanism
+  and must be established first so the contrast is meaningful
+- do not add `.inc` files to the example directories until a concrete shared-
+  definition need emerges from the actual example corpus
 
 ## Phased writing plan
 

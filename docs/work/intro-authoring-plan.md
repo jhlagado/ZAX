@@ -78,6 +78,7 @@ Do not introduce these in Phase A prose or examples as normal teaching surface:
 - `break` / `continue`
 - `op`
 - module `import`
+- text-level `include`
 - `for`
 
 Phase A may mention later constructs only as forward references, not as active
@@ -109,10 +110,12 @@ Current recorded decision:
 - examples demonstrate results through register state, memory state, and
   generated output
 
-Before cross-file early examples are drafted, this may need review:
+Before cross-file early examples are drafted:
 
-3. whether a text-level `include` feature is actually needed, or whether the
-   examples stay clean without it on the generic platform plan
+3. Text-level `include` is now shipped (PR #951). It is not needed for Phase A.
+   Phase A examples are short, single-file, and platform-neutral. `include` is
+   deferred to Phase B or Book 2, introduced after `import`, not before. Do not
+   add `.inc` files to Phase A example directories.
 
 ## Writer contract per chapter
 
