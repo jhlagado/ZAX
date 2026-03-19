@@ -1,4 +1,4 @@
-# Chapter 08 — Typed Storage and Assignment
+# Chapter 09 — Typed Storage and Assignment
 
 This chapter introduces typed local variables and the `:=` assignment operator.
 After reading it you will be able to declare a typed local inside a function,
@@ -6,7 +6,7 @@ read and write it with `:=`, use `succ` and `pred` to increment or decrement it,
 and explain what the compiler does differently from a raw `ld` instruction.
 
 Prerequisites: Chapters 00–07 (all Phase A constructs, especially the register-
-naming friction identified in Chapter 07).
+naming friction identified in Chapter 08).
 
 ---
 
@@ -23,7 +23,7 @@ live in a register — B for a loop counter, D for a running count, and so on.
 The choice of register was the programmer's responsibility, and it was a source
 of naming pressure: when two values needed to persist simultaneously, two
 registers had to be reserved, and any function that modified those registers had
-to save and restore them with `push` and `pop`. Chapter 07 named this cost
+to save and restore them with `push` and `pop`. Chapter 08 named this cost
 explicitly in `count_above`: the `push bc / ld d, 0 / pop bc` block existed
 only because D needed to be initialized in a register-conscious way, not because
 the save and restore carried any logical meaning.
@@ -143,10 +143,10 @@ for range discipline.
 
 ## Phase A vs Phase B: the same two loops
 
-The Chapter 07 capstone — finding the maximum value and counting entries above a
+The Chapter 08 capstone — finding the maximum value and counting entries above a
 threshold — illustrates the change clearly. Here are both versions side by side.
 
-**Phase A — `find_max` from `07_phase_a_capstone.zax`:**
+**Phase A — `find_max` from `08_phase_a_capstone.zax`:**
 
 ```zax
 func find_max(): AF
@@ -166,7 +166,7 @@ The running maximum lives in A throughout. A temporary register C is used to
 hold each table byte. Neither name says what the value means — `a` and `c` are
 structural choices, not semantic names.
 
-**Phase B — `find_max_b` from `08_typed_storage.zax`:**
+**Phase B — `find_max_b` from `09_typed_storage.zax`:**
 
 ```zax
 func find_max_b(): AF
@@ -190,7 +190,7 @@ places it in a frame slot; the programmer does not need to choose a register for
 it. The logic at the end — `a := running_max` — makes explicit what Phase A
 left implicit: the result must be loaded into A before the function returns.
 
-**Phase A — `count_above` from `07_phase_a_capstone.zax`:**
+**Phase A — `count_above` from `08_phase_a_capstone.zax`:**
 
 ```zax
 func count_above(): AF
@@ -216,7 +216,7 @@ before the loop, but B and C carry inputs and cannot be clobbered. The push/pop
 pair preserves them while D is initialized. The push/pop is not part of the
 algorithm; it is register management overhead.
 
-**Phase B — `count_above_b` from `08_typed_storage.zax`:**
+**Phase B — `count_above_b` from `09_typed_storage.zax`:**
 
 ```zax
 func count_above_b(): AF
@@ -243,10 +243,10 @@ an input.
 
 ---
 
-## The example: `examples/intro/08_typed_storage.zax`
+## The example: `examples/intro/09_typed_storage.zax`
 
 The example file rewrites the two Phase A subroutines above and demonstrates
-them called from the same `main` as Chapter 07. The data and expected results
+them called from the same `main` as Chapter 08. The data and expected results
 are identical — the table `{ 23, 47, 91, 5, 67, 12, 88, 34 }` produces a
 maximum of 91 and a count of 3 entries above 64 — so the reader can compare the
 outputs directly.
@@ -297,7 +297,7 @@ same underlying storage.
 
 ## What Comes Next
 
-Chapter 09 introduces structured control flow: `if`/`else` as a replacement for
+Chapter 10 introduces structured control flow: `if`/`else` as a replacement for
 flag-test-and-jump sequences, and `while` as a replacement for manual loop-label
 structures. The `count_above` pattern — two `jr` instructions to separate less-
 than and equal-to from greater-than — will be rewritten as a readable `if` chain.

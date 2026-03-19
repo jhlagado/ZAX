@@ -1,4 +1,4 @@
-# Chapter 07 — A Phase A Program
+# Chapter 08 — A Phase A Program
 
 This chapter builds a complete Phase A program using every construct from
 Chapters 00–06: a data table, a DJNZ loop, subroutines called from the loop,
@@ -23,7 +23,7 @@ the same data, which demonstrates the full Phase A pattern: a data table in
 ROM, subroutines that receive a table pointer and length, results stored to
 named RAM, and a `main` that orchestrates the calls.
 
-The example is `examples/intro/07_phase_a_capstone.zax`.
+The example is `examples/intro/08_phase_a_capstone.zax`.
 
 ---
 
@@ -253,7 +253,7 @@ None of these constructs hide the machine. They each lower to the same Z80
 instructions that Phase A programs use. The difference is that the structured
 forms carry the intent in the source, and the compiler manages the scaffolding.
 
-Phase B starts in Chapter 08.
+Phase B starts in Chapter 09.
 
 ---
 
@@ -274,5 +274,5 @@ Phase B starts in Chapter 08.
 
 ## What Comes Next
 
-Chapter 08 introduces typed storage and `:=`, the first Phase B construct, and
+Chapter 09 introduces typed storage and `:=`, the first Phase B construct, and
 shows how it eliminates register-naming pressure for local values.
