@@ -62,6 +62,36 @@ and the current depth as arguments and return the updated depth.
 
 ---
 
+## Token Kinds and Enums
+
+The calculator recognises three token kinds: a number to push, an addition
+operator, and a multiplication operator. In the source, these are declared as an
+enum:
+
+```zax
+enum TokenKind Number, Add, Multiply
+```
+
+An enum assigns sequential integer values starting at zero. `TokenKind.Number`
+is 0, `TokenKind.Add` is 1, `TokenKind.Multiply` is 2. Enum members must be
+referenced with the qualified form `EnumType.Member` — bare `Number` or `Add`
+is a compile error. The compiler resolves `TokenKind.Add` to the integer `1` at
+compile time; there is no runtime enum object.
+
+The token kind array uses these names directly in its initializer:
+
+```zax
+token_kinds: byte[5] = { TokenKind.Number, TokenKind.Number, TokenKind.Add, TokenKind.Number, TokenKind.Multiply }
+```
+
+This is the same initializer position as a literal integer — `TokenKind.Add`
+and `1` are identical to the compiler, but `TokenKind.Add` tells the reader
+what the value means. The same names appear in the `case` labels of the dispatch
+below, so the connection between the stored kind and the dispatch arm is visible
+without needing to count integer values.
+
+---
+
 ## The Evaluation Loop and Operator Dispatch
 
 The main evaluation function is `rpn_demo`. Its shape is a `while` loop over
@@ -73,12 +103,12 @@ Inside the loop, operator dispatch uses `select`:
 
 ```zax
     select A
-      case KindNumber
+      case TokenKind.Number
         l := token_index
         hl := token_values[L]
         word_stack.push_word value_stack, stack_depth, hl
         stack_depth := a
-      case KindAdd
+      case TokenKind.Add
         word_stack.pop_word value_stack, stack_depth
         stack_depth := a
         right_value := hl
@@ -90,12 +120,12 @@ Inside the loop, operator dispatch uses `select`:
         add hl, de
         word_stack.push_word value_stack, stack_depth, hl
         stack_depth := a
-      case KindMultiply
+      case TokenKind.Multiply
         ...
     end
 ```
 
-(From `examples/course/unit7/rpn_calculator.zax`, lines 78–106.)
+(From `examples/course/unit7/rpn_calculator.zax`, lines 77–105.)
 
 `select A` tests the value currently in A against each `case` constant. When
 `current_kind` has been loaded into A at the top of the loop body, `select`
@@ -157,9 +187,13 @@ the right operand is saved, the left operand is popped, the operation is applied
 
 - `import "module.zax"` makes exported functions available under the module
   name. Calls are qualified: `word_stack.push_word`.
-- `select A` / `case K` dispatches on the value in A. It is the natural form
-  for token-kind dispatch, replacing a chain of `if` comparisons where the
-  distinguishing value is already in a register.
+- `enum TypeName Member, Member, ...` assigns sequential integers starting at 0.
+  Members must be referenced as `TypeName.Member`; bare member names are compile
+  errors. Enum members are compile-time immediates — the same as `const` values,
+  but grouped under a type name that makes their relationship explicit.
+- `select A` / `case TokenKind.Member` dispatches on the value in A. It is the
+  natural form for token-kind dispatch, replacing a chain of `if` comparisons
+  where the distinguishing value is already in a register.
 - Software-stack discipline over a typed word array requires explicit depth
   management. Every push and pop returns a new depth in A, and the caller must
   store it.
@@ -192,10 +226,10 @@ stack here, but using the same typed-path and null-sentinel discipline.
 
 ## Exercises
 
-1. The `KindMultiply` case calls the helper `mul_u16`. `mul_u16` uses a
+1. The `TokenKind.Multiply` case calls the helper `mul_u16`. `mul_u16` uses a
    `while` loop with a `pred` on the repeat count. What is the time complexity
    of this multiplication, and what would happen for large operands? How would
-   you extend `rpn_calculator.zax` to add a `KindSubtract` case?
+   you extend `rpn_calculator.zax` to add a `TokenKind.Subtract` case?
 
 2. `stack_depth` is a module-level variable, not a local. What would happen if
    two calls to `rpn_demo` ran in sequence? Is the initial `ld a, 0` /
@@ -209,4 +243,4 @@ stack here, but using the same typed-path and null-sentinel discipline.
 4. `pop_word` returns its result in HL and the new depth in A simultaneously
    (`HL, AF` return declaration). After each pop in the calculator, `stack_depth
 := a` captures the new depth. What would happen if this assignment were
-   omitted for the second of the two pops in the `KindAdd` arm?
+   omitted for the second of the two pops in the `TokenKind.Add` arm?
