@@ -14,24 +14,25 @@ Prerequisites: none. This is the first chapter.
 
 ## Machine code is bytes the CPU reads as instructions
 
-The Z80 processor reads bytes from memory one at a time and acts on them. The
-byte `$3E` tells the processor to load the following byte into the accumulator
-register. The byte `$76` tells the processor to halt. Each byte, or short
-sequence of bytes, corresponds to one action the CPU can perform. That sequence
-of bytes is called **machine code**.
+The Z80 processor reads bytes from memory one at a time and acts on them. Each
+byte, or short sequence of bytes, is a single instruction — one thing the CPU
+knows how to do. The byte value 62 tells the processor to load the following
+byte into register A. The byte value 118 tells the processor to halt. That
+sequence of bytes — one instruction after another — is called **machine code**.
 
-Writing programs directly as hex values like `$3E $42 $76` is possible but
-painful. Each value must be looked up in the CPU manual, and nothing in the file
-shows what any sequence is trying to accomplish. A single typo changes the
-program in ways that are invisible until the CPU misbehaves.
+Writing programs directly as numbers is possible but painful. Each value must be
+looked up in the CPU manual, and nothing in the file shows what any sequence is
+trying to accomplish. A single mistake changes the program in ways that are
+invisible until the CPU misbehaves.
 
 An **assembler** accepts human-readable instruction names — called **mnemonics**
 — and converts them to the correct byte sequences automatically. The mnemonic
-for `$3E $42` is `ld a, $42`. The assembler turns that text into the two bytes;
-you see the names.
+for byte 62 followed by byte 66 is `ld a, 66`. The assembler turns that text
+into the two bytes; you write names, not numbers.
 
-ZAX is an assembler. You write `ld a, $42` in a `.zax` source file and ZAX
-produces the machine code byte sequence `$3E $42`.
+ZAX is an assembler. You write instructions in a `.zax` source file and ZAX
+produces the machine code. Later in this chapter, once hex notation is
+introduced, the examples will use it — for now, plain decimal is clearer.
 
 ---
 

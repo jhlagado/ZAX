@@ -15,6 +15,72 @@ It exists to prevent a predictable failure mode:
 The standard is intentionally strict. The writer is expected to use it as a
 skeletal discipline and then produce clear, concrete prose on top of it.
 
+---
+
+## Who the writer is
+
+Before writing anything, be clear about who is writing and why.
+
+The writer is someone who likes Z80 and finds ZAX genuinely useful. They want
+to share that. They are not producing documentation for an organization. They
+are not writing in a neutral, institutional voice. They are a person talking
+to another person who wants to learn.
+
+**Motive**: The writer wants the reader to understand how this works and feel
+the satisfaction of it clicking into place. Not to admire the language from a
+distance, but to be able to use it.
+
+**Tone**: Direct. Warm but not cheerful. Like sitting next to someone at a
+keyboard. You would not say "the reader should note that" — you would say
+"notice that." You would not say "this imposes a bookkeeping overhead" — you
+would say "this means you have to track the values yourself."
+
+**What this rules out**:
+- Neutral third-person distance ("the reader", "one might observe")
+- Documentation language ("this section describes", "it is worth noting")
+- Academic hedging ("in general", "it may be said that")
+- Writing that is correct but has no human behind it
+
+If a sentence could have been produced by a committee, rewrite it.
+
+---
+
+## Narrative and voice
+
+The course is not a reference manual. It is a story told in order, and each
+chapter is a conversation with the reader.
+
+**Use "you".** The second person is not informal — it is direct. "You will
+see" is better than "the reader will observe." "You need to know X before Y
+makes sense" is better than "X is a prerequisite for Y."
+
+**Chapters lead somewhere.** Each section should feel like it is moving toward
+something. The reader should sense forward motion — not just a list of facts
+to absorb, but a path being walked. Use short signposts: "That pattern has a
+cost, which the next chapter addresses." "Now that you have seen the loop
+structure, here is the one thing the hardware does differently from what you
+expect."
+
+**Show, then explain.** When a concept is surprising or non-obvious, show it
+first in code, then explain what just happened. Do not front-load explanation
+of something the reader has not yet seen.
+
+**Name the moment of confusion.** If there is a common mistake or a thing
+that trips people up, say so directly: "This is the part that catches people."
+"The easy mistake here is to forget the init." The reader is not fragile.
+Naming the difficulty is reassuring, not discouraging.
+
+**Short sentences carry more weight.** Long sentences make readers work harder.
+If a sentence runs past 25 words, see whether it can be split. One idea per
+sentence is not a style rule — it is a teaching rule.
+
+**The writer has a point of view.** It is fine to say "this is the cleaner
+approach." It is fine to say "this pattern is worth memorising." The writer
+does not have to be neutral about everything. What they cannot do is claim
+something is good without showing why.
+
+---
+
 ## Non-negotiable rule
 
 Every paragraph must measurably advance the target reader's understanding.
@@ -155,6 +221,20 @@ structure.
 The reader does not need literary pedigree. The reader needs operational
 understanding.
 
+### 6. Jargon and internal vocabulary
+
+Use common English words.
+
+Phrases like "assembler surface", "justified relief", "bookkeeping cost",
+"cash out", "operational payoff", "teaching payload", "reader model" are
+internal vocabulary — shorthand between writers. They are not reader-facing
+language.
+
+If you would not say it aloud to someone sitting next to you learning Z80 for
+the first time, do not write it in the course.
+
+Ask: what am I actually trying to say? Then say that, in plain words.
+
 ## Positive writing model
 
 Prefer this pattern:
@@ -252,7 +332,7 @@ Editing is not line smoothing. Editing is concept sharpening.
 
 The editor should actively:
 
-- remove paragraphs with no teaching payload
+- remove paragraphs that teach nothing
 - split paragraphs that try to do too much
 - replace abstract claims with code-grounded claims
 - tighten transitions so each section earns the next one
@@ -325,6 +405,42 @@ The reviewer should explicitly look for:
 - After each section, what does the reader now know?
 - If the answer is unclear, the section is weak.
 
+### 6. Voice and tone
+
+This is the most commonly missed failure mode. Check each of the following
+explicitly — do not assume good prose style passes automatically.
+
+**Pronouns**: Search the text for "the programmer", "the reader", "one". Every
+occurrence should be "you" unless there is a specific reason it cannot be.
+"The programmer cannot name their variables" is wrong. "You cannot name your
+variables" is right.
+
+**Third-person distance**: Sentences like "It is the compiler's job to...",
+"The function's purpose is to...", "The reader should note that..." all signal
+institutional voice. The test: could this sentence have come from a product
+manual? If yes, rewrite it as something a person would say.
+
+**Dead openings**: Flag sentences that begin with "There is", "There are",
+"It is", "This is", or "That is" and do no teaching work. Some are fine — but
+when a section has several in a row, each one is probably deferring real content.
+Ask: what is the sentence actually saying, and can it say it directly?
+
+**Internal vocabulary**: Search for "idiom", "discipline", "invariant",
+"ergonomic", "bookkeeping cost", "naming pressure", "Phase A", "Phase B",
+"assembler surface", "justified relief". These should not appear in
+reader-facing prose. If they do, the writer is thinking about the course design,
+not talking to the reader.
+
+**Narrative forward motion**: Read each section opening. Does it say where this
+section is going, and why now? A section that opens with a definition and then
+lists facts has no narrative arc. A section that opens with the problem it is
+about to solve does.
+
+**The sitting-next-to-someone test**: Read a paragraph aloud as if you were
+explaining it to a person sitting next to you. If it sounds strange spoken —
+too formal, too distant, too abstract — it needs rewriting. Good course prose
+reads naturally aloud.
+
 ## Criticism standard
 
 Criticism should be direct and concrete.
@@ -387,6 +503,9 @@ A chapter is not ready to merge unless all of the following are true:
 - every named example path exists on `main`
 - every substantial claim is grounded in real code or documented language behaviour
 - the chapter can be shortened nowhere without losing real teaching value
+- the text uses "you" throughout — no "the programmer", "the reader", or "one"
+- no internal vocabulary appears in reader-facing prose (see rule #6)
+- no dead openings ("There is nothing new here", "It is worth noting") go unchallenged
 
 ## Editorial rule of deletion
 

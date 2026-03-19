@@ -5,7 +5,7 @@
 The Chapter 01 examples work with arithmetic and number-theory algorithms.
 There are no arrays, records, or pointer operations — just functions, typed
 locals, and structured control flow over integer computations. That scope
-keeps the core idioms visible before the surface grows wider.
+keeps the working patterns visible before the language grows wider.
 
 ---
 
@@ -31,12 +31,12 @@ func power(base: word, exponent: word): HL
 end
 ```
 
-Each local occupies a 16-bit slot in the IX-anchored stack frame. The
+Each local occupies a 16-bit slot in the function's stack frame. The
 initializer value is emitted at function entry, before any instructions in the
 body run. The `var` block is terminated by its own `end`; a second `end` closes
 the function itself.
 
-The compiler allocates and initialises locals before the callee-save push
+The compiler allocates and initialises locals before the register-save push
 sequence. Reading the `.asm` output for a framed function, you will see
 `LD HL, imm16` / `PUSH HL` pairs for each initialised local at the top of the
 prologue.
@@ -82,7 +82,7 @@ the same function body:
 
 The raw `ld a, l` and `and 1` test the low bit of a 16-bit value. That is
 pure Z80 work. The `:=` assignments on either side are typed storage transfers.
-Both are idiomatic ZAX.
+Both appear throughout ZAX programs.
 
 ---
 
@@ -125,8 +125,8 @@ the condition code keyword, not a `jp` instruction.
 
 `if NZ`, `if Z`, `if C`, `if NC`, `if M`, `if P`, `if PE`, `if PO` — any Z80
 condition code is valid. The condition is tested at the `if` keyword using the
-current flag state. It is always the programmer's responsibility to establish
-the correct flags with a Z80 instruction immediately before the condition:
+current flag state. It is always your responsibility to establish the correct flags with a Z80
+instruction immediately before the condition:
 
 ```zax
     hl := right
@@ -161,7 +161,7 @@ must also re-establish the flags before control reaches the back edge:
     end
 ```
 
-`ld a, 1` / `or a` is the explicit, safe idiom for establishing NZ. It appears
+`ld a, 1` / `or a` is the reliable way to establish NZ. It appears
 at entry and at the back edge whenever the loop condition must be guaranteed.
 If Z=1 on entry to a `while NZ` loop, the body never executes regardless of
 what is inside it.
@@ -245,8 +245,9 @@ left < right, Z is set if left == right.
 `gcd_recursive.zax` expresses the same algorithm recursively. Each call reduces
 one or both operands and recurses. The compiler generates a fresh IX frame for
 each call, so the callee's locals are entirely independent of the caller's.
-Recursive `func` in ZAX is structurally identical to non-recursive `func` — the
-IX frame discipline handles the per-call local state automatically.
+Recursive `func` in ZAX works exactly like non-recursive `func` — the compiler
+creates a fresh stack frame for each call, so each level gets its own locals
+automatically.
 
 See `learning/part2/examples/unit1/gcd_iterative.zax` and
 `learning/part2/examples/unit1/gcd_recursive.zax`.
@@ -321,8 +322,7 @@ halve the exponent:
 
 The 16-bit right shift uses `srl h` / `rr l`: shift H right with zero fill,
 rotate L right through carry (which carries the bit from H). This is the
-standard Z80 idiom for a logical right shift of a 16-bit value held in a
-register pair.
+standard Z80 way to shift a 16-bit register pair one place to the right.
 
 See `learning/part2/examples/unit1/exp_squaring.zax`.
 
@@ -336,8 +336,8 @@ than 10.
 A notable detail: the initial value of the count local is `1`, not `0`. A
 positive integer always has at least one decimal digit, so the count starts at
 one before the loop begins. The loop increments the count (`succ count`) each
-time division is needed. This is a small example of how initial-value choices
-in `var` declarations express algorithmic invariants.
+time division is needed. Starting at 1 reflects that assumption directly — the
+`var` declaration records the guarantee, not just an arbitrary starting point.
 
 See `learning/part2/examples/unit1/digits.zax`.
 
@@ -353,7 +353,7 @@ See `learning/part2/examples/unit1/digits.zax`.
 - `while NZ` is the basic loop form. Entry flags always matter: a stale Z=1
   on entry skips the loop body entirely. Establish NZ with `ld a, 1` / `or a`
   before the first `while NZ`, and re-establish it at the back edge.
-- `succ` and `pred` are the idiomatic scalar increment and decrement operators.
+- `succ` and `pred` increment and decrement typed scalar paths.
   They appear wherever a loop counter or accumulator needs stepping.
 - Recursive functions look and work like non-recursive ones. The compiler
   handles the per-call IX frame.
@@ -393,7 +393,7 @@ that build directly on the typed storage and control flow introduced here.
    one less `word` slot? What is the tradeoff in readability?
 
 3. In `digits.zax`, the initial value of `count` is 1. Change it to 0 and
-   adjust the loop accordingly. Which version makes the invariant clearer?
+   adjust the loop accordingly. Which version is easier to read?
 
 4. `sqrt_newton.zax` uses a fixed iteration count. Modify it to iterate until
    `next_guess == guess` (convergence). What edge cases does the fixed count

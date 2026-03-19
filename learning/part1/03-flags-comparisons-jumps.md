@@ -20,7 +20,7 @@ or write F directly with `ld`. Instead, arithmetic instructions set the flags
 as a side effect, and conditional jump instructions test the flags to decide
 whether to jump.
 
-The four flags used most often in Phase A programs are:
+The four flags you will use most often are:
 
 | Flag | Name | Set when |
 |------|------|----------|
@@ -68,7 +68,7 @@ n (unsigned).
 A, so A is unchanged. The flags are updated: Z is set if A is zero, C is
 cleared.
 
-This is the standard idiom for testing whether A holds zero without a separate
+This is the standard way to test whether A holds zero without a separate
 comparison:
 
 ```zax
@@ -80,8 +80,8 @@ or a       ; Z is clear because A is non-zero
 ```
 
 `or a` does not require knowing what value to compare against; it simply
-reflects whether A is currently zero. It is shorter than `cp 0` (one byte vs
-two bytes), and both take the same number of T-states.
+reflects whether A is currently zero. It is also shorter than `cp 0` — one
+byte instead of two.
 
 ---
 

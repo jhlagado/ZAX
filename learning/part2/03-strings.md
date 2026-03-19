@@ -7,7 +7,7 @@ A null-terminated string is just a sequence of bytes with a zero at the end. Tha
 simple convention drives everything in this chapter: every algorithm either walks
 until it finds the zero, or copies until it copies the zero.
 
-What changes compared to Chapter 02 is the register discipline. In Chapter 02, the index
+What changes compared to Chapter 02 is how registers are used. In Chapter 02, the index
 lived in a typed local and the array base was a fixed symbol; you loaded the index
 into L or B and did a single array access. In Chapter 03, the current position lives
 in HL or DE directly — the pointer is the thing that advances. Typed storage paths
@@ -19,7 +19,7 @@ total of a conversion), but the traversal itself is raw Z80 pointer work: `ld a,
 
 ## The Null-Terminator Loop
 
-The fundamental string idiom in ZAX is the `while NZ` sentinel loop. You load the
+The standard string loop in ZAX is the `while NZ` sentinel loop. You load the
 address of the string into HL, test the byte at that address, and loop as long as
 the byte is non-zero:
 
@@ -35,14 +35,14 @@ the byte is non-zero:
 
 The `or a` instruction ORs A with itself — it has no effect on A but sets or clears
 the Z flag depending on whether A is zero. `if Z` then handles the terminator.
-This is the standard Z80 idiom for testing a byte against zero without disturbing
+This is the standard Z80 way to test a byte for zero without disturbing
 its value (unlike `cp 0`, which also sets Z but incurs a second immediate operand).
 Six of the seven Chapter 03 examples use this pattern as the core of their
 traversal loop. The exception is `itoa.zax`, which generates digits by repeated
 division into a scratch buffer and terminates by index counter, not by null
 sentinel.
 
-The loop structure is the `while NZ` idiom from Chapter 01, established by `ld a, 1` /
+The loop uses the `while NZ` pattern from Chapter 01, established by `ld a, 1` /
 `or a` at entry and re-established at the bottom of each iteration. The actual loop
 exit happens via an early `ret` or `break` inside the body when the terminator is
 found.
@@ -52,7 +52,7 @@ found.
 `strlen_demo` in `strlen.zax` counts bytes from a fixed string until it reaches
 the zero terminator. HL holds the current address. The count lives in a typed word
 local `count_value`, which is incremented using the explicit load-increment-store
-idiom: `de := count_value`, `inc de`, `count_value := de`. Because `inc` on a
+pattern: `de := count_value`, `inc de`, `count_value := de`. Because `inc` on a
 16-bit pair is a direct Z80 instruction (not IX-relative), the function loads the
 local into DE, uses `inc de`, and stores back. This is the word-local increment
 pattern for cases where the compiler cannot emit `inc` directly against the frame
@@ -178,7 +178,7 @@ then advances HL forward and retreats DE backward, stopping when HL >= DE.
 
 The pointer comparison in the second loop uses `xor a` / `sbc hl, de` to compute
 HL - DE, then tests NC to detect when the left pointer has caught up to or passed
-the right pointer. This is the standard Z80 idiom for a signed 16-bit comparison:
+the right pointer. This is the standard Z80 way to do a signed 16-bit comparison:
 clear carry with `xor a`, subtract with `sbc hl, de`, and branch on the carry or
 no-carry result.
 
@@ -247,8 +247,8 @@ See `learning/part2/examples/unit3/itoa.zax`.
 
 ## What This Chapter Teaches
 
-- The null-terminator loop — `ld a, (hl)` / `or a` / `if Z` — is the fundamental
-  string traversal idiom. You will use it in every string-processing function.
+- The null-terminator loop — `ld a, (hl)` / `or a` / `if Z` — is the core
+  string traversal pattern. You will use it in every string-processing function.
 - Pointer traversal in ZAX is raw Z80: `ld a, (hl)`, `inc hl`, `ld (de), a`,
   `inc de`. ZAX does not abstract over pointer advance; typed storage paths appear
   where they add clarity, not where the traversal is inherently register-level.
@@ -277,7 +277,7 @@ See `learning/part2/examples/unit3/itoa.zax`.
 ## What Comes Next
 
 Chapter 04 returns to tight, register-level work: bit manipulation using Z80
-shift and logic instructions. The loop structures are the same `while NZ` idiom
+shift and logic instructions. The loop structures are the same `while NZ` pattern
 from Chapter 01 — counter-driven rather than sentinel-driven — and the local
 `op` pattern introduced in this chapter's `strcpy.zax` reappears in
 `bit_reverse.zax`.
