@@ -112,6 +112,8 @@ Entry-point selection is outside v0.1 scope. A typical convention is `export fun
 - In module/declaration regions, **newlines terminate** declarations and directives.
 - In instruction streams (function bodies and `op` bodies), newlines terminate instructions/keywords.
 - Spaces/tabs separate tokens.
+- The backslash (`\`) can also separate statements when written as a visible separator (followed by whitespace); it is treated as a newline-equivalent separator outside of string/char literals and comments.
+- The backslash (`\`) can also separate statements; it is treated as a newline-equivalent statement separator outside of string/char literals and comments.
 
 Multi-line constructs (v0.1):
 
@@ -555,7 +557,7 @@ Module storage is declared inside named `data` sections.
 - Scalar storage uses **value semantics** in `LD` and call arguments: a bare name means the stored value.
 - Composite storage (arrays, records, unions) is still referred to by name in source, but the compiler transparently passes or lowers it as a storage base when an aggregate operation needs one.
 - `bin` and `hex` names denote storage regions/blobs and are primarily used as storage bases rather than scalar values.
-- Parentheses are an explicit low-level dereference form: `(ea)` denotes memory at the computed location `ea`. For normal scalar variables, bare forms are the normative source syntax.
+- Parentheses are an explicit low-level dereference form: `( ... )` denotes memory at the computed location. For normal scalar variables, bare forms are the normative source syntax.
 - Dereference width is implied by the instruction operand size:
   - `LD A, (ea)` reads a byte
   - `LD HL, (ea)` reads a word
@@ -564,12 +566,13 @@ Module storage is declared inside named `data` sections.
 Notes (v0.1):
 
 - In instruction-operand position, parentheses always mean dereference/indirection. They are not grouping parentheses.
+  - The enclosed text may be any `imm` expression or any `ea` expression.
   - Example: `LD A, (X)` always means “load `A` from memory at address `X`”, even if `X` is a `const`.
 - Z80 also has **I/O port indirection** operands for `in`/`out`:
   - `(C)` means “port addressed by register `C`”.
   - `($imm8)` means “port addressed by an immediate 8-bit port number”.
   - These port forms refer to the Z80 I/O space (not memory) and are only valid where a raw Z80 mnemonic expects a port operand. They are not `ea` expressions.
-- Grouping parentheses apply only inside `imm` expressions (e.g., `const X = (1+2)*3`, or `ea + (1+2)`).
+- Grouping parentheses apply only inside `imm` expressions (e.g., `const X = (1+2)*3`, or `ea + (1+2)`). In operand position, outer parentheses mean dereference.
 
 ### 6.1.1 Lowering of Non-Encodable Operands
 

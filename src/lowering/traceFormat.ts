@@ -29,6 +29,8 @@ export const formatEaExprForAsm = (ea: EaExprNode): string => {
   switch (ea.kind) {
     case 'EaName':
       return ea.name;
+    case 'EaImm':
+      return formatImmExprForAsm(ea.expr);
     case 'EaField':
       return `${formatEaExprForAsm(ea.base)}.${ea.field}`;
     case 'EaAdd':
