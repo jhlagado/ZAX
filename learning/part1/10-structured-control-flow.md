@@ -7,28 +7,27 @@ reading it you will be able to replace raw flag-test-and-jump sequences with
 `if`/`else`, replace manual loop-label structures with `while`, and use `break`
 and `continue` to exit or restart a loop without writing explicit jump targets.
 
-Prerequisites: Chapters 00–08 (all Phase A constructs, typed locals, `:=`).
+Prerequisites: Chapters 00–09.
 
 ---
 
-## The cost that Phase B is removing
+## What structured control flow replaces
 
-Chapter 08 identified two specific costs of the raw approach.
+Chapter 08 ended with two specific annoyances in the raw code.
 
-The first: label scaffolding. Every branch in Phase A requires at least one
-label. `find_max` needed `find_max_loop:` and `find_max_no_update:`. `count_above`
-needed `count_above_loop:`, `count_above_skip:`. These labels carry no semantic
-information about what the code does. They exist because jumps need targets.
+The first: invented labels everywhere. Every branch needs at least one label.
+`find_max` needed `find_max_loop:` and `find_max_no_update:`. `count_above`
+needed `count_above_loop:`, `count_above_skip:`. These labels say nothing about
+what the code does — they just give jumps somewhere to point.
 
-The second: the double `cp c` in `count_above`. A single `cp` sets the carry
-flag for less-than and the Z flag for equality. Strictly-greater-than requires
-both tests. The Phase A implementation ran `cp c` twice in sequence — once for
-the less-than skip, once for the equality skip — because there was no single-
-instruction way to express the combined condition.
+The second: the double `cp c` in `count_above`. A single `cp` sets carry for
+less-than and Z for equal. Strictly-greater-than needs both. So the raw version
+ran `cp c` twice — once for the less-than skip, once for the equality skip —
+because there was no single way to express the combined condition.
 
-Structured `if` and `while` address the first cost directly. They do not address
-the double-`cp` problem (that requires a different comparison strategy), but they
-do make the structure around the comparisons readable.
+`if` and `while` fix the first problem directly. The double-`cp` stays — that
+needs a different comparison strategy — but the structure around it becomes
+readable.
 
 ---
 
@@ -52,31 +51,30 @@ jump over the second, along with the hidden labels needed to make them target th
 right locations. The programmer writes the intent; the compiler manages the
 targets.
 
-`else` is optional. `if NC ... end` with no `else` branch is valid and is the
-direct replacement for the Phase A pattern:
+`else` is optional. `if NC ... end` with no `else` branch is the direct
+replacement for the raw pattern:
 
 ```zax
-; Phase A
+; raw
 cp c
 jr c, skip
   ; body
 skip:
 
-; Phase B
+; structured
 cp c
 if NC
   ; body
 end
 ```
 
-Both forms emit the same Z80 instructions. The Phase B form has no `skip:` label
-because the compiler generates it internally. The label was bookkeeping; `end`
-replaces it.
+Both forms emit the same Z80 instructions. The structured form has no `skip:`
+label because the compiler generates it internally.
 
 **Important rule:** `if`/`else`/`end` do not set flags. The condition is always
 the state of the flags at the moment `if` is reached. You must establish the
 correct flags with a Z80 instruction immediately before `if`, just as you did
-before `jr cc` in Phase A.
+before `jr cc` in the raw chapters.
 
 ---
 
@@ -97,11 +95,11 @@ while NZ
 end
 ```
 
-`while` is pre-tested: entry is conditional. This is the same semantics as the
-Phase A pattern with the branch at the top of the loop:
+`while` is pre-tested: the body only runs if the condition is true on entry.
+This works the same as the raw pattern with the branch at the top of the loop:
 
 ```zax
-; Phase A pre-tested loop
+; raw pre-tested loop
 ld a, b
 or a
 jr z, loop_exit
@@ -138,8 +136,8 @@ while NZ          ; tests stale flags from whatever ran before
 end
 ```
 
-The fix is to establish flags explicitly before the loop. The standard idiom for
-a loop over B counts is to copy B into A and `or a`:
+The fix is to establish flags explicitly before the loop. The standard pattern
+for a loop over B counts is to copy B into A and `or a`:
 
 ```zax
 ld b, 10
@@ -152,7 +150,7 @@ while NZ
 end
 ```
 
-The `or a` idiom for flag-establishment was introduced in Chapter 03 and applied
+The `or a` pattern for flag-establishment was introduced in Chapter 03 and applied
 to loop-entry guards in Chapter 04. The same reasoning applies here. Use
 `ld a, b / or a` to convert a register value into a flag state before `while`.
 
@@ -220,10 +218,10 @@ of `case` constants, and runs the matching body. If no case matches and an
 `else` arm is present, the `else` body runs. After any arm finishes, control
 transfers to after the enclosing `end`. There is no fallthrough between cases.
 
-The comparison in Phase A, using `cp` + `jp Z`:
+The same logic written in raw Z80, using `cp` + `jp Z`:
 
 ```zax
-; Phase A: test A against three operator characters
+; raw: test A against three operator characters
 ld a, (op_byte)
 cp 0x2B              ; '+'
 jp z, handle_plus
@@ -244,7 +242,7 @@ after_dispatch:
 The same logic as a `select`:
 
 ```zax
-; Phase B: select on A
+; structured: select on A
 ld a, (op_byte)
 select A
   case 0x2B          ; '+'
@@ -276,13 +274,13 @@ from the case labels.
 
 ---
 
-## Phase A vs Phase B: the same two loops
+## Before and after: the same two loops
 
 The example file `learning/part1/examples/10_structured_control.zax` rewrites
 `find_max` and `count_above` from Chapter 08 using `while` and `if`. Here are
 the two versions side by side.
 
-**`find_max` — Phase A:**
+**`find_max` — raw (Chapter 08):**
 
 ```zax
 func find_max(): AF
@@ -302,7 +300,7 @@ Labels: `find_max_loop:` (loop top) and `find_max_no_update:` (skip target).
 The jump `jr nc, find_max_no_update` is the only thing connecting the test
 to the effect — a reader must trace the label to understand the structure.
 
-**`find_max_cf` — Phase B:**
+**`find_max_cf` — with `while` and `if`:**
 
 ```zax
 func find_max_cf(): AF
@@ -330,10 +328,9 @@ No labels. `while NZ` expresses "loop while B is non-zero." `if NC` expresses
 "update if the current byte is not less than the running maximum." The condition
 and the consequence are adjacent and visually nested.
 
-The Phase B version uses `dec b` instead of `djnz` because the `while` loop
-already handles the branch-back. `djnz` was the Phase A idiom for "decrement B
-and loop." With `while`, the explicit loop structure is already present; `dec b`
-alone is enough.
+This version uses `dec b` instead of `djnz` because `while` already handles
+the branch-back. `djnz` fused decrement-and-branch into one instruction; with
+`while`, the branch is already there, so `dec b` alone is enough.
 
 **Flag behavior: `djnz` vs `dec b`.** `djnz` does not affect the Z flag — it
 uses its own internal decrement-and-branch without touching the flag register.
@@ -345,11 +342,10 @@ because `dec b` alone sets Z correctly, but the back-edge test in the `while`
 loop reads the flags at the `end` line, and any instruction between `dec b` and
 `end` may have changed them. The `ld a, b / or a` sequence ensures the final
 flag state before the back-edge test reflects B's value, not whatever a previous
-instruction left in the flags. Phase A-aware readers will notice that `djnz`
-cannot be directly replaced by `dec b / jr nz` in a `while` loop without this
-extra flag-establishment step.
+instruction left in the flags. Note: `djnz` cannot be directly replaced by `dec b / jr nz` in a `while` loop
+without this extra flag-establishment step.
 
-**`count_above` — Phase A:**
+**`count_above` — raw (Chapter 08):**
 
 ```zax
 func count_above(): AF
@@ -374,7 +370,7 @@ The push/pop and the double `cp c` are both present. The skip label serves both
 jump instructions; a reader must check both to understand when the counter is
 incremented.
 
-**`count_above_cf` — Phase B:**
+**`count_above_cf` — with typed local and `if`:**
 
 ```zax
 func count_above_cf(): AF
@@ -412,7 +408,7 @@ count it." The skip label is gone.
 ## The example: `learning/part1/examples/10_structured_control.zax`
 
 The example file contains `main`, `find_max_cf`, and `count_above_cf`. It uses
-the same table and produces the same results as `08_phase_a_capstone.zax`:
+the same table and produces the same results as Chapter 08:
 maximum = 91, above-64 count = 3. The only difference is in how the subroutine
 bodies are written.
 
@@ -423,9 +419,8 @@ Read both files simultaneously. For each subroutine, compare:
 - where the conditional skip is expressed
 - where the counter initialization is
 
-In Phase A each of those concerns requires at least one label and one explicit
-jump instruction. In Phase B each is expressed by the structured keyword that
-carries it.
+In the raw version, each of those requires at least one label and one explicit
+jump. In the structured version, each is expressed by the keyword that carries it.
 
 ---
 
@@ -448,15 +443,15 @@ carries it.
 - `continue` restarts from the condition test. Flags must be correct for the
   condition before `continue` executes in a `while` loop.
 - Structured control flow does not hide the machine. Each `if`/`else`/`end` and
-  `while`/`end` lowers to the same conditional jumps and labels that Phase A
-  programs use. The compiler manages the labels; the programmer manages the flags.
+  `while`/`end` generates the same conditional jumps and labels. The compiler manages the labels;
+  you manage the flags.
 
 ## What Comes Next
 
-Chapter 11 introduces function arguments in the ZAX style and the `op`
-construct. The reader will see how typed parameters remove the register-passing
-conventions that Phase A programs document in comments, and how `op` provides
-a lightweight named-operation form that expands inline without a function frame.
+Chapter 11 introduces typed function parameters and the `op` construct. Typed
+parameters replace the register-passing convention that raw subroutines document
+in comments. `op` provides a lightweight named-operation form that expands inline
+without any call overhead.
 
 ---
 

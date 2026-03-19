@@ -118,7 +118,7 @@ is implemented and available on the current surface. The course examples use it.
   `eight_queens.zax` is a direct workaround for this. The gap is recorded;
   no specific design has been decided.
 
-- _Pointer-typing ergonomics._ `linked_list.zax` and `bst.zax` both require
+- _Pointer type annotation._ `linked_list.zax` and `bst.zax` both require
   `<Type>local.field` at every traversal step. The `addr` type carries no type
   information — there is no `addr<ListNode>`. Every dereference must repeat the
   type annotation at the use site. The design is not settled. See `docs/design/`
@@ -135,13 +135,13 @@ is implemented and available on the current surface. The course examples use it.
 - _Local named-constant initialisation._ `var` block initialisers cannot
   currently reference named constants by name. This is a readability gap
   grounded in `binary_search.zax` and `bubble_sort.zax`. It requires a
-  compiler change and is not addressable by a library or idiom.
+  compiler change and cannot be worked around in a library.
 
 **Where ZAX stands after these examples**:
 
 You still choose registers, write mnemonics, manage flags, and decide what
-lives in ROM versus RAM. The compiler adds names, typed offsets, function-frame
-discipline, and structured control flow. The `.asm` output is deterministic:
+lives in ROM versus RAM. The compiler adds names, typed offsets, function frames,
+and structured control flow. The `.asm` output is deterministic:
 every source line maps to a predictable instruction sequence that you can read
 and verify. The gaps above are the places where the current surface still
 requires manual workarounds. They are recorded as such, and design work on them
@@ -162,9 +162,8 @@ the same source file.
 - An explicit flag variable is still the necessary mechanism for propagating a
   found result across recursive frames. ZAX has no named exit from nested
   structures; this is a recorded gap, not a design oversight.
-- Pointer-typing ergonomics (the `<Type>local.field` repetition from Chapter 08)
-  and software-stack verbosity (the `pop_word`/`stack_depth` bouncing from
-  Chapter 07) are both grounded, open design issues. See `docs/design/` for
+- The `<Type>local.field` repetition from Chapter 08 and the `pop_word`/`stack_depth`
+  bouncing from Chapter 07 are both known design issues. See `docs/design/` for
   current work.
 - The `.asm` output is deterministic and inspectable throughout. The compiler
   adds no hidden passes or runtime system. That design position is deliberate

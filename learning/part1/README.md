@@ -1,19 +1,20 @@
 # Part 1 — Learn Z80 Programming in ZAX
 
-Status: complete Volume 1 course
-Audience: hobbyist / retro learner first, determined absolute beginner second
+No prior assembly experience required.
 
-This is the first volume of the two-volume ZAX teaching path. It teaches Z80 programming from the machine model upward, using ZAX as the assembler surface throughout. No prior assembly experience assumed.
+This course teaches Z80 programming from scratch, using ZAX as the assembler throughout. By the end you will understand how a Z80 program actually runs — registers, memory, the stack, subroutines — and you will know how to use ZAX's higher-level features to write cleaner code without giving anything up.
 
-After completing Chapter 11, continue with [Part 2 — Algorithms and Data Structures in ZAX](../part2/README.md).
+After Chapter 11, continue with [Part 2 — Algorithms and Data Structures in ZAX](../part2/README.md).
 
 ---
 
-## Phase A and Phase B
+## How the course is structured
 
-**Phase A** (Chapters 00–08) stays close to ordinary Z80 programming. The reader writes raw instructions, manages registers by hand, invents loop labels, and calls subroutines with register-passing conventions documented only in comments. Chapter 07 covers the Z80 I/O model. Chapter 08 is the Phase A capstone: a complete program that uses every Phase A construct and names the points where the raw approach creates overhead.
+Chapters 00–08 teach raw Z80. You write instructions directly, manage registers by hand, and build programs the way a traditional assembler expects. This is the foundation — understanding what the machine actually does.
 
-**Phase B** (Chapters 09–11) introduces the higher-level ZAX surface as justified relief from that overhead. Each Phase B construct is introduced by showing exactly which Phase A cost it removes.
+Chapter 08 is a complete program that ties all of that together. At the end of it you will have felt the friction: keeping track of which register holds what, writing boilerplate to pass values into subroutines, inventing label names for every loop.
+
+Chapters 09–11 show how ZAX removes that friction. Typed variables, `if`/`while`, and typed function arguments — each one introduced by showing the raw Z80 code it replaces. Nothing is hidden; you can see exactly what the compiler emits.
 
 ---
 
@@ -29,7 +30,7 @@ After completing Chapter 11, continue with [Part 2 — Algorithms and Data Struc
 | 05 | [Data Tables and Indexed Access](05-data-tables-and-indexed-access.md) | A | Byte/word tables, HL sequential access, IX+d displaced access |
 | 06 | [Stack and Subroutines](06-stack-and-subroutines.md) | A | `call`/`ret`, the hardware stack, `push`/`pop`, register conventions |
 | 07 | [I/O and Ports](07-io-and-ports.md) | A | Z80 I/O space, `in`/`out`, immediate and register-addressed port forms |
-| 08 | [A Phase A Program](08-a-phase-a-program.md) | A | Phase A capstone; names Phase A costs that Phase B will address |
+| 08 | [A Complete Program](08-a-phase-a-program.md) | A | Capstone: a full program using everything so far; shows where raw Z80 gets unwieldy |
 | 09 | [Typed Storage and Assignment](09-typed-storage-and-assignment.md) | B | Typed locals, `:=` assignment, `succ`/`pred` |
 | 10 | [Structured Control Flow](10-structured-control-flow.md) | B | `if`/`else`, `while`, `break`, `continue` |
 | 11 | [Functions, Arguments, and Op](11-functions-arguments-and-op.md) | B | Typed parameters, typed return values, `op` |

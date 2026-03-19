@@ -157,7 +157,7 @@ carry when A < StopFactor; `if NC` means carry is not set, so A >= StopFactor).
 At that point, every composite number up to the limit has been marked and the
 outer loop has nothing more to do. Without `break`, the loop would need an
 explicit boolean flag — a local set to 0 or 1 — and the condition test at the
-top of `while` would check that flag instead of the `ld a, 1` / `or a` idiom.
+top of `while` would check that flag instead of the `ld a, 1` / `or a` pattern.
 With `break`, the exit condition is expressed exactly where it arises.
 
 ### `continue` in `prime_sieve.zax`
@@ -356,8 +356,8 @@ the outer loop swaps the minimum into position if it is not already there:
 (From `learning/part2/examples/unit2/selection_sort.zax`, lines 104–115.)
 
 The `if NZ` skips the swap when the minimum is already at `outer_index` (no
-work needed). This is a common ZAX idiom: compare, then conditionally call a
-helper inside an `if` block.
+work needed). This pattern — compare, then conditionally call a helper inside
+an `if` block — appears throughout the course.
 
 See `learning/part2/examples/unit2/selection_sort.zax`.
 
@@ -404,7 +404,7 @@ See `learning/part2/examples/unit2/linear_search.zax`.
 Binary search divides the sorted array in half repeatedly, narrowing the search
 range by comparing the target against the middle element.
 
-The midpoint calculation uses the standard Z80 idiom for a 16-bit arithmetic
+The midpoint calculation uses the standard Z80 technique for a 16-bit arithmetic
 right shift: add `low_index` and `high_index` into HL, then shift right with
 `srl h` / `rr l`. This gives `(low + high) / 2` without overflow for values
 that fit in 16 bits:
@@ -492,7 +492,7 @@ See `learning/part2/examples/unit2/prime_sieve.zax`.
 
 Chapter 03 moves from indexed arrays to pointer-walked memory. The string
 algorithms there advance HL and DE directly rather than loading an index into L
-— a different traversal discipline built on the same `while NZ` loop structure
+— a different traversal approach built on the same `while NZ` loop structure
 used here. `break` reappears in the scan-to-terminator pattern; `continue` does
 not, because string traversal rarely needs to skip iterations rather than exit.
 

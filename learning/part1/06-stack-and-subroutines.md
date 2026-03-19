@@ -78,7 +78,7 @@ loader or runtime before `main` is entered.
 ## Passing values through registers
 
 The Z80 has no hardware-enforced calling convention. Any register can carry any
-value into a subroutine or back out. The conventions used throughout Phase A
+value into a subroutine or back out. The conventions used in these chapters
 are:
 
 - **A** carries a single byte result or input value.
@@ -133,12 +133,11 @@ func my_sub(): AF
 end
 ```
 
-This is different from raw labeled subroutines (Phase A code reached by `call
-label` but not wrapped in a ZAX `func`). Raw subroutines are plain Z80 — the
-assembler does not insert any epilogue — so they **do** require an explicit
-`ret`. Chapter 08 shows several Phase A subroutines that must keep their `ret`.
-In Phase B (Chapters 08–10), you write ZAX `func` blocks exclusively, and the
-compiler handles the return for you.
+This is different from raw labeled subroutines — code you reach with `call
+label` but that is not wrapped in a ZAX `func`. Those are plain Z80: the
+assembler inserts nothing, so they **do** require an explicit `ret`. Chapter 08
+shows several such subroutines. In Chapters 09–11 you write ZAX `func` blocks
+exclusively, and the compiler handles the return for you.
 
 Declaring `: void` when the function leaves a meaningful value in A is a bug:
 the compiler's `pop AF` in the epilogue will overwrite A before returning, and
@@ -327,16 +326,16 @@ paths.
 - `ret cc` returns conditionally; the stack must be balanced at that point too.
 - Subroutines can call other subroutines. Each call pushes a return address;
   each ret pops one. The stack depth grows with each nested call.
-- A ZAX `func` block emits the epilogue and `ret` automatically at `end`. A
+- A ZAX `func` block emits the cleanup and `ret` automatically at `end`. A
   trailing `ret` is not needed. Use `ret` inside a `func` only for early exits.
-  Raw labeled subroutines (Phase A code reached by `call label` outside a ZAX
-  `func`) are plain Z80 and do require an explicit `ret`.
+  Raw labeled subroutines — code reached by `call label` outside a ZAX `func`
+  — are plain Z80 and do require an explicit `ret`.
 
 ## What Comes Next
 
-Chapter 08 builds a complete Phase A program that uses all the constructs from
-Chapters 00–06 together, then names the points where the raw approach creates
-bookkeeping overhead that Phase B constructs will later remove.
+Chapter 08 builds a complete program using everything from Chapters 00–06
+together, then shows the points where raw Z80 starts to get unwieldy — the
+same points that Chapters 09–11 address.
 
 ---
 

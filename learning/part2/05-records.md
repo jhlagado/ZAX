@@ -212,7 +212,7 @@ the mechanics.
   and-add stride sequence rather than a pure shift chain.
 - `succ` and `pred` work on module-level variables, not only on frame locals. Any
   typed scalar storage path is a valid operand.
-- The `next_slot` modular-index helper is the idiomatic way to wrap an index
+- The `next_slot` modular-index helper is the clean way to wrap an index
   without an explicit division: increment, compare against the capacity bound,
   return zero on overflow.
 

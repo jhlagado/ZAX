@@ -58,9 +58,9 @@ stack_depth := a
 The qualifier makes the call site explicit about where the operation comes from.
 `push_word` returns in A: it yields the new depth count. The `stack_depth := a`
 that follows every stack operation captures that return value into the module
-variable. This is the full push/pop discipline — no hidden state, no mutable
-counter inside the support module, just two functions that accept the storage
-and the current depth as arguments and return the updated depth.
+variable. No hidden state, no mutable counter inside the support module — just
+two functions that accept the storage and the current depth as arguments and
+return the updated depth.
 
 ---
 
@@ -141,7 +141,7 @@ pair is bracketed by `stack_depth := a` to capture the updated depth. The typed
 locals `right_value` and `left_value` hold the popped words across the two pop
 calls, because HL is overwritten by the second pop before the operation can
 proceed. Saving intermediate results into locals before the next call — the same
-pattern seen in the recursion chapter — is the natural discipline here.
+pattern seen in the recursion chapter — is the right approach here.
 
 ---
 
@@ -162,7 +162,7 @@ end
 
 (From `learning/part2/examples/unit7/word_stack.zax`, lines 6–14.)
 
-`word_stack.zax` loads the depth count into L with `ld l, a` — L is the index token for the `arr[L]` path expression — while DE carries the word value via `de := value_word`. `stack_slots[L] := de` then stores it cleanly. This is the established ZAX idiom for word-array access with an 8-bit index: index in L, value in DE.
+`word_stack.zax` loads the depth count into L with `ld l, a` — L is the index token for the `arr[L]` path expression — while DE carries the word value via `de := value_word`. `stack_slots[L] := de` then stores it cleanly. The pattern — index in L, value in DE — is how ZAX does word-array access with an 8-bit index.
 
 The full source of `word_stack.zax` is short enough to read in one sitting — see `learning/part2/examples/unit7/word_stack.zax`.
 
@@ -178,10 +178,10 @@ register holds which intermediate value at each point in the dispatch arms — t
 same bookkeeping that raw assembly requires and that ZAX structured storage
 eliminates.
 
-The typed paths do not hide anything from the programmer. `right_value := hl`
-emits a frame store; `de := right_value` emits a frame load. The compiler
-handles the IX-relative mechanics. What the programmer reads is the algorithm:
-the right operand is saved, the left operand is popped, the operation is applied.
+The typed paths do not hide anything. `right_value := hl` emits a frame store;
+`de := right_value` emits a frame load. The compiler handles the IX-relative
+mechanics. What you read is the algorithm: the right operand is saved, the left
+operand is popped, the operation is applied.
 
 ---
 
@@ -196,12 +196,11 @@ the right operand is saved, the left operand is popped, the operation is applied
 - `select A` / `case TokenKind.Member` dispatches on the value in A. It is the
   natural form for token-kind dispatch, replacing a chain of `if` comparisons
   where the distinguishing value is already in a register.
-- Software-stack discipline over a typed word array requires explicit depth
-  management. Every push and pop returns a new depth in A, and the caller must
-  store it.
-- DE-as-value, L-as-index is the idiom for word-array push/pop when HL is
-  needed for the store address. This choice is visible in `word_stack.zax` and
-  is worth understanding.
+- A software stack over a typed word array requires explicit depth management.
+  Every push and pop returns a new depth in A, and the caller must store it.
+- DE-as-value, L-as-index is the right register choice for word-array push/pop
+  when HL is needed for the store address. This is visible in `word_stack.zax`
+  and worth understanding.
 - Store intermediate results into typed locals before the next call overwrites
   HL. This is the same pattern as the recursion chapter, applied here to a
   software-stack evaluator.
@@ -222,7 +221,7 @@ the right operand is saved, the left operand is popped, the operation is applied
 Chapter 08 works with pointer fields and typed reinterpretation. The linked
 list and binary search tree examples require following stored addresses rather
 than advancing an index — a structurally different traversal from the software
-stack here, but using the same typed-path and null-sentinel discipline.
+stack here, but using the same typed-path and null-sentinel approach.
 
 ---
 
