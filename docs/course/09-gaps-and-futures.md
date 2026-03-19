@@ -186,10 +186,10 @@ the same source file.
    `succ col_index` were omitted from one of the three `continue` paths? Trace
    the column loop behaviour for a column that fails the first constraint check.
 
-2. The `found_solution` flag is module-level state. What happens if `solve` is
-   called twice in sequence without resetting `found_solution` to zero between
-   calls? Add a reset at the start of `solve` and verify that the second call
-   produces a correct result.
+2. The `found_solution` flag is module-level state. `main` resets it to zero
+   before calling `place_row`. What happens if that reset is removed and `main`
+   is called twice in sequence? Trace the second call's behaviour from the entry
+   of `place_row` when `found_solution` is already 1.
 
 3. `place_row` marks the three constraint arrays (`col_used`, `diag_sum_used`,
    `diag_diff_used`) before recursing and unmarks them on backtrack. If the

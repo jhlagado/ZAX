@@ -45,7 +45,7 @@ Planned file set:
 - `docs/intro/07-a-phase-a-program.md`
 - `docs/intro/08-typed-storage-and-assignment.md`
 - `docs/intro/09-structured-control-flow.md`
-- `docs/intro/10-subroutines-arguments-and-op.md`
+- `docs/intro/10-functions-arguments-and-op.md`
 
 ## Canonical sources
 
@@ -180,7 +180,7 @@ If any of the three is unclear, the chapter is not ready to draft.
 - `if`, `while`, then `break` / `continue`
 - direct comparison against Phase A jump-heavy versions
 
-### `10-subroutines-arguments-and-op.md`
+### `10-functions-arguments-and-op.md`
 
 - arguments, locals, and `op`
 - final bridge into the advanced practical-programming volume
@@ -206,7 +206,7 @@ If any of the three is unclear, the chapter is not ready to draft.
 
 - `docs/intro/08-typed-storage-and-assignment.md`
 - `docs/intro/09-structured-control-flow.md`
-- `docs/intro/10-subroutines-arguments-and-op.md`
+- `docs/intro/10-functions-arguments-and-op.md`
 
 ## Verification expectations
 

@@ -35,7 +35,10 @@ The `or a` instruction ORs A with itself — it has no effect on A but sets or c
 the Z flag depending on whether A is zero. `if Z` then handles the terminator.
 This is the standard Z80 idiom for testing a byte against zero without disturbing
 its value (unlike `cp 0`, which also sets Z but incurs a second immediate operand).
-Every Chapter 03 example uses this pattern as the core of its traversal loop.
+Six of the seven Chapter 03 examples use this pattern as the core of their
+traversal loop. The exception is `itoa.zax`, which generates digits by repeated
+division into a scratch buffer and terminates by index counter, not by null
+sentinel.
 
 The loop structure is the `while NZ` idiom from Chapter 01, established by `ld a, 1` /
 `or a` at entry and re-established at the bottom of each iteration. The actual loop
