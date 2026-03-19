@@ -5,6 +5,7 @@ import type {
 } from '../formats/types.js';
 import type { SectionKind } from './loweringTypes.js';
 import type { FinalizationContext } from './programLowering.js';
+import { parseNumberLiteral } from '../frontend/parseImm.js';
 
 export function finalizeProgramEmission(ctx: FinalizationContext): {
   codeBase: number;
@@ -105,8 +106,17 @@ export function finalizeProgramEmission(ctx: FinalizationContext): {
     });
   }
 
+  const resolveFixupBase = (nameLower: string): number | undefined => {
+    const sym = addrByNameLower.get(nameLower);
+    if (sym !== undefined) return sym;
+    const literal = parseNumberLiteral(nameLower);
+    if (literal !== undefined) return literal;
+    if (/^-?[0-9]+$/.test(nameLower)) return Number.parseInt(nameLower, 10);
+    return undefined;
+  };
+
   for (const fx of ctx.fixups) {
-    const base = addrByNameLower.get(fx.baseLower);
+    const base = resolveFixupBase(fx.baseLower);
     const addr = base === undefined ? undefined : base + fx.addend;
     if (addr === undefined) {
       ctx.diag(ctx.diagnostics, fx.file, `Unresolved symbol "${fx.baseLower}" in 16-bit fixup.`);
@@ -125,7 +135,7 @@ export function finalizeProgramEmission(ctx: FinalizationContext): {
   }
 
   for (const fx of ctx.rel8Fixups) {
-    const base = addrByNameLower.get(fx.baseLower);
+    const base = resolveFixupBase(fx.baseLower);
     const target = base === undefined ? undefined : base + fx.addend;
     if (target === undefined) {
       ctx.diag(

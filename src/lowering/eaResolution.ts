@@ -88,6 +88,8 @@ export function createEaResolutionHelpers(ctx: EaResolutionContext) {
           addend: base.addend + (expr.kind === 'EaAdd' ? delta : -delta),
         };
       }
+      case 'EaImm':
+        return { kind: 'invalid', message: reinterpretBaseMessage(expr) };
       default:
         return { kind: 'invalid', message: reinterpretBaseMessage(expr) };
     }
@@ -127,7 +129,17 @@ export function createEaResolutionHelpers(ctx: EaResolutionContext) {
             }
           }
           const typeExpr = ctx.storageTypes.get(baseLower);
-          return { kind: 'abs', baseLower, addend: 0, ...(typeExpr ? { typeExpr } : {}) };
+          if (typeExpr) return { kind: 'abs', baseLower, addend: 0, typeExpr };
+          const constValue = ctx.evalImmNoDiag({ kind: 'ImmName', span: expr.span, name: expr.name });
+          if (constValue !== undefined) {
+            return { kind: 'abs', baseLower: String(constValue), addend: 0 };
+          }
+          return { kind: 'abs', baseLower, addend: 0 };
+        }
+        case 'EaImm': {
+          const value = ctx.evalImmNoDiag(expr.expr);
+          if (value === undefined) return undefined;
+          return { kind: 'abs', baseLower: String(value), addend: 0 };
         }
         case 'EaReinterpret': {
           if (!hasKnownType(expr.typeExpr)) return undefined;

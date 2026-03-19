@@ -219,6 +219,8 @@ function memAbs16(op: AsmOperandNode, env: CompileEnv): number | undefined {
           },
           env,
         );
+      case 'EaImm':
+        return evalImmExpr(ea.expr, env);
       case 'EaAdd': {
         const base = evalEaAbs16(ea.base);
         const delta = evalImmExpr(ea.offset, env);

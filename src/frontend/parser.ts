@@ -102,6 +102,91 @@ function splitTopLevelComma(text: string): string[] {
   return parts;
 }
 
+function splitBackslashStatements(
+  modulePath: string,
+  sourceText: string,
+  diagnostics: Diagnostic[],
+): string {
+  const lines = sourceText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+  const out: string[] = [];
+
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const raw = lines[lineIndex] ?? '';
+    let segment = '';
+    let inChar = false;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = 0; i < raw.length; i++) {
+      const ch = raw[i]!;
+
+      if (inChar || inString) {
+        if (escaped) {
+          escaped = false;
+          segment += ch;
+          continue;
+        }
+        if (ch === '\\') {
+          escaped = true;
+          segment += ch;
+          continue;
+        }
+        if (inChar && ch === "'") {
+          inChar = false;
+          segment += ch;
+          continue;
+        }
+        if (inString && ch === '"') {
+          inString = false;
+          segment += ch;
+          continue;
+        }
+        segment += ch;
+        continue;
+      }
+
+      if (ch === ';') {
+        segment += raw.slice(i);
+        break;
+      }
+
+      if (ch === "'") {
+        inChar = true;
+        segment += ch;
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = true;
+        segment += ch;
+        continue;
+      }
+
+      if (ch === '\\') {
+        const rest = raw.slice(i + 1);
+        const nonSpaceIndex = rest.search(/[^\s]/);
+        const nextToken = nonSpaceIndex >= 0 ? rest[nonSpaceIndex] : '';
+        if (nonSpaceIndex === -1 || nextToken === ';') {
+          diag(diagnostics, modulePath, 'Trailing backslash must be followed by another statement.', {
+            line: lineIndex + 1,
+            column: i + 1,
+          });
+          continue;
+        }
+        out.push(segment);
+        segment = '';
+        continue;
+      }
+
+      segment += ch;
+    }
+
+    out.push(segment);
+  }
+
+  return out.join('\n');
+}
+
 /**
  * Parse a single `.zax` module file from an in-memory source string.
  *
@@ -114,7 +199,8 @@ export function parseModuleFile(
   sourceText: string,
   diagnostics: Diagnostic[],
 ): ModuleFileNode {
-  const file = makeSourceFile(modulePath, sourceText);
+  const normalizedSource = splitBackslashStatements(modulePath, sourceText, diagnostics);
+  const file = makeSourceFile(modulePath, normalizedSource);
   const lineCount = file.lineStarts.length;
 
   function getRawLine(lineIndex: number): { raw: string; startOffset: number; endOffset: number } {

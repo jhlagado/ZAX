@@ -129,6 +129,8 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
     switch (ea.kind) {
       case 'EaName':
         return ea.name;
+      case 'EaImm':
+        return undefined;
       case 'EaReinterpret':
         return resolveEaBaseName(ea.base);
       case 'EaField':
@@ -183,6 +185,8 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
         if (!baseType) return undefined;
         return resolveArrayElementType(baseType);
       }
+      case 'EaImm':
+        return undefined;
     }
   };
 
