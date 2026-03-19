@@ -134,7 +134,7 @@ end
 This is different from raw labeled subroutines (Phase A code reached by `call
 label` but not wrapped in a ZAX `func`). Raw subroutines are plain Z80 — the
 assembler does not insert any epilogue — so they **do** require an explicit
-`ret`. Chapter 07 shows several Phase A subroutines that must keep their `ret`.
+`ret`. Chapter 08 shows several Phase A subroutines that must keep their `ret`.
 In Phase B (Chapters 08–10), you write ZAX `func` blocks exclusively, and the
 compiler handles the return for you.
 
@@ -332,6 +332,6 @@ paths.
 
 ## What Comes Next
 
-Chapter 07 builds a complete Phase A program that uses all the constructs from
+Chapter 08 builds a complete Phase A program that uses all the constructs from
 Chapters 00–06 together, then names the points where the raw approach creates
 bookkeeping overhead that Phase B constructs will later remove.

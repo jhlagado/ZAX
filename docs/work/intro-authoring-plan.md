@@ -42,10 +42,11 @@ Planned file set:
 - `docs/intro/04-counting-loops-and-djnz.md`
 - `docs/intro/05-data-tables-and-indexed-access.md`
 - `docs/intro/06-stack-and-subroutines.md`
-- `docs/intro/07-a-phase-a-program.md`
-- `docs/intro/08-typed-storage-and-assignment.md`
-- `docs/intro/09-structured-control-flow.md`
-- `docs/intro/10-functions-arguments-and-op.md`
+- `docs/intro/07-io-and-ports.md`
+- `docs/intro/08-a-phase-a-program.md`
+- `docs/intro/09-typed-storage-and-assignment.md`
+- `docs/intro/10-structured-control-flow.md`
+- `docs/intro/11-functions-arguments-and-op.md`
 
 ## Canonical sources
 
@@ -165,17 +166,21 @@ If any of the three is unclear, the chapter is not ready to draft.
 - `call`, `ret`, `push`, `pop`
 - raw calling convention and register preservation
 
-### `07-a-phase-a-program.md`
+### `07-io-and-ports.md`
+
+Covers Z80 I/O ports. Phase A.
+
+### `08-a-phase-a-program.md`
 
 - integrate Phase A into one real raw-first program
 - intentionally expose the bookkeeping cost that motivates Phase B
 
-### `08-typed-storage-and-assignment.md`
+### `09-typed-storage-and-assignment.md`
 
 - first introduction of typed storage and `:=`
 - relief from handwritten offsets and repetitive load/store paths
 
-### `09-structured-control-flow.md`
+### `10-structured-control-flow.md`
 
 - `if`, `while`, then `break` / `continue`
 - direct comparison against Phase A jump-heavy versions
@@ -200,13 +205,14 @@ If any of the three is unclear, the chapter is not ready to draft.
 - `docs/intro/04-counting-loops-and-djnz.md`
 - `docs/intro/05-data-tables-and-indexed-access.md`
 - `docs/intro/06-stack-and-subroutines.md`
-- `docs/intro/07-a-phase-a-program.md`
+- `docs/intro/07-io-and-ports.md`
+- `docs/intro/08-a-phase-a-program.md`
 
 ### Phase 3
 
-- `docs/intro/08-typed-storage-and-assignment.md`
-- `docs/intro/09-structured-control-flow.md`
-- `docs/intro/10-functions-arguments-and-op.md`
+- `docs/intro/09-typed-storage-and-assignment.md`
+- `docs/intro/10-structured-control-flow.md`
+- `docs/intro/11-functions-arguments-and-op.md`
 
 ## Verification expectations
 
