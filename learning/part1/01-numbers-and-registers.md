@@ -1,4 +1,4 @@
-[← What a Computer Is Doing](00-what-a-computer-is-doing.md) | [Part 1](README.md) | [Loading, Storing, Constants →](02-loading-storing-constants.md)
+[← Machine Code and the Assembler](00-what-a-computer-is-doing.md) | [Part 1](README.md) | [Loading, Storing, Constants →](02-loading-storing-constants.md)
 
 # Chapter 01 — Numbers and the Z80 Register Set
 
@@ -13,8 +13,8 @@ Prerequisites: Chapter 00 (bytes, addresses, the module shell).
 
 ## Binary and hexadecimal
 
-Every byte in the Z80 holds an eight-bit binary value. Each bit is either 0 or
-1. The bits are numbered 7 (most significant, leftmost) down to 0 (least
+Every byte in the Z80 holds an eight-bit binary value. Each bit is either 0 or 1.
+The bits are numbered 7 (most significant, leftmost) down to 0 (least
 significant, rightmost). The binary value `%10000001` has bits 7 and 0 set and
 all others clear; its decimal value is 128 + 1 = 129.
 
@@ -31,7 +31,13 @@ combinations:
 Binary  Hex  Decimal
 0000    $0   0
 0001    $1   1
-...
+0010    $2   2
+0011    $3   3
+0100    $4   4
+0101    $5   5
+0110    $6   6
+0111    $7   7
+1000    $8   8
 1001    $9   9
 1010    $A   10
 1011    $B   11
@@ -200,4 +206,4 @@ locations using immediate values, register pairs, and indirect addressing.
 
 ---
 
-[← What a Computer Is Doing](00-what-a-computer-is-doing.md) | [Part 1](README.md) | [Loading, Storing, Constants →](02-loading-storing-constants.md)
+[← Machine Code and the Assembler](00-what-a-computer-is-doing.md) | [Part 1](README.md) | [Loading, Storing, Constants →](02-loading-storing-constants.md)
