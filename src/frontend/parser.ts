@@ -9,7 +9,7 @@ import type {
   SourceSpan,
   SectionItemNode,
 } from './ast.js';
-import { makeSourceFile, span } from './source.js';
+import { makeSourceFile, span, type SourceFile } from './source.js';
 import type { Diagnostic } from '../diagnostics/types.js';
 import {
   TOP_LEVEL_KEYWORDS,
@@ -113,14 +113,16 @@ export function parseModuleFile(
   modulePath: string,
   sourceText: string,
   diagnostics: Diagnostic[],
+  sourceFileOverride?: SourceFile,
 ): ModuleFileNode {
-  const file = makeSourceFile(modulePath, sourceText);
+  const file = sourceFileOverride ?? makeSourceFile(modulePath, sourceText);
 
   type LogicalLine = {
     raw: string;
     startOffset: number;
     endOffset: number;
     lineNo: number;
+    filePath: string;
   };
 
   const logicalLines: LogicalLine[] = [];
@@ -133,7 +135,8 @@ export function parseModuleFile(
     if (rawWithEol.endsWith('\r')) rawWithEol = rawWithEol.slice(0, -1);
 
     const raw = rawWithEol;
-    const lineNo = i + 1;
+    const lineNo = file.lineBaseLines?.[i] ?? i + 1;
+    const filePath = file.lineFiles?.[i] ?? modulePath;
     let segmentStart = 0;
     let inChar = false;
     let inString = false;
@@ -184,7 +187,7 @@ export function parseModuleFile(
         const nonSpaceIndex = rest.search(/[^\s]/);
         const nextToken = nonSpaceIndex >= 0 ? rest[nonSpaceIndex] : '';
         if (nonSpaceIndex === -1 || nextToken === ';') {
-          diag(diagnostics, modulePath, 'Trailing backslash must be followed by another statement.', {
+          diag(diagnostics, filePath, 'Trailing backslash must be followed by another statement.', {
             line: lineNo,
             column: j + 1,
           });
@@ -196,6 +199,7 @@ export function parseModuleFile(
           startOffset: startOffset + segmentStart,
           endOffset: startOffset + j,
           lineNo,
+          filePath,
         });
         segmentStart = j + 1;
       }
@@ -206,14 +210,33 @@ export function parseModuleFile(
       startOffset: startOffset + segmentStart,
       endOffset: startOffset + raw.length,
       lineNo,
+      filePath,
     });
   }
 
   const lineCount = logicalLines.length;
 
-  function getRawLine(lineIndex: number): { raw: string; startOffset: number; endOffset: number } {
-    const logical = logicalLines[lineIndex] ?? { raw: '', startOffset: 0, endOffset: 0, lineNo: 1 };
-    return { raw: logical.raw, startOffset: logical.startOffset, endOffset: logical.endOffset };
+  function getRawLine(lineIndex: number): {
+    raw: string;
+    startOffset: number;
+    endOffset: number;
+    lineNo: number;
+    filePath: string;
+  } {
+    const logical = logicalLines[lineIndex] ?? {
+      raw: '',
+      startOffset: 0,
+      endOffset: 0,
+      lineNo: 1,
+      filePath: modulePath,
+    };
+    return {
+      raw: logical.raw,
+      startOffset: logical.startOffset,
+      endOffset: logical.endOffset,
+      lineNo: logical.lineNo,
+      filePath: logical.filePath,
+    };
   }
 
   const items: ModuleItemNode[] = [];
@@ -222,13 +245,14 @@ export function parseModuleFile(
     text: string,
     lineNo: number,
     allowAsmSpecialCase: boolean,
+    filePath: string,
   ): { rest: string; exported: boolean } | undefined {
     const exportTail = consumeKeywordPrefix(text, 'export');
     if (exportTail === undefined) return { rest: text, exported: false };
 
     const rest = exportTail;
     if (rest.length === 0) {
-      diag(diagnostics, modulePath, `Invalid export statement`, { line: lineNo, column: 1 });
+      diag(diagnostics, filePath, `Invalid export statement`, { line: lineNo, column: 1 });
       return undefined;
     }
 
@@ -246,7 +270,7 @@ export function parseModuleFile(
       if (exportAsmTail !== undefined) {
         diag(
           diagnostics,
-          modulePath,
+          filePath,
           `"asm" is not a top-level construct (function and op bodies are implicit instruction streams)`,
           {
             line: lineNo,
@@ -261,14 +285,14 @@ export function parseModuleFile(
     if (targetKeyword !== undefined) {
       const targetKind = unsupportedExportTargetKind[targetKeyword];
       if (targetKind !== undefined) {
-        diag(diagnostics, modulePath, `export not supported on ${targetKind}`, {
+        diag(diagnostics, filePath, `export not supported on ${targetKind}`, {
           line: lineNo,
           column: 1,
         });
       } else {
         diag(
           diagnostics,
-          modulePath,
+          filePath,
           `export is only permitted on const/type/union/enum/func/op declarations`,
           {
             line: lineNo,
@@ -279,7 +303,7 @@ export function parseModuleFile(
     } else {
       diag(
         diagnostics,
-        modulePath,
+        filePath,
         `export is only permitted on const/type/union/enum/func/op declarations`,
         {
           line: lineNo,
@@ -295,6 +319,7 @@ export function parseModuleFile(
     sectionSpan: NamedSectionNode['span'],
     lineNo: number,
     originalText: string,
+    filePath: string,
   ): { section: 'code' | 'data'; name: string; anchor?: SectionAnchorNode } | undefined {
     const m = /^(code|data)\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s+at\s+(.+?)(?:\s+(size|end)\s+(.+))?)?$/i.exec(
       sectionText.trim(),
@@ -302,7 +327,7 @@ export function parseModuleFile(
     if (!m) {
       diagInvalidHeaderLine(
         diagnostics,
-        modulePath,
+        filePath,
         'named section declaration',
         originalText,
         '<code|data> <name> [at <imm16> [size <n> | end <addr>]]',
@@ -318,7 +343,7 @@ export function parseModuleFile(
     const rangeExprText = m[5]?.trim();
     let anchor: SectionAnchorNode | undefined;
     if (atText) {
-      const at = parseImmExprFromText(modulePath, atText, sectionSpan, diagnostics);
+      const at = parseImmExprFromText(filePath, atText, sectionSpan, diagnostics);
       if (!at) return undefined;
       let bound: SectionAnchorNode['bound'] = { kind: 'none' };
       anchor = {
@@ -333,7 +358,7 @@ export function parseModuleFile(
           rangeExprText,
           {
             diagnostics,
-            modulePath,
+            modulePath: filePath,
             lineNo,
             text: originalText,
             span: sectionSpan,
@@ -353,6 +378,7 @@ export function parseModuleFile(
     name: string;
     span: SourceSpan;
     lineNo: number;
+    filePath: string;
   };
 
   type ParseItemContext =
@@ -373,6 +399,7 @@ export function parseModuleFile(
   type ParseModuleItemDispatchArgs = {
     index: number;
     lineNo: number;
+    filePath: string;
     text: string;
     rest: string;
     stmtSpan: SourceSpan;
@@ -388,6 +415,7 @@ export function parseModuleFile(
   function parseImportItem({
     index,
     lineNo,
+    filePath,
     text,
     rest,
     stmtSpan,
@@ -397,7 +425,7 @@ export function parseModuleFile(
     if (ctx.scope === 'module') {
       const importNode = parseImportDecl(importTail, {
         diagnostics,
-        modulePath,
+        modulePath: filePath,
         lineNo,
         text,
         span: stmtSpan,
@@ -405,7 +433,7 @@ export function parseModuleFile(
       });
       return { nextIndex: index + 1, ...(importNode ? { node: importNode } : {}) };
     }
-    diag(diagnostics, modulePath, `import is only permitted at module scope`, {
+    diag(diagnostics, filePath, `import is only permitted at module scope`, {
       line: lineNo,
       column: 1,
     });
@@ -415,6 +443,7 @@ export function parseModuleFile(
   function parseTypeItem({
     index,
     lineNo,
+    filePath,
     text,
     rest,
     stmtSpan,
@@ -431,7 +460,7 @@ export function parseModuleFile(
         file,
         lineCount,
         diagnostics,
-        modulePath,
+        modulePath: filePath,
         getRawLine,
         isReservedTopLevelName,
       },
@@ -444,6 +473,7 @@ export function parseModuleFile(
   function parseUnionItem({
     index,
     lineNo,
+    filePath,
     text,
     rest,
     stmtSpan,
@@ -460,7 +490,7 @@ export function parseModuleFile(
         file,
         lineCount,
         diagnostics,
-        modulePath,
+        modulePath: filePath,
         getRawLine,
         isReservedTopLevelName,
       },
@@ -473,6 +503,7 @@ export function parseModuleFile(
   function parseGlobalsItem({
     index,
     lineNo,
+    filePath,
     rest,
   }: ParseModuleItemDispatchArgs): ParseItemResult | undefined {
     const storageHeader = rest.toLowerCase();
@@ -481,7 +512,7 @@ export function parseModuleFile(
       file,
       lineCount,
       diagnostics,
-      modulePath,
+      modulePath: filePath,
       getRawLine,
       isReservedTopLevelName,
     });
@@ -491,6 +522,7 @@ export function parseModuleFile(
   function parseFuncItem({
     index,
     lineNo,
+    filePath,
     text,
     rest,
     stmtSpan,
@@ -508,7 +540,7 @@ export function parseModuleFile(
         file,
         lineCount,
         diagnostics,
-        modulePath,
+        modulePath: filePath,
         getRawLine,
         isReservedTopLevelName,
         parseParamsFromText,
@@ -520,6 +552,7 @@ export function parseModuleFile(
   function parseOpItem({
     index,
     lineNo,
+    filePath,
     text,
     rest,
     stmtSpan,
@@ -537,7 +570,7 @@ export function parseModuleFile(
         file,
         lineCount,
         diagnostics,
-        modulePath,
+        modulePath: filePath,
         getRawLine,
         isReservedTopLevelName,
         parseOpParamsFromText,
@@ -550,6 +583,7 @@ export function parseModuleFile(
   function parseExternItem({
     index,
     lineNo,
+    filePath,
     text,
     rest,
     stmtSpan,
@@ -565,7 +599,7 @@ export function parseModuleFile(
         file,
         lineCount,
         diagnostics,
-        modulePath,
+        modulePath: filePath,
         getRawLine,
         isReservedTopLevelName,
         parseParamsFromText,
@@ -577,6 +611,7 @@ export function parseModuleFile(
   function parseEnumItem({
     index,
     lineNo,
+    filePath,
     text,
     rest,
     stmtSpan,
@@ -587,7 +622,7 @@ export function parseModuleFile(
       enumTail,
       {
         diagnostics,
-        modulePath,
+        modulePath: filePath,
         lineNo,
         text,
         span: stmtSpan,
@@ -601,6 +636,7 @@ export function parseModuleFile(
   function parseSectionItem({
     index,
     lineNo,
+    filePath,
     text,
     rest,
     stmtSpan,
@@ -609,7 +645,7 @@ export function parseModuleFile(
   }: ParseModuleItemDispatchArgs): ParseItemResult {
     const sectionTail = consumeTopKeyword(rest, 'section') ?? '';
     if (ctx.scope === 'section') {
-      diag(diagnostics, modulePath, `nested section blocks are not supported`, {
+      diag(diagnostics, filePath, `nested section blocks are not supported`, {
         line: lineNo,
         column: 1,
       });
@@ -624,7 +660,7 @@ export function parseModuleFile(
       /^[A-Za-z_][A-Za-z0-9_]*$/.test(namedTokens[1] ?? '') &&
       !/^(at|size|end)$/i.test(namedTokens[1] ?? '');
     if (namedPrefix) {
-      const header = parseNamedSectionHeader(sectionDecl, stmtSpan, lineNo, text);
+      const header = parseNamedSectionHeader(sectionDecl, stmtSpan, lineNo, text, filePath);
       if (!header) return { nextIndex: index + 1 };
       const parsedSection = parseSectionItems(index + 1, header.section);
       const sectionEndIndex = Math.max(parsedSection.nextIndex - 1, index);
@@ -638,7 +674,7 @@ export function parseModuleFile(
         ...(header.anchor ? { anchor: header.anchor } : {}),
       };
       if (!parsedSection.closed) {
-        diag(diagnostics, modulePath, `Missing end for section "${header.name}"`, {
+        diag(diagnostics, filePath, `Missing end for section "${header.name}"`, {
           line: lineNo,
           column: 1,
         });
@@ -648,7 +684,7 @@ export function parseModuleFile(
 
     parseSectionDirectiveDecl(rest, sectionTail, {
       diagnostics,
-      modulePath,
+      modulePath: filePath,
       lineNo,
       text,
       span: stmtSpan,
@@ -660,6 +696,7 @@ export function parseModuleFile(
   function parseAlignItem({
     index,
     lineNo,
+    filePath,
     text,
     rest,
     stmtSpan,
@@ -667,7 +704,7 @@ export function parseModuleFile(
     const alignTail = consumeTopKeyword(rest, 'align') ?? '';
     const alignNode = parseAlignDirectiveDecl(rest, alignTail, {
       diagnostics,
-      modulePath,
+      modulePath: filePath,
       lineNo,
       text,
       span: stmtSpan,
@@ -679,6 +716,7 @@ export function parseModuleFile(
   function parseConstItem({
     index,
     lineNo,
+    filePath,
     text,
     rest,
     stmtSpan,
@@ -687,7 +725,7 @@ export function parseModuleFile(
     const constTail = consumeTopKeyword(rest, 'const') ?? '';
     const constNode = parseConstDecl(constTail, hasExportPrefix, {
       diagnostics,
-      modulePath,
+      modulePath: filePath,
       lineNo,
       text,
       span: stmtSpan,
@@ -699,6 +737,7 @@ export function parseModuleFile(
   function parseBinItem({
     index,
     lineNo,
+    filePath,
     text,
     rest,
     stmtSpan,
@@ -706,7 +745,7 @@ export function parseModuleFile(
     const binTail = consumeTopKeyword(rest, 'bin') ?? '';
     const node = parseBinDecl(binTail, {
       diagnostics,
-      modulePath,
+      modulePath: filePath,
       lineNo,
       text,
       span: stmtSpan,
@@ -718,6 +757,7 @@ export function parseModuleFile(
   function parseHexItem({
     index,
     lineNo,
+    filePath,
     text,
     rest,
     stmtSpan,
@@ -725,7 +765,7 @@ export function parseModuleFile(
     const hexTail = consumeTopKeyword(rest, 'hex') ?? '';
     const node = parseHexDecl(hexTail, {
       diagnostics,
-      modulePath,
+      modulePath: filePath,
       lineNo,
       text,
       span: stmtSpan,
@@ -737,6 +777,7 @@ export function parseModuleFile(
   function parseDataItem({
     index,
     lineNo,
+    filePath,
     rest,
     ctx,
   }: ParseModuleItemDispatchArgs): ParseItemResult | undefined {
@@ -746,14 +787,14 @@ export function parseModuleFile(
         file,
         lineCount,
         diagnostics,
-        modulePath,
+        modulePath: filePath,
         getRawLine,
       });
       return { nextIndex: parsedData.nextIndex };
     }
     diag(
       diagnostics,
-      modulePath,
+      filePath,
       `Bare "data" marker lines are removed; declare symbols directly inside named data sections.`,
       {
         line: lineNo,
@@ -786,10 +827,11 @@ export function parseModuleFile(
     valuesText: string,
     lineNo: number,
     lineSpan: SourceSpan,
+    filePath: string,
   ): RawDataDeclNode | undefined {
     const parts = splitTopLevelComma(valuesText).map((part) => part.trim());
     if (parts.length === 0 || parts.every((part) => part.length === 0)) {
-      diag(diagnostics, modulePath, `"${directive}" expects one or more imm expressions`, {
+      diag(diagnostics, filePath, `"${directive}" expects one or more imm expressions`, {
         line: lineNo,
         column: 1,
       });
@@ -798,13 +840,13 @@ export function parseModuleFile(
     const values: ImmExprNode[] = [];
     for (const part of parts) {
       if (part.length === 0) {
-        diag(diagnostics, modulePath, `"${directive}" expects one or more imm expressions`, {
+        diag(diagnostics, filePath, `"${directive}" expects one or more imm expressions`, {
           line: lineNo,
           column: 1,
         });
         return undefined;
       }
-      const expr = parseImmExprFromText(modulePath, part, lineSpan, diagnostics);
+      const expr = parseImmExprFromText(filePath, part, lineSpan, diagnostics);
       if (!expr) return undefined;
       values.push(expr);
     }
@@ -815,16 +857,17 @@ export function parseModuleFile(
     sizeText: string,
     lineNo: number,
     lineSpan: SourceSpan,
+    filePath: string,
   ): RawDataDeclNode | undefined {
     const parts = splitTopLevelComma(sizeText).map((part) => part.trim());
     if (parts.length !== 1 || parts[0]!.length === 0) {
-      diag(diagnostics, modulePath, `"ds" expects a single imm expression size`, {
+      diag(diagnostics, filePath, `"ds" expects a single imm expression size`, {
         line: lineNo,
         column: 1,
       });
       return undefined;
     }
-    const expr = parseImmExprFromText(modulePath, parts[0]!, lineSpan, diagnostics);
+    const expr = parseImmExprFromText(filePath, parts[0]!, lineSpan, diagnostics);
     if (!expr) return undefined;
     return { kind: 'RawDataDecl', span: lineSpan, name: '', directive: 'ds', size: expr };
   }
@@ -834,6 +877,7 @@ export function parseModuleFile(
     directiveText: string,
     lineNo: number,
     lineSpan: SourceSpan,
+    filePath: string,
   ): RawDataDeclNode | undefined {
     const match = /^(db|dw|ds)\b(.*)$/i.exec(directiveText.trim());
     if (!match) return undefined;
@@ -841,8 +885,8 @@ export function parseModuleFile(
     const payload = match[2]!.trim();
     const parsed =
       directive === 'ds'
-        ? parseRawDataSize(payload, lineNo, lineSpan)
-        : parseRawDataValues(directive, payload, lineNo, lineSpan);
+        ? parseRawDataSize(payload, lineNo, lineSpan, filePath)
+        : parseRawDataValues(directive, payload, lineNo, lineSpan, filePath);
     if (!parsed) return undefined;
     return { ...parsed, name: label.name, span: lineSpan };
   }
@@ -851,6 +895,7 @@ export function parseModuleFile(
     const { raw, startOffset: lineStartOffset, endOffset: lineEndOffset } = getRawLine(index);
     const text = stripComment(raw).trim();
     const lineNo = logicalLines[index]?.lineNo ?? index + 1;
+    const filePath = logicalLines[index]?.filePath ?? modulePath;
     if (text.length === 0) {
       if (ctx.scope === 'section') {
         return { nextIndex: index + 1 };
@@ -859,7 +904,7 @@ export function parseModuleFile(
     }
     if (ctx.scope === 'section' && text.toLowerCase() === 'end') {
       if (ctx.pendingRawLabel) {
-        diag(diagnostics, modulePath, `Raw data label "${ctx.pendingRawLabel.name}" is missing a directive`, {
+        diag(diagnostics, ctx.pendingRawLabel.filePath, `Raw data label "${ctx.pendingRawLabel.name}" is missing a directive`, {
           line: ctx.pendingRawLabel.lineNo,
           column: 1,
         });
@@ -868,7 +913,7 @@ export function parseModuleFile(
       return { nextIndex: index + 1, sectionClosed: true };
     }
 
-    const exportParsed = parseExportModifier(text, lineNo, ctx.scope === 'module');
+    const exportParsed = parseExportModifier(text, lineNo, ctx.scope === 'module', filePath);
     if (!exportParsed) {
       return { nextIndex: index + 1 };
     }
@@ -878,14 +923,14 @@ export function parseModuleFile(
 
     if (ctx.scope === 'section' && ctx.sectionKind === 'data') {
       if (ctx.pendingRawLabel) {
-        const parsedRaw = parseRawDataDirective(ctx.pendingRawLabel, rest, lineNo, stmtSpan);
+        const parsedRaw = parseRawDataDirective(ctx.pendingRawLabel, rest, lineNo, stmtSpan, filePath);
         if (parsedRaw) {
           ctx.directDeclNamesLower.add(ctx.pendingRawLabel.name.toLowerCase());
           delete ctx.pendingRawLabel;
           if (ctx.sectionKind !== 'data') {
             diag(
               diagnostics,
-              modulePath,
+              filePath,
               `Raw data declarations are only permitted inside data sections.`,
               { line: lineNo, column: 1 },
             );
@@ -893,7 +938,7 @@ export function parseModuleFile(
           }
           return { nextIndex: index + 1, node: parsedRaw };
         }
-        diag(diagnostics, modulePath, `Raw data label "${ctx.pendingRawLabel.name}" is missing a directive`, {
+        diag(diagnostics, ctx.pendingRawLabel.filePath, `Raw data label "${ctx.pendingRawLabel.name}" is missing a directive`, {
           line: ctx.pendingRawLabel.lineNo,
           column: 1,
         });
@@ -904,20 +949,20 @@ export function parseModuleFile(
         const labelName = inlineMatch[1]!;
         const labelLower = labelName.toLowerCase();
         if (ctx.directDeclNamesLower.has(labelLower)) {
-          diag(diagnostics, modulePath, `Duplicate data declaration name "${labelName}".`, {
+          diag(diagnostics, filePath, `Duplicate data declaration name "${labelName}".`, {
             line: lineNo,
             column: 1,
           });
           return { nextIndex: index + 1 };
         }
-        const label: PendingRawLabel = { name: labelName, span: stmtSpan, lineNo };
-        const parsedRaw = parseRawDataDirective(label, inlineMatch[2]! + inlineMatch[3]!, lineNo, stmtSpan);
+        const label: PendingRawLabel = { name: labelName, span: stmtSpan, lineNo, filePath };
+        const parsedRaw = parseRawDataDirective(label, inlineMatch[2]! + inlineMatch[3]!, lineNo, stmtSpan, filePath);
         if (!parsedRaw) return { nextIndex: index + 1 };
         ctx.directDeclNamesLower.add(labelLower);
         if (ctx.sectionKind !== 'data') {
           diag(
             diagnostics,
-            modulePath,
+            filePath,
             `Raw data declarations are only permitted inside data sections.`,
             { line: lineNo, column: 1 },
           );
@@ -930,7 +975,7 @@ export function parseModuleFile(
         const labelName = labelMatch[1]!;
         const labelLower = labelName.toLowerCase();
         if (ctx.directDeclNamesLower.has(labelLower)) {
-          diag(diagnostics, modulePath, `Duplicate data declaration name "${labelName}".`, {
+          diag(diagnostics, filePath, `Duplicate data declaration name "${labelName}".`, {
             line: lineNo,
             column: 1,
           });
@@ -939,20 +984,20 @@ export function parseModuleFile(
         if (ctx.sectionKind !== 'data') {
           diag(
             diagnostics,
-            modulePath,
+            filePath,
             `Raw data labels are only permitted inside data sections.`,
             { line: lineNo, column: 1 },
           );
           return { nextIndex: index + 1 };
         }
-        ctx.pendingRawLabel = { name: labelName, span: stmtSpan, lineNo };
+        ctx.pendingRawLabel = { name: labelName, span: stmtSpan, lineNo, filePath };
         return { nextIndex: index + 1 };
       }
     } else if (ctx.scope === 'section' && ctx.sectionKind === 'code') {
       if (/^(db|dw|ds)\b/i.test(rest) || /^[A-Za-z_][A-Za-z0-9_]*\s*:\s*(db|dw|ds)\b/i.test(rest)) {
         diag(
           diagnostics,
-          modulePath,
+          filePath,
           `Raw data directives are only permitted inside data sections.`,
           { line: lineNo, column: 1 },
         );
@@ -962,7 +1007,7 @@ export function parseModuleFile(
       if (/^(db|dw|ds)\b/i.test(rest) || /^[A-Za-z_][A-Za-z0-9_]*\s*:\s*(db|dw|ds)\b/i.test(rest)) {
         diag(
           diagnostics,
-          modulePath,
+          filePath,
           `Raw data directives are only permitted inside data sections.`,
           { line: lineNo, column: 1 },
         );
@@ -976,6 +1021,7 @@ export function parseModuleFile(
       const parsed = dispatchHandler({
         index,
         lineNo,
+        filePath,
         text,
         rest,
         stmtSpan,
@@ -991,7 +1037,7 @@ export function parseModuleFile(
       const sectionDataDecl = parseDataDeclLine({
         allowOmittedInitializer: true,
         allowInferredArrayLength: false,
-        modulePath,
+        modulePath: filePath,
         diagnostics,
         lineNo,
         text: rest,
@@ -1000,7 +1046,7 @@ export function parseModuleFile(
       });
       if (!sectionDataDecl) return { nextIndex: index + 1 };
       if (ctx.sectionKind !== 'data') {
-        diag(diagnostics, modulePath, `Data declarations are only permitted inside data sections.`, {
+        diag(diagnostics, filePath, `Data declarations are only permitted inside data sections.`, {
           line: lineNo,
           column: 1,
         });
@@ -1014,7 +1060,7 @@ export function parseModuleFile(
     if (asmTail !== undefined || asmAfterExportTail !== undefined) {
       diag(
         diagnostics,
-        modulePath,
+        filePath,
         `"asm" is not a top-level construct (function and op bodies are implicit instruction streams)`,
         {
           line: lineNo,
@@ -1030,7 +1076,7 @@ export function parseModuleFile(
         if (hasTopKeyword(expectation.keyword)) {
           diagInvalidHeaderLine(
             diagnostics,
-            modulePath,
+            filePath,
             expectation.kind,
             text,
             expectation.expected,
@@ -1040,14 +1086,14 @@ export function parseModuleFile(
         }
       }
 
-      diag(diagnostics, modulePath, `Unsupported top-level construct: ${text}`, {
+      diag(diagnostics, filePath, `Unsupported top-level construct: ${text}`, {
         line: lineNo,
         column: 1,
       });
       return { nextIndex: index + 1 };
     }
 
-    diag(diagnostics, modulePath, `Unsupported section-contained construct: ${text}`, {
+    diag(diagnostics, filePath, `Unsupported section-contained construct: ${text}`, {
       line: lineNo,
       column: 1,
     });
@@ -1079,7 +1125,7 @@ export function parseModuleFile(
     }
 
     if (ctx.pendingRawLabel) {
-      diag(diagnostics, modulePath, `Raw data label "${ctx.pendingRawLabel.name}" is missing a directive`, {
+      diag(diagnostics, ctx.pendingRawLabel.filePath, `Raw data label "${ctx.pendingRawLabel.name}" is missing a directive`, {
         line: ctx.pendingRawLabel.lineNo,
         column: 1,
       });

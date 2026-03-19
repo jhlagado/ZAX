@@ -15,13 +15,21 @@ describe('PR476 type and union parser extraction', () => {
       raw: string;
       startOffset: number;
       endOffset: number;
+      lineNo: number;
+      filePath: string;
     } {
       const startOffset = file.lineStarts[lineIndex] ?? 0;
       const nextStart = file.lineStarts[lineIndex + 1] ?? file.text.length;
       let rawWithEol = file.text.slice(startOffset, nextStart);
       if (rawWithEol.endsWith('\n')) rawWithEol = rawWithEol.slice(0, -1);
       if (rawWithEol.endsWith('\r')) rawWithEol = rawWithEol.slice(0, -1);
-      return { raw: rawWithEol, startOffset, endOffset: startOffset + rawWithEol.length };
+      return {
+        raw: rawWithEol,
+        startOffset,
+        endOffset: startOffset + rawWithEol.length,
+        lineNo: lineIndex + 1,
+        filePath: file.path,
+      };
     }
 
     const parsed = parseTypeDecl('Pair', 'type Pair', span(file, 0, 9), 1, 0, {
@@ -57,13 +65,21 @@ describe('PR476 type and union parser extraction', () => {
       raw: string;
       startOffset: number;
       endOffset: number;
+      lineNo: number;
+      filePath: string;
     } {
       const startOffset = file.lineStarts[lineIndex] ?? 0;
       const nextStart = file.lineStarts[lineIndex + 1] ?? file.text.length;
       let rawWithEol = file.text.slice(startOffset, nextStart);
       if (rawWithEol.endsWith('\n')) rawWithEol = rawWithEol.slice(0, -1);
       if (rawWithEol.endsWith('\r')) rawWithEol = rawWithEol.slice(0, -1);
-      return { raw: rawWithEol, startOffset, endOffset: startOffset + rawWithEol.length };
+      return {
+        raw: rawWithEol,
+        startOffset,
+        endOffset: startOffset + rawWithEol.length,
+        lineNo: lineIndex + 1,
+        filePath: file.path,
+      };
     }
 
     const parsed = parseUnionDecl('Either', 'union Either', span(file, 0, 12), 1, 0, {
