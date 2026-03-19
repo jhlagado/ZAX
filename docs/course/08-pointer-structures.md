@@ -1,6 +1,6 @@
 # Chapter 08 — Pointer Structures
 
-The unit 8 examples work with data that is not laid out as a flat array. A
+The Chapter 08 examples work with data that is not laid out as a flat array. A
 linked list is a chain of individually addressable nodes, each holding a value
 and the address of the next node in the chain. A binary search tree is a
 hierarchy of nodes where each node holds a value and the addresses of its left
@@ -9,13 +9,11 @@ node to the next, you must follow a stored address — a pointer — rather than
 increment an index. That act of following a pointer is the defining operation
 in this chapter.
 
-ZAX expresses it through typed reinterpretation: given a local holding an
-address, you cast it to a named record type at the access site and name the
-field you want. The programmer writes the address arithmetic as a type
-annotation rather than as a numeric offset. The machine model stays fully
-visible — you still load the address into HL and work with raw Z80 registers —
-but the field access reads as structure, not as a byte offset into an opaque
-block of memory.
+The ZAX syntax for following a pointer to a named field is
+`<Type>local.field`, where `local` holds an address and `Type` names the
+record the compiler should interpret it as. You still load the address into HL
+and work with raw Z80 registers, but the field access names the field rather
+than hard-coding a byte offset. The next section shows the syntax directly.
 
 ---
 
@@ -197,8 +195,8 @@ Compare this with the linked list traversal: the list uses a `while` loop
 because the structure is linear — there is always at most one next step. The
 BST uses recursion because the structure is branching — at each node, the
 algorithm commits to one of two subtrees, and the choice depends on a
-comparison. Recursion maps naturally onto that shape; the call stack mirrors the
-path from root to target node.
+comparison. Recursion maps onto that shape directly: the call stack mirrors the path from
+root to target node.
 
 See `examples/course/unit8/bst.zax`.
 
@@ -222,15 +220,16 @@ step. `ptr` fields carry no type information: `next: addr` says that `next`
 holds an address, but not that it is the address of another `ListNode`. That
 annotation must be written at the use site, every time, as `<ListNode>`.
 
-This is a real ergonomic cost. It is honest: you always know exactly what the
-machine is doing. But for deeply linked structures, the repeated casting adds
-noise that obscures the algorithm's shape. The friction log in
-`docs/work/course-roadmap.md` records this as the pointer-typing ergonomics gap,
-grounded in the evidence from `linked_list.zax` and `bst.zax`.
+This is a real ergonomic cost. You always know exactly what the machine is
+doing — but for deeply linked structures, the repeated type annotation adds
+noise that obscures the algorithm's shape. This is the pointer-typing
+ergonomics gap grounded in the evidence from `linked_list.zax` and `bst.zax`,
+and it is an open design issue. Chapter 09 records it alongside the other
+open gaps from the course.
 
 ---
 
-## What This Unit Teaches About ZAX
+## What This Chapter Teaches
 
 - `type RecordName` / `field: type` / `end` defines a record. Fields have
   explicit types; the compiler tracks offsets.
@@ -248,7 +247,7 @@ grounded in the evidence from `linked_list.zax` and `bst.zax`.
 
 ---
 
-## Examples in This Unit
+## Examples in This Chapter
 
 - `examples/course/unit8/linked_list.zax` — singly-linked list sum using
   pointer traversal and null-sentinel termination
@@ -257,7 +256,7 @@ grounded in the evidence from `linked_list.zax` and `bst.zax`.
 
 ---
 
-## What comes next
+## What Comes Next
 
 Chapter 09 closes the course with the eight-queens problem — a backtracking
 search that puts maximum pressure on the loop-escape surface. It also functions
@@ -271,7 +270,7 @@ work is targeting.
 
 1. `list_sum` initialises `total_value` to zero and accumulates into it.
    Rewrite the traversal as a recursive function in the style of
-   `array_sum_recursive.zax` from unit 6. How does the call depth relate to the
+   `array_sum_recursive.zax` from Chapter 06. How does the call depth relate to the
    list length?
 
 2. The null check `ld a, h` / `or l` / `if Z` tests whether HL is zero. What

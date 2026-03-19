@@ -1,13 +1,13 @@
 # Chapter 03 — Strings
 
-The unit 3 examples shift the focus from indexed arrays to pointer-walked memory.
+The Chapter 03 examples shift the focus from indexed arrays to pointer-walked memory.
 A null-terminated string is just a sequence of bytes with a zero at the end. That
 simple convention drives everything in this chapter: every algorithm either walks
 until it finds the zero, or copies until it copies the zero.
 
-What changes compared to unit 2 is the register discipline. In unit 2, the index
+What changes compared to Chapter 02 is the register discipline. In Chapter 02, the index
 lived in a typed local and the array base was a fixed symbol; you loaded the index
-into L or B and did a single array access. In unit 3, the current position lives
+into L or B and did a single array access. In Chapter 03, the current position lives
 in HL or DE directly — the pointer is the thing that advances. Typed storage paths
 appear where they help (buffering a character into a local, storing the running
 total of a conversion), but the traversal itself is raw Z80 pointer work: `ld a,
@@ -35,9 +35,12 @@ The `or a` instruction ORs A with itself — it has no effect on A but sets or c
 the Z flag depending on whether A is zero. `if Z` then handles the terminator.
 This is the standard Z80 idiom for testing a byte against zero without disturbing
 its value (unlike `cp 0`, which also sets Z but incurs a second immediate operand).
-You will see this pattern in every unit 3 example.
+Six of the seven Chapter 03 examples use this pattern as the core of their
+traversal loop. The exception is `itoa.zax`, which generates digits by repeated
+division into a scratch buffer and terminates by index counter, not by null
+sentinel.
 
-The loop structure is the `while NZ` idiom from unit 1, established by `ld a, 1` /
+The loop structure is the `while NZ` idiom from Chapter 01, established by `ld a, 1` /
 `or a` at entry and re-established at the bottom of each iteration. The actual loop
 exit happens via an early `ret` or `break` inside the body when the terminator is
 found.
@@ -82,9 +85,9 @@ immediately after the op call — if A is zero, the terminator was just copied a
 the copy is complete. This is a tight and readable way to write the copy-including-
 terminator loop: copy first, then check what was copied.
 
-The `op` definition here is a local helper, not a shared library function. The
-pointer-advance pattern recurs across most unit 3 examples; the roadmap notes it
-as a candidate for a shared helper op once the full recurrence is measured.
+The `op` definition here is a local helper, not a shared library function.
+Defining it as an `op` rather than a `func` avoids call overhead and keeps
+the body visible alongside the loop that uses it.
 
 See `examples/course/unit3/strcpy.zax`.
 
@@ -228,7 +231,7 @@ digits accumulate into a scratch buffer in reverse order. A second pass then
 copies them into the output buffer in forward order.
 
 The division uses the `div_u16` helper — the same repeated-subtraction routine
-that appears in the unit 1 arithmetic examples — and `times_ten` is used again to
+that appears in the Chapter 01 arithmetic examples — and `times_ten` is used again to
 recover the digit: the remainder from `remaining - quotient * 10` gives the raw
 digit value. Adding `'0'` converts it to an ASCII character.
 
@@ -240,7 +243,7 @@ See `examples/course/unit3/itoa.zax`.
 
 ---
 
-## What This Unit Teaches About ZAX
+## What This Chapter Teaches
 
 - The null-terminator loop — `ld a, (hl)` / `or a` / `if Z` — is the fundamental
   string traversal idiom. You will use it in every string-processing function.
@@ -257,7 +260,7 @@ See `examples/course/unit3/itoa.zax`.
 
 ---
 
-## Examples in This Unit
+## Examples in This Chapter
 
 - `examples/course/unit3/strlen.zax` — byte count to null terminator
 - `examples/course/unit3/strcpy.zax` — copy with a local `op` for advance
@@ -269,7 +272,7 @@ See `examples/course/unit3/itoa.zax`.
 
 ---
 
-## What comes next
+## What Comes Next
 
 Chapter 04 returns to tight, register-level work: bit manipulation using Z80
 shift and logic instructions. The loop structures are the same `while NZ` idiom
