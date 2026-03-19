@@ -89,6 +89,7 @@ By the end of Volume 1, the reader should be able to:
   - functions with arguments and locals
   - `op`
 - understand what module `import` is and why it is a Book 2 topic
+- understand what `include` is, how it differs from `import`, and when each is appropriate
 
 At that point the reader is ready for the algorithms volume.
 
@@ -163,7 +164,7 @@ author a clear line.
 | module `import` system | Book 2 | |
 | `for` loop | Book 2 or later | see note below |
 | `repeat...until` | Phase B or Book 2 | see note below |
-| text-level `include` | pending design | see open questions |
+| text-level `include` | Phase B or Book 2 | shipped (PR #951); teach after `import`, not before — see teaching rule below |
 
 ### Note on `for`
 
@@ -182,6 +183,30 @@ Book 1 only if a later chapter produces a genuinely clear natural example
 where it is better than a `while` with a leading flag test. If no such example
 appears organically, leave `repeat...until` for Book 2. Do not force an
 example to justify early introduction.
+
+### Teaching rule: `import` and `include`
+
+When multi-file composition is introduced (Phase B or Book 2), teach `import`
+first. Introduce `include` immediately after, as an explicit contrast.
+
+The contrast must make these distinctions clear:
+
+- `import` creates a module relationship: qualified names (`dep.Symbol`),
+  export rules, circular-import detection, deterministic module order.
+- `include` is a literal pre-parse text paste: the included text is inserted
+  into the including file before parsing begins.
+- `include` has no module semantics. There are no qualified names, no export
+  rules, no module graph.
+- Including the same file twice inserts the text twice. There are no
+  include-once semantics unless the programmer builds them manually.
+- `import` is the right tool for program logic, API-style module boundaries,
+  and anything that wants exports or qualified names.
+- `include` is the right tool for shared hardware constants, shared op
+  definitions, and repeated low-level definitions that are implementation
+  detail rather than public API.
+
+Do not introduce `include` before `import`. A reader who learns `include`
+first will try to use it as a module system, which it is not.
 
 ---
 
@@ -297,6 +322,12 @@ RPN calculator's `word_stack` module). Book 1 prepares the reader for `import`
 by naming it and explaining that it is a separate concept from text-level
 inclusion, then deferring its full treatment.
 
+`include` is also available as a language feature (shipped PR #951). It is not
+a module mechanism. It performs a literal pre-parse text insertion with no
+module graph involvement, no qualified names, and no include-once semantics.
+Book 1 may name it when introducing `import`, as a contrast, and leave both for
+deeper treatment in Volume 2.
+
 ---
 
 ## Example Style Guidance
@@ -362,16 +393,21 @@ know what format Book 1 targets operationally in the prose (raw binary, Intel
 HEX, listing file, or some combination). This affects how example programs are
 presented and verified.
 
-**2. Text-level `include` directive**
+**2. Text-level `include` directive — SETTLED**
 
-A text-level source inclusion mechanism — `include "filename.zax"` or
-`#include "filename.zax"` — remains a design candidate. See
-`docs/design/text-include.md` for the full design note.
+`include "path"` shipped in PR #951. It is not a design candidate; it is
+implemented and in spec §3.1.1.
 
-With a generic platform target, the primary motivation is weaker than it would
-be for a machine-specific hardware definitions file. Do not treat `include` as
-a prerequisite for the first tranche. Revisit it only if real early examples
-start accumulating noisy repeated constants or definitions.
+Settled decisions for Book 1:
+
+- `include` is not needed for Phase A. Phase A examples are short, single-file,
+  and platform-neutral. No shared hardware definitions file is required.
+- `include` is deferred to Phase B or Book 2, taught after `import`, not before.
+- Teaching rule: when `import` is introduced, contrast it explicitly with
+  `include`. See the teaching rule section below.
+- Do not add `.inc` files to Book 1 example directories until the platform
+  story is settled and a concrete shared-definition need emerges from the
+  actual example corpus.
 
 **3. Phase A / Phase B balance**
 

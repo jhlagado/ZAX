@@ -1894,6 +1894,7 @@ A ZAX module is a single `.zax` source file. Its **canonical ID** is the file's 
 
 A module file may contain, in any order:
 
+- zero or more `include` lines (text-only insertion)
 - zero or more `import` lines (must be at module scope)
 - section and alignment directives (`section`, `align`)
 - module-scope declarations: `type`, `union`, `enum`, `const`, `bin`, `hex`, `extern`
@@ -1914,6 +1915,16 @@ import "drivers/uart.zax"      ; explicit path, resolved relative to the importi
 For quoted paths, the `.zax` extension should be included. Resolution is: first relative to the importing file's directory, then via compiler search paths (added with `-I`). If the file is not found, compilation fails.
 
 Circular imports are a compile error.
+
+### 10.2.1 Text-Only Includes
+
+You can also insert raw text before parsing:
+
+```zax
+include "legacy/uart.asm"
+```
+
+`include` is a literal text insertion and has no module semantics. It can appear anywhere, and path resolution uses the same rules as `import "<path>"`.
 
 ### 10.3 Module Visibility and Qualified Names
 
