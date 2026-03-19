@@ -214,8 +214,6 @@ loop_top:
   ld (counter), a
   dec b
   jp nz, loop_top
-
-  ret
 end
 ```
 
@@ -253,7 +251,7 @@ counter. Always identify which instruction sets the flag you are about to test.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - The Z, C, S, and P/V flags record the outcome of the last instruction that
   affected them. Most `ld` instructions do not affect flags; arithmetic and

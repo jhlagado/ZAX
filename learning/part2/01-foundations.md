@@ -366,7 +366,7 @@ See `learning/part2/examples/unit1/digits.zax`.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - `:=` is the interface between typed storage and the Z80 register file. It
   appears constantly alongside raw Z80 mnemonics in the same function body.

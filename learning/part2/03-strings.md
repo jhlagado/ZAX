@@ -245,7 +245,7 @@ See `learning/part2/examples/unit3/itoa.zax`.
 
 ---
 
-## What This Chapter Teaches
+## Summary
 
 - The null-terminator loop — `ld a, (hl)` / `or a` / `if Z` — is the core
   string traversal pattern. You will use it in every string-processing function.

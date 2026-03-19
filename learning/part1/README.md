@@ -22,7 +22,7 @@ Chapters 09–11 show how ZAX removes that friction. Typed variables, `if`/`whil
 
 | Ch | File | Phase | What it covers |
 |----|------|-------|----------------|
-| 00 | [What a Computer Is Doing](00-what-a-computer-is-doing.md) | A | Bytes, addresses, machine code, the ZAX module shell |
+| 00 | [Machine Code and the Assembler](00-what-a-computer-is-doing.md) | A | Bytes, addresses, machine code, the ZAX module shell |
 | 01 | [Numbers and Registers](01-numbers-and-registers.md) | A | Binary and hex, the Z80 register set, register pairs |
 | 02 | [Loading, Storing, Constants](02-loading-storing-constants.md) | A | `ld` addressing modes, labels, `const`, named storage |
 | 03 | [Flags, Comparisons, Jumps](03-flags-comparisons-jumps.md) | A | Flag register, `cp`, `or a`, conditional and unconditional jumps |
