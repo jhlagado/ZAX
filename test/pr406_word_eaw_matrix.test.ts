@@ -20,7 +20,7 @@ const compileAsm = async (entry: string): Promise<string> => {
 describe('PR406: indexed word EAW matrix coverage', () => {
   it('uses EAW_GLOB_FVAR for global base + frame word index', async () => {
     const text = await compileAsm(
-      join(__dirname, '..', 'examples', 'language-tour', '66_word_glob_fvar.zax'),
+      join(__dirname, '..', 'test', 'language-tour', '66_word_glob_fvar.zax'),
     );
 
     expect(text).toContain('LD DE, GLOB_WORDS');
@@ -33,7 +33,7 @@ describe('PR406: indexed word EAW matrix coverage', () => {
 
   it('uses EAW_FVAR_FVAR for frame base + frame word index', async () => {
     const text = await compileAsm(
-      join(__dirname, '..', 'examples', 'language-tour', '67_word_fvar_fvar.zax'),
+      join(__dirname, '..', 'test', 'language-tour', '67_word_fvar_fvar.zax'),
     );
 
     expect(text).toContain('LD E, (IX + $0004)');
@@ -49,7 +49,7 @@ describe('PR406: indexed word EAW matrix coverage', () => {
 
   it('uses EAW_FVAR_GLOB for frame base + global word index', async () => {
     const text = await compileAsm(
-      join(__dirname, '..', 'examples', 'language-tour', '68_word_fvar_glob.zax'),
+      join(__dirname, '..', 'test', 'language-tour', '68_word_fvar_glob.zax'),
     );
 
     expect(text).toContain('LD E, (IX + $0004)');
@@ -62,7 +62,7 @@ describe('PR406: indexed word EAW matrix coverage', () => {
 
   it('uses EAW_GLOB_GLOB for global base + global word index', async () => {
     const text = await compileAsm(
-      join(__dirname, '..', 'examples', 'language-tour', '69_word_glob_glob.zax'),
+      join(__dirname, '..', 'test', 'language-tour', '69_word_glob_glob.zax'),
     );
 
     expect(text).toContain('LD DE, GLOB_WORDS');

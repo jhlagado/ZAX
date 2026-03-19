@@ -23,12 +23,12 @@ describe('PR453: codegen corpus workflow', () => {
   it('documents the supported regeneration command and ownership', async () => {
     const [workflowDoc, indexDoc] = await Promise.all([
       readFile(join(__dirname, '..', 'docs', 'reference', 'codegen-corpus-workflow.md'), 'utf8'),
-      readFile(join(__dirname, '..', 'examples', 'codegen-corpus', 'INDEX.md'), 'utf8'),
+      readFile(join(__dirname, '..', 'test', 'codegen-corpus', 'INDEX.md'), 'utf8'),
     ]);
 
     expect(workflowDoc).toContain('npm run regen:codegen-corpus');
     expect(workflowDoc).toContain('test/fixtures/corpus/manifest.json');
-    expect(workflowDoc).toContain('examples/language-tour/30+');
+    expect(workflowDoc).toContain('test/language-tour/30+');
     expect(indexDoc).toContain('npm run regen:codegen-corpus');
     expect(indexDoc).toContain('docs/reference/codegen-corpus-workflow.md');
   });

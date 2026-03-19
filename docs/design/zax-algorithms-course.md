@@ -341,7 +341,7 @@ surface: typed storage, `func`, `if`/`while`/`repeat`/`select` with ranges,
 | Decimal digit decomposition              | K&R §1.2   | division-by-10, character offset, `repeat`    |
 
 Note: a Fibonacci reference implementation already exists at
-`examples/language-tour/02_fibonacci_args_locals.zax`. That file is the style
+`test/language-tour/02_fibonacci_args_locals.zax`. That file is the style
 baseline for Unit 2.
 
 #### 1B: Sorting and Searching
@@ -798,7 +798,7 @@ recorded in `docs/design/`.
 **Goal**: complete all Unit 2 arithmetic examples, establish the style baseline,
 confirm the compiler handles the unit cleanly.
 
-**Style baseline**: `examples/language-tour/02_fibonacci_args_locals.zax`.
+**Style baseline**: `test/language-tour/02_fibonacci_args_locals.zax`.
 All Tranche 1 files must match that style: current typed-storage syntax, explicit return
 registers, no unexplained register choices.
 
@@ -814,7 +814,7 @@ registers, no unexplained register choices.
 | `fibonacci.zax`     | Fibonacci (iterative, extended)   | `while`, two-variable rolling locals        |
 | `digits.zax`        | Decimal digit decomposition       | division-by-10, `repeat`, character offset  |
 
-Fibonacci already has a reference in `examples/language-tour/02_fibonacci_args_locals.zax`.
+Fibonacci already has a reference in `test/language-tour/02_fibonacci_args_locals.zax`.
 The Unit 2 version extends it to a full table-generating form.
 
 **Support surface needed**: none beyond current main. Unit 2 is pure arithmetic —

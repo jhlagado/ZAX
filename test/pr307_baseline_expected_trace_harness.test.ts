@@ -44,14 +44,14 @@ describe('PR307: baseline expected-trace harness', () => {
     const entry = join(
       __dirname,
       '..',
-      'examples',
+      'test',
       'language-tour',
       '00_call_with_arg_and_local_baseline.zax',
     );
     const expectedPath = join(
       __dirname,
       '..',
-      'examples',
+      'test',
       'language-tour',
       '00_call_with_arg_and_local_baseline.expected-v02.asm',
     );
