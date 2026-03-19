@@ -46,7 +46,7 @@ Planned file set:
 - `docs/intro/08-a-phase-a-program.md`
 - `docs/intro/09-typed-storage-and-assignment.md`
 - `docs/intro/10-structured-control-flow.md`
-- `docs/intro/10-subroutines-arguments-and-op.md`
+- `docs/intro/11-functions-arguments-and-op.md`
 
 ## Canonical sources
 
@@ -185,7 +185,7 @@ Covers Z80 I/O ports. Phase A.
 - `if`, `while`, then `break` / `continue`
 - direct comparison against Phase A jump-heavy versions
 
-### `10-subroutines-arguments-and-op.md`
+### `10-functions-arguments-and-op.md`
 
 - arguments, locals, and `op`
 - final bridge into the advanced practical-programming volume
@@ -212,7 +212,7 @@ Covers Z80 I/O ports. Phase A.
 
 - `docs/intro/09-typed-storage-and-assignment.md`
 - `docs/intro/10-structured-control-flow.md`
-- `docs/intro/10-subroutines-arguments-and-op.md`
+- `docs/intro/11-functions-arguments-and-op.md`
 
 ## Verification expectations
 

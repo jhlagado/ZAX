@@ -1,6 +1,6 @@
 # Chapter 07 — Composition
 
-The unit 7 example is an RPN calculator. It is the first program in this course
+The Chapter 07 example is an RPN calculator. It is the first program in this course
 that is built from more than one source file. `rpn_calculator.zax` is the
 lesson. `word_stack.zax` is a support module that the calculator imports — it
 provides a push and a pop operation over a typed word array, and the calculator
@@ -132,7 +132,7 @@ end
 
 `word_stack.zax` loads the depth count into L with `ld l, a` — L is the index token for the `arr[L]` path expression — while DE carries the word value via `de := value_word`. `stack_slots[L] := de` then stores it cleanly. This is the established ZAX idiom for word-array access with an 8-bit index: index in L, value in DE.
 
-This is a real design choice, not an accident of the implementation. The programmer writes `ld l, a` to set the index, `de := value_word` to hold the value, and `stack_slots[L] := de` to store it — that is all that appears in the source. `word_stack.zax` is short enough to read in its entirety — the full source is in `examples/course/unit7/word_stack.zax`.
+The full source of `word_stack.zax` is short enough to read in one sitting — see `examples/course/unit7/word_stack.zax`.
 
 ---
 
@@ -153,7 +153,7 @@ the right operand is saved, the left operand is popped, the operation is applied
 
 ---
 
-## What This Unit Teaches About ZAX
+## What This Chapter Teaches
 
 - `import "module.zax"` makes exported functions available under the module
   name. Calls are qualified: `word_stack.push_word`.
@@ -172,7 +172,7 @@ the right operand is saved, the left operand is popped, the operation is applied
 
 ---
 
-## Examples in This Unit
+## Examples in This Chapter
 
 - `examples/course/unit7/rpn_calculator.zax` — the lesson: RPN evaluation loop
   with operator dispatch and software-stack management
@@ -181,7 +181,7 @@ the right operand is saved, the left operand is popped, the operation is applied
 
 ---
 
-## What comes next
+## What Comes Next
 
 Chapter 08 works with pointer fields and typed reinterpretation. The linked
 list and binary search tree examples require following stored addresses rather
@@ -208,5 +208,5 @@ stack here, but using the same typed-path and null-sentinel discipline.
 
 4. `pop_word` returns its result in HL and the new depth in A simultaneously
    (`HL, AF` return declaration). After each pop in the calculator, `stack_depth
-   := a` captures the new depth. What would happen if this assignment were
+:= a` captures the new depth. What would happen if this assignment were
    omitted for the second of the two pops in the `KindAdd` arm?

@@ -1,7 +1,7 @@
 # Chapter 02 — Arrays and Loops
 
-The unit 2 examples introduce arrays and the full loop surface: `while`,
-`break`, and `continue`. The algorithms in this unit — sorting and searching
+The Chapter 02 examples introduce arrays and the full loop surface: `while`,
+`break`, and `continue`. The algorithms in this chapter — sorting and searching
 over small byte arrays — are chosen deliberately. They require indexed storage,
 they loop over it repeatedly, and they exit loops early under specific
 conditions. That last requirement is what makes `break` and `continue` earn
@@ -29,7 +29,7 @@ element strides for indexed access.
 
 Declaring an array as a function local is not directly supported for variable-
 length storage — function `var` blocks only hold scalars. Working arrays for
-unit 2 algorithms live in named `data` sections at module scope, which is the
+Chapter 02 algorithms live in named `data` sections at module scope, which is the
 normal home for data that persists across function calls.
 
 ---
@@ -54,7 +54,7 @@ low half of HL, which is the register pair the Z80 uses for most memory
 addressing. Loading the index into L and leaving H as zero gives you a valid
 16-bit address offset with minimal fuss.
 
-This is the register-as-index convention throughout the unit 2 examples: load
+This is the register-as-index convention throughout the Chapter 02 examples: load
 the index into L (or occasionally B), perform the array access, then advance
 the index with `succ` or with an arithmetic instruction.
 
@@ -75,35 +75,22 @@ compiler emits the required address calculation and write instruction.
 
 One indexing detail is worth remembering: `values[HL]` uses HL directly as a
 16-bit index into the array. `values[(HL)]` reads a byte from memory at address
-HL and uses that byte as the index. These mean different things. The unit 2
+HL and uses that byte as the index. These mean different things. The Chapter 02
 examples use the direct form: the index is a value held in a register, not
 a value pointed to by a register.
 
 ---
 
-## Loops: `while` and `repeat`/`until`
+## The `while` Loop
 
-The unit 1 chapter introduced `while`. The unit 2 examples use it more
-extensively. The two loop forms are:
+Chapter 01 introduced `while <cc> ... end`: it checks the condition before each
+iteration. If the condition is false on entry, the body never executes. All the
+chapter 02 examples use this form because the loop bounds are checked upfront —
+every sort and search knows its range before it starts.
 
-- `while <cc> ... end`: checks the condition before each iteration. If the
-  condition is false on entry, the body never runs.
-- `repeat ... until <cc>`: runs the body at least once, then checks the
-  condition at the `until`. Continues looping as long as the condition is
-  false; stops when it is true.
-
-The `repeat`/`until` form is natural when the loop body must execute once
-before any test makes sense. The unit 2 sorting and searching examples use
-`while` because the loop bounds are checked upfront. Chapter 03 uses `while NZ`
-with early `break` for string scanning — a natural fit when the exit condition
-can occur mid-body rather than only at the top or bottom of the loop.
-
-Both forms require the programmer to establish the correct flag state. `while`
-requires flags to be correct at the point of the `while` keyword and again at
-the back edge after each iteration. `until` requires flags to be correct at the
-`until` keyword, using whatever state the loop body left behind.
-
-For the formal semantics of `repeat`/`until`, see `docs/spec/zax-spec.md`.
+ZAX also has a `repeat ... until <cc>` form that runs the body at least once
+and tests the condition at the bottom. None of the Chapter 02 examples require
+it.
 
 ---
 
@@ -289,7 +276,7 @@ Insertion sort works by maintaining a sorted prefix of the array. For each new
 element (the `hold_value`), it finds the correct insertion position in the
 prefix and shifts elements right to make room.
 
-The unit 2 version implements this recursively through the helper
+The Chapter 02 version implements this recursively through the helper
 `insert_hole`, which walks leftward through the prefix comparing adjacent
 elements. The recursion depth is bounded by the array length; for short arrays
 this is fine. The function exits early via `ret` in two cases: when the scan
@@ -431,7 +418,7 @@ See `examples/course/unit2/binary_search.zax`.
 ### Prime sieve
 
 The sieve of Eratosthenes marks all composite numbers in a flag array. It is
-the most algorithmically interesting unit 2 example because it has nested loops
+the most algorithmically interesting Chapter 02 example because it has nested loops
 and uses both `break` and `continue` — the full loop-control surface.
 
 The outer loop iterates over candidate factors from 2 to `StopFactor`. For each
@@ -447,7 +434,7 @@ See `examples/course/unit2/prime_sieve.zax`.
 
 ---
 
-## What This Unit Teaches About ZAX
+## What This Chapter Teaches
 
 - Arrays are declared with exact sizes. There is no hidden padding. A `byte[8]`
   is eight bytes.
@@ -468,7 +455,7 @@ See `examples/course/unit2/prime_sieve.zax`.
 
 ---
 
-## Examples in This Unit
+## Examples in This Chapter
 
 - `examples/course/unit2/bubble_sort.zax` — repeated adjacent-swap passes
 - `examples/course/unit2/insertion_sort.zax` — sorted insertion into a growing prefix
@@ -479,7 +466,7 @@ See `examples/course/unit2/prime_sieve.zax`.
 
 ---
 
-## What comes next
+## What Comes Next
 
 Chapter 03 moves from indexed arrays to pointer-walked memory. The string
 algorithms there advance HL and DE directly rather than loading an index into L
