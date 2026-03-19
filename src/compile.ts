@@ -17,6 +17,7 @@ import { canonicalModuleId } from './moduleIdentity.js';
 import { validateAssignmentAcceptance } from './semantics/assignmentAcceptance.js';
 import { buildEnv } from './semantics/env.js';
 import { validateSuccPredAcceptance } from './semantics/succPredAcceptance.js';
+import { stripLineComment } from './frontend/parseParserShared.js';
 
 function hasErrors(diagnostics: Diagnostic[]): boolean {
   return diagnostics.some((d) => d.severity === 'error');
@@ -83,6 +84,21 @@ function resolveImportCandidates(
   return out.filter((p) => (seen.has(p) ? false : (seen.add(p), true)));
 }
 
+function resolveIncludeCandidates(
+  fromModulePath: string,
+  specifier: string,
+  includeDirs: string[],
+): string[] {
+  const fromDir = dirname(fromModulePath);
+  const out: string[] = [];
+  out.push(normalizePath(resolve(fromDir, specifier)));
+  for (const inc of includeDirs) {
+    out.push(normalizePath(resolve(inc, specifier)));
+  }
+  const seen = new Set<string>();
+  return out.filter((p) => (seen.has(p) ? false : (seen.add(p), true)));
+}
+
 function isIgnorableImportProbeError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false;
   const code = (err as { code?: unknown }).code;
@@ -108,6 +124,93 @@ async function loadProgram(
   const includeDirs = (options.includeDirs ?? []).map(normalizePath);
   const moduleIdRootDir = dirname(entryPath);
 
+  const expandIncludes = async (
+    modulePath: string,
+    sourceText: string,
+    includeStack: string[],
+  ): Promise<string | undefined> => {
+    const lines = sourceText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+    const out: string[] = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const raw = lines[i] ?? '';
+      const stripped = stripLineComment(raw).trim();
+      const lineNo = i + 1;
+      const match = /^\s*include\s+"([^"]+)"\s*$/.exec(stripped);
+      if (!match) {
+        out.push(raw);
+        continue;
+      }
+
+      const spec = match[1]!;
+      const candidates = resolveIncludeCandidates(modulePath, spec, includeDirs);
+      let resolved: string | undefined;
+      let resolvedText: string | undefined;
+      let hardFailure = false;
+
+      for (const c of candidates) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          resolvedText = await readFile(c, 'utf8');
+          resolved = c;
+          break;
+        } catch (err) {
+          if (isIgnorableImportProbeError(err)) {
+            continue;
+          }
+          diagnostics.push({
+            id: DiagnosticIds.IoReadFailed,
+            severity: 'error',
+            message: `Failed to read include candidate "${c}" while resolving includes for "${modulePath}": ${String(
+              err,
+            )}`,
+            file: modulePath,
+            line: lineNo,
+            column: raw.indexOf('include') + 1 || 1,
+          });
+          hardFailure = true;
+          break;
+        }
+      }
+
+      if (hardFailure) return undefined;
+
+      if (!resolved || resolvedText === undefined) {
+        diagnostics.push({
+          id: DiagnosticIds.ImportNotFound,
+          severity: 'error',
+          message: `Failed to resolve include "${spec}" from "${modulePath}". Tried:\n${candidates
+            .map((c) => `- ${c}`)
+            .join('\n')}`,
+          file: modulePath,
+          line: lineNo,
+          column: raw.indexOf('include') + 1 || 1,
+        });
+        out.push(raw);
+        continue;
+      }
+
+      if (includeStack.includes(resolved)) {
+        diagnostics.push({
+          id: DiagnosticIds.SemanticsError,
+          severity: 'error',
+          message: `Include cycle detected: "${resolved}" is already active in the include stack.`,
+          file: modulePath,
+          line: lineNo,
+          column: raw.indexOf('include') + 1 || 1,
+        });
+        out.push(raw);
+        continue;
+      }
+
+      const expanded = await expandIncludes(resolved, resolvedText, [...includeStack, resolved]);
+      if (expanded === undefined) return undefined;
+      out.push(expanded);
+    }
+
+    return out.join('\n');
+  };
+
   const loadModule = async (
     modulePath: string,
     importer?: string,
@@ -131,9 +234,12 @@ async function loadProgram(
       return;
     }
 
+    const expandedText = await expandIncludes(p, sourceText, [p]);
+    if (expandedText === undefined) return;
+
     let moduleFile: ModuleFileNode;
     try {
-      moduleFile = parseModuleFile(p, sourceText, diagnostics);
+      moduleFile = parseModuleFile(p, expandedText, diagnostics);
     } catch (err) {
       diagnostics.push({
         id: DiagnosticIds.InternalParseError,
@@ -145,7 +251,7 @@ async function loadProgram(
     }
 
     modules.set(p, moduleFile);
-    sourceTexts.set(p, sourceText);
+    sourceTexts.set(p, expandedText);
     edges.set(p, new Map());
 
     for (const imp of importTargets(moduleFile)) {
