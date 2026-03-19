@@ -112,17 +112,17 @@ is implemented and available on the current surface. The course examples use it.
 
 **Real and grounded, design open**:
 
-- *Named exit from nested structures.* The `found_solution` flag in
+- _Named exit from nested structures._ The `found_solution` flag in
   `eight_queens.zax` is a direct workaround for this. The gap is recorded;
   no specific design has been decided.
 
-- *Pointer-typing ergonomics.* `linked_list.zax` and `bst.zax` both require
+- _Pointer-typing ergonomics._ `linked_list.zax` and `bst.zax` both require
   `<Type>local.field` at every traversal step. The `addr` type carries no type
   information — there is no `addr<ListNode>`. Every dereference must repeat the
   type annotation at the use site. The design is not settled. See `docs/design/`
   for live design work as it progresses.
 
-- *Software-stack storage verbosity.* `rpn_calculator.zax` requires storing
+- _Software-stack storage verbosity._ `rpn_calculator.zax` requires storing
   every `pop_word` result into a local immediately to survive the next
   `pop_word`. The support module interface works, but the interaction between
   software-stack operations and frame-local storage is repetitive. Whether the
@@ -130,7 +130,7 @@ is implemented and available on the current surface. The course examples use it.
 
 **Language gaps, not library gaps**:
 
-- *Local named-constant initialisation.* `var` block initialisers cannot
+- _Local named-constant initialisation._ `var` block initialisers cannot
   currently reference named constants by name. This is a readability gap
   grounded in `binary_search.zax` and `bubble_sort.zax`. It requires a
   compiler change and is not addressable by a library or idiom.

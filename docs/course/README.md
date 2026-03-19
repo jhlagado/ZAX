@@ -71,18 +71,18 @@ it) shows the generated assembly for each source file.
 
 ## Chapter List
 
-| File | Chapter | What it covers |
-|------|---------|----------------|
-| `00-introduction.md` | Introduction | What ZAX is, why it exists, the structured assembler philosophy. No code. |
-| `01-foundations.md` | Foundations | Variables, `:=` assignment, functions, `while`/`if`, `succ`/`pred`. Arithmetic and number-theory algorithms. |
-| `02-arrays-and-loops.md` | Arrays and Loops | Array indexing with register operands, `break` and `continue`, the register-as-index convention. Sorting and searching. |
-| `03-strings.md` | Strings | Null-terminated strings, byte-by-byte traversal, `while NZ` sentinel loops with early `break`. String algorithms. |
-| `04-bit-patterns.md` | Bit Patterns | Z80 shift and logic idioms, counter-driven loops, local `op` for recurring register patterns. Bit manipulation. |
-| `05-records.md` | Records | Typed aggregate state, field access, `sizeof`/`offsetof`, non-power-of-two strides. Ring buffer. |
-| `06-recursion.md` | Recursion | Recursive functions, IX frame per call, preserving return values across multiple calls. Hanoi, recursive reverse and sum. |
-| `07-composition.md` | Composition | `import`, module-qualified calls, `select`/`case` dispatch, software-stack discipline. RPN calculator. |
-| `08-pointer-structures.md` | Pointer Structures | Typed reinterpretation (`<Type>local.field`), null-sentinel traversal, static pointer wiring. Linked list and BST. |
-| `09-gaps-and-futures.md` | Gaps and Futures | Control-flow pressure, recorded language gaps, design status. Eight queens capstone. |
+| File                       | Chapter            | What it covers                                                                                                            |
+| -------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `00-introduction.md`       | Introduction       | What ZAX is, why it exists, the structured assembler philosophy. No code.                                                 |
+| `01-foundations.md`        | Foundations        | Variables, `:=` assignment, functions, `while`/`if`, `succ`/`pred`. Arithmetic and number-theory algorithms.              |
+| `02-arrays-and-loops.md`   | Arrays and Loops   | Array indexing with register operands, `break` and `continue`, the register-as-index convention. Sorting and searching.   |
+| `03-strings.md`            | Strings            | Null-terminated strings, byte-by-byte traversal, `while NZ` sentinel loops with early `break`. String algorithms.         |
+| `04-bit-patterns.md`       | Bit Patterns       | Z80 shift and logic idioms, counter-driven loops, local `op` for recurring register patterns. Bit manipulation.           |
+| `05-records.md`            | Records            | Typed aggregate state, field access, `sizeof`/`offsetof`, non-power-of-two strides. Ring buffer.                          |
+| `06-recursion.md`          | Recursion          | Recursive functions, IX frame per call, preserving return values across multiple calls. Hanoi, recursive reverse and sum. |
+| `07-composition.md`        | Composition        | `import`, module-qualified calls, `select`/`case` dispatch, software-stack discipline. RPN calculator.                    |
+| `08-pointer-structures.md` | Pointer Structures | Typed reinterpretation (`<Type>local.field`), null-sentinel traversal, static pointer wiring. Linked list and BST.        |
+| `09-gaps-and-futures.md`   | Gaps and Futures   | Control-flow pressure, recorded language gaps, design status. Eight queens capstone.                                      |
 
 ---
 
