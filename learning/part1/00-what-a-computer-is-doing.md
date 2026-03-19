@@ -1,6 +1,6 @@
 [Part 1](README.md) | [Numbers and Registers →](01-numbers-and-registers.md)
 
-# Chapter 00 — What a Computer Is Doing
+# Chapter 00 — Machine Code and the Assembler
 
 This chapter explains the ground that every later chapter builds on: what bytes
 and addresses are, how memory holds both code and data, and what an assembler

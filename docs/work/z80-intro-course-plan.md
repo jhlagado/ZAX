@@ -217,7 +217,7 @@ numbers and topics are the current plan; titles are working titles.
 
 ### Phase A — Raw Z80 in ZAX (chapters 00–07)
 
-**Chapter 00 — What a Computer Is Doing**
+**Chapter 00 — Machine Code and the Assembler**
 - machine code vs assembly language
 - bytes and words; memory as addressed storage
 - code vs data; ROM vs RAM
