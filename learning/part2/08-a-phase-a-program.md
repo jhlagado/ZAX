@@ -1,4 +1,4 @@
-[← I/O and Ports](07-io-and-ports.md) | [Part 1](README.md) | [Typed Storage and Assignment →](09-typed-storage-and-assignment.md)
+[← I/O and Ports](07-io-and-ports.md) | [Part 2](README.md) | [Typed Storage and Assignment →](09-typed-storage-and-assignment.md)
 
 # Chapter 08 — A Complete Program
 
@@ -269,4 +269,4 @@ places on the stack, with no register chosen by hand.
 
 ---
 
-[← I/O and Ports](07-io-and-ports.md) | [Part 1](README.md) | [Typed Storage and Assignment →](09-typed-storage-and-assignment.md)
+[← I/O and Ports](07-io-and-ports.md) | [Part 2](README.md) | [Typed Storage and Assignment →](09-typed-storage-and-assignment.md)

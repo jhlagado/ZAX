@@ -1,4 +1,4 @@
-[← Counting Loops and DJNZ](04-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](06-stack-and-subroutines.md)
+[← Counting Loops and DJNZ](04-counting-loops-and-djnz.md) | [Part 2](README.md) | [Stack and Subroutines →](06-stack-and-subroutines.md)
 
 # Chapter 05 — Data Tables and Indexed Access
 
@@ -317,4 +317,4 @@ return results to the caller.
 
 ---
 
-[← Counting Loops and DJNZ](04-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](06-stack-and-subroutines.md)
+[← Counting Loops and DJNZ](04-counting-loops-and-djnz.md) | [Part 2](README.md) | [Stack and Subroutines →](06-stack-and-subroutines.md)

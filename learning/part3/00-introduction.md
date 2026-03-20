@@ -1,4 +1,4 @@
-[Part 2](README.md) | [Foundations →](01-foundations.md)
+[Part 3](README.md) | [Foundations →](01-foundations.md)
 
 # Chapter 00 — Introduction
 
@@ -8,7 +8,7 @@ This volume is the second stage of the ZAX course.
 
 It assumes you already know the basic machine model: registers, flags, memory,
 subroutines, and ordinary loop structure on the Z80. Volume 1 under
-`learning/part1/` covers those foundations from the ground up. This volume starts
+`learning/part2/` covers those foundations from the ground up. This volume starts
 later. Its job is to show how larger ZAX programs are organised once those
 basics are already familiar.
 
@@ -69,4 +69,4 @@ flow. They establish the working patterns that every later chapter builds on.
 
 ---
 
-[Part 2](README.md) | [Foundations →](01-foundations.md)
+[Part 3](README.md) | [Foundations →](01-foundations.md)

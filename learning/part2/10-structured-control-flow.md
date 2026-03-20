@@ -1,4 +1,4 @@
-[← Typed Storage and Assignment](09-typed-storage-and-assignment.md) | [Part 1](README.md) | [Functions, Arguments, and Op →](11-functions-arguments-and-op.md)
+[← Typed Storage and Assignment](09-typed-storage-and-assignment.md) | [Part 2](README.md) | [Functions, Arguments, and Op →](11-functions-arguments-and-op.md)
 
 # Chapter 10 — Structured Control Flow
 
@@ -455,4 +455,4 @@ without any call overhead.
 
 ---
 
-[← Typed Storage and Assignment](09-typed-storage-and-assignment.md) | [Part 1](README.md) | [Functions, Arguments, and Op →](11-functions-arguments-and-op.md)
+[← Typed Storage and Assignment](09-typed-storage-and-assignment.md) | [Part 2](README.md) | [Functions, Arguments, and Op →](11-functions-arguments-and-op.md)

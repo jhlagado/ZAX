@@ -1,4 +1,4 @@
-[← Loading, Storing, Constants](02-loading-storing-constants.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](04-counting-loops-and-djnz.md)
+[← Loading, Storing, Constants](02-loading-storing-constants.md) | [Part 2](README.md) | [Counting Loops and DJNZ →](04-counting-loops-and-djnz.md)
 
 # Chapter 03 — Flags, Comparisons, and Jumps
 
@@ -280,4 +280,4 @@ and-test pattern to a single instruction.
 
 ---
 
-[← Loading, Storing, Constants](02-loading-storing-constants.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](04-counting-loops-and-djnz.md)
+[← Loading, Storing, Constants](02-loading-storing-constants.md) | [Part 2](README.md) | [Counting Loops and DJNZ →](04-counting-loops-and-djnz.md)

@@ -1,4 +1,4 @@
-[← A Complete Program](08-a-phase-a-program.md) | [Part 1](README.md) | [Structured Control Flow →](10-structured-control-flow.md)
+[← A Complete Program](08-a-phase-a-program.md) | [Part 2](README.md) | [Structured Control Flow →](10-structured-control-flow.md)
 
 # Chapter 09 — Typed Storage and Assignment
 
@@ -299,4 +299,4 @@ pattern — two `jr` instructions just to distinguish less-than from greater-tha
 
 ---
 
-[← A Complete Program](08-a-phase-a-program.md) | [Part 1](README.md) | [Structured Control Flow →](10-structured-control-flow.md)
+[← A Complete Program](08-a-phase-a-program.md) | [Part 2](README.md) | [Structured Control Flow →](10-structured-control-flow.md)
