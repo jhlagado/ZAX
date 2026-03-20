@@ -1,4 +1,4 @@
-[← Machine Code and the Assembler](00-machine-code-and-the-assembler.md) | [Part 1](README.md) | [Loading, Storing, Constants →](02-loading-storing-constants.md)
+ [← Part 1](../part1/README.md) | [Part 2](README.md) | [Loading, Storing, Constants →](02-loading-storing-constants.md)
 
 # Chapter 01 — Numbers and the Z80 Register Set
 
@@ -208,4 +208,4 @@ locations using immediate values, register pairs, and indirect addressing.
 
 ---
 
-[← Machine Code and the Assembler](00-machine-code-and-the-assembler.md) | [Part 1](README.md) | [Loading, Storing, Constants →](02-loading-storing-constants.md)
+ [← Part 1](../part1/README.md) | [Part 2](README.md) | [Loading, Storing, Constants →](02-loading-storing-constants.md)

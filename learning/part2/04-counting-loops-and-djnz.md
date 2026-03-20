@@ -1,4 +1,4 @@
-[← Flags, Comparisons, Jumps](03-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](05-data-tables-and-indexed-access.md)
+[← Flags, Comparisons, Jumps](03-flags-comparisons-jumps.md) | [Part 2](README.md) | [Data Tables and Indexed Access →](05-data-tables-and-indexed-access.md)
 
 # Chapter 04 — Counting Loops and DJNZ
 
@@ -305,4 +305,4 @@ entries using HL as a sequential pointer and IX as a displaced-access pointer.
 
 ---
 
-[← Flags, Comparisons, Jumps](03-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](05-data-tables-and-indexed-access.md)
+[← Flags, Comparisons, Jumps](03-flags-comparisons-jumps.md) | [Part 2](README.md) | [Data Tables and Indexed Access →](05-data-tables-and-indexed-access.md)
