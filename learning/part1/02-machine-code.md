@@ -61,6 +61,8 @@ The CPU starts with PC = `$0000`.
 
 ## Variables
 
+From the CPU's point of view, a variable is just a byte (or several bytes) of memory at some address. It has no name, no type, and no relationship to any other byte. The only way to refer to it is by its numeric address.
+
 In the program above, the result was written to the fixed address `$8000`. But `$8000` is embedded as raw bytes in the instruction at `$0006`. If you later decide the result should live at `$8100` instead, you must find that instruction and change bytes `$07` and `$08` by hand. If you have fifty instructions referencing the same address, you change fifty places.
 
 This is the core problem with raw machine code: there is no concept of a name. Everything is a position number. The programmer must manually track what every address means and keep every reference consistent.
