@@ -67,14 +67,14 @@ This is the core problem with raw machine code: there is no concept of a name. E
 
 Assembly solves this with **labels**. A label is a name that the assembler associates with a particular address at assembly time. Everywhere you write the label, the assembler substitutes the correct address automatically. If the variable moves, you update the label's definition and every reference updates with it.
 
-In a traditional Z80 assembler the label definition looks like this:
+In a Z80 assembler a label definition looks like this:
 
 ```
 Result:          ; the assembler records "Result" as the current address
-  .byte 0        ; allocate one byte at this address
+  DB 0           ; allocate one byte at this address, initial value 0
 ```
 
-From this point on, writing `LD ($Result), A` in the code is equivalent to writing `LD ($8000), A` — but the programmer never has to know or write `$8000`. The assembler handles it.
+(`DB` stands for "define byte." `DW` defines a 16-bit word.) From this point on, writing `LD (Result), A` in the code is equivalent to writing `LD ($8000), A` — but the programmer never has to know or write `$8000`. The assembler handles it.
 
 Labels also name positions within the code — the targets of jumps and branches. Instead of writing `JP $0034`, you write `JP loop_top`, and the assembler works out the address of `loop_top` itself.
 
