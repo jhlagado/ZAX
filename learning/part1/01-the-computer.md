@@ -2,13 +2,13 @@
 
 # Chapter 1 — The Computer
 
-A program is a series of instructions given to a computer to carry out a task. There are many languages you can write programs in, and programs called *compilers* translate those languages into the native language of the computer: machine code. Machine code is a sequence of numbers that the CPU can execute directly, without any further translation.
+Every computer, at the lowest level, runs **machine code** — raw numeric instructions built into the CPU's hardware. High-level languages like C or Python hide the machine entirely; a compiler or interpreter handles the translation down to those numbers. Assembly does not hide the machine. Each line you write corresponds directly to one CPU instruction, and the assembler's job is mostly mechanical: turn your readable text into the exact bytes the CPU expects.
 
-Assembly is a language that sits very close to machine code. Instead of writing raw numbers, you write short, memorable words — *mnemonics* — that correspond almost one-to-one with the CPU's own instructions. An assembler also provides things that raw machine code does not: named labels for addresses, named constants, and (in the case of ZAX) structured control flow and typed variables.
+This directness is both the appeal and the difficulty. You get full control — every register, every memory access, every branch is yours to specify. Nothing happens unless you ask for it. But you also carry the full burden: you must understand what the CPU can do, how it stores data, and how it steps through a program byte by byte. There is no safety net of type checking, garbage collection, or automatic memory management.
 
-Because assembly maps so directly onto the hardware, it gives you complete control over what the CPU does. That is also what makes it harder to learn than a high-level language: you have to think in terms of the machine — its registers, its memory layout, its instruction-by-instruction execution — rather than in the abstractions that higher-level languages provide.
+ZAX is an assembler for the Z80 that adds some structure on top — named variables, typed storage, and control flow keywords like `if` and `while` — but the underlying model is the same. Every ZAX program compiles down to Z80 machine code, and understanding that machine code is what this book teaches.
 
-Before writing a single line of assembly, then, you need a clear picture of the machine you are programming. This chapter describes the Z80 — its memory, its registers, and the cycle by which it executes instructions. Everything in the rest of the book depends on this picture.
+This chapter describes the Z80 itself: its memory, its registers, and the cycle by which it executes instructions. Everything in the rest of the book depends on this picture.
 
 ---
 
