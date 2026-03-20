@@ -2,7 +2,13 @@
 
 # Chapter 1 — The Computer
 
-Before writing a single line of assembly, you need to know what you are programming. This chapter describes the Z80 computer — its memory, its registers, and the cycle by which it executes instructions. Everything in the rest of the book depends on this picture being clear.
+A program is a series of instructions given to a computer to carry out a task. There are many languages you can write programs in, and programs called *compilers* translate those languages into the native language of the computer: machine code. Machine code is a sequence of numbers that the CPU can execute directly, without any further translation.
+
+Assembly is a language that sits very close to machine code. Instead of writing raw numbers, you write short, memorable words — *mnemonics* — that correspond almost one-to-one with the CPU's own instructions. An assembler also provides things that raw machine code does not: named labels for addresses, named constants, and (in the case of ZAX) structured control flow and typed variables.
+
+Because assembly maps so directly onto the hardware, it gives you complete control over what the CPU does. That is also what makes it harder to learn than a high-level language: you have to think in terms of the machine — its registers, its memory layout, its instruction-by-instruction execution — rather than in the abstractions that higher-level languages provide.
+
+Before writing a single line of assembly, then, you need a clear picture of the machine you are programming. This chapter describes the Z80 — its memory, its registers, and the cycle by which it executes instructions. Everything in the rest of the book depends on this picture.
 
 ---
 
