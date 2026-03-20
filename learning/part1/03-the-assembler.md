@@ -2,38 +2,182 @@
 
 # Chapter 3 — The Assembler
 
-## Mnemonics
+An assembler reads a text source file and produces a binary — the byte sequence that goes into memory. The programmer writes instructions using mnemonics (human-readable names for opcodes) and labels (names for addresses), and the assembler handles the translation to bytes, the calculation of label addresses, and the resolution of every reference.
 
-The fundamental problem with raw machine code is not that the CPU is hard to understand — the fetch-execute cycle is straightforward. The problem is that hex bytes give you nothing to hold onto: no names, no structure, no indication of intent.
-
-An assembler solves this by letting you write instructions using **mnemonics** — human-readable names that correspond one-to-one with opcodes. Instead of writing `$3E $05`, you write:
-
-```
-ld a, 5
-```
-
-`ld` stands for "load." `a` names the destination register. `5` is the value. The assembler reads this text and produces the same bytes `$3E $05` that the CPU expects.
-
-Here is the program from Chapter 2, written as Z80 assembly mnemonics:
-
-```
-ld a, 5        ; load 5 into A
-ld b, a        ; copy A into B
-ld a, 3        ; load 3 into A
-add a, b       ; A = A + B
-ld ($8000), a  ; store result at address $8000
-halt           ; stop
-```
-
-Six readable lines instead of ten opaque bytes. The assembler translates them back into exactly the same byte sequence: `3E 05 47 3E 03 80 32 00 80 76`.
+This chapter covers the most important single instruction in the Z80 (`LD`), introduces the hardware stack, and shows what a complete ZAX program looks like from source to output.
 
 ---
 
-## A ZAX Program
+## The LD Instruction
 
-ZAX is an assembler for the Z80. It understands all the standard Z80 mnemonics, and adds a structured layer on top: named variables, typed storage, and control flow written in a readable form. But underneath, ZAX still produces raw machine code — the same bytes the CPU reads.
+`LD` is the Z80's load instruction. It copies a value from a source location to a destination location: a register, a memory address, or an immediate constant. Its general form is:
 
-Here is the same program written in ZAX:
+```
+ld destination, source
+```
+
+`LD` by itself does not affect the flags register. It is a pure copy — source is unchanged, destination receives the value, nothing else happens.
+
+Not every combination of source and destination is legal. The Z80's hardware supports specific pairings, and asking for an unsupported one is an assembler error. The rules are worth knowing in full, because `LD` is the most frequently used instruction in any Z80 program.
+
+### 8-bit register to register
+
+Any of the registers A, B, C, D, E, H, L can be copied to any other. The only restriction concerns the undivided halves of IX and IY (IXH, IXL, IYH, IYL): you can freely mix within one pair (`LD IXH, IXL` is valid), but you cannot mix between HL's bytes and IX's or IY's bytes in the same instruction.
+
+```zax
+ld a, b     ; A = B
+ld d, h     ; D = H
+ld l, c     ; L = C
+ld a, a     ; legal, pointless
+```
+
+### Immediate constant into register
+
+Any 8-bit register takes an immediate byte constant (0–255). Any 16-bit register pair or index register takes a 16-bit constant.
+
+```zax
+ld a, 42        ; A = 42
+ld b, $FF       ; B = 255
+ld hl, $8000    ; HL = $8000
+ld ix, $4000    ; IX = $4000
+```
+
+### Memory access through HL
+
+HL is the primary indirect address register. `(HL)` means "the byte at the address currently in HL."
+
+```zax
+ld a, (hl)     ; A = byte at address HL
+ld (hl), a     ; byte at address HL = A
+ld b, (hl)     ; B = byte at address HL
+ld (hl), 19    ; byte at address HL = 19  (immediate constant also valid here)
+```
+
+Any of A, B, C, D, E, H, L can appear on either side when the other side is `(HL)`.
+
+### Indexed memory access through IX and IY
+
+IX and IY support **displaced** (indexed) addressing: `(IX+n)` means "the byte at address IX + n", where n is a signed 8-bit offset from −128 to +127.
+
+```zax
+ld a, (ix+0)    ; A = byte at address IX
+ld b, (ix+7)    ; B = byte at address IX+7
+ld (iy-2), a    ; byte at address IY-2 = A
+ld (ix+1), $3F  ; byte at address IX+1 = $3F
+```
+
+This is the mechanism behind struct field access and array element access in ZAX — you set IX or IY to point to the start of a structure, then access fields at known offsets.
+
+### Memory access through BC or DE
+
+Only the accumulator A can be used with `(BC)` or `(DE)`:
+
+```zax
+ld a, (bc)     ; A = byte at address BC
+ld (de), a     ; byte at address DE = A
+```
+
+Neither `LD B, (BC)` nor `LD (DE), H` is legal.
+
+### Direct memory address
+
+A can be loaded from or stored to a fixed 16-bit address. 16-bit register pairs can also be loaded from or stored to memory, transferring both bytes in one instruction (little-endian, as always).
+
+```zax
+ld a, ($8000)      ; A = byte at $8000
+ld ($8001), a      ; byte at $8001 = A
+ld hl, ($8002)     ; HL = word at $8002–$8003 (little-endian)
+ld ($8004), bc     ; word at $8004–$8005 = BC (low byte first)
+```
+
+Note that `LD (nn), r` where `r` is a 16-bit pair works for BC, DE, HL, SP, IX, and IY. All are stored little-endian.
+
+### Two memory locations cannot be combined
+
+There is no single instruction that copies one memory address directly to another. You must go through a register:
+
+```zax
+; No such instruction: ld ($8001), ($8000)
+
+; Do this instead:
+ld a, ($8000)
+ld ($8001), a
+```
+
+### Summary of LD forms
+
+| Form | Example | Notes |
+|------|---------|-------|
+| reg8 ← reg8 | `ld a, b` | Any 8-bit register to any other (with IX/IY half-register restriction) |
+| reg8 ← n | `ld b, $FF` | Immediate 8-bit constant |
+| reg16 ← nn | `ld hl, $8000` | Immediate 16-bit constant |
+| reg8 ← (HL) | `ld c, (hl)` | Read byte at address HL |
+| (HL) ← reg8 | `ld (hl), d` | Write byte to address HL |
+| (HL) ← n | `ld (hl), 0` | Write immediate to address HL |
+| reg8 ← (IX+n) | `ld a, (ix+3)` | Read byte at IX + offset (n: −128 to +127) |
+| (IX+n) ← reg8 | `ld (ix+3), a` | Write byte to IX + offset |
+| A ← (BC) | `ld a, (bc)` | Read byte at address BC; A only |
+| (DE) ← A | `ld (de), a` | Write A to address DE; A only |
+| A ← (nn) | `ld a, ($8000)` | Read byte from fixed address |
+| (nn) ← A | `ld ($8001), a` | Write A to fixed address |
+| reg16 ← (nn) | `ld hl, ($8002)` | Read 16-bit word from memory |
+| (nn) ← reg16 | `ld ($8004), hl` | Write 16-bit word to memory |
+| SP ← reg16 | `ld sp, hl` | SP = HL (or IX or IY) |
+
+---
+
+## The Stack
+
+The **stack** is a region of RAM used for temporary storage of register values. It is managed through the stack pointer SP, which always points to the most recently stored item. The Z80 provides two instructions for using it: `PUSH` and `POP`.
+
+Both instructions work with 16-bit register pairs: AF, BC, DE, HL, IX, or IY.
+
+### PUSH
+
+`PUSH HL` does two things in sequence:
+1. SP is decremented by 2.
+2. The value of HL is written to memory at address SP — L at SP, H at SP+1 (little-endian).
+
+### POP
+
+`POP HL` does the inverse:
+1. The word at address SP is read: the byte at SP goes into L, the byte at SP+1 goes into H.
+2. SP is incremented by 2.
+
+### The stack is last-in, first-out
+
+Values come off the stack in the reverse order they went on. If you push BC and then push DE, popping gives you DE first and BC second.
+
+```zax
+push bc       ; save BC
+push de       ; save DE
+; ... do something that wrecks BC and DE ...
+pop de        ; restore DE (came off first — was pushed last)
+pop bc        ; restore BC (came off second — was pushed first)
+```
+
+This is the standard pattern for preserving registers across a block of code that would otherwise destroy them. You will see it constantly.
+
+### A useful trick
+
+There is no direct instruction to copy AF to another register pair or to access F directly. You can work around this using the stack: push AF, then pop into the target pair (where the byte that was F ends up in the low register).
+
+```zax
+push af
+pop hl        ; H = A, L = F
+```
+
+### The stack is ordinary RAM
+
+The stack is not a separate structure — it is the same RAM as your program and data. SP starts pointing somewhere in RAM (you set it up at the start of your program, or it is set for you), and push/pop move SP up and down within that area. There is nothing magical about it and nothing enforced — if you push more than you pop, SP drifts downward and will eventually collide with something you care about. It is your responsibility to keep pushes and pops balanced.
+
+---
+
+## A First ZAX Program
+
+ZAX wraps Z80 instructions in a structured outer form. A ZAX source file is organised into **sections** — declarations that tell the assembler where in the address space to place the code and data.
+
+Here is the addition program in complete ZAX:
 
 ```zax
 section data state at $8000
@@ -51,53 +195,51 @@ section code app at $0100
 end
 ```
 
-A few things to notice.
+### What each part means
 
-`section data state at $8000` tells ZAX that the variables declared below live starting at address `$8000`. ZAX calculates the exact address of `result` — you name it, ZAX tracks where it lives.
+`section data state at $8000` — declares a data section. The variables defined below will be placed in memory starting at address `$8000`. The assembler tracks the exact address of each variable for you.
 
-`section code app at $0100` tells ZAX that the code below starts at address `$0100`. (This is the convention used by CP/M, a common Z80 operating environment, which reserves the bottom of RAM for its own use.)
+`var result: byte` — declares one byte of named storage. The name `result` behaves as a label: everywhere you write `result` in the code, the assembler substitutes the actual address. If you add more variables before it or change the section's start address, every reference updates automatically.
 
-`var result: byte` names a one-byte storage location. Writing `result` in the code is clearer than writing `$8000`, and it stays correct even if you reorganise your data layout.
+`section code app at $0100` — declares a code section starting at address `$0100`. The `$0100` origin is a CP/M convention: the CP/M operating system occupies the bottom of RAM and loads application programs at `$0100`.
 
-`result := a` is ZAX syntax for "store A into the variable `result`." ZAX translates this into the store instruction `ld ($8000), a` — the same opcode as before.
+`export func main(): void` — declares the program's entry point. ZAX generates the function header automatically. The function's closing `end` emits a `ret` instruction, so you do not write one yourself.
 
-`export func main(): void` declares the program's entry point. ZAX automatically adds the housekeeping that a well-formed function needs: a header, a final `ret` instruction, and correct structure for the linker.
+`result := a` — ZAX's typed assignment operator. This specific form means "store the value of A into the byte variable `result`." The assembler translates it to `LD ($8000), A`.
 
----
+### The output
 
-## What ZAX Produces
+Running ZAX on this source produces a binary file. The bytes inside the function body are identical to the ones decoded in Chapter 2 — the same opcodes, now starting at `$0100` instead of `$0000`. The store to `$8000` is unchanged.
 
-When you run ZAX on that source file, it produces a binary — a sequence of bytes ready to be loaded into memory. The store to address `$8000` is still there; the result is still 8.
-
-The bytes are different from Chapter 2 only because the code now starts at `$0100` instead of `$0000`, and ZAX adds a small function header. The arithmetic is identical: 5 + 3, stored at `$8000`.
-
-ZAX does not change what the program does. It changes how you express it.
+ZAX does not change what the program does. It changes how you write and maintain it.
 
 ---
 
-## Why ZAX Goes Further
+## Beyond Mnemonics: What ZAX Adds
 
-Most assemblers stop at mnemonics — they translate names to bytes and track label addresses. ZAX adds things that become valuable as programs grow:
+Most assemblers stop at mnemonics and labels. ZAX goes further with features that become important as programs grow:
 
-**Named variables.** `result` instead of `$8000`. You add a variable and ZAX places it; you do not adjust addresses by hand when your layout changes.
+**Typed variables.** `var result: byte` not only names the storage location — it records what size it is. ZAX uses that information to generate the correct load and store instructions for `:=` assignments. This catches mismatches at assembly time rather than silently generating wrong code.
 
-**Typed storage.** `result := a` knows that `result` is a byte and generates the right store instruction. `:=` is ZAX's assignment operator; it handles the load or store sequence for you.
+**Typed function parameters.** Functions can declare what values they receive and what value they return. The assembler generates the correct load and store sequences at call sites.
 
-**Structured control flow.** `if`, `while`, `break`, and `func` generate correct conditional jumps and call sequences. You write the structure; ZAX counts the bytes and calculates the offsets.
+**Structured control flow.** `if`, `while`, `break`, and `continue` generate correct conditional jumps and loop structures, including the offsets that raw Z80 assembly requires you to calculate manually. You write the structure; the assembler produces the bytes.
 
-All of these features produce machine code. The CPU still sees bytes. ZAX just handles the bookkeeping that would otherwise be your problem.
+**`op` — inline expansion.** An `op` block is like a function, but its body is copied inline at every call site instead of being called with `CALL`/`RET`. This gives you the reuse of a named block without the overhead of a subroutine call.
+
+All of these still produce machine code. The CPU sees bytes. ZAX just handles the bookkeeping.
 
 ---
 
-## What Comes Next
+## Summary
 
-You now have the mental model:
-
-- A computer is a CPU, memory, and I/O ports (Chapter 1)
-- A program is bytes in memory; the CPU fetches and executes them (Chapter 2)
-- An assembler translates readable source into those bytes; ZAX adds structure on top of that (this chapter)
-
-Part 2 of this book teaches Z80 programming with ZAX in detail — the full instruction set, addressing modes, the stack, subroutines, and ZAX's typed features. Every chapter in Part 2 builds on the picture you have just established.
+- An assembler translates mnemonics and labels to bytes; label addresses are calculated and substituted automatically
+- `LD` copies a value from source to destination; it does not affect flags
+- Not all combinations of source and destination are legal — the key groupings are: register-to-register, immediate constant, indirect through HL, indexed through IX/IY, indirect through BC or DE (A only), and direct memory address
+- Two memory locations cannot both appear in a single `LD`; use a register as an intermediate
+- The stack is a region of RAM managed through SP; `PUSH` decrements SP by 2 and stores; `POP` loads and increments SP by 2
+- Pushes and pops must be balanced; the stack is ordinary RAM with no automatic protection
+- A ZAX program wraps instructions in `section` and `func` blocks; it adds typed variables, structured control flow, and typed function interfaces on top of standard Z80 assembly
 
 ---
 
