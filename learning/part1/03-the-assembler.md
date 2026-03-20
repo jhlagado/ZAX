@@ -18,6 +18,8 @@ ld destination, source
 
 `LD` by itself does not affect the flags register. It is a pure copy — source is unchanged, destination receives the value, nothing else happens.
 
+One convention to internalise now: **parentheses always indicate a memory access.** `LD A, B` copies the register B into A. `LD A, (HL)` reads the byte from memory at the address stored in HL. The parentheses are not optional decoration — they change the meaning of the instruction entirely. This convention applies everywhere in Z80 assembly, not just to `LD`.
+
 Not every combination of source and destination is legal. The Z80's hardware supports specific pairings, and asking for an unsupported one is an assembler error. The rules are worth knowing in full, because `LD` is the most frequently used instruction in any Z80 program.
 
 ### 8-bit register to register
@@ -123,6 +125,40 @@ ld ($8001), a
 | reg16 ← (nn) | `ld hl, ($8002)` | Read 16-bit word from memory |
 | (nn) ← reg16 | `ld ($8004), hl` | Write 16-bit word to memory |
 | SP ← reg16 | `ld sp, hl` | SP = HL (or IX or IY) |
+
+---
+
+## Arithmetic Instructions Are Not Operators
+
+Before moving on, there is one difference between assembly and higher-level languages that catches everyone. In a language like C, `a + b` produces a result without changing either `a` or `b`. In Z80 assembly, `ADD A, B` adds B to A and **writes the result back into A**, destroying whatever A held before. The instruction is not an operator — it is a complete operation that modifies the destination register.
+
+This matters as soon as you write code longer than a few lines. Here is a small example that calculates the perimeter of a rectangle whose width and height are stored in memory:
+
+```zax
+ld a, (Width)       ; A = Width
+add a, a            ; A = Width * 2
+ld b, a             ; B = Width * 2
+ld a, (Height)      ; A = Height
+add a, a            ; A = Height * 2
+add a, b            ; A = Height*2 + Width*2
+ld (Perim), a       ; store result
+```
+
+This is correct: 2 × Width + 2 × Height. Now consider what happens if you rearrange the additions, thinking that addition is commutative and the order does not matter:
+
+```zax
+ld a, (Width)       ; A = Width
+ld b, a             ; B = Width
+ld a, (Height)      ; A = Height
+add a, b            ; A = Height + Width
+add a, b            ; A = Height + Width + Width
+add a, a            ; A = (Height + Width + Width) * 2    ← WRONG
+ld (Perim), a       ; stores the wrong value
+```
+
+The final `ADD A, A` does not double the original width — it doubles the running total in A, which by that point is already Height + 2 × Width. The result is `2 × (Height + 2 × Width)`, which is Height × 2 too large.
+
+The mistake is natural if you think of `ADD` as an algebraic operator. It is not. It is an instruction that replaces the contents of A with a new value, and every subsequent instruction sees the new value, not the original. This kind of ordering bug is common in assembly, easy to miss, and produces no error message — just a wrong answer.
 
 ---
 
