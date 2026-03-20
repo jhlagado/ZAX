@@ -1,4 +1,4 @@
-[← Numbers and Registers](01-numbers-and-registers.md) | [Part 1](README.md) | [Flags, Comparisons, Jumps →](03-flags-comparisons-jumps.md)
+[← Numbers and Registers](01-numbers-and-registers.md) | [Part 2](README.md) | [Flags, Comparisons, Jumps →](03-flags-comparisons-jumps.md)
 
 # Chapter 02 — Loading, Storing, and Simple Constants
 
@@ -369,4 +369,4 @@ instructions read to decide where execution continues next.
 
 ---
 
-[← Numbers and Registers](01-numbers-and-registers.md) | [Part 1](README.md) | [Flags, Comparisons, Jumps →](03-flags-comparisons-jumps.md)
+[← Numbers and Registers](01-numbers-and-registers.md) | [Part 2](README.md) | [Flags, Comparisons, Jumps →](03-flags-comparisons-jumps.md)

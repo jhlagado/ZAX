@@ -1,4 +1,4 @@
-[← Data Tables and Indexed Access](05-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](07-io-and-ports.md)
+[← Data Tables and Indexed Access](05-data-tables-and-indexed-access.md) | [Part 2](README.md) | [I/O and Ports →](07-io-and-ports.md)
 
 # Chapter 06 — Stack and Subroutines
 
@@ -338,4 +338,4 @@ same points that Chapters 09–11 address.
 
 ---
 
-[← Data Tables and Indexed Access](05-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](07-io-and-ports.md)
+[← Data Tables and Indexed Access](05-data-tables-and-indexed-access.md) | [Part 2](README.md) | [I/O and Ports →](07-io-and-ports.md)
