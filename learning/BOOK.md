@@ -156,7 +156,7 @@ The memory of any computer stores only two values: 0 and 1. Each individual 0 or
 
 The eight bits in a byte are numbered from position 7 down to position 0. The numbering reflects each bit's contribution to the byte's total value: bit 7 represents 2<sup>7</sup> = 128, bit 6 represents 2<sup>6</sup> = 64, and so on down to bit 0, which represents 2<sup>0</sup> = 1. To find the numeric value of a byte, multiply each bit by its positional value and add up the results.
 
-Here is the byte `0b01110101` worked out in full (the `0b` prefix means the number is written in binary):
+Here is the byte `%01110101` worked out in full (the `%` prefix means the number is written in binary; ZAX also accepts `0b` as an alternative):
 
 | Bit position | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
 |---|---|---|---|---|---|---|---|---|
@@ -166,7 +166,7 @@ Here is the byte `0b01110101` worked out in full (the `0b` prefix means the numb
 
 Total: 64 + 32 + 16 + 4 + 1 = **117**.
 
-A byte can hold any value from 0 (`0b00000000`) to 255 (`0b11111111`). This is the smallest unit of data the Z80 can directly read, write, or operate on.
+A byte can hold any value from 0 (`%00000000`) to 255 (`%11111111`). This is the smallest unit of data the Z80 can directly read, write, or operate on.
 
 ### Words
 
@@ -182,7 +182,7 @@ Writing out eight bits every time you mean a byte value is tedious and error-pro
 
 Hexadecimal uses sixteen digits: `0`–`9` for values 0–9, then `A`–`F` for values 10–15. The key property that makes hexadecimal useful in this context is that exactly four bits correspond to exactly one hexadecimal digit. Converting between hex and binary requires no arithmetic — just split the bits into groups of four and substitute each group directly.
 
-Taking the example from above, `0b01110101`:
+Taking the example from above, `%01110101`:
 
 ```
   0111   0101
@@ -190,9 +190,9 @@ Taking the example from above, `0b01110101`:
   $75
 ```
 
-So `0b01110101 = $75`. Confirm in the other direction: `$75 = 7 × 16 + 5 = 112 + 5 = 117`. ✓
+So `%01110101 = $75`. Confirm in the other direction: `$75 = 7 × 16 + 5 = 112 + 5 = 117`. ✓
 
-The same holds for 16-bit words: `$FFFF` is `0b1111111111111111`, and a four-digit hex number always represents exactly sixteen bits. Addresses in the Z80 are always four hex digits, running from `$0000` to `$FFFF`.
+The same holds for 16-bit words: `$FFFF` is `%1111111111111111`, and a four-digit hex number always represents exactly sixteen bits. Addresses in the Z80 are always four hex digits, running from `$0000` to `$FFFF`.
 
 You will see hex constantly in Z80 work. Every opcode, every address, every constant value is typically written this way. It is worth spending a few minutes converting numbers in both directions until it feels natural.
 
@@ -301,7 +301,7 @@ The Z80 starts with PC at `$0000` after a reset. The first byte fetched is there
 
 - Memory is 65,536 bytes at addresses `$0000`–`$FFFF`; each byte holds 0–255
 - A byte is 8 bits; a word is 16 bits (two bytes)
-- The `0b` prefix marks binary numbers; the `$` prefix marks hexadecimal numbers
+- The `%` prefix marks binary numbers (ZAX also accepts `0b`); the `$` prefix marks hexadecimal numbers
 - Four bits = one hex digit; conversion between binary and hex is direct and requires no arithmetic
 - The Z80 is little-endian: the low byte of a word is stored at the lower address
 - The memory map (which addresses are ROM, which are RAM) varies by system; PC starts at `$0000` after reset, so that address must contain valid code
@@ -737,13 +737,13 @@ Prerequisites: Chapter 3 (bytes, addresses, the module shell).
 
 Every byte in the Z80 holds an eight-bit binary value. Each bit is either 0 or 1.
 The bits are numbered 7 (most significant, leftmost) down to 0 (least
-significant, rightmost). The binary value `0b10000001` has bits 7 and 0 set and
+significant, rightmost). The binary value `%10000001` has bits 7 and 0 set and
 all others clear; its decimal value is 128 + 1 = 129.
 
 Binary notation is precise but long. Hexadecimal (base 16) is shorter. One hex
 digit represents exactly four bits: `0`–`9` for values 0–9, `A`–`F` for
 values 10–15. Two hex digits describe a full byte. The binary byte
-`0b10000001` written in hex is `$81` (8×16 + 1 = 129). ZAX uses the `$` prefix
+`%10000001` written in hex is `$81` (8×16 + 1 = 129). ZAX uses the `$` prefix
 for hex literals throughout.
 
 The table below shows the correspondence for the sixteen possible four-bit
@@ -788,8 +788,8 @@ pattern `$80` is -128.
 
 Two's complement is the standard encoding for negative integers on the Z80.
 To compute the two's complement of a positive value, invert all bits and add
-one. The two's complement of `$01` (binary `0b00000001`) is `0b11111110 + 1 =
-0b11111111 = $FF`, which is -1.
+one. The two's complement of `$01` (binary `%00000001`) is `%11111110 + 1 =
+%11111111 = $FF`, which is -1.
 
 The CPU arithmetic instructions do not distinguish: `add a, b` performs the same
 bitwise addition regardless of whether you intend the values as signed or
