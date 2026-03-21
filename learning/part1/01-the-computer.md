@@ -4,7 +4,7 @@
 
 Every computer, at the lowest level, runs **machine code** — raw numeric instructions built into the CPU's hardware. High-level languages like C or Python hide the machine entirely; a compiler or interpreter handles the translation down to those numbers. Assembly does not hide the machine. Each line you write corresponds directly to one CPU instruction, and the assembler's job is mostly mechanical: turn your readable text into the exact bytes the CPU expects.
 
-This directness is both the appeal and the difficulty. You get full control — every register, every memory access, every branch is yours to specify. Nothing happens unless you ask for it. But you also carry the full burden: you must understand what the CPU can do, how it stores data, and how it steps through a program byte by byte. There is no safety net of type checking, garbage collection, or automatic memory management. This is what makes assembly harder to learn than other languages: you have to think like the computer rather than in the abstractions that high-level languages provide.
+Assembly requires you to think like the computer. You get full control — every register, every memory access, every branch is yours to specify. Nothing happens unless you ask for it. But you also carry the full burden: you must understand what the CPU can do, how it stores data, and how it steps through a program byte by byte. There is no safety net of type checking, garbage collection, or automatic memory management.
 
 ZAX is an assembler for the Z80 that adds some structure on top — named variables, typed storage, and control flow keywords like `if` and `while` — but the underlying model is the same. Every ZAX program compiles down to Z80 machine code, and understanding that machine code is what this book teaches.
 
@@ -102,7 +102,7 @@ Read it back: the byte at `$8000` is `$2B` (low), the byte at `$8001` is `$1A` (
 
 The CPU (central processing unit) is the chip that does the work. It reads bytes from memory, interprets them as instructions, and carries them out one after another. To carry out those instructions, the CPU needs a small amount of very fast internal storage. That storage is called the **registers**.
 
-Registers are not part of RAM. They are built into the CPU itself, much faster to access than any external memory. The Z80 has only 26 bytes of register storage in total — a tiny amount compared to the 64K of addressable memory. It is not useful to think of them as a single block; each register has its own name and its own special roles. Almost every instruction you write uses at least one register, and almost every calculation must pass through them — there are very few Z80 operations that work directly on memory without involving a register.
+Registers are not part of RAM. They are built into the CPU itself, much faster to access than any external memory. The Z80 has only 26 bytes of register storage in total — a tiny amount compared to the 64K of addressable memory. Each register has its own name and its own special roles. Almost every instruction you write uses at least one register, and almost every calculation must pass through them — there are very few Z80 operations that work directly on memory without involving a register.
 
 Here is the complete Z80 register set:
 
