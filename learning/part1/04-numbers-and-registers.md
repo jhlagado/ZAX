@@ -7,7 +7,7 @@ programs depend on. After reading it you will be able to read any value in
 binary or hexadecimal, explain what register pairs are, and follow a program
 that moves values between registers.
 
-Prerequisites: Chapter 00 (bytes, addresses, the module shell).
+Prerequisites: Chapter 3 (bytes, addresses, the module shell).
 
 ---
 
@@ -73,7 +73,7 @@ The CPU arithmetic instructions do not distinguish: `add a, b` performs the same
 bitwise addition regardless of whether you intend the values as signed or
 unsigned. The result is the same bit pattern either way. Only the meaning you
 attach to the result, and which flags you check afterward, reflects the
-signed/unsigned choice. Chapter 03 covers flag interpretation in detail.
+signed/unsigned choice. Chapter 6 covers flag interpretation in detail.
 
 ---
 
@@ -96,7 +96,7 @@ The Z80 has these main registers:
 | F | 8 bits | Flags — set by arithmetic, read by conditional jumps |
 
 The flag register F is not used directly in `ld` instructions. Its contents are
-examined implicitly by conditional jumps. Chapter 03 covers the flags.
+examined implicitly by conditional jumps. Chapter 6 covers the flags.
 
 The Z80 also has a **program counter** (PC) and a **stack pointer** (SP):
 
@@ -104,7 +104,7 @@ The Z80 also has a **program counter** (PC) and a **stack pointer** (SP):
   advances it automatically after each fetch. You do not write to PC directly;
   jump instructions change it.
 - **SP** holds the top-of-stack address. Push and pop instructions move SP.
-  Chapter 06 covers the stack.
+  Chapter 9 covers the stack.
 
 ---
 
@@ -202,7 +202,7 @@ shows that two-step pattern so you recognise it when you see it later.
 
 ## What Comes Next
 
-Chapter 02 introduces the addressing modes of `ld` in full, shows how labels
+Chapter 5 introduces the addressing modes of `ld` in full, shows how labels
 name memory addresses, and demonstrates reading from and writing to named RAM
 locations using immediate values, register pairs, and indirect addressing.
 

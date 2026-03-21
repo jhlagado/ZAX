@@ -7,13 +7,13 @@ reading it you will be able to replace raw flag-test-and-jump sequences with
 `if`/`else`, replace manual loop-label structures with `while`, and use `break`
 and `continue` to exit or restart a loop without writing explicit jump targets.
 
-Prerequisites: Chapters 00–09.
+Prerequisites: Chapters 4–12.
 
 ---
 
 ## What structured control flow replaces
 
-Chapter 08 ended with two specific annoyances in the raw code.
+Chapter 11 ended with two specific annoyances in the raw code.
 
 The first: invented labels everywhere. Every branch needs at least one label.
 `find_max` needed `find_max_loop:` and `find_max_no_update:`. `count_above`
@@ -142,7 +142,7 @@ for a loop over B counts is to copy B into A and `or a`:
 ```zax
 ld b, 10
 ld a, b           ; copy B into A
-or a              ; sets Z if A is zero, NZ if non-zero (see Chapter 03)
+or a              ; sets Z if A is zero, NZ if non-zero (see Chapter 6)
 while NZ
   dec b
   ld a, b
@@ -150,8 +150,8 @@ while NZ
 end
 ```
 
-The `or a` pattern for flag-establishment was introduced in Chapter 03 and applied
-to loop-entry guards in Chapter 04. The same reasoning applies here. Use
+The `or a` pattern for flag-establishment was introduced in Chapter 6 and applied
+to loop-entry guards in Chapter 7. The same reasoning applies here. Use
 `ld a, b / or a` to convert a register value into a flag state before `while`.
 
 The back edge of a `while` loop also tests the condition. Every `continue` or
@@ -277,10 +277,10 @@ from the case labels.
 ## Before and after: the same two loops
 
 The example file `learning/part1/examples/10_structured_control.zax` rewrites
-`find_max` and `count_above` from Chapter 08 using `while` and `if`. Here are
+`find_max` and `count_above` from Chapter 11 using `while` and `if`. Here are
 the two versions side by side.
 
-**`find_max` — raw (Chapter 08):**
+**`find_max` — raw (Chapter 11):**
 
 ```zax
 func find_max(): AF
@@ -345,7 +345,7 @@ flag state before the back-edge test reflects B's value, not whatever a previous
 instruction left in the flags. Note: `djnz` cannot be directly replaced by `dec b / jr nz` in a `while` loop
 without this extra flag-establishment step.
 
-**`count_above` — raw (Chapter 08):**
+**`count_above` — raw (Chapter 11):**
 
 ```zax
 func count_above(): AF
@@ -408,7 +408,7 @@ count it." The skip label is gone.
 ## The example: `learning/part1/examples/10_structured_control.zax`
 
 The example file contains `main`, `find_max_cf`, and `count_above_cf`. It uses
-the same table and produces the same results as Chapter 08:
+the same table and produces the same results as Chapter 11:
 maximum = 91, above-64 count = 3. The only difference is in how the subroutine
 bodies are written.
 
@@ -448,7 +448,7 @@ jump. In the structured version, each is expressed by the keyword that carries i
 
 ## What Comes Next
 
-Chapter 11 introduces typed function parameters and the `op` construct. Typed
+Chapter 14 introduces typed function parameters and the `op` construct. Typed
 parameters replace the register-passing convention that raw subroutines document
 in comments. `op` provides a lightweight named-operation form that expands inline
 without any call overhead.

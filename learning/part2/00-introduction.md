@@ -62,7 +62,7 @@ That distinction is what the rest of the volume keeps reinforcing.
 
 ## What Comes Next
 
-Chapter 01 starts with arithmetic and number-theory algorithms: power, GCD,
+Chapter 1 starts with arithmetic and number-theory algorithms: power, GCD,
 Fibonacci, square root, and decimal digit count. These are small programs with
 no arrays or records — just functions, typed locals, and structured control
 flow. They establish the working patterns that every later chapter builds on.
