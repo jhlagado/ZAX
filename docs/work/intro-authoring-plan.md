@@ -55,7 +55,7 @@ Use these as the authority for planning and current syntax:
 - `docs/work/course-writing-standard.md`
 - `docs/work/z80-intro-course-plan.md`
 - `docs/design/z80-programming-with-zax.md`
-- `docs/design/text-include.md`
+- `docs/archive/design/text-include.md`
 - `docs/spec/zax-spec.md`
 - `docs/reference/ZAX-quick-guide.md`
 - `examples/` and future intro examples on `main`
