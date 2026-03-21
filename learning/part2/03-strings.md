@@ -1,6 +1,6 @@
 [← Arrays and Loops](02-arrays-and-loops.md) | [Part 2](README.md) | [Bit Patterns →](04-bit-patterns.md)
 
-# Chapter 03 — Strings
+# Chapter 3 — Strings
 
 The Chapter 03 examples shift the focus from indexed arrays to pointer-walked memory.
 A null-terminated string is just a sequence of bytes with a zero at the end. That

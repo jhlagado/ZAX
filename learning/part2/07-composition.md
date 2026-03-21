@@ -1,6 +1,6 @@
 [← Recursion](06-recursion.md) | [Part 2](README.md) | [Pointer Structures →](08-pointer-structures.md)
 
-# Chapter 07 — Composition
+# Chapter 7 — Composition
 
 The Chapter 07 example is an RPN calculator. It is the first program in this course
 that is built from more than one source file. `rpn_calculator.zax` is the

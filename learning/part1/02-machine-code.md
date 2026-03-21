@@ -61,20 +61,22 @@ The CPU starts with PC = `$0000`.
 
 ## Variables
 
+From the CPU's point of view, a variable is just a byte (or several bytes) of memory at some address. It has no name, no type, and no relationship to any other byte. The only way to refer to it is by its numeric address.
+
 In the program above, the result was written to the fixed address `$8000`. But `$8000` is embedded as raw bytes in the instruction at `$0006`. If you later decide the result should live at `$8100` instead, you must find that instruction and change bytes `$07` and `$08` by hand. If you have fifty instructions referencing the same address, you change fifty places.
 
 This is the core problem with raw machine code: there is no concept of a name. Everything is a position number. The programmer must manually track what every address means and keep every reference consistent.
 
 Assembly solves this with **labels**. A label is a name that the assembler associates with a particular address at assembly time. Everywhere you write the label, the assembler substitutes the correct address automatically. If the variable moves, you update the label's definition and every reference updates with it.
 
-In a traditional Z80 assembler the label definition looks like this:
+In a Z80 assembler a label definition looks like this:
 
 ```
 Result:          ; the assembler records "Result" as the current address
-  .byte 0        ; allocate one byte at this address
+  DB 0           ; allocate one byte at this address, initial value 0
 ```
 
-From this point on, writing `LD ($Result), A` in the code is equivalent to writing `LD ($8000), A` — but the programmer never has to know or write `$8000`. The assembler handles it.
+(`DB` stands for "define byte." `DW` defines a 16-bit word.) From this point on, writing `LD (Result), A` in the code is equivalent to writing `LD ($8000), A` — but the programmer never has to know or write `$8000`. The assembler handles it.
 
 Labels also name positions within the code — the targets of jumps and branches. Instead of writing `JP $0034`, you write `JP loop_top`, and the assembler works out the address of `loop_top` itself.
 

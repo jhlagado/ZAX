@@ -1,13 +1,13 @@
- [← Part 1](../part1/README.md) | [Part 2](README.md) | [Loading, Storing, Constants →](02-loading-storing-constants.md)
+[← The Assembler](03-the-assembler.md) | [Part 1](README.md) | [Loading, Storing, Constants →](05-loading-storing-constants.md)
 
-# Chapter 01 — Numbers and the Z80 Register Set
+# Chapter 4 — Numbers and the Z80 Register Set
 
 This chapter introduces the number systems and the internal storage that Z80
 programs depend on. After reading it you will be able to read any value in
 binary or hexadecimal, explain what register pairs are, and follow a program
 that moves values between registers.
 
-Prerequisites: Chapter 00 (bytes, addresses, the module shell).
+Prerequisites: Chapter 3 (bytes, addresses, the module shell).
 
 ---
 
@@ -73,7 +73,7 @@ The CPU arithmetic instructions do not distinguish: `add a, b` performs the same
 bitwise addition regardless of whether you intend the values as signed or
 unsigned. The result is the same bit pattern either way. Only the meaning you
 attach to the result, and which flags you check afterward, reflects the
-signed/unsigned choice. Chapter 03 covers flag interpretation in detail.
+signed/unsigned choice. Chapter 6 covers flag interpretation in detail.
 
 ---
 
@@ -96,7 +96,7 @@ The Z80 has these main registers:
 | F | 8 bits | Flags — set by arithmetic, read by conditional jumps |
 
 The flag register F is not used directly in `ld` instructions. Its contents are
-examined implicitly by conditional jumps. Chapter 03 covers the flags.
+examined implicitly by conditional jumps. Chapter 6 covers the flags.
 
 The Z80 also has a **program counter** (PC) and a **stack pointer** (SP):
 
@@ -104,7 +104,7 @@ The Z80 also has a **program counter** (PC) and a **stack pointer** (SP):
   advances it automatically after each fetch. You do not write to PC directly;
   jump instructions change it.
 - **SP** holds the top-of-stack address. Push and pop instructions move SP.
-  Chapter 06 covers the stack.
+  Chapter 9 covers the stack.
 
 ---
 
@@ -138,6 +138,40 @@ HL also supports `inc (hl)` and `dec (hl)` to modify a byte in place, and it
 is the base for indexed addressing with the IX and IY registers. You will load
 an address into HL, then use `(hl)` to read or write at that address. This
 pattern appears in almost every Z80 program.
+
+---
+
+## IX, IY, and the half-register restriction
+
+IX and IY are 16-bit index registers used primarily for displaced memory access
+(`ld a, (ix+3)`). Each can be split into 8-bit halves: IXH / IXL and IYH / IYL.
+These halves are useful for holding temporary byte values when you have run out
+of general registers.
+
+Zilog's original Z80 documentation did not list IXH, IXL, IYH, or IYL as
+supported instructions. They were discovered by programmers who noticed that the
+prefix-byte encoding made them work, and they have been in common use since the
+early 1980s. Every Z80-compatible CPU executes them correctly, and modern
+assemblers — ZAX included — support them without qualification. You will
+sometimes see them called "undocumented instructions," but by now they are
+standard practice.
+
+There is a hardware constraint to be aware of. The Z80 encodes H, L, IXH, IXL,
+IYH, and IYL using the same bit positions in the instruction byte. The CPU
+resolves the ambiguity with a prefix byte: unprefixed means H/L, the `$DD`
+prefix means IXH/IXL, and the `$FD` prefix means IYH/IYL. Because a single
+instruction can only carry one prefix, you cannot mix halves from different
+groups in the same instruction:
+
+- `ld ixh, ixl` is valid — both halves share the `$DD` prefix.
+- `ld l, h` is valid — both are unprefixed HL halves.
+- `ld h, ixl` is **impossible** — H is unprefixed, IXL needs `$DD`.
+- `ld iyh, ixl` is **impossible** — IYH needs `$FD`, IXL needs `$DD`.
+
+The general rule: in any single `ld` instruction, the halves of HL, IX, and IY
+are mutually exclusive. You can freely use any combination of A, B, C, D, E
+with any of these halves, but you cannot cross the HL / IX / IY boundary within
+one instruction.
 
 ---
 
@@ -202,10 +236,10 @@ shows that two-step pattern so you recognise it when you see it later.
 
 ## What Comes Next
 
-Chapter 02 introduces the addressing modes of `ld` in full, shows how labels
+Chapter 5 introduces the addressing modes of `ld` in full, shows how labels
 name memory addresses, and demonstrates reading from and writing to named RAM
 locations using immediate values, register pairs, and indirect addressing.
 
 ---
 
- [← Part 1](../part1/README.md) | [Part 2](README.md) | [Loading, Storing, Constants →](02-loading-storing-constants.md)
+[← The Assembler](03-the-assembler.md) | [Part 1](README.md) | [Loading, Storing, Constants →](05-loading-storing-constants.md)

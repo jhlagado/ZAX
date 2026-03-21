@@ -1,6 +1,6 @@
 [← Foundations](01-foundations.md) | [Part 2](README.md) | [Strings →](03-strings.md)
 
-# Chapter 02 — Arrays and Loops
+# Chapter 2 — Arrays and Loops
 
 The Chapter 02 examples introduce arrays and the full loop surface: `while`,
 `break`, and `continue`. The algorithms in this chapter — sorting and searching
