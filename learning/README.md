@@ -2,6 +2,8 @@
 
 Two parts. Read them in order.
 
+If you want the whole learning corpus as one GitHub-readable document, use [Learning Book](BOOK.md).
+
 ---
 
 ## [Part 1 — Learn Z80 Programming in ZAX](part1/README.md)
