@@ -40,6 +40,8 @@ describe('PR781 ld typed-storage migration diagnostics', () => {
       symbolicTargetFromExpr: () => undefined,
       evalImmExpr: () => undefined,
       resolveScalarBinding: resolveScalar,
+      isModuleStorageName: () => false,
+      isFrameSlotName: () => false,
       resolveScalarTypeForEa: () => undefined,
       resolveScalarTypeForLd: () => undefined,
       resolveEa: () => undefined,

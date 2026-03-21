@@ -15,6 +15,12 @@ describe('PR952 raw ix slot offsets', () => {
     expect(res.diagnostics).toEqual([]);
   });
 
+  it('keeps raw ld working for typed globals', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr952_raw_ix_slot_offsets_globals.zax');
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+    expect(res.diagnostics).toEqual([]);
+  });
+
   it('rejects alias-only locals as ix slot offsets', async () => {
     const entry = join(__dirname, 'fixtures', 'pr952_raw_ix_slot_offsets_alias.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
