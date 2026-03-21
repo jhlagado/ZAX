@@ -8,7 +8,7 @@ named typed parameters and a typed return value, write a zero-parameter `op`,
 and explain the difference in cost between a typed `func` call and a raw `call`
 or an `op` expansion.
 
-Prerequisites: Chapters 00–09.
+Prerequisites: Chapters 4–12.
 
 ---
 
@@ -141,7 +141,7 @@ result and which registers the compiler saves and restores around the frame.
 `: AF` does **not** deliver A through the typed call mechanism. What it does is
 remove AF from the compiler's save/restore set: the compiler does not emit
 `pop AF` before returning, so whatever value A held at function exit reaches the
-caller through raw register survival. This is the pattern from Chapter 06 —
+caller through raw register survival. This is the pattern from Chapter 9 —
 the caller and callee agree by convention that A carries the result, and the
 declaration `: AF` tells the compiler not to clobber it.
 
@@ -156,7 +156,7 @@ after the standalone call statement.
 
 Declaring `: void` when the function places a meaningful value in A is a bug.
 The compiler's `pop AF` in the epilogue overwrites A before the caller sees it.
-Chapter 06 established this rule; it applies to all three chapters.
+Chapter 9 established this rule; it applies to all three chapters.
 
 ---
 
@@ -285,7 +285,7 @@ already on the stack and this function's frame slot is a copy.
 
 The `op load_and_or` appears at both the loop entry and the back edge. This is
 intentional: the while condition is re-tested at the back edge (as established
-in Chapter 10) using the same flag state, so the same setup must be correct at
+in Chapter 13) using the same flag state, so the same setup must be correct at
 both points.
 
 Notice that the call passes `B`, not `len`. This is required: `op` parameters
@@ -305,16 +305,16 @@ pass the register to the op.
 
 Each step removes one manual task:
 
-- Chapter 08 → Chapter 09: registers-as-variables replaced by typed locals.
-- Chapter 09 → Chapter 10: label management replaced by `if`/`while`.
-- Chapter 10 → Chapter 11: register-passing conventions replaced by typed parameters.
+- Chapter 11 → Chapter 12: registers-as-variables replaced by typed locals.
+- Chapter 12 → Chapter 13: label management replaced by `if`/`while`.
+- Chapter 13 → Chapter 14: register-passing conventions replaced by typed parameters.
 
-Across Chapters 09–11, the compiler also handles frame setup, frame teardown,
+Across Chapters 12–14, the compiler also handles frame setup, frame teardown,
 register preservation, and the final `ret` at `end`. A ZAX `func` never needs a
 trailing `ret`.
 
 The Z80 machine model has not changed. Registers, flags, the stack, and indexed
-addressing are all still present in Chapter 11. What has changed is how much
+addressing are all still present in Chapter 14. What has changed is how much
 of the repetitive work the compiler does for you.
 
 ---
@@ -359,7 +359,7 @@ By this point you can:
 - write `if`/`else` and `while` loops with `break` and `continue`
 - write a ZAX `func` with typed parameters and a typed return value
 - write an `op` for inline named instruction sequences
-- explain what each construct in Chapters 09–11 does and what it replaces
+- explain what each construct in Chapters 12–14 does and what it replaces
 
 **Volume 2: `learning/part2/`**
 
@@ -384,7 +384,7 @@ Volume 2 covers the constructs and patterns needed for larger programs:
   linked-list and tree traversal using `addr` locals
 - **`select`/`case`** — dispatch on a value, the ZAX alternative to jump tables
 
-A reader who has finished Volume 1 through Chapter 11 can open any Volume 2
+A reader who has finished Volume 1 through Chapter 14 can open any Volume 2
 example file and follow it without encountering unfamiliar ZAX syntax. The
 structures will be new; the language surface will not.
 

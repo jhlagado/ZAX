@@ -2,20 +2,26 @@
 
 # Chapter 7 — Counting Loops and DJNZ
 
+There are no loops in assembly. There are no subroutines, no if-statements, no
+structured blocks of any kind. The language is nothing but individual
+instructions, one after another. Every structure that exists in high-level
+languages — loops, conditionals, function calls — you build yourself out of
+jumps and labels. This might sound limiting, but it gives you complete freedom
+of creation: the CPU does exactly what you tell it, nothing more.
+
 This chapter introduces `djnz`, the Z80's single-instruction counted loop
 primitive. After reading it you will be able to write a DJNZ counted loop, a
 sentinel loop that exits on a value match, and a flag-exit loop that exits when
 a computed condition becomes true. You will also understand a hardware edge case
 that every Z80 programmer needs to know.
 
-Prerequisites: Chapters 00–03 (registers, `ld`, flags, `cp`, `jp`, `jr`,
-label-based control flow).
+Prerequisites: Chapter 6 (flags, `cp`, `jp`, `jr`, label-based control flow).
 
 ---
 
-## Chapter 03 left a two-instruction pattern
+## Chapter 6 left a two-instruction pattern
 
-Chapter 03 ended with this loop shape:
+Chapter 6 ended with this loop shape:
 
 ```zax
 ld b, Limit
@@ -106,6 +112,37 @@ skip_loop:
 
 If you know at write-time that the count is always between 1 and 255, no
 pre-test is needed.
+
+---
+
+## What the registers hold after a loop
+
+It is worth pausing to think about what state the CPU is in after a loop
+finishes. Consider the counted loop from Part 1 of the example below, which
+sums the five bytes `{ 3, 7, 2, 8, 5 }`:
+
+```zax
+ld hl, addends
+ld b, TableLen      ; B = 5
+ld a, 0
+djnz_loop:
+  add a, (hl)
+  inc hl
+  djnz djnz_loop
+ld (total), a
+```
+
+When the loop exits: **B is zero** (that was the exit condition). **A holds 25**
+(the accumulated sum). **HL points one byte past the last element** — it was
+incremented after reading each entry, so after five elements it has advanced
+five positions beyond the base.
+
+That last point matters. If another variable is stored immediately after the
+table, HL now points at it. A stray `ld (hl), a` at this point would silently
+overwrite that variable. There is nothing to stop you: the Z80 has no array
+bounds, no memory protection, no runtime error. If you write past the end of
+a table, you corrupt whatever is there. The price of assembly's freedom is
+responsibility — you must track where your pointers end up.
 
 ---
 
@@ -300,7 +337,7 @@ determines when to stop.
 
 ## What Comes Next
 
-Chapter 05 shows how to define byte and word tables in memory and read their
+Chapter 8 shows how to define byte and word tables in memory and read their
 entries using HL as a sequential pointer and IX as a displaced-access pointer.
 
 ---

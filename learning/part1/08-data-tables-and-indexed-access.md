@@ -8,7 +8,7 @@ access pointer. After reading it you will be able to define a small table,
 load its base address into HL or IX, and read elements either sequentially in
 a loop or by fixed offset.
 
-Prerequisites: Chapters 00–04 (registers, `ld` modes, labels, DJNZ loops).
+Prerequisites: Chapters 4–7 (registers, `ld` modes, labels, DJNZ loops).
 
 ---
 
@@ -96,6 +96,25 @@ This distinction matters most when a function receives a table to process. The
 function receives the address (loaded into HL or another pair by the caller) and
 uses `(hl)` to reach the values. The address is the handle; the values are what
 the memory at that address contains.
+
+---
+
+## Labels, variables, and code share the same memory
+
+An important fact to internalise: assembly does **not** distinguish between
+a label that names a variable and a label that marks a point in code. Both are
+memory addresses — plain 16-bit numbers. `scores` is the address where the
+table starts. `loop_top` is the address where the loop body starts. To the CPU,
+both are just numbers. You could load data from a code address, and you could
+jump to a data address. The CPU would blindly obey, attempting to execute your
+data bytes as instructions (almost certainly crashing) or overwriting your
+instructions with data values.
+
+This is one reason why testing on an emulator before running on hardware is
+sensible practice. A stray pointer that writes into the code region can corrupt
+instructions in ways that are difficult to diagnose. The Z80 has no hardware
+separation between code and data — everything is bytes in the same 64K address
+space, and it is your job to keep them organised.
 
 ---
 
@@ -211,7 +230,7 @@ ld (max_score), a
 ```
 
 A holds the running maximum. Each iteration loads the current byte into C and
-compares A with C using `cp c`. The rule from Chapter 03: after `cp c`, carry is
+compares A with C using `cp c`. The rule from Chapter 6: after `cp c`, carry is
 set if A is less than C. `jr nc` skips the update when A is already greater than
 or equal to C. `ld a, c` runs only when a new maximum is found. After six
 entries, `max_score` holds 60 (`$3C`).
@@ -311,7 +330,7 @@ call.
 
 ## What Comes Next
 
-Chapter 06 introduces `call` and `ret`, explains how the hardware stack works,
+Chapter 9 introduces `call` and `ret`, explains how the hardware stack works,
 and shows how to write reusable subroutines that receive values in registers and
 return results to the caller.
 
