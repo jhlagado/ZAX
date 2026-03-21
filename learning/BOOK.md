@@ -1,0 +1,7659 @@
+# Learning Book
+
+This file concatenates the current `learning/` prose in reading order so it can be read on GitHub as one document.
+
+It preserves the current course structure: Part 1 first, then Part 2.
+
+
+## Source Order
+
+- `learning/README.md`
+- `learning/part1/README.md`
+- `learning/part1/01-the-computer.md`
+- `learning/part1/02-machine-code.md`
+- `learning/part1/03-the-assembler.md`
+- `learning/part1/04-numbers-and-registers.md`
+- `learning/part1/05-loading-storing-constants.md`
+- `learning/part1/06-flags-comparisons-jumps.md`
+- `learning/part1/07-counting-loops-and-djnz.md`
+- `learning/part1/08-data-tables-and-indexed-access.md`
+- `learning/part1/09-stack-and-subroutines.md`
+- `learning/part1/10-io-and-ports.md`
+- `learning/part1/11-a-phase-a-program.md`
+- `learning/part1/12-typed-storage-and-assignment.md`
+- `learning/part1/13-structured-control-flow.md`
+- `learning/part1/14-functions-arguments-and-op.md`
+- `learning/part2/README.md`
+- `learning/part2/00-introduction.md`
+- `learning/part2/01-foundations.md`
+- `learning/part2/02-arrays-and-loops.md`
+- `learning/part2/03-strings.md`
+- `learning/part2/04-bit-patterns.md`
+- `learning/part2/05-records.md`
+- `learning/part2/06-recursion.md`
+- `learning/part2/07-composition.md`
+- `learning/part2/08-pointer-structures.md`
+- `learning/part2/09-gaps-and-futures.md`
+
+---
+
+<!-- Source: learning/README.md -->
+
+# Learning ZAX
+
+Two parts. Read them in order.
+
+---
+
+## [Part 1 — Learn Z80 Programming in ZAX](part1/README.md)
+
+No prior knowledge assumed. Starts with what a computer actually is, what a program looks like in memory, and what an assembler does — then teaches Z80 programming from scratch over 14 chapters, working up to ZAX's higher-level features.
+
+> [Start here](part1/README.md)
+
+---
+
+## [Part 2 — Algorithms and Data Structures in ZAX](part2/README.md)
+
+Teaches ZAX through classic short algorithms. Assumes you understand the basic machine model — either from Part 1 or from prior Z80 experience.
+
+Covers sorting, searching, strings, bit patterns, records, recursion, module composition, and pointer structures through real compilable programs.
+
+> [Continue here after Part 1](part2/README.md)
+
+---
+
+## How examples work
+
+Each part keeps its prose chapters and example source files together:
+
+- `part1/examples/` — compilable `.zax` files for Part 1
+- `part2/examples/` — compilable `.zax` files for Part 2
+
+To compile any example:
+
+```sh
+npm run zax -- learning/part1/examples/00_first_program.zax
+npm run zax -- learning/part2/examples/unit1/fibonacci.zax
+```
+
+Run `npm run build` once first to pre-build the compiler, then call `node dist/src/cli.js` directly for faster iteration.
+
+
+---
+
+<!-- Source: learning/part1/README.md -->
+
+# Part 1 — Learn Z80 Programming in ZAX
+
+No prior knowledge of computers or programming assumed.
+
+The first three chapters answer the questions that must be settled before any code makes sense: what is a computer, what is a program, and what does an assembler actually do? Chapters 4–14 teach Z80 programming from the ground up using ZAX.
+
+Continue with [Part 2 — Algorithms and Data Structures in ZAX](../part2/README.md) when you are done.
+
+---
+
+## Chapter table
+
+| Ch | File | What it covers |
+|----|------|----------------|
+| 1 | [The Computer](01-the-computer.md) | CPU, memory, registers, the fetch-execute cycle, I/O ports |
+| 2 | [Machine Code](02-machine-code.md) | Programs as bytes, decoding a real hex program, why raw machine code is fragile |
+| 3 | [The Assembler](03-the-assembler.md) | Mnemonics, a ZAX program, what ZAX produces, why ZAX goes further than a basic assembler |
+| 4 | [Numbers and Registers](04-numbers-and-registers.md) | Binary, hex, the Z80 register set, first register-to-register moves |
+| 5 | [Loading, Storing, Constants](05-loading-storing-constants.md) | LD instruction, immediate values, memory access with labels |
+| 6 | [Flags, Comparisons, Jumps](06-flags-comparisons-jumps.md) | Flags register, CP instruction, conditional and unconditional jumps |
+| 7 | [Counting Loops and DJNZ](07-counting-loops-and-djnz.md) | DJNZ instruction, counted loops, loop patterns |
+| 8 | [Data Tables and Indexed Access](08-data-tables-and-indexed-access.md) | Tables in memory, IX/IY indexed addressing, lookup patterns |
+| 9 | [Stack and Subroutines](09-stack-and-subroutines.md) | PUSH, POP, CALL, RET, the system stack, subroutine conventions |
+| 10 | [I/O and Ports](10-io-and-ports.md) | IN, OUT, port-mapped I/O, TEC-1 hardware examples |
+| 11 | [A Complete Program](11-a-phase-a-program.md) | Putting it all together: a real program from start to finish |
+| 12 | [Typed Storage and Assignment](12-typed-storage-and-assignment.md) | ZAX variables, `:=` assignment, `var` declarations, typed storage |
+| 13 | [Structured Control Flow](13-structured-control-flow.md) | `if`/`while`/`break`/`continue`, `select`/`case`, structured programming in ZAX |
+| 14 | [Functions, Arguments, and Op](14-functions-arguments-and-op.md) | ZAX functions, typed parameters, `op` for inline expansion |
+
+Example files are under `examples/` in this directory. The examples are numbered
+starting from `00` and correspond to chapters starting from Chapter 3:
+`00_first_program.zax` goes with Chapter 3, `01_register_moves.zax` with
+Chapter 4, and so on. Chapters 1 and 2 have no example files — they cover
+concepts that precede writing code.
+
+---
+
+## How to compile the examples
+
+```sh
+npm run zax -- learning/part1/examples/01_register_moves.zax
+```
+
+---
+
+## Editorial standard
+
+All prose in this volume is held to [`docs/work/course-writing-standard.md`](../../docs/work/course-writing-standard.md).
+
+
+---
+
+<!-- Source: learning/part1/01-the-computer.md -->
+
+# Chapter 1 — The Computer
+
+Every computer, at the lowest level, runs **machine code** — raw numeric instructions built into the CPU's hardware. High-level languages like C or Python hide the machine entirely; a compiler or interpreter handles the translation down to those numbers. Assembly does not hide the machine. Each line you write corresponds directly to one CPU instruction, and the assembler's job is mostly mechanical: turn your readable text into the exact bytes the CPU expects.
+
+Assembly requires you to think like the computer. You get full control — every register, every memory access, every branch is yours to specify. Nothing happens unless you ask for it. But you also carry the full burden: you must understand what the CPU can do, how it stores data, and how it steps through a program byte by byte. There is no safety net of type checking, garbage collection, or automatic memory management.
+
+ZAX is an assembler for the Z80 that adds some structure on top — named variables, typed storage, and control flow keywords like `if` and `while` — but the underlying model is the same. Every ZAX program compiles down to Z80 machine code, and understanding that machine code is what this book teaches.
+
+This chapter describes the Z80 itself: its memory, its registers, and the cycle by which it executes instructions. Everything in the rest of the book depends on this picture.
+
+---
+
+## Bits and Bytes
+
+The memory of any computer stores only two values: 0 and 1. Each individual 0 or 1 is called a **bit** (from *binary digit*). The Z80 cannot access individual bits directly, however. It always handles memory in groups of eight bits at a time. A group of eight bits is a **byte**.
+
+The eight bits in a byte are numbered from position 7 down to position 0. The numbering reflects each bit's contribution to the byte's total value: bit 7 represents 2<sup>7</sup> = 128, bit 6 represents 2<sup>6</sup> = 64, and so on down to bit 0, which represents 2<sup>0</sup> = 1. To find the numeric value of a byte, multiply each bit by its positional value and add up the results.
+
+Here is the byte `0b01110101` worked out in full (the `0b` prefix means the number is written in binary):
+
+| Bit position | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+|---|---|---|---|---|---|---|---|---|
+| Positional value | 128 | 64 | 32 | 16 | 8 | 4 | 2 | 1 |
+| Digit | 0 | 1 | 1 | 1 | 0 | 1 | 0 | 1 |
+| Contribution | 0 | 64 | 32 | 16 | 0 | 4 | 0 | 1 |
+
+Total: 64 + 32 + 16 + 4 + 1 = **117**.
+
+A byte can hold any value from 0 (`0b00000000`) to 255 (`0b11111111`). This is the smallest unit of data the Z80 can directly read, write, or operate on.
+
+### Words
+
+Two consecutive bytes form a **word**, a 16-bit value. A word can hold values from 0 to 2<sup>16</sup> − 1 = 65,535. The Z80 handles both bytes and words; many of its registers are 16 bits wide and its memory addressing uses 16-bit values throughout. (Other CPUs have 32-bit or 64-bit words, but the Z80 only works with these two sizes.)
+
+When a word is stored in memory, it occupies two consecutive bytes. Which byte comes first matters, and this is discussed below under *Endianness*.
+
+---
+
+## Hexadecimal
+
+Writing out eight bits every time you mean a byte value is tedious and error-prone. Instead, Z80 programmers almost universally use **hexadecimal** — base 16 — and so will you. Hexadecimal numbers are prefixed with `$` throughout this book.
+
+Hexadecimal uses sixteen digits: `0`–`9` for values 0–9, then `A`–`F` for values 10–15. The key property that makes hexadecimal useful in this context is that exactly four bits correspond to exactly one hexadecimal digit. Converting between hex and binary requires no arithmetic — just split the bits into groups of four and substitute each group directly.
+
+Taking the example from above, `0b01110101`:
+
+```
+  0111   0101
+   7      5
+  $75
+```
+
+So `0b01110101 = $75`. Confirm in the other direction: `$75 = 7 × 16 + 5 = 112 + 5 = 117`. ✓
+
+The same holds for 16-bit words: `$FFFF` is `0b1111111111111111`, and a four-digit hex number always represents exactly sixteen bits. Addresses in the Z80 are always four hex digits, running from `$0000` to `$FFFF`.
+
+You will see hex constantly in Z80 work. Every opcode, every address, every constant value is typically written this way. It is worth spending a few minutes converting numbers in both directions until it feels natural.
+
+---
+
+## Memory
+
+The Z80 has a 16-bit address bus, which means it can address 2<sup>16</sup> = 65,536 bytes of memory, at addresses `$0000` through `$FFFF`. Think of it as a flat array: 65,536 numbered slots, each holding one byte. The number that identifies a slot is its **address**. To read or write any byte, you name its address.
+
+The CPU itself does not know or care what kind of memory chip sits behind any given address. It simply puts an address on the bus and reads or writes a byte. The hardware designer decides which addresses connect to which chips. Two kinds of memory chip are common:
+
+**ROM** (read-only memory) contains pre-programmed data that cannot be changed during normal operation. ROM retains its contents when power is removed. It is used for code and data that must survive power cycles — bootloaders, fixed routines, lookup tables.
+
+**RAM** (random-access memory) can be freely read and written, but loses its contents when power is removed. RAM is where your running program stores variables, the stack, and any data it creates or modifies.
+
+A system's **memory map** describes which address ranges connect to which chips. There is no single standard layout — it varies from system to system. A typical small Z80 board might look like this:
+
+```
+$0000–$1FFF   ROM   (8 KB — startup code)
+$2000–$7FFF   RAM   (24 KB — program and data)
+$8000–$FFFF   —     (unmapped, or more RAM, or memory-mapped I/O)
+```
+
+The Z80 imposes only one constraint: when it powers on or resets, the program counter starts at `$0000`, so whatever memory is mapped there must contain valid code. On the board above, that means ROM. Other boards arrange things differently — the memory map is always a hardware decision, not a CPU rule.
+
+What matters for you as a programmer is knowing the memory map of the specific system you are targeting. The assembler needs to know where to place your code and data so that the addresses in the output binary match the hardware layout.
+
+### Endianness
+
+When a 16-bit word is stored in memory, its two bytes must go into two consecutive addresses. The Z80 is **little-endian**: the low byte of the word is stored at the lower address, and the high byte at the higher address.
+
+For example, storing the word `$1A2B` at address `$8000`:
+
+```
+Address   Contents
+$8000       $2B    ← low byte first
+$8001       $1A    ← high byte second
+```
+
+Read it back: the byte at `$8000` is `$2B` (low), the byte at `$8001` is `$1A` (high), so the word is `$1A2B`. This is not something you can change — every Z80 instruction that handles 16-bit values follows this rule. You will encounter it whenever you store addresses or multi-byte values in memory, so remember it.
+
+---
+
+## The CPU and Its Registers
+
+The CPU (central processing unit) is the chip that does the work. It reads bytes from memory, interprets them as instructions, and carries them out one after another. To carry out those instructions, the CPU needs a small amount of very fast internal storage. That storage is called the **registers**.
+
+Registers are not part of RAM. They are built into the CPU itself, much faster to access than any external memory. The Z80 has only 26 bytes of register storage in total — a tiny amount compared to the 64K of addressable memory. Each register has its own name and its own special roles. Almost every instruction you write uses at least one register, and almost every calculation must pass through them — there are very few Z80 operations that work directly on memory without involving a register.
+
+Here is the complete Z80 register set:
+
+| Register | Width | Role |
+|----------|-------|------|
+| A | 8 bits | **Accumulator.** Most arithmetic and logic operations happen here. If an instruction produces a result, it usually ends up in A. |
+| F | 8 bits | **Flags.** Individual bits record the outcome of the last operation (zero result, carry, overflow, etc.). Cannot be used directly in most instructions. |
+| B | 8 bits | General purpose. Frequently used as a loop counter. |
+| C | 8 bits | General purpose. Also used as a port number with the `in`/`out` instructions. |
+| D | 8 bits | General purpose. |
+| E | 8 bits | General purpose. |
+| H | 8 bits | General purpose. High byte of HL. |
+| L | 8 bits | General purpose. Low byte of HL. |
+| BC | 16 bits | B and C treated as a pair. Useful for 16-bit counts and addresses. |
+| DE | 16 bits | D and E treated as a pair. Commonly used as a destination address when copying data. |
+| HL | 16 bits | H and L treated as a pair. The primary address register — most indirect memory access goes through HL. |
+| IX | 16 bits | Index register. Used for indexed memory access (address + offset). Splits into IXH and IXL. |
+| IY | 16 bits | Index register. Same role as IX, a second independent index. Splits into IYH and IYL. |
+| SP | 16 bits | **Stack pointer.** Points to the most recently pushed value on the hardware stack. |
+| PC | 16 bits | **Program counter.** Always contains the address of the next instruction to execute. Cannot be read or written directly. |
+| I | 8 bits | Interrupt vector register. Used with interrupt mode 2. |
+| R | 8 bits | Refresh register. Incremented automatically as each instruction is fetched. Only the low seven bits cycle; the top bit stays zero. Rarely useful to the programmer. |
+
+When B and C are used as the pair BC, B holds the high byte and C holds the low byte — the same pattern as DE (D high, E low) and HL (H high, L low). IX and IY follow the same rule with their halves. So for example if HL = `$1A2B`, then H = `$1A` and L = `$2B`.
+
+The Z80 also has a second, hidden copy of A, F, B, C, D, E, H, and L called the **shadow registers**. They are covered in Chapter 9, where you will have a practical reason to use them.
+
+---
+
+## The Flags Register in Detail
+
+The flags register F contains eight bits, each of which records something about the result of the last operation that affected it. You will use these flags constantly — every conditional branch in the Z80 tests one of them.
+
+| Bit | Symbol | Name | Meaning |
+|-----|--------|------|---------|
+| 7 | S | Sign | Set if the result, interpreted as a signed number, is negative (i.e. bit 7 of the result is 1). |
+| 6 | Z | Zero | Set if the result is zero. |
+| 5 | — | | Undefined. |
+| 4 | H | Half carry | Set if there was a carry from bit 3 to bit 4. Used for BCD arithmetic. You will almost certainly never need this. |
+| 3 | — | | Undefined. |
+| 2 | P/V | Parity / Overflow | Used for two different purposes depending on the instruction: parity (set if the number of 1-bits in the result is even) or overflow (set if the result exceeded the signed range). Which meaning applies is determined by the instruction. |
+| 1 | N | Subtract | Set if the last operation was a subtraction. Used internally for BCD correction. |
+| 0 | C | Carry | Set if the last operation produced a carry out of bit 7, or a borrow in the case of subtraction. |
+
+Not every instruction updates every flag. Some instructions update all flags; some update only Z and C; some leave all flags unchanged. You will learn which flags each instruction affects as you encounter them in later chapters.
+
+---
+
+## The Fetch-Execute Cycle
+
+The CPU does one thing, over and over: read the byte at address PC, interpret it as an instruction, carry it out, and advance PC to the next instruction. This is the **fetch-execute cycle**.
+
+The Z80 starts with PC at `$0000` after a reset. The first byte fetched is therefore the byte at address `$0000` — whatever memory the hardware has mapped there. Some instructions are one byte long, some are two, three, or four. After executing an instruction, PC advances by exactly as many bytes as that instruction occupied, unless the instruction itself changes PC — jumps and calls do exactly that.
+
+---
+
+## Summary
+
+- Memory is 65,536 bytes at addresses `$0000`–`$FFFF`; each byte holds 0–255
+- A byte is 8 bits; a word is 16 bits (two bytes)
+- The `0b` prefix marks binary numbers; the `$` prefix marks hexadecimal numbers
+- Four bits = one hex digit; conversion between binary and hex is direct and requires no arithmetic
+- The Z80 is little-endian: the low byte of a word is stored at the lower address
+- The memory map (which addresses are ROM, which are RAM) varies by system; PC starts at `$0000` after reset, so that address must contain valid code
+- The CPU has 20+ named registers; the main working registers are A, BC, DE, HL, IX, IY, SP, and PC
+- The flags register F records results of operations; its bits (S, Z, H, P/V, N, C) control conditional branches
+- PC always holds the address of the next instruction; the CPU fetches and executes endlessly
+
+---
+
+[Part 1](README.md) | [Machine Code →](02-machine-code.md)
+
+
+---
+
+<!-- Source: learning/part1/02-machine-code.md -->
+
+# Chapter 2 — Machine Code
+
+A program is a sequence of bytes in memory. The CPU fetches one byte, executes the corresponding operation, advances PC, and fetches the next. This chapter shows what that looks like concretely — actual opcodes, an actual hex program decoded instruction by instruction, and the reason assembly was invented.
+
+---
+
+## Opcodes
+
+The byte (or bytes) that represent an instruction are called its **opcode**. Each opcode is a fixed numeric code that the Z80's hardware decodes into an operation. Some instructions are one byte; others include one or more additional bytes carrying a constant value, a memory address, or an offset.
+
+A few examples from the Z80 instruction set:
+
+| Byte sequence | Instruction | What it does |
+|---------------|-------------|--------------|
+| `$3E n` | `LD A, n` | Load the constant value `n` into A |
+| `$06 n` | `LD B, n` | Load the constant value `n` into B |
+| `$47` | `LD B, A` | Copy A into B |
+| `$80` | `ADD A, B` | Add B to A; result goes into A |
+| `$32 lo hi` | `LD (nn), A` | Store A at the 16-bit address `nn` |
+| `$3A lo hi` | `LD A, (nn)` | Load A from the 16-bit address `nn` |
+| `$76` | `HALT` | Stop the CPU |
+
+Address operands always follow the Z80's little-endian convention: low byte first, high byte second. The address `$8000` appears in the instruction stream as `$00 $80`.
+
+---
+
+## A Complete Hex Program
+
+Here is a complete Z80 program written entirely as bytes, placed in memory starting at address `$0000`. It loads the values 5 and 3 into registers, adds them, and stores the result at address `$8000`.
+
+```
+$0000:  3E 05        ; LD A, 5         — load 5 into A
+$0002:  47           ; LD B, A         — copy A into B; B now holds 5, A holds 5
+$0003:  3E 03        ; LD A, 3         — load 3 into A; B still holds 5
+$0005:  80           ; ADD A, B        — A = A + B = 3 + 5 = 8
+$0006:  32 00 80     ; LD ($8000), A   — store A at address $8000
+$0009:  76           ; HALT
+```
+
+Ten bytes, starting at `$0000`, ending at `$0009`.
+
+### Stepping Through It
+
+The CPU starts with PC = `$0000`.
+
+**PC = `$0000`:** The byte there is `$3E`. The Z80 recognises this as a two-byte instruction: "load the next byte into A." It reads the following byte, `$05`, and loads 5 into A. PC advances to `$0002`.
+
+**PC = `$0002`:** The byte is `$47`: "copy A into B." One byte, no operand. B becomes 5; A remains 5. PC advances to `$0003`.
+
+**PC = `$0003`:** `$3E $03` — load 3 into A. B is unchanged and still holds 5. A is now 3. PC advances to `$0005`.
+
+**PC = `$0005`:** `$80` — add B to A. The Z80 adds the contents of B (5) to the contents of A (3) and puts the result (8) into A. The flags register is updated: Zero is clear (8 ≠ 0), Carry is clear (8 < 256), Sign is clear (bit 7 of 8 is 0). PC advances to `$0006`.
+
+**PC = `$0006`:** `$32 $00 $80` — store A at a 16-bit address. The opcode `$32` is followed by two address bytes: `$00` (low) and `$80` (high), giving address `$8000`. The value 8 is written to memory location `$8000`. PC advances to `$0009`.
+
+**PC = `$0009`:** `$76` — HALT. The CPU stops. Address `$8000` now contains `$08`.
+
+---
+
+## Variables
+
+From the CPU's point of view, a variable is just a byte (or several bytes) of memory at some address. It has no name, no type, and no relationship to any other byte. The only way to refer to it is by its numeric address.
+
+In the program above, the result was written to the fixed address `$8000`. But `$8000` is embedded as raw bytes in the instruction at `$0006`. If you later decide the result should live at `$8100` instead, you must find that instruction and change bytes `$07` and `$08` by hand. If you have fifty instructions referencing the same address, you change fifty places.
+
+This is the core problem with raw machine code: there is no concept of a name. Everything is a position number. The programmer must manually track what every address means and keep every reference consistent.
+
+Assembly solves this with **labels**. A label is a name that the assembler associates with a particular address at assembly time. Everywhere you write the label, the assembler substitutes the correct address automatically. If the variable moves, you update the label's definition and every reference updates with it.
+
+In a Z80 assembler a label definition looks like this:
+
+```
+Result:          ; the assembler records "Result" as the current address
+  DB 0           ; allocate one byte at this address, initial value 0
+```
+
+(`DB` stands for "define byte." `DW` defines a 16-bit word.) From this point on, writing `LD (Result), A` in the code is equivalent to writing `LD ($8000), A` — but the programmer never has to know or write `$8000`. The assembler handles it.
+
+Labels also name positions within the code — the targets of jumps and branches. Instead of writing `JP $0034`, you write `JP loop_top`, and the assembler works out the address of `loop_top` itself.
+
+This is the single most important difference between machine code and assembly. Machine code is just bytes. Assembly adds names for addresses.
+
+---
+
+## Why Raw Machine Code Is Impractical
+
+The program above was ten bytes. Real programs are thousands. Writing them as raw hex creates compounding problems:
+
+**No names.** Every address is a number. `$8000` might be your result, or it might be a display buffer, or it might be the start of a lookup table. Nothing in the code tells you which.
+
+**Fragility.** Insert one instruction in the middle of the program and every address calculated from that point shifts. You update them all by hand, and one missed update produces a silent wrong result — not an error message.
+
+**Unreadability.** You cannot skim `3E 05 47 3E 03 80 32 00 80 76` and understand what the program does. You have to decode each byte from memory.
+
+**No structure.** Machine code has no subroutines, no loops, no conditionals — just bytes and addresses. Everything that programs need beyond raw arithmetic must be built by hand from jumps to raw addresses.
+
+An assembler does not change the fact that the CPU sees bytes. It changes what you, the programmer, have to write and maintain.
+
+---
+
+## Summary
+
+- Every Z80 instruction has a specific numeric opcode; the CPU reads this byte and carries out the corresponding operation
+- Multi-byte instructions include operand bytes after the opcode: constants, addresses, or offsets
+- Address operands are always little-endian: low byte first
+- The CPU steps through instructions one at a time by following PC; PC advances by the length of each instruction
+- Raw machine code has no names, no structure, and breaks silently whenever you move things around
+- Labels — names for addresses — are the fundamental thing assembly adds over raw machine code
+
+---
+
+[← The Computer](01-the-computer.md) | [Part 1](README.md) | [The Assembler →](03-the-assembler.md)
+
+
+---
+
+<!-- Source: learning/part1/03-the-assembler.md -->
+
+# Chapter 3 — The Assembler
+
+An assembler reads a text source file and produces a binary — the byte sequence that goes into memory. The programmer writes instructions using mnemonics (human-readable names for opcodes) and labels (names for addresses), and the assembler handles the translation to bytes, the calculation of label addresses, and the resolution of every reference.
+
+This chapter covers the most important single instruction in the Z80 (`LD`), introduces the hardware stack, and shows what a complete ZAX program looks like from source to output.
+
+---
+
+## The LD Instruction
+
+`LD` is the Z80's load instruction. It copies a value from a source location to a destination location: a register, a memory address, or an immediate constant. Its general form is:
+
+```
+ld destination, source
+```
+
+`LD` by itself does not affect the flags register. It is a pure copy — source is unchanged, destination receives the value, nothing else happens.
+
+One convention to internalise now: **parentheses always indicate a memory access.** `LD A, B` copies the register B into A. `LD A, (HL)` reads the byte from memory at the address stored in HL. The parentheses are not optional decoration — they change the meaning of the instruction entirely. This convention applies everywhere in Z80 assembly, not just to `LD`.
+
+Not every combination of source and destination is legal. The Z80's hardware supports specific pairings, and asking for an unsupported one is an assembler error. The rules are worth knowing in full, because `LD` is the most frequently used instruction in any Z80 program.
+
+### 8-bit register to register
+
+Any of the registers A, B, C, D, E, H, L can be copied to any other. The only restriction concerns the undivided halves of IX and IY (IXH, IXL, IYH, IYL): you can freely mix within one pair (`LD IXH, IXL` is valid), but you cannot mix between HL's bytes and IX's or IY's bytes in the same instruction.
+
+```zax
+ld a, b     ; A = B
+ld d, h     ; D = H
+ld l, c     ; L = C
+ld a, a     ; legal, pointless
+```
+
+### Immediate constant into register
+
+Any 8-bit register takes an immediate byte constant (0–255). Any 16-bit register pair or index register takes a 16-bit constant.
+
+```zax
+ld a, 42        ; A = 42
+ld b, $FF       ; B = 255
+ld hl, $8000    ; HL = $8000
+ld ix, $4000    ; IX = $4000
+```
+
+### Memory access through HL
+
+HL is the primary indirect address register. `(HL)` means "the byte at the address currently in HL."
+
+```zax
+ld a, (hl)     ; A = byte at address HL
+ld (hl), a     ; byte at address HL = A
+ld b, (hl)     ; B = byte at address HL
+ld (hl), 19    ; byte at address HL = 19  (immediate constant also valid here)
+```
+
+Any of A, B, C, D, E, H, L can appear on either side when the other side is `(HL)`.
+
+### Indexed memory access through IX and IY
+
+IX and IY support **displaced** (indexed) addressing: `(IX+n)` means "the byte at address IX + n", where n is a signed 8-bit offset from −128 to +127.
+
+```zax
+ld a, (ix+0)    ; A = byte at address IX
+ld b, (ix+7)    ; B = byte at address IX+7
+ld (iy-2), a    ; byte at address IY-2 = A
+ld (ix+1), $3F  ; byte at address IX+1 = $3F
+```
+
+This is the mechanism behind struct field access and array element access in ZAX — you set IX or IY to point to the start of a structure, then access fields at known offsets.
+
+### Memory access through BC or DE
+
+Only the accumulator A can be used with `(BC)` or `(DE)`:
+
+```zax
+ld a, (bc)     ; A = byte at address BC
+ld (de), a     ; byte at address DE = A
+```
+
+Neither `LD B, (BC)` nor `LD (DE), H` is legal.
+
+### Direct memory address
+
+A can be loaded from or stored to a fixed 16-bit address. 16-bit register pairs can also be loaded from or stored to memory, transferring both bytes in one instruction (little-endian, as always).
+
+```zax
+ld a, ($8000)      ; A = byte at $8000
+ld ($8001), a      ; byte at $8001 = A
+ld hl, ($8002)     ; HL = word at $8002–$8003 (little-endian)
+ld ($8004), bc     ; word at $8004–$8005 = BC (low byte first)
+```
+
+Note that `LD (nn), r` where `r` is a 16-bit pair works for BC, DE, HL, SP, IX, and IY. All are stored little-endian.
+
+### Two memory locations cannot be combined
+
+There is no single instruction that copies one memory address directly to another. You must go through a register:
+
+```zax
+; No such instruction: ld ($8001), ($8000)
+
+; Do this instead:
+ld a, ($8000)
+ld ($8001), a
+```
+
+### Summary of LD forms
+
+| Form | Example | Notes |
+|------|---------|-------|
+| reg8 ← reg8 | `ld a, b` | Any 8-bit register to any other (with IX/IY half-register restriction) |
+| reg8 ← n | `ld b, $FF` | Immediate 8-bit constant |
+| reg16 ← nn | `ld hl, $8000` | Immediate 16-bit constant |
+| reg8 ← (HL) | `ld c, (hl)` | Read byte at address HL |
+| (HL) ← reg8 | `ld (hl), d` | Write byte to address HL |
+| (HL) ← n | `ld (hl), 0` | Write immediate to address HL |
+| reg8 ← (IX+n) | `ld a, (ix+3)` | Read byte at IX + offset (n: −128 to +127) |
+| (IX+n) ← reg8 | `ld (ix+3), a` | Write byte to IX + offset |
+| A ← (BC) | `ld a, (bc)` | Read byte at address BC; A only |
+| (DE) ← A | `ld (de), a` | Write A to address DE; A only |
+| A ← (nn) | `ld a, ($8000)` | Read byte from fixed address |
+| (nn) ← A | `ld ($8001), a` | Write A to fixed address |
+| reg16 ← (nn) | `ld hl, ($8002)` | Read 16-bit word from memory |
+| (nn) ← reg16 | `ld ($8004), hl` | Write 16-bit word to memory |
+| SP ← reg16 | `ld sp, hl` | SP = HL (or IX or IY) |
+
+---
+
+## Arithmetic Instructions Are Not Operators
+
+Before moving on, there is one difference between assembly and higher-level languages that catches everyone. In a language like C, `a + b` produces a result without changing either `a` or `b`. In Z80 assembly, `ADD A, B` adds B to A and **writes the result back into A**, destroying whatever A held before. The instruction is not an operator — it is a complete operation that modifies the destination register.
+
+This matters as soon as you write code longer than a few lines. Here is a small example that calculates the perimeter of a rectangle whose width and height are stored in memory:
+
+```zax
+ld a, (Width)       ; A = Width
+add a, a            ; A = Width * 2
+ld b, a             ; B = Width * 2
+ld a, (Height)      ; A = Height
+add a, a            ; A = Height * 2
+add a, b            ; A = Height*2 + Width*2
+ld (Perim), a       ; store result
+```
+
+This is correct: 2 × Width + 2 × Height. Now consider what happens if you rearrange the additions, thinking that addition is commutative and the order does not matter:
+
+```zax
+ld a, (Width)       ; A = Width
+ld b, a             ; B = Width
+ld a, (Height)      ; A = Height
+add a, b            ; A = Height + Width
+add a, b            ; A = Height + Width + Width
+add a, a            ; A = (Height + Width + Width) * 2    ← WRONG
+ld (Perim), a       ; stores the wrong value
+```
+
+The final `ADD A, A` does not double the original width — it doubles the running total in A, which by that point is already Height + 2 × Width. The result is `2 × (Height + 2 × Width)`, which is 2 × Width too large.
+
+The mistake is natural if you think of `ADD` as an algebraic operator. It is not. It is an instruction that replaces the contents of A with a new value, and every subsequent instruction sees the new value, not the original. This kind of ordering bug is common in assembly, easy to miss, and produces no error message — just a wrong answer.
+
+---
+
+## The Stack
+
+The **stack** is a region of RAM used for temporary storage of register values. It is managed through the stack pointer SP, which always points to the most recently stored item. The Z80 provides two instructions for using it: `PUSH` and `POP`.
+
+Both instructions work with 16-bit register pairs: AF, BC, DE, HL, IX, or IY.
+
+### PUSH
+
+`PUSH HL` does two things in sequence:
+1. SP is decremented by 2.
+2. The value of HL is written to memory at address SP — L at SP, H at SP+1 (little-endian).
+
+### POP
+
+`POP HL` does the inverse:
+1. The word at address SP is read: the byte at SP goes into L, the byte at SP+1 goes into H.
+2. SP is incremented by 2.
+
+### The stack is last-in, first-out
+
+Values come off the stack in the reverse order they went on. If you push BC and then push DE, popping gives you DE first and BC second.
+
+```zax
+push bc       ; save BC
+push de       ; save DE
+; ... do something that wrecks BC and DE ...
+pop de        ; restore DE (came off first — was pushed last)
+pop bc        ; restore BC (came off second — was pushed first)
+```
+
+This is the standard pattern for preserving registers across a block of code that would otherwise destroy them. You will see it constantly.
+
+### A useful trick
+
+There is no direct instruction to copy AF to another register pair or to access F directly. You can work around this using the stack: push AF, then pop into the target pair (where the byte that was F ends up in the low register).
+
+```zax
+push af
+pop hl        ; H = A, L = F
+```
+
+### The stack is ordinary RAM
+
+The stack is not a separate structure — it is the same RAM as your program and data. SP starts pointing somewhere in RAM (you set it up at the start of your program, or it is set for you), and push/pop move SP up and down within that area. There is nothing magical about it and nothing enforced — if you push more than you pop, SP drifts downward and will eventually collide with something you care about. It is your responsibility to keep pushes and pops balanced.
+
+---
+
+## A First ZAX Program
+
+ZAX wraps Z80 instructions in a structured outer form. A ZAX source file is organised into **sections** — declarations that tell the assembler where in the address space to place the code and data.
+
+Here is the addition program in complete ZAX:
+
+```zax
+section data state at $8000
+  var result: byte
+end
+
+section code app at $0100
+  export func main(): void
+    ld a, 5
+    ld b, a
+    ld a, 3
+    add a, b
+    result := a
+  end
+end
+```
+
+### What each part means
+
+`section data state at $8000` — declares a data section. The variables defined below will be placed in memory starting at address `$8000`. The assembler tracks the exact address of each variable for you.
+
+`var result: byte` — declares one byte of named storage. The name `result` behaves as a label: everywhere you write `result` in the code, the assembler substitutes the actual address. If you add more variables before it or change the section's start address, every reference updates automatically.
+
+`section code app at $0100` — declares a code section starting at address `$0100`. The starting address depends on your target system's memory map. This example uses `$0100`, which is where the CP/M operating system loads application programs. A different board might use `$0000`, `$4000`, or any other address — you set it to match whatever hardware or loader you are targeting.
+
+`export func main(): void` — declares the program's entry point. ZAX generates the function header automatically. The function's closing `end` emits a `ret` instruction, so you do not write one yourself.
+
+`result := a` — ZAX's typed assignment operator. This specific form means "store the value of A into the byte variable `result`." The assembler translates it to `LD ($8000), A`.
+
+### The output
+
+Running ZAX on this source produces a binary file. The bytes inside the function body are identical to the ones decoded in Chapter 2 — the same opcodes, now starting at `$0100` instead of `$0000`. The store to `$8000` is unchanged.
+
+ZAX does not change what the program does. It changes how you write and maintain it.
+
+---
+
+## Beyond Mnemonics: What ZAX Adds
+
+Most assemblers stop at mnemonics and labels. ZAX goes further with features that become important as programs grow:
+
+**Typed variables.** `var result: byte` not only names the storage location — it records what size it is. ZAX uses that information to generate the correct load and store instructions for `:=` assignments. This catches mismatches at assembly time rather than silently generating wrong code.
+
+**Typed function parameters.** Functions can declare what values they receive and what value they return. The assembler generates the correct load and store sequences at call sites.
+
+**Structured control flow.** `if`, `while`, `break`, and `continue` generate correct conditional jumps and loop structures, including the offsets that raw Z80 assembly requires you to calculate manually. You write the structure; the assembler produces the bytes.
+
+**`op` — inline expansion.** An `op` block is like a function, but its body is copied inline at every call site instead of being called with `CALL`/`RET`. This gives you the reuse of a named block without the overhead of a subroutine call.
+
+All of these still produce machine code. The CPU sees bytes. ZAX handles the repetitive work so you can focus on what the program does.
+
+---
+
+## Summary
+
+- An assembler translates mnemonics and labels to bytes; label addresses are calculated and substituted automatically
+- `LD` copies a value from source to destination; it does not affect flags
+- Not all combinations of source and destination are legal — the key groupings are: register-to-register, immediate constant, indirect through HL, indexed through IX/IY, indirect through BC or DE (A only), and direct memory address
+- Two memory locations cannot both appear in a single `LD`; use a register as an intermediate
+- The stack is a region of RAM managed through SP; `PUSH` decrements SP by 2 and stores; `POP` loads and increments SP by 2
+- Pushes and pops must be balanced; the stack is ordinary RAM with no automatic protection
+- A ZAX program wraps instructions in `section` and `func` blocks; it adds typed variables, structured control flow, and typed function interfaces on top of standard Z80 assembly
+
+---
+
+[← Machine Code](02-machine-code.md) | [Part 1](README.md) | [Numbers and Registers →](04-numbers-and-registers.md)
+
+
+---
+
+<!-- Source: learning/part1/04-numbers-and-registers.md -->
+
+# Chapter 4 — Numbers and the Z80 Register Set
+
+This chapter introduces the number systems and the internal storage that Z80
+programs depend on. After reading it you will be able to read any value in
+binary or hexadecimal, explain what register pairs are, and follow a program
+that moves values between registers.
+
+Prerequisites: Chapter 3 (bytes, addresses, the module shell).
+
+---
+
+## Binary and hexadecimal
+
+Every byte in the Z80 holds an eight-bit binary value. Each bit is either 0 or 1.
+The bits are numbered 7 (most significant, leftmost) down to 0 (least
+significant, rightmost). The binary value `0b10000001` has bits 7 and 0 set and
+all others clear; its decimal value is 128 + 1 = 129.
+
+Binary notation is precise but long. Hexadecimal (base 16) is shorter. One hex
+digit represents exactly four bits: `0`–`9` for values 0–9, `A`–`F` for
+values 10–15. Two hex digits describe a full byte. The binary byte
+`0b10000001` written in hex is `$81` (8×16 + 1 = 129). ZAX uses the `$` prefix
+for hex literals throughout.
+
+The table below shows the correspondence for the sixteen possible four-bit
+combinations:
+
+```
+Binary  Hex  Decimal
+0000    $0   0
+0001    $1   1
+0010    $2   2
+0011    $3   3
+0100    $4   4
+0101    $5   5
+0110    $6   6
+0111    $7   7
+1000    $8   8
+1001    $9   9
+1010    $A   10
+1011    $B   11
+1100    $C   12
+1101    $D   13
+1110    $E   14
+1111    $F   15
+```
+
+A word is two bytes, expressed as four hex digits. `$1234` has high byte `$12`
+and low byte `$34`.
+
+---
+
+## Unsigned vs signed values
+
+The Z80 can interpret the eight bits of a byte in two ways.
+
+As an **unsigned** value, the byte holds a number from 0 to 255. The bit pattern
+`$FF` is 255.
+
+As a **signed** value using two's complement, bit 7 is the sign bit. If bit 7
+is 0, the value is positive (0 to 127). If bit 7 is 1, the value is negative
+(-128 to -1). The bit pattern `$FF` is -1 in signed interpretation. The bit
+pattern `$80` is -128.
+
+Two's complement is the standard encoding for negative integers on the Z80.
+To compute the two's complement of a positive value, invert all bits and add
+one. The two's complement of `$01` (binary `0b00000001`) is `0b11111110 + 1 =
+0b11111111 = $FF`, which is -1.
+
+The CPU arithmetic instructions do not distinguish: `add a, b` performs the same
+bitwise addition regardless of whether you intend the values as signed or
+unsigned. The result is the same bit pattern either way. Only the meaning you
+attach to the result, and which flags you check afterward, reflects the
+signed/unsigned choice. Chapter 6 covers flag interpretation in detail.
+
+---
+
+## The Z80 register set
+
+Registers are byte and word storage locations built into the CPU. They are much
+faster to access than memory and are where all arithmetic happens.
+
+The Z80 has these main registers:
+
+| Register | Width | Primary use |
+|----------|-------|-------------|
+| A | 8 bits | Accumulator — arithmetic and logic results land here |
+| B | 8 bits | General purpose; counted-loop counter |
+| C | 8 bits | General purpose; I/O port number |
+| D | 8 bits | General purpose |
+| E | 8 bits | General purpose |
+| H | 8 bits | High byte of HL; general purpose |
+| L | 8 bits | Low byte of HL; general purpose |
+| F | 8 bits | Flags — set by arithmetic, read by conditional jumps |
+
+The flag register F is not used directly in `ld` instructions. Its contents are
+examined implicitly by conditional jumps. Chapter 6 covers the flags.
+
+The Z80 also has a **program counter** (PC) and a **stack pointer** (SP):
+
+- **PC** holds the address of the next instruction byte to execute. The CPU
+  advances it automatically after each fetch. You do not write to PC directly;
+  jump instructions change it.
+- **SP** holds the top-of-stack address. Push and pop instructions move SP.
+  Chapter 9 covers the stack.
+
+---
+
+## Register pairs
+
+The Z80 can treat certain pairs of 8-bit registers as a single 16-bit unit:
+
+| Pair | High byte | Low byte |
+|------|-----------|----------|
+| BC | B | C |
+| DE | D | E |
+| HL | H | L |
+
+When you write `ld hl, $1234`, both H and L are loaded at once: H gets `$12`
+and L gets `$34`. When you later read `ld d, h`, you get the high byte of that
+word — `$12` — in D.
+
+---
+
+## Why HL is the common working pair
+
+HL is the most useful 16-bit register on the Z80 for memory access. It can be
+used as a **memory pointer** in indirect addressing: `ld a, (hl)` reads the
+byte from the address held in HL, and `ld (hl), a` writes a byte there.
+
+BC and DE also have indirect forms, but only with A: `ld a, (bc)` and
+`ld a, (de)` read one byte into A; `ld (bc), a` and `ld (de), a` write A to
+memory. What makes HL different is that it works with any byte register, not
+just A. `ld b, (hl)`, `ld c, (hl)`, `ld (hl), d` — any combination is valid.
+HL also supports `inc (hl)` and `dec (hl)` to modify a byte in place, and it
+is the base for indexed addressing with the IX and IY registers. You will load
+an address into HL, then use `(hl)` to read or write at that address. This
+pattern appears in almost every Z80 program.
+
+---
+
+## IX, IY, and the half-register restriction
+
+IX and IY are 16-bit index registers used primarily for displaced memory access
+(`ld a, (ix+3)`). Each can be split into 8-bit halves: IXH / IXL and IYH / IYL.
+These halves are useful for holding temporary byte values when you have run out
+of general registers.
+
+Zilog's original Z80 documentation did not list IXH, IXL, IYH, or IYL as
+supported instructions. They were discovered by programmers who noticed that the
+prefix-byte encoding made them work, and they have been in common use since the
+early 1980s. Modern assemblers — ZAX included — support them without
+qualification. You will sometimes see them called "undocumented instructions,"
+but by now they are standard practice.
+
+There is a hardware constraint to be aware of. The Z80 encodes H, L, IXH, IXL,
+IYH, and IYL using the same bit positions in the instruction byte. The CPU
+resolves the ambiguity with a prefix byte: unprefixed means H/L, the `$DD`
+prefix means IXH/IXL, and the `$FD` prefix means IYH/IYL. Because a single
+instruction can only carry one prefix, you cannot mix halves from different
+groups in the same instruction:
+
+- `ld ixh, ixl` is valid — both halves share the `$DD` prefix.
+- `ld l, h` is valid — both are unprefixed HL halves.
+- `ld h, ixl` is **impossible** — H is unprefixed, IXL needs `$DD`.
+- `ld iyh, ixl` is **impossible** — IYH needs `$FD`, IXL needs `$DD`.
+
+The general rule: in any single `ld` instruction, the halves of HL, IX, and IY
+are mutually exclusive. You can freely use any combination of A, B, C, D, E
+with any of these halves, but you cannot cross the HL / IX / IY boundary within
+one instruction.
+
+---
+
+## The example: `learning/part1/examples/01_register_moves.zax`
+
+```zax
+export func main(): void
+  ld a, $FF
+  ld b, $10
+  ld c, $20
+  ld d, a
+  ld e, b
+  ld hl, $1234
+  ld de, $5678
+  ld bc, $0064
+  ld d, h
+  ld e, l
+end
+```
+
+`ld a, $FF` loads the immediate value 255 into A. This is a one-instruction load
+with no memory access: the value `$FF` is encoded directly in the instruction
+bytes.
+
+`ld d, a` copies the current value of A into D. No immediate value is involved;
+this is a register-to-register move. After this instruction D holds `$FF`.
+
+`ld hl, $1234` loads a 16-bit immediate into the register pair HL. Note that
+later in the example `ld de, $5678` overwrites D and E: D becomes `$56` and E
+becomes `$78`, replacing the `$FF` that was in D after the register copy above. H receives
+the high byte `$12` and L receives the low byte `$34`. The instruction encodes
+as three bytes: the opcode followed by the two bytes of the value in
+little-endian order (`$34` then `$12`).
+
+`ld d, h` and `ld e, l` copy the high and low bytes of HL into DE, one byte at
+a time. After both instructions DE holds `$1234` — a copy of HL.
+
+There is no native `ld de, hl` instruction in the Z80 instruction set. Copying
+a register pair in raw Z80 always takes two separate 8-bit moves. The example
+shows that two-step pattern so you recognise it when you see it later.
+
+---
+
+## Summary
+
+- A byte holds 8 bits; two hex digits describe it. A word holds 16 bits; four
+  hex digits describe it.
+- Unsigned bytes represent 0–255. Signed bytes use two's complement: bit 7 is
+  the sign bit, range is -128–127.
+- The Z80 has eight 8-bit registers: A (accumulator), B, C, D, E, H, L, and F
+  (flags).
+- Register pairs BC, DE, and HL treat two 8-bit registers as a single 16-bit
+  unit.
+- HL is the standard memory-pointer pair: `(hl)` reads or writes the byte at
+  the address in HL.
+- PC holds the next-instruction address; SP holds the stack top. Both are
+  managed indirectly.
+- `ld reg, imm` loads an immediate value; `ld reg, reg` copies between
+  registers; `ld rr, imm16` loads a 16-bit immediate into a pair.
+- Copying HL to DE in raw Z80 requires two separate 8-bit moves; there is no
+  native `ld de, hl` instruction.
+
+## What Comes Next
+
+Chapter 5 introduces the addressing modes of `ld` in full, shows how labels
+name memory addresses, and demonstrates reading from and writing to named RAM
+locations using immediate values, register pairs, and indirect addressing.
+
+---
+
+[← The Assembler](03-the-assembler.md) | [Part 1](README.md) | [Loading, Storing, Constants →](05-loading-storing-constants.md)
+
+
+---
+
+<!-- Source: learning/part1/05-loading-storing-constants.md -->
+
+# Chapter 5 — Loading, Storing, and Simple Constants
+
+This chapter covers the four addressing modes of `ld` you will use in every
+program, shows how labels name memory addresses, and demonstrates EQU-style
+constants and named storage. After reading it you will be able to load an
+immediate value, read from and write to a named memory location, and read
+through a register pair used as a pointer.
+
+Prerequisites: Chapters 3–4 (bytes, addresses, register pairs, module shell).
+
+---
+
+## The `ld` instruction
+
+`ld` moves a value from one place to another. The destination is always on the
+left and the source is on the right:
+
+```
+ld  destination, source
+```
+
+`ld` never performs arithmetic; it only copies. The source value is placed in
+the destination unchanged. The two operands must match in size: you cannot load
+an 8-bit value into a 16-bit register, or a 16-bit value into an 8-bit
+register, even when it seems like the value would fit. There is no automatic
+type conversion in assembly. If you have a byte value and you need it in a
+register pair, you must place it explicitly — for example, load the byte into
+the low register and zero the high register yourself.
+
+The four source/destination combinations you will use most often are:
+
+1. **Immediate**: the value is a literal number in the instruction.
+2. **Register to register**: copy from one register to another.
+3. **Indirect through HL**: read or write the byte at the address in HL.
+4. **Direct address**: read or write a fixed memory address by name.
+
+---
+
+## Immediate mode
+
+`ld a, $42` loads the value `$42` into A. The assembler encodes `$42` directly
+into the instruction bytes. No memory read happens at run time.
+
+`ld hl, $8000` loads the 16-bit value `$8000` into the register pair HL. The
+high byte `$80` goes to H and the low byte `$00` goes to L.
+
+Immediate loads are the first instructions a program uses to establish known
+values before doing any work.
+
+---
+
+## Register-to-register mode
+
+`ld b, a` copies the current value of A into B. Neither operand is a memory
+address; both are register names. No memory access is involved.
+
+Any pair of the 8-bit registers A, B, C, D, E, H, L can be combined:
+`ld d, h`, `ld l, c`, and so on. You cannot use `ld reg, reg` to copy between
+register pairs directly; you must copy the high and low bytes separately, as
+shown in Chapter 4.
+
+---
+
+## Indirect mode through (HL)
+
+`ld a, (hl)` reads the byte from the memory address currently in HL and places
+it in A. The parentheses mean "the memory location whose address is the value
+inside the parentheses."
+
+`ld (hl), a` writes the value of A to the memory address in HL.
+
+To use this form, you first load an address into HL, then use `(hl)` to access
+that location:
+
+```zax
+ld hl, $8000   ; HL = address $8000
+ld a, (hl)     ; A = byte at address $8000
+```
+
+Changing HL and repeating `ld a, (hl)` reads from a different address. This is
+how loops read through consecutive bytes in memory — load an address into HL,
+read, increment HL, repeat.
+
+---
+
+## Direct address mode
+
+`ld a, ($8000)` reads the byte at the fixed address `$8000` and places it in A.
+`ld ($8000), a` writes A to that address.
+
+The 16-bit form `ld hl, ($8000)` reads a word (two bytes) from address `$8000`
+and `$8001` and places the result in HL.
+
+The parentheses always mean **memory dereference**: treat the value inside as
+an address and read or write the byte (or word) at that location. This is the
+same meaning as `(hl)` — the parens signal "go to this address in memory."
+
+Writing bare numbers like `$8000` in instructions is inconvenient and error-
+prone. If the address appears in ten instructions and you later move the storage
+to `$8100`, you must change all ten. Labels solve this.
+
+---
+
+## Labels as named addresses
+
+A **label** is a name the assembler binds to an address. When you reference a
+label in an instruction operand, the assembler substitutes the address at that
+label's location.
+
+In ZAX, labels inside function bodies are defined by writing `labelname:` at the
+start of an instruction line. Labels can also refer to storage locations declared
+in data sections.
+
+Consider this data section:
+
+```zax
+section data vars at $8000
+  count: byte = 0
+end
+```
+
+The assembler places one byte at address `$8000` and records that the name
+`count` refers to typed scalar storage at `$8000`. Every instruction that
+mentions `count` will use that storage. If the section is later moved to
+`$9000`, all those instructions update automatically.
+
+**The bare-name form is the standard way to access named scalar storage in
+ZAX.** `ld a, count` reads the value of `count` into A. `ld count, a` (or the
+store form, depending on the instruction) writes A to `count`. The name
+directly refers to the typed storage value — no extra notation is needed.
+
+`ld a, (count)` is the **explicit memory dereference** form. The parentheses
+mean "treat `count` as a memory address and load the byte at that address." For
+typed scalar storage this produces the same result as the bare form, but the
+meaning is subtly different: bare name = the stored value; `(name)` = memory at
+that address. Prefer the bare form for named scalar reads and writes.
+
+---
+
+## EQU-style constants
+
+A constant is a name for a fixed value that has no address of its own. In ZAX,
+constants are declared with `const`:
+
+```zax
+const MaxCount  = 10
+const BaseAddr  = $8000
+```
+
+The assembler substitutes the value everywhere the name is used. `ld a, MaxCount`
+becomes `ld a, 10` in the emitted code. `ld hl, BaseAddr` becomes
+`ld hl, $8000`.
+
+Constants are purely a compile-time feature. They produce no bytes in the output
+binary and occupy no memory at run time.
+
+The difference between a constant and a label is that a constant is a value
+you write down — `10`, `$8000` — while a label is the assembler-computed address
+of something in the output. A label for a data byte is also an address, but you
+did not write the address down; the assembler computed it from the section
+placement.
+
+---
+
+## Bare name vs parentheses: the rule stated once
+
+Three different things can appear as a `ld` operand, and the notation
+distinguishes them:
+
+| Notation | What it means |
+|----------|---------------|
+| `ld a, MaxCount` | `MaxCount` is a `const`: the assembler substitutes the value directly. No memory access. |
+| `ld a, count` | `count` is a named scalar storage location: read the typed value stored there. |
+| `ld a, (count)` | Explicit memory dereference: read the byte at the address that `count` labels. |
+
+The rule: **parentheses always mean "treat this as a memory address and
+dereference it."** A `const` name without parens is substituted as a value.
+A storage name without parens reads or writes the typed scalar value at that
+location. Only when you specifically want to express "go to this address in
+memory" do you write parentheses.
+
+For named scalar storage (`byte`, `word`), the bare form and the paren form
+produce the same machine code — the difference is in how you reason about the
+code. Use the bare form as your default; reach for `(name)` only when you are
+deliberately working at the address level.
+
+---
+
+## Named byte and word storage
+
+The `section data` block declares named storage at a specific address. You can
+declare bytes and words:
+
+```zax
+section data vars at $8000
+  count:   byte = 0
+  scratch: word = 0
+end
+```
+
+The assembler places `count` at `$8000` (one byte, initial value 0) and
+`scratch` at `$8001` (two bytes, initial value 0).
+
+Reading and writing named byte storage with the bare form:
+
+```zax
+ld a, count       ; A = value of count
+ld count, a       ; count = A  (store form)
+```
+
+Reading and writing named word storage with the bare form:
+
+```zax
+ld hl, $1234
+ld scratch, hl    ; scratch = $1234
+
+ld hl, scratch    ; HL = $1234 (read back)
+```
+
+The same operations written with explicit dereference:
+
+```zax
+ld hl, $1234
+ld (scratch), hl  ; identical effect — (scratch) dereferences the address
+
+ld hl, (scratch)  ; identical effect
+```
+
+Both forms are legal; the bare form is preferred for typed scalar storage.
+
+---
+
+## The example: `learning/part1/examples/02_constants_and_labels.zax`
+
+```zax
+const MaxCount  = 10
+const BaseAddr  = $8000
+
+section data vars at $8000
+  count:   byte = 0
+  scratch: word = 0
+end
+
+export func main(): void
+  ld a, MaxCount
+  ld count, a
+
+  ld hl, BaseAddr
+  ld a, (hl)
+
+  ld hl, $1234
+  ld scratch, hl
+
+  ld hl, scratch
+end
+```
+
+`ld a, MaxCount` uses immediate mode with a named constant. The assembler
+substitutes the value `10` directly. After this instruction, A = 10.
+
+`ld count, a` uses the bare-name form to store A into the typed scalar storage
+`count`. After this instruction, `count` holds 10.
+
+`ld hl, BaseAddr` loads the constant value `$8000` into HL. Notice that
+`BaseAddr` and the address of `count` are the same value — `$8000`. This is
+intentional: the next instruction uses HL as a pointer to that address.
+
+`ld a, (hl)` uses indirect mode through HL. The parentheses here are the
+explicit memory dereference: since HL holds `$8000`, this reads the byte at
+address `$8000` — the same byte `count` names. After this instruction, A = 10
+again. This demonstrates why `(hl)` needs parens: HL holds an address, and we
+are dereferencing it.
+
+`ld scratch, hl` uses the bare-name form to store the word in HL into `scratch`.
+`ld hl, scratch` reads it back. Both use the bare form because `scratch` is a
+named typed storage location.
+
+---
+
+## Exchanging register pairs
+
+`ex de, hl` swaps the contents of DE and HL in a single instruction. After it
+executes, the old value of HL is in DE and the old value of DE is in HL.
+
+It is worth being precise about what "swap" means here versus a one-way copy.
+
+A one-way copy from HL into DE takes two instructions and leaves HL unchanged:
+
+```zax
+; One-way copy: HL -> DE (two instructions, HL still holds its old value)
+ld d, h
+ld e, l
+; DE now holds old HL; HL is unchanged
+```
+
+This works if you only need HL's value in DE and no longer care about DE's old
+value. But if you need to truly exchange the two — so that DE gets HL's value
+and HL gets DE's old value simultaneously — you must save one of them first.
+Using A as scratch, that is six instructions:
+
+```zax
+; True swap without ex de, hl: six instructions, A used as scratch
+ld a, h
+ld h, d
+ld d, a     ; D now holds old H
+ld a, l
+ld l, e
+ld e, a     ; E now holds old L — swap complete, A clobbered
+```
+
+`ex de, hl` replaces all six with one instruction and leaves A untouched:
+
+```zax
+ld hl, $1234
+ld de, $5678
+ex de, hl      ; HL = $5678, DE = $1234 — true bidirectional swap in one step
+```
+
+After `ex de, hl`: HL holds `$5678` and DE holds `$1234`. This makes
+`ex de, hl` useful any time you need to swap the addresses or values held in
+these two pairs — for example, after a loop that built a result in HL and you
+want to pass it to the next step in DE.
+
+Two other exchange instructions exist. They are noted here for completeness but
+belong to more advanced usage patterns covered later in the course.
+
+`ex af, af'` swaps the AF register pair with its shadow counterpart AF'. The Z80
+has a second set of registers — the shadow registers — that are separate storage
+locations with the same names, accessed by swapping. The shadow registers are
+introduced in Chapter 9. The practical use of `ex af, af'` is saving and
+restoring A and the flags temporarily, without using the stack.
+
+`exx` swaps BC, DE, and HL all at once with their shadow counterparts BC', DE',
+HL'. Like `ex af, af'`, this relies on the shadow registers and is most
+commonly used in interrupt handlers and time-critical routines where spilling
+to the stack is too slow.
+
+Throughout this course, `ex de, hl` is the exchange instruction you will
+encounter regularly. The others exist and will appear in later volumes.
+
+---
+
+## Summary
+
+- `ld` copies a value from source to destination; it does not perform
+  arithmetic.
+- Immediate mode encodes the value directly in the instruction bytes.
+- Register-to-register mode copies between named registers at no memory cost.
+- Indirect mode `(hl)` reads or writes the byte at the address held in HL.
+- Direct address mode `(addr)` reads or writes a fixed memory location.
+- Labels name addresses; the assembler substitutes the address wherever the
+  label appears.
+- `const` names a fixed value; it produces no output bytes.
+- `section data ... end` declares named byte or word storage at a known address.
+- The bare-name form (`ld a, count`, `ld count, a`) is the standard way to read
+  and write named scalar storage in ZAX. The name refers directly to the typed
+  value.
+- The paren form (`ld a, (count)`) is an explicit memory dereference: "read the
+  byte at the address of `count`." Use it when working at the address level.
+- Parentheses in instruction operands always mean dereference, whether the
+  operand is a register (`(hl)`), a name (`(count)`), or a literal address
+  (`($8000)`).
+- `ex de, hl` performs a true bidirectional swap of DE and HL in one
+  instruction. A one-way copy (HL→DE) takes two instructions; a manual swap
+  without `ex de, hl` takes six and clobbers a scratch register.
+
+## What Comes Next
+
+Chapter 6 introduces the flag register: the set of condition bits that
+arithmetic and comparison instructions set, and that conditional jump
+instructions read to decide where execution continues next.
+
+---
+
+[← Numbers and Registers](04-numbers-and-registers.md) | [Part 1](README.md) | [Flags, Comparisons, Jumps →](06-flags-comparisons-jumps.md)
+
+
+---
+
+<!-- Source: learning/part1/06-flags-comparisons-jumps.md -->
+
+# Chapter 6 — Flags, Comparisons, and Jumps
+
+This chapter explains the flag register, shows how `cp` and `or a` set flags,
+and demonstrates how conditional and unconditional jump instructions use those
+flags to control which instructions execute next. After reading it you will be
+able to follow a short raw Z80 control-flow sequence, trace through a simple
+conditional branch, and read a label-based counted loop.
+
+Prerequisites: Chapters 4–5 (bytes, registers, `ld` modes, labels).
+
+---
+
+## The flag register
+
+The Z80 flag register F holds eight bits, each of which records one piece of
+information about the last instruction that affected flags. Programs cannot read
+or write F directly with `ld`. Instead, arithmetic instructions set the flags
+as a side effect, and conditional jump instructions test the flags to decide
+whether to jump.
+
+The four flags you will use most often are:
+
+| Flag | Name | Set when |
+|------|------|----------|
+| Z | Zero | Result is zero |
+| C | Carry | Arithmetic produced a carry out of bit 7 (unsigned overflow) |
+| S | Sign | Bit 7 of the result is 1 (result is negative in signed interpretation) |
+| P/V | Parity/Overflow | Result parity is even; or signed overflow occurred |
+
+The Z and C flags appear in almost every conditional branch. S and P/V appear
+in more specialized cases.
+
+---
+
+## `cp`: compare without storing
+
+`cp n` subtracts the value `n` from A and sets the flags based on the result,
+but does **not** store the result back in A. After `cp n`, A is unchanged and
+the flags reflect `A - n`.
+
+This is the standard way to test a relationship between A and a value:
+
+```zax
+ld a, 5
+cp 5      ; A - 5 = 0; Z flag is set, C flag is clear
+```
+
+After `cp 5` with A = 5: Z is set (result is zero), C is clear (no borrow).
+
+```zax
+ld a, 3
+cp 5      ; A - 5 = -2; Z flag is clear, C flag is set (borrow)
+```
+
+After `cp 5` with A = 3: Z is clear (result is not zero), C is set (A was less
+than 5 — unsigned borrow is treated as carry).
+
+The rule: after `cp n`, Z is set if A equals n, and C is set if A is less than
+n (unsigned).
+
+---
+
+## `or a`: test whether A is zero
+
+`or a` performs the bitwise OR of A with itself. The result is always equal to
+A, so A is unchanged. The flags are updated: Z is set if A is zero, C is
+cleared.
+
+This is the standard way to test whether A holds zero without a separate
+comparison:
+
+```zax
+ld a, 0
+or a       ; Z is set because A is zero
+
+ld a, $FF
+or a       ; Z is clear because A is non-zero
+```
+
+`or a` does not require knowing what value to compare against; it simply
+reflects whether A is currently zero. It is also shorter than `cp 0` — one
+byte instead of two.
+
+---
+
+## Unconditional jump: `jp nn`
+
+`jp $8010` changes the program counter to `$8010`. The CPU's next fetch comes
+from that address. Execution continues from there, not from the instruction
+following the `jp`.
+
+`jp` can target a label:
+
+```zax
+jp done
+...
+done:
+  ret
+```
+
+The assembler resolves the label `done` to its address and encodes that address
+into the `jp` instruction. This is the unconditional jump: it always branches,
+no matter what the flags say.
+
+---
+
+## Conditional jump: `jp cc, label`
+
+`jp z, target` jumps to `target` only if the Z flag is currently set. If Z is
+clear, execution falls through to the next instruction.
+
+`jp nz, target` jumps if Z is clear (n = "not"). The condition codes for the
+four main flags are:
+
+| Code | Meaning |
+|------|---------|
+| `z` | Jump if Z is set |
+| `nz` | Jump if Z is clear |
+| `c` | Jump if C is set |
+| `nc` | Jump if C is clear |
+
+A conditional branch is the raw Z80 equivalent of an if-statement. There is no
+structured keyword. Instead, you set the flags with `cp` or an arithmetic
+instruction, then use a conditional `jp` to skip over the "then" block:
+
+```zax
+; if A == 5: do something
+cp 5
+jp nz, skip    ; if A != 5, skip the block
+; ... the "then" body ...
+skip:
+```
+
+If A equals 5, Z is set, `jp nz` does not branch, and the then-body executes.
+If A is anything else, Z is clear, `jp nz` branches to `skip`, and the
+then-body is skipped.
+
+---
+
+## Short relative jump: `jr`
+
+`jr` is a shorter form of `jp`. Where `jp` encodes a full 16-bit target
+address, `jr` encodes a signed 8-bit displacement from the current instruction.
+This limits its range to approximately 127 bytes forward or 128 bytes backward,
+but saves one byte of code.
+
+`jr nz, label` is the conditional relative jump form: jump to `label` if Z is
+clear.
+
+`jr` is commonly used for short backward jumps in loops. For any jump that could
+exceed the 128-byte backward range, use `jp` instead. The assembler will report
+an error if a `jr` target is out of range.
+
+The practical differences:
+
+| | `jp` (absolute) | `jr` (relative) |
+|---|---|---|
+| Address encoding | Full 16-bit address | Signed 8-bit displacement |
+| Instruction size | 3 bytes | 2 bytes |
+| Reach | Anywhere in 64K | ≈ 128 bytes backward / 127 forward |
+| Available conditions | z, nz, c, nc, pe, po, m, p | z, nz, c, nc only |
+
+Use `jr` when the target is close and you want compact code. Use `jp` when the
+target may be far away, or when you need the `pe`, `po`, `m`, or `p` conditions
+that `jr` does not support.
+
+---
+
+## Detecting a negative number: the `cp $80` technique
+
+A signed byte stores values from -128 to 127. Negative values have bit 7 set,
+which means their unsigned interpretation is 128 or greater. You can test
+whether A holds a negative number by comparing it against 128 as an unsigned
+value:
+
+```zax
+  cp $80              ; compare A (unsigned) against 128
+  jr c, is_positive   ; carry set means A < 128 → non-negative
+  neg                 ; negate A: A = -A
+is_positive:
+  ; A now holds the absolute value
+```
+
+After `cp $80`, carry is set when A is less than 128 (unsigned) — meaning
+bit 7 is clear, so the signed value is non-negative. If carry is clear, A is
+128 or above, which means bit 7 is set and the value is negative. `neg` then
+flips the sign, leaving A with the absolute value.
+
+This pattern works because signed and unsigned representations share the same
+bits — the only difference is how you interpret bit 7. Comparing against `$80`
+is the dividing line between the two halves: 0–127 (non-negative) and 128–255
+(negative when read as signed).
+
+Note that `neg` applied to -128 gives -128 — the mathematical result (+128)
+does not fit in a signed byte, so the bit pattern (`$80`) is unchanged.
+
+---
+
+## Label-based control flow structure
+
+Every conditional block in raw Z80 has the same skeleton:
+
+1. Set the flags (using `cp`, `or a`, arithmetic, or another instruction).
+2. Conditionally jump over the block you want to skip.
+3. Write the block.
+4. Place an exit label after the block.
+
+A simple loop has a similar skeleton:
+
+1. Initialize a counter or pointer before the loop.
+2. Place a label at the loop top.
+3. Write the loop body.
+4. Update the counter or pointer.
+5. Test the exit condition.
+6. Conditionally jump back to the loop-top label.
+
+Both structures are visible in the example file.
+
+---
+
+## The example: `learning/part1/examples/03_flag_tests_and_jumps.zax`
+
+```zax
+const Limit = 5
+
+section data vars at $8000
+  counter: byte = 0
+  found:   byte = 0
+end
+
+export func main(): void
+  ld a, Limit
+  cp 5
+  jp nz, not_equal
+  ld a, 1
+  ld (found), a
+  jp done_compare
+not_equal:
+  ld a, 0
+  ld (found), a
+done_compare:
+
+  ld a, 0
+  or a
+  jp z, was_zero
+  jp skip_zero
+was_zero:
+  ld a, $AA
+skip_zero:
+
+  ld b, Limit
+loop_top:
+  ld a, (counter)
+  inc a
+  ld (counter), a
+  dec b
+  jp nz, loop_top
+end
+```
+
+**Section A — equality test.** `ld a, Limit` loads 5 into A. `cp 5` subtracts 5
+from A and sets Z. Because A equals 5, Z is set. `jp nz, not_equal` tests
+whether Z is clear: it is set, so the jump does not occur. Execution continues
+through `ld a, 1 / ld (found), a`, then `jp done_compare` skips the else-block
+and lands at `done_compare:`.
+
+If A had held any value other than 5, Z would have been clear, `jp nz` would
+have branched to `not_equal:`, and `found` would have been set to 0.
+
+**Section B — zero test with `or a`.** `ld a, 0` loads zero. `or a` sets Z because
+A is zero. `jp z, was_zero` branches because Z is set. The instruction
+`ld a, $AA` executes as the "zero was detected" branch; this marks the register
+so you can verify in a debugger or simulator that this path ran. `jp skip_zero`
+then skips past the end of the zero-branch.
+
+This pair — `jp z, was_zero` / `jp skip_zero` — is the raw conditional branch
+pattern defined in "Label-based control flow structure" above: set a flag, use a
+conditional jump to enter or skip a consequence block, and place an exit label
+after it. The only difference from the `cp`-based Section A is that `or a` sets
+the flag here instead of `cp`.
+
+**Section C — counted loop with `dec` / `jp nz`.** `ld b, Limit` initializes B to
+5. At `loop_top:`, the body reads `counter` from RAM, increments it, and stores
+it back. `dec b` decrements B and sets Z when B reaches zero. `jp nz, loop_top`
+branches back while B is non-zero.
+
+After the loop, `counter` holds 5. B holds 0. The loop ran exactly five times.
+
+Notice that `dec b` sets the Z flag: this is how `jp nz` knows when to stop.
+The flag is not set by `ld`; it is set by the instruction that changes the
+counter. Always identify which instruction sets the flag you are about to test.
+
+---
+
+## Summary
+
+- The Z, C, S, and P/V flags record the outcome of the last instruction that
+  affected them. Most `ld` instructions do not affect flags; arithmetic and
+  comparison instructions do.
+- `cp n` subtracts n from A and sets flags without changing A. Z is set if
+  A = n; C is set if A < n (unsigned).
+- `or a` sets Z if A is zero, without changing A. Use it to test A for zero
+  without a comparison value.
+- `jp label` jumps unconditionally to the address of `label`.
+- `jp nz, label` jumps if Z is clear; `jp z, label` jumps if Z is set; `jp c`
+  and `jp nc` test the C flag.
+- `jr` is a shorter, range-limited relative jump. Use it for nearby branches;
+  use `jp` when the target might be more than 127 bytes away.
+- A conditional block in raw Z80 uses a flag-setting instruction, a conditional
+  `jp` to skip the block, the block body, and an exit label.
+- A counted loop uses a register as the counter, a loop-top label, the loop
+  body, a decrement, and `jp nz` back to the loop-top label.
+- Always identify which instruction sets the flag before the branch that reads
+  it.
+
+## What Comes Next
+
+Chapter 7 introduces `djnz`, the Z80's dedicated decrement-and-branch-if-not-
+zero instruction, and shows how it reduces the two-instruction counter-decrement-
+and-test pattern to a single instruction.
+
+---
+
+[← Loading, Storing, Constants](05-loading-storing-constants.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](07-counting-loops-and-djnz.md)
+
+
+---
+
+<!-- Source: learning/part1/07-counting-loops-and-djnz.md -->
+
+# Chapter 7 — Counting Loops and DJNZ
+
+There are no loops in assembly. There are no subroutines, no if-statements, no
+structured blocks of any kind. The language is nothing but individual
+instructions, one after another. Every structure that exists in high-level
+languages — loops, conditionals, function calls — you build yourself out of
+jumps and labels. The CPU does exactly what you write, nothing more.
+
+This chapter introduces `djnz`, the Z80's single-instruction counted loop
+primitive. After reading it you will be able to write a DJNZ counted loop, a
+sentinel loop that exits on a value match, and a flag-exit loop that exits when
+a computed condition becomes true. You will also understand a hardware edge case
+that every Z80 programmer needs to know.
+
+Prerequisites: Chapter 6 (flags, `cp`, `jp`, `jr`, label-based control flow).
+
+---
+
+## Chapter 6 left a two-instruction pattern
+
+Chapter 6 ended with this loop shape:
+
+```zax
+ld b, Limit
+loop_top:
+  ; ... body ...
+  dec b
+  jp nz, loop_top
+```
+
+`dec b` decrements B and sets the Z flag when B reaches zero. `jp nz` branches
+back while B is non-zero. The pattern works, but it takes two instructions to
+perform one conceptual operation: decrement-the-counter-and-loop-if-not-done.
+
+The Z80 has a single instruction that fuses those two operations.
+
+---
+
+## DJNZ: decrement B and jump if not zero
+
+`djnz label` does exactly what its name says:
+
+1. Decrement B by one.
+2. If B is now non-zero, jump to `label`.
+3. If B is now zero, fall through to the next instruction.
+
+The single instruction replaces `dec b / jp nz, label`. It is one byte smaller
+than the `dec b / jr nz` form (2 bytes vs 3) and two bytes smaller than
+`dec b / jp nz` (2 bytes vs 4). On a tight Z80, that matters.
+
+`djnz` is a relative jump, like `jr`. Its target must be within approximately
+128 bytes backward or 127 bytes forward. If the loop body is too long for that
+range, the assembler reports an error and you must use `dec b / jp nz` instead.
+
+---
+
+## The loop structure with explicit labels
+
+Every DJNZ loop has the same three parts:
+
+1. **Init**: load B with the iteration count before the loop.
+2. **Body**: the instructions that run each iteration.
+3. **Branch-back**: `djnz` at the end of the body, targeting the body label.
+
+```zax
+ld b, 5           ; init: B = iteration count
+loop_top:
+  ; body
+  djnz loop_top   ; branch-back: B--; if B != 0, go to loop_top
+```
+
+The label `loop_top` sits at the first instruction of the body, not before the
+`ld b` initializer. DJNZ does not initialize B; that is your
+responsibility. If you forget the `ld b` init, B holds whatever was there from
+the previous instruction, and the loop runs for an unpredictable number of
+iterations.
+
+---
+
+## The zero-count hardware semantic
+
+`djnz` uses B as an 8-bit counter. When you write `ld b, 5`, the loop runs
+exactly 5 times. But what happens if you write `ld b, 0`?
+
+On the Z80, DJNZ decrements B before testing. If B starts at 0, the decrement
+wraps to 255 (`$FF`), the result is non-zero, and the jump is taken. The loop
+continues from B = 255 and runs a further 255 times before B reaches zero again.
+Total: 256 iterations.
+
+This is not a programming error that the hardware catches. It is a documented
+hardware behaviour. `ld b, 0 / djnz label` is a valid way to write a 256-
+iteration loop on the Z80, and some programs use it intentionally for that
+reason.
+
+The consequence for you as a programmer: **never call a DJNZ loop with B = 0
+when you intend zero iterations.** If the iteration count can be zero, test for
+it before the loop:
+
+```zax
+ld a, count_value
+or a               ; test whether count_value is zero
+jr z, skip_loop    ; skip the entire loop if count is zero
+ld b, a
+loop_top:
+  ; body
+  djnz loop_top
+skip_loop:
+```
+
+If you know at write-time that the count is always between 1 and 255, no
+pre-test is needed.
+
+---
+
+## What the registers hold after a loop
+
+It is worth pausing to think about what state the CPU is in after a loop
+finishes. Consider the counted loop from Section A of the example below, which
+sums the five bytes `{ 3, 7, 2, 8, 5 }`:
+
+```zax
+ld hl, addends
+ld b, TableLen      ; B = 5
+ld a, 0
+djnz_loop:
+  add a, (hl)
+  inc hl
+  djnz djnz_loop
+ld (total), a
+```
+
+When the loop exits: **B is zero** (that was the exit condition). **A holds 25**
+(the accumulated sum). **HL points one byte past the last element** — it was
+incremented after reading each entry, so after five elements it has advanced
+five positions beyond the base.
+
+That last point matters. If another variable is stored immediately after the
+table, HL now points at it. A stray `ld (hl), a` at this point would silently
+overwrite that variable. There is nothing to stop you: the Z80 has no array
+bounds, no memory protection, no runtime error. If you write past the end of
+a table, you corrupt whatever is there. The price of assembly's freedom is
+responsibility — you must track where your pointers end up.
+
+---
+
+## Sentinel loops
+
+A sentinel loop does not count iterations. It tests each element against a
+known value (the sentinel) and stops when it finds a match.
+
+The structure uses `cp` and `jr z` instead of DJNZ as the exit mechanism:
+
+```zax
+ld hl, table_base
+sentinel_loop:
+  ld a, (hl)
+  cp sentinel_value
+  jr z, found        ; exit when the sentinel value is seen
+  inc hl
+  jr sentinel_loop   ; keep going (no bound check here)
+found:
+```
+
+This form has no automatic bound: if the sentinel value never appears, the loop
+runs past the end of the table. A safe sentinel loop pairs the value test with a
+DJNZ bound:
+
+```zax
+ld hl, table_base
+ld b, TableLen       ; guard against overrun
+sentinel_loop:
+  ld a, (hl)
+  cp sentinel_value
+  jr z, found
+  inc hl
+  djnz sentinel_loop ; DJNZ as the overrun guard
+  jr not_found       ; fell through without a match
+found:
+```
+
+Now the loop exits when the sentinel is found, or when all TableLen entries have
+been checked without a match. The role of DJNZ here is purely a safety bound,
+not the primary exit condition.
+
+---
+
+## Flag-exit loops
+
+A flag-exit loop runs until an arithmetic condition becomes true, then exits
+through the flag. A typical case: accumulate values until the sum exceeds a
+threshold.
+
+```zax
+ld a, 0
+flag_loop:
+  add a, (hl)
+  inc hl
+  cp threshold
+  jr nc, done    ; exit when A >= threshold (carry clear means A >= threshold)
+  djnz flag_loop
+done:
+```
+
+The exit here is driven by `cp threshold / jr nc`, not by DJNZ. DJNZ again
+provides the overrun guard. The two conditions are independent: whichever fires
+first ends the loop.
+
+---
+
+## The example: `learning/part1/examples/04_djnz_loops.zax`
+
+```zax
+const TableLen = 5
+
+section data vars at $8000
+  total:    byte = 0
+  scanval:  byte = 0
+  flagval:  byte = 0
+end
+
+section data rom at $8010
+  addends: byte[5] = { 3, 7, 2, 8, 5 }
+end
+```
+
+The `section data` declaration takes a user-chosen name. Earlier chapters used
+`vars` to indicate mutable RAM storage. Here, `rom` is a conventional name
+meaning the data lives in read-only or program memory. Neither `vars` nor `rom`
+is a ZAX keyword — the name is yours to choose. Pick a name that describes
+where the data lives on your target system (`vars`, `rom`, `heap`, and `bss` are
+all valid).
+
+The program runs three loop forms side by side over the same five-element table.
+
+**Section A — DJNZ counted loop.**
+
+```zax
+ld hl, addends
+ld b, TableLen
+ld a, 0
+djnz_loop:
+  add a, (hl)
+  inc hl
+  djnz djnz_loop
+ld (total), a
+```
+
+`ld hl, addends` sets HL to the address of the first entry. `ld b, TableLen`
+sets B to 5. The body adds the current byte at HL to A and increments HL. DJNZ
+decrements B and loops back while B is non-zero. After 5 iterations B = 0, the
+loop exits, and `total` receives 25 ($19): the sum of 3 + 7 + 2 + 8 + 5.
+
+**Section B — sentinel loop (cp / jr z).**
+
+```zax
+ld hl, addends
+ld b, TableLen
+sentinel_loop:
+  ld a, (hl)
+  cp 8
+  jr z, sentinel_found
+  inc hl
+  djnz sentinel_loop
+  ld a, $FF
+  jr sentinel_done
+sentinel_found:
+  ld a, (hl)
+sentinel_done:
+  ld (scanval), a
+```
+
+The loop scans the table for the value 8. `cp 8` tests the current byte. When
+it matches, Z is set and `jr z, sentinel_found` exits the loop; A receives the
+matched byte. DJNZ provides the overrun guard: if 8 were not present, the loop
+would exhaust all five entries and fall through to `ld a, $FF`. Because 8 is
+the fourth entry, `scanval` receives 8.
+
+**Section C — flag-exit loop.**
+
+```zax
+ld hl, addends
+ld b, TableLen
+ld a, 0
+flag_loop:
+  add a, (hl)
+  inc hl
+  cp $10
+  jr nc, flag_done
+  djnz flag_loop
+flag_done:
+  ld (flagval), a
+```
+
+The loop accumulates bytes until the sum reaches or exceeds 16 (`$10`). After
+adding 3, the sum is 3 — `cp $10` sets carry (3 < 16), so `jr nc` does not
+branch. After adding 7, the sum is 10 — still less than 16. After adding 2, the
+sum is 12 — still less. After adding 8, the sum is 20 — `cp $10` finds 20 >= 16,
+carry is clear, `jr nc` exits. `flagval` receives 20 ($14).
+
+---
+
+## Choosing between DJNZ, sentinel, and flag-exit
+
+DJNZ is the right choice when you know exactly how many iterations to run before
+the loop starts. Load B with that count and use DJNZ.
+
+A sentinel loop is right when the stopping condition is "find this value." It
+exits on content, not count, and DJNZ serves only as an overrun guard.
+
+A flag-exit loop is right when the stopping condition is "some computed quantity
+has crossed a threshold." It exits on an arithmetic result, with DJNZ again
+serving only as the overrun guard.
+
+In practice, most raw Z80 loops are counted loops with DJNZ as the primary
+exit. The sentinel and flag-exit forms appear when the content or computation
+determines when to stop.
+
+---
+
+## Summary
+
+- `djnz label` decrements B and jumps to `label` if B is non-zero; it falls
+  through when B reaches zero.
+- `djnz` replaces `dec b / jp nz` in one instruction and is smaller: 2 bytes
+  vs 3 for `dec b / jr nz`, or 4 for `dec b / jp nz`. Its reach is limited to
+  roughly 128 bytes backward; use `dec b / jp nz` for longer loops.
+- A DJNZ loop has three parts: init (load B), body, and branch-back (djnz).
+- The zero-count hardware semantic: B = 0 before `djnz` gives 256 iterations,
+  not zero. Guard against this when the count can be zero.
+- A sentinel loop uses `cp` and `jr z` as the primary exit, with DJNZ as an
+  overrun guard.
+- A flag-exit loop uses a flag condition as the primary exit, with DJNZ again
+  as the overrun guard.
+
+## What Comes Next
+
+Chapter 8 shows how to define byte and word tables in memory and read their
+entries using HL as a sequential pointer and IX as a displaced-access pointer.
+
+---
+
+[← Flags, Comparisons, Jumps](06-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](08-data-tables-and-indexed-access.md)
+
+
+---
+
+<!-- Source: learning/part1/08-data-tables-and-indexed-access.md -->
+
+# Chapter 8 — Data Tables and Indexed Access
+
+This chapter shows how to lay out a byte or word table in memory, and how to
+read entries from it using HL as a sequential pointer and IX as a displaced-
+access pointer. After reading it you will be able to define a small table,
+load its base address into HL or IX, and read elements either sequentially in
+a loop or by fixed offset.
+
+Prerequisites: Chapters 4–7 (registers, `ld` modes, labels, DJNZ loops).
+
+---
+
+## Declaring a byte table in a data section
+
+A data section in ZAX can hold an array of bytes. The syntax is:
+
+```zax
+section data rom at $8000
+  scores: byte[6] = { 10, 20, 30, 40, 50, 60 }
+end
+```
+
+This declares six bytes of initialized storage starting at address `$8000`.
+The assembler lays them out in memory in the order listed: `$8000` holds 10,
+`$8001` holds 20, `$8002` holds 30, and so on.
+
+The name `scores` refers to the address of the first byte in the array — the
+address `$8000`. It is not the value 10. This is the difference between a table
+address and a table value: `scores` is the address where the table begins;
+`(scores)` is the first byte stored there.
+
+Word tables work the same way, with two bytes per entry in little-endian order:
+
+```zax
+section data rom at $8010
+  widths: word[4] = { 100, 200, 300, 400 }
+end
+```
+
+`$8010` and `$8011` together hold 100 (low byte `$64` at `$8010`, high byte
+`$00` at `$8011`). Each subsequent word occupies the next two bytes.
+
+---
+
+## HL-based sequential access
+
+HL holds an address. `ld a, (hl)` reads the byte at that address. `inc hl`
+advances HL to the next byte. Repeating those two operations steps through a
+byte table one entry at a time.
+
+The standard pattern for reading a table with a DJNZ loop:
+
+```zax
+ld hl, scores      ; HL = address of first entry
+ld b, 6            ; B = number of entries
+loop_top:
+  ld a, (hl)       ; A = current entry
+  ; ... process A ...
+  inc hl           ; advance to next entry
+  djnz loop_top    ; repeat for all entries
+```
+
+After the loop, HL points one byte past the last entry. The order matters: read
+the entry first (`ld a, (hl)`), process it, then advance (`inc hl`). If you
+advance before reading, you skip the first entry.
+
+For word tables, `inc hl` is not enough between entries — each word is two bytes
+wide. Use `inc hl / inc hl` to advance by two:
+
+```zax
+ld hl, widths
+ld b, 4
+word_loop:
+  ld e, (hl)       ; low byte of current word
+  inc hl
+  ld d, (hl)       ; high byte of current word
+  inc hl           ; now HL points to next word
+  ; DE holds current word value
+  djnz word_loop
+```
+
+---
+
+## The address vs value distinction
+
+`ld hl, scores` loads the address of the table into HL. HL now holds `$8000`,
+the memory location where the table begins. HL does not hold 10 (the first
+element's value).
+
+`ld a, (hl)` reads the byte at the address in HL. Only this instruction
+produces the value stored in the table.
+
+This distinction matters most when a function receives a table to process. The
+function receives the address (loaded into HL or another pair by the caller) and
+uses `(hl)` to reach the values. The address is the handle; the values are what
+the memory at that address contains.
+
+---
+
+## Labels, variables, and code share the same memory
+
+An important fact to internalise: assembly does **not** distinguish between
+a label that names a variable and a label that marks a point in code. Both are
+memory addresses — plain 16-bit numbers. `scores` is the address where the
+table starts. `loop_top` is the address where the loop body starts. To the CPU,
+both are just numbers. You could load data from a code address, and you could
+jump to a data address. The CPU would blindly obey, attempting to execute your
+data bytes as instructions (almost certainly crashing) or overwriting your
+instructions with data values.
+
+This is one reason why testing on an emulator before running on hardware is
+sensible practice. A stray pointer that writes into the code region can corrupt
+instructions in ways that are difficult to diagnose. The Z80 has no hardware
+separation between code and data — everything is bytes in the same 64K address
+space, and it is your job to keep them organised.
+
+---
+
+## IX-based displaced access
+
+IX is a 16-bit index register. Unlike HL, IX is not used for arithmetic or as a
+general register pair in most instructions. Its specific capability is the
+`(ix+d)` addressing mode, where `d` is a signed 8-bit displacement — any value
+from -128 to +127.
+
+`ld a, (ix+0)` reads the byte at the address in IX. `ld a, (ix+1)` reads the
+byte one position after IX. `ld a, (ix+2)` reads two bytes after IX.
+
+This mode is useful when you want to access several fields at fixed offsets from
+a base address, without changing the base pointer between accesses:
+
+```zax
+; A three-byte record: offset 0 = id, offset 1 = high byte, offset 2 = low byte
+ld ix, record_base   ; IX = base of the record
+ld a, (ix+0)         ; A = id field
+ld b, (ix+1)         ; B = high byte field
+ld c, (ix+2)         ; C = low byte field
+; IX is unchanged throughout — all three fields read from one base address
+```
+
+With HL you would need to load the address and then increment between fields.
+With IX+d you load the base once and name each field by its offset.
+
+The displacement `d` is a byte-sized signed offset. Offsets larger than 127 or
+smaller than -128 are not encodable and will cause an assembler error.
+
+---
+
+## Accessing a specific table entry by index
+
+To reach entry `n` in a byte table, you need the address `table_base + n`. For
+small, known-at-compile-time indices, you can write the offset directly:
+
+```zax
+ld ix, scores        ; IX = base of scores table
+ld a, (ix+0)         ; entry 0: value 10
+ld a, (ix+3)         ; entry 3: value 40
+```
+
+For a runtime index, the general approach is to add the index to HL:
+
+```zax
+ld hl, scores        ; HL = base
+ld de, 3             ; DE = index (entry 3)
+add hl, de           ; HL = scores + 3
+ld a, (hl)           ; A = entry 3 = 40
+```
+
+`add hl, de` adds the 16-bit value in DE to HL. After the add, `(hl)` points
+to entry 3. This form does not check bounds; if the index exceeds the table
+length, the read will access whatever bytes follow the table in memory.
+
+---
+
+## The example: `learning/part1/examples/05_data_tables.zax`
+
+```zax
+const TableLen  = 6
+const RecSize   = 3
+
+section data rom at $8000
+  scores: byte[6] = { 10, 20, 30, 40, 50, 60 }
+  records: byte[9] = { $01, $01, $A0,
+                        $02, $02, $B0,
+                        $03, $03, $C0 }
+end
+
+section data vars at $8020
+  sum:       byte = 0
+  max_score: byte = 0
+  rec1_id:   byte = 0
+  rec1_lo:   byte = 0
+end
+```
+
+**Section A — sequential HL loop, accumulating a sum.**
+
+```zax
+ld hl, scores
+ld b, TableLen
+ld a, 0
+hl_loop:
+  add a, (hl)
+  inc hl
+  djnz hl_loop
+ld (sum), a
+```
+
+HL walks the six score bytes. Each `add a, (hl)` adds the current byte to A.
+After six iterations, A = 10 + 20 + 30 + 40 + 50 + 60 = 210 (`$D2`), which is
+stored in `sum`.
+
+**Section B — sequential HL loop, finding the maximum.**
+
+```zax
+ld hl, scores
+ld b, TableLen
+ld a, 0
+max_loop:
+  ld c, (hl)
+  cp c
+  jr nc, no_new_max
+  ld a, c
+no_new_max:
+  inc hl
+  djnz max_loop
+ld (max_score), a
+```
+
+A holds the running maximum. Each iteration loads the current byte into C and
+compares A with C using `cp c`. The rule from Chapter 6: after `cp c`, carry is
+set if A is less than C. `jr nc` skips the update when A is already greater than
+or equal to C. `ld a, c` runs only when a new maximum is found. After six
+entries, `max_score` holds 60 (`$3C`).
+
+**Section C — IX+d access on a packed record table.**
+
+```zax
+ld ix, records + RecSize    ; IX = base of record 1
+ld a, (ix+0)                ; A = id field
+ld (rec1_id), a
+ld a, (ix+2)                ; A = lo field
+ld (rec1_lo), a
+```
+
+`records + RecSize` is a compile-time address arithmetic expression: the
+assembler computes `address_of_records + 3` before emitting any code. IX is
+loaded with that address in a single `ld ix, imm16` instruction.
+
+Once IX holds the base of record 1, `(ix+0)` is the id field and `(ix+2)` is
+the lo field. No `inc` instructions appear between reads: the displacement
+encodes the offset directly. `rec1_id` receives `$02` (the id byte of record 1)
+and `rec1_lo` receives `$B0`.
+
+---
+
+## Block operations: LDIR and friends
+
+The Z80 has hardware instructions for copying or scanning ranges of memory. The
+most useful is `ldir`.
+
+`ldir` copies BC bytes from the address in HL to the address in DE. After each
+byte is copied, HL and DE are both incremented and BC is decremented. The
+instruction repeats until BC reaches zero. One `ldir` replaces an entire copy
+loop.
+
+Compare the two forms for copying 4 bytes:
+
+```zax
+; Without ldir: a manual copy loop
+ld hl, source     ; HL = source address
+ld de, dest       ; DE = destination address
+ld b, 4           ; B = byte count
+copy_loop:
+  ld a, (hl)      ; A = byte from source
+  ld (de), a      ; write to destination
+  inc hl
+  inc de
+  djnz copy_loop
+
+; With ldir: one instruction
+ld hl, source     ; HL = source address
+ld de, dest       ; DE = destination address
+ld bc, 4          ; BC = byte count (note: BC, not just B)
+ldir              ; copy 4 bytes, HL and DE advance, BC reaches 0
+```
+
+Both forms copy 4 bytes from `source` to `dest`. After `ldir`, HL points one
+byte past the last source byte, DE points one byte past the last destination
+byte, and BC holds zero.
+
+`ldir` uses BC as a 16-bit counter, so it can copy up to 65535 bytes in one
+instruction. The loop form above used B (8-bit), which would need a different
+structure for counts larger than 255.
+
+Three related instructions exist. `lddr` copies in the decrementing direction —
+HL and DE are decremented after each byte rather than incremented. This is
+useful when source and destination overlap and copying forward would overwrite
+source bytes before they are read.
+
+`cpir` scans memory for a byte value. It reads bytes from (HL), compares each
+to A, and stops when it finds a match or exhausts BC bytes. After `cpir`, Z is
+set if a match was found, and HL points one past the matching byte. `cpdr` is
+the same scan in the decrementing direction.
+
+`ldir`, `lddr`, `cpir`, and `cpdr` are raw Z80 mnemonics used directly in ZAX,
+exactly like `djnz`. There is no ZAX-typed construct wrapping them. When you
+see `ldir` in code, it is the hardware instruction itself, not a ZAX function
+call.
+
+---
+
+## Summary
+
+- A `byte[n]` or `word[n]` declaration in a `section data` block lays out n
+  bytes or words of initialized storage at the section's base address.
+- The table name refers to the address of the first element, not to its value.
+  Use `(hl)` or `(ix+d)` to read the values stored there.
+- `ld a, (hl)` reads the byte at the current address; `inc hl` advances to the
+  next byte. Together they step through a table entry by entry.
+- For word tables, advance HL by two between entries.
+- IX+d addressed access (`ld a, (ix+d)`) reads a byte at a fixed byte offset
+  from the base in IX. The displacement must fit in a signed byte (-128 to 127).
+- IX+d is useful for record-like access: load IX to the record base once, then
+  name each field by its offset without moving IX.
+- To reach entry `n` at runtime, either load `table_base + n` into IX using
+  compile-time arithmetic, or add the index to HL with `add hl, de`.
+
+## What Comes Next
+
+Chapter 9 introduces `call` and `ret`, explains how the hardware stack works,
+and shows how to write reusable subroutines that receive values in registers and
+return results to the caller.
+
+---
+
+[← Counting Loops and DJNZ](07-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](09-stack-and-subroutines.md)
+
+
+---
+
+<!-- Source: learning/part1/09-stack-and-subroutines.md -->
+
+# Chapter 9 — Stack and Subroutines
+
+This chapter explains how `call` and `ret` work, how the hardware stack operates,
+and how to write reusable subroutines that receive values through registers and
+return results to the caller. After reading it you will be able to write a
+subroutine, call it with values in registers, preserve the caller's registers
+using `push` and `pop`, and return a result.
+
+Prerequisites: Chapters 4–8 (registers, flags, `ld`, labels, DJNZ, tables).
+
+---
+
+## What a subroutine is
+
+A subroutine is a block of instructions that can be called from multiple places
+in a program. The caller executes `call address`, the CPU runs the subroutine,
+and when the subroutine executes `ret`, control returns to the instruction
+immediately after the `call`.
+
+Without subroutines, a programmer who needs the same logic in three places must
+copy those instructions to three locations and maintain three copies. With
+subroutines, the instructions appear once and each caller reaches them with a
+single `call`.
+
+---
+
+## How `call` works
+
+`call label` does two things:
+
+1. Pushes the address of the instruction following the `call` onto the hardware
+   stack (this is the **return address**).
+2. Jumps to `label`.
+
+In other words, `call` is equivalent to a `push` of the return address followed
+by a `jp`. The instruction is always 3 bytes long, so the return address pushed
+is always the address of the byte immediately after the `call` instruction.
+There is nothing magical about it — it is a push and a jump combined into one
+opcode.
+
+The hardware stack is a region of RAM used as a last-in-first-out buffer. The
+stack pointer SP always holds the address of the most recently pushed value.
+When `call` pushes a word onto the stack, SP decreases by two (the stack grows
+downward in memory on the Z80). The return address is stored at the new SP.
+
+After the `call`, the CPU is executing instructions inside the subroutine. The
+subroutine does not know which call site reached it.
+
+---
+
+## How `ret` works
+
+`ret` is even simpler: it pops two bytes from the stack into the program
+counter. That is the return address that `call` pushed. Execution resumes at
+the instruction after the original `call`.
+
+In other words, `ret` is equivalent to `pop pc` — if such an instruction
+existed. The CPU reads the top of the stack, increments SP by two, and jumps
+to the address it just read. Nothing more.
+
+If `ret` runs when the stack does not contain a valid return address — because
+of a push/pop mismatch, for example — the CPU jumps to whatever bytes are at
+the top of the stack, which is almost certainly not a valid instruction address.
+
+---
+
+## The hardware stack
+
+The stack is a region of RAM. You decide where it lives by loading SP with a
+starting address before the program uses any `call`, `push`, or `pop`
+instructions. A common choice is the top of available RAM: `ld sp, $BFFF` (or
+whichever address marks the last byte of RAM on your target).
+
+The stack grows downward. Each push decreases SP by two and writes a 16-bit
+value. Each pop reads two bytes and increases SP by two. The rule: SP always
+points to the most recent data pushed.
+
+A program that calls subroutines must have SP initialized to a valid address
+before the first call. In ZAX's generic model, SP is assumed to be set up by the
+loader or runtime before `main` is entered.
+
+---
+
+## Passing values through registers
+
+The Z80 has no hardware-enforced calling convention. Any register can carry any
+value into a subroutine or back out. The conventions used in these chapters
+are:
+
+- **A** carries a single byte result or input value.
+- **HL** carries a 16-bit result or input value.
+- **BC** and **DE** carry secondary input values.
+
+The subroutine's comment block must document which registers it reads on entry
+and which it modifies on exit. Without this documentation, the caller has no way
+to know what registers are safe to use after the call.
+
+Example documentation pattern:
+
+```zax
+; add_bytes: add two byte values.
+; Inputs:  B = first byte, C = second byte
+; Outputs: A = B + C
+; Preserves: BC, DE, HL
+func add_bytes(): AF
+  ld a, b
+  add a, c
+end
+```
+
+The word `Preserves` means those registers hold the same values after the call
+that they held before. The caller can rely on them being intact.
+
+### The return clause tells ZAX which registers carry the result
+
+A `func` declaration ends with a return clause that names the register or
+registers that carry the result back to the caller. ZAX uses this to decide
+which registers to save and restore around the function frame:
+
+- **`func name(): void`** — no result; ZAX saves and restores AF, BC, DE, and
+  HL. Any value placed in A inside the function is destroyed by the `pop AF`
+  before `ret`.
+- **`func name(): AF`** — A (and flags) hold the result; ZAX does NOT save or
+  restore AF, so the value in A survives to the caller.
+- **`func name(): HL`** — HL holds the result; AF, BC, and DE are saved and
+  restored; HL is live on return.
+
+### ZAX `func` blocks emit `ret` automatically
+
+A ZAX `func` block does **not** require a final `ret`. When control reaches
+`end`, the compiler emits the frame epilogue and `ret` automatically. Only use
+`ret` inside a `func` for **early exits** — places in the function body where
+you want to return before reaching `end`.
+
+```zax
+func my_sub(): AF
+  ; ... compute result in A ...
+  ; No explicit ret needed: ZAX emits ret at end.
+end
+```
+
+This is different from raw labeled subroutines — code you reach with `call
+label` but that is not wrapped in a ZAX `func`. Those are plain Z80: the
+assembler inserts nothing, so they **do** require an explicit `ret`. Chapter 11
+shows several such subroutines. In Chapters 12–14 you write ZAX `func` blocks
+exclusively, and the compiler handles the return for you.
+
+Declaring `: void` when the function leaves a meaningful value in A is a bug:
+the compiler's `pop AF` in the epilogue will overwrite A before returning, and
+the caller sees stale flag values rather than the computed result.
+
+---
+
+## `push` and `pop`: saving and restoring registers
+
+`push` and `pop` are simple operations, described most clearly in terms of
+virtual `ld` instructions:
+
+`push hl` does two things: first SP is decremented by two, then the equivalent
+of `ld (sp), hl` happens — the contents of HL are written to the two bytes at
+the new SP address. (I say "equivalent" because `ld (sp), hl` is not an actual
+Z80 instruction — you cannot use it directly. But it describes exactly what
+`push` does internally.)
+
+`pop hl` is the inverse: the equivalent of `ld hl, (sp)` happens first — two
+bytes are read from the address in SP into HL — then SP is incremented by two.
+
+The operand can be any of AF, BC, DE, HL, IX, or IY. The important thing to
+remember is that the stack does not know whose value it is holding. All register
+pairs are saved to and restored from the same area of memory — the bytes at and
+below SP. The stack is the very same RAM where your program and variables
+reside. There is nothing magical about it; it is ordinary memory that SP
+happens to point at.
+
+A subroutine uses `push` / `pop` to preserve registers it needs to modify
+internally. The pattern:
+
+```zax
+func example(): void
+  push bc          ; save caller's BC on entry
+  ; ... use BC for internal work ...
+  pop bc           ; restore caller's BC before returning
+end
+```
+
+The critical rule: every `push` in a subroutine must have exactly one matching
+`pop` before the function returns. If a subroutine pushes twice and pops once,
+the stack has an extra word on it when `ret` runs. `ret` will then read that
+extra word as the return address and jump to garbage.
+
+Stack depth discipline: count your pushes and pops. They must be balanced.
+
+### Cross-register moves through the stack
+
+The stack does not care which register pushed a value or which register pops it.
+You can push one pair and pop into a different pair. This lets you perform
+register transfers that `ld` cannot express:
+
+```zax
+  push af         ; save AF onto the stack
+  push bc         ; save BC onto the stack
+  pop de          ; DE ← what was in BC
+  pop hl          ; HL ← what was in AF
+```
+
+After these four instructions, DE holds the original value of BC and HL holds
+the original value of AF. The second transfer — AF into HL — is particularly
+useful, because there is no `ld l, f` instruction. The flags register F cannot
+appear in any `ld` combination, but it can be moved through the stack by
+pushing AF and popping into another pair. This is one of the few ways to
+inspect or transfer the flags register.
+
+Remember that the stack is last-in-first-out: the pair pushed last is popped
+first. If you swap the pop order above, DE gets AF and HL gets BC — the reverse
+of what you might expect if you read the code top-to-bottom without thinking
+about the stack.
+
+---
+
+## Shadow registers: saving state without the stack
+
+The Z80 has a second, hidden copy of A, F, B, C, D, E, H, and L — denoted A′,
+F′, B′, C′, D′, E′, H′, and L′. These are the **shadow registers**. You cannot
+use them directly in instructions. Two dedicated exchange instructions swap the
+main registers with their shadow counterparts:
+
+- `EX AF, AF′` swaps A and F with A′ and F′.
+- `EXX` swaps BC, DE, and HL with BC′, DE′, and HL′ simultaneously.
+
+One `EXX` moves six registers in a single instruction — much faster than six
+individual `push` / `pop` pairs. This makes the shadow registers useful for
+very tight interrupt handlers or innermost loops where you need to save and
+restore a full register state instantly.
+
+The trade-off is that there is only one shadow set. If both your main code and
+an interrupt handler rely on `EXX`, the interrupt can silently destroy the
+values the main code stored. `push` and `pop` work at any nesting depth; shadow
+registers do not. Use them when speed matters and you can guarantee that only
+one context uses them at a time.
+
+---
+
+## Conditional return: `ret cc`
+
+The Z80 also provides conditional return instructions: `ret z`, `ret nz`,
+`ret c`, `ret nc`, and so on. `ret z` pops the return address and returns only
+if Z is set; otherwise it falls through to the next instruction.
+
+This is useful for early-exit patterns:
+
+```zax
+func check_nonzero(): void
+  or a          ; test A for zero
+  ret z         ; early exit: return immediately if A is zero
+  ; ... rest of the function runs only when A != 0 ...
+  ; No explicit ret needed at the end: ZAX emits it automatically.
+end
+```
+
+`ret z` here is an **early exit** — it returns before `end` is reached.
+ZAX still emits the epilogue and final `ret` at `end` for the normal path.
+
+When using `ret cc`, the stack must be balanced at the conditional return point
+just as it must be at the final return. If the function pushed a register before
+the test, it must pop before `ret z` as well.
+
+---
+
+## Nested calls and stack depth
+
+A subroutine can itself call another subroutine. Each `call` pushes another
+return address; each `ret` pops one. As long as every call is matched with a
+return, the stack remains balanced and execution returns correctly through each
+level.
+
+The only limit is the size of the RAM region allocated to the stack. A program
+that calls too many levels deep (or forgets to pop before returning) will
+overwrite RAM that the program uses for other purposes. On the Z80, there is no
+hardware guard against stack overflow.
+
+---
+
+## The example: `learning/part1/examples/06_subroutines.zax`
+
+```zax
+section data vars at $8000
+  result_add:  byte = 0
+  result_max:  word = 0
+end
+```
+
+The program has a `main` function and two helper subroutines.
+
+**`add_bytes`: the simplest subroutine.**
+
+```zax
+func add_bytes(): AF
+  ld a, b
+  add a, c
+end
+```
+
+`add_bytes` reads B and C, adds them, and leaves the result in A. The return
+clause `: AF` tells ZAX that A carries the result, so AF is not saved and
+restored — the computed sum in A reaches the caller intact. It modifies only A,
+so BC, DE, and HL are naturally preserved. The caller (`main`) passes 20 in B
+and 10 in C:
+
+```zax
+ld b, $14
+ld c, $0A
+call add_bytes        ; A = 30
+ld (result_add), a
+```
+
+After the call, `result_add` holds 30 (`$1E`).
+
+**`max_word`: push/pop for preservation.**
+
+```zax
+func max_word(): HL
+  push de
+  or a
+  sbc hl, de
+  pop de
+  jr c, max_is_de
+  add hl, de
+  ret                ; early exit: HL holds the original HL (the larger value)
+max_is_de:
+  ex de, hl          ; HL < DE: put DE (the larger value) into HL
+end
+```
+
+`max_word` receives two 16-bit values in HL and DE and returns the larger one in
+HL. Because it returns a result in HL, its declaration is `func max_word(): HL`.
+ZAX saves and restores AF, BC, and DE, but leaves HL live for the caller.
+
+Internally the function uses `sbc hl, de` to compare HL with DE, which
+overwrites HL. The original DE value is needed after the subtraction (to put
+back into HL if DE was larger), so it is saved with `push de` at entry and
+restored with `pop de` immediately after the subtract.
+
+The `or a` before `sbc hl, de` clears the carry flag. `sbc hl, de` subtracts
+DE from HL including the carry bit, so carry must be clear before the
+instruction for a pure 16-bit subtraction.
+
+After `sbc hl, de`, the carry flag indicates the comparison result:
+
+- **Carry clear** — HL was greater than or equal to DE (no unsigned borrow).
+  HL now holds `original_HL - DE`, which is not the result we want. `add hl, de`
+  restores HL to its original value, and the function returns with that value.
+- **Carry set** — HL was less than DE (unsigned borrow occurred). DE is the
+  larger value. `ex de, hl` puts DE into HL and returns.
+
+The `or a / sbc hl, de / add hl, de` restore pattern is the standard way to do
+an unsigned 16-bit comparison in Z80 when you need the original HL after the
+test. `sbc hl, de` is destructive; `add hl, de` undoes the subtraction when the
+result was that HL was the larger value.
+
+The caller passes 80 (`$0050`) in HL and 200 (`$00C8`) in DE:
+
+```zax
+ld hl, $0050
+ld de, $00C8
+call max_word         ; HL = $00C8
+ld (result_max), hl
+```
+
+After the call, `result_max` holds 200.
+
+**Stack balance in `max_word`.** The function has one `push de` and one `pop de`.
+The pop occurs before `jr c, max_is_de`, which means DE is restored regardless
+of which branch the conditional takes. The stack is clean for both `ret`
+paths.
+
+---
+
+## An advanced trick: reading the program counter
+
+The Z80 has no instruction to read PC directly. But because `call` pushes the
+address of the next instruction onto the stack, you can read PC with a trick:
+
+```zax
+  call next_instr       ; pushes address of next_instr onto the stack
+next_instr:
+  pop hl                ; HL = address of this instruction
+```
+
+`call next_instr` jumps to the very next instruction — it does nothing except
+push the return address. `pop hl` retrieves that address. HL now holds its own
+address in memory, which is the value PC had when `pop hl` was fetched.
+
+There is no `ret` here, and that is fine. The only thing the stack requires is
+balance: `call` pushed one word, `pop hl` consumed it. The stack is clean.
+This trick demonstrates the freedom assembly gives you: `call` and `ret` are
+not ceremonial pairs that must always appear together. They are stack
+operations, and you can use them however the stack discipline permits.
+
+You are unlikely to need this technique early on, but it illustrates an
+important principle: every instruction in the Z80 does exactly one mechanical
+thing. There is no hidden contract between `call` and `ret` — only the stack
+connects them.
+
+---
+
+## Summary
+
+- `call label` pushes the return address onto the stack and jumps to `label`.
+- `ret` pops the return address and jumps to it, returning to the call site.
+- The hardware stack is a region of RAM. SP points to the most recently pushed
+  word; the stack grows downward.
+- Pass values into a subroutine in registers: A for a single byte, HL for a
+  16-bit word, BC and DE for secondary values. Document which registers carry
+  inputs and which carry outputs.
+- `push rr` saves a register pair; `pop rr` restores it. Every push must have
+  a matching pop before the function returns.
+- Unbalanced push/pop causes `ret` to jump to garbage, because the wrong bytes
+  are at the top of the stack when `ret` reads the return address.
+- `ret cc` returns conditionally; the stack must be balanced at that point too.
+- The shadow registers (A′–L′) provide one-instruction save/restore via `EXX`
+  and `EX AF, AF′`, but only one context can use them safely at a time.
+- Subroutines can call other subroutines. Each call pushes a return address;
+  each ret pops one. The stack depth grows with each nested call.
+- A ZAX `func` block emits the cleanup and `ret` automatically at `end`. A
+  trailing `ret` is not needed. Use `ret` inside a `func` only for early exits.
+  Raw labeled subroutines — code reached by `call label` outside a ZAX `func`
+  — are plain Z80 and do require an explicit `ret`.
+
+## What Comes Next
+
+Chapter 11 builds a complete program using everything from Chapters 4–9
+together, then shows the points where raw Z80 starts to get unwieldy — the
+same points that Chapters 12–14 address.
+
+---
+
+[← Data Tables and Indexed Access](08-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](10-io-and-ports.md)
+
+
+---
+
+<!-- Source: learning/part1/10-io-and-ports.md -->
+
+# Chapter 10 — I/O and Ports
+
+The Z80 has two distinct address spaces: the memory space you have been using
+since Chapter 1, and a separate **I/O space** of 256 numbered ports. The `in`
+and `out` instructions transfer bytes between CPU registers and these ports
+without touching memory at all.
+
+On real hardware, ports connect to peripherals: keyboard controllers, display
+chips, timers, serial interfaces. The port number selects which device the CPU
+is talking to. Chapter 10 treats port numbers as abstract placeholders — the
+Z80 mechanism is what matters here; the mapping of numbers to devices varies by
+platform and is for the hardware documentation of whichever machine you are
+targeting.
+
+---
+
+## The I/O address space
+
+The Z80 I/O space has 256 locations, addressed by an 8-bit port number (0–255).
+A write to port N delivers a byte to the peripheral at port N. A read from port
+N receives a byte back from it. The CPU makes the distinction between memory and
+I/O transactions visible on its address and control buses; peripherals are wired
+to respond to one or the other, not both.
+
+From your perspective, `in` and `out` are the only instructions that access I/O
+space. All other Z80 instructions — `ld`, `add`, `cp`, `jp`, `call`,
+everything else — operate on memory or registers. I/O and memory do not overlap.
+
+---
+
+## Writing to a port: `out`
+
+`out (n), a` writes the byte in A to port n, where n is an 8-bit immediate port
+number:
+
+```zax
+ld a, $42        ; load value to send
+out ($10), a     ; write $42 to port $10
+```
+
+The parentheses around `$10` mark it as a port operand, not a memory address.
+The instruction encodes as two bytes: the `out` opcode and the port number. Only
+A can be the source with the immediate form.
+
+`out (C), r` writes the byte in register r to the port whose number is in C.
+Any of the standard 8-bit registers (B, C, D, E, H, L, A) can be the source:
+
+```zax
+ld c, $10        ; port number
+ld b, $42        ; value to send
+out (C), b       ; write B to the port in C
+out (C), a       ; write A to the same port
+```
+
+The register-addressed form uses C as the port selector regardless of what other
+register supplies the data. On some Z80 platforms B is visible on the high byte
+of the address bus during `out (C), r`, which some hardware uses as a secondary
+selector; this is a hardware detail, not something you need to worry about here.
+
+---
+
+## Reading from a port: `in`
+
+`in a, (n)` reads the byte at port n into A:
+
+```zax
+in a, ($10)      ; read byte from port $10 into A
+```
+
+The immediate form requires A as the destination. It is the counterpart of
+`out (n), a`.
+
+`in r, (C)` reads from the port in C into any standard 8-bit register:
+
+```zax
+ld c, $10        ; port number
+in b, (C)        ; read from port $10 into B
+in a, (C)        ; read from port $10 into A
+```
+
+Unlike `out`, the `in` instruction **sets flags**. After `in r, (C)`:
+
+- S is set if the byte read has bit 7 set.
+- Z is set if the byte read is zero.
+- P/V reflects the parity of the byte.
+- H and N are reset.
+- C (carry) is unaffected.
+
+`in a, (n)` (the immediate form) does **not** set flags. Only the
+register-addressed form `in r, (C)` does. If you need to branch on whether the
+input is zero, use `in a, (C)` and then `or a` to establish flags, or use
+`in r, (C)` directly and branch on the flags it sets.
+
+---
+
+## Polling a port in a loop
+
+A common pattern is to poll a status port until a condition is met, then
+read or write a data port. The example below spins waiting for bit 0 of a status
+port to become 1, then reads from the data port:
+
+```zax
+const STATUS_PORT = $11
+const DATA_PORT   = $10
+
+func read_when_ready(): AF
+  ld c, STATUS_PORT
+wait:
+  in a, (C)         ; read status into A, flags set
+  and $01           ; test bit 0 (ready flag)
+  jr Z, wait        ; Z set means bit 0 was 0 — not ready yet; loop
+  in a, (DATA_PORT) ; bit 0 is 1 — device is ready; read data into A
+  ; A holds the received byte; return it
+end
+```
+
+`and $01` masks all bits except bit 0 and sets Z if the result is zero.
+`jr Z, wait` loops back while Z is set (bit 0 still clear). When bit 0
+becomes 1, the loop exits and the data read follows.
+
+`in a, (DATA_PORT)` uses the immediate form because the port number is a
+compile-time constant. Both `in a, (C)` and `in a, (n)` read the port; the
+difference is where the port number comes from.
+
+---
+
+## Sending a block of bytes
+
+A counted loop can send a sequence of bytes to a port one at a time. HL points
+to the data; BC holds the count; C holds the port number. There is no
+block-copy instruction for I/O on the Z80 (unlike the `ldir` memory copy from
+Chapter 8), so you write the loop yourself.
+
+```zax
+func send_block()
+  ; caller sets: HL = source address, B = byte count, C = port number
+  ; precondition: B > 0
+send_loop:
+  ld a, (hl)       ; load byte at current address
+  out (C), a       ; send it to the port in C
+  inc hl           ; advance source pointer
+  djnz send_loop   ; decrement B; loop until B reaches 0
+end
+```
+
+HL advances one byte per iteration. B counts down from the caller-supplied
+count. This is the same DJNZ-counted walk pattern from Chapter 7, applied to
+output rather than calculation.
+
+---
+
+## The example: `learning/part1/examples/07_io_and_ports.zax`
+
+The example file demonstrates the three I/O patterns above: immediate-port
+output, register-port input, and a block send loop.
+
+```zax
+; learning/part1/examples/07_io_and_ports.zax
+; Demonstrates Z80 in/out instructions and port forms.
+; Port numbers are abstract: inspect the Z80 output, not hardware behavior.
+
+const OUT_PORT    = $10
+const IN_PORT     = $11
+const STATUS_PORT = $12
+
+; send_byte: write A to OUT_PORT
+func send_byte()
+  out (OUT_PORT), a    ; immediate port form; A is the source
+end
+
+; recv_byte: read IN_PORT into A; return A
+func recv_byte(): AF
+  in a, (IN_PORT)      ; immediate port form; reads into A only
+end
+
+; echo_reg: write the byte in B to OUT_PORT using register-addressed form
+func echo_reg()
+  ld c, OUT_PORT       ; C holds the port number
+  out (C), b           ; register-addressed form; B is the data source
+end
+
+; poll_and_recv: spin on STATUS_PORT until bit 0 is set, then read IN_PORT
+func poll_and_recv(): AF
+  ld c, STATUS_PORT
+poll_loop:
+  in a, (C)            ; read status; flags set by in r,(C)
+  and $01              ; test bit 0
+  jr Z, poll_loop      ; Z set: not ready; keep polling
+  in a, (IN_PORT)      ; ready: read data into A
+end
+
+; send_block: send B bytes from (HL) to the port in C
+; Precondition: B > 0, HL = source address, C = port number
+func send_block()
+block_loop:
+  ld a, (hl)
+  out (C), a
+  inc hl
+  djnz block_loop
+end
+
+const PayloadLen = 4
+
+export func main()
+  ; Demonstrate send_byte
+  ld a, $AA
+  call send_byte        ; sends $AA to OUT_PORT
+
+  ; Demonstrate recv_byte (reads from IN_PORT; result in A)
+  call recv_byte
+
+  ; Demonstrate echo_reg
+  ld b, $55
+  call echo_reg         ; sends $55 to OUT_PORT via register-addressed out
+
+  ; Demonstrate send_block
+  ld hl, payload
+  ld b, PayloadLen
+  ld c, OUT_PORT
+  call send_block
+end
+
+section data rom at $8000
+  payload: byte[4] = { $10, $20, $30, $40 }
+end
+```
+
+Walk through the key lines:
+
+**`out (OUT_PORT), a`** — the immediate port form. `OUT_PORT` is a `const`
+defined as `$10`; the assembler substitutes `$10` at compile time. Only A can
+be the source.
+
+**`in a, (IN_PORT)`** — reads from port `$11` into A. Flags are **not** set by
+this form.
+
+**`out (C), b`** — B supplies the data; C holds the port number. The C register
+here is a port selector, not a data register.
+
+**`in a, (C)` in `poll_and_recv`** — flags **are** set by this form. Z reflects
+whether the byte read was zero. `and $01` then narrows the test to bit 0 before
+the conditional branch.
+
+**`send_block`** — a DJNZ loop from Chapter 7 applied to output. B counts the
+bytes; HL steps through source memory; C holds the port. The call site sets all
+three before the call.
+
+---
+
+## Summary
+
+- The Z80 has a separate I/O address space of 256 ports. `in` and `out` are the
+  only instructions that access it; all other instructions use memory.
+- `out (n), a` writes A to an immediate port number. Only A is valid as the
+  source.
+- `out (C), r` writes any 8-bit register to the port number in C.
+- `in a, (n)` reads from an immediate port into A. Flags are not set.
+- `in r, (C)` reads from the port in C into any 8-bit register. Flags (S, Z,
+  P/V) are set based on the value read.
+- A polling loop tests a status port in a loop until a ready condition is met,
+  then reads the data port.
+- Port numbers are platform-defined. The examples here use abstract constants
+  and demonstrate the instructions themselves, not any specific hardware.
+
+## What Comes Next
+
+Chapter 11 brings everything together: a complete program that uses every
+instruction form from Chapters 4–10. It also names the specific places where
+raw Z80 starts to get tedious — which sets up what Chapters 12–14 address.
+
+---
+
+[← Stack and Subroutines](09-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](11-a-phase-a-program.md)
+
+
+---
+
+<!-- Source: learning/part1/11-a-phase-a-program.md -->
+
+# Chapter 11 — A Complete Program
+
+This chapter builds a complete program using everything from Chapters 4–9:
+a data table, a DJNZ loop, subroutines called from the loop, conditional
+branches, and push/pop register preservation. By the end you will be able to
+follow and write a complete raw Z80 program in ZAX. You will also be able to
+see the specific places where writing raw Z80 gets unwieldy — which is exactly
+what Chapters 12–14 address.
+
+Prerequisites: Chapters 4–9.
+
+---
+
+## The program: find the maximum value in a byte table
+
+The capstone program solves two related problems on the same byte table:
+
+1. Find the maximum value in the table.
+2. Count how many entries are strictly greater than 64.
+
+These two problems are separate enough to justify two subroutines, but share
+the same data. The structure — a data table, subroutines that receive a pointer
+and a length, results stored to named RAM, a `main` that orchestrates the calls
+— is what a complete raw Z80 program looks like.
+
+The example is `learning/part1/examples/08_phase_a_capstone.zax`.
+
+---
+
+## Reading the program top to bottom
+
+```zax
+const TableLen = 8
+
+section data rom at $8000
+  values: byte[8] = { 23, 47, 91, 5, 67, 12, 88, 34 }
+end
+
+section data vars at $8020
+  max_val:   byte = 0
+  above_64:  byte = 0
+end
+```
+
+`TableLen` is a compile-time constant. The assembler substitutes 8 wherever
+`TableLen` appears. The data section at `$8000` holds the eight values the
+program will process. The vars section at `$8020` holds the two result bytes.
+
+---
+
+## The return clause and register survival
+
+Chapter 9 established that the return clause on a `func` declaration controls
+which registers the compiler saves and restores. Both `find_max` and
+`count_above` return their result in A, so both are declared `func ...: AF` —
+which tells ZAX not to save and restore AF, leaving A intact for the caller.
+
+---
+
+## `main`: the calling sequence
+
+```zax
+export func main(): void
+  ld hl, values
+  ld b, TableLen
+  call find_max
+  ld (max_val), a
+
+  ld hl, values
+  ld b, TableLen
+  ld c, 64
+  call count_above
+  ld (above_64), a
+end
+```
+
+`main` has no logic of its own. It sets up registers, calls a subroutine, stores
+the result, then repeats for the second task. The calling sequence is entirely
+explicit: every register used to pass arguments is loaded immediately before each
+`call`.
+
+The table base address `values` must be loaded into HL again before each call
+because `find_max` advances HL past the end of the table. HL holds different
+values after each call. Nothing in the language tells the caller that HL was modified —
+you find out by reading the function, or by running the program and getting
+wrong results. The caller has to handle it manually.
+
+---
+
+## `find_max`: a simple counted loop with a conditional update
+
+```zax
+func find_max(): AF
+  ld a, 0
+find_max_loop:
+  ld c, (hl)
+  cp c
+  jr nc, find_max_no_update
+  ld a, c
+find_max_no_update:
+  inc hl
+  djnz find_max_loop
+end
+```
+
+`find_max` scans the table and returns the largest byte in A. The loop body uses
+C as a temporary to hold the current element. `cp c` compares A (the running
+maximum) with C (the current element). The rule from Chapter 6: carry is set
+when A is less than C. `jr nc` skips the `ld a, c` update when A is already
+greater than or equal to C. After eight iterations, A = 91 (`$5B`), the largest
+value in the table.
+
+This subroutine uses B (via DJNZ) and C (as a temporary). The label comment at
+the top of a real program would say "Clobbers: A, B, C, HL" — all four are
+modified by the time the function returns.
+
+---
+
+## `count_above`: the cost of manual register discipline
+
+```zax
+func count_above(): AF
+  push bc
+  ld d, 0
+  pop bc
+count_above_loop:
+  ld a, (hl)
+  cp c
+  jr c, count_above_skip
+  cp c
+  jr z, count_above_skip
+  inc d
+count_above_skip:
+  inc hl
+  djnz count_above_loop
+  ld a, d
+end
+```
+
+`count_above` receives the table base in HL, the length in B, and the threshold
+in C. It counts entries strictly greater than C and returns the count in A.
+
+It needs a separate counter, D, to accumulate the count. But D must be
+initialized to zero before the loop. This creates a problem: the only way to
+zero D without disturbing B and C — which carry the function's inputs — is to
+do it before the loop touches B. The `push bc / ld d, 0 / pop bc` block saves
+B and C, performs the initialization, and restores them.
+
+In this specific case, `ld d, 0` does not actually disturb B or C, so the
+push/pop buys nothing mechanically. But the push/pop is here because you cannot
+name your variables in raw Z80 — you have to pick a register, and you cannot
+easily see at a glance which registers are already in use for what. When you
+cannot name things, you save everything and hope.
+
+The double `cp c` in the loop body is another cost. A single `cp c` sets carry
+when A < C and clears it when A >= C, but "greater than" requires distinguishing
+A == C from A > C. One `cp` gives the less-than test; a second `cp` is needed
+to isolate the equality case. This is correct but redundant: the same comparison
+is performed twice for each element.
+
+---
+
+## What works well
+
+The program has real strengths at the raw level:
+
+The data layout is explicit. The programmer placed `values` at `$8000` and
+`max_val` and `above_64` at `$8020`. The two regions do not overlap, and the
+programmer knows exactly what lives at each address. There is no hidden
+allocation.
+
+The register usage is explicit. A reader who traces through `main` can follow
+exactly which registers carry which values at each line. There is no compiler-
+invisible magic.
+
+The subroutine call cost is explicit. Every `call` costs a stack push, and the
+programmer can count those pushes. There is no invisible calling machinery.
+
+For a short, performance-sensitive routine — a counted loop over a small table
+— the raw approach produces code that maps directly to Z80 instructions with
+no overhead between what you wrote and what the CPU executes.
+
+---
+
+## What gets harder as programs grow
+
+These are not complaints about the Z80. They are the specific things that get
+tedious once programs grow past a handful of subroutines.
+
+**Label names are structural noise.** Every loop needs at least two labels: the
+top-of-loop label and the skip label for the conditional update. Every
+if-like branch needs at least one label for the not-taken path. None of these
+carry meaning about what the code is doing — they are just targets for jumps.
+The programmer has to invent names for them, place them correctly, and make sure
+every branch reaches the right one. In a ten-line subroutine this is fine. In a
+program with twenty subroutines it becomes work that has nothing to do with the
+actual problem.
+
+**The push/pop in `count_above` is there because registers have no names.**
+The subroutine needs to set D to zero, but B and C already hold inputs. The push/
+pop saves B and C temporarily so D can be initialized safely. What you really
+want is a variable called `count` that belongs to this function and does not
+collide with anything else. Without named variables, registers are shared
+workspace, and sharing means saving.
+
+**Re-loading HL before the second call is invisible until it breaks.** `find_max`
+walks HL through the table and leaves it pointing past the end. Nothing in the
+call interface tells the caller this will happen. You find out by reading the
+function body carefully, or by running the program and seeing wrong output.
+
+**The double `cp c` exists because there is no greater-than test.** `cp` gives
+you less-than (carry flag) and equal (zero flag). To test strictly greater-than,
+you need both. So the comparison runs twice. A structured `if value > threshold`
+would generate the same two instructions automatically, and the reader would see
+the intent instead of the mechanism.
+
+---
+
+## What the next three chapters address
+
+Chapters 12–14 introduce three things that each fix one of the problems above.
+
+**Typed variables and `:=`** let you name a value — `count`, `running_max` —
+without tying it to a specific register. You write `count := 0` and the compiler
+puts it somewhere. No push/pop needed to protect inputs while you initialize
+something else.
+
+**Structured `if`** replaces the label-test-jump pattern. `if NC / ... / end`
+generates the same flag test and conditional branch as `cp c / jr nc, label /
+... / label:`, but you do not write the label. The source shows what the code
+is doing, not where jumps are going.
+
+**Structured `while`** replaces the loop-top label, the body, and the
+branch-back jump. `while NZ / ... / end` is a loop that tests flags before
+entering: if the condition is already false, the body does not run. This is
+different from the `jr nz, loop_top` form at the bottom of a loop, which always
+runs the body at least once. The label management disappears.
+
+None of this hides the machine. Everything translates to the same Z80
+instructions as before. What changes is that the source shows the intent, and
+the compiler writes the scaffolding.
+
+Chapter 12 starts there.
+
+---
+
+## Summary
+
+- A complete ZAX program has a data section, a vars section, a `main` function,
+  and one or more helper subroutines.
+- Subroutines receive inputs in registers and return results in registers.
+  Document which registers each function reads and which it modifies.
+- The caller must reload any register that the callee modified before the next
+  call. Nothing enforces this.
+- Loop labels, skip labels, and conditional branch labels are structural noise:
+  they give jumps a target, but carry no meaning about what the code does. The
+  programmer has to manage them correctly.
+- Push/pop pairs appear when a function needs to initialize a register that
+  already holds an input. The real problem is not having named variables.
+- Chapters 12–14 — typed storage, `if`, and `while` — each address one of these
+  problems, while generating the same Z80 output.
+
+## What Comes Next
+
+Chapter 12 introduces typed variables and `:=`: named storage that the compiler
+places on the stack, with no register chosen by hand.
+
+---
+
+[← I/O and Ports](10-io-and-ports.md) | [Part 1](README.md) | [Typed Storage and Assignment →](12-typed-storage-and-assignment.md)
+
+
+---
+
+<!-- Source: learning/part1/12-typed-storage-and-assignment.md -->
+
+# Chapter 12 — Typed Storage and Assignment
+
+This chapter introduces typed local variables and the `:=` assignment operator.
+After reading it you will be able to declare a typed local inside a function,
+read and write it with `:=`, use `succ` and `pred` to increment or decrement it,
+and explain what the compiler does differently from a raw `ld` instruction.
+
+Prerequisites: Chapters 4–10 (especially Chapter 11, which names the specific
+problems that typed variables address).
+
+---
+
+## What typed storage is
+
+A typed local is a named variable declared inside a `var` block at the top of a
+function. It has a declared type (`byte`, `word`, or `addr`), and the compiler
+allocates a slot for it in the function's stack frame. The variable is referred
+to by name throughout the function body. No register is permanently assigned to
+hold its value.
+
+In raw Z80, a value that needs to persist across loop iterations has to live in
+a register — B for a loop counter, D for a running count, and so on. You choose
+the register. When two values need to persist at the same time, two registers
+have to be reserved, and any function that modifies those registers has to save
+and restore them with `push` and `pop`. Chapter 11 showed this in `count_above`:
+the `push bc / ld d, 0 / pop bc` block existed only because D needed to be
+initialized without disturbing B and C. The save and restore carried no logical
+meaning — it was just register traffic management.
+
+Typed locals remove that problem. You name the value; the compiler decides
+where to put it.
+
+---
+
+## Declaring a typed local
+
+A `var` block appears at the start of a function body, before any instructions,
+and is terminated by its own `end`:
+
+```zax
+func example(): void
+  var
+    count: byte = 0
+    total: word = 0
+  end
+  ; instructions follow
+end
+```
+
+`count: byte = 0` declares a one-byte local named `count`, initialized to zero.
+`total: word = 0` declares a two-byte local named `total`, initialized to zero.
+Both are allocated as 16-bit slots in the block of stack memory ZAX reserves
+for the function's local variables.
+
+A local initialized to zero does not need the `= 0` clause — uninitialized
+scalar locals start at zero by default — but writing it explicitly states the
+intent.
+
+Only scalar types are valid in `var` blocks: `byte`, `word`, `addr`, and `ptr`.
+Arrays and records can appear as aliases but do not get stack slots of their own.
+This chapter uses only `byte` and `word` locals.
+
+---
+
+## `:=` as the assignment surface
+
+`:=` is the typed assignment operator. It reads a value from the right-hand side
+and stores it into the left-hand side. Both sides must be readable storage
+expressions — registers or named typed storage:
+
+```zax
+count := a      ; store A into the typed local 'count'
+a := count      ; load the value of 'count' into A
+hl := total     ; load the 16-bit value of 'total' into HL
+total := hl     ; store HL into 'total'
+```
+
+The direction is left-to-right: the destination is on the left, the source on
+the right — the same direction as `ld destination, source`.
+
+`:=` is not just another spelling of `ld`. `ld` is a raw Z80 instruction: you
+choose the operand form and the assembler encodes it exactly as written. `:=`
+is a typed assignment: the compiler checks that the left side is writable
+storage, checks that the right side is a compatible value, and emits whatever
+instruction sequence is needed to make the transfer happen correctly.
+
+For word-sized stack variables, this is not a single instruction on the Z80.
+Stack locals are addressed through `(IX±offset)`, and the Z80 does not allow
+`ld h, (ix+d)` or `ld l, (ix+d)`. So the compiler uses DE as an intermediate
+register and wraps the load in `ex de, hl`. When you write `hl := count`, the
+compiler emits:
+
+```asm
+ex de, hl
+ld e, (ix-2)
+ld d, (ix-1)
+ex de, hl
+```
+
+That sequence is correct, preserves all other registers, and is entirely
+compiler-managed. You do not write it; you write `hl := count`.
+
+---
+
+## Bare-name access vs address dereference
+
+Chapter 5 established the bare-name rule: the bare form means "the typed value
+at this location" and `(name)` means "memory at this address." With typed
+locals, the bare form is the only form used for `:=`. Typed locals live at
+IX-relative offsets, not at fixed absolute addresses; the dereference form
+`(count)` would mean "memory at the address value stored in the count slot,"
+which is not the same thing. Use bare names with `:=` for all reads and writes
+of typed locals.
+
+---
+
+## `succ` and `pred`
+
+`succ path` increments a typed scalar storage location in place.
+`pred path` decrements a typed scalar storage location in place.
+
+```zax
+succ count      ; count := count + 1
+pred count      ; count := count - 1
+```
+
+The compiler lowers each to the appropriate Z80 increment or decrement
+instruction sequence. Neither statement returns a value or sets flags in a
+guaranteed way — they are pure side-effecting mutations of the named location.
+
+`succ` and `pred` are the right tool when a typed local is used as a counter
+and the update is always by exactly one. They are shorter to write than
+`a := count / inc a / count := a` and communicate the intent directly: this
+location is being counted up or counted down.
+
+Do not use `succ` on a `byte` local that holds `$FF` and expect the result to be
+`$00` safely — there is no wrap-around guarantee. The programmer is responsible
+for range discipline.
+
+---
+
+## Before and after: the same two loops
+
+The Chapter 11 program — finding the maximum value and counting entries above a
+threshold — shows the difference clearly. Here are both versions side by side.
+
+**Without typed variables (`08_phase_a_capstone.zax`):**
+
+```zax
+func find_max(): AF
+  ld a, 0                        ; A = running maximum (lives in A throughout)
+find_max_loop:
+  ld c, (hl)                     ; C = current table byte (C is a temporary)
+  cp c                           ; compare A with C
+  jr nc, find_max_no_update
+  ld a, c                        ; new maximum: update A
+find_max_no_update:
+  inc hl
+  djnz find_max_loop
+end
+```
+
+The running maximum lives in A throughout. A temporary register C holds each
+table byte. Neither name says what the value means — `a` and `c` are just
+whatever registers were free.
+
+**With typed variables (`09_typed_storage.zax`):**
+
+```zax
+func find_max_b(): AF
+  var
+    running_max: byte = 0
+  end
+find_max_loop:
+  ld a, (hl)
+  cp running_max
+  jr c, find_max_no_update
+  running_max := a               ; A >= running_max: update
+find_max_no_update:
+  inc hl
+  djnz find_max_loop
+  a := running_max               ; load result for caller
+end
+```
+
+`running_max` is a named variable. Its name says what it holds. The compiler
+places it on the stack; you do not choose a register. The `a := running_max` at
+the end makes explicit what the raw version left implicit: the result has to be
+in A before returning.
+
+**Without typed variables (`08_phase_a_capstone.zax`):**
+
+```zax
+func count_above(): AF
+  push bc                        ; save B and C
+  ld d, 0                        ; D = counter (must be initialized here)
+  pop bc                         ; restore B and C
+count_above_loop:
+  ld a, (hl)
+  cp c
+  jr c, count_above_skip
+  cp c                           ; compare again to check equality
+  jr z, count_above_skip
+  inc d                          ; D = running count
+count_above_skip:
+  inc hl
+  djnz count_above_loop
+  ld a, d
+end
+```
+
+The `push bc / ld d, 0 / pop bc` block has nothing to do with the algorithm.
+D must be zero before the loop, but B and C already hold inputs. The push/pop
+saves them temporarily so D can be set. It is there because there are no named
+variables — just registers that have to be juggled.
+
+**With typed variables (`09_typed_storage.zax`):**
+
+```zax
+func count_above_b(): AF
+  var
+    cnt: byte = 0
+  end
+count_above_loop:
+  ld a, (hl)
+  cp c
+  jr c, count_above_skip
+  jr z, count_above_skip
+  succ cnt                       ; cnt := cnt + 1
+count_above_skip:
+  inc hl
+  djnz count_above_loop
+  a := cnt
+end
+```
+
+`cnt` is a named typed local initialized to zero. No register needed. No
+push/pop. `succ cnt` increments it. `a := cnt` loads the result for the caller.
+The push/pop block is gone because `cnt` does not occupy a register that carries
+an input.
+
+---
+
+## The example: `learning/part1/examples/09_typed_storage.zax`
+
+The example file rewrites the two subroutines above and calls them from the same
+`main` as Chapter 11. The data and expected results are identical — the table
+`{ 23, 47, 91, 5, 67, 12, 88, 34 }` produces a maximum of 91 and a count of 3
+entries above 64 — so you can compare the two directly.
+
+Notice what stays the same:
+
+- The `djnz` loop structure is kept. DJNZ is still the right counted-loop
+  primitive for a table of known length.
+- The `cp c` instruction for comparison is kept. `:=` covers assignment; it does
+  not replace flag-setting arithmetic instructions.
+- The `ld a, (hl)` inside the loop body is kept. Reading through a raw pointer
+  into a register is still written as raw Z80.
+
+Typed variables add names to values that need to persist. They do not change
+how arithmetic and pointer manipulation work.
+
+**Raw Z80 instructions can use typed local names directly.** In the typed
+version, `cp running_max` uses the typed local name as an operand to a raw Z80
+instruction — not a `:=` assignment. The compiler recognises typed local names
+in raw instruction operand positions and translates them to the correct
+`(IX±d)` addressing form. Writing `cp running_max` emits `cp (ix-N)` where N
+is the offset of `running_max` in the stack frame. This is different from
+`a := running_max` (which generates a register load sequence), but both refer
+to the same stored value.
+
+---
+
+## Summary
+
+- A `var` block inside a function declares typed locals. The compiler puts them
+  on the stack and tracks the offsets; you use their names.
+- `:=` assigns a value from the right side to the left side. The compiler checks
+  that the types are compatible and generates whatever Z80 sequence is needed.
+- `:=` is not `ld`. For word-sized stack variables, the compiler emits a
+  multi-instruction sequence using DE as an intermediate. You write one line;
+  the compiler figures out the rest.
+- Bare names refer to the typed value. Do not use `(name)` for typed locals —
+  that would mean "memory at the address stored in the slot," which is different.
+- `succ path` increments a typed scalar in place. `pred path` decrements it.
+  Neither returns a value or guarantees flag state.
+- The push/pop from Chapter 11's `count_above` disappears because `cnt` is a
+  named variable that does not occupy a register — so there is nothing to protect.
+- The DJNZ loop, `cp` comparison, and `ld a, (hl)` stay exactly as they were.
+  Typed variables are an addition to raw Z80, not a replacement for it.
+
+## What Comes Next
+
+Chapter 13 introduces `if`/`else` and `while`. The `count_above` double-`cp`
+pattern — two `jr` instructions just to distinguish less-than from greater-than
+— gets replaced with a readable `if` chain.
+
+---
+
+[← A Complete Program](11-a-phase-a-program.md) | [Part 1](README.md) | [Structured Control Flow →](13-structured-control-flow.md)
+
+
+---
+
+<!-- Source: learning/part1/13-structured-control-flow.md -->
+
+# Chapter 13 — Structured Control Flow
+
+This chapter introduces `if`/`else`, `while`, `break`, and `continue`. After
+reading it you will be able to replace raw flag-test-and-jump sequences with
+`if`/`else`, replace manual loop-label structures with `while`, and use `break`
+and `continue` to exit or restart a loop without writing explicit jump targets.
+
+Prerequisites: Chapters 4–12.
+
+---
+
+## What structured control flow replaces
+
+Chapter 11 ended with two specific annoyances in the raw code.
+
+The first: invented labels everywhere. Every branch needs at least one label.
+`find_max` needed `find_max_loop:` and `find_max_no_update:`. `count_above`
+needed `count_above_loop:`, `count_above_skip:`. These labels say nothing about
+what the code does — they just give jumps somewhere to point.
+
+The second: the double `cp c` in `count_above`. A single `cp` sets carry for
+less-than and Z for equal. Strictly-greater-than needs both. So the raw version
+ran `cp c` twice — once for the less-than skip, once for the equality skip —
+because there was no single way to express the combined condition.
+
+`if` and `while` fix the first problem directly. The double-`cp` stays — that
+needs a different comparison strategy — but the structure around it becomes
+readable.
+
+---
+
+## `if`/`else`: flags without labels
+
+`if <cc>` tests the current Z80 flags at the point where `if` appears. If the
+condition is true, the body executes; otherwise it is skipped. `else` provides
+an alternative body. The block is closed by `end`.
+
+```zax
+cp threshold
+if NC               ; carry clear means A >= threshold
+  ; body when A >= threshold
+else
+  ; body when A < threshold
+end
+```
+
+The compiler emits a conditional jump over the first body and an unconditional
+jump over the second, along with the hidden labels needed to make them target the
+right locations. The programmer writes the intent; the compiler manages the
+targets.
+
+`else` is optional. `if NC ... end` with no `else` branch is the direct
+replacement for the raw pattern:
+
+```zax
+; raw
+cp c
+jr c, skip
+  ; body
+skip:
+
+; structured
+cp c
+if NC
+  ; body
+end
+```
+
+Both forms emit the same Z80 instructions. The structured form has no `skip:`
+label because the compiler generates it internally.
+
+**Important rule:** `if`/`else`/`end` do not set flags. The condition is always
+the state of the flags at the moment `if` is reached. You must establish the
+correct flags with a Z80 instruction immediately before `if`, just as you did
+before `jr cc` in the raw chapters.
+
+---
+
+## `while`: a pre-tested loop
+
+`while <cc>` tests the current flags on entry. If the condition is false, the
+body never executes. After each iteration, the compiler branches back to the
+condition test and re-tests. If the condition is now false, the loop exits.
+
+```zax
+ld a, b
+or a            ; establish NZ: B is non-zero
+while NZ
+  ; body
+  dec b
+  ld a, b
+  or a          ; re-establish flags for the back-edge test
+end
+```
+
+`while` is pre-tested: the body only runs if the condition is true on entry.
+This works the same as the raw pattern with the branch at the top of the loop:
+
+```zax
+; raw pre-tested loop
+ld a, b
+or a
+jr z, loop_exit
+loop_top:
+  ; body
+  dec b
+  ld a, b
+  or a
+  jr nz, loop_top
+loop_exit:
+```
+
+Both forms check the condition before executing the body even once. `while NZ`
+replaces the pair `loop_top:` + `jr nz, loop_top` and the exit label
+`loop_exit:`, while keeping the entry check. The programmer writes one `while NZ`
+line instead of managing two labels and two jump instructions.
+
+---
+
+## Establishing flags before `while`
+
+`while NZ` does not set flags. It reads them. The flags at the `while` keyword
+are exactly whatever instruction last set them.
+
+`ld` instructions on the Z80 do not affect flags. This is the most common mistake:
+
+```zax
+; WRONG — ld b, 10 does not set flags
+ld b, 10
+while NZ          ; tests stale flags from whatever ran before
+  dec b
+  ld a, b
+  or a
+end
+```
+
+The fix is to establish flags explicitly before the loop. The standard pattern
+for a loop over B counts is to copy B into A and `or a`:
+
+```zax
+ld b, 10
+ld a, b           ; copy B into A
+or a              ; sets Z if A is zero, NZ if non-zero (see Chapter 6)
+while NZ
+  dec b
+  ld a, b
+  or a            ; re-establish for the back-edge
+end
+```
+
+The `or a` pattern for flag-establishment was introduced in Chapter 6 and applied
+to loop-entry guards in Chapter 7. The same reasoning applies here. Use
+`ld a, b / or a` to convert a register value into a flag state before `while`.
+
+The back edge of a `while` loop also tests the condition. Every `continue` or
+fall-through to the `end` line re-runs the condition test. That means the loop
+body is responsible for re-establishing the flags on every path that does not
+exit via `break` or `ret`. If `dec b` is followed by `ld a, b / or a` inside the
+body, then the back-edge test sees the correct NZ state for the next iteration.
+
+---
+
+## `break` and `continue`
+
+`break` exits the immediately enclosing loop immediately. Control jumps to the
+first instruction after the loop's `end`.
+
+`continue` transfers control to the condition test at the top of the loop, re-
+testing `<cc>` with the current flags. For `while`, that means the flags must
+be correct for the condition before `continue` executes.
+
+```zax
+ld a, b
+or a
+while NZ
+  ld a, (hl)
+  or a
+  if Z
+    break         ; stop as soon as a zero byte is found
+  end
+  cp 64
+  if NC           ; byte >= 64: skip processing, move to next
+    inc hl
+    dec b
+    ld a, b
+    or a          ; re-establish flags before continue re-tests while NZ
+    continue
+  end
+  ; ... process byte at HL ...
+  inc hl
+  dec b
+  ld a, b
+  or a
+end
+```
+
+`break` does not need to re-establish flags — it exits the loop entirely. But
+`continue` does: because `continue` jumps back to the `while NZ` condition test,
+the flags must correctly represent the intended condition at the moment
+`continue` executes.
+
+`break` and `continue` only affect the immediately enclosing loop. If you have
+nested `while` loops, `break` exits the inner one. There is no labeled-loop form
+in the current language.
+
+---
+
+## Multi-way branching: `select` and `case`
+
+`if`/`else` handles two branches: the condition is true or it is not. When you
+need to branch on three or more distinct values, chained `if`/`else` becomes a
+ladder of `cp` + conditional jump pairs. `select` is the structured alternative.
+
+`select` takes a register (or other selector value), tests it against a series
+of `case` constants, and runs the matching body. If no case matches and an
+`else` arm is present, the `else` body runs. After any arm finishes, control
+transfers to after the enclosing `end`. There is no fallthrough between cases.
+
+The same logic written in raw Z80, using `cp` + `jp Z`:
+
+```zax
+; raw: test A against three operator characters
+ld a, (op_byte)
+cp 0x2B              ; '+'
+jp z, handle_plus
+cp 0x2D              ; '-'
+jp z, handle_minus
+jp unknown_op
+handle_plus:
+  ; ...
+  jp after_dispatch
+handle_minus:
+  ; ...
+  jp after_dispatch
+unknown_op:
+  ; ...
+after_dispatch:
+```
+
+The same logic as a `select`:
+
+```zax
+; structured: select on A
+ld a, (op_byte)
+select A
+  case 0x2B          ; '+'
+    ; handle +
+  case 0x2D          ; '-'
+    ; handle -
+  else
+    ; unknown operator
+end
+```
+
+The `select` form names the intent directly: "dispatch on the value of A."
+Each `case` line states the value being tested. The `else` arm handles the
+no-match case. No jump targets, no labels.
+
+Three rules from the spec apply here. First, `select` evaluates the selector
+once at the `select` keyword. The selector is not re-evaluated for each case.
+Second, each `case` must be a compile-time constant or range — runtime
+expressions are not allowed. Third, when the selector is `A`, the compiler's
+dispatch sequence may modify A and flags, so do not rely on A still holding
+the selector value inside a case body. When the selector is any other register,
+that register is preserved across dispatch.
+
+For a real-world example of `select` in a larger program, see
+`learning/part2/examples/unit7/rpn_calculator.zax`. That file (Volume 2 material)
+dispatches on token kind constants using `select A` with three `case` arms,
+one for each operator type. The structure of the dispatch is directly readable
+from the case labels.
+
+---
+
+## Before and after: the same two loops
+
+The example file `learning/part1/examples/10_structured_control.zax` rewrites
+`find_max` and `count_above` from Chapter 11 using `while` and `if`. Here are
+the two versions side by side.
+
+**`find_max` — raw (Chapter 11):**
+
+```zax
+func find_max(): AF
+  ld a, 0
+find_max_loop:
+  ld c, (hl)
+  cp c
+  jr nc, find_max_no_update
+  ld a, c
+find_max_no_update:
+  inc hl
+  djnz find_max_loop
+end
+```
+
+Labels: `find_max_loop:` (loop top) and `find_max_no_update:` (skip target).
+The jump `jr nc, find_max_no_update` is the only thing connecting the test
+to the effect — a reader must trace the label to understand the structure.
+
+**`find_max_cf` — with `while` and `if`:**
+
+```zax
+func find_max_cf(): AF
+  var
+    running_max: byte = 0
+  end
+  ld a, b
+  or a
+  while NZ
+    ld a, (hl)
+    cp running_max
+    if NC
+      running_max := a
+    end
+    inc hl
+    dec b
+    ld a, b
+    or a
+  end
+  a := running_max
+end
+```
+
+No labels. `while NZ` expresses "loop while B is non-zero." `if NC` expresses
+"update if the current byte is not less than the running maximum." The condition
+and the consequence are adjacent and visually nested.
+
+This version uses `dec b` instead of `djnz` because `while` already handles
+the branch-back. `djnz` fused decrement-and-branch into one instruction; with
+`while`, the branch is already there, so `dec b` alone is enough.
+
+**Flag behavior: `djnz` vs `dec b`.** `djnz` does not affect the Z flag — it
+uses its own internal decrement-and-branch without touching the flag register.
+`dec b`, by contrast, does set the Z flag (as well as S, H, and P/V). When
+using `dec b` to drive a `while NZ` loop, the `dec b / ld a, b / or a`
+back-edge sequence is needed because `or a` re-establishes the Z flag from the
+current value of A (which was just loaded from B). This extra step is required
+because `dec b` alone sets Z correctly, but the back-edge test in the `while`
+loop reads the flags at the `end` line, and any instruction between `dec b` and
+`end` may have changed them. The `ld a, b / or a` sequence ensures the final
+flag state before the back-edge test reflects B's value, not whatever a previous
+instruction left in the flags. Note: `djnz` cannot be directly replaced by `dec b / jr nz` in a `while` loop
+without this extra flag-establishment step.
+
+**`count_above` — raw (Chapter 11):**
+
+```zax
+func count_above(): AF
+  push bc
+  ld d, 0
+  pop bc
+count_above_loop:
+  ld a, (hl)
+  cp c
+  jr c, count_above_skip
+  cp c
+  jr z, count_above_skip
+  inc d
+count_above_skip:
+  inc hl
+  djnz count_above_loop
+  ld a, d
+end
+```
+
+The push/pop and the double `cp c` are both present. The skip label serves both
+jump instructions; a reader must check both to understand when the counter is
+incremented.
+
+**`count_above_cf` — with typed local and `if`:**
+
+```zax
+func count_above_cf(): AF
+  var
+    cnt: byte = 0
+  end
+  ld a, b
+  or a
+  while NZ
+    ld a, (hl)
+    cp c
+    if NC
+      cp c
+      if NZ
+        succ cnt
+      end
+    end
+    inc hl
+    dec b
+    ld a, b
+    or a
+  end
+  a := cnt
+end
+```
+
+The push/pop is gone (typed local `cnt` carries the count). The double `cp c` is
+still present — the comparison logic itself has not changed, because "strictly
+greater than" still requires two tests — but the outer `if NC / inner if NZ`
+nesting makes the structure explicit: "if not-less-than, then if not-equal, then
+count it." The skip label is gone.
+
+---
+
+## The example: `learning/part1/examples/10_structured_control.zax`
+
+The example file contains `main`, `find_max_cf`, and `count_above_cf`. It uses
+the same table and produces the same results as Chapter 11:
+maximum = 91, above-64 count = 3. The only difference is in how the subroutine
+bodies are written.
+
+Read both files simultaneously. For each subroutine, compare:
+
+- the number of user-defined labels
+- where the loop exit point is expressed
+- where the conditional skip is expressed
+- where the counter initialization is
+
+In the raw version, each of those requires at least one label and one explicit
+jump. In the structured version, each is expressed by the keyword that carries it.
+
+---
+
+## Summary
+
+- `if <cc> ... end` tests the current flags at `if`. If the condition is true,
+  the body executes. `else` provides an alternative body. No user labels are
+  needed.
+- `while <cc> ... end` is pre-tested: the body runs zero or more times depending
+  on the flag state at entry. The back edge re-tests the same condition after
+  each iteration.
+- `while` does not set flags. Flags must be established by a Z80 instruction
+  immediately before `while`. Use `ld a, b / or a` to convert a register value
+  into a flag state before a `while NZ` loop.
+- The body of a `while` loop is responsible for re-establishing the flags before
+  each back-edge test. Any path that reaches `end` without a `break` or `ret`
+  will re-test the condition with the current flags.
+- `break` exits the immediately enclosing loop. Flags do not need to be set
+  before `break`.
+- `continue` restarts from the condition test. Flags must be correct for the
+  condition before `continue` executes in a `while` loop.
+- Structured control flow does not hide the machine. Each `if`/`else`/`end` and
+  `while`/`end` generates the same conditional jumps and labels. The compiler manages the labels;
+  you manage the flags.
+
+## What Comes Next
+
+Chapter 14 introduces typed function parameters and the `op` construct. Typed
+parameters replace the register-passing convention that raw subroutines document
+in comments. `op` provides a lightweight named-operation form that expands inline
+without any call overhead.
+
+---
+
+[← Typed Storage and Assignment](12-typed-storage-and-assignment.md) | [Part 1](README.md) | [Functions, Arguments, and Op →](14-functions-arguments-and-op.md)
+
+
+---
+
+<!-- Source: learning/part1/14-functions-arguments-and-op.md -->
+
+# Chapter 14 — Functions, Arguments, and `op`
+
+This chapter introduces typed function parameters, typed return values, the
+`op` construct, and two features that extend the Z80's native instruction set:
+undocumented half-index-register opcodes and ZAX pseudo-opcodes for 16-bit
+register moves. After reading it you will be able to write a ZAX `func` with
+named typed parameters and a typed return value, write an `op`, use IXH/IXL
+and the synthetic `ld hl, de` family, and explain the difference in cost between
+a typed `func` call, a raw `call`, and an `op` expansion.
+
+Prerequisites: Chapters 4–13.
+
+---
+
+## What raw subroutines required
+
+Raw subroutines passed all values through registers. The conventions were
+chosen by you and documented only in comments:
+
+```zax
+; find_max: scan a byte table and return the largest value.
+; Inputs:  HL = pointer to first byte, B = number of bytes
+; Outputs: A = maximum byte value found
+func find_max(): AF
+```
+
+Every caller had to know that HL held the table pointer and B held the count,
+and had to load those registers before each `call`. When `main` called
+`find_max` and then `count_above`, it had to reload HL before the second call
+because `find_max` advanced HL as a side effect — a fact visible only by reading
+the function body or running the program.
+
+The comment block was the only thing linking the register convention to the
+function's purpose. If the convention was wrong or out of date, the compiler did
+not notice.
+
+---
+
+## Typed parameters: names and types in the signature
+
+A ZAX function with typed parameters moves the register-passing protocol into
+the compiler's hands. The function declares what inputs it needs and what type
+they have:
+
+```zax
+func find_max_f(tbl: addr, len: byte): HL
+```
+
+`tbl: addr` and `len: byte` are the parameters. A function call is a standalone
+statement — the function name appears alone on the line with its arguments:
+
+```zax
+find_max_f values, TableLen
+ld a, l          ; byte result is in L after the call (H = 0 by convention)
+```
+
+The compiler emits the pushes for `values` (the address of the table) and
+`TableLen` (the count), the `call`, and the stack cleanup after return. The
+caller does not load HL or B. The compiler matches the arguments to the
+parameters, checks types, and generates the call sequence. The result is read
+from the return register — L for a byte result from a `: HL` function — in the
+next instruction.
+
+There is no `a := func_name args` syntax in ZAX. A call cannot appear on the
+right-hand side of a `:=` assignment. Write the call as a standalone statement,
+then read from the return register explicitly.
+
+Inside the function, parameters are accessed by name using `:=`, just like
+typed locals:
+
+```zax
+hl := tbl           ; load the tbl parameter into HL
+b := len            ; load the len parameter into B
+```
+
+The compiler places each parameter in an IX-relative slot (starting at IX+4 for
+the first parameter). Accessing a parameter costs the same IX-relative
+load/store sequence as accessing a local.
+
+---
+
+## The function frame: what it costs
+
+A function with parameters or locals carries setup overhead that a raw
+subroutine does not. The compiler emits three setup instructions at entry:
+
+```asm
+push ix
+ld   ix, 0
+add  ix, sp
+```
+
+This saves the caller's IX and makes IX point to the current top of stack. Every
+local and every parameter is then accessible as a signed byte offset from IX.
+
+At function exit, the compiler emits matching cleanup instructions:
+
+```asm
+ld  sp, ix
+pop ix
+ret
+```
+
+For a void function that preserves BC, DE, HL, and AF, the epilogue also emits
+the register restore sequence before the final `ret`.
+
+**A ZAX `func` does not need a final `ret`.** The compiler emits the epilogue
+and `ret` automatically when it reaches `end`. Use `ret` inside a `func` only
+for early exits — places in the body where you want to return before `end` is
+reached. Conditional returns (`ret cc`) are also early exits and remain valid
+wherever they are needed.
+
+That is six instructions of overhead — three prologue, three epilogue — plus
+the register save/restore pushes. A raw `call` and `ret` are two instructions
+total with no frame at all.
+
+The frame overhead is not free. For a tight inner loop that calls a very short
+helper, it may outweigh the benefit. For a function that is called a few times
+from different places in a larger program, the frame cost is small relative to
+what the function does, and the gain in readability and safety is real.
+
+A function that has no parameters and no locals — like `func main(): void` in
+all the examples — is frameless. No prologue, no epilogue. The `ret` is emitted
+directly.
+
+---
+
+## The return clause
+
+The return clause on a function declaration controls which registers carry the
+result and which registers the compiler saves and restores around the frame.
+
+| Declaration | Meaning | What compiler preserves |
+|-------------|---------|-------------------------|
+| `func f(): void` | no return value | AF, BC, DE, HL all saved/restored |
+| `func f(): AF` | A survives if left there; AF not saved/restored by compiler | BC, DE, HL saved/restored; AF is not |
+| `func f(): HL` | typed byte/word return in HL (byte in L, H = 0) | AF, BC, DE saved/restored; HL is not |
+
+**Important distinction — two return patterns:**
+
+`: AF` does **not** deliver A through the typed call mechanism. What it does is
+remove AF from the compiler's save/restore set: the compiler does not emit
+`pop AF` before returning, so whatever value A held at function exit reaches the
+caller through raw register survival. This is the pattern from Chapter 9 —
+the caller and callee agree by convention that A carries the result, and the
+declaration `: AF` tells the compiler not to clobber it.
+
+`: HL` is the typed return pattern. The compiler treats HL as the return
+channel: byte values go in L (with H set to zero), word values fill all of HL.
+The caller reads the result from L (for bytes) or HL (for words) after the
+call returns.
+
+`find_max_f` and `count_above_f` use `: HL`. They place their byte result in L
+(with H = 0) just before returning. The caller retrieves it with `ld a, l`
+after the standalone call statement.
+
+Declaring `: void` when the function places a meaningful value in A is a bug.
+The compiler's `pop AF` in the epilogue overwrites A before the caller sees it.
+Chapter 9 established this rule; it applies to all three chapters.
+
+---
+
+## Undocumented opcodes: IXH, IXL, IYH, IYL
+
+Chapter 4 introduced the half-index registers IXH, IXL, IYH, and IYL and the
+prefix-byte constraint that prevents mixing halves from different register
+families in one instruction. ZAX supports all half-index instructions
+unconditionally.
+
+```zax
+ld ixh, a       ; store A in the high half of IX
+ld a, iyl       ; load the low half of IY into A
+ld ixl, b       ; store B in IXL
+add a, ixh      ; add IXH to A
+```
+
+The practical constraint that matters in this chapter is the **frame conflict**.
+The ZAX function frame uses IX as its base pointer: every parameter and local is
+accessed as an offset from IX. Inside any function that has parameters or typed
+locals, the compiler owns IX, and IXH/IXL are unavailable. IYH and IYL remain
+free unless IY is also in use.
+
+In frameless functions — those with no parameters and no locals — IX is not
+claimed by the compiler, and all four halves are available as extra byte-sized
+scratch registers.
+
+---
+
+## ZAX pseudo-opcodes: synthetic 16-bit register moves
+
+The Z80 has no instruction to copy one register pair into another. To copy HL
+into DE in raw Z80, you write two 8-bit moves:
+
+```zax
+ld d, h
+ld e, l
+```
+
+ZAX removes this chore. You can write the 16-bit form directly:
+
+```zax
+ld hl, de       ; ZAX expands to: ld h, d / ld l, e
+ld de, hl       ; ZAX expands to: ld d, h / ld e, l
+```
+
+The assembler emits the two-instruction sequence automatically. No new opcode is
+invented — the output is exactly the same pair of 8-bit moves you would write
+by hand. The pseudo-opcode exists to make the intent visible at a glance.
+
+ZAX supports the following synthetic 16-bit register transfers:
+
+| Pseudo-opcode | Expands to |
+|---------------|------------|
+| `ld hl, de` | `ld h, d` / `ld l, e` |
+| `ld hl, bc` | `ld h, b` / `ld l, c` |
+| `ld de, hl` | `ld d, h` / `ld e, l` |
+| `ld de, bc` | `ld d, b` / `ld e, c` |
+| `ld bc, hl` | `ld b, h` / `ld c, l` |
+| `ld bc, de` | `ld b, d` / `ld c, e` |
+
+Each expands to exactly two bytes of machine code (two one-byte `ld` instructions).
+The cost is the same as writing the pair by hand — ZAX adds nothing at run time.
+
+These pseudo-opcodes are always available. Use them freely wherever you would
+otherwise write the two-instruction sequence yourself.
+
+---
+
+## `op`: inline named operations
+
+`op` defines a named operation that expands inline at every call site. There is
+no `call` instruction, no frame, and no `ret`. The body is substituted directly
+into the instruction stream where the op is invoked.
+
+A zero-parameter `op` is declared with no parentheses:
+
+```zax
+op load_and_or(src: reg8)
+  ld a, src
+  or a
+end
+```
+
+Every invocation of `load_and_or B` expands to:
+
+```asm
+ld a, b
+or a
+```
+
+exactly as if those two instructions were written at that position in the source.
+
+The example file uses `load_and_or` to name the repeated "copy register into A
+and OR to establish flags" pattern that appears before every `while NZ` loop and
+at every back edge. Without `op`, that pattern is copied by hand in every place it appears. With
+the `op`, it appears once in the declaration and once at each invocation. The reader sees `load_and_or B` and knows immediately what
+instruction pair will appear there.
+
+**`reg8` parameters accept only physical register names.** At the call site, a
+`reg8` parameter must be passed as one of the seven physical registers: `A`,
+`B`, `C`, `D`, `E`, `H`, or `L`. A frame-slot name like `len` or a local like
+`count` is not a valid `reg8` operand. The reason is structural: an `op` has no
+frame of its own, so it cannot emit IX-relative loads inside the expanded body.
+The compiler substitutes the register token directly into the body instruction
+— `ld a, B` — and that substitution only makes sense if the operand is a
+register. If the value you want to pass lives in a frame slot, load it into a
+register first and pass that register:
+
+```zax
+b := len       ; load frame slot into B
+load_and_or B  ; now B is a physical register token — valid reg8 operand
+```
+
+---
+
+## When to use `op` vs `func`
+
+Use `op` when:
+
+- a short sequence of instructions repeats in a mechanical way
+- the expansion is small enough that calling overhead would dominate the cost
+- you want accumulator-style or register-pair operations that read like opcodes
+- no frame slot allocation is needed (ops cannot have `var` blocks)
+
+Use `func` when:
+
+- the function is long enough that a `call`/`ret` pair is not the dominant cost
+- the function needs typed local variables (ops cannot have `var` blocks)
+- the function is called from many places and you want the compiler to enforce
+  the calling convention
+- a consistent preservation contract at the call boundary matters
+
+`op` bodies do not have their own preservation boundary. Registers clobbered by
+an `op` body are clobbered in the caller's instruction stream, just as if the
+programmer had written those instructions directly. If `load_and_or` clobbers A,
+that clobber is visible in the function that invokes it. A `func` call, by
+contrast, preserves all registers not in the return clause — the compiler
+generates the save/restore sequence.
+
+---
+
+## The example: `learning/part1/examples/11_functions_and_op.zax`
+
+The example file contains `main`, `find_max_f`, `count_above_f`, and the op
+`load_and_or`. It produces the same results as all previous capstone versions.
+
+The `main` function now calls with argument expressions:
+
+```zax
+find_max_f values, TableLen
+ld a, l                    ; byte result is in L (H = 0)
+ld (max_val), a
+
+count_above_f values, TableLen, 64
+ld a, l                    ; byte result is in L (H = 0)
+ld (cnt_val), a
+```
+
+No register pre-loading. No `ld hl, values / ld b, TableLen` before each call.
+The caller names the arguments in the call; the compiler emits the pushes.
+After the call returns, the caller reads the result from L (since both functions
+are declared `: HL` and return a byte value in L with H set to zero).
+
+Inside `find_max_f`, the parameter `tbl` is loaded into HL to walk the table,
+and `ptr` is a typed local that persists the current pointer across loop
+iterations:
+
+```zax
+hl := tbl
+ptr := hl
+
+b := len           ; load frame slot into B — op reg8 params require a physical register
+load_and_or B      ; establish flags from B before while
+while NZ
+  hl := ptr
+  ld a, (hl)
+  inc hl
+  ptr := hl
+  ; ...
+  b := len
+  dec b
+  len := b
+  load_and_or B    ; B still holds the decremented value; re-establish flags
+end
+```
+
+`len` is a parameter. Parameters can be read and written with `:=` the same way
+locals can — writing to a parameter changes the frame slot, not a register the
+caller holds. Decrementing `len` each iteration is valid; the caller's value is
+already on the stack and this function's frame slot is a copy.
+
+The `op load_and_or` appears at both the loop entry and the back edge. This is
+intentional: the while condition is re-tested at the back edge (as established
+in Chapter 13) using the same flag state, so the same setup must be correct at
+both points.
+
+Notice that the call passes `B`, not `len`. This is required: `op` parameters
+typed `reg8` accept only physical register names at the call site. The frame
+slot `len` is not a register token — the compiler cannot substitute it into the
+`ld a, src` body of the op. Load the frame slot into a register first, then
+pass the register to the op.
+
+---
+
+## Comparing the four versions
+
+`06_subroutines.zax` — raw subroutines, register conventions in comments.
+`08_phase_a_capstone.zax` — raw Z80 with DJNZ, push/pop, double-cp.
+`10_structured_control.zax` — typed locals and structured control, still raw register-passing for arguments.
+`11_functions_and_op.zax` — typed parameters, typed return, op, structured control.
+
+Each step removes one manual task:
+
+- Chapter 11 → Chapter 12: registers-as-variables replaced by typed locals.
+- Chapter 12 → Chapter 13: label management replaced by `if`/`while`.
+- Chapter 13 → Chapter 14: register-passing conventions replaced by typed parameters.
+
+Across Chapters 12–14, the compiler also handles frame setup, frame teardown,
+register preservation, and the final `ret` at `end`. A ZAX `func` never needs a
+trailing `ret`.
+
+The Z80 machine model has not changed. Registers, flags, the stack, and indexed
+addressing are all still present in Chapter 14. What has changed is how much
+of the repetitive work the compiler does for you.
+
+---
+
+## Summary
+
+- IXH, IXL, IYH, and IYL (Chapter 4) are supported unconditionally in ZAX.
+  Inside framed functions, IXH/IXL are unavailable because the compiler uses IX
+  for frame addressing. In frameless functions, all four halves are free.
+- ZAX pseudo-opcodes — `ld hl, de`, `ld de, bc`, and the other four pair-to-pair
+  combinations — expand to two 8-bit moves. They add no run-time cost and make
+  16-bit register transfers readable at a glance.
+- Typed function parameters move the register-passing protocol into the
+  compiler. The caller names the arguments; the compiler emits the pushes and
+  stack cleanup.
+- Parameters are accessible inside the function by name with `:=`, at the same
+  cost as IX-relative locals.
+- The function frame costs a three-instruction prologue and a three-instruction
+  epilogue plus register saves/restores. A frameless function (no params, no
+  locals) has none of this overhead.
+- The compiler emits the epilogue and `ret` automatically at `end`. A ZAX
+  `func` does not need a trailing `ret`. Use `ret` only for early exits inside
+  the function body.
+- The return clause controls which registers carry results and which the compiler
+  saves/restores. Declaring `: void` when the function leaves a result in A
+  causes the epilogue to overwrite it before the caller sees it.
+- `op` expands inline with no call overhead and no frame. Clobbers are visible
+  in the caller.
+- `func` provides a typed preservation boundary and compiler-enforced calling
+  convention, at the cost of the frame overhead.
+- Use `op` for short repeating patterns that need no frame. Use `func` for
+  anything that benefits from a clean call boundary and typed parameters.
+
+---
+
+## What Comes Next
+
+You have completed Volume 1.
+
+By this point you can:
+
+- explain bytes, words, addresses, the Z80 registers, and the hardware stack
+- write raw Z80 instructions: `ld`, `add`, `sub`, `cp`, `and`, `or`, `jp`,
+  `jr`, `djnz`, `call`, `ret`, `push`, `pop`
+- use `section data` to declare named module storage
+- write typed locals with `var` and assign them with `:=`
+- use `succ` and `pred` for typed scalar update
+- write `if`/`else` and `while` loops with `break` and `continue`
+- write a ZAX `func` with typed parameters and a typed return value
+- use IXH/IXL/IYH/IYL and the ZAX pseudo-opcodes for 16-bit register moves
+- write an `op` for inline named instruction sequences
+- explain what each construct in Chapters 12–14 does and what it replaces
+
+**Volume 2: `learning/part2/`**
+
+The algorithms course (`learning/part2/README.md`) is the second stage. It
+assumes everything from Part 1 — typed storage, `:=`, `if`, `while`, `break`,
+`continue`, `succ`/`pred`, typed functions, and `op` — and uses it from the
+first chapter.
+
+Volume 2 covers the constructs and patterns needed for larger programs:
+
+- **Arrays and indexing** — typed arrays declared in `section data`, indexed
+  with register operands, 0-based with no runtime bounds checks
+- **Records** — struct-like types, field access with `.`, `sizeof` and
+  `offsetof` for layout arithmetic
+- **Strings** — null-terminated byte arrays, sentinel traversal with `while NZ`
+  and `break`
+- **Recursion** — recursive `func` calls, the IX frame per call level, returning
+  values across multiple call levels
+- **Modules and `import`** — splitting programs across files, qualifying names
+  with a module prefix, the `export` keyword
+- **Pointer structures** — typed reinterpretation with `<Type>base.field`,
+  linked-list and tree traversal using `addr` locals
+- **`select`/`case`** — dispatch on a value, the ZAX alternative to jump tables
+
+A reader who has finished Volume 1 through Chapter 14 can open any Volume 2
+example file and follow it without encountering unfamiliar ZAX syntax. The
+structures will be new; the language surface will not.
+
+You are ready.
+
+---
+
+[← Structured Control Flow](13-structured-control-flow.md) | [Part 1](README.md) | [Part 2 →](../part2/README.md)
+
+
+---
+
+<!-- Source: learning/part2/README.md -->
+
+# Part 2 — Algorithms and Data Structures in ZAX
+
+**New to Z80?** Start with [Part 1](../part1/README.md) first.
+
+This part is for readers who already understand the Z80 basics — either from Part 1 or from prior Z80 experience. Each chapter works through a real algorithm or data structure in ZAX, covering one area of the language as it comes up naturally.
+
+---
+
+## Chapter table
+
+| Ch | File | What it covers |
+|----|------|----------------|
+| 1  | [Foundations](01-foundations.md) | Variables, `:=` assignment, functions, `while`/`if`, `succ`/`pred`. Arithmetic algorithms. |
+| 2  | [Arrays and Loops](02-arrays-and-loops.md) | Array indexing, `break` and `continue`. Sorting and searching. |
+| 3  | [Strings](03-strings.md) | Null-terminated strings, byte-by-byte traversal, sentinel loops. String algorithms. |
+| 4  | [Bit Patterns](04-bit-patterns.md) | Shift and logic instructions, `op` for reusable register patterns. Bit manipulation. |
+| 5  | [Records](05-records.md) | Structs, field access, `sizeof`/`offsetof`. Ring buffer. |
+| 6  | [Recursion](06-recursion.md) | Recursive functions, the IX stack frame, preserving return values. Tower of Hanoi, recursive reverse and sum. |
+| 7  | [Composition](07-composition.md) | `import`, module-qualified calls, `select`/`case`. RPN calculator. |
+| 8  | [Pointer Structures](08-pointer-structures.md) | Typed reinterpretation, unions, linked list, binary search tree. |
+| 9  | [Gaps and Futures](09-gaps-and-futures.md) | What ZAX can't yet do, known language gaps, eight queens capstone. |
+
+Each chapter's examples are in a matching subdirectory: Chapter 1's examples
+are in `examples/unit1/`, Chapter 2's in `examples/unit2/`, and so on.
+
+---
+
+## How to compile the examples
+
+```sh
+npm run zax -- learning/part2/examples/unit1/fibonacci.zax
+```
+
+---
+
+## Editorial standard
+
+All prose in this volume is held to [`docs/work/course-writing-standard.md`](../../docs/work/course-writing-standard.md).
+
+
+---
+
+<!-- Source: learning/part2/00-introduction.md -->
+
+# Introduction
+
+## What This Volume Is For
+
+This volume is the second stage of the ZAX course.
+
+It assumes you already know the basic machine model: registers, flags, memory,
+subroutines, and ordinary loop structure on the Z80. Volume 1 under
+`learning/part1/` covers those foundations from the ground up. This volume starts
+later. Its job is to show how larger ZAX programs are organised once those
+basics are already familiar.
+
+The chapters are built around practical programs. They cover arrays, strings,
+bit manipulation, records, recursion, composition, pointer structures, and a
+capstone search problem. Each one works through real ZAX code that solves a
+non-trivial problem, and shows how the language helps keep that code readable.
+
+## What ZAX Gives You Here
+
+ZAX is still close to the machine. Raw Z80 instructions are always available,
+and you still decide what the registers, flags, and memory layout mean. What
+changes is the amount of repetitive work you have to do by hand.
+
+In these chapters you will keep seeing the same pattern. Raw instructions are
+used when the machine detail matters directly. ZAX features are used when your
+intent is clearer than the mechanical load/store sequence.
+A byte can still be loaded with `ld a, (hl)`. A typed local can be updated with
+`count := hl` or `succ index_value`. The language does not remove machine-level
+thinking. It removes repeated clerical work so the program structure is easier
+to follow.
+
+## What This Volume Assumes
+
+You should already be comfortable with:
+
+- the Z80 register set and register pairs
+- flag-driven branching and loop entry conditions
+- `call`, `ret`, and the idea of stack-based local state
+- the difference between ROM data, RAM data, and addresses
+- reading short Z80 sequences without opcode-by-opcode commentary
+
+You do not need prior knowledge of C, Pascal, or any other high-level language.
+This volume explains each program in its own terms. What it does assume is that
+you are ready to read multi-step code and follow what a program is doing across
+more than a few instructions.
+
+## How To Use The Chapters
+
+Each chapter should be read in the same order:
+
+1. read the prose for the chapter's main idea
+2. open the cited `.zax` example files
+3. follow the code with the chapter's explanation beside it
+4. compile the example if you want to inspect the generated output
+
+Do not try to memorize every line. The useful question is simpler: what problem
+is this code solving, and which parts are raw Z80 detail versus ZAX structure?
+That distinction is what the rest of the volume keeps reinforcing.
+
+## What Comes Next
+
+Chapter 1 starts with arithmetic and number-theory algorithms: power, GCD,
+Fibonacci, square root, and decimal digit count. These are small programs with
+no arrays or records — just functions, typed locals, and structured control
+flow. They establish the working patterns that every later chapter builds on.
+
+---
+
+[Part 2](README.md) | [Foundations →](01-foundations.md)
+
+
+---
+
+<!-- Source: learning/part2/01-foundations.md -->
+
+# Chapter 1 — Foundations
+
+The Chapter 01 examples work with arithmetic and number-theory algorithms.
+There are no arrays, records, or pointer operations — just functions, typed
+locals, and structured control flow over integer computations. That scope
+keeps the working patterns visible before the language grows wider.
+
+---
+
+## Variables and Types
+
+In raw Z80 code, every intermediate value lives in a register or at a
+hand-chosen memory address. You track which register holds what, and if you run
+out of registers you spill to memory yourself. ZAX typed variables replace that
+manual tracking: you give a value a name and a type, and the compiler handles
+where it lives.
+
+ZAX has four scalar storage types: `byte` (8-bit unsigned), `word` (16-bit
+unsigned), `addr` (16-bit, signals a memory address), and `ptr` (16-bit,
+signals a pointer to something). In these examples only `byte` and `word`
+appear — the others become relevant when you start working with arrays and
+records.
+
+You can declare storage in two places: named `data` sections at module scope,
+and `var` blocks inside function bodies.
+
+A `var` block declares function-local scalars with optional initializers:
+
+```zax
+func power(base: word, exponent: word): HL
+  var
+    result:    word = 1
+    remaining: word = 0
+  end
+  ...
+end
+```
+
+Each local occupies a 16-bit slot in the function's stack frame. The
+initializer value is emitted at function entry, before any instructions in the
+body run. The `var` block is terminated by its own `end`; a second `end` closes
+the function itself.
+
+The compiler allocates and initialises locals before the register-save push
+sequence. Reading the `.asm` output for a framed function, you will see
+`LD HL, imm16` / `PUSH HL` pairs for each initialised local at the top of the
+prologue.
+
+---
+
+## The `:=` Assignment Operator
+
+In raw Z80, moving a value between a register and a named location means writing
+the `ld` instruction yourself, with the exact register and address. That works,
+but it means you always have to know the address, remember which register holds
+what, and keep those details consistent by hand.
+
+`:=` is the way you read or write a named variable without spelling out the
+load or store sequence yourself. When you write:
+
+```zax
+remaining := exponent
+```
+
+you are telling the compiler: "put the value of `exponent` into `remaining`."
+The compiler figures out where both of those live (in the function's stack frame,
+in a specific register, as a named constant) and emits the right instruction
+sequence. You write the intent; the compiler does the mechanical part.
+
+`:=` works in both directions. You can read a local into a register:
+
+```zax
+hl := result             ; load the local 'result' into HL
+```
+
+Or write a register back into a local:
+
+```zax
+result := hl             ; store HL into the local 'result'
+```
+
+This is different from `ld`. When you write `ld hl, $FF00` you are writing a
+specific Z80 instruction — "load HL with this constant." When you write
+`hl := result` you are describing a transfer between a named storage location
+and a register, and the compiler works out the instruction to use. For a local
+`word` variable, that might take more than one instruction internally, because
+the Z80's indexed addressing has constraints. You do not need to know the
+details — that is the point.
+
+In practice, both `:=` and `ld` appear in the same function body:
+
+```zax
+    hl := remaining     ; typed load: read frame local into HL
+    ld a, l
+    and 1               ; test the low bit of remaining
+    if NZ
+      mul_u16 result, factor
+      result := hl      ; typed store: write HL back to frame local
+    end
+```
+
+(From `learning/part2/examples/unit1/exp_squaring.zax`, lines 60–66.)
+
+The `ld a, l` and `and 1` are raw Z80 instructions — testing a specific bit
+of a specific register. The `:=` lines on either side are named transfers to
+and from the local `remaining`. Both appear naturally together. Raw instructions
+when you are doing register-level work; `:=` when you want to read or write a
+named local without tracking the address yourself.
+
+---
+
+## Functions
+
+Every computation in the Chapter 01 examples lives inside a `func`. You have
+seen `func` in Volume 1 — here is a quick recap of the parts that matter most
+in these examples.
+
+A function declaration names the function, lists its parameters with types, and
+says which register carries the result:
+
+```zax
+func gcd_iterative(left_input: word, right_input: word): HL
+```
+
+`left_input` and `right_input` are the inputs. Both are `word` — a 16-bit
+unsigned value. The `: HL` at the end says two things: HL will carry the result
+when the function returns, and the compiler will automatically save and restore
+AF, BC, and DE around the function body so the caller does not have to worry
+about them.
+
+Inside the function, you use the parameter names directly — `left_input`,
+`right_input` — with `:=` to read or write them. The compiler handles the
+addressing; you just use the name.
+
+Calling a function with arguments looks like this:
+
+```zax
+    mul_u16 result, factor
+    result := hl
+```
+
+`mul_u16` takes two `word` arguments. After it returns, the result is in HL.
+The `:=` then stores it into the local `result`.
+
+---
+
+## Basic Control Flow: `if` and `while`
+
+ZAX structured control flow works on the Z80 flag register, which is exactly
+what you would use for a conditional branch in raw assembly. The difference is
+that the compiler generates the hidden labels and conditional jumps — you write
+the condition code keyword, not a `jp` instruction.
+
+`if NZ`, `if Z`, `if C`, `if NC`, `if M`, `if P`, `if PE`, `if PO` — any Z80
+condition code is valid. The condition is tested at the `if` keyword using the
+current flag state. It is always your responsibility to establish the correct flags with a Z80
+instruction immediately before the condition:
+
+```zax
+    hl := right
+    ld a, h
+    or l              ; set Z if HL is zero, clear Z otherwise
+    if Z
+      hl := left
+      ret
+    end
+```
+
+(From `learning/part2/examples/unit1/gcd_iterative.zax`, lines 20–26.)
+
+The `or l` instruction sets Z if HL is zero. The `if Z` block then handles the
+base case. This is the standard Z80 null-check pattern: OR H with L, or OR A
+with itself to test A, then branch on Z or NZ.
+
+`while <cc>` tests the condition on entry and at the back edge after each
+iteration. If the condition is false on entry, the body never runs. The entry
+flag rule therefore always applies: flags must correctly represent the loop
+condition before the first `while` test, not only at the back edge. The body
+must also re-establish the flags before control reaches the back edge:
+
+```zax
+    ld a, 1
+    or a            ; establish NZ before the first while test
+    while NZ
+      ; ... loop body ...
+
+      ld a, 1
+      or a            ; re-establish NZ for the next iteration
+    end
+```
+
+`ld a, 1` / `or a` is the reliable way to establish NZ. It appears
+at entry and at the back edge whenever the loop condition must be guaranteed.
+If Z=1 on entry to a `while NZ` loop, the body never executes regardless of
+what is inside it.
+
+---
+
+## `succ` and `pred`
+
+ZAX provides two built-in operations for incrementing and decrementing typed
+scalar paths: `succ` and `pred`. They operate on locals, module-scope
+variables, record fields, and array elements — any typed scalar storage path.
+
+```zax
+    succ index_value    ; increment the word local 'index_value' by 1
+    pred remaining      ; decrement the word local 'remaining' by 1
+```
+
+These are not function calls; they lower to an efficient read-increment-write
+(or read-decrement-write) sequence at the storage path in question. Using
+`succ` and `pred` instead of a manual HL-roundtrip sequence keeps the code
+concise and the intent visible.
+
+In the Chapter 01 examples, `succ` and `pred` are the standard way to advance or
+retreat a counter local. You will see them throughout the loops that drive
+counting and iteration.
+
+---
+
+## The Chapter 01 Programs
+
+### Power: repeated multiplication
+
+`power.zax` builds integer power by repeated multiplication of `base`, using
+a helper function `mul_u16` to multiply two `word` values by repeated addition.
+Both functions share the same loop structure: a `while NZ` loop that counts
+down a countdown local, returning early when the count reaches zero.
+
+The `pred` built-in decrements `remaining` at the bottom of each iteration.
+This is the first example of a common Chapter 01 pattern: a counting loop with an
+explicit zero check at the top and a `pred` decrement at the bottom.
+
+See `learning/part2/examples/unit1/power.zax`.
+
+### GCD: iterative and recursive
+
+`gcd_iterative.zax` implements Euclid's algorithm by subtraction: at each step,
+replace the larger of two values with the difference. The loop continues until
+the two values are equal (difference is zero) or one of them reaches zero.
+
+The ZAX structure for this is a `while NZ` loop containing nested `if` blocks
+for the three cases (right is zero, values are equal, one is larger):
+
+```zax
+    hl := left
+    de := right
+    xor a
+    sbc hl, de          ; signed subtract: sets C if left < right, Z if equal
+    if Z
+      hl := left
+      ret
+    end
+    if NC
+      left := hl        ; left was larger: left := left - right
+    end
+    if C
+      ; right was larger: right := right - left
+      hl := right
+      de := left
+      xor a
+      sbc hl, de
+      right := hl
+    end
+```
+
+(From `learning/part2/examples/unit1/gcd_iterative.zax`, lines 28–45.)
+
+`xor a` clears the carry before `sbc hl, de`, so the subtraction result is
+exact (no borrow from a prior carry). After the subtraction, C is set if
+left < right, Z is set if left == right.
+
+`gcd_recursive.zax` expresses the same algorithm recursively. Each call reduces
+one or both operands and recurses. The compiler generates a fresh IX frame for
+each call, so the callee's locals are entirely independent of the caller's.
+Recursive `func` in ZAX works exactly like non-recursive `func` — the compiler
+creates a fresh stack frame for each call, so each level gets its own locals
+automatically.
+
+See `learning/part2/examples/unit1/gcd_iterative.zax` and
+`learning/part2/examples/unit1/gcd_recursive.zax`.
+
+### Fibonacci: rolling state
+
+`fibonacci.zax` maintains two locals — `prev_value` and `curr_value` — that
+carry consecutive Fibonacci values across iterations. A third local
+`index_value` counts up to the target. At each step, the next value is computed
+from the sum of the current pair, then the pair advances one position:
+
+```zax
+    hl := prev_value
+    de := curr_value
+    add hl, de
+    next_value := hl
+
+    prev_value := curr_value
+    curr_value := next_value
+
+    succ index_value
+```
+
+(From `learning/part2/examples/unit1/fibonacci.zax`, lines 26–34.)
+
+The `add hl, de` computes the next Fibonacci number. The two `:=` assignments
+advance the rolling state. `succ index_value` steps the counter. The loop
+exits via an early `ret` when `index_value` reaches `target_count`.
+
+See `learning/part2/examples/unit1/fibonacci.zax`.
+
+### Integer square root: Newton iteration
+
+`sqrt_newton.zax` refines a guess iteratively. The initial guess is the input
+value itself (a very conservative but safe start). Each iteration computes
+`next = (guess + value/guess) / 2`, the standard Newton step for square root.
+The helper `div_u16` performs 16-bit unsigned division by repeated subtraction.
+
+The loop runs for a fixed number of iterations (`remaining_iters = 4`) rather
+than testing for convergence. This is a deliberate choice for an integer
+algorithm: four Newton steps are enough to converge for values in the range
+that fits in a `word`.
+
+See `learning/part2/examples/unit1/sqrt_newton.zax`.
+
+### Exponentiation by squaring
+
+`exp_squaring.zax` computes power more efficiently than repeated multiplication
+by halving the exponent at each step. If the current exponent bit is odd,
+multiply the running result by the current factor; then square the factor and
+halve the exponent:
+
+```zax
+    hl := remaining
+    ld a, l
+    and 1             ; test the low bit of the exponent
+    if NZ
+      mul_u16 result, factor
+      result := hl
+    end
+
+    mul_u16 factor, factor
+    factor := hl
+
+    hl := remaining
+    srl h
+    rr l              ; halve: logical right shift of 16-bit pair HL
+    remaining := hl
+```
+
+(From `learning/part2/examples/unit1/exp_squaring.zax`, lines 60–74.)
+
+The 16-bit right shift uses `srl h` / `rr l`: shift H right with zero fill,
+rotate L right through carry (which carries the bit from H). This is the
+standard Z80 way to shift a 16-bit register pair one place to the right.
+
+See `learning/part2/examples/unit1/exp_squaring.zax`.
+
+### Decimal digit decomposition
+
+`digits.zax` counts how many decimal digits a value has by dividing
+repeatedly by 10. The helper `div_u16` performs unsigned division; the outer
+function `decimal_digits` counts divisions until the remaining value is less
+than 10.
+
+A notable detail: the initial value of the count local is `1`, not `0`. A
+positive integer always has at least one decimal digit, so the count starts at
+one before the loop begins. The loop increments the count (`succ count`) each
+time division is needed. Starting at 1 reflects that assumption directly — the
+`var` declaration records the guarantee, not just an arbitrary starting point.
+
+See `learning/part2/examples/unit1/digits.zax`.
+
+---
+
+## Summary
+
+- `:=` is the interface between typed storage and the Z80 register file. It
+  appears constantly alongside raw Z80 mnemonics in the same function body.
+- Functions declare their return register. The compiler enforces the
+  complementary preservation set. Callers can rely on those registers surviving
+  a typed call.
+- `while NZ` is the basic loop form. Entry flags always matter: a stale Z=1
+  on entry skips the loop body entirely. Establish NZ with `ld a, 1` / `or a`
+  before the first `while NZ`, and re-establish it at the back edge.
+- `succ` and `pred` increment and decrement typed scalar paths.
+  They appear wherever a loop counter or accumulator needs stepping.
+- Recursive functions look and work like non-recursive ones. The compiler
+  handles the per-call IX frame.
+
+---
+
+## Examples in This Chapter
+
+- `learning/part2/examples/unit1/power.zax` — integer power by repeated multiplication
+- `learning/part2/examples/unit1/gcd_iterative.zax` — Euclid's algorithm, iterative
+- `learning/part2/examples/unit1/gcd_recursive.zax` — Euclid's algorithm, recursive
+- `learning/part2/examples/unit1/sqrt_newton.zax` — Newton-step integer square root
+- `learning/part2/examples/unit1/exp_squaring.zax` — exponentiation by squaring
+- `learning/part2/examples/unit1/fibonacci.zax` — iterative Fibonacci with rolling state
+- `learning/part2/examples/unit1/digits.zax` — decimal digit count by repeated division
+
+---
+
+## What Comes Next
+
+Chapter 02 extends the foundation with arrays and the full loop-control surface:
+`break` and `continue`. The algorithms there sort and search small byte arrays,
+which requires indexed storage, multi-pass loops, and early exits — three things
+that build directly on the typed storage and control flow introduced here.
+
+---
+
+## Exercises
+
+1. In `gcd_iterative.zax`, both the iterative and recursive forms use the
+   subtraction form of Euclid's algorithm rather than the modulo form. The
+   modulo form converges faster for inputs with a large ratio. Modify
+   `gcd_iterative.zax` to use `div_u16` for the remainder step. Does the
+   loop structure change meaningfully?
+
+2. `fibonacci.zax` uses four locals. Could it be rewritten using three, with
+   one less `word` slot? What is the tradeoff in readability?
+
+3. In `digits.zax`, the initial value of `count` is 1. Change it to 0 and
+   adjust the loop accordingly. Which version is easier to read?
+
+4. `sqrt_newton.zax` uses a fixed iteration count. Modify it to iterate until
+   `next_guess == guess` (convergence). What edge cases does the fixed count
+   avoid? What does an explicit convergence test expose?
+
+---
+
+[← Introduction](00-introduction.md) | [Part 2](README.md) | [Arrays and Loops →](02-arrays-and-loops.md)
+
+
+---
+
+<!-- Source: learning/part2/02-arrays-and-loops.md -->
+
+# Chapter 2 — Arrays and Loops
+
+The Chapter 02 examples introduce arrays and the full loop surface: `while`,
+`break`, and `continue`. The algorithms in this chapter — sorting and searching
+over small byte arrays — are chosen deliberately. They require indexed storage,
+they loop over it repeatedly, and they exit loops early under specific
+conditions. That last requirement is what makes `break` and `continue` earn
+their place in this chapter.
+
+---
+
+## Arrays
+
+An array in ZAX is declared with a type, a length, and an optional initializer:
+
+```zax
+section data vars at $8000
+  values: byte[8] = { 9, 4, 6, 2, 8, 1, 7, 3 }
+end
+```
+
+This declares a module-level `byte` array of eight elements, initialized to the
+given values. The storage lives in the named `data` section starting at `$8000`.
+
+`byte[8]` means exactly eight one-byte elements — `sizeof(byte[8]) = 8`.
+There is no padding. If you write `word[4]`, you get exactly eight bytes: four
+two-byte elements. The compiler tracks exact sizes and uses them to compute
+element strides for indexed access.
+
+The Chapter 02 examples give these sizes names rather than repeating the
+literal everywhere:
+
+```zax
+const ItemCount = 8
+const LastIndex = ItemCount - 1
+```
+
+`const` values are compile-time expressions. They can reference other `const`
+names and use standard arithmetic and bitwise operators. The compiler resolves
+them before generating any code. `LastIndex = ItemCount - 1` is not a
+subtraction at runtime — it is a constant folded to `7` at compile time.
+`const` names can appear in raw instruction operands (`ld b, LastIndex`,
+`ld hl, ItemCount`) and inside other `const` expressions. Array size
+declarations (`byte[8]`) currently require literal values.
+
+Declaring an array as a function local is not directly supported for variable-
+length storage — function `var` blocks only hold scalars. Working arrays for
+Chapter 02 algorithms live in named `data` sections at module scope, which is the
+normal home for data that persists across function calls.
+
+---
+
+## Array Indexing
+
+To read or write an array element, you put a register inside the square
+brackets:
+
+```zax
+    l := scan_index       ; load the index into L (an 8-bit register)
+    a := values[L]        ; read the element at position L
+```
+
+The index register must be one of the valid Z80 register forms: an 8-bit
+register (`A`, `B`, `C`, `D`, `E`, `H`, `L`), a 16-bit pair (`HL`, `DE`,
+`BC`), or an indirect form like `(HL)`. Computed expressions are not valid
+inside `[...]` — you must compute the index into a register first.
+
+For a `byte[]` array with an 8-bit index, L is the natural choice. L is the
+low half of HL, which is the register pair the Z80 uses for most memory
+addressing. Loading the index into L and leaving H as zero gives you a valid
+16-bit address offset with minimal fuss.
+
+This is the register-as-index convention throughout the Chapter 02 examples: load
+the index into L (or occasionally B), perform the array access, then advance
+the index with `succ` or with an arithmetic instruction.
+
+### Writing Back
+
+The same syntax works for stores:
+
+```zax
+    l := left_index
+    a := right_value
+    values[L] := a        ; write A into values[L]
+```
+
+The place expression `values[L]` on the left side of `:=` is a store; the
+compiler emits the required address calculation and write instruction.
+
+### The `arr[HL]` vs `arr[(HL)]` Distinction
+
+One indexing detail is worth remembering: `values[HL]` uses HL directly as a
+16-bit index into the array. `values[(HL)]` reads a byte from memory at address
+HL and uses that byte as the index. These mean different things. The Chapter 02
+examples use the direct form: the index is a value held in a register, not
+a value pointed to by a register.
+
+---
+
+## The `while` Loop
+
+Chapter 01 introduced `while <cc> ... end`: it checks the condition before each
+iteration. If the condition is false on entry, the body never executes. All the
+chapter 02 examples use this form because the loop bounds are checked upfront —
+every sort and search knows its range before it starts.
+
+ZAX also has a `repeat ... until <cc>` form that runs the body at least once
+and tests the condition at the bottom. None of the Chapter 02 examples require
+it.
+
+---
+
+## `break` and `continue`
+
+`break` exits the enclosing loop immediately, transferring control to the
+statement after the loop's `end`. `continue` skips the remainder of the current
+loop iteration and jumps to the back-edge condition check.
+
+Both `break` and `continue` apply to the innermost enclosing loop — `while` or
+`repeat`/`until`. They are unconditional by themselves; if you want a
+conditional `break`, put the `break` inside an `if` block.
+
+### `break` in `prime_sieve.zax`
+
+The prime sieve uses `break` in two places: once to exit the outer factor loop
+when the factor exceeds the stop threshold, and once to exit the inner multiple-
+marking loop when the multiple exceeds the array limit.
+
+The outer loop:
+
+```zax
+  while NZ
+    a := factor_index
+    cp StopFactor
+    if NC
+      break               ; factor >= StopFactor: no more composites to mark
+    end
+
+    l := factor_index
+    a := is_prime[L]
+    or a
+    if Z
+      succ factor_index
+      ld a, 1
+      or a
+      continue            ; this factor is already composite: skip to next
+    end
+    ...
+```
+
+(From `learning/part2/examples/unit2/prime_sieve.zax`, lines 21–37.)
+
+The `break` fires when `factor_index >= StopFactor` (the `cp` instruction sets
+carry when A < StopFactor; `if NC` means carry is not set, so A >= StopFactor).
+At that point, every composite number up to the limit has been marked and the
+outer loop has nothing more to do. Without `break`, the loop would need an
+explicit boolean flag — a local set to 0 or 1 — and the condition test at the
+top of `while` would check that flag instead of the `ld a, 1` / `or a` pattern.
+With `break`, the exit condition is expressed exactly where it arises.
+
+### `continue` in `prime_sieve.zax`
+
+The `continue` in the outer loop skips the marking pass for a factor that has
+already been marked composite. If `is_prime[factor_index]` is zero (already
+composite), there is no point computing its multiples — they were already
+marked by a smaller factor. The `continue` advances `factor_index` with `succ`
+and re-enters the loop, re-establishing the `NZ` condition before jumping to
+the back edge:
+
+```zax
+    if Z
+      succ factor_index
+      ld a, 1
+      or a
+      continue            ; jump to the while NZ condition check
+    end
+```
+
+Note the `ld a, 1` / `or a` before `continue`. The back edge of the `while NZ`
+loop tests the flag state at that point. After `continue`, control returns to
+the condition test at the top of the `while`. The `or a` with A set to 1
+ensures the condition reads NZ (non-zero), so the loop continues rather than
+exits. If you omit this, the loop exits immediately on the `continue` because
+the `or a` from `is_prime[L]` left Z set.
+
+### `break` in the inner loop
+
+The inner loop marks multiples of the current factor composite. It also uses
+`break` to exit when the multiple index exceeds the sieve limit:
+
+```zax
+    while NZ
+      a := multiple_index
+      cp Limit
+      if NC
+        break             ; multiple_index >= Limit: done marking this factor
+      end
+
+      l := multiple_index
+      ld a, 0
+      is_prime[L] := a
+
+      a := multiple_index
+      b := factor_index
+      add a, b
+      multiple_index := a
+
+      ld a, 1
+      or a
+    end
+```
+
+(From `learning/part2/examples/unit2/prime_sieve.zax`, lines 43–63.)
+
+The structure is the same as the outer break: test the bound, `break` when
+exceeded. The loop body marks the current multiple composite, then advances
+`multiple_index` by `factor_index` (each multiple is one factor step further).
+The `ld a, 1` / `or a` re-establishes NZ for the next iteration.
+
+### `break` in `selection_sort.zax`
+
+The `find_min_index` helper in `selection_sort.zax` uses `break` to exit the
+scan loop once it has passed the last valid index:
+
+```zax
+  while NZ
+    a := current_index
+    b := last_index
+    cp b
+    if NC
+      if NZ
+        break             ; current_index > last_index: scan complete
+      end
+    end
+    ...
+    succ current_index
+    ld a, 1
+    or a
+  end
+```
+
+(From `learning/part2/examples/unit2/selection_sort.zax`, lines 54–82, condensed.)
+
+The condition `if NC` / `if NZ` tests for `current_index > last_index`: `cp b`
+sets NC when A >= B, and the nested `if NZ` excludes the equal case. When
+both conditions are true — the index has gone past the last valid position —
+the scan is complete and `break` exits the loop immediately.
+
+---
+
+## The Sorting Examples
+
+### Bubble sort
+
+Bubble sort repeatedly walks adjacent pairs through the array, swapping any
+pair that is out of order. Each pass pushes the largest unsorted element to its
+final position. The pass bound (`pass_last`) shrinks by one after each pass.
+
+The outer function `bubble_sort` drives the pass sequence; the inner function
+`bubble_pass` performs one pass. Each function has its own `while NZ` loop.
+`bubble_pass` exits early via `ret` when `inner_index` reaches `last_index`.
+
+```zax
+func bubble_pass(last_index: byte)
+  ...
+  while NZ
+    a := inner_index
+    b := last_index
+    cp b
+    if NC
+      ret               ; inner_index >= last_index: pass complete
+    end
+    ...
+    succ inner_index
+    ld a, 1
+    or a
+  end
+end
+```
+
+(From `learning/part2/examples/unit2/bubble_sort.zax`, lines 44–78, condensed.)
+
+The comparison and conditional swap use the same L-as-index pattern as the
+other sorting examples: load the index into L, read `values[L]`, compare,
+swap if out of order.
+
+See `learning/part2/examples/unit2/bubble_sort.zax`.
+
+### Insertion sort
+
+Insertion sort works by maintaining a sorted prefix of the array. For each new
+element (the `hold_value`), it finds the correct insertion position in the
+prefix and shifts elements right to make room.
+
+The Chapter 02 version implements this recursively through the helper
+`insert_hole`, which walks leftward through the prefix comparing adjacent
+elements. The recursion depth is bounded by the array length; for short arrays
+this is fine. The function exits early via `ret` in two cases: when the scan
+reaches index 0 (nowhere further left to shift), or when it finds an element
+that is already in the correct relative order.
+
+```zax
+func insert_hole(scan_index: byte, hold_value: byte)
+  ...
+  a := left_value
+  b := hold_value
+  cp b
+  if C                  ; left_value < hold_value: correct position found
+    l := scan_index
+    a := hold_value
+    values[L] := a
+    ret
+  end
+  ...
+  insert_hole prior_index, hold_value   ; recurse one step left
+end
+```
+
+(From `learning/part2/examples/unit2/insertion_sort.zax`, lines 34–54, condensed.)
+
+The comparison `cp b` sets C when `left_value < hold_value`, meaning the left
+element is already smaller than what we are inserting. The `if C` block writes
+the held value at the current position and returns. Otherwise, the left element
+shifts right and the recursion continues one step leftward.
+
+See `learning/part2/examples/unit2/insertion_sort.zax`.
+
+### Selection sort
+
+Selection sort finds the minimum element of the unsorted suffix on each pass
+and exchanges it with the element at the current outer index. The helper
+`find_min_index` scans from `start_index` to `last_index` tracking the index
+of the smallest value seen.
+
+The break example from `find_min_index` is shown in the `break` section above.
+After `find_min_index` returns the minimum index in HL (with the index in L),
+the outer loop swaps the minimum into position if it is not already there:
+
+```zax
+    find_min_index outer_index, LastIndex
+    ld a, l
+    min_index := a
+
+    a := min_index
+    b := outer_index
+    cp b
+    if NZ
+      swap_values outer_index, min_index
+    end
+
+    succ outer_index
+```
+
+(From `learning/part2/examples/unit2/selection_sort.zax`, lines 104–115.)
+
+The `if NZ` skips the swap when the minimum is already at `outer_index` (no
+work needed). This pattern — compare, then conditionally call a helper inside
+an `if` block — appears throughout the course.
+
+See `learning/part2/examples/unit2/selection_sort.zax`.
+
+---
+
+## The Searching Examples
+
+### Linear search
+
+`linear_search.zax` scans `values` from index 0 upward, comparing each element
+against `target_value`. The loop exits via early `ret` in two cases: when the
+element matches (returning the index), or when the scan exhausts the array
+(returning `$FFFF` as a not-found sentinel).
+
+```zax
+    l := scan_index
+    a := values[L]
+    probe_value := a
+
+    a := target_value
+    b := probe_value
+    cp b
+    if Z
+      ld h, 0
+      a := scan_index
+      ld l, a
+      ret               ; found: return index in HL
+    end
+
+    succ scan_index
+```
+
+(From `learning/part2/examples/unit2/linear_search.zax`, lines 28–42.)
+
+When the match is found, the index needs to be in HL (the return register). The
+function loads 0 into H and `scan_index` into L, forming a 16-bit index value.
+`ld h, 0` is a raw Z80 instruction; `ld l, a` transfers A into L. The result is
+then in HL for the `ret`.
+
+See `learning/part2/examples/unit2/linear_search.zax`.
+
+### Binary search
+
+Binary search divides the sorted array in half repeatedly, narrowing the search
+range by comparing the target against the middle element.
+
+The midpoint calculation uses the standard Z80 technique for a 16-bit arithmetic
+right shift: add `low_index` and `high_index` into HL, then shift right with
+`srl h` / `rr l`. This gives `(low + high) / 2` without overflow for values
+that fit in 16 bits:
+
+```zax
+    hl := low_index
+    de := high_index
+    add hl, de
+    srl h
+    rr l              ; HL = (low_index + high_index) / 2
+    mid_index := hl
+```
+
+(From `learning/part2/examples/unit2/binary_search.zax`, lines 37–42.)
+
+After computing the midpoint, the function reads `values[L]` (using L as the
+low byte of `mid_index`) and compares against `target_value`. If C is set
+(target is less than probe), the search continues in the left half by setting
+`high_index := mid_index - 1` via `pred`. If NC and NZ (target is greater than
+probe), it continues in the right half with `succ` on `low_index`. The loop
+exits when the search interval closes (`low_index > high_index`), returning
+`$FFFF` as not-found.
+
+`pred` and `succ` on `high_index` and `low_index` are the concise way to
+narrow the search bounds by one step in either direction.
+
+See `learning/part2/examples/unit2/binary_search.zax`.
+
+### Prime sieve
+
+The sieve of Eratosthenes marks all composite numbers in a flag array. It is
+the most algorithmically interesting Chapter 02 example because it has nested loops
+and uses both `break` and `continue` — the full loop-control surface.
+
+The outer loop iterates over candidate factors from 2 to `StopFactor`. For each
+prime factor, the inner loop marks all multiples of that factor as composite.
+`break` exits each loop when its bound is exceeded; `continue` skips the inner
+marking pass for factors already known to be composite.
+
+The complete structure is shown across the `break` and `continue` examples
+above. Reading `prime_sieve.zax` in full is the best way to see how the two
+constructs interact with the nested loop structure.
+
+See `learning/part2/examples/unit2/prime_sieve.zax`.
+
+---
+
+## Summary
+
+- Arrays are declared with exact sizes. There is no hidden padding. A `byte[8]`
+  is eight bytes.
+- `const` values are compile-time expressions. They can reference other `const`
+  names and use arithmetic operators. `const LastIndex = ItemCount - 1` folds
+  to a literal at compile time; the subtraction does not appear in the emitted
+  code.
+- The index inside `[...]` must be a register. Load the index into a register
+  before the access. L is the natural choice for 8-bit indexing into `byte[]`
+  arrays.
+- `break` exits the current loop at the point where the exit condition is
+  known. It replaces an explicit flag variable that would otherwise track
+  whether the loop should continue. When you use `break`, re-establishing flags
+  before `continue` (or at the loop back edge) is your responsibility.
+- `continue` skips the remainder of the current iteration and jumps to the
+  condition test. It requires that flags be correct for the loop condition at
+  the point of the jump. Establishing those flags immediately before `continue`
+  is the pattern used in `prime_sieve.zax`.
+- `succ` and `pred` work on index locals just as they work on counter locals.
+  They appear wherever `low_index`, `high_index`, or `scan_index` needs
+  stepping by one.
+
+---
+
+## Examples in This Chapter
+
+- `learning/part2/examples/unit2/bubble_sort.zax` — repeated adjacent-swap passes
+- `learning/part2/examples/unit2/insertion_sort.zax` — sorted insertion into a growing prefix
+- `learning/part2/examples/unit2/selection_sort.zax` — minimum-selection with `break`-terminated scan
+- `learning/part2/examples/unit2/linear_search.zax` — sequential scan with early return
+- `learning/part2/examples/unit2/binary_search.zax` — divide-and-conquer with `pred`/`succ` bound narrowing
+- `learning/part2/examples/unit2/prime_sieve.zax` — nested loops with `break` and `continue`
+
+---
+
+## What Comes Next
+
+Chapter 03 moves from indexed arrays to pointer-walked memory. The string
+algorithms there advance HL and DE directly rather than loading an index into L
+— a different traversal approach built on the same `while NZ` loop structure
+used here. `break` reappears in the scan-to-terminator pattern; `continue` does
+not, because string traversal rarely needs to skip iterations rather than exit.
+
+---
+
+## Exercises
+
+1. In `prime_sieve.zax`, the `continue` before the inner loop requires
+   `ld a, 1` / `or a` to re-establish NZ before jumping to the condition test.
+   What would happen if those two instructions were removed? Try tracing the
+   flag state manually.
+
+2. `linear_search.zax` returns `$FFFF` as the not-found sentinel. The calling
+   convention uses HL as the return register. Modify `linear_search` to return
+   a `byte` result in L — `$FF` for not-found, 0-based index for found — and
+   update `main` accordingly. What changes in the return-register declaration?
+
+3. The bubble sort in `bubble_sort.zax` does not track whether any swaps
+   occurred during a pass. A classic optimization is to exit early if a pass
+   produces no swaps (the array is already sorted). Add a `swapped` local to
+   `bubble_pass` that tracks this, and modify `bubble_sort` to call a function
+   that returns whether any swaps happened. Does `break` make the outer loop
+   structure cleaner or not?
+
+4. `binary_search.zax` uses `word` locals for `low_index` and `high_index`
+   because the midpoint calculation uses 16-bit arithmetic. Could those locals
+   be `byte` instead, with the midpoint calculation adjusted? What would change
+   in the register usage and arithmetic?
+
+---
+
+[← Foundations](01-foundations.md) | [Part 2](README.md) | [Strings →](03-strings.md)
+
+
+---
+
+<!-- Source: learning/part2/03-strings.md -->
+
+# Chapter 3 — Strings
+
+The Chapter 03 examples shift the focus from indexed arrays to pointer-walked memory.
+A null-terminated string is just a sequence of bytes with a zero at the end. That
+simple convention drives everything in this chapter: every algorithm either walks
+until it finds the zero, or copies until it copies the zero.
+
+What changes compared to Chapter 02 is how registers are used. In Chapter 02, the index
+lived in a typed local and the array base was a fixed symbol; you loaded the index
+into L or B and did a single array access. In Chapter 03, the current position lives
+in HL or DE directly — the pointer is the thing that advances. Typed storage paths
+appear where they help (buffering a character into a local, storing the running
+total of a conversion), but the traversal itself is raw Z80 pointer work: `ld a,
+(hl)`, `inc hl`, `ld (de), a`, `inc de`.
+
+---
+
+## The Null-Terminator Loop
+
+The standard string loop in ZAX is the `while NZ` sentinel loop. You load the
+address of the string into HL, test the byte at that address, and loop as long as
+the byte is non-zero:
+
+```zax
+  ld a, (hl)
+  or a
+  if Z
+    ; null terminator reached
+    ret
+  end
+  inc hl
+```
+
+The `or a` instruction ORs A with itself — it has no effect on A but sets or clears
+the Z flag depending on whether A is zero. `if Z` then handles the terminator.
+This is the standard Z80 way to test a byte for zero without disturbing
+its value (unlike `cp 0`, which also sets Z but incurs a second immediate operand).
+Six of the seven Chapter 03 examples use this pattern as the core of their
+traversal loop. The exception is `itoa.zax`, which generates digits by repeated
+division into a scratch buffer and terminates by index counter, not by null
+sentinel.
+
+The loop uses the `while NZ` pattern from Chapter 01, established by `ld a, 1` /
+`or a` at entry and re-established at the bottom of each iteration. The actual loop
+exit happens via an early `ret` or `break` inside the body when the terminator is
+found.
+
+### `strlen.zax`
+
+`strlen_demo` in `strlen.zax` counts bytes from a fixed string until it reaches
+the zero terminator. HL holds the current address. The count lives in a typed word
+local `count_value`, which is incremented using the explicit load-increment-store
+pattern: `de := count_value`, `inc de`, `count_value := de`. Because `inc` on a
+16-bit pair is a direct Z80 instruction (not IX-relative), the function loads the
+local into DE, uses `inc de`, and stores back. This is the word-local increment
+pattern for cases where the compiler cannot emit `inc` directly against the frame
+slot.
+
+See `learning/part2/examples/unit3/strlen.zax`.
+
+---
+
+## Copying and Concatenating
+
+When copying a string, two pointers advance together: HL for the source and DE
+for the destination. The natural factoring for this is a local `op` that does the
+read-write-advance pair atomically.
+
+### `strcpy.zax`
+
+`strcpy.zax` defines a local `op` named `copy_and_advance` that takes HL and DE
+as typed register parameters:
+
+```zax
+op copy_and_advance(src_ptr: HL, dst_ptr: DE)
+  ld a, (hl)
+  ld (de), a
+  inc hl
+  inc de
+end
+```
+
+After the copy, A holds the byte that was just written. The loop tests `or a`
+immediately after the op call — if A is zero, the terminator was just copied and
+the copy is complete. This is a tight and readable way to write the copy-including-
+terminator loop: copy first, then check what was copied.
+
+The `op` definition here is a local helper, not a shared library function.
+Defining it as an `op` rather than a `func` avoids call overhead and keeps
+the body visible alongside the loop that uses it.
+
+See `learning/part2/examples/unit3/strcpy.zax`.
+
+### `strcat.zax`
+
+`strcat_demo` in `strcat.zax` appends one string to another in two phases. In the
+first phase, HL scans the destination string to find its terminator — that position
+is where the suffix will be written. The first `while NZ` loop uses `break` to
+exit when the terminator is found:
+
+```zax
+  while NZ
+    ld a, (hl)
+    or a
+    if Z
+      break
+    end
+    inc hl
+    ld a, 1
+    or a
+  end
+```
+
+After `break`, HL points at the zero byte of the destination string. The second
+loop then copies the suffix string from DE into that position, character by
+character, terminator included. The `break` here is the cleanest way to stop a
+scan-to-terminator loop without a special exit flag: the exit condition is
+precisely when the zero is found, and `break` expresses that directly.
+
+See `learning/part2/examples/unit3/strcat.zax`.
+
+---
+
+## Comparing and Reversing
+
+### `strcmp.zax`
+
+`strcmp_demo` in `strcmp.zax` performs a lexicographic comparison of two strings
+by walking both HL and DE simultaneously, comparing one character at a time.
+The comparison has three outcomes: left is less (`$FFFF`), strings are equal (`0`),
+or left is greater (`1`). Each iteration reads one character from each string,
+compares with `cp b`, and takes an early `ret` on any inequality:
+
+```zax
+    a := left_char
+    b := right_char
+    cp b
+    if C
+      ld hl, $FFFF
+      ret
+    end
+    if NC
+      if NZ
+        ld hl, 1
+        ret
+      end
+    end
+
+    a := left_char
+    or a
+    if Z
+      ld hl, 0
+      ret
+    end
+    inc hl
+    inc de
+```
+
+(From `learning/part2/examples/unit3/strcmp.zax`, lines 28–51.)
+
+There is a subtlety in the order of checks. The comparison `cp b` happens before
+the null test: this means if both characters are zero (both strings ended at the
+same point), the `if NC` / `if NZ` block does not fire (because CP sets Z when
+they are equal), and control falls through to the `or a` / `if Z` null check,
+which returns 0 (equal). If one character is non-zero and the other is zero, the
+CP fires first, correctly returning the inequality result.
+
+See `learning/part2/examples/unit3/strcmp.zax`.
+
+### `str_reverse.zax`
+
+`str_reverse_demo` reverses a string in place using inward-moving left and right
+pointers. The first pass scans DE forward to find the last character position
+(the byte before the terminator). The second pass swaps characters at HL and DE,
+then advances HL forward and retreats DE backward, stopping when HL >= DE.
+
+The pointer comparison in the second loop uses `xor a` / `sbc hl, de` to compute
+HL - DE, then tests NC to detect when the left pointer has caught up to or passed
+the right pointer. This is the standard Z80 way to do a signed 16-bit comparison:
+clear carry with `xor a`, subtract with `sbc hl, de`, and branch on the carry or
+no-carry result.
+
+See `learning/part2/examples/unit3/str_reverse.zax`.
+
+---
+
+## Character Arithmetic: `atoi` and `itoa`
+
+The conversion examples are where character arithmetic appears. A decimal digit
+character occupies the ASCII range `'0'` through `'9'` — values `$30` through
+`$39`. The digit value is recovered by subtracting `'0'`, and a digit is produced
+by adding `'0'`. This is raw Z80 arithmetic applied to byte values; ZAX requires
+no special syntax for it.
+
+### `atoi.zax`
+
+`atoi_demo` converts a decimal string to a word by accumulating a running total.
+For each digit character, subtract `'0'` to get the numeric value, multiply the
+running total by 10, then add the new digit. The multiply-by-ten is factored into
+a local helper `times_ten` that uses the shift-and-add identity `10x = 2(4x + x)`:
+
+```zax
+func times_ten(value_word: word): HL
+  push de
+  hl := value_word
+  ld d, h
+  ld e, l
+  add hl, hl    ; HL = 2x
+  add hl, hl    ; HL = 4x
+  add hl, de    ; HL = 5x
+  add hl, hl    ; HL = 10x
+  pop de
+end
+```
+
+(From `learning/part2/examples/unit3/atoi.zax`, lines 10–20.)
+
+The scan pointer advances through `succ scan_ptr` rather than `inc hl` because the
+pointer is kept in a typed local (`scan_ptr: word`) rather than held continuously
+in HL. The loop reloads `scan_ptr` into HL at the start of each iteration. This
+is a natural tradeoff: keeping the pointer in a typed local lets the function call
+`times_ten` and `succ` without worrying about HL being clobbered by the call.
+
+See `learning/part2/examples/unit3/atoi.zax`.
+
+### `itoa.zax`
+
+`itoa_demo` inverts the process: it extracts digits from a word value by dividing
+repeatedly by 10. Because division produces least-significant digits first, the
+digits accumulate into a scratch buffer in reverse order. A second pass then
+copies them into the output buffer in forward order.
+
+The division uses the `div_u16` helper — the same repeated-subtraction routine
+that appears in the Chapter 01 arithmetic examples — and `times_ten` is used again to
+recover the digit: the remainder from `remaining - quotient * 10` gives the raw
+digit value. Adding `'0'` converts it to an ASCII character.
+
+The reversal pass uses `pred write_index` to walk backward through the scratch
+buffer and `succ read_index` to fill the output buffer forward. These `pred` and
+`succ` calls work on typed byte locals in the `var` block.
+
+See `learning/part2/examples/unit3/itoa.zax`.
+
+---
+
+## Summary
+
+- The null-terminator loop — `ld a, (hl)` / `or a` / `if Z` — is the core
+  string traversal pattern. You will use it in every string-processing function.
+- Pointer traversal in ZAX is raw Z80: `ld a, (hl)`, `inc hl`, `ld (de), a`,
+  `inc de`. ZAX does not abstract over pointer advance; typed storage paths appear
+  where they add clarity, not where the traversal is inherently register-level.
+- `break` is the clean exit from a scan-to-terminator loop when the exit condition
+  is exactly "found the zero." `strcat.zax` shows the natural shape: loop body
+  reads and tests, `break` exits when the condition is met.
+- Character arithmetic is ordinary Z80 arithmetic on byte values. `sub '0'`
+  extracts a digit value; `add a, '0'` produces an ASCII digit character.
+- A local `op` can capture a repeated register pattern (as in `copy_and_advance`)
+  without the overhead of a function call and frame.
+
+---
+
+## Examples in This Chapter
+
+- `learning/part2/examples/unit3/strlen.zax` — byte count to null terminator
+- `learning/part2/examples/unit3/strcpy.zax` — copy with a local `op` for advance
+- `learning/part2/examples/unit3/strcmp.zax` — dual-pointer lexicographic comparison
+- `learning/part2/examples/unit3/strcat.zax` — scan to end, then copy suffix
+- `learning/part2/examples/unit3/str_reverse.zax` — in-place reversal with converging pointers
+- `learning/part2/examples/unit3/atoi.zax` — decimal string to word
+- `learning/part2/examples/unit3/itoa.zax` — word to decimal string, via reversed digits
+
+---
+
+## What Comes Next
+
+Chapter 04 returns to tight, register-level work: bit manipulation using Z80
+shift and logic instructions. The loop structures are the same `while NZ` pattern
+from Chapter 01 — counter-driven rather than sentinel-driven — and the local
+`op` pattern introduced in this chapter's `strcpy.zax` reappears in
+`bit_reverse.zax`.
+
+---
+
+## Exercises
+
+1. `strlen.zax` increments `count_value` by loading into DE, incrementing DE, and
+   storing back. Could the count be tracked directly in a byte register across
+   iterations without a typed local at all? What would you give up?
+
+2. In `strcpy.zax`, the loop copies the terminator and then immediately tests `or a`
+   on the just-copied zero. Could the test happen before the copy instead? What
+   would change about when HL and DE are advanced?
+
+3. `strcmp.zax` returns `$FFFF` for "left is less". The calling convention uses HL
+   as the return register. If the caller needs to distinguish all three outcomes
+   (less, equal, greater), how does it extract the result reliably from HL?
+
+4. `atoi.zax` does not validate that each character is actually in the `'0'`–`'9'`
+   range before subtracting `'0'`. Add a bounds check and decide what the function
+   should return on invalid input. Does this change the loop structure?
+
+---
+
+[← Arrays and Loops](02-arrays-and-loops.md) | [Part 2](README.md) | [Bit Patterns →](04-bit-patterns.md)
+
+
+---
+
+<!-- Source: learning/part2/04-bit-patterns.md -->
+
+# Chapter 4 — Bit Patterns
+
+The Chapter 04 examples stay close to the machine. The Z80 bit-manipulation
+instructions — `srl`, `rr`, `and`, `or`, `xor`, `bit` — appear directly as
+mnemonics in ZAX source. What ZAX adds is the surrounding structure: typed
+locals that carry algorithm state between steps, `if` blocks that branch on
+bit tests, and the `while NZ` loop form used throughout the course.
+
+Each of the four examples is a single loop that shifts through a byte, testing
+or transforming one bit per iteration. Reading them requires knowing what each
+Z80 instruction does to the flags and registers. The prose explains the
+algorithm built on top of those instructions.
+
+---
+
+## Counting and Testing Bits
+
+### `popcount.zax`
+
+Population count — counting the set bits in a value — is the canonical bit-loop
+example. The algorithm is direct: check the low bit, increment a counter if set,
+shift the value right, repeat until nothing remains.
+
+`popcount_demo` in `popcount.zax` holds the working value in a byte local
+`working_value` and the count in `count_value`. Each iteration uses `and 1` to
+test whether the low bit is set, increments the count via `succ count_value` if
+it is, and then shifts right using `srl a`:
+
+```zax
+    a := working_value
+    and 1
+    if NZ
+      succ count_value
+    end
+
+    a := working_value
+    srl a
+    working_value := a
+```
+
+(From `learning/part2/examples/unit4/popcount.zax`, lines 24–32.)
+
+The `srl a` instruction performs a logical right shift of A, shifting in a zero
+from the high end and pushing the low bit into the carry. After eight iterations,
+`working_value` is zero and the loop exits via the sentinel test at the top.
+
+See `learning/part2/examples/unit4/popcount.zax`.
+
+### `parity.zax`
+
+Parity is closely related to population count: it is the low bit of the count.
+Rather than counting bits, `parity_demo` maintains a toggle variable that flips
+on each set bit. The toggle uses `xor 1` to invert the low bit of `parity_value`:
+
+```zax
+    a := working_value
+    and 1
+    if NZ
+      a := parity_value
+      xor 1
+      parity_value := a
+    end
+
+    a := working_value
+    srl a
+    working_value := a
+```
+
+(From `learning/part2/examples/unit4/parity.zax`, lines 24–34.)
+
+The `xor 1` flips the low bit of A (which holds `parity_value`) each time a set
+bit is encountered. Repeated XOR with 1 alternates between 0 and 1. When the loop ends, `parity_value` is 1 if an odd
+number of bits were set, 0 if even — odd parity as a single-bit result.
+
+The loop structure in `parity.zax` is nearly identical to `popcount.zax`. Both
+examples share the same shift-and-test skeleton; what differs is the action taken
+when a set bit is found.
+
+See `learning/part2/examples/unit4/parity.zax`.
+
+---
+
+## Bit Reversal
+
+### `bit_reverse.zax`
+
+Bit reversal mirrors the bit order of a byte: bit 7 becomes bit 0, bit 6 becomes
+bit 1, and so on. The algorithm feeds bits from the source into the result one at
+a time, building the reversed byte in the opposite order.
+
+`bit_reverse.zax` defines a local `op` named `append_low_bit` that encapsulates
+the append step:
+
+```zax
+op append_low_bit(reversed_reg: A, source_reg: B)
+  add a, a        ; shift result left, making room for the new bit
+  bit 0, b        ; test bit 0 of the source
+  if NZ
+    or 1          ; set bit 0 of result
+  end
+end
+```
+
+(From `learning/part2/examples/unit4/bit_reverse.zax`, lines 6–12.)
+
+`add a, a` doubles A, which is identical to a left shift by one position. `bit 0,
+b` tests bit 0 of B using the Z80 `BIT` instruction, which sets Z if the bit is
+clear and NZ if it is set. The `if NZ` / `or 1` sequence then conditionally sets
+the low bit of the result.
+
+The outer loop loads `reversed_value` into A and `source_value` into B, calls
+the op, writes back, then shifts `source_value` right by one with `srl a`. This
+repeats for eight iterations counted by `bit_count`, decremented with `pred
+bit_count` at each step.
+
+The `op` form here is natural: `append_low_bit` takes two specific registers as
+operands, and the compiler checks that the call sites provide the right register
+bindings. The body is short enough that calling overhead would dominate if it
+were a full `func`.
+
+See `learning/part2/examples/unit4/bit_reverse.zax`.
+
+---
+
+## Field Extraction
+
+### `getbits.zax`
+
+Field extraction retrieves a contiguous group of bits from a byte, specified by
+a starting bit offset and a width. The algorithm has two phases: first shift the
+value right by `offset` positions to align the target field to the low end, then
+extract `width` bits from that aligned value.
+
+`getbits_demo` in `getbits.zax` performs the right-shift phase in the first
+`while NZ` loop, decrementing `offset_value` via `pred offset_value` and shifting
+`working_value` right with `srl a` on each iteration:
+
+```zax
+  while NZ
+    a := offset_value
+    or a
+    if Z
+      ld a, 0
+      or a
+    end
+    if NZ
+      a := working_value
+      srl a
+      working_value := a
+      pred offset_value
+      ld a, 1
+      or a
+    end
+  end
+```
+
+(From `learning/part2/examples/unit4/getbits.zax`, lines 16–34, condensed.)
+
+The second `while NZ` loop extracts `width` bits using a growing bit mask. On
+each iteration, `bit_mask` doubles via `add a, a` (the same left-shift technique from
+`bit_reverse.zax`), and the corresponding bit is ORed into `result_value`:
+
+```zax
+    a := working_value
+    and 1
+    if NZ
+      a := result_value
+      b := bit_mask
+      or b
+      result_value := a
+    end
+
+    a := working_value
+    srl a
+    working_value := a
+
+    a := bit_mask
+    add a, a
+    bit_mask := a
+
+    pred width_value
+```
+
+(From `learning/part2/examples/unit4/getbits.zax`, lines 46–65.)
+
+The `bit_mask` starts at 1 and doubles each iteration — it tracks which bit
+position in the result the current source bit maps to. After `width` iterations,
+`result_value` holds the extracted field.
+
+See `learning/part2/examples/unit4/getbits.zax`.
+
+---
+
+## Patterns Common to All Four Examples
+
+Looking across the Chapter 04 examples, several ZAX patterns recur:
+
+**The shift-and-test skeleton.** Every example loops over a fixed number of bit
+positions, shifting a working value right by one at each step and acting on the
+low bit. The loop body is a few instructions around `srl a`, `and 1`, and a
+conditional action.
+
+**The `while NZ` form with a counter.** Counting loops in Chapter 04 use `while NZ`
+with a byte counter decremented by `pred`. The loop exits when the counter reaches
+zero — the `or a` on the counter value sets Z, which terminates the loop. This
+is the same counter-driven `while NZ` pattern introduced in Chapter 01.
+
+**Local `op` for a recurring register step.** Both `bit_reverse.zax` and
+`strcpy.zax` (Chapter 03) define local `op` definitions for a recurring two-or-three
+instruction sequence that operates on named registers. The `op` form is the right
+tool when a small sequence has a clear input/output register contract and appears
+in a tight loop.
+
+**Typed locals as algorithm state, raw Z80 for the bit work.** In every Chapter 04
+example, the algorithmic state — the working value, the counter, the accumulating
+result — lives in typed byte locals in the `var` block. The actual bit operations
+(`srl`, `and`, `xor`, `bit`, `or`) operate on A and B directly. The `:=`
+assignments move values between the typed locals and the register file as needed.
+This split — typed storage for algorithm state, raw Z80 instructions for the
+actual bit work — is what ZAX code looks like at its most concentrated.
+
+---
+
+## Summary
+
+- Bit algorithms are expressed using Z80 bit-manipulation instructions directly:
+  `srl`, `rr`, `and`, `or`, `xor`, `bit`. ZAX provides no higher-level bitwise
+  abstractions. The instructions appear as mnemonics.
+- `while NZ` with `pred` decrement works for counting loops just as well as for
+  sentinel loops. When the counter hits zero, `or a` sets Z and the
+  loop exits.
+- A local `op` captures a recurring register-level pattern without function call
+  overhead. The compiler verifies that the operand register bindings at call sites
+  match the op's parameter declarations.
+- Typed byte locals hold algorithm state between loop iterations. Raw Z80 work
+  happens in registers. The `:=` operator shuttles values between them.
+
+---
+
+## Examples in This Chapter
+
+- `learning/part2/examples/unit4/popcount.zax` — count set bits by shift and test
+- `learning/part2/examples/unit4/parity.zax` — XOR-toggle odd parity
+- `learning/part2/examples/unit4/bit_reverse.zax` — bit order reversal with a local `op`
+- `learning/part2/examples/unit4/getbits.zax` — two-phase bit-field extraction
+
+---
+
+## What Comes Next
+
+Chapter 05 introduces records and arrays of records. The byte and word scalars
+that have carried algorithm state throughout the course get grouped into named
+types with automatic offset computation. The ring buffer example applies the
+same modular-index technique used in the counter-driven loops here, now over a
+struct array rather than a scalar.
+
+---
+
+## Exercises
+
+1. `popcount.zax` exits the loop when `working_value` reaches zero. This is
+   efficient for sparse values (few set bits) but not for values with many set
+   bits. Could you write a version that always runs exactly eight iterations using
+   `pred bit_count` as the loop counter? Compare code size.
+
+2. In `parity.zax`, `xor 1` is used to toggle `parity_value`. The Z80 has a `CPL`
+   instruction that inverts all bits of A. Could `CPL` be used instead of `xor 1`?
+   What are the differences in what each produces?
+
+3. `bit_reverse.zax` uses a local `op` named `append_low_bit`. Rewrite the loop
+   body to inline the op — remove the `op` definition and write the three
+   instructions directly in the loop. Does the resulting code feel more or less
+   readable? What does the op definition buy you?
+
+4. `getbits.zax` uses two separate `while NZ` loops for the two phases. Could both
+   phases be combined into one loop? What would the combined loop need to track?
+
+---
+
+[← Strings](03-strings.md) | [Part 2](README.md) | [Records →](05-records.md)
+
+
+---
+
+<!-- Source: learning/part2/05-records.md -->
+
+# Chapter 5 — Records
+
+The Chapter 05 examples introduce typed aggregate state. Up to this point, every
+algorithm has worked with scalars — individual bytes and words. A record collects
+multiple named fields into a single compound value, and an array of records brings
+both structured access and interesting layout questions together.
+
+The Chapter 05 example corpus is a single file: `ring_buffer.zax`. It is compact, but
+it covers a lot of ground. It defines a record type, declares an array of that
+record type at a non-power-of-two size, stores and retrieves field values through
+typed paths, and implements a bounded FIFO queue with a modular index.
+
+---
+
+## Record Types and Field Access
+
+A `type` declaration in ZAX defines a named record with fields in order:
+
+```zax
+type Entry
+  value: byte
+  stamp: word
+end
+```
+
+`sizeof(Entry)` is 3 — one byte for `value`, two bytes for `stamp`. There is no
+padding. Field offsets are computed from declaration order using exact sizes:
+`offsetof(Entry, value) = 0`, `offsetof(Entry, stamp) = 1`.
+
+An array of records is declared like any other typed array, with the element type
+naming the record:
+
+```zax
+section data vars at $8000
+  entries: Entry[5]
+end
+```
+
+`sizeof(Entry[5]) = 15`. Because 3 is not a power of two, the compiler cannot
+lower the index scale to a pure shift chain — it emits a shift-and-add sequence
+for the stride multiplication. You do not write that sequence; the compiler
+handles it. The indexing syntax is the same as for any array:
+
+```zax
+  b := tail_slot
+  a := entry_value
+  entries[B].value := a
+  entries[B].stamp := entry_stamp
+```
+
+(From `learning/part2/examples/unit5/ring_buffer.zax`, lines 40–43.)
+
+`entries[B].value` is a typed path expression: take the `B`-th element of the
+`entries` array, then access its `value` field. On the left side of `:=`, it is
+a store — the compiler emits the address calculation for `entries + B * 3 + 0`
+and a `ld` instruction to write A there. On the right side, it would be a load.
+The same path notation works for both read and write.
+
+This is one of the clearest ZAX benefits in the Chapter 05 example: the field access
+reads as `entries[B].value` rather than as a hand-computed offset load. When the
+`Entry` type definition changes, the offsets update automatically.
+
+---
+
+## The Ring Buffer Pattern
+
+A ring buffer is a fixed-capacity queue that wraps its write and read positions
+around a circular index. The state consists of:
+
+- `entries`: the backing array of `Entry` records
+- `head_slot`: the index of the oldest entry (next to be dequeued)
+- `tail_slot`: the index of the next free slot (next to be enqueued)
+- `used_slots`: the count of entries currently in the buffer
+
+Both `head_slot` and `tail_slot` advance modularly: when they reach the capacity
+limit, they wrap back to zero. The `next_slot` helper in `ring_buffer.zax`
+encapsulates that wrap:
+
+```zax
+func next_slot(slot_index: byte): HL
+  a := slot_index
+  inc a
+  cp Capacity
+  if C
+    ld h, 0
+    ld l, a
+    ret
+  end
+  ld hl, 0
+end
+```
+
+(From `learning/part2/examples/unit5/ring_buffer.zax`, lines 20–31.)
+
+`inc a` advances the slot index. `cp Capacity` tests whether the incremented value
+has reached the capacity bound: if carry is set, the incremented value is strictly
+less than `Capacity` and is returned as-is. If carry is clear, the index has
+reached or passed the end of the array, and zero is returned as the wrapped value.
+For a capacity of 5, this produces the sequence 0, 1, 2, 3, 4, 0, 1, 2, ...
+
+This helper is called after every enqueue and dequeue:
+
+```zax
+  next_slot tail_slot
+  ld a, l
+  tail_slot := a
+```
+
+The result comes back in HL (per the `: HL` return declaration). The caller
+extracts the byte value from L with `ld a, l` and stores it into `tail_slot`.
+The `ld a, l` is raw Z80; `tail_slot := a` is the typed store.
+
+---
+
+## Enqueue and Dequeue
+
+`enqueue` pushes an entry onto the tail of the queue. It first checks whether the
+buffer is full (`used_slots >= Capacity`) and returns early if so. Then it writes
+both fields to the tail slot, advances the tail, and increments the used count:
+
+```zax
+func enqueue(entry_value: byte, entry_stamp: word)
+  a := used_slots
+  cp Capacity
+  if NC
+    ret
+  end
+
+  b := tail_slot
+  a := entry_value
+  entries[B].value := a
+  entries[B].stamp := entry_stamp
+
+  next_slot tail_slot
+  ld a, l
+  tail_slot := a
+
+  succ used_slots
+end
+```
+
+(From `learning/part2/examples/unit5/ring_buffer.zax`, lines 33–50.)
+
+`succ used_slots` increments the module-level `used_slots` byte directly. `succ`
+and `pred` work on any typed scalar storage path — not only on frame-local `var`
+slots, but also on module-level variables declared in named `data` sections. Here,
+`used_slots` lives in the module's `vars` section and `succ` increments it in
+place.
+
+`dequeue` removes and returns the entry at the head. It checks for empty (`used_slots`
+is zero), reads the value from the head slot, advances the head, and decrements the
+used count:
+
+```zax
+func dequeue(): HL
+  ...
+  l := head_slot
+  a := entries[L].value
+  removed_value := a
+
+  next_slot head_slot
+  ld a, l
+  head_slot := a
+
+  pred used_slots
+  ...
+end
+```
+
+(From `learning/part2/examples/unit5/ring_buffer.zax`, lines 52–77, condensed.)
+
+The read side uses L as the index register — `l := head_slot` loads the slot
+index into L, then `entries[L].value` reads the `value` field of that element.
+This mirrors the write in `enqueue`, which used B. Either register works; the
+choice is driven by what is already live and convenient at that point in the
+function.
+
+---
+
+## Typed Paths vs Raw Loads
+
+It is worth pausing to compare what field access looks like with and without the
+ZAX path syntax. In raw Z80 assembly, reading `entries[b].value` for the current
+record at index B with a non-power-of-two stride would require:
+
+1. Computing `B * 3` using a shift-add sequence
+2. Adding the base address of `entries`
+3. Loading with `ld a, (hl)`
+
+In ZAX, `entries[B].value` on the right side of `:=` emits exactly that sequence
+— but the code reads as a field access on a named type. When the `Entry` type
+changes (say, `stamp` becomes a `byte` instead of a `word`), the stride and the
+field offset both update automatically throughout the program.
+
+The field path notation does not hide the machine. The `.asm` output will show
+the multiply-add sequence for the stride and the resulting memory load. But the
+source code expresses intent — "the value field of the B-th entry" — rather than
+the mechanics.
+
+---
+
+## Summary
+
+- A `type` declaration groups named fields. `sizeof` and `offsetof` compute layout
+  automatically using exact field sizes. There is no padding.
+- Array element access and field access compose: `entries[B].value` is a single
+  typed path expression that the compiler lowers to the correct address calculation
+  and load or store.
+- Non-power-of-two element sizes are fully supported. The compiler emits a shift-
+  and-add stride sequence rather than a pure shift chain.
+- `succ` and `pred` work on module-level variables, not only on frame locals. Any
+  typed scalar storage path is a valid operand.
+- The `next_slot` modular-index helper is the clean way to wrap an index
+  without an explicit division: increment, compare against the capacity bound,
+  return zero on overflow.
+
+---
+
+## Examples in This Chapter
+
+- `learning/part2/examples/unit5/ring_buffer.zax` — FIFO queue over an `Entry[5]` array
+  with modular index advance
+
+---
+
+## What Comes Next
+
+Chapter 06 takes up recursion. Recursive functions in ZAX use the same `func`
+and `var` block syntax as everything else — no special forms — but the call
+stack becomes the active data structure. Reading the Towers of Hanoi and
+recursive array examples requires tracking the IX frame stack mentally, which
+is the natural next step after the structured record layout in this chapter.
+
+---
+
+## Exercises
+
+1. `ring_buffer.zax` stores both a `value` and a `stamp` in each `Entry`. If you
+   removed the `stamp` field, `sizeof(Entry)` would become 1 — a power of two.
+   Would the indexing code in `enqueue` and `dequeue` look different? Check the
+   `.asm` output for both versions and compare the stride calculation.
+
+2. The `next_slot` function returns 0 when the incremented index reaches
+   `Capacity`. What happens if `Capacity` is 0? Is this a case worth guarding
+   against in the function, or does the calling code make it impossible?
+
+3. `enqueue` takes `entry_stamp: word` as its second parameter. But
+   `entries[B].stamp := entry_stamp` writes directly from the typed parameter to
+   the typed field. Trace through what the compiler must emit for this store,
+   given that `stamp` is at offset 1 within `Entry` and `B` is the index register.
+
+4. The buffer uses a separate `used_slots` counter to track occupancy. An
+   alternative is to derive occupancy from `head_slot` and `tail_slot` directly:
+   the buffer is empty when they are equal and full when
+   `(tail_slot + 1) % Capacity == head_slot`. Would removing `used_slots` simplify
+   or complicate the code? What would you trade away?
+
+---
+
+[← Bit Patterns](04-bit-patterns.md) | [Part 2](README.md) | [Recursion →](06-recursion.md)
+
+
+---
+
+<!-- Source: learning/part2/06-recursion.md -->
+
+# Chapter 6 — Recursion
+
+The Chapter 06 examples show recursive decomposition using the same `func` construct
+that has appeared throughout the course. ZAX handles recursion the same way it
+handles any other call: every `func` call — whether the callee is a different
+function or the same function calling itself — gets a fresh stack frame. The
+compiler does not distinguish recursive from non-recursive calls. Each invocation
+has its own independent locals, and you do not need to save state manually across
+the recursive boundary.
+
+What changes in Chapter 06 is the algorithmic shape. These examples do not loop over
+a flat array or advance a pointer; they reduce a problem into a smaller version of
+itself, recurse, and combine the result on the way back. That "on the way back"
+structure — work done after the recursive call returns — is what makes the call
+stack load-bearing in a way it was not in the iterative examples.
+
+---
+
+## The IX Frame Under Recursion
+
+Every `func` with a `var` block gets a fresh IX frame on entry. The compiler emits
+`push ix` / `ld ix, 0` / `add ix, sp` to anchor the frame, allocates space for
+the declared locals below IX, then emits the register-save pushes for the
+registers the function will clobber.
+
+In a recursive function, each call to itself pushes a new frame on top of the
+previous one. When the base case returns, the innermost frame is popped and the
+previous frame's IX is restored. Each level sees its own `var` block values,
+completely independent.
+
+Chapter 01 noted that recursive functions look and work like non-recursive
+ones. Chapter 06 demonstrates this at greater depth: `hanoi_count` calls itself twice
+per invocation and stores both results in frame locals, `array_sum_recursive`
+calls itself once and adds to the result on unwind, and `array_reverse_recursive`
+calls itself with a narrower range at each level. None of these require any
+special syntax for recursion.
+
+---
+
+## Counting: Towers of Hanoi
+
+### `hanoi.zax`
+
+The Towers of Hanoi problem asks how many moves are required to transfer a stack
+of `n` disks from one peg to another using a spare peg. The recurrence is:
+
+- `hanoi(0) = 0` (no disks, no moves)
+- `hanoi(n) = 2 * hanoi(n - 1) + 1` (move n-1 disks aside, move the bottom disk, move n-1 disks back)
+
+`hanoi_count` in `hanoi.zax` implements this directly. The base case returns zero
+when `disks_count` is zero. Otherwise, it decrements `disks_count` into a local
+`reduced_count` using `pred`, makes two recursive calls with the pegs permuted,
+and combines the results:
+
+```zax
+  reduced_count := disks_count
+  pred reduced_count
+
+  hanoi_count reduced_count, source_peg, target_peg, spare_peg
+  left_count := hl
+
+  hanoi_count reduced_count, spare_peg, source_peg, target_peg
+  right_count := hl
+
+  hl := left_count
+  inc hl
+  de := right_count
+  add hl, de
+```
+
+(From `learning/part2/examples/unit6/hanoi.zax`, lines 20–33.)
+
+Both recursive calls return in HL. Each result is stored immediately into a local
+— `left_count := hl` and `right_count := hl` — before the next call overwrites
+HL. This is the essential pattern for preserving return values across multiple
+recursive calls: store into a typed local, not into a register.
+
+The final combine step loads `left_count` into HL, increments it by one (the move
+of the bottom disk), then adds `right_count` via DE. `inc hl` is a raw Z80
+instruction; `de := right_count` and `add hl, de` mix a typed load with a raw
+arithmetic instruction — a normal pairing in ZAX.
+
+See `learning/part2/examples/unit6/hanoi.zax`.
+
+---
+
+## Accumulating on Unwind: Recursive Array Sum
+
+### `array_sum_recursive.zax`
+
+Summing an array recursively demonstrates the structure where the accumulation
+happens on the way back up, not on the way down. `sum_from` computes the sum of
+`numbers[index_value..]` by reading the current element, recursing on the tail,
+and adding the current element to the result as it unwinds:
+
+```zax
+func sum_from(index_value: byte): HL
+  ...
+  l := index_value
+  a := numbers[L]
+  current_value := a
+
+  next_index := index_value
+  succ next_index
+
+  sum_from next_index
+
+  a := current_value
+  ld e, a
+  ld d, 0
+  add hl, de
+end
+```
+
+(From `learning/part2/examples/unit6/array_sum_recursive.zax`, lines 25–37.)
+
+The recursive call `sum_from next_index` returns the sum of everything after the
+current element in HL. The current element, saved in `current_value` before the
+call, is then zero-extended into DE and added to HL. Each level contributes its
+element to the running total as the call stack unwinds.
+
+The zero-extension — `ld e, a` / `ld d, 0` — is a recurring Z80 pattern for
+promoting an 8-bit byte value into a 16-bit DE pair for use with `add hl, de`.
+There is no ZAX operator for this; the two raw instructions are the way to do it.
+
+The base case returns `ld hl, 0` when `index_value == ItemCount`, providing the
+zero that the deepest level adds to. Every other level adds one element to that
+running total on the way back.
+
+See `learning/part2/examples/unit6/array_sum_recursive.zax`.
+
+---
+
+## Structural Recursion: In-Place Array Reversal
+
+### `array_reverse_recursive.zax`
+
+Reversing an array in place by recursion is a structural example: swap the
+endpoints, then recurse on the interior. The recursion terminates when the
+two indices meet or cross, at which point there is nothing left to swap.
+
+`reverse_range` takes a `left_index` and `right_index`. If `left_index >= right_index`,
+it returns immediately. Otherwise, it swaps the two endpoints, advances the
+left index with `succ next_left`, retreats the right index with `pred next_right`,
+and recurses:
+
+```zax
+func reverse_range(left_index: byte, right_index: byte)
+  ...
+  a := left_index
+  b := right_index
+  cp b
+  if NC
+    ret
+  end
+
+  swap_values left_index, right_index
+
+  next_left := left_index
+  succ next_left
+
+  next_right := right_index
+  pred next_right
+
+  reverse_range next_left, next_right
+end
+```
+
+(From `learning/part2/examples/unit6/array_reverse_recursive.zax`, lines 41–56.)
+
+The termination test uses `cp b` with `if NC`: `cp b` subtracts B from A, and
+NC (no carry) is set when A >= B. When `left_index >= right_index`, the indices
+have met or crossed, so the function returns without doing any more work.
+
+The helper `swap_values` is a separate `func` that reads both elements into locals
+and writes them back in reversed positions. It has its own IX frame and its own
+`var` block. Calling a helper inside a recursive function adds depth to the call
+stack, but each frame is independent.
+
+After the swap, the locals `next_left` and `next_right` are used rather than
+passing the incremented/decremented values directly. This is the same pattern
+from `hanoi.zax`: compute the adjusted values into locals before passing them as
+arguments, because argument expressions are evaluated before the frame is set up
+for the call.
+
+See `learning/part2/examples/unit6/array_reverse_recursive.zax`.
+
+---
+
+## Summary
+
+- Recursive functions use no special syntax. Each call — self or otherwise —
+  generates a fresh IX frame with independent locals. The call stack depth is the
+  recursion depth.
+- Return values in HL must be captured into a typed local before the next call
+  can overwrite HL. `left_count := hl` followed by a second recursive call is the
+  standard pattern.
+- `succ` and `pred` on frame locals correctly advance arguments for the recursive
+  call. The incremented value is computed and stored before it is passed, not
+  computed in place inside the argument list.
+- `ld e, a` / `ld d, 0` zero-extends a byte into DE for use with `add hl, de`.
+  This appears wherever an 8-bit element value needs to be added into a 16-bit
+  accumulator in HL.
+- The recursion depth is bounded by the algorithm. `hanoi_count 4` produces four
+  levels of double-recursive calls. On a real Z80, the stack must be large enough
+  to hold all frames. That is your responsibility to ensure.
+
+---
+
+## Examples in This Chapter
+
+- `learning/part2/examples/unit6/hanoi.zax` — Towers of Hanoi move count, double recursion
+- `learning/part2/examples/unit6/array_sum_recursive.zax` — array sum by linear recursion
+  with accumulation on unwind
+- `learning/part2/examples/unit6/array_reverse_recursive.zax` — in-place reversal by
+  structural recursion on a shrinking index range
+
+---
+
+## What Comes Next
+
+Chapter 07 shows how a larger program is assembled from multiple source files.
+The RPN calculator imports a support module and dispatches on token kind using
+`select`. The pattern of storing intermediate results into typed locals before
+the next call — visible in `hanoi.zax` here — reappears throughout the
+calculator's operator arms.
+
+---
+
+## Exercises
+
+1. `hanoi_count` stores both recursive results in `word` locals before combining
+   them. What would happen if the second recursive call were made before storing
+   the first result into `left_count`? Trace the frame state.
+
+2. `array_sum_recursive.zax` recurses on the tail of the array and adds the head
+   element on unwind. Rewrite it to recurse on the head (increment nothing, process
+   `numbers[0]`, recurse with index 1) and accumulate on the way down instead.
+   Does the result change? Does the code structure change?
+
+3. The `reverse_range` base case returns when `left_index >= right_index`. For an
+   array of odd length, the two indices will meet exactly at the middle element.
+   For an even length, they will cross. Trace both cases for a four-element and
+   five-element array.
+
+4. `array_reverse_recursive.zax` uses a helper `swap_values` as a separate `func`.
+   Could the swap be inlined into `reverse_range` without a helper? What would
+   the frame depth change be, and would that affect correctness?
+
+---
+
+[← Records](05-records.md) | [Part 2](README.md) | [Composition →](07-composition.md)
+
+
+---
+
+<!-- Source: learning/part2/07-composition.md -->
+
+# Chapter 7 — Composition
+
+The Chapter 07 example is an RPN calculator. It is the first program in this course
+that is built from more than one source file. `rpn_calculator.zax` is the
+lesson. `word_stack.zax` is a support module that the calculator imports — it
+provides a push and a pop operation over a typed word array, and the calculator
+uses these without caring about their implementation. This separation is small
+but representative: it shows how ZAX `import` works, how a module-qualified
+call is written, and how a well-chosen interface lets a higher-level algorithm
+stay focused on what it is actually computing.
+
+---
+
+## The RPN Stack Machine
+
+Reverse Polish notation evaluates an expression written as a sequence of tokens
+where operators follow their operands. The expression `7 3 + 2 *` means "push 7,
+push 3, add the top two values (giving 10), push 2, multiply the top two values
+(giving 20)." There is no operator precedence to track, no parentheses, and no
+ambiguity: the stack is the only state.
+
+This makes RPN a natural fit for a software-stack implementation. The evaluator
+scans tokens left to right, maintaining a stack of pending word values. Number
+tokens push their value. Operator tokens pop two operands, apply the operation,
+and push the result. When the token stream is exhausted, the stack holds exactly
+one value: the answer.
+
+`rpn_calculator.zax` implements this evaluation loop directly. The token stream
+is two parallel arrays — `token_kinds` and `token_values` — both declared at
+module scope. The software stack is a `word[8]` array named `value_stack`, also
+at module scope, with a separate `stack_depth` byte tracking how many valid
+elements it contains. This is a deliberate design: the stack storage is module
+state, not function-local, because it needs to persist across the helper calls
+that `push_word` and `pop_word` make. The calculator function manages the depth
+counter itself; the helper functions read and write through it.
+
+---
+
+## The `import` Mechanism
+
+The first line of `rpn_calculator.zax` is:
+
+```zax
+import "word_stack.zax"
+```
+
+This makes the exported functions from `word_stack.zax` available under the
+module qualifier `word_stack`. A call to `push_word` from the calculator is
+written as:
+
+```zax
+word_stack.push_word value_stack, stack_depth, hl
+stack_depth := a
+```
+
+The qualifier makes the call site explicit about where the operation comes from.
+`push_word` returns in A: it yields the new depth count. The `stack_depth := a`
+that follows every stack operation captures that return value into the module
+variable. No hidden state, no mutable counter inside the support module — just
+two functions that accept the storage and the current depth as arguments and
+return the updated depth.
+
+---
+
+## Token Kinds and Enums
+
+The calculator recognises three token kinds: a number to push, an addition
+operator, and a multiplication operator. In the source, these are declared as an
+enum:
+
+```zax
+enum TokenKind Number, Add, Multiply
+```
+
+An enum assigns sequential integer values starting at zero. `TokenKind.Number`
+is 0, `TokenKind.Add` is 1, `TokenKind.Multiply` is 2. Enum members must be
+referenced with the qualified form `EnumType.Member` — bare `Number` or `Add`
+is a compile error. The compiler resolves `TokenKind.Add` to the integer `1` at
+compile time; there is no runtime enum object.
+
+The token kind array uses these names directly in its initializer:
+
+```zax
+token_kinds: byte[5] = { TokenKind.Number, TokenKind.Number, TokenKind.Add, TokenKind.Number, TokenKind.Multiply }
+```
+
+This is the same initializer position as a literal integer — `TokenKind.Add`
+and `1` are identical to the compiler, but `TokenKind.Add` tells the reader
+what the value means. The same names appear in the `case` labels of the dispatch
+below, so the connection between the stored kind and the dispatch arm is visible
+without needing to count integer values.
+
+---
+
+## The Evaluation Loop and Operator Dispatch
+
+The main evaluation function is `rpn_demo`. Its shape is a `while` loop over
+`token_index`, advancing with `succ token_index` at the bottom of each
+iteration. When `token_index` reaches `TokenCount`, the loop pops the final
+result and returns it in HL.
+
+Inside the loop, operator dispatch uses `select`:
+
+```zax
+    select A
+      case TokenKind.Number
+        l := token_index
+        hl := token_values[L]
+        word_stack.push_word value_stack, stack_depth, hl
+        stack_depth := a
+      case TokenKind.Add
+        word_stack.pop_word value_stack, stack_depth
+        stack_depth := a
+        right_value := hl
+        word_stack.pop_word value_stack, stack_depth
+        stack_depth := a
+        left_value := hl
+        hl := left_value
+        de := right_value
+        add hl, de
+        word_stack.push_word value_stack, stack_depth, hl
+        stack_depth := a
+      case TokenKind.Multiply
+        ...
+    end
+```
+
+(From `learning/part2/examples/unit7/rpn_calculator.zax`, lines 77–105.)
+
+`select A` tests the value currently in A against each `case` constant. When
+`current_kind` has been loaded into A at the top of the loop body, `select`
+routes to the right arm directly. This is cleaner than a chain of `if`
+comparisons for a dispatch-by-value pattern; the intent — "pick a case based on
+the kind of this token" — reads directly in the code.
+
+The operator arms follow the same structure: pop right operand, pop left operand
+(order matters for non-commutative operations), apply, push result. Each pop/push
+pair is bracketed by `stack_depth := a` to capture the updated depth. The typed
+locals `right_value` and `left_value` hold the popped words across the two pop
+calls, because HL is overwritten by the second pop before the operation can
+proceed. Saving intermediate results into locals before the next call — the same
+pattern seen in the recursion chapter — is the right approach here.
+
+---
+
+## A Note on `word_stack.zax`
+
+`push_word` and `pop_word` are short. Here is the push:
+
+```zax
+export func push_word(stack_slots: word[], depth_count: byte, value_word: word): AF
+  a := depth_count
+  ld l, a
+  de := value_word
+  stack_slots[L] := de
+  a := depth_count
+  inc a
+end
+```
+
+(From `learning/part2/examples/unit7/word_stack.zax`, lines 6–14.)
+
+`word_stack.zax` loads the depth count into L with `ld l, a` — L is the index token for the `arr[L]` path expression — while DE carries the word value via `de := value_word`. `stack_slots[L] := de` then stores it cleanly. The pattern — index in L, value in DE — is how ZAX does word-array access with an 8-bit index.
+
+The full source of `word_stack.zax` is short enough to read in one sitting — see `learning/part2/examples/unit7/word_stack.zax`.
+
+---
+
+## Typed Paths Through the Evaluation Loop
+
+The evaluation loop in `rpn_demo` is built on typed locals: `token_index`,
+`current_kind`, `right_value`, `left_value`. These names carry the
+algorithm's intent across what would otherwise be a tangle of register
+assignments. Without them, the code would require careful tracking of which
+register holds which intermediate value at each point in the dispatch arms — the
+same manual tracking that raw assembly requires and that ZAX structured storage
+eliminates.
+
+The typed paths do not hide anything. `right_value := hl` emits a frame store;
+`de := right_value` emits a frame load. The compiler handles the IX-relative
+mechanics. What you read is the algorithm: the right operand is saved, the left
+operand is popped, the operation is applied.
+
+---
+
+## Summary
+
+- `import "module.zax"` makes exported functions available under the module
+  name. Calls are qualified: `word_stack.push_word`.
+- `enum TypeName Member, Member, ...` assigns sequential integers starting at 0.
+  Members must be referenced as `TypeName.Member`; bare member names are compile
+  errors. Enum members are compile-time immediates — the same as `const` values,
+  but grouped under a type name that makes their relationship explicit.
+- `select A` / `case TokenKind.Member` dispatches on the value in A. It is the
+  natural form for token-kind dispatch, replacing a chain of `if` comparisons
+  where the distinguishing value is already in a register.
+- A software stack over a typed word array requires explicit depth management.
+  Every push and pop returns a new depth in A, and the caller must store it.
+- DE-as-value, L-as-index is the right register choice for word-array push/pop
+  when HL is needed for the store address. This is visible in `word_stack.zax`
+  and worth understanding.
+- Store intermediate results into typed locals before the next call overwrites
+  HL. This is the same pattern as the recursion chapter, applied here to a
+  software-stack evaluator.
+
+---
+
+## Examples in This Chapter
+
+- `learning/part2/examples/unit7/rpn_calculator.zax` — the lesson: RPN evaluation loop
+  with operator dispatch and software-stack management
+- `learning/part2/examples/unit7/word_stack.zax` — support module: `push_word` and
+  `pop_word` over a caller-managed word array
+
+---
+
+## What Comes Next
+
+Chapter 08 works with pointer fields and typed reinterpretation. The linked
+list and binary search tree examples require following stored addresses rather
+than advancing an index — a structurally different traversal from the software
+stack here, but using the same typed-path and null-sentinel approach.
+
+---
+
+## Exercises
+
+1. The `TokenKind.Multiply` case calls the helper `mul_u16`. `mul_u16` uses a
+   `while` loop with a `pred` on the repeat count. What is the time complexity
+   of this multiplication, and what would happen for large operands? How would
+   you extend `rpn_calculator.zax` to add a `TokenKind.Subtract` case?
+
+2. `stack_depth` is a module-level variable, not a local. What would happen if
+   two calls to `rpn_demo` ran in sequence? Is the initial `ld a, 0` /
+   `stack_depth := a` at the top of `rpn_demo` necessary for correct behaviour
+   on the first call? On subsequent calls?
+
+3. The `select` dispatch is on `current_kind`, loaded into A before the
+   `select A`. What would happen if a token kind not covered by any `case`
+   appeared in the stream? What defensive measure would you add?
+
+4. `pop_word` returns its result in HL and the new depth in A simultaneously
+   (`HL, AF` return declaration). After each pop in the calculator, `stack_depth
+:= a` captures the new depth. What would happen if this assignment were
+   omitted for the second of the two pops in the `TokenKind.Add` arm?
+
+---
+
+[← Recursion](06-recursion.md) | [Part 2](README.md) | [Pointer Structures →](08-pointer-structures.md)
+
+
+---
+
+<!-- Source: learning/part2/08-pointer-structures.md -->
+
+# Chapter 8 — Pointer Structures
+
+The Chapter 08 examples work with data that is not laid out as a flat array. A
+linked list is a chain of individually addressable nodes, each holding a value
+and the address of the next node in the chain. A binary search tree is a
+hierarchy of nodes where each node holds a value and the addresses of its left
+and right children. Both structures share a common requirement: to move from one
+node to the next, you must follow a stored address — a pointer — rather than
+increment an index. That act of following a pointer is the defining operation
+in this chapter.
+
+The ZAX syntax for following a pointer to a named field is
+`<Type>local.field`, where `local` holds an address and `Type` names the
+record the compiler should interpret it as. You still load the address into HL
+and work with raw Z80 registers, but the field access names the field rather
+than hard-coding a byte offset. The next section shows the syntax directly.
+
+---
+
+## Typed Reinterpretation: `<Type>local.field`
+
+The syntax is `<Type>local.field`, where `local` holds an address and
+`Type` is the record type you want to interpret it as. The compiler resolves
+`field` against `Type`'s declaration and emits the appropriate IX-relative load
+or constant-offset dereference.
+
+Consider the `ListNode` record from `linked_list.zax`:
+
+```zax
+type ListNode
+  value: byte
+  next: addr
+end
+```
+
+Each node has a one-byte value and a two-byte address pointing to the next node.
+Given a local `current_ptr: addr` that holds the address of the current node in
+the list, you read the value with:
+
+```zax
+a := <ListNode>current_ptr.value
+```
+
+And you advance to the next node with:
+
+```zax
+current_ptr := <ListNode>current_ptr.next
+```
+
+These two lines are the core of the traversal. Everything else — the null check,
+the accumulation — is the supporting work around them.
+
+---
+
+## Linked List Traversal
+
+### `linked_list.zax`
+
+The linked list example builds a three-node chain and sums the values. The nodes
+`node_a`, `node_b`, and `node_c` are declared as static module-level `ListNode`
+records, with `list_head` holding the address of the first node. This is a
+fixed-pool layout: the nodes are statically allocated, their addresses are
+known at compile time, and `init_list` wires them together by writing the
+`@node_b` and `@node_c` address constants into the `next` fields.
+
+The `@symbol` form takes the address of a named module symbol. `node_a.next :=
+@node_b` writes the compile-time address of `node_b` into the `next` field of
+`node_a`. This is the static equivalent of a dynamic allocation: instead of
+calling an allocator, you name the nodes and connect them by address.
+
+The traversal in `list_sum` has this shape:
+
+```zax
+  current_ptr := list_head
+
+  ld a, 1
+  or a
+  while NZ
+    hl := current_ptr
+    ld a, h
+    or l
+    if Z
+      hl := total_value
+      ret
+    end
+
+    a := <ListNode>current_ptr.value
+    ld e, a
+    ld d, 0
+    hl := total_value
+    add hl, de
+    total_value := hl
+
+    current_ptr := <ListNode>current_ptr.next
+
+    ld a, 1
+    or a
+  end
+```
+
+(From `learning/part2/examples/unit8/linked_list.zax`, lines 42–66.)
+
+The null check — `hl := current_ptr` / `ld a, h` / `or l` / `if Z` — loads the
+current pointer into HL and tests whether both bytes are zero. Zero is the
+null sentinel: a stored `addr` of zero means "no next node." The test uses the
+`or l` trick seen throughout the course: `or` with L sets the Z flag if both H
+and L are zero, without using a compare instruction. When the pointer is null,
+the function returns `total_value` in HL.
+
+When the pointer is non-null, the typed reinterpretation reads the `value` byte
+into A. The byte is zero-extended into DE — `ld e, a` / `ld d, 0` — and added
+to the running total in HL. Then `current_ptr` is updated from its own `next`
+field, and the loop continues.
+
+The null check at the top of the loop is the standard pattern for sentinel
+termination in ZAX pointer code. The list may be empty (if `list_head` is
+zero), and the same check covers that case without special handling before the
+loop.
+
+See `learning/part2/examples/unit8/linked_list.zax`.
+
+---
+
+## Binary Search Tree Traversal
+
+### `bst.zax`
+
+The binary search tree example builds a four-node tree and searches it for a
+target value. The node record is:
+
+```zax
+type TreeNode
+  value: byte
+  left: addr
+  right: addr
+end
+```
+
+Each node has a value and two child addresses. The search function
+`bst_contains` is recursive. It takes a node address and a target value, and
+returns 1 in HL if the target is in the subtree rooted at that node, 0
+otherwise.
+
+The null check is the base case — if the address is zero, the target is not
+present:
+
+```zax
+func bst_contains(node_ptr: addr, target_value: byte): HL
+  hl := node_ptr
+  ld a, h
+  or l
+  if Z
+    ld hl, 0
+    ret
+  end
+```
+
+(From `learning/part2/examples/unit8/bst.zax`, lines 50–57.)
+
+After the null check, the value at the current node is read and compared to
+the target:
+
+```zax
+  a := <TreeNode>node_ptr.value
+  b := target_value
+  cp b
+  if Z
+    ld hl, 1
+    ret
+  end
+  if C
+    hl := <TreeNode>node_ptr.right
+    bst_contains hl, target_value
+    ret
+  end
+
+  hl := <TreeNode>node_ptr.left
+  bst_contains hl, target_value
+```
+
+(From `learning/part2/examples/unit8/bst.zax`, lines 59–74.)
+
+`cp b` subtracts B from A and sets flags without storing a result. `if Z` catches
+the equal case. `if C` catches the case where A < B — that is, where the current
+node's value is less than the target, meaning the target must be in the right
+subtree. If neither condition holds (A > B), the search continues into the left
+subtree.
+
+The child address is retrieved with `<TreeNode>node_ptr.right` or `<TreeNode>
+node_ptr.left`, loaded into HL, and then passed directly as the first argument
+to the recursive call. Each recursive invocation handles its own null check, so
+the pattern is uniform at every level of the tree.
+
+Compare this with the linked list traversal: the list uses a `while` loop
+because the structure is linear — there is always at most one next step. The
+BST uses recursion because the structure is branching — at each node, the
+algorithm commits to one of two subtrees, and the choice depends on a
+comparison. Recursion maps onto that shape directly: the call stack mirrors the path from
+root to target node.
+
+See `learning/part2/examples/unit8/bst.zax`.
+
+---
+
+## Unions: Named Field Overlay
+
+Sometimes you need to read the same bytes in two different ways. You have a
+16-bit word and you want just the low byte. You could mask with `AND $FF`, but
+that only works in A and loses the high byte. You could store the word to memory
+and read back one byte — but then you are managing the address yourself and
+hoping you got the offset right. A **union** lets you declare the overlay once
+and access each view by name.
+
+Here is the `RegPair` union from `reg_pair.zax`:
+
+```zax
+union RegPair
+  full_word: word
+  lo_byte: byte
+end
+```
+
+Both fields start at byte offset 0. `sizeof(RegPair)` is 2 — the size of the
+largest field. When you write through `full_word`, you store two bytes. When you
+read through `lo_byte`, you read the first of those two bytes.
+
+This is where the Z80's little-endian layout does the work for you. Writing
+`$0134` through `full_word` puts `$34` at offset 0 and `$01` at offset 1.
+Reading `lo_byte` reads offset 0 — `$34`, the low byte:
+
+```zax
+section data vars at $8000
+  scratch: RegPair
+end
+
+func lo_byte_of(input_word: word): HL
+  scratch.full_word := input_word
+  a := scratch.lo_byte
+  ld l, a
+  ld h, 0
+end
+```
+
+(From `learning/part2/examples/unit8/reg_pair.zax`, lines 13–27.)
+
+You don't need to give `scratch` an initializer — it starts at zero.
+`scratch.full_word := input_word` stores the two-byte argument at `$8000`.
+`a := scratch.lo_byte` loads the single byte at `$8000` — the low byte. You
+then zero-extend into HL before returning.
+
+This is the part that catches people if you are used to records: `full_word`
+and `lo_byte` look like they should live at different addresses, but they don't.
+Every field in a union starts at offset 0. They overlap completely — that is the
+point.
+
+You can only declare a union at module scope, not inside a function.
+
+There are no tags and no runtime safety checks. You choose which field to read
+at each access site, and the compiler does not verify that you read through the
+same field you wrote. The overlay is entirely your responsibility — just like
+every other memory interpretation on the Z80.
+
+See `learning/part2/examples/unit8/reg_pair.zax`.
+
+---
+
+## The Verbosity of Pointer Traversal
+
+Both examples follow the same pattern at every pointer access site: load the
+address into HL, apply the typed cast, name the field. For a structure with
+several pointer hops, this becomes a repeating sequence:
+
+```zax
+current_ptr := <ListNode>current_ptr.next
+```
+
+Each step is one line. But if a data structure required following a chain of
+fields — loading a node, reading one of its pointer fields, treating that as a
+node, reading another field — each hop would need its own address-load and cast.
+The current language has no way to express a pointer dereference path in a single
+step. `ptr` fields carry no type information: `next: addr` says that `next`
+holds an address, but not that it is the address of another `ListNode`. That
+annotation must be written at the use site, every time, as `<ListNode>`.
+
+The cost is real. You always know exactly what the machine is doing — but for
+deeply linked structures, the repeated type annotation adds noise that obscures
+the algorithm's shape. This is a genuine limitation, and it shows up clearly in
+`linked_list.zax` and `bst.zax`. Chapter 09 records it alongside the other open
+gaps from the course.
+
+---
+
+## Summary
+
+- `type RecordName` / `field: type` / `end` defines a record. Fields have
+  explicit types; the compiler tracks offsets.
+- `<Type>local.field` applies a type cast at the access site to read or write
+  a field through a stored address. This is the ZAX expression for pointer
+  dereference.
+- The null sentinel is stored address zero. The test is `ld a, h` / `or l` /
+  `if Z` — the same `or` trick used throughout the course to test a 16-bit
+  value for zero without a compare.
+- Static linked structures are built with `@symbol` address constants. Nodes
+  are named module-level records; `next` and `left`/`right` fields are
+  initialised with the compile-time addresses of the target nodes.
+- Linked traversal uses a `while` loop; tree traversal uses recursion. The
+  control-flow shape follows the data structure's shape.
+- `union TypeName` / `field: type` / `end` declares an overlay type. All
+  fields start at offset 0; `sizeof(union)` is the largest field size. Writing
+  through one field and reading through another reinterprets the same bytes
+  without arithmetic.
+
+---
+
+## Examples in This Chapter
+
+- `learning/part2/examples/unit8/linked_list.zax` — singly-linked list sum using
+  pointer traversal and null-sentinel termination
+- `learning/part2/examples/unit8/bst.zax` — binary search tree search using recursive
+  typed-pointer traversal
+- `learning/part2/examples/unit8/reg_pair.zax` — union overlay: write a 16-bit word,
+  read the low byte without arithmetic
+
+---
+
+## What Comes Next
+
+Chapter 09 closes the course with the eight-queens problem — a backtracking
+search that puts maximum pressure on the loop-escape surface. It also functions
+as a design review: after nine chapters of examples, the chapter maps which
+language gaps remain, which have been addressed, and what the current design
+work is targeting.
+
+---
+
+## Exercises
+
+1. `list_sum` initialises `total_value` to zero and accumulates into it.
+   Rewrite the traversal as a recursive function in the style of
+   `array_sum_recursive.zax` from Chapter 06. How does the call depth relate to the
+   list length?
+
+2. The null check `ld a, h` / `or l` / `if Z` tests whether HL is zero. What
+   does this test actually check, and could it give a false positive? Under what
+   addressing convention is it safe to use zero as a null sentinel?
+
+3. `bst_contains` uses `if C` (carry set) to detect that the current node's
+   value is less than the target. Trace the comparison for `target_value = 6`
+   starting from `root_node.value = 8`. Which branches are taken at each level?
+
+4. `bst.zax` initialises null child pointers with `ld hl, 0` followed by the
+   field assignment, rather than with `@someNode`. In `init_tree`, the
+   right child of `left_node` is set to `@left_right_node`. What would the
+   traversal do if that field were mistakenly left as zero?
+
+5. `reg_pair.zax` reads `lo_byte` (offset 0) to get the low byte of
+   `full_word`. How would you read the high byte — the byte at offset 1 —
+   using only ZAX structured code? What raw Z80 register sequence would you
+   use after loading `full_word` into HL?
+
+---
+
+[← Composition](07-composition.md) | [Part 2](README.md) | [Gaps and Futures →](09-gaps-and-futures.md)
+
+
+---
+
+<!-- Source: learning/part2/09-gaps-and-futures.md -->
+
+# Chapter 9 — Gaps and Futures
+
+`eight_queens.zax` is the final example in the course. It solves the eight-queens
+puzzle — placing eight queens on a chessboard so that none threatens any other —
+by recursive backtracking. It is not the most complex algorithm in this course;
+`bst.zax` has a more intricate data structure, and `rpn_calculator.zax` has more
+moving parts. What makes `eight_queens.zax` the right capstone is its
+control-flow pressure. It is a backtracking search, and backtracking search puts
+maximum stress on the loop escape surface: the algorithm wants to stop searching
+the moment a solution is found, and it wants to skip quickly past invalid
+positions. Without good loop escape primitives, backtracking search accumulates
+manual state.
+
+This chapter reads `eight_queens.zax` as a lens on the current ZAX surface —
+what it expresses cleanly and where it still requires workarounds — and connects
+those observations to the language's recorded friction and its ongoing design
+work.
+
+---
+
+## The Eight Queens Algorithm
+
+The algorithm assigns one queen to each row, trying each column in turn. For each
+row, `place_row` iterates over the eight column positions and checks three
+constraints: the column must not already be occupied, the forward diagonal must
+not already be threatened, and the backward diagonal must not already be
+threatened. Column occupation is tracked in `col_used`, a byte array indexed by
+column number. The two diagonals are tracked in `diag_sum_used` and
+`diag_diff_used`, indexed by `row + col` and `row + col - DiagBias` respectively.
+The `DiagBias` constant shifts the difference index into the non-negative range.
+
+When all three constraint arrays say the position is free, `place_row` marks the
+position, records the column assignment in `queen_cols`, and recurses into
+`place_row row + 1`. When the recursion reaches row 8 — one past the last row —
+all eight queens have been placed and the solution is found. The function sets
+`found_solution := 1` and returns. On unwind, each level of recursion checks
+`found_solution` and returns immediately if it is set, propagating the termination
+back to the root call.
+
+---
+
+## `break` and `continue` in Practice
+
+The column loop in `place_row` uses both `break` and `continue` (introduced in
+Chapter 02, `prime_sieve.zax`):
+
+```zax
+    l := col_index
+    a := col_used[L]
+    or a
+    if NZ
+      succ col_index
+      ld a, 1
+      or a
+      continue
+    end
+```
+
+When a constraint check fails, the column index is advanced with `succ col_index`
+and `continue` jumps to the loop test, skipping the remaining checks and the
+placement code. There are three such constraint checks, each ending with
+`continue`. At the bottom of the loop, if all constraints passed and the recursive
+call returned with `found_solution` set, `break` exits the loop immediately:
+
+```zax
+    a := found_solution
+    or a
+    if NZ
+      break
+    end
+```
+
+(From `learning/part2/examples/unit9/eight_queens.zax`, lines 109–113.)
+
+Before `break` and `continue` were part of the ZAX surface, the friction log
+records that the workaround for this kind of control flow was explicit state
+variables and early returns. The `found_solution` flag is still necessary —
+because `break` exits only the innermost loop, not the entire recursive call
+chain — but the constraint-check skips use `continue` cleanly rather than
+nesting `if/else` blocks or duplicating the loop increment.
+
+Structured loop escape — `break` and `continue` — was the highest-priority
+language gap identified during the course. Both are now implemented. The
+`eight_queens.zax` example uses `continue` in the constraint checks and `break`
+after finding a solution.
+
+---
+
+## Where the Workaround Remains Visible
+
+The `found_solution` flag is explicit module state. Every level of recursion
+checks it on entry and again after the recursive call returns. This is correct,
+but it is a workaround: the flag exists because ZAX has no way to break out of
+a recursive call chain from inside a nested frame. In a language with named
+exits from nested structures, the termination would propagate structurally
+instead of through a shared flag.
+
+No design has been finalised. Whether the right answer is a named exit label,
+a propagated break, or something else is an open question.
+
+---
+
+## The Friction Log in Full
+
+Working through the course examples surfaced the following gaps.
+
+**Already addressed**: Structured loop escape — `break` and `continue` — was
+the highest-priority gap identified from `eight_queens.zax` and the broader
+course. It is now implemented. The course examples use it.
+
+**Design open**:
+
+- _Named exit from nested structures._ The `found_solution` flag in
+  `eight_queens.zax` is a direct workaround for this. The gap is recorded;
+  no specific design has been decided.
+
+- _Pointer type annotation._ `linked_list.zax` and `bst.zax` both require
+  `<Type>local.field` at every traversal step. The `addr` type carries no type
+  information — there is no `addr<ListNode>`. Every dereference must repeat the
+  type annotation at the use site. The design is not settled. See `docs/design/`
+  for live design work as it progresses.
+
+- _Software-stack storage verbosity._ `rpn_calculator.zax` requires storing
+  every `pop_word` result into a local immediately to survive the next
+  `pop_word`. The support module interface works, but the interaction between
+  software-stack operations and frame-local storage is repetitive. Whether the
+  answer is a library surface change or a language feature is not yet clear.
+
+**Language gaps, not library gaps**:
+
+- _Local named-constant initialisation._ `var` block initialisers cannot
+  currently reference named constants by name. This is a readability gap
+  grounded in `binary_search.zax` and `bubble_sort.zax`. It requires a
+  compiler change and cannot be worked around in a library.
+
+**Where ZAX stands after these examples**:
+
+You still choose registers, write mnemonics, manage flags, and decide what
+lives in ROM versus RAM. The compiler adds names, typed offsets, function frames,
+and structured control flow. The `.asm` output is deterministic:
+every source line maps to a predictable instruction sequence that you can read
+and verify. The gaps above are the places where the current surface still
+requires manual workarounds. They are recorded as such, and design work on them
+is tracked in `docs/design/`.
+
+The eight-queens example ends the course at the right point. It is a real
+program — it compiles, runs, and finds a solution. The `found_solution` flag
+is the workaround; `break` and `continue` are the progress. Both show up in
+the same source file.
+
+---
+
+## Summary
+
+- `break` and `continue` are implemented and available on the current surface.
+  The eight-queens column loop shows both in a single algorithm: `continue`
+  skips failed constraint checks cleanly; `break` exits on a found solution.
+- An explicit flag variable is still the necessary mechanism for propagating a
+  found result across recursive frames. ZAX has no named exit from nested
+  structures; this is a recorded gap, not a design oversight.
+- The `<Type>local.field` repetition from Chapter 08 and the `pop_word`/`stack_depth`
+  bouncing from Chapter 07 are both known design issues. See `docs/design/` for
+  current work.
+- The `.asm` output is deterministic and inspectable throughout. The compiler
+  adds no hidden passes or runtime system. That design position is deliberate
+  and unchanged.
+
+---
+
+## Examples in This Chapter
+
+- `learning/part2/examples/unit9/eight_queens.zax` — recursive backtracking search for
+  the eight queens problem, using `break`, `continue`, and an explicit solution
+  flag
+
+---
+
+## Exercises
+
+1. `place_row` uses three separate `continue` statements to skip failed
+   constraint checks. Each one advances `col_index` with `succ` and
+   re-establishes NZ before jumping to the loop test. What would happen if the
+   `succ col_index` were omitted from one of the three `continue` paths? Trace
+   the column loop behaviour for a column that fails the first constraint check.
+
+2. The `found_solution` flag is module-level state. `main` resets it to zero
+   before calling `place_row`. What happens if that reset is removed and `main`
+   is called twice in sequence? Trace the second call's behaviour from the entry
+   of `place_row` when `found_solution` is already 1.
+
+3. `place_row` marks the three constraint arrays (`col_used`, `diag_sum_used`,
+   `diag_diff_used`) before recursing and unmarks them on backtrack. If the
+   marking step runs but the unmark step is skipped — say, the function returns
+   early before reaching the unmark — what happens to the search for later
+   columns on the same row? Identify the specific code path where this could
+   occur.
+
+4. The eight-queens solution terminates as soon as one solution is found.
+   Modify `place_row` to count all solutions rather than stopping at the first.
+   What changes in the termination condition, the flag variable, and the
+   `found_solution` check after the recursive call?
+
+---
+
+## Further Reading
+
+- `docs/design/` — live design work on the open gaps identified above
+- `docs/spec/zax-spec.md` — the normative language surface
+
+---
+
+[← Pointer Structures](08-pointer-structures.md) | [Part 2](README.md)
