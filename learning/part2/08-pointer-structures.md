@@ -1,6 +1,6 @@
 [← Composition](07-composition.md) | [Part 2](README.md) | [Gaps and Futures →](09-gaps-and-futures.md)
 
-# Chapter 08 — Pointer Structures
+# Chapter 8 — Pointer Structures
 
 The Chapter 08 examples work with data that is not laid out as a flat array. A
 linked list is a chain of individually addressable nodes, each holding a value

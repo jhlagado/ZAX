@@ -1,4 +1,4 @@
-[← Machine Code](02-machine-code.md) | [Part 1](README.md) | [Part 2 →](../part2/README.md)
+[← Machine Code](02-machine-code.md) | [Part 1](README.md) | [Numbers and Registers →](04-numbers-and-registers.md)
 
 # Chapter 3 — The Assembler
 
@@ -279,4 +279,4 @@ All of these still produce machine code. The CPU sees bytes. ZAX just handles th
 
 ---
 
-[← Machine Code](02-machine-code.md) | [Part 1](README.md) | [Part 2 →](../part2/README.md)
+[← Machine Code](02-machine-code.md) | [Part 1](README.md) | [Numbers and Registers →](04-numbers-and-registers.md)

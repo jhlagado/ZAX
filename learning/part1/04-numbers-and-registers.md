@@ -1,6 +1,6 @@
- [← Part 1](../part1/README.md) | [Part 2](README.md) | [Loading, Storing, Constants →](02-loading-storing-constants.md)
+[← The Assembler](03-the-assembler.md) | [Part 1](README.md) | [Loading, Storing, Constants →](05-loading-storing-constants.md)
 
-# Chapter 01 — Numbers and the Z80 Register Set
+# Chapter 4 — Numbers and the Z80 Register Set
 
 This chapter introduces the number systems and the internal storage that Z80
 programs depend on. After reading it you will be able to read any value in
@@ -208,4 +208,4 @@ locations using immediate values, register pairs, and indirect addressing.
 
 ---
 
- [← Part 1](../part1/README.md) | [Part 2](README.md) | [Loading, Storing, Constants →](02-loading-storing-constants.md)
+[← The Assembler](03-the-assembler.md) | [Part 1](README.md) | [Loading, Storing, Constants →](05-loading-storing-constants.md)

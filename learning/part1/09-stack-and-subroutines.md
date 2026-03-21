@@ -1,6 +1,6 @@
-[← Data Tables and Indexed Access](05-data-tables-and-indexed-access.md) | [Part 2](README.md) | [I/O and Ports →](07-io-and-ports.md)
+[← Data Tables and Indexed Access](08-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](10-io-and-ports.md)
 
-# Chapter 06 — Stack and Subroutines
+# Chapter 9 — Stack and Subroutines
 
 This chapter explains how `call` and `ret` work, how the hardware stack operates,
 and how to write reusable subroutines that receive values through registers and
@@ -338,4 +338,4 @@ same points that Chapters 09–11 address.
 
 ---
 
-[← Data Tables and Indexed Access](05-data-tables-and-indexed-access.md) | [Part 2](README.md) | [I/O and Ports →](07-io-and-ports.md)
+[← Data Tables and Indexed Access](08-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](10-io-and-ports.md)

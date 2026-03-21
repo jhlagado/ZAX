@@ -1,6 +1,6 @@
-[← Numbers and Registers](01-numbers-and-registers.md) | [Part 2](README.md) | [Flags, Comparisons, Jumps →](03-flags-comparisons-jumps.md)
+[← Numbers and Registers](04-numbers-and-registers.md) | [Part 1](README.md) | [Flags, Comparisons, Jumps →](06-flags-comparisons-jumps.md)
 
-# Chapter 02 — Loading, Storing, and Simple Constants
+# Chapter 5 — Loading, Storing, and Simple Constants
 
 This chapter covers the four addressing modes of `ld` you will use in every
 program, shows how labels name memory addresses, and demonstrates EQU-style
@@ -369,4 +369,4 @@ instructions read to decide where execution continues next.
 
 ---
 
-[← Numbers and Registers](01-numbers-and-registers.md) | [Part 2](README.md) | [Flags, Comparisons, Jumps →](03-flags-comparisons-jumps.md)
+[← Numbers and Registers](04-numbers-and-registers.md) | [Part 1](README.md) | [Flags, Comparisons, Jumps →](06-flags-comparisons-jumps.md)

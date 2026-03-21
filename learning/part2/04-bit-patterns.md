@@ -1,6 +1,6 @@
 [← Strings](03-strings.md) | [Part 2](README.md) | [Records →](05-records.md)
 
-# Chapter 04 — Bit Patterns
+# Chapter 4 — Bit Patterns
 
 The Chapter 04 examples stay close to the machine. The Z80 bit-manipulation
 instructions — `srl`, `rr`, `and`, `or`, `xor`, `bit` — appear directly as

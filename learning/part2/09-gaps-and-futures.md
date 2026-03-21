@@ -1,6 +1,6 @@
 [← Pointer Structures](08-pointer-structures.md) | [Part 2](README.md)
 
-# Chapter 09 — Gaps and Futures
+# Chapter 9 — Gaps and Futures
 
 `eight_queens.zax` is the final example in the course. It solves the eight-queens
 puzzle — placing eight queens on a chessboard so that none threatens any other —
