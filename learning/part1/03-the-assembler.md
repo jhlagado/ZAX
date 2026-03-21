@@ -263,7 +263,7 @@ Most assemblers stop at mnemonics and labels. ZAX goes further with features tha
 
 **`op` — inline expansion.** An `op` block is like a function, but its body is copied inline at every call site instead of being called with `CALL`/`RET`. This gives you the reuse of a named block without the overhead of a subroutine call.
 
-All of these still produce machine code. The CPU sees bytes. ZAX just handles the bookkeeping.
+All of these still produce machine code. The CPU sees bytes. ZAX handles the repetitive work so you can focus on what the program does.
 
 ---
 

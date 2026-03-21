@@ -50,7 +50,7 @@ current_ptr := <ListNode>current_ptr.next
 ```
 
 These two lines are the core of the traversal. Everything else — the null check,
-the accumulation — is bookkeeping around them.
+the accumulation — is the supporting work around them.
 
 ---
 
@@ -206,12 +206,14 @@ See `learning/part2/examples/unit8/bst.zax`.
 
 ## Unions: Named Field Overlay
 
-The `<Type>local.field` syntax reinterprets a stored address at the use site.
-A union does something structurally different: it declares that the same fixed
-storage can be read or written as any of several named fields, where every field
-starts at offset 0. The overlay is in the type declaration, not at the use site.
+Sometimes you need to read the same bytes in two different ways. You have a
+16-bit word and you want just the low byte. You could mask with `AND $FF`, but
+that only works in A and loses the high byte. You could store the word to memory
+and read back one byte — but then you are managing the address yourself and
+hoping you got the offset right. A **union** lets you declare the overlay once
+and access each view by name.
 
-The `RegPair` union from `reg_pair.zax` has two fields:
+Here is the `RegPair` union from `reg_pair.zax`:
 
 ```zax
 union RegPair
@@ -220,14 +222,13 @@ union RegPair
 end
 ```
 
-`sizeof(RegPair)` is 2 — the size of the largest field. `full_word` and
-`lo_byte` both start at byte offset 0. Writing through `full_word` stores two
-bytes; reading through `lo_byte` reads the first of those two bytes.
+Both fields start at byte offset 0. `sizeof(RegPair)` is 2 — the size of the
+largest field. When you write through `full_word`, you store two bytes. When you
+read through `lo_byte`, you read the first of those two bytes.
 
-This is useful when you need to access the low byte of a 16-bit value without
-arithmetic. Z80 stores words little-endian: the low byte is at the lower
-address, which is offset 0. Writing `$0134` through `full_word` puts `$34` at
-offset 0 and `$01` at offset 1. Reading `lo_byte` reads offset 0 — `$34`:
+This is where the Z80's little-endian layout does the work for you. Writing
+`$0134` through `full_word` puts `$34` at offset 0 and `$01` at offset 1.
+Reading `lo_byte` reads offset 0 — `$34`, the low byte:
 
 ```zax
 section data vars at $8000
@@ -244,15 +245,22 @@ end
 
 (From `learning/part2/examples/unit8/reg_pair.zax`, lines 13–27.)
 
-The union variable is declared without an initializer; it is zero-initialized by
-default. `scratch.full_word := input_word` stores the two-byte argument at
-`$8000`. `a := scratch.lo_byte` loads the single byte at `$8000` — the low
-byte. The result is zero-extended into HL before returning.
+You don't need to give `scratch` an initializer — it starts at zero.
+`scratch.full_word := input_word` stores the two-byte argument at `$8000`.
+`a := scratch.lo_byte` loads the single byte at `$8000` — the low byte. You
+then zero-extend into HL before returning.
 
-Union declarations are module-scope. Every union field starts at offset 0;
-there is no padding between fields, because they all overlap. Unions have no
-tags and no runtime checks — you choose which field to use at each access site.
-The compiler does not enforce that you read through the same field you wrote.
+This is the part that catches people if you are used to records: `full_word`
+and `lo_byte` look like they should live at different addresses, but they don't.
+Every field in a union starts at offset 0. They overlap completely — that is the
+point.
+
+You can only declare a union at module scope, not inside a function.
+
+There are no tags and no runtime safety checks. You choose which field to read
+at each access site, and the compiler does not verify that you read through the
+same field you wrote. The overlay is entirely your responsibility — just like
+every other memory interpretation on the Z80.
 
 See `learning/part2/examples/unit8/reg_pair.zax`.
 
