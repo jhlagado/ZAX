@@ -148,6 +148,14 @@ IX and IY are 16-bit index registers used primarily for displaced memory access
 These halves are useful for holding temporary byte values when you have run out
 of general registers.
 
+Zilog's original Z80 documentation did not list IXH, IXL, IYH, or IYL as
+supported instructions. They were discovered by programmers who noticed that the
+prefix-byte encoding made them work, and they have been in common use since the
+early 1980s. Every Z80-compatible CPU executes them correctly, and modern
+assemblers — ZAX included — support them without qualification. You will
+sometimes see them called "undocumented instructions," but by now they are
+standard practice.
+
 There is a hardware constraint to be aware of. The Z80 encodes H, L, IXH, IXL,
 IYH, and IYL using the same bit positions in the instruction byte. The CPU
 resolves the ambiguity with a prefix byte: unprefixed means H/L, the `$DD`

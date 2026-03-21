@@ -2,13 +2,15 @@
 
 # Chapter 14 — Functions, Arguments, and `op`
 
-This chapter introduces typed function parameters, typed return values, and the
-`op` construct. After reading it you will be able to write a ZAX `func` with
-named typed parameters and a typed return value, write a zero-parameter `op`,
-and explain the difference in cost between a typed `func` call and a raw `call`
-or an `op` expansion.
+This chapter introduces typed function parameters, typed return values, the
+`op` construct, and two features that extend the Z80's native instruction set:
+undocumented half-index-register opcodes and ZAX pseudo-opcodes for 16-bit
+register moves. After reading it you will be able to write a ZAX `func` with
+named typed parameters and a typed return value, write an `op`, use IXH/IXL
+and the synthetic `ld hl, de` family, and explain the difference in cost between
+a typed `func` call, a raw `call`, and an `op` expansion.
 
-Prerequisites: Chapters 4–12.
+Prerequisites: Chapters 4–13.
 
 ---
 
@@ -157,6 +159,80 @@ after the standalone call statement.
 Declaring `: void` when the function places a meaningful value in A is a bug.
 The compiler's `pop AF` in the epilogue overwrites A before the caller sees it.
 Chapter 9 established this rule; it applies to all three chapters.
+
+---
+
+## Undocumented opcodes: IXH, IXL, IYH, IYL
+
+The Z80's index registers IX and IY can each be split into 8-bit halves — IXH
+and IXL for IX, IYH and IYL for IY — just as HL splits into H and L. Zilog
+never listed these half-register instructions in the original Z80 data sheet,
+but programmers discovered them in the early 1980s by experimenting with the
+prefix-byte encoding. Every Z80-compatible CPU executes them correctly, and they
+have been in routine use for over forty years. The label "undocumented" is
+historical; in practice they are as reliable as any other Z80 instruction.
+
+ZAX supports all IXH/IXL/IYH/IYL instructions unconditionally — there is no
+flag to enable or disable them.
+
+The half-registers obey one hardware constraint described in Chapter 4: because
+the CPU uses a single prefix byte (`$DD` for IX, `$FD` for IY) to select which
+register family an instruction refers to, you cannot mix halves from different
+families in the same instruction. `ld ixh, ixl` is valid; `ld ixh, iyl` is not.
+Any combination with A, B, C, D, or E is fine:
+
+```zax
+ld ixh, a       ; store A in the high half of IX
+ld a, iyl       ; load the low half of IY into A
+ld ixl, b       ; store B in IXL
+add a, ixh      ; add IXH to A
+```
+
+The halves are most useful when you need extra byte-sized scratch storage beyond
+A–L. Because the ZAX function frame uses IX as its base pointer, IXH and IXL
+are not available inside functions that have parameters or typed locals — the
+compiler owns IX for frame addressing in that context. Outside a frame (or in
+frameless functions), the halves are free to use.
+
+---
+
+## ZAX pseudo-opcodes: synthetic 16-bit register moves
+
+The Z80 has no instruction to copy one register pair into another. To copy HL
+into DE in raw Z80, you write two 8-bit moves:
+
+```zax
+ld d, h
+ld e, l
+```
+
+ZAX removes this chore. You can write the 16-bit form directly:
+
+```zax
+ld hl, de       ; ZAX expands to: ld h, d / ld l, e
+ld de, hl       ; ZAX expands to: ld d, h / ld e, l
+```
+
+The assembler emits the two-instruction sequence automatically. No new opcode is
+invented — the output is exactly the same pair of 8-bit moves you would write
+by hand. The pseudo-opcode exists to make the intent visible at a glance.
+
+ZAX supports the following synthetic 16-bit register transfers:
+
+| Pseudo-opcode | Expands to |
+|---------------|------------|
+| `ld hl, de` | `ld h, d` / `ld l, e` |
+| `ld hl, bc` | `ld h, b` / `ld l, c` |
+| `ld de, hl` | `ld d, h` / `ld e, l` |
+| `ld de, bc` | `ld d, b` / `ld e, c` |
+| `ld bc, hl` | `ld b, h` / `ld c, l` |
+| `ld bc, de` | `ld b, d` / `ld c, e` |
+
+Each expands to exactly two bytes of machine code (two one-byte `ld` instructions).
+The cost is the same as writing the pair by hand — ZAX adds nothing at run time.
+
+These pseudo-opcodes are always available. Use them freely wherever you would
+otherwise write the two-instruction sequence yourself.
 
 ---
 
@@ -321,6 +397,14 @@ of the repetitive work the compiler does for you.
 
 ## Summary
 
+- IXH, IXL, IYH, and IYL are half-index-register instructions omitted from
+  Zilog's original documentation but universally supported by Z80 hardware. ZAX
+  enables them unconditionally. The only constraint is that halves from
+  different register families (HL, IX, IY) cannot appear in the same
+  instruction.
+- ZAX pseudo-opcodes — `ld hl, de`, `ld de, bc`, and the other four pair-to-pair
+  combinations — expand to two 8-bit moves. They add no run-time cost and make
+  16-bit register transfers readable at a glance.
 - Typed function parameters move the register-passing protocol into the
   compiler. The caller names the arguments; the compiler emits the pushes and
   stack cleanup.
@@ -358,6 +442,7 @@ By this point you can:
 - use `succ` and `pred` for typed scalar update
 - write `if`/`else` and `while` loops with `break` and `continue`
 - write a ZAX `func` with typed parameters and a typed return value
+- use IXH/IXL/IYH/IYL and the ZAX pseudo-opcodes for 16-bit register moves
 - write an `op` for inline named instruction sequences
 - explain what each construct in Chapters 12–14 does and what it replaces
 
