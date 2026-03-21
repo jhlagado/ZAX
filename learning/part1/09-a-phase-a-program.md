@@ -1,15 +1,15 @@
-[← I/O and Ports](10-io-and-ports.md) | [Part 1](README.md) | [Typed Storage and Assignment →](12-typed-storage-and-assignment.md)
+[← I/O and Ports](08-io-and-ports.md) | [Part 1](README.md) | [Typed Storage and Assignment →](10-typed-storage-and-assignment.md)
 
-# Chapter 11 — A Complete Program
+# Chapter 9 — A Complete Program
 
-This chapter builds a complete program using everything from Chapters 4–9:
+This chapter builds a complete program using everything from Chapters 3–7:
 a data table, a DJNZ loop, subroutines called from the loop, conditional
 branches, and push/pop register preservation. By the end you will be able to
 follow and write a complete raw Z80 program in ZAX. You will also be able to
 see the specific places where writing raw Z80 gets unwieldy — which is exactly
-what Chapters 12–14 address.
+what Chapters 10–12 address.
 
-Prerequisites: Chapters 4–9.
+Prerequisites: Chapters 3–7.
 
 ---
 
@@ -52,7 +52,7 @@ program will process. The vars section at `$8020` holds the two result bytes.
 
 ## The return clause and register survival
 
-Chapter 9 established that the return clause on a `func` declaration controls
+Chapter 7 established that the return clause on a `func` declaration controls
 which registers the compiler saves and restores. Both `find_max` and
 `count_above` return their result in A, so both are declared `func ...: AF` —
 which tells ZAX not to save and restore AF, leaving A intact for the caller.
@@ -107,7 +107,7 @@ end
 
 `find_max` scans the table and returns the largest byte in A. The loop body uses
 C as a temporary to hold the current element. `cp c` compares A (the running
-maximum) with C (the current element). The rule from Chapter 6: carry is set
+maximum) with C (the current element). The rule from Chapter 4: carry is set
 when A is less than C. `jr nc` skips the `ld a, c` update when A is already
 greater than or equal to C. After eight iterations, A = 91 (`$5B`), the largest
 value in the table.
@@ -220,7 +220,7 @@ the intent instead of the mechanism.
 
 ## What the next three chapters address
 
-Chapters 12–14 introduce three things that each fix one of the problems above.
+Chapters 10–12 introduce three things that each fix one of the problems above.
 
 **Typed variables and `:=`** let you name a value — `count`, `running_max` —
 without tying it to a specific register. You write `count := 0` and the compiler
@@ -242,7 +242,7 @@ None of this hides the machine. Everything translates to the same Z80
 instructions as before. What changes is that the source shows the intent, and
 the compiler writes the scaffolding.
 
-Chapter 12 starts there.
+Chapter 10 starts there.
 
 ---
 
@@ -259,14 +259,14 @@ Chapter 12 starts there.
   programmer has to manage them correctly.
 - Push/pop pairs appear when a function needs to initialize a register that
   already holds an input. The real problem is not having named variables.
-- Chapters 12–14 — typed storage, `if`, and `while` — each address one of these
+- Chapters 10–12 — typed storage, `if`, and `while` — each address one of these
   problems, while generating the same Z80 output.
 
 ## What Comes Next
 
-Chapter 12 introduces typed variables and `:=`: named storage that the compiler
+Chapter 10 introduces typed variables and `:=`: named storage that the compiler
 places on the stack, with no register chosen by hand.
 
 ---
 
-[← I/O and Ports](10-io-and-ports.md) | [Part 1](README.md) | [Typed Storage and Assignment →](12-typed-storage-and-assignment.md)
+[← I/O and Ports](08-io-and-ports.md) | [Part 1](README.md) | [Typed Storage and Assignment →](10-typed-storage-and-assignment.md)

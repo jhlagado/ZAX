@@ -1,6 +1,6 @@
-[← Loading, Storing, Constants](05-loading-storing-constants.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](07-counting-loops-and-djnz.md)
+[← Assembly Language](03-assembly-language.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](05-counting-loops-and-djnz.md)
 
-# Chapter 6 — Flags, Comparisons, and Jumps
+# Chapter 4 — Flags, Comparisons, and Jumps
 
 This chapter explains the flag register, shows how `cp` and `or a` set flags,
 and demonstrates how conditional and unconditional jump instructions use those
@@ -8,7 +8,7 @@ flags to control which instructions execute next. After reading it you will be
 able to follow a short raw Z80 control-flow sequence, trace through a simple
 conditional branch, and read a label-based counted loop.
 
-Prerequisites: Chapters 4–5 (bytes, registers, `ld` modes, labels).
+Prerequisites: Chapter 3 (bytes, registers, LD modes, labels).
 
 ---
 
@@ -317,10 +317,10 @@ counter. Always identify which instruction sets the flag you are about to test.
 
 ## What Comes Next
 
-Chapter 7 introduces `djnz`, the Z80's dedicated decrement-and-branch-if-not-
+Chapter 5 introduces `djnz`, the Z80's dedicated decrement-and-branch-if-not-
 zero instruction, and shows how it reduces the two-instruction counter-decrement-
 and-test pattern to a single instruction.
 
 ---
 
-[← Loading, Storing, Constants](05-loading-storing-constants.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](07-counting-loops-and-djnz.md)
+[← Assembly Language](03-assembly-language.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](05-counting-loops-and-djnz.md)

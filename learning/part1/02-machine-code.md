@@ -1,4 +1,4 @@
-[← The Computer](01-the-computer.md) | [Part 1](README.md) | [The Assembler →](03-the-assembler.md)
+[← The Computer](01-the-computer.md) | [Part 1](README.md) | [Assembly Language →](03-assembly-language.md)
 
 # Chapter 2 — Machine Code
 
@@ -111,4 +111,4 @@ An assembler does not change the fact that the CPU sees bytes. It changes what y
 
 ---
 
-[← The Computer](01-the-computer.md) | [Part 1](README.md) | [The Assembler →](03-the-assembler.md)
+[← The Computer](01-the-computer.md) | [Part 1](README.md) | [Assembly Language →](03-assembly-language.md)

@@ -1,6 +1,6 @@
-[← Counting Loops and DJNZ](07-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](09-stack-and-subroutines.md)
+[← Counting Loops and DJNZ](05-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](07-stack-and-subroutines.md)
 
-# Chapter 8 — Data Tables and Indexed Access
+# Chapter 6 — Data Tables and Indexed Access
 
 This chapter shows how to lay out a byte or word table in memory, and how to
 read entries from it using HL as a sequential pointer and IX as a displaced-
@@ -8,7 +8,7 @@ access pointer. After reading it you will be able to define a small table,
 load its base address into HL or IX, and read elements either sequentially in
 a loop or by fixed offset.
 
-Prerequisites: Chapters 4–7 (registers, `ld` modes, labels, DJNZ loops).
+Prerequisites: Chapters 3–5 (registers, `ld` modes, labels, DJNZ loops).
 
 ---
 
@@ -230,7 +230,7 @@ ld (max_score), a
 ```
 
 A holds the running maximum. Each iteration loads the current byte into C and
-compares A with C using `cp c`. The rule from Chapter 6: after `cp c`, carry is
+compares A with C using `cp c`. The rule from Chapter 4: after `cp c`, carry is
 set if A is less than C. `jr nc` skips the update when A is already greater than
 or equal to C. `ld a, c` runs only when a new maximum is found. After six
 entries, `max_score` holds 60 (`$3C`).
@@ -330,10 +330,10 @@ call.
 
 ## What Comes Next
 
-Chapter 9 introduces `call` and `ret`, explains how the hardware stack works,
+Chapter 7 introduces `call` and `ret`, explains how the hardware stack works,
 and shows how to write reusable subroutines that receive values in registers and
 return results to the caller.
 
 ---
 
-[← Counting Loops and DJNZ](07-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](09-stack-and-subroutines.md)
+[← Counting Loops and DJNZ](05-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](07-stack-and-subroutines.md)
