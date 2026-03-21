@@ -2767,7 +2767,7 @@ compiler-managed. You do not write it; you write `hl := count`.
 
 ## Bare-name access vs address dereference
 
-Chapter 3 established the bare-name rule: the bare form means "the typed value
+ZAX distinguishes two forms: the bare name means "the typed value
 at this location" and `(name)` means "memory at this address." With typed
 locals, the bare form is the only form used for `:=`. Typed locals live at
 IX-relative offsets, not at fixed absolute addresses; the dereference form
