@@ -22,7 +22,8 @@
     "check:source-file-sizes": "node scripts/check-source-file-sizes.mjs",
     "zax": "npm run build && node dist/src/cli.js",
     "regen:language-tour": "bash scripts/regenerate-language-tour.sh",
-    "regen:codegen-corpus": "node scripts/regenerate-codegen-corpus.mjs"
+    "regen:codegen-corpus": "node scripts/regenerate-codegen-corpus.mjs",
+    "book": "bash scripts/build-book.sh"
   },
   "devDependencies": {
     "@types/node": "^22.13.1",
