@@ -34,10 +34,10 @@ Current active docs:
 
 - `docs/design/exact-size-layout-and-indexing.md`
 - `docs/design/grammar-parser-convergence-plan.md`
-- `docs/design/structured-loop-escape.md`
 - `docs/design/z80-programming-with-zax.md`
+- `docs/design/zax-algorithms-course.md`
 
-These describe direction and decisions. They are not normative.
+These describe current direction and decisions. Landed or superseded design notes belong under `docs/archive/design/`.
 
 ### `docs/work/`
 

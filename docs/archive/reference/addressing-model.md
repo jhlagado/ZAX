@@ -8,32 +8,53 @@ Goal: express every allowed load/store addressing shape as a short pipeline of r
 
 ## Source Semantics
 
-ZAX uses variable semantics for named storage. A bare variable name means the stored value, not the address of the storage.
+ZAX has two distinct name-resolution surfaces, and this document only makes sense if they stay separate.
 
-> **Key invariant:** Bare variable names (module-scope `data` declarations, frame vars, args, scalar `data`) are value accesses, not address expressions. In load/store contexts, the compiler must lower them as reads/writes of the stored value. Arithmetic on bare scalar variables as if they were addresses is invalid and must be rejected.
+> **Key invariant:** `:=` and other typed storage/value contexts use typed semantics. Raw Z80 instruction operands use classic assembler-style semantics.
 
-- Scalars (module-scope symbols, frame vars, args, scalar `data`) are used by value.
-- Indexable aggregates (arrays, records) are still source-level variables, but the compiler transparently passes their storage reference when an aggregate-typed operation needs a base.
-- Indexed forms such as `arr[i]` and field forms such as `rec.field` mean the stored element/field value.
-- This address materialization is a lowering detail only. It does not change the source-level semantics into raw symbol or pointer arithmetic.
-- The only source-level names that are address-like are control-flow labels used by jump/call forms. Raw `DB` / `DW` style storage labels are future work and are out of scope here.
+Typed/value surface:
+
+- In `:=`, typed call boundaries, field access, and indexed access, a bare storage name means the stored value or storage path named by that symbol.
+- `arr[i]` means the selected element.
+- `rec.field` means the selected field.
+- These forms may require address materialization internally, but that remains a lowering detail.
+
+Raw instruction surface:
+
+- In raw Z80 instruction operands, module-scope storage names behave as labels.
+- Bare `name` means the storage address / base address.
+- Parenthesized `(name)` means dereference at that address, with width implied by the instruction form.
+- This applies to scalar globals and aggregate globals alike.
+- Inside framed functions, scalar arg/local names may also be used as symbolic IX-relative slot offsets in raw immediates and raw indexed operands.
+- Non-scalar parameter names and alias-only locals are not valid raw IX-offset symbols.
 
 Quick reference:
 
-| Source form         | Meaning in source         | Lowering intent                      |
-| ------------------- | ------------------------- | ------------------------------------ |
-| `glob_b`            | scalar variable value     | read/write the stored byte           |
-| `arr[i]`            | element access            | load/store element, or continue path |
-| `rec.field`         | field access              | load/store field, or continue path   |
-| `loop` in `jp loop` | control-flow target label | branch/call target                   |
+| Source form                 | Context                 | Meaning                              |
+| --------------------------- | ----------------------- | ------------------------------------ |
+| `glob_b`                    | `:=` / typed surface    | scalar value/path                    |
+| `glob_b`                    | raw `ld`/`jp`/...       | address / label                      |
+| `(glob_b)`                  | raw `ld`/`inc`/...      | dereference of `glob_b`              |
+| `arr[i]`                    | typed surface           | element access                       |
+| `rec.field`                 | typed surface           | field access                         |
+| `arg1` in `(ix+arg1+0)`     | raw indexed operand     | scalar frame-slot displacement       |
+| `loop` in `jp loop`         | raw control flow        | branch/call target label             |
 
 Practical rule:
 
-- `ld a, glob_b` loads the byte stored in `glob_b`.
-- `ld glob_b, a` stores into `glob_b`.
-- Bare scalar variables are not pointer values and are not valid for arithmetic.
-- Array/record addressing in this document describes how the compiler lowers aggregate access internally; it does not expose general address semantics to user code.
-- The emitter must never reinterpret a bare scalar variable as an immediate address operand. If lowering needs an address internally, it derives that from the variable's storage location; source semantics stay value-based.
+- `hl := count` uses typed semantics and reads the value stored in `count`.
+- `ld hl, count` uses raw semantics and loads the address of `count`.
+- `ld hl, (count)` reads the word stored at `count`.
+- `ld hl, arr` loads the base address of aggregate global `arr`.
+- `ld a, (arr)` reads the first byte at `arr`.
+- `ld c, (ix+arg1+0)` uses scalar argument `arg1` as an IX-relative displacement symbol.
+- There is no corresponding raw symbolic form for non-scalar frame parameters; those remain typed-storage references carried in one 16-bit slot.
+
+Notation used below:
+
+- `glob` means a module-scope storage symbol used as a raw absolute base/dereference in generated or canonical raw forms.
+- `fvar` means a resolved IX-relative frame displacement, not a literal source identifier.
+- Snippets labelled `ZAX` in this implementation note describe the lowering intent or canonical form being discussed; they are not always literal user-facing source syntax.
 
 ## 1. Step Library (reusable "words")
 
