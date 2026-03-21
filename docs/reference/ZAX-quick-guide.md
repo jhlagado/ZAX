@@ -1036,9 +1036,19 @@ IX-4 .. IX-3    local 1
 
 Each argument and local scalar occupies one 16-bit slot regardless of declared type. For `byte` parameters, the value is in the low byte of the slot; the high byte is ignored by the callee (recommended: zero-extend when pushing).
 
-#### Raw IX Slot Offsets
+#### Raw Names in Raw Z80 Code
 
-In raw instruction operands and immediates, argument and local names can be used as IX-relative slot offsets:
+Module-scope storage names behave like labels in raw instruction operands, regardless of declared type:
+
+```asm
+ld hl, count   ; address of scalar global
+ld hl, (count) ; stored word at scalar global
+ld hl, arr     ; base address of array/record global
+ld a, (arr)    ; first byte at arr
+ld hl, (arr)   ; first word at arr (little-endian)
+```
+
+Function-scope raw symbolic offsets are narrower. In raw instruction operands and immediates, scalar argument and local names can be used as IX-relative slot offsets:
 
 ```asm
 ld c, (ix+arg1+0)
@@ -1047,7 +1057,9 @@ ld e, (ix+tmp+0)
 ld d, (ix+tmp+1)
 ```
 
-Arguments resolve to positive IX displacements; locals resolve to negative displacements. This is separate from typed/value semantics in `:=` — bare names there still mean typed values/paths, not frame offsets. Only scalar locals/args with real frame slots participate; alias-only locals do not.
+Arguments resolve to positive IX displacements; locals resolve to negative displacements. This is separate from typed/value semantics in `:=` — bare names there still mean typed values/paths, not frame offsets.
+
+Only scalar locals/args with real frame slots participate in this raw IX-offset form. Non-scalar parameters are still passed in one 16-bit frame slot as storage references, but their names are not valid raw IX-offset symbols. Alias-only locals also do not participate.
 
 #### Epilogue (compiler-generated)
 
