@@ -155,12 +155,24 @@ the caller sees stale flag values rather than the computed result.
 
 ## `push` and `pop`: saving and restoring registers
 
-`push bc` writes the current value of the register pair BC onto the stack
-(two bytes, in the order that `pop bc` expects to recover them). SP decreases
-by two.
+`push` and `pop` are simple operations, described most clearly in terms of
+virtual `ld` instructions:
 
-`pop bc` reads two bytes from the stack and places them into BC. SP increases
-by two.
+`push hl` does two things: first SP is decremented by two, then the equivalent
+of `ld (sp), hl` happens — the contents of HL are written to the two bytes at
+the new SP address. (I say "equivalent" because `ld (sp), hl` is not an actual
+Z80 instruction — you cannot use it directly. But it describes exactly what
+`push` does internally.)
+
+`pop hl` is the inverse: the equivalent of `ld hl, (sp)` happens first — two
+bytes are read from the address in SP into HL — then SP is incremented by two.
+
+The operand can be any of AF, BC, DE, HL, IX, or IY. The important thing to
+remember is that the stack does not know whose value it is holding. All register
+pairs are saved to and restored from the same area of memory — the bytes at and
+below SP. The stack is the very same RAM where your program and variables
+reside. There is nothing magical about it; it is ordinary memory that SP
+happens to point at.
 
 A subroutine uses `push` / `pop` to preserve registers it needs to modify
 internally. The pattern:

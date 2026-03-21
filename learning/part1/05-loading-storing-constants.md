@@ -22,7 +22,12 @@ ld  destination, source
 ```
 
 `ld` never performs arithmetic; it only copies. The source value is placed in
-the destination unchanged.
+the destination unchanged. The two operands must match in size: you cannot load
+an 8-bit value into a 16-bit register, or a 16-bit value into an 8-bit
+register, even when it seems like the value would fit. There is no automatic
+type conversion in assembly. If you have a byte value and you need it in a
+register pair, you must place it explicitly — for example, load the byte into
+the low register and zero the high register yourself.
 
 The four source/destination combinations you will use most often are:
 
