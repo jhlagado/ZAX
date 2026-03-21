@@ -128,14 +128,7 @@ Here is the complete Z80 register set:
 
 When B and C are used as the pair BC, B holds the high byte and C holds the low byte — the same pattern as DE (D high, E low) and HL (H high, L low). IX and IY follow the same rule with their halves. So for example if HL = `$1A2B`, then H = `$1A` and L = `$2B`.
 
-### Shadow Registers
-
-There is a second, hidden copy of A, F, B, C, D, E, H, and L — denoted A′, F′, B′, C′, D′, E′, H′, and L′. These are the **shadow registers**. You cannot use them directly in instructions. Two dedicated exchange instructions swap the main registers with their shadow counterparts:
-
-- `EX AF, AF′` swaps A and F with A′ and F′.
-- `EXX` swaps BC, DE, and HL with BC′, DE′, and HL′ simultaneously.
-
-One `EXX` moves six registers in a single instruction — much faster than six individual saves to memory. This makes the shadow registers useful for very tight interrupt handlers or innermost loops where you need to save and restore a full register state instantly.
+The Z80 also has a second, hidden copy of A, F, B, C, D, E, H, and L called the **shadow registers**. They are covered in Chapter 9, where you will have a practical reason to use them.
 
 ---
 
@@ -166,14 +159,6 @@ The Z80 starts with PC at `$0000` after a reset. The first byte fetched is there
 
 ---
 
-## Input and Output
-
-Memory covers data and programs, but the Z80 also communicates with the outside world through **I/O ports** — a separate 256-address space, numbered 0 to 255, entirely independent of the `$0000`–`$FFFF` memory space. Each port typically connects to a hardware peripheral: a keyboard, a display, a serial line, or a timer. The instructions `IN` and `OUT` read from and write to ports.
-
-Which device sits at which port number depends on the hardware. We will cover I/O in detail in Chapter 10, once you have the instruction set under your belt.
-
----
-
 ## Summary
 
 - Memory is 65,536 bytes at addresses `$0000`–`$FFFF`; each byte holds 0–255
@@ -185,7 +170,6 @@ Which device sits at which port number depends on the hardware. We will cover I/
 - The CPU has 20+ named registers; the main working registers are A, BC, DE, HL, IX, IY, SP, and PC
 - The flags register F records results of operations; its bits (S, Z, H, P/V, N, C) control conditional branches
 - PC always holds the address of the next instruction; the CPU fetches and executes endlessly
-- I/O ports form a separate 256-address space for hardware peripherals
 
 ---
 
