@@ -219,6 +219,29 @@ about the stack.
 
 ---
 
+## Shadow registers: saving state without the stack
+
+The Z80 has a second, hidden copy of A, F, B, C, D, E, H, and L — denoted A′,
+F′, B′, C′, D′, E′, H′, and L′. These are the **shadow registers**. You cannot
+use them directly in instructions. Two dedicated exchange instructions swap the
+main registers with their shadow counterparts:
+
+- `EX AF, AF′` swaps A and F with A′ and F′.
+- `EXX` swaps BC, DE, and HL with BC′, DE′, and HL′ simultaneously.
+
+One `EXX` moves six registers in a single instruction — much faster than six
+individual `push` / `pop` pairs. This makes the shadow registers useful for
+very tight interrupt handlers or innermost loops where you need to save and
+restore a full register state instantly.
+
+The trade-off is that there is only one shadow set. If both your main code and
+an interrupt handler rely on `EXX`, the interrupt can silently destroy the
+values the main code stored. `push` and `pop` work at any nesting depth; shadow
+registers do not. Use them when speed matters and you can guarantee that only
+one context uses them at a time.
+
+---
+
 ## Conditional return: `ret cc`
 
 The Z80 also provides conditional return instructions: `ret z`, `ret nz`,
@@ -396,6 +419,8 @@ connects them.
 - Unbalanced push/pop causes `ret` to jump to garbage, because the wrong bytes
   are at the top of the stack when `ret` reads the return address.
 - `ret cc` returns conditionally; the stack must be balanced at that point too.
+- The shadow registers (A′–L′) provide one-instruction save/restore via `EXX`
+  and `EX AF, AF′`, but only one context can use them safely at a time.
 - Subroutines can call other subroutines. Each call pushes a return address;
   each ret pops one. The stack depth grows with each nested call.
 - A ZAX `func` block emits the cleanup and `ret` automatically at `end`. A
