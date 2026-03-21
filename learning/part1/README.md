@@ -27,14 +27,18 @@ Continue with [Part 2 — Algorithms and Data Structures in ZAX](../part2/README
 | 13 | [Structured Control Flow](13-structured-control-flow.md) | `if`/`while`/`break`/`continue`, `select`/`case`, structured programming in ZAX |
 | 14 | [Functions, Arguments, and Op](14-functions-arguments-and-op.md) | ZAX functions, typed parameters, `op` for inline expansion |
 
-Example files are under `examples/` in this directory.
+Example files are under `examples/` in this directory. The examples are numbered
+starting from `00` and correspond to chapters starting from Chapter 3:
+`00_first_program.zax` goes with Chapter 3, `01_register_moves.zax` with
+Chapter 4, and so on. Chapters 1 and 2 have no example files — they cover
+concepts that precede writing code.
 
 ---
 
 ## How to compile the examples
 
 ```sh
-npm run zax -- learning/part1/examples/00_first_program.zax
+npm run zax -- learning/part1/examples/01_register_moves.zax
 ```
 
 ---

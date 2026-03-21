@@ -20,7 +20,8 @@ This part is for readers who already understand the Z80 basics — either from P
 | 8  | [Pointer Structures](08-pointer-structures.md) | Typed reinterpretation, unions, linked list, binary search tree. |
 | 9  | [Gaps and Futures](09-gaps-and-futures.md) | What ZAX can't yet do, known language gaps, eight queens capstone. |
 
-Chapter 1's examples are in `examples/unit1/`, Chapter 2's in `examples/unit2/`, and so on.
+Each chapter's examples are in a matching subdirectory: Chapter 1's examples
+are in `examples/unit1/`, Chapter 2's in `examples/unit2/`, and so on.
 
 ---
 
@@ -29,8 +30,6 @@ Chapter 1's examples are in `examples/unit1/`, Chapter 2's in `examples/unit2/`,
 ```sh
 npm run zax -- learning/part2/examples/unit1/fibonacci.zax
 ```
-
-Example files are under `examples/` in this directory, organised by unit.
 
 ---
 
