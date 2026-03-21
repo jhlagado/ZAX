@@ -8,15 +8,17 @@ Goal: express every allowed load/store addressing shape as a short pipeline of r
 
 ## Source Semantics
 
-ZAX uses variable semantics for named storage. A bare variable name means the stored value, not the address of the storage.
+ZAX uses two source-level name modes depending on context: typed value semantics for `:=`/typed-call positions, and raw Z80 operand semantics for ordinary instruction operands.
 
-> **Key invariant:** Bare variable names (module-scope `data` declarations, frame vars, args, scalar `data`) are value accesses, not address expressions. In load/store contexts, the compiler must lower them as reads/writes of the stored value. Arithmetic on bare scalar variables as if they were addresses is invalid and must be rejected.
+> **Key invariant:** Typed value semantics and raw Z80 operand semantics are distinct. In `:=` and typed call-argument positions, bare typed names mean stored values. In raw Z80 instruction operands, module-scope typed data names behave like ordinary labels, and framed-function locals/args may also appear as IX-relative slot-offset symbols in immediate/displacement expressions.
 
-- Scalars (module-scope symbols, frame vars, args, scalar `data`) are used by value.
+- Scalars in `:=`/typed-call contexts are used by value.
+- Module-scope typed data names in raw instruction operands use label semantics (`name` = address, `(name)` = dereference).
+- Framed locals/args in raw immediate/displacement contexts may resolve to signed IX-relative slot offsets.
 - Indexable aggregates (arrays, records) are still source-level variables, but the compiler transparently passes their storage reference when an aggregate-typed operation needs a base.
 - Indexed forms such as `arr[i]` and field forms such as `rec.field` mean the stored element/field value.
 - This address materialization is a lowering detail only. It does not change the source-level semantics into raw symbol or pointer arithmetic.
-- The only source-level names that are address-like are control-flow labels used by jump/call forms. Raw `DB` / `DW` style storage labels are future work and are out of scope here.
+- Control-flow labels remain address-like in jump/call contexts. Module-scope typed data names are also address-like in raw instruction operands, and framed locals/args are offset-like in raw IX-displacement expressions.
 
 Quick reference:
 
