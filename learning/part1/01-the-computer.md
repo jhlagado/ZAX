@@ -62,23 +62,25 @@ You will see hex constantly in Z80 work. Every opcode, every address, every cons
 
 ## Memory
 
-The Z80 can address 65,536 bytes of memory, at addresses `$0000` through `$FFFF`. Think of it as a flat array: 65,536 numbered slots, each holding one byte. The number that identifies a slot is its **address**. To read or write any byte, you name its address.
+The Z80 has a 16-bit address bus, which means it can address 2<sup>16</sup> = 65,536 bytes of memory, at addresses `$0000` through `$FFFF`. Think of it as a flat array: 65,536 numbered slots, each holding one byte. The number that identifies a slot is its **address**. To read or write any byte, you name its address.
 
-Two types of memory occupy different parts of this address space:
+The CPU itself does not know or care what kind of memory chip sits behind any given address. It simply puts an address on the bus and reads or writes a byte. The hardware designer decides which addresses connect to which chips. Two kinds of memory chip are common:
 
-**ROM** (read-only memory) holds content that cannot be changed during normal operation and retains its contents when power is removed. On the Z80, ROM almost always occupies the lowest addresses, starting at `$0000`. The program that runs at power-on must live in ROM, because the CPU always begins executing from address `$0000`.
+**ROM** (read-only memory) contains pre-programmed data that cannot be changed during normal operation. ROM retains its contents when power is removed. It is used for code and data that must survive power cycles — bootloaders, fixed routines, lookup tables.
 
-**RAM** (random-access memory) holds content that can be freely read and written. RAM loses its contents when power is removed. RAM normally occupies the upper portion of the address space.
+**RAM** (random-access memory) can be freely read and written, but loses its contents when power is removed. RAM is where your running program stores variables, the stack, and any data it creates or modifies.
 
-The exact layout depends on the hardware. A small Z80 system might look like this:
+A system's **memory map** describes which address ranges connect to which chips. There is no single standard layout — it varies from system to system. A small Z80 board might look like this:
 
 ```
-$0000–$3FFF   ROM   (16 KB — startup code, fixed routines)
-$4000–$7FFF   —     (unmapped or memory-mapped I/O)
-$8000–$FFFF   RAM   (32 KB — your programs and data)
+$0000–$1FFF   ROM   (8 KB — startup code)
+$2000–$7FFF   RAM   (24 KB — program and data)
+$8000–$FFFF   —     (unmapped, or more RAM, or memory-mapped I/O)
 ```
 
-Other systems use completely different layouts. The important thing is that on any Z80 system, ROM begins at `$0000`.
+Another system might have ROM at the top and RAM at the bottom, or multiple ROM chips at different address ranges, or bank-switched memory that maps different physical chips into the same address window depending on a control register. The Z80 imposes only one constraint: when it powers on or resets, the program counter starts at `$0000`, so whatever memory is mapped at that address must contain valid code. On many systems that means ROM at `$0000`, but on others, hardware logic copies code into RAM before the CPU starts, or a boot ROM runs briefly and then switches itself out of the address space. The point is that the memory map is a hardware decision, not a CPU rule.
+
+What matters for you as a programmer is knowing the memory map of the specific system you are targeting. The assembler needs to know where to place your code and data so that the addresses in the output binary match the hardware layout.
 
 ### Endianness
 
@@ -152,7 +154,7 @@ The flags register F contains eight bits, each of which records something about 
 | 1 | N | Subtract | Set if the last operation was a subtraction. Used internally for BCD correction. |
 | 0 | C | Carry | Set if the last operation produced a carry out of bit 7, or a borrow in the case of subtraction. |
 
-Not every instruction updates every flag. Some instructions update all flags; some update only Z and C; some leave all flags unchanged. You will learn which flags each instruction affects as you encounter them in Part 2.
+Not every instruction updates every flag. Some instructions update all flags; some update only Z and C; some leave all flags unchanged. You will learn which flags each instruction affects as you encounter them in later chapters.
 
 ---
 
@@ -160,7 +162,7 @@ Not every instruction updates every flag. Some instructions update all flags; so
 
 The CPU does one thing, over and over: read the byte at address PC, interpret it as an instruction, carry it out, and advance PC to the next instruction. This is the **fetch-execute cycle**.
 
-The Z80 starts with PC at `$0000`. The first byte fetched is therefore the byte at the lowest address in ROM — which is why ROM must occupy `$0000`. Some instructions are one byte long, some are two, three, or four. After executing an instruction, PC advances by exactly as many bytes as that instruction occupied, unless the instruction itself changes PC — jumps and calls do exactly that.
+The Z80 starts with PC at `$0000` after a reset. The first byte fetched is therefore the byte at address `$0000` — whatever memory the hardware has mapped there. Some instructions are one byte long, some are two, three, or four. After executing an instruction, PC advances by exactly as many bytes as that instruction occupied, unless the instruction itself changes PC — jumps and calls do exactly that.
 
 ---
 
@@ -168,7 +170,7 @@ The Z80 starts with PC at `$0000`. The first byte fetched is therefore the byte 
 
 Memory covers data and programs, but the Z80 also communicates with the outside world through **I/O ports** — a separate 256-address space, numbered 0 to 255, entirely independent of the `$0000`–`$FFFF` memory space. Each port typically connects to a hardware peripheral: a keyboard, a display, a serial line, or a timer. The instructions `IN` and `OUT` read from and write to ports.
 
-Which device sits at which port number depends on the hardware. We will cover I/O in detail in Part 2, Chapter 7, once you have the instruction set under your belt.
+Which device sits at which port number depends on the hardware. We will cover I/O in detail in Chapter 10, once you have the instruction set under your belt.
 
 ---
 
@@ -179,7 +181,7 @@ Which device sits at which port number depends on the hardware. We will cover I/
 - The `0b` prefix marks binary numbers; the `$` prefix marks hexadecimal numbers
 - Four bits = one hex digit; conversion between binary and hex is direct and requires no arithmetic
 - The Z80 is little-endian: the low byte of a word is stored at the lower address
-- ROM occupies `$0000` (the startup address); RAM occupies the upper address space
+- The memory map (which addresses are ROM, which are RAM) varies by system; PC starts at `$0000` after reset, so that address must contain valid code
 - The CPU has 20+ named registers; the main working registers are A, BC, DE, HL, IX, IY, SP, and PC
 - The flags register F records results of operations; its bits (S, Z, H, P/V, N, C) control conditional branches
 - PC always holds the address of the next instruction; the CPU fetches and executes endlessly
