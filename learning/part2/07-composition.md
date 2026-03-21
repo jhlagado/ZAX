@@ -175,7 +175,7 @@ The evaluation loop in `rpn_demo` is built on typed locals: `token_index`,
 algorithm's intent across what would otherwise be a tangle of register
 assignments. Without them, the code would require careful tracking of which
 register holds which intermediate value at each point in the dispatch arms — the
-same bookkeeping that raw assembly requires and that ZAX structured storage
+same manual tracking that raw assembly requires and that ZAX structured storage
 eliminates.
 
 The typed paths do not hide anything. `right_value := hl` emits a frame store;
