@@ -141,6 +141,32 @@ pattern appears in almost every Z80 program.
 
 ---
 
+## IX, IY, and the half-register restriction
+
+IX and IY are 16-bit index registers used primarily for displaced memory access
+(`ld a, (ix+3)`). Each can be split into 8-bit halves: IXH / IXL and IYH / IYL.
+These halves are useful for holding temporary byte values when you have run out
+of general registers.
+
+There is a hardware constraint to be aware of. The Z80 encodes H, L, IXH, IXL,
+IYH, and IYL using the same bit positions in the instruction byte. The CPU
+resolves the ambiguity with a prefix byte: unprefixed means H/L, the `$DD`
+prefix means IXH/IXL, and the `$FD` prefix means IYH/IYL. Because a single
+instruction can only carry one prefix, you cannot mix halves from different
+groups in the same instruction:
+
+- `ld ixh, ixl` is valid — both halves share the `$DD` prefix.
+- `ld l, h` is valid — both are unprefixed HL halves.
+- `ld h, ixl` is **impossible** — H is unprefixed, IXL needs `$DD`.
+- `ld iyh, ixl` is **impossible** — IYH needs `$FD`, IXL needs `$DD`.
+
+The general rule: in any single `ld` instruction, the halves of HL, IX, and IY
+are mutually exclusive. You can freely use any combination of A, B, C, D, E
+with any of these halves, but you cannot cross the HL / IX / IY boundary within
+one instruction.
+
+---
+
 ## The example: `learning/part1/examples/01_register_moves.zax`
 
 ```zax
