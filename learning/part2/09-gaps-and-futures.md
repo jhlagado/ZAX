@@ -98,9 +98,8 @@ a recursive call chain from inside a nested frame. In a language with named
 exits from nested structures, the termination would propagate structurally
 instead of through a shared flag.
 
-The evidence is now written code, not speculation. The issue is open and the
-gap is grounded, but no design has been finalised. Whether the right answer is
-a named exit label, a propagated break, or something else is genuinely open.
+No design has been finalised. Whether the right answer is a named exit label,
+a propagated break, or something else is an open question.
 
 ---
 
@@ -109,10 +108,10 @@ a named exit label, a propagated break, or something else is genuinely open.
 Working through the course examples surfaced the following gaps.
 
 **Already addressed**: Structured loop escape — `break` and `continue` — was
-the highest-priority signal from `eight_queens.zax` and the broader course. It
-is implemented and available on the current surface. The course examples use it.
+the highest-priority gap identified from `eight_queens.zax` and the broader
+course. It is now implemented. The course examples use it.
 
-**Real and grounded, design open**:
+**Design open**:
 
 - _Named exit from nested structures._ The `found_solution` flag in
   `eight_queens.zax` is a direct workaround for this. The gap is recorded;

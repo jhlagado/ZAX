@@ -260,7 +260,7 @@ loop_top:
 end
 ```
 
-**Part 1 — equality test.** `ld a, Limit` loads 5 into A. `cp 5` subtracts 5
+**Section A — equality test.** `ld a, Limit` loads 5 into A. `cp 5` subtracts 5
 from A and sets Z. Because A equals 5, Z is set. `jp nz, not_equal` tests
 whether Z is clear: it is set, so the jump does not occur. Execution continues
 through `ld a, 1 / ld (found), a`, then `jp done_compare` skips the else-block
@@ -269,7 +269,7 @@ and lands at `done_compare:`.
 If A had held any value other than 5, Z would have been clear, `jp nz` would
 have branched to `not_equal:`, and `found` would have been set to 0.
 
-**Part 2 — zero test with `or a`.** `ld a, 0` loads zero. `or a` sets Z because
+**Section B — zero test with `or a`.** `ld a, 0` loads zero. `or a` sets Z because
 A is zero. `jp z, was_zero` branches because Z is set. The instruction
 `ld a, $AA` executes as the "zero was detected" branch; this marks the register
 so you can verify in a debugger or simulator that this path ran. `jp skip_zero`
@@ -278,10 +278,10 @@ then skips past the end of the zero-branch.
 This pair — `jp z, was_zero` / `jp skip_zero` — is the raw conditional branch
 pattern defined in "Label-based control flow structure" above: set a flag, use a
 conditional jump to enter or skip a consequence block, and place an exit label
-after it. The only difference from the `cp`-based Part 1 is that `or a` sets
+after it. The only difference from the `cp`-based Section A is that `or a` sets
 the flag here instead of `cp`.
 
-**Part 3 — counted loop with `dec` / `jp nz`.** `ld b, Limit` initializes B to
+**Section C — counted loop with `dec` / `jp nz`.** `ld b, Limit` initializes B to
 5. At `loop_top:`, the body reads `counter` from RAM, increments it, and stores
 it back. `dec b` decrements B and sets Z when B reaches zero. `jp nz, loop_top`
 branches back while B is non-zero.

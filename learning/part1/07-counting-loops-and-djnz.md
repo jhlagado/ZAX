@@ -118,7 +118,7 @@ pre-test is needed.
 ## What the registers hold after a loop
 
 It is worth pausing to think about what state the CPU is in after a loop
-finishes. Consider the counted loop from Part 1 of the example below, which
+finishes. Consider the counted loop from Section A of the example below, which
 sums the five bytes `{ 3, 7, 2, 8, 5 }`:
 
 ```zax
@@ -235,7 +235,7 @@ all valid).
 
 The program runs three loop forms side by side over the same five-element table.
 
-**Part 1 — DJNZ counted loop.**
+**Section A — DJNZ counted loop.**
 
 ```zax
 ld hl, addends
@@ -253,7 +253,7 @@ sets B to 5. The body adds the current byte at HL to A and increments HL. DJNZ
 decrements B and loops back while B is non-zero. After 5 iterations B = 0, the
 loop exits, and `total` receives 25 ($19): the sum of 3 + 7 + 2 + 8 + 5.
 
-**Part 2 — sentinel loop (cp / jr z).**
+**Section B — sentinel loop (cp / jr z).**
 
 ```zax
 ld hl, addends
@@ -278,7 +278,7 @@ matched byte. DJNZ provides the overrun guard: if 8 were not present, the loop
 would exhaust all five entries and fall through to `ld a, $FF`. Because 8 is
 the fourth entry, `scanval` receives 8.
 
-**Part 3 — flag-exit loop.**
+**Section C — flag-exit loop.**
 
 ```zax
 ld hl, addends
