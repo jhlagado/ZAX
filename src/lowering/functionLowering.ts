@@ -910,6 +910,8 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     symbolicTargetFromExpr: symbolicTargetFromExprForAsm,
     evalImmExpr: evalImmExprForAsm,
     resolveScalarBinding,
+    isModuleStorageName: (name) => storageTypes.has(name.toLowerCase()),
+    isFrameSlotName: (name) => stackSlotOffsets.has(name.toLowerCase()),
     resolveScalarTypeForEa,
     resolveScalarTypeForLd,
     resolveEa,

@@ -43,6 +43,8 @@ type Context = {
   ) => { baseLower: string; addend: number } | undefined;
   evalImmExpr: (expr: Extract<AsmOperandNode, { kind: 'Imm' }>['expr']) => number | undefined;
   resolveScalarBinding: (name: string) => 'byte' | 'word' | 'addr' | undefined;
+  isModuleStorageName: (name: string) => boolean;
+  isFrameSlotName: (name: string) => boolean;
   resolveScalarTypeForEa: (ea: EaExprNode) => ScalarKind | undefined;
   resolveScalarTypeForLd: (ea: EaExprNode) => ScalarKind | undefined;
   resolveEa: (ea: EaExprNode, span: SourceSpan) => EaResolution | undefined;
@@ -223,6 +225,85 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     return false;
   };
 
+  const isRawLdLabelName = (name: string): boolean =>
+    ctx.isModuleStorageName(name) && !ctx.isFrameSlotName(name);
+
+  const emitAbs16LdFixup = (
+    dst: AsmOperandNode,
+    src: AsmOperandNode,
+    span: AsmInstructionNode['span'],
+  ): boolean => {
+    const dstName = dst.kind === 'Reg' ? dst.name.toUpperCase() : undefined;
+    const srcName = src.kind === 'Reg' ? src.name.toUpperCase() : undefined;
+    const memExpr = dst.kind === 'Mem' ? dst.expr : src.kind === 'Mem' ? src.expr : undefined;
+    if (!memExpr || memExpr.kind !== 'EaName') return false;
+    const baseLower = memExpr.name.toLowerCase();
+    if (ctx.isFrameSlotName(baseLower)) return false;
+
+    if (dst.kind === 'Reg' && src.kind === 'Mem') {
+      if (dstName === 'A') {
+        ctx.emitAbs16Fixup(0x3a, baseLower, 0, span);
+        return true;
+      }
+      if (dstName === 'HL') {
+        ctx.emitAbs16Fixup(0x2a, baseLower, 0, span);
+        return true;
+      }
+      if (dstName === 'BC') {
+        ctx.emitAbs16FixupPrefixed(0xed, 0x4b, baseLower, 0, span);
+        return true;
+      }
+      if (dstName === 'DE') {
+        ctx.emitAbs16FixupPrefixed(0xed, 0x5b, baseLower, 0, span);
+        return true;
+      }
+      if (dstName === 'SP') {
+        ctx.emitAbs16FixupPrefixed(0xed, 0x7b, baseLower, 0, span);
+        return true;
+      }
+      if (dstName === 'IX') {
+        ctx.emitAbs16FixupPrefixed(0xdd, 0x2a, baseLower, 0, span);
+        return true;
+      }
+      if (dstName === 'IY') {
+        ctx.emitAbs16FixupPrefixed(0xfd, 0x2a, baseLower, 0, span);
+        return true;
+      }
+    }
+
+    if (dst.kind === 'Mem' && src.kind === 'Reg') {
+      if (srcName === 'A') {
+        ctx.emitAbs16Fixup(0x32, baseLower, 0, span);
+        return true;
+      }
+      if (srcName === 'HL') {
+        ctx.emitAbs16Fixup(0x22, baseLower, 0, span);
+        return true;
+      }
+      if (srcName === 'BC') {
+        ctx.emitAbs16FixupPrefixed(0xed, 0x43, baseLower, 0, span);
+        return true;
+      }
+      if (srcName === 'DE') {
+        ctx.emitAbs16FixupPrefixed(0xed, 0x53, baseLower, 0, span);
+        return true;
+      }
+      if (srcName === 'SP') {
+        ctx.emitAbs16FixupPrefixed(0xed, 0x73, baseLower, 0, span);
+        return true;
+      }
+      if (srcName === 'IX') {
+        ctx.emitAbs16FixupPrefixed(0xdd, 0x22, baseLower, 0, span);
+        return true;
+      }
+      if (srcName === 'IY') {
+        ctx.emitAbs16FixupPrefixed(0xfd, 0x22, baseLower, 0, span);
+        return true;
+      }
+    }
+
+    return false;
+  };
 
   const lowerSuccPredOnTypedPath = (
     asmItem: AsmInstructionNode,
@@ -580,7 +661,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
         opcode !== undefined &&
         srcOp.kind === 'Imm' &&
         srcOp.expr.kind === 'ImmName' &&
-        !ctx.resolveScalarBinding(srcOp.expr.name)
+        (!ctx.resolveScalarBinding(srcOp.expr.name) || isRawLdLabelName(srcOp.expr.name))
       ) {
         const v = ctx.evalImmExpr(srcOp.expr);
         if (v === undefined) {
@@ -593,7 +674,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
         (dst === 'IX' || dst === 'IY') &&
         srcOp.kind === 'Imm' &&
         srcOp.expr.kind === 'ImmName' &&
-        !ctx.resolveScalarBinding(srcOp.expr.name)
+        (!ctx.resolveScalarBinding(srcOp.expr.name) || isRawLdLabelName(srcOp.expr.name))
       ) {
         const v = ctx.evalImmExpr(srcOp.expr);
         if (v === undefined) {
@@ -601,6 +682,10 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
           ctx.syncToFlow();
           return;
         }
+      }
+      if (emitAbs16LdFixup(dstOp, srcOp, asmItem.span)) {
+        ctx.syncToFlow();
+        return;
       }
     }
 
@@ -663,12 +748,23 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     }
 
     if (head === 'ld' && asmItem.operands.some(isTypedStorageLdOperand)) {
+      const allowed = asmItem.operands.every((op) => {
+        if (op.kind === 'Ea') {
+          return op.expr.kind === 'EaName' && isRawLdLabelName(op.expr.name);
+        }
+        if (op.kind === 'Imm' && op.expr.kind === 'ImmName') {
+          return isRawLdLabelName(op.expr.name);
+        }
+        return op.kind !== 'Reg' || !ctx.resolveScalarBinding(op.name);
+      });
+      if (!allowed) {
         ctx.diagAt(
-        ctx.diagnostics,
-        asmItem.span,
-        `"ld" no longer accepts typed storage operands; use ":=".`,
-      );
-      return;
+          ctx.diagnostics,
+          asmItem.span,
+          `"ld" no longer accepts typed storage operands; use ":=".`,
+        );
+        return;
+      }
     }
 
     if (head !== 'ld' && ctx.lowerLdWithEa(asmItem)) {
