@@ -1,6 +1,6 @@
 [← Bit Patterns](04-bit-patterns.md) | [Part 2](README.md) | [Recursion →](06-recursion.md)
 
-# Chapter 05 — Records
+# Chapter 5 — Records
 
 The Chapter 05 examples introduce typed aggregate state. Up to this point, every
 algorithm has worked with scalars — individual bytes and words. A record collects

@@ -1,6 +1,6 @@
 [← Introduction](00-introduction.md) | [Part 2](README.md) | [Arrays and Loops →](02-arrays-and-loops.md)
 
-# Chapter 01 — Foundations
+# Chapter 1 — Foundations
 
 The Chapter 01 examples work with arithmetic and number-theory algorithms.
 There are no arrays, records, or pointer operations — just functions, typed

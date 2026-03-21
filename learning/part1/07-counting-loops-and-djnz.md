@@ -1,6 +1,6 @@
-[← Flags, Comparisons, Jumps](03-flags-comparisons-jumps.md) | [Part 2](README.md) | [Data Tables and Indexed Access →](05-data-tables-and-indexed-access.md)
+[← Flags, Comparisons, Jumps](06-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](08-data-tables-and-indexed-access.md)
 
-# Chapter 04 — Counting Loops and DJNZ
+# Chapter 7 — Counting Loops and DJNZ
 
 This chapter introduces `djnz`, the Z80's single-instruction counted loop
 primitive. After reading it you will be able to write a DJNZ counted loop, a
@@ -305,4 +305,4 @@ entries using HL as a sequential pointer and IX as a displaced-access pointer.
 
 ---
 
-[← Flags, Comparisons, Jumps](03-flags-comparisons-jumps.md) | [Part 2](README.md) | [Data Tables and Indexed Access →](05-data-tables-and-indexed-access.md)
+[← Flags, Comparisons, Jumps](06-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](08-data-tables-and-indexed-access.md)

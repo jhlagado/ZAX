@@ -1,6 +1,6 @@
-[← I/O and Ports](07-io-and-ports.md) | [Part 2](README.md) | [Typed Storage and Assignment →](09-typed-storage-and-assignment.md)
+[← I/O and Ports](10-io-and-ports.md) | [Part 1](README.md) | [Typed Storage and Assignment →](12-typed-storage-and-assignment.md)
 
-# Chapter 08 — A Complete Program
+# Chapter 11 — A Complete Program
 
 This chapter builds a complete program using everything from Chapters 00–06:
 a data table, a DJNZ loop, subroutines called from the loop, conditional
@@ -269,4 +269,4 @@ places on the stack, with no register chosen by hand.
 
 ---
 
-[← I/O and Ports](07-io-and-ports.md) | [Part 2](README.md) | [Typed Storage and Assignment →](09-typed-storage-and-assignment.md)
+[← I/O and Ports](10-io-and-ports.md) | [Part 1](README.md) | [Typed Storage and Assignment →](12-typed-storage-and-assignment.md)

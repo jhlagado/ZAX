@@ -1,6 +1,6 @@
-[← Structured Control Flow](10-structured-control-flow.md) | [Part 1](README.md)
+[← Structured Control Flow](13-structured-control-flow.md) | [Part 1](README.md) | [Part 2 →](../part2/README.md)
 
-# Chapter 11 — Functions, Arguments, and `op`
+# Chapter 14 — Functions, Arguments, and `op`
 
 This chapter introduces typed function parameters, typed return values, and the
 `op` construct. After reading it you will be able to write a ZAX `func` with
@@ -392,4 +392,4 @@ You are ready.
 
 ---
 
-[← Structured Control Flow](10-structured-control-flow.md) | [Part 1](README.md)
+[← Structured Control Flow](13-structured-control-flow.md) | [Part 1](README.md) | [Part 2 →](../part2/README.md)

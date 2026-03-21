@@ -1,6 +1,6 @@
-[← Counting Loops and DJNZ](04-counting-loops-and-djnz.md) | [Part 2](README.md) | [Stack and Subroutines →](06-stack-and-subroutines.md)
+[← Counting Loops and DJNZ](07-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](09-stack-and-subroutines.md)
 
-# Chapter 05 — Data Tables and Indexed Access
+# Chapter 8 — Data Tables and Indexed Access
 
 This chapter shows how to lay out a byte or word table in memory, and how to
 read entries from it using HL as a sequential pointer and IX as a displaced-
@@ -317,4 +317,4 @@ return results to the caller.
 
 ---
 
-[← Counting Loops and DJNZ](04-counting-loops-and-djnz.md) | [Part 2](README.md) | [Stack and Subroutines →](06-stack-and-subroutines.md)
+[← Counting Loops and DJNZ](07-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](09-stack-and-subroutines.md)

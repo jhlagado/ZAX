@@ -1,6 +1,6 @@
-[← Stack and Subroutines](06-stack-and-subroutines.md) | [Part 2](README.md) | [A Complete Program →](08-a-phase-a-program.md)
+[← Stack and Subroutines](09-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](11-a-phase-a-program.md)
 
-# Chapter 07 — I/O and Ports
+# Chapter 10 — I/O and Ports
 
 The Z80 has two distinct address spaces: the memory space you have been using
 since Chapter 00, and a separate **I/O space** of 256 numbered ports. The `in`
@@ -272,4 +272,4 @@ raw Z80 starts to get tedious — which sets up what Chapters 09–11 address.
 
 ---
 
-[← Stack and Subroutines](06-stack-and-subroutines.md) | [Part 2](README.md) | [A Complete Program →](08-a-phase-a-program.md)
+[← Stack and Subroutines](09-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](11-a-phase-a-program.md)

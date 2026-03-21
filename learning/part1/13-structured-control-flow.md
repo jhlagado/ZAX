@@ -1,6 +1,6 @@
-[← Typed Storage and Assignment](09-typed-storage-and-assignment.md) | [Part 2](README.md) | [Functions, Arguments, and Op →](11-functions-arguments-and-op.md)
+[← Typed Storage and Assignment](12-typed-storage-and-assignment.md) | [Part 1](README.md) | [Functions, Arguments, and Op →](14-functions-arguments-and-op.md)
 
-# Chapter 10 — Structured Control Flow
+# Chapter 13 — Structured Control Flow
 
 This chapter introduces `if`/`else`, `while`, `break`, and `continue`. After
 reading it you will be able to replace raw flag-test-and-jump sequences with
@@ -455,4 +455,4 @@ without any call overhead.
 
 ---
 
-[← Typed Storage and Assignment](09-typed-storage-and-assignment.md) | [Part 2](README.md) | [Functions, Arguments, and Op →](11-functions-arguments-and-op.md)
+[← Typed Storage and Assignment](12-typed-storage-and-assignment.md) | [Part 1](README.md) | [Functions, Arguments, and Op →](14-functions-arguments-and-op.md)
