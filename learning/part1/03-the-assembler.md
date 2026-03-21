@@ -226,7 +226,7 @@ section code app at $0100
     ld b, a
     ld a, 3
     add a, b
-    result := a
+    ld (result), a
   end
 end
 ```
@@ -241,7 +241,7 @@ end
 
 `export func main(): void` — declares the program's entry point. ZAX generates the function header automatically. The function's closing `end` emits a `ret` instruction, so you do not write one yourself.
 
-`result := a` — ZAX's typed assignment operator. This specific form means "store the value of A into the byte variable `result`." The assembler translates it to `LD ($8000), A`.
+`ld (result), a` — stores the value of A into the byte variable `result`. The parentheses around the name mean "the memory address of." The assembler substitutes the actual address, so this becomes `LD ($8000), A`.
 
 ### The output
 
@@ -255,7 +255,7 @@ ZAX does not change what the program does. It changes how you write and maintain
 
 Most assemblers stop at mnemonics and labels. ZAX goes further with features that become important as programs grow:
 
-**Typed variables.** `var result: byte` not only names the storage location — it records what size it is. ZAX uses that information to generate the correct load and store instructions for `:=` assignments. This catches mismatches at assembly time rather than silently generating wrong code.
+**Typed variables.** `var result: byte` not only names the storage location — it records what size it is. ZAX uses that information later to generate correct load and store sequences automatically. This catches mismatches at assembly time rather than silently generating wrong code.
 
 **Typed function parameters.** Functions can declare what values they receive and what value they return. The assembler generates the correct load and store sequences at call sites.
 
