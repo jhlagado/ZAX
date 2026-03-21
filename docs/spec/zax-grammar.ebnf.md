@@ -25,6 +25,12 @@ escape_seq      = "\\" , ( "n" | "r" | "t" | "'" | "\\" | "x" , hex_digit , hex_
 newline         = "\n" ;
 ```
 
+Lexical normalization notes:
+
+- In instruction streams, a visible backslash separator (`\` followed by whitespace) is normalized to a newline-equivalent statement separator before parsing.
+- This companion grammar writes those boundaries as `newline` for readability.
+- `include "path"` is a pre-parse text-insertion directive. It is not modeled as an ordinary production in this grammar because it is expanded before parsing.
+
 ## 2. Module Structure
 
 ```ebnf
@@ -248,6 +254,10 @@ These are semantic constraints enforced beyond pure grammar:
 - Typed reinterpretation requires at least one tail segment after the cast head.
 - `reinterpret_name` is limited semantically to scalar names of type `word` or `addr`.
 - Bare aggregate storage names are not valid reinterpret bases.
+- Raw instruction name resolution is semantic, not purely syntactic:
+  - module-scope storage names behave as raw labels in raw Z80 instruction operands
+  - scalar function args/locals may act as symbolic IX-relative slot offsets in raw instruction operands/immediates
+  - non-scalar parameters and alias-only locals do not participate in that raw IX-offset form
 
 ## 9. Maintenance Rule
 

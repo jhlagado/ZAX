@@ -166,7 +166,7 @@ This note complements:
 
 - `docs/work/z80-intro-course-plan.md`
 - `docs/design/z80-programming-with-zax.md`
-- `docs/design/text-include.md`
+- `docs/archive/design/text-include.md`
 
 If those documents define chapter structure or language behaviour, they take
 precedence. This note exists to preserve strategic intent across future content,
