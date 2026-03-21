@@ -81,11 +81,10 @@ because `break` exits only the innermost loop, not the entire recursive call
 chain — but the constraint-check skips use `continue` cleanly rather than
 nesting `if/else` blocks or duplicating the loop increment.
 
-The friction log entry for Chapter 09 marks this as the clearest language signal from
-the entire course: structured loop escape was the highest-priority language gap,
-and `break` and `continue` have since landed. The `eight_queens.zax` example was
-written after that landing; the `continue` in the constraint checks and the
-`break` after finding a solution are both using settled, implemented syntax.
+Structured loop escape — `break` and `continue` — was the highest-priority
+language gap identified during the course. Both are now implemented. The
+`eight_queens.zax` example uses `continue` in the constraint checks and `break`
+after finding a solution.
 
 ---
 
