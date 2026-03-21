@@ -1090,6 +1090,13 @@ Frame shape:
 - `IX+4..`: arguments (0-based word slots)
 - `IX-1..`: local scalar slots
 
+Raw instruction IX slot offsets:
+
+- In raw instruction operand/immediate contexts, function-local argument and local names may be used as IX-relative slot offsets.
+- Arguments resolve to positive offsets; locals resolve to negative offsets.
+- This is separate from typed/value semantics in `:=`; bare names there still mean typed values/paths, not frame offsets.
+- Only scalar locals/args with real frame slots participate; alias-only locals do not.
+
 IX-displacement byte-lane lowering constraints (v0.2):
 
 - Z80 `IX+d` byte-load/store forms operate on `A B C D E` and memory/immediate forms; they do not support `H`/`L` as direct byte operands in these indexed forms.
