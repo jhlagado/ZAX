@@ -15,18 +15,16 @@ OUT="$LEARNING/BOOK.md"
 PART1=(
   part1/01-the-computer.md
   part1/02-machine-code.md
-  part1/03-the-assembler.md
-  part1/04-numbers-and-registers.md
-  part1/05-loading-storing-constants.md
-  part1/06-flags-comparisons-jumps.md
-  part1/07-counting-loops-and-djnz.md
-  part1/08-data-tables-and-indexed-access.md
-  part1/09-stack-and-subroutines.md
-  part1/10-io-and-ports.md
-  part1/11-a-phase-a-program.md
-  part1/12-typed-storage-and-assignment.md
-  part1/13-structured-control-flow.md
-  part1/14-functions-arguments-and-op.md
+  part1/03-assembly-language.md
+  part1/04-flags-comparisons-jumps.md
+  part1/05-counting-loops-and-djnz.md
+  part1/06-data-tables-and-indexed-access.md
+  part1/07-stack-and-subroutines.md
+  part1/08-io-and-ports.md
+  part1/09-a-phase-a-program.md
+  part1/10-typed-storage-and-assignment.md
+  part1/11-structured-control-flow.md
+  part1/12-functions-arguments-and-op.md
 )
 
 PART2=(
