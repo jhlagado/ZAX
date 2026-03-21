@@ -223,6 +223,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     return false;
   };
 
+
   const lowerSuccPredOnTypedPath = (
     asmItem: AsmInstructionNode,
     head: 'succ' | 'pred',
@@ -670,7 +671,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       return;
     }
 
-    if (ctx.lowerLdWithEa(asmItem)) {
+    if (head !== 'ld' && ctx.lowerLdWithEa(asmItem)) {
       ctx.syncToFlow();
       return;
     }
