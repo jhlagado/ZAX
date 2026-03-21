@@ -112,8 +112,7 @@ Entry-point selection is outside v0.1 scope. A typical convention is `export fun
 - In module/declaration regions, **newlines terminate** declarations and directives.
 - In instruction streams (function bodies and `op` bodies), newlines terminate instructions/keywords.
 - Spaces/tabs separate tokens.
-- The backslash (`\`) can also separate statements when written as a visible separator (followed by whitespace); it is treated as a newline-equivalent separator outside of string/char literals and comments.
-- The backslash (`\`) can also separate statements; it is treated as a newline-equivalent statement separator outside of string/char literals and comments.
+- The backslash (`\`) can also separate statements when written as a visible separator (followed by whitespace); it is treated as a newline-equivalent statement separator outside of string/char literals and comments.
 
 Multi-line constructs (v0.1):
 
@@ -442,7 +441,7 @@ Arrays are nested fixed-size arrays:
 Indexing:
 
 - `a[i]` denotes the element access for index `i`.
-- If the element type is scalar, bare use has value semantics in `LD` and call arguments.
+- If the element type is scalar, bare use has value semantics in typed storage/value contexts such as `:=` and typed call arguments.
 - If the element type is aggregate, the result is the nested storage object and may be indexed or field-selected further.
 - Arrays are **0-based**: valid indices are `0..len-1`. No runtime bounds checks are emitted.
 
@@ -494,7 +493,7 @@ Layout rules:
 Field access:
 
 - `rec.field` denotes field access.
-- If the field type is scalar, bare use has value semantics in `LD` and call arguments.
+- If the field type is scalar, bare use has value semantics in typed storage/value contexts such as `:=` and typed call arguments.
 - If the field type is aggregate, the result is the nested storage object and may be indexed or field-selected further.
 
 Example: arrays of records lower through storage-path access (informative):
@@ -565,14 +564,18 @@ Module storage is declared inside named `data` sections.
 ### 6.1 Storage Semantics and Dereference
 
 - Function-local `var`, parameters, and named-section `data` declarations are typed storage.
-- Scalar storage uses **value semantics** in `LD` and call arguments: a bare name means the stored value.
+- Scalar storage uses **value semantics** in typed storage/value contexts such as `:=` and typed call arguments: a bare name means the stored value.
 - Composite storage (arrays, records, unions) is still referred to by name in source, but the compiler transparently passes or lowers it as a storage base when an aggregate operation needs one.
 - `bin` and `hex` names denote storage regions/blobs and are primarily used as storage bases rather than scalar values.
-- Parentheses are an explicit low-level dereference form: `( ... )` denotes memory at the computed location. For normal scalar variables, bare forms are the normative source syntax.
+- In raw Z80 instruction operands, module-scope storage names behave as labels:
+  - bare `name` means the storage address / base address
+  - parenthesized `(name)` means memory at that address
+  - this applies to both scalar storage and aggregate storage (arrays, records, blobs)
 - Dereference width is implied by the instruction operand size:
-  - `LD A, (ea)` reads a byte
-  - `LD HL, (ea)` reads a word
-  - `LD (ea), HL` writes a word
+  - `LD A, (name)` reads one byte
+  - `LD HL, (name)` reads one word (little-endian)
+  - `LD (name), HL` writes one word
+  - for an aggregate such as `arr: byte[4]`, `LD HL, arr` loads the base address of `arr`, `LD A, (arr)` reads `arr[0]`, and `LD HL, (arr)` reads the first two bytes of `arr` as a word
 
 Notes (v0.1):
 
@@ -1090,12 +1093,21 @@ Frame shape:
 - `IX+4..`: arguments (0-based word slots)
 - `IX-1..`: local scalar slots
 
-Raw instruction IX slot offsets:
+Raw instruction name resolution in framed functions:
 
-- In raw instruction operand/immediate contexts, function-local argument and local names may be used as IX-relative slot offsets.
+- Module-scope storage names still behave as raw labels in raw instruction operands, regardless of declared type.
+- In addition, function-local argument and local names may be used as IX-relative slot offsets in raw instruction operand/immediate contexts.
 - Arguments resolve to positive offsets; locals resolve to negative offsets.
 - This is separate from typed/value semantics in `:=`; bare names there still mean typed values/paths, not frame offsets.
-- Only scalar locals/args with real frame slots participate; alias-only locals do not.
+- Only scalar locals/args with real frame slots participate in this raw IX-offset form.
+- Non-scalar parameters are still passed in one 16-bit frame slot as storage references, but their names are not valid raw IX-offset symbols.
+- Alias-only locals do not allocate frame slots and are not valid raw IX-offset symbols.
+- Examples:
+  - `ld hl, count` loads the address of module-scope `count`
+  - `ld hl, (count)` loads the stored word at module-scope `count`
+  - `ld hl, arr` loads the base address of module-scope array/record `arr`
+  - `ld c, (ix+arg1+0)` uses scalar argument `arg1` as a raw IX displacement symbol
+  - `ld a, (ix+tmp+0)` uses scalar local `tmp` as a raw IX displacement symbol
 
 IX-displacement byte-lane lowering constraints (v0.2):
 
@@ -1499,8 +1511,9 @@ This section defines required source migration behavior for programs moving from
    - `sizeof` and field/array layout now use exact size.
 2. Runtime indexed addressing uses direct-register indexing for `arr[HL]`/`arr[DE]`/`arr[BC]`.
    - If legacy code intended indirect-byte indexing through `HL`, rewrite to `arr[(HL)]`.
-3. Typed scalar variables use value semantics in `LD` and typed call-argument positions.
-   - Rewrite legacy scalar dereference forms (`(arg)`) to direct scalar forms (`arg`) for value loads/stores.
+3. Typed scalar variables use value semantics in `:=` and typed call-argument positions.
+   - Rewrite legacy scalar dereference forms (`(arg)`) to direct scalar forms (`arg`) in typed value/store contexts.
+   - Raw `ld` keeps assembler-style label semantics for module-scope storage names.
 4. Enum members require qualification.
    - Rewrite unqualified members (`Read`) to `EnumName.Member` (`Mode.Read`).
 5. `sizeof` and `offsetof` use exact-size rules.
