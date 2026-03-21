@@ -11,13 +11,20 @@ keeps the working patterns visible before the language grows wider.
 
 ## Variables and Types
 
+In raw Z80 code, every intermediate value lives in a register or at a
+hand-chosen memory address. You track which register holds what, and if you run
+out of registers you spill to memory yourself. ZAX typed variables replace that
+manual tracking: you give a value a name and a type, and the compiler handles
+where it lives.
+
 ZAX has four scalar storage types: `byte` (8-bit unsigned), `word` (16-bit
 unsigned), `addr` (16-bit, signals a memory address), and `ptr` (16-bit,
-signals a pointer to something). In the Chapter 01 examples only `byte` and `word`
-appear — the others become relevant when dealing with arrays and records.
+signals a pointer to something). In these examples only `byte` and `word`
+appear — the others become relevant when you start working with arrays and
+records.
 
-Storage exists in two places: named `data` sections at module scope, and `var`
-blocks inside function bodies.
+You can declare storage in two places: named `data` sections at module scope,
+and `var` blocks inside function bodies.
 
 A `var` block declares function-local scalars with optional initializers:
 

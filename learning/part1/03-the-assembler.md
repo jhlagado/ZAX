@@ -237,7 +237,7 @@ end
 
 `var result: byte` — declares one byte of named storage. The name `result` behaves as a label: everywhere you write `result` in the code, the assembler substitutes the actual address. If you add more variables before it or change the section's start address, every reference updates automatically.
 
-`section code app at $0100` — declares a code section starting at address `$0100`. The `$0100` origin is a CP/M convention: the CP/M operating system occupies the bottom of RAM and loads application programs at `$0100`.
+`section code app at $0100` — declares a code section starting at address `$0100`. The starting address depends on your target system's memory map. This example uses `$0100`, which is where the CP/M operating system loads application programs. A different board might use `$0000`, `$4000`, or any other address — you set it to match whatever hardware or loader you are targeting.
 
 `export func main(): void` — declares the program's entry point. ZAX generates the function header automatically. The function's closing `end` emits a `ret` instruction, so you do not write one yourself.
 

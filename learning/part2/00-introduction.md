@@ -14,9 +14,8 @@ basics are already familiar.
 
 The chapters are built around practical programs. They cover arrays, strings,
 bit manipulation, records, recursion, composition, pointer structures, and a
-capstone search problem. The point is not to admire named algorithms as museum
-pieces. The point is to study real ZAX code that solves non-trivial problems
-and to learn how the language helps keep that code readable.
+capstone search problem. Each one works through real ZAX code that solves a
+non-trivial problem, and shows how the language helps keep that code readable.
 
 ## What ZAX Gives You Here
 
