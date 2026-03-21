@@ -442,7 +442,7 @@ Arrays are nested fixed-size arrays:
 Indexing:
 
 - `a[i]` denotes the element access for index `i`.
-- If the element type is scalar, bare use has value semantics in `LD` and call arguments.
+- If the element type is scalar, bare use has value semantics in `:=` and typed call arguments; raw Z80 instruction operands use their own operand rules.
 - If the element type is aggregate, the result is the nested storage object and may be indexed or field-selected further.
 - Arrays are **0-based**: valid indices are `0..len-1`. No runtime bounds checks are emitted.
 
@@ -494,7 +494,7 @@ Layout rules:
 Field access:
 
 - `rec.field` denotes field access.
-- If the field type is scalar, bare use has value semantics in `LD` and call arguments.
+- If the field type is scalar, bare use has value semantics in `:=` and typed call arguments; raw Z80 instruction operands use their own operand rules.
 - If the field type is aggregate, the result is the nested storage object and may be indexed or field-selected further.
 
 Example: arrays of records lower through storage-path access (informative):
@@ -565,10 +565,10 @@ Module storage is declared inside named `data` sections.
 ### 6.1 Storage Semantics and Dereference
 
 - Function-local `var`, parameters, and named-section `data` declarations are typed storage.
-- Scalar storage uses **value semantics** in `LD` and call arguments: a bare name means the stored value.
+- Scalar storage uses **value semantics** in `:=` and typed call-argument positions: a bare typed name means the stored value.
 - Composite storage (arrays, records, unions) is still referred to by name in source, but the compiler transparently passes or lowers it as a storage base when an aggregate operation needs one.
 - `bin` and `hex` names denote storage regions/blobs and are primarily used as storage bases rather than scalar values.
-- Parentheses are an explicit low-level dereference form: `( ... )` denotes memory at the computed location. For normal scalar variables, bare forms are the normative source syntax.
+- Parentheses are an explicit low-level dereference form: `( ... )` denotes memory at the computed location. In raw Z80 instruction operands, module-scope typed data names behave like ordinary labels: bare names mean addresses, and parenthesized names mean memory at those addresses.
 - Dereference width is implied by the instruction operand size:
   - `LD A, (ea)` reads a byte
   - `LD HL, (ea)` reads a word
@@ -819,12 +819,14 @@ Conceptually, an `ea` is a base storage location plus a sequence of path segment
 
 Value semantics note (current):
 
-- Bare scalar variables use value semantics in ordinary `:=` assignment, transitional `move`, and call contexts.
+- Bare scalar variables use value semantics in ordinary `:=` assignment, transitional `move`, and typed call contexts.
 - `rec.field` and `arr[idx]` are storage-path expressions. In scalar value/store contexts (for example `a := rec.field`, `rec.field := a`), the compiler inserts the required load/store lowering.
 - `<Type>base.tail` is also a storage-path expression. It supplies the base
   type explicitly at the access site, then applies ordinary field/index
   traversal.
 - In aggregate contexts (for example passing an array/record parameter), the compiler passes the storage reference transparently.
+- In raw Z80 instruction operands, typed module-scope data names follow raw label semantics (`ld hl, count` means the address; `ld hl, (count)` means the stored word).
+- In raw Z80 immediate and displacement expressions inside a framed function, argument names and slot-allocating local names may also resolve as **frame-offset symbols**. Arguments contribute positive displacements from `IX`; local scalar slots contribute negative displacements from `IX`. This raw offset meaning is not used by `:=`.
 - `@path` is the source-level address-of form for typed storage paths. In v1 it is accepted only on the source side of `rr := @path` (with transitional `move rr, @path` still supported):
 
   ```zax
@@ -1077,6 +1079,10 @@ Operand identifier resolution (v0.1):
   - `LD IX, 0`
   - `ADD IX, SP`
 - Arguments and locals are addressed by fixed offsets from `IX`.
+- Raw Z80 code may refer to these slot offsets symbolically in immediate/displacement contexts, especially in `(IX+disp)` forms.
+  - Example: if `arg1` is the first `word` argument, `ld c, (ix+arg1+0)` reads its low byte and `ld b, (ix+arg1+1)` reads its high byte.
+  - Example: if `tmp` is a local `word`, `ld e, (ix+tmp+0)` reads its low byte and `ld d, (ix+tmp+1)` reads its high byte.
+  - This is a raw-instruction feature only; `hl := arg1` and `tmp := hl` still use typed value semantics.
 - Slot model in current ABI:
   - each argument is one 16-bit slot
   - local scalar storage declarations allocate one 16-bit slot each
@@ -1492,8 +1498,9 @@ This section defines required source migration behavior for programs moving from
    - `sizeof` and field/array layout now use exact size.
 2. Runtime indexed addressing uses direct-register indexing for `arr[HL]`/`arr[DE]`/`arr[BC]`.
    - If legacy code intended indirect-byte indexing through `HL`, rewrite to `arr[(HL)]`.
-3. Typed scalar variables use value semantics in `LD` and typed call-argument positions.
-   - Rewrite legacy scalar dereference forms (`(arg)`) to direct scalar forms (`arg`) for value loads/stores.
+3. Typed scalar variables use value semantics in `:=` and typed call-argument positions.
+   - In raw Z80 instruction operands, module-scope typed data names follow ordinary label semantics (`name` = address, `(name)` = dereference).
+   - In raw framed-function code, arguments and slot-allocating locals may be used as symbolic IX-relative displacements (`(ix+arg1+0)`, `(ix+tmp+1)`).
 4. Enum members require qualification.
    - Rewrite unqualified members (`Read`) to `EnumName.Member` (`Mode.Read`).
 5. `sizeof` and `offsetof` use exact-size rules.
@@ -1519,16 +1526,20 @@ a := arr[(HL)]
 a := arr[HL]
 ```
 
-Scalar value semantics:
+Scalar typed/value vs raw instruction semantics:
 
 ```zax
-; v0.1 style
-ld a, (arg)
-ld (arg), a
+; typed value semantics
+a := arg
+arg := a
 
-; v0.2 style
-ld a, arg
-ld arg, a
+; raw module-scope label semantics
+ld a, (global_byte)
+ld hl, global_word
+
+; raw frame-offset semantics inside a function
+ld c, (ix+arg1+0)
+ld b, (ix+arg1+1)
 ```
 
 `sizeof` exact-size semantics:

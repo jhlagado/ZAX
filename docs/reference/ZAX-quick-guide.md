@@ -367,7 +367,47 @@ func example(): void
 end
 ```
 
-Explicit parentheses on scalar symbols are still accepted but are redundant. In operand position, parentheses always mean memory dereference and may enclose a full `imm` expression, e.g. `ld a, (3 + 2)`.
+In operand position, parentheses always mean memory dereference and may enclose a full `imm` expression, e.g. `ld a, (3 + 2)`. This is separate from `:=` value semantics. In raw Z80 instruction operands, a module-scope typed symbol behaves like an ordinary label: `ld hl, count` means the address of `count`, while `ld hl, (count)` means the stored word.
+
+### 3.4.1 Raw Z80 Access to Typed Globals, Arguments, and Locals
+
+`:=` is the typed value/store surface. Raw Z80 instructions keep raw Z80 operand rules.
+
+For module-scope typed data names:
+
+```zax
+section data vars at $8000
+  count: word
+  mode:  byte
+end
+
+ld hl, count      ; HL = address of count
+ld hl, (count)    ; HL = word stored at count
+ld a, (mode)      ; A  = byte stored at mode
+```
+
+For framed functions, arguments and slot-allocating local scalars may be used as **IX-relative slot offsets** in raw immediate/displacement expressions. Arguments are positive from `IX`; locals are negative from `IX`.
+
+```zax
+export func main(arg1: word)
+  var
+    tmp: word = 0
+  end
+
+  ld c, (ix+arg1+0)   ; low byte of arg1
+  ld b, (ix+arg1+1)   ; high byte of arg1
+
+  ld e, (ix+tmp+0)    ; low byte of tmp
+  ld d, (ix+tmp+1)    ; high byte of tmp
+end
+```
+
+This raw offset meaning does **not** apply in `:=`. These still use typed value semantics:
+
+```zax
+hl := arg1
+tmp := hl
+```
 
 ### 3.5 Field and Element Access
 
@@ -973,7 +1013,7 @@ Z80 mnemonics and register names are reserved, so user-defined names cannot shad
 Inside operands, identifiers resolve in this order:
 
 1. Local labels (scoped to the enclosing `func` or `op` body)
-2. Locals and arguments (frame-bound names)
+2. Locals and arguments (frame-bound names; in raw immediate/displacement contexts these may resolve as IX-relative slot offsets)
 3. Module-scope symbols (named-section data symbols, constants, enum members, function names)
 
 An identifier that matches none of these is a compile error.
