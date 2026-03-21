@@ -164,22 +164,10 @@ Chapter 9 established this rule; it applies to all three chapters.
 
 ## Undocumented opcodes: IXH, IXL, IYH, IYL
 
-The Z80's index registers IX and IY can each be split into 8-bit halves — IXH
-and IXL for IX, IYH and IYL for IY — just as HL splits into H and L. Zilog
-never listed these half-register instructions in the original Z80 data sheet,
-but programmers discovered them in the early 1980s by experimenting with the
-prefix-byte encoding. Every Z80-compatible CPU executes them correctly, and they
-have been in routine use for over forty years. The label "undocumented" is
-historical; in practice they are as reliable as any other Z80 instruction.
-
-ZAX supports all IXH/IXL/IYH/IYL instructions unconditionally — there is no
-flag to enable or disable them.
-
-The half-registers obey one hardware constraint described in Chapter 4: because
-the CPU uses a single prefix byte (`$DD` for IX, `$FD` for IY) to select which
-register family an instruction refers to, you cannot mix halves from different
-families in the same instruction. `ld ixh, ixl` is valid; `ld ixh, iyl` is not.
-Any combination with A, B, C, D, or E is fine:
+Chapter 4 introduced the half-index registers IXH, IXL, IYH, and IYL and the
+prefix-byte constraint that prevents mixing halves from different register
+families in one instruction. ZAX supports all half-index instructions
+unconditionally.
 
 ```zax
 ld ixh, a       ; store A in the high half of IX
@@ -188,11 +176,15 @@ ld ixl, b       ; store B in IXL
 add a, ixh      ; add IXH to A
 ```
 
-The halves are most useful when you need extra byte-sized scratch storage beyond
-A–L. Because the ZAX function frame uses IX as its base pointer, IXH and IXL
-are not available inside functions that have parameters or typed locals — the
-compiler owns IX for frame addressing in that context. Outside a frame (or in
-frameless functions), the halves are free to use.
+The practical constraint that matters in this chapter is the **frame conflict**.
+The ZAX function frame uses IX as its base pointer: every parameter and local is
+accessed as an offset from IX. Inside any function that has parameters or typed
+locals, the compiler owns IX, and IXH/IXL are unavailable. IYH and IYL remain
+free unless IY is also in use.
+
+In frameless functions — those with no parameters and no locals — IX is not
+claimed by the compiler, and all four halves are available as extra byte-sized
+scratch registers.
 
 ---
 
@@ -397,11 +389,9 @@ of the repetitive work the compiler does for you.
 
 ## Summary
 
-- IXH, IXL, IYH, and IYL are half-index-register instructions omitted from
-  Zilog's original documentation but universally supported by Z80 hardware. ZAX
-  enables them unconditionally. The only constraint is that halves from
-  different register families (HL, IX, IY) cannot appear in the same
-  instruction.
+- IXH, IXL, IYH, and IYL (Chapter 4) are supported unconditionally in ZAX.
+  Inside framed functions, IXH/IXL are unavailable because the compiler uses IX
+  for frame addressing. In frameless functions, all four halves are free.
 - ZAX pseudo-opcodes — `ld hl, de`, `ld de, bc`, and the other four pair-to-pair
   combinations — expand to two 8-bit moves. They add no run-time cost and make
   16-bit register transfers readable at a glance.
