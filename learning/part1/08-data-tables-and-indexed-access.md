@@ -195,7 +195,7 @@ section data vars at $8020
 end
 ```
 
-**Part 1 — sequential HL loop, accumulating a sum.**
+**Section A — sequential HL loop, accumulating a sum.**
 
 ```zax
 ld hl, scores
@@ -212,7 +212,7 @@ HL walks the six score bytes. Each `add a, (hl)` adds the current byte to A.
 After six iterations, A = 10 + 20 + 30 + 40 + 50 + 60 = 210 (`$D2`), which is
 stored in `sum`.
 
-**Part 2 — sequential HL loop, finding the maximum.**
+**Section B — sequential HL loop, finding the maximum.**
 
 ```zax
 ld hl, scores
@@ -235,7 +235,7 @@ set if A is less than C. `jr nc` skips the update when A is already greater than
 or equal to C. `ld a, c` runs only when a new maximum is found. After six
 entries, `max_score` holds 60 (`$3C`).
 
-**Part 3 — IX+d access on a packed record table.**
+**Section C — IX+d access on a packed record table.**
 
 ```zax
 ld ix, records + RecSize    ; IX = base of record 1

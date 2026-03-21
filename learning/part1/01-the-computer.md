@@ -70,7 +70,7 @@ The CPU itself does not know or care what kind of memory chip sits behind any gi
 
 **RAM** (random-access memory) can be freely read and written, but loses its contents when power is removed. RAM is where your running program stores variables, the stack, and any data it creates or modifies.
 
-A system's **memory map** describes which address ranges connect to which chips. There is no single standard layout — it varies from system to system. A small Z80 board might look like this:
+A system's **memory map** describes which address ranges connect to which chips. There is no single standard layout — it varies from system to system. A typical small Z80 board might look like this:
 
 ```
 $0000–$1FFF   ROM   (8 KB — startup code)
@@ -78,7 +78,7 @@ $2000–$7FFF   RAM   (24 KB — program and data)
 $8000–$FFFF   —     (unmapped, or more RAM, or memory-mapped I/O)
 ```
 
-Another system might have ROM at the top and RAM at the bottom, or multiple ROM chips at different address ranges, or bank-switched memory that maps different physical chips into the same address window depending on a control register. The Z80 imposes only one constraint: when it powers on or resets, the program counter starts at `$0000`, so whatever memory is mapped at that address must contain valid code. On many systems that means ROM at `$0000`, but on others, hardware logic copies code into RAM before the CPU starts, or a boot ROM runs briefly and then switches itself out of the address space. The point is that the memory map is a hardware decision, not a CPU rule.
+The Z80 imposes only one constraint: when it powers on or resets, the program counter starts at `$0000`, so whatever memory is mapped there must contain valid code. On the board above, that means ROM. Other boards arrange things differently — the memory map is always a hardware decision, not a CPU rule.
 
 What matters for you as a programmer is knowing the memory map of the specific system you are targeting. The assembler needs to know where to place your code and data so that the addresses in the output binary match the hardware layout.
 
