@@ -156,7 +156,7 @@ add a, a            ; A = (Height + Width + Width) * 2    ← WRONG
 ld (Perim), a       ; stores the wrong value
 ```
 
-The final `ADD A, A` does not double the original width — it doubles the running total in A, which by that point is already Height + 2 × Width. The result is `2 × (Height + 2 × Width)`, which is Height × 2 too large.
+The final `ADD A, A` does not double the original width — it doubles the running total in A, which by that point is already Height + 2 × Width. The result is `2 × (Height + 2 × Width)`, which is 2 × Width too large.
 
 The mistake is natural if you think of `ADD` as an algebraic operator. It is not. It is an instruction that replaces the contents of A with a new value, and every subsequent instruction sees the new value, not the original. This kind of ordering bug is common in assembly, easy to miss, and produces no error message — just a wrong answer.
 
