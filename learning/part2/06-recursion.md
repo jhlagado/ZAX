@@ -1,6 +1,6 @@
 [← Records](05-records.md) | [Part 2](README.md) | [Composition →](07-composition.md)
 
-# Chapter 06 — Recursion
+# Chapter 6 — Recursion
 
 The Chapter 06 examples show recursive decomposition using the same `func` construct
 that has appeared throughout the course. ZAX handles recursion the same way it

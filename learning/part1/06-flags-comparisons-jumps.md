@@ -1,6 +1,6 @@
-[← Loading, Storing, Constants](02-loading-storing-constants.md) | [Part 2](README.md) | [Counting Loops and DJNZ →](04-counting-loops-and-djnz.md)
+[← Loading, Storing, Constants](05-loading-storing-constants.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](07-counting-loops-and-djnz.md)
 
-# Chapter 03 — Flags, Comparisons, and Jumps
+# Chapter 6 — Flags, Comparisons, and Jumps
 
 This chapter explains the flag register, shows how `cp` and `or a` set flags,
 and demonstrates how conditional and unconditional jump instructions use those
@@ -8,7 +8,7 @@ flags to control which instructions execute next. After reading it you will be
 able to follow a short raw Z80 control-flow sequence, trace through a simple
 conditional branch, and read a label-based counted loop.
 
-Prerequisites: Chapters 00–02 (bytes, registers, `ld` modes, labels).
+Prerequisites: Chapters 4–5 (bytes, registers, `ld` modes, labels).
 
 ---
 
@@ -153,6 +153,49 @@ clear.
 exceed the 128-byte backward range, use `jp` instead. The assembler will report
 an error if a `jr` target is out of range.
 
+The practical differences:
+
+| | `jp` (absolute) | `jr` (relative) |
+|---|---|---|
+| Address encoding | Full 16-bit address | Signed 8-bit displacement |
+| Instruction size | 3 bytes | 2 bytes |
+| Reach | Anywhere in 64K | ≈ 128 bytes backward / 127 forward |
+| Available conditions | z, nz, c, nc, pe, po, m, p | z, nz, c, nc only |
+
+Use `jr` when the target is close and you want compact code. Use `jp` when the
+target may be far away, or when you need the `pe`, `po`, `m`, or `p` conditions
+that `jr` does not support.
+
+---
+
+## Detecting a negative number: the `cp $80` technique
+
+A signed byte stores values from -128 to 127. Negative values have bit 7 set,
+which means their unsigned interpretation is 128 or greater. You can test
+whether A holds a negative number by comparing it against 128 as an unsigned
+value:
+
+```zax
+  cp $80              ; compare A (unsigned) against 128
+  jr c, is_positive   ; carry set means A < 128 → non-negative
+  neg                 ; negate A: A = -A
+is_positive:
+  ; A now holds the absolute value
+```
+
+After `cp $80`, carry is set when A is less than 128 (unsigned) — meaning
+bit 7 is clear, so the signed value is non-negative. If carry is clear, A is
+128 or above, which means bit 7 is set and the value is negative. `neg` then
+flips the sign, leaving A with the absolute value.
+
+This pattern works because signed and unsigned representations share the same
+bits — the only difference is how you interpret bit 7. Comparing against `$80`
+is the dividing line between the two halves: 0–127 (non-negative) and 128–255
+(negative when read as signed).
+
+Note that `neg` applied to -128 produces 128, which overflows back to -128 in
+a signed byte. The absolute value of -128 does not fit in 8 bits.
+
 ---
 
 ## Label-based control flow structure
@@ -274,10 +317,10 @@ counter. Always identify which instruction sets the flag you are about to test.
 
 ## What Comes Next
 
-Chapter 04 introduces `djnz`, the Z80's dedicated decrement-and-branch-if-not-
+Chapter 7 introduces `djnz`, the Z80's dedicated decrement-and-branch-if-not-
 zero instruction, and shows how it reduces the two-instruction counter-decrement-
 and-test pattern to a single instruction.
 
 ---
 
-[← Loading, Storing, Constants](02-loading-storing-constants.md) | [Part 2](README.md) | [Counting Loops and DJNZ →](04-counting-loops-and-djnz.md)
+[← Loading, Storing, Constants](05-loading-storing-constants.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](07-counting-loops-and-djnz.md)

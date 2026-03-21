@@ -1,6 +1,6 @@
-[← Data Tables and Indexed Access](05-data-tables-and-indexed-access.md) | [Part 2](README.md) | [I/O and Ports →](07-io-and-ports.md)
+[← Data Tables and Indexed Access](08-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](10-io-and-ports.md)
 
-# Chapter 06 — Stack and Subroutines
+# Chapter 9 — Stack and Subroutines
 
 This chapter explains how `call` and `ret` work, how the hardware stack operates,
 and how to write reusable subroutines that receive values through registers and
@@ -8,7 +8,7 @@ return results to the caller. After reading it you will be able to write a
 subroutine, call it with values in registers, preserve the caller's registers
 using `push` and `pop`, and return a result.
 
-Prerequisites: Chapters 00–05 (registers, flags, `ld`, labels, DJNZ, tables).
+Prerequisites: Chapters 4–8 (registers, flags, `ld`, labels, DJNZ, tables).
 
 ---
 
@@ -34,6 +34,12 @@ single `call`.
    stack (this is the **return address**).
 2. Jumps to `label`.
 
+In other words, `call` is equivalent to a `push` of the return address followed
+by a `jp`. The instruction is always 3 bytes long, so the return address pushed
+is always the address of the byte immediately after the `call` instruction.
+There is nothing magical about it — it is a push and a jump combined into one
+opcode.
+
 The hardware stack is a region of RAM used as a last-in-first-out buffer. The
 stack pointer SP always holds the address of the most recently pushed value.
 When `call` pushes a word onto the stack, SP decreases by two (the stack grows
@@ -46,15 +52,17 @@ subroutine does not know which call site reached it.
 
 ## How `ret` works
 
-`ret` does the reverse:
+`ret` is even simpler: it pops two bytes from the stack into the program
+counter. That is the return address that `call` pushed. Execution resumes at
+the instruction after the original `call`.
 
-1. Pops two bytes from the stack. That is the return address that `call` pushed.
-2. Jumps to that address.
+In other words, `ret` is equivalent to `pop pc` — if such an instruction
+existed. The CPU reads the top of the stack, increments SP by two, and jumps
+to the address it just read. Nothing more.
 
-Execution resumes at the instruction after the original `call`. If `ret` runs
-when the stack does not contain a valid return address — because of a push/pop
-mismatch, for example — the CPU jumps to whatever bytes are at the top of the
-stack, which is almost certainly not a valid instruction address.
+If `ret` runs when the stack does not contain a valid return address — because
+of a push/pop mismatch, for example — the CPU jumps to whatever bytes are at
+the top of the stack, which is almost certainly not a valid instruction address.
 
 ---
 
@@ -135,8 +143,8 @@ end
 
 This is different from raw labeled subroutines — code you reach with `call
 label` but that is not wrapped in a ZAX `func`. Those are plain Z80: the
-assembler inserts nothing, so they **do** require an explicit `ret`. Chapter 08
-shows several such subroutines. In Chapters 09–11 you write ZAX `func` blocks
+assembler inserts nothing, so they **do** require an explicit `ret`. Chapter 11
+shows several such subroutines. In Chapters 12–14 you write ZAX `func` blocks
 exclusively, and the compiler handles the return for you.
 
 Declaring `: void` when the function leaves a meaningful value in A is a bug:
@@ -147,12 +155,24 @@ the caller sees stale flag values rather than the computed result.
 
 ## `push` and `pop`: saving and restoring registers
 
-`push bc` writes the current value of the register pair BC onto the stack
-(two bytes, in the order that `pop bc` expects to recover them). SP decreases
-by two.
+`push` and `pop` are simple operations, described most clearly in terms of
+virtual `ld` instructions:
 
-`pop bc` reads two bytes from the stack and places them into BC. SP increases
-by two.
+`push hl` does two things: first SP is decremented by two, then the equivalent
+of `ld (sp), hl` happens — the contents of HL are written to the two bytes at
+the new SP address. (I say "equivalent" because `ld (sp), hl` is not an actual
+Z80 instruction — you cannot use it directly. But it describes exactly what
+`push` does internally.)
+
+`pop hl` is the inverse: the equivalent of `ld hl, (sp)` happens first — two
+bytes are read from the address in SP into HL — then SP is incremented by two.
+
+The operand can be any of AF, BC, DE, HL, IX, or IY. The important thing to
+remember is that the stack does not know whose value it is holding. All register
+pairs are saved to and restored from the same area of memory — the bytes at and
+below SP. The stack is the very same RAM where your program and variables
+reside. There is nothing magical about it; it is ordinary memory that SP
+happens to point at.
 
 A subroutine uses `push` / `pop` to preserve registers it needs to modify
 internally. The pattern:
@@ -171,6 +191,31 @@ the stack has an extra word on it when `ret` runs. `ret` will then read that
 extra word as the return address and jump to garbage.
 
 Stack depth discipline: count your pushes and pops. They must be balanced.
+
+### Cross-register moves through the stack
+
+The stack does not care which register pushed a value or which register pops it.
+You can push one pair and pop into a different pair. This lets you perform
+register transfers that `ld` cannot express:
+
+```zax
+  push af         ; save AF onto the stack
+  push bc         ; save BC onto the stack
+  pop de          ; DE ← what was in BC
+  pop hl          ; HL ← what was in AF
+```
+
+After these four instructions, DE holds the original value of BC and HL holds
+the original value of AF. The second transfer — AF into HL — is particularly
+useful, because there is no `ld l, f` instruction. The flags register F cannot
+appear in any `ld` combination, but it can be moved through the stack by
+pushing AF and popping into another pair. This is one of the few ways to
+inspect or transfer the flags register.
+
+Remember that the stack is last-in-first-out: the pair pushed last is popped
+first. If you swap the pop order above, DE gets AF and HL gets BC — the reverse
+of what you might expect if you read the code top-to-bottom without thinking
+about the stack.
 
 ---
 
@@ -309,6 +354,34 @@ paths.
 
 ---
 
+## An advanced trick: reading the program counter
+
+The Z80 has no instruction to read PC directly. But because `call` pushes the
+address of the next instruction onto the stack, you can read PC with a trick:
+
+```zax
+  call next_instr       ; pushes address of next_instr onto the stack
+next_instr:
+  pop hl                ; HL = address of this instruction
+```
+
+`call next_instr` jumps to the very next instruction — it does nothing except
+push the return address. `pop hl` retrieves that address. HL now holds its own
+address in memory, which is the value PC had when `pop hl` was fetched.
+
+There is no `ret` here, and that is fine. The only thing the stack requires is
+balance: `call` pushed one word, `pop hl` consumed it. The stack is clean.
+This trick demonstrates the freedom assembly gives you: `call` and `ret` are
+not ceremonial pairs that must always appear together. They are stack
+operations, and you can use them however the stack discipline permits.
+
+You are unlikely to need this technique early on, but it illustrates an
+important principle: every instruction in the Z80 does exactly one mechanical
+thing. There is no hidden contract between `call` and `ret` — only the stack
+connects them.
+
+---
+
 ## Summary
 
 - `call label` pushes the return address onto the stack and jumps to `label`.
@@ -332,10 +405,10 @@ paths.
 
 ## What Comes Next
 
-Chapter 08 builds a complete program using everything from Chapters 00–06
+Chapter 11 builds a complete program using everything from Chapters 4–9
 together, then shows the points where raw Z80 starts to get unwieldy — the
-same points that Chapters 09–11 address.
+same points that Chapters 12–14 address.
 
 ---
 
-[← Data Tables and Indexed Access](05-data-tables-and-indexed-access.md) | [Part 2](README.md) | [I/O and Ports →](07-io-and-ports.md)
+[← Data Tables and Indexed Access](08-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](10-io-and-ports.md)

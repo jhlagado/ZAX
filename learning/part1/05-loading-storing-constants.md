@@ -1,6 +1,6 @@
-[← Numbers and Registers](01-numbers-and-registers.md) | [Part 2](README.md) | [Flags, Comparisons, Jumps →](03-flags-comparisons-jumps.md)
+[← Numbers and Registers](04-numbers-and-registers.md) | [Part 1](README.md) | [Flags, Comparisons, Jumps →](06-flags-comparisons-jumps.md)
 
-# Chapter 02 — Loading, Storing, and Simple Constants
+# Chapter 5 — Loading, Storing, and Simple Constants
 
 This chapter covers the four addressing modes of `ld` you will use in every
 program, shows how labels name memory addresses, and demonstrates EQU-style
@@ -8,7 +8,7 @@ constants and named storage. After reading it you will be able to load an
 immediate value, read from and write to a named memory location, and read
 through a register pair used as a pointer.
 
-Prerequisites: Chapters 00–01 (bytes, addresses, register pairs, module shell).
+Prerequisites: Chapters 3–4 (bytes, addresses, register pairs, module shell).
 
 ---
 
@@ -22,7 +22,12 @@ ld  destination, source
 ```
 
 `ld` never performs arithmetic; it only copies. The source value is placed in
-the destination unchanged.
+the destination unchanged. The two operands must match in size: you cannot load
+an 8-bit value into a 16-bit register, or a 16-bit value into an 8-bit
+register, even when it seems like the value would fit. There is no automatic
+type conversion in assembly. If you have a byte value and you need it in a
+register pair, you must place it explicitly — for example, load the byte into
+the low register and zero the high register yourself.
 
 The four source/destination combinations you will use most often are:
 
@@ -54,7 +59,7 @@ address; both are register names. No memory access is involved.
 Any pair of the 8-bit registers A, B, C, D, E, H, L can be combined:
 `ld d, h`, `ld l, c`, and so on. You cannot use `ld reg, reg` to copy between
 register pairs directly; you must copy the high and low bytes separately, as
-shown in Chapter 01.
+shown in Chapter 4.
 
 ---
 
@@ -324,7 +329,7 @@ belong to more advanced usage patterns covered later in the course.
 `ex af, af'` swaps the AF register pair with its shadow counterpart AF'. The Z80
 has a second set of registers — the shadow registers — that are separate storage
 locations with the same names, accessed by swapping. The shadow registers are
-introduced in Chapter 06. The practical use of `ex af, af'` is saving and
+introduced in Chapter 9. The practical use of `ex af, af'` is saving and
 restoring A and the flags temporarily, without using the stack.
 
 `exx` swaps BC, DE, and HL all at once with their shadow counterparts BC', DE',
@@ -363,10 +368,10 @@ encounter regularly. The others exist and will appear in later volumes.
 
 ## What Comes Next
 
-Chapter 03 introduces the flag register: the set of condition bits that
+Chapter 6 introduces the flag register: the set of condition bits that
 arithmetic and comparison instructions set, and that conditional jump
 instructions read to decide where execution continues next.
 
 ---
 
-[← Numbers and Registers](01-numbers-and-registers.md) | [Part 2](README.md) | [Flags, Comparisons, Jumps →](03-flags-comparisons-jumps.md)
+[← Numbers and Registers](04-numbers-and-registers.md) | [Part 1](README.md) | [Flags, Comparisons, Jumps →](06-flags-comparisons-jumps.md)

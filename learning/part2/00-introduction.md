@@ -1,6 +1,6 @@
-[Part 3](README.md) | [Foundations →](01-foundations.md)
+[Part 2](README.md) | [Foundations →](01-foundations.md)
 
-# Chapter 00 — Introduction
+# Introduction
 
 ## What This Volume Is For
 
@@ -8,7 +8,7 @@ This volume is the second stage of the ZAX course.
 
 It assumes you already know the basic machine model: registers, flags, memory,
 subroutines, and ordinary loop structure on the Z80. Volume 1 under
-`learning/part2/` covers those foundations from the ground up. This volume starts
+`learning/part1/` covers those foundations from the ground up. This volume starts
 later. Its job is to show how larger ZAX programs are organised once those
 basics are already familiar.
 
@@ -62,11 +62,11 @@ That distinction is what the rest of the volume keeps reinforcing.
 
 ## What Comes Next
 
-Chapter 01 starts with arithmetic and number-theory algorithms: power, GCD,
+Chapter 1 starts with arithmetic and number-theory algorithms: power, GCD,
 Fibonacci, square root, and decimal digit count. These are small programs with
 no arrays or records — just functions, typed locals, and structured control
 flow. They establish the working patterns that every later chapter builds on.
 
 ---
 
-[Part 3](README.md) | [Foundations →](01-foundations.md)
+[Part 2](README.md) | [Foundations →](01-foundations.md)
