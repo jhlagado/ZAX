@@ -15,13 +15,13 @@ Prerequisites: Chapter 3 (bytes, addresses, the module shell).
 
 Every byte in the Z80 holds an eight-bit binary value. Each bit is either 0 or 1.
 The bits are numbered 7 (most significant, leftmost) down to 0 (least
-significant, rightmost). The binary value `0b10000001` has bits 7 and 0 set and
+significant, rightmost). The binary value `%10000001` has bits 7 and 0 set and
 all others clear; its decimal value is 128 + 1 = 129.
 
 Binary notation is precise but long. Hexadecimal (base 16) is shorter. One hex
 digit represents exactly four bits: `0`–`9` for values 0–9, `A`–`F` for
 values 10–15. Two hex digits describe a full byte. The binary byte
-`0b10000001` written in hex is `$81` (8×16 + 1 = 129). ZAX uses the `$` prefix
+`%10000001` written in hex is `$81` (8×16 + 1 = 129). ZAX uses the `$` prefix
 for hex literals throughout.
 
 The table below shows the correspondence for the sixteen possible four-bit
@@ -66,8 +66,8 @@ pattern `$80` is -128.
 
 Two's complement is the standard encoding for negative integers on the Z80.
 To compute the two's complement of a positive value, invert all bits and add
-one. The two's complement of `$01` (binary `0b00000001`) is `0b11111110 + 1 =
-0b11111111 = $FF`, which is -1.
+one. The two's complement of `$01` (binary `%00000001`) is `%11111110 + 1 =
+%11111111 = $FF`, which is -1.
 
 The CPU arithmetic instructions do not distinguish: `add a, b` performs the same
 bitwise addition regardless of whether you intend the values as signed or
