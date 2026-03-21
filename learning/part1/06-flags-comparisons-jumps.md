@@ -193,8 +193,8 @@ bits — the only difference is how you interpret bit 7. Comparing against `$80`
 is the dividing line between the two halves: 0–127 (non-negative) and 128–255
 (negative when read as signed).
 
-Note that `neg` applied to -128 produces 128, which overflows back to -128 in
-a signed byte. The absolute value of -128 does not fit in 8 bits.
+Note that `neg` applied to -128 gives -128 — the mathematical result (+128)
+does not fit in a signed byte, so the bit pattern (`$80`) is unchanged.
 
 ---
 

@@ -6,8 +6,7 @@ There are no loops in assembly. There are no subroutines, no if-statements, no
 structured blocks of any kind. The language is nothing but individual
 instructions, one after another. Every structure that exists in high-level
 languages — loops, conditionals, function calls — you build yourself out of
-jumps and labels. This might sound limiting, but it gives you complete freedom
-of creation: the CPU does exactly what you tell it, nothing more.
+jumps and labels. The CPU does exactly what you write, nothing more.
 
 This chapter introduces `djnz`, the Z80's single-instruction counted loop
 primitive. After reading it you will be able to write a DJNZ counted loop, a
