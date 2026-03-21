@@ -128,7 +128,7 @@ Here is the complete Z80 register set:
 
 When B and C are used as the pair BC, B holds the high byte and C holds the low byte — the same pattern as DE (D high, E low) and HL (H high, L low). IX and IY follow the same rule with their halves. So for example if HL = `$1A2B`, then H = `$1A` and L = `$2B`.
 
-The Z80 also has a second, hidden copy of A, F, B, C, D, E, H, and L called the **shadow registers**. They are covered in Chapter 9, where you will have a practical reason to use them.
+The Z80 also has a second, hidden copy of A, F, B, C, D, E, H, and L called the **shadow registers**. They are covered in Chapter 7, where you will have a practical reason to use them.
 
 ---
 

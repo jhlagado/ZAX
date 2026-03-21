@@ -1,6 +1,6 @@
-[← Data Tables and Indexed Access](08-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](10-io-and-ports.md)
+[← Data Tables and Indexed Access](06-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](08-io-and-ports.md)
 
-# Chapter 9 — Stack and Subroutines
+# Chapter 7 — Stack and Subroutines
 
 This chapter explains how `call` and `ret` work, how the hardware stack operates,
 and how to write reusable subroutines that receive values through registers and
@@ -8,7 +8,7 @@ return results to the caller. After reading it you will be able to write a
 subroutine, call it with values in registers, preserve the caller's registers
 using `push` and `pop`, and return a result.
 
-Prerequisites: Chapters 4–8 (registers, flags, `ld`, labels, DJNZ, tables).
+Prerequisites: Chapters 3–6 (registers, flags, `ld`, labels, DJNZ, tables).
 
 ---
 
@@ -143,8 +143,8 @@ end
 
 This is different from raw labeled subroutines — code you reach with `call
 label` but that is not wrapped in a ZAX `func`. Those are plain Z80: the
-assembler inserts nothing, so they **do** require an explicit `ret`. Chapter 11
-shows several such subroutines. In Chapters 12–14 you write ZAX `func` blocks
+assembler inserts nothing, so they **do** require an explicit `ret`. Chapter 9
+shows several such subroutines. In Chapters 10–12 you write ZAX `func` blocks
 exclusively, and the compiler handles the return for you.
 
 Declaring `: void` when the function leaves a meaningful value in A is a bug:
@@ -430,10 +430,10 @@ connects them.
 
 ## What Comes Next
 
-Chapter 11 builds a complete program using everything from Chapters 4–9
+Chapter 9 builds a complete program using everything from Chapters 3–7
 together, then shows the points where raw Z80 starts to get unwieldy — the
-same points that Chapters 12–14 address.
+same points that Chapters 10–12 address.
 
 ---
 
-[← Data Tables and Indexed Access](08-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](10-io-and-ports.md)
+[← Data Tables and Indexed Access](06-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](08-io-and-ports.md)

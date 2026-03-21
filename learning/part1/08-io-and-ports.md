@@ -1,6 +1,6 @@
-[← Stack and Subroutines](09-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](11-a-phase-a-program.md)
+[← Stack and Subroutines](07-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](09-a-phase-a-program.md)
 
-# Chapter 10 — I/O and Ports
+# Chapter 8 — I/O and Ports
 
 The Z80 has two distinct address spaces: the memory space you have been using
 since Chapter 1, and a separate **I/O space** of 256 numbered ports. The `in`
@@ -9,7 +9,7 @@ without touching memory at all.
 
 On real hardware, ports connect to peripherals: keyboard controllers, display
 chips, timers, serial interfaces. The port number selects which device the CPU
-is talking to. Chapter 10 treats port numbers as abstract placeholders — the
+is talking to. Chapter 8 treats port numbers as abstract placeholders — the
 Z80 mechanism is what matters here; the mapping of numbers to devices varies by
 platform and is for the hardware documentation of whichever machine you are
 targeting.
@@ -131,7 +131,7 @@ difference is where the port number comes from.
 A counted loop can send a sequence of bytes to a port one at a time. HL points
 to the data; BC holds the count; C holds the port number. There is no
 block-copy instruction for I/O on the Z80 (unlike the `ldir` memory copy from
-Chapter 8), so you write the loop yourself.
+Chapter 6), so you write the loop yourself.
 
 ```zax
 func send_block()
@@ -146,7 +146,7 @@ end
 ```
 
 HL advances one byte per iteration. B counts down from the caller-supplied
-count. This is the same DJNZ-counted walk pattern from Chapter 7, applied to
+count. This is the same DJNZ-counted walk pattern from Chapter 5, applied to
 output rather than calculation.
 
 ---
@@ -243,7 +243,7 @@ here is a port selector, not a data register.
 whether the byte read was zero. `and $01` then narrows the test to bit 0 before
 the conditional branch.
 
-**`send_block`** — a DJNZ loop from Chapter 7 applied to output. B counts the
+**`send_block`** — a DJNZ loop from Chapter 5 applied to output. B counts the
 bytes; HL steps through source memory; C holds the port. The call site sets all
 three before the call.
 
@@ -266,10 +266,10 @@ three before the call.
 
 ## What Comes Next
 
-Chapter 11 brings everything together: a complete program that uses every
-instruction form from Chapters 4–10. It also names the specific places where
-raw Z80 starts to get tedious — which sets up what Chapters 12–14 address.
+Chapter 9 brings everything together: a complete program that uses every
+instruction form from Chapters 3–8. It also names the specific places where
+raw Z80 starts to get tedious — which sets up what Chapters 10–12 address.
 
 ---
 
-[← Stack and Subroutines](09-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](11-a-phase-a-program.md)
+[← Stack and Subroutines](07-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](09-a-phase-a-program.md)

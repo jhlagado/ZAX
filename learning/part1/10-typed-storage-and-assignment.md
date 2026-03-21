@@ -1,13 +1,13 @@
-[← A Complete Program](11-a-phase-a-program.md) | [Part 1](README.md) | [Structured Control Flow →](13-structured-control-flow.md)
+[← A Complete Program](09-a-phase-a-program.md) | [Part 1](README.md) | [Structured Control Flow →](11-structured-control-flow.md)
 
-# Chapter 12 — Typed Storage and Assignment
+# Chapter 10 — Typed Storage and Assignment
 
 This chapter introduces typed local variables and the `:=` assignment operator.
 After reading it you will be able to declare a typed local inside a function,
 read and write it with `:=`, use `succ` and `pred` to increment or decrement it,
 and explain what the compiler does differently from a raw `ld` instruction.
 
-Prerequisites: Chapters 4–10 (especially Chapter 11, which names the specific
+Prerequisites: Chapters 3–8 (especially Chapter 9, which names the specific
 problems that typed variables address).
 
 ---
@@ -24,7 +24,7 @@ In raw Z80, a value that needs to persist across loop iterations has to live in
 a register — B for a loop counter, D for a running count, and so on. You choose
 the register. When two values need to persist at the same time, two registers
 have to be reserved, and any function that modifies those registers has to save
-and restore them with `push` and `pop`. Chapter 11 showed this in `count_above`:
+and restore them with `push` and `pop`. Chapter 9 showed this in `count_above`:
 the `push bc / ld d, 0 / pop bc` block existed only because D needed to be
 initialized without disturbing B and C. The save and restore carried no logical
 meaning — it was just register traffic management.
@@ -106,7 +106,7 @@ compiler-managed. You do not write it; you write `hl := count`.
 
 ## Bare-name access vs address dereference
 
-Chapter 5 established the bare-name rule: the bare form means "the typed value
+ZAX distinguishes two forms: the bare name means "the typed value
 at this location" and `(name)` means "memory at this address." With typed
 locals, the bare form is the only form used for `:=`. Typed locals live at
 IX-relative offsets, not at fixed absolute addresses; the dereference form
@@ -143,7 +143,7 @@ for range discipline.
 
 ## Before and after: the same two loops
 
-The Chapter 11 program — finding the maximum value and counting entries above a
+The Chapter 9 program — finding the maximum value and counting entries above a
 threshold — shows the difference clearly. Here are both versions side by side.
 
 **Without typed variables (`08_phase_a_capstone.zax`):**
@@ -246,7 +246,7 @@ an input.
 ## The example: `learning/part1/examples/09_typed_storage.zax`
 
 The example file rewrites the two subroutines above and calls them from the same
-`main` as Chapter 11. The data and expected results are identical — the table
+`main` as Chapter 9. The data and expected results are identical — the table
 `{ 23, 47, 91, 5, 67, 12, 88, 34 }` produces a maximum of 91 and a count of 3
 entries above 64 — so you can compare the two directly.
 
@@ -286,17 +286,17 @@ to the same stored value.
   that would mean "memory at the address stored in the slot," which is different.
 - `succ path` increments a typed scalar in place. `pred path` decrements it.
   Neither returns a value or guarantees flag state.
-- The push/pop from Chapter 11's `count_above` disappears because `cnt` is a
+- The push/pop from Chapter 9's `count_above` disappears because `cnt` is a
   named variable that does not occupy a register — so there is nothing to protect.
 - The DJNZ loop, `cp` comparison, and `ld a, (hl)` stay exactly as they were.
   Typed variables are an addition to raw Z80, not a replacement for it.
 
 ## What Comes Next
 
-Chapter 13 introduces `if`/`else` and `while`. The `count_above` double-`cp`
+Chapter 11 introduces `if`/`else` and `while`. The `count_above` double-`cp`
 pattern — two `jr` instructions just to distinguish less-than from greater-than
 — gets replaced with a readable `if` chain.
 
 ---
 
-[← A Complete Program](11-a-phase-a-program.md) | [Part 1](README.md) | [Structured Control Flow →](13-structured-control-flow.md)
+[← A Complete Program](09-a-phase-a-program.md) | [Part 1](README.md) | [Structured Control Flow →](11-structured-control-flow.md)
