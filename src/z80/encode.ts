@@ -171,6 +171,7 @@ function isReg16TransferName(name: string | undefined): boolean {
 function memIndexed(
   op: AsmOperandNode,
   env: CompileEnv,
+  diagnostics?: Diagnostic[],
 ): { prefix: number; disp: number } | undefined {
   if (op.kind !== 'Mem') return undefined;
   const ea = op.expr;
@@ -184,6 +185,16 @@ function memIndexed(
     if (base !== 'IX' && base !== 'IY') return undefined;
     const rawDisp = evalImmExpr(dispExpr, env);
     if (rawDisp === undefined) return undefined;
+    if (rawDisp < -128 || rawDisp > 127) {
+      if (diagnostics) {
+        diag(
+          diagnostics,
+          op,
+          `IX/IY displacement out of range (-128..127): ${rawDisp}.`,
+        );
+      }
+      return undefined;
+    }
     const prefix = base === 'IX' ? 0xdd : 0xfd;
     return { prefix, disp: negate ? -rawDisp : rawDisp };
   };
@@ -382,7 +393,7 @@ function encodeFamilyInstruction(
         reg8Code,
         fitsImm8,
         isMemHL,
-        memIndexed,
+        memIndexed: (op, env) => memIndexed(op, env, diagnostics),
       });
     case 'io':
       return encodeIoInstruction(node, env, diagnostics, {
@@ -404,7 +415,7 @@ function encodeFamilyInstruction(
         fitsImm8,
         fitsImm16,
         memAbs16,
-        memIndexed,
+        memIndexed: (op, env) => memIndexed(op, env, diagnostics),
         isMemHL,
         isMemRegName,
         isReg16TransferName,
@@ -417,7 +428,7 @@ function encodeFamilyInstruction(
         indexedReg8,
         reg8Code,
         isMemHL,
-        memIndexed,
+        memIndexed: (op, env) => memIndexed(op, env, diagnostics),
       });
     case 'bit':
       return encodeBitOpsInstruction(node, env, diagnostics, {
@@ -427,7 +438,7 @@ function encodeFamilyInstruction(
         indexedReg8,
         reg8Code,
         isMemHL,
-        memIndexed,
+        memIndexed: (op, env) => memIndexed(op, env, diagnostics),
       });
   }
 }
