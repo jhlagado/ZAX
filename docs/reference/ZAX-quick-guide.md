@@ -154,11 +154,11 @@ Module storage is declared inside named `data` sections. Three declaration forms
 section data vars at $8000
   count:     word              ; storage declaration — allocates, zero-initialized
   base:      addr = $C000      ; typed value initializer — allocates and initializes
-  alias_ptr  = count           ; alias initializer — no storage; new name for an existing symbol
+  alias_ptr  = count           ; alias initializer — no storage; new name for direct module-scope storage
 end
 ```
 
-The **typed alias form** `name: Type = rhs` is always a compile error in both named `data` sections and function-local `var` blocks. Use `name: Type = valueExpr` for value initialization, or `name = rhs` for aliasing.
+The **typed alias form** `name: Type = rhs` is always a compile error in both named `data` sections and function-local `var` blocks. Use `name: Type = valueExpr` for value initialization, or `name = rhs` for aliasing. In function-local `var`, that alias form is intentionally narrow: the right-hand side must be a direct module-scope storage name.
 
 Composite storage can be zero-initialized using scalar zero:
 
@@ -889,11 +889,11 @@ Three declaration forms are valid inside a `var` block:
 | ------------------------ | ------------------------------------------------------------- |
 | `name: Type`             | allocates a scalar frame slot, zero-initialized               |
 | `name: Type = valueExpr` | allocates a scalar frame slot, initialized to `valueExpr`     |
-| `name = rhs`             | alias — no frame slot; binds a new name to an existing symbol |
+| `name = GlobalStorageName` | alias — no frame slot; binds a local name to direct module-scope storage |
 
 The **typed alias form** `name: Type = rhs` is always a compile error.
 
-Only scalar types (`byte`, `word`, `addr`, `ptr`, or aliases resolving to those) may have frame slots. Non-scalar locals (arrays, records) are allowed only as alias declarations — they name an existing address but allocate no storage:
+Only scalar types (`byte`, `word`, `addr`, `ptr`, or aliases resolving to those) may have frame slots. Non-scalar locals (arrays, records) are allowed only as alias declarations to direct module-scope storage — they name an existing address but allocate no storage:
 
 ```zax
 section data vars at $8000
@@ -904,7 +904,7 @@ func process(): void
   var
     count:   word = 0        ; valid: scalar slot, initialized
     offset:  byte            ; valid: scalar slot, zero-initialized
-    tbl    = table           ; valid: alias — 'tbl' is another name for 'table'
+    tbl    = table           ; valid: alias to direct module-scope storage
     bad:     byte[4] = table ; COMPILE ERROR: typed alias form
   end
   ; tbl and table are the same address
@@ -912,6 +912,23 @@ end
 ```
 
 Scalar initializers are lowered in declaration order at function entry. For zero or constant word-sized init, the preferred lowering is `LD HL, imm16` / `PUSH HL`, which allocates and initializes the slot in one sequence.
+
+Rejected local alias forms:
+
+```zax
+func bad(buf: byte[16])
+  var
+    a = buf        ; COMPILE ERROR: parameter target not allowed
+  end
+end
+
+func also_bad(): void
+  var
+    count: word = 0
+    c = count      ; COMPILE ERROR: local target not allowed
+  end
+end
+```
 
 ### 6.3 The Typed Call Boundary
 
@@ -992,6 +1009,17 @@ Compatibility at call sites:
 - `T[N]` → `T[]` is allowed (narrowing to flexible view)
 - `T[]` → `T[N]` is rejected unless the compiler can prove the length is exactly `N`
 - Element-type mismatch is always rejected
+- Forwarding a non-scalar parameter is legal and does not require a local alias
+
+```zax
+func stage2(t: byte[16])
+  a := t[hl]
+end
+
+func stage1(t: byte[16])
+  stage2 t
+end
+```
 
 ```zax
 section data vars at $8000
@@ -1059,7 +1087,7 @@ ld d, (ix+tmp+1)
 
 Arguments resolve to positive IX displacements; locals resolve to negative displacements. This is separate from typed/value semantics in `:=` — bare names there still mean typed values/paths, not frame offsets.
 
-Only scalar locals/args with real frame slots participate in this raw IX-offset form. Non-scalar parameters are still passed in one 16-bit frame slot as storage references, but their names are not valid raw IX-offset symbols. Alias-only locals also do not participate.
+Only scalar locals/args with real frame slots participate in this raw IX-offset form. Non-scalar parameters are still passed in one 16-bit frame slot as storage references, but their names are not valid raw IX-offset symbols. Legal alias-only locals denote module-scope storage, not frame slots, so in raw code they behave like their module-scope target rather than as IX-offset symbols.
 
 #### Epilogue (compiler-generated)
 

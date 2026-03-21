@@ -932,13 +932,22 @@ Function-local `var` declaration forms (v0.2):
 
 - scalar storage declaration: `name: Type`
 - scalar value initializer: `name: Type = valueExpr`
-- alias initializer: `name = rhs`
+- alias initializer: `name = GlobalStorageName`
 
 Function-local `var` invalid forms and rules:
 
 - typed alias is invalid: `name: Type = rhs`
 - non-scalar local storage declaration without alias init is invalid in this scope
-- non-scalar locals are allowed only via alias form (`name = rhs`) and allocate no frame slot
+- non-scalar locals are allowed only via alias form and allocate no frame slot
+- in a function-local alias declaration, the right-hand side must be a **direct module-scope storage name**
+- therefore a function-local alias may target a module-scope scalar or aggregate storage symbol, but it may not target:
+  - a parameter
+  - a local
+  - another alias
+  - a field path
+  - an indexed path
+  - a constant
+  - a label
 
 Examples (normative classification):
 
@@ -950,7 +959,7 @@ end
 func sample(): void
   var
     a: word = 0             ; valid scalar value-init
-    b = table               ; valid alias-init
+    b = table               ; valid alias-init to direct module-scope storage
     bad: byte[4] = table    ; invalid typed alias form
   end
 end
@@ -1011,6 +1020,7 @@ Non-scalar argument contract (v0.2):
   - passing `T[N]` to `T[]` is allowed.
   - passing `T[]` to `T[N]` is rejected unless compiler can prove length is exactly `N`.
   - element-type mismatch is rejected.
+- Forwarding a non-scalar parameter to another non-scalar parameter is legal; it forwards the same storage reference and does not require a local alias.
 - This is a type/semantic rule; stack width remains one 16-bit slot for non-scalar args.
 
 ### 8.3 Calling Functions From Instruction Streams
@@ -1084,7 +1094,7 @@ Operand identifier resolution (v0.1):
   - each argument is one 16-bit slot
   - local scalar storage declarations allocate one 16-bit slot each
 - Local storage allocation in this scope remains scalar-slot based (`byte`, `word`, `addr`, `ptr`, or aliases resolving to those scalar types).
-- Non-scalar locals are permitted only as alias declarations (`name = rhs`) and do not allocate frame slots.
+- Non-scalar locals are permitted only as alias declarations to direct module-scope storage (`name = GlobalStorageName`) and do not allocate frame slots.
 
 Frame shape:
 
@@ -1102,6 +1112,7 @@ Raw instruction name resolution in framed functions:
 - Only scalar locals/args with real frame slots participate in this raw IX-offset form.
 - Non-scalar parameters are still passed in one 16-bit frame slot as storage references, but their names are not valid raw IX-offset symbols.
 - Alias-only locals do not allocate frame slots and are not valid raw IX-offset symbols.
+- Legal function-local aliases still denote module-scope storage in raw instruction contexts; e.g. `alias = table` permits `ld hl, alias` and `ld a, (alias)`.
 - Examples:
   - `ld hl, count` loads the address of module-scope `count`
   - `ld hl, (count)` loads the stored word at module-scope `count`

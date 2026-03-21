@@ -129,7 +129,7 @@ local_var_block = "var" , newline , local_decl , { newline , local_decl } , newl
 
 local_decl      = identifier , ":" , type_expr                              (* local scalar decl *)
                 | identifier , ":" , type_expr , "=" , value_init_expr      (* local scalar value-init *)
-                | identifier , "=" , rhs_alias_expr ;                        (* local alias-init *)
+                | identifier , "=" , rhs_alias_expr ;                        (* local alias-init to direct module-scope storage *)
 
 op_decl         = "op" , identifier , [ "(" , [ op_param_list ] , ")" ] ,
                   newline , instr_stream , "end" ;
@@ -247,7 +247,9 @@ These are semantic constraints enforced beyond pure grammar:
 - `import` remains module-scope only. It is not valid inside a named section.
 - Variable declarations inside a `code` named section are a compile error.
 - Local non-scalar value-init declarations are invalid.
-- Local non-scalar declarations are alias-only (`name = rhs`).
+- Local non-scalar declarations are alias-only (`name = GlobalStorageName`).
+- In function-local `var`, the alias RHS must be a direct module-scope storage name.
+- Function-local aliases may not target parameters, locals, aliases, field paths, indexed paths, constants, or labels.
 - `@path` is not a general expression operator. In v1 it is accepted only on the source side of `rr := @path` (with transitional `move rr, @path` still supported).
 - Raw data directives (`db`/`dw`/`ds`) and `raw_label` are only valid inside `section data` blocks.
 - A `raw_label` must be followed by a raw directive; it cannot stand alone.
@@ -257,7 +259,8 @@ These are semantic constraints enforced beyond pure grammar:
 - Raw instruction name resolution is semantic, not purely syntactic:
   - module-scope storage names behave as raw labels in raw Z80 instruction operands
   - scalar function args/locals may act as symbolic IX-relative slot offsets in raw instruction operands/immediates
-  - non-scalar parameters and alias-only locals do not participate in that raw IX-offset form
+  - non-scalar parameters do not participate in that raw IX-offset form
+  - legal function-local aliases denote module-scope storage in raw instruction contexts; they do not denote frame slots
 
 ## 9. Maintenance Rule
 
