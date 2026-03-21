@@ -1,6 +1,6 @@
-[← Flags, Comparisons, Jumps](06-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](08-data-tables-and-indexed-access.md)
+[← Flags, Comparisons, Jumps](04-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](06-data-tables-and-indexed-access.md)
 
-# Chapter 7 — Counting Loops and DJNZ
+# Chapter 5 — Counting Loops and DJNZ
 
 There are no loops in assembly. There are no subroutines, no if-statements, no
 structured blocks of any kind. The language is nothing but individual
@@ -14,13 +14,13 @@ sentinel loop that exits on a value match, and a flag-exit loop that exits when
 a computed condition becomes true. You will also understand a hardware edge case
 that every Z80 programmer needs to know.
 
-Prerequisites: Chapter 6 (flags, `cp`, `jp`, `jr`, label-based control flow).
+Prerequisites: Chapter 4 (flags, `cp`, `jp`, `jr`, label-based control flow).
 
 ---
 
-## Chapter 6 left a two-instruction pattern
+## Chapter 4 left a two-instruction pattern
 
-Chapter 6 ended with this loop shape:
+Chapter 4 ended with this loop shape:
 
 ```zax
 ld b, Limit
@@ -336,9 +336,9 @@ determines when to stop.
 
 ## What Comes Next
 
-Chapter 8 shows how to define byte and word tables in memory and read their
+Chapter 6 shows how to define byte and word tables in memory and read their
 entries using HL as a sequential pointer and IX as a displaced-access pointer.
 
 ---
 
-[← Flags, Comparisons, Jumps](06-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](08-data-tables-and-indexed-access.md)
+[← Flags, Comparisons, Jumps](04-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](06-data-tables-and-indexed-access.md)

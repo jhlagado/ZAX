@@ -9,19 +9,18 @@ section data vars at $8000
 end
 
 export func main(): void
-  ; Load a constant value into A and store it to named RAM (bare-name form)
+  ; Load a constant value into A and store it to named RAM
   ld a, MaxCount                 ; A = 10  (const: value substituted directly)
-  ld count, a                    ; count = 10  (bare name: write typed scalar)
+  ld (count), a                  ; store A at the address of count
 
-  ; Load a 16-bit constant into HL and read back via (HL) — explicit dereference
-  ; This demonstrates the pointer / address-dereference form deliberately:
+  ; Load a 16-bit constant into HL and read back via (HL)
   ; HL holds the address $8000, and (hl) reads the byte at that address.
   ld hl, BaseAddr                ; HL = $8000 (the address of count)
-  ld a, (hl)                     ; A = byte at address HL  — explicit dereference
+  ld a, (hl)                     ; A = byte at address HL
 
-  ; Store a word value into named word storage and read it back (bare-name form)
+  ; Store a word value into named word storage and read it back
   ld hl, $1234
-  ld scratch, hl                 ; scratch = $1234  (bare name: write typed word)
+  ld (scratch), hl               ; store HL at the address of scratch
 
-  ld hl, scratch                 ; HL = $1234  (bare name: read typed word)
+  ld hl, (scratch)               ; read word back from scratch into HL
 end
