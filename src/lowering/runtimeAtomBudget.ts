@@ -47,6 +47,8 @@ export function createRuntimeAtomBudgetHelpers(ctx: RuntimeAtomBudgetContext) {
           0,
         );
       case 'ImmName':
+        if (ctx.stackSlotOffsets.has(expr.name.toLowerCase())) return 0;
+        if (ctx.stackSlotTypes.has(expr.name.toLowerCase())) return 0;
         return ctx.resolveScalarBinding(expr.name) ? 1 : 0;
       case 'ImmUnary':
         return countRuntimeAtomsInImmExpr(expr.expr);

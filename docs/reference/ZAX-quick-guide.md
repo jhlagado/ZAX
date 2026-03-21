@@ -1036,6 +1036,19 @@ IX-4 .. IX-3    local 1
 
 Each argument and local scalar occupies one 16-bit slot regardless of declared type. For `byte` parameters, the value is in the low byte of the slot; the high byte is ignored by the callee (recommended: zero-extend when pushing).
 
+#### Raw IX Slot Offsets
+
+In raw instruction operands and immediates, argument and local names can be used as IX-relative slot offsets:
+
+```asm
+ld c, (ix+arg1+0)
+ld b, (ix+arg1+1)
+ld e, (ix+tmp+0)
+ld d, (ix+tmp+1)
+```
+
+Arguments resolve to positive IX displacements; locals resolve to negative displacements. This is separate from typed/value semantics in `:=` — bare names there still mean typed values/paths, not frame offsets. Only scalar locals/args with real frame slots participate; alias-only locals do not.
+
 #### Epilogue (compiler-generated)
 
 ```asm
