@@ -76,6 +76,37 @@ That distinction matters:
 The current trace file should remain for now.
 It may later evolve into a listing-like format, but that is separate from this design.
 
+## Pipeline boundary
+
+This design requires a new pipeline boundary.
+
+It is **not** just another format writer hanging off the current artifact contract.
+
+Today the format-writer side of the compiler receives an `EmittedByteMap` plus
+`SymbolEntry[]`. That is already too late for a real assembler-source backend,
+because by that point the compiler has discarded or flattened information that a
+valid lowered source emitter needs to retain directly.
+
+Examples of information that cannot be recovered reliably from the current
+writer contract alone:
+
+- declaration-shaped data
+- section/origin directives as source-level emission decisions
+- intended instruction/data ordering before trace-specific sorting
+- comment associations
+- distinctions between user-declared and synthetic emitted structure
+
+So the first implementation step is architectural:
+
+- introduce a backend-neutral lowered assembly product before final byte-map
+  emission
+- make both direct code emission and assembler-source emission consume that
+  lower-level product, or derive from it in a controlled way
+- keep the existing trace writer as a separate consumer or derived artifact
+
+That boundary shift should be treated as a primary part of the work, not a
+detail hidden inside an emitter.
+
 ## Target model
 
 The compiler should support two independent lowered-output products:
@@ -128,6 +159,9 @@ The clean architecture is:
 
 The current direct machine-code backend remains supported.
 The new assembler backend is an additional emitter, not a replacement.
+The important implementation point is that these emitters must sit behind the
+new lowered-assembly boundary, not directly on top of the current
+`EmittedByteMap` writer contract.
 
 ## Dialect abstraction
 
@@ -251,8 +285,11 @@ It only needs one real backend that proves the architecture.
 ### Phase 1 — design and backend boundary
 
 - define the backend-neutral lowered assembly model
+- define the new pipeline boundary where that model is produced
 - define the distinction between trace output and assembler backend output
 - keep existing trace output unchanged
+- widen the compile/pipeline contract as needed so assembler emitters consume
+  lowered structure rather than only final bytes
 - add an explicit emitter slot for assembler-source backends
 
 ### Phase 2 — ASM80 source emitter without comment preservation
