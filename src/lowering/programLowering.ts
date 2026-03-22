@@ -95,7 +95,7 @@ export type Context = FunctionLoweringSharedContext & {
     diagnostics: Diagnostic[],
   ) => number | undefined;
   lowerFunctionDecl: (ctx: FunctionLoweringContext) => void;
-  recordLoweredAsmItem: (item: LoweredAsmItem) => void;
+  recordLoweredAsmItem: (item: LoweredAsmItem, span?: SourceSpan) => void;
   lowerImmExprForLoweredAsm: (expr: ImmExprNode) => LoweredImmExpr;
   namedSectionSinksByNode: Map<NamedSectionNode, NamedSectionContributionSink>;
   withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T) => T;
@@ -453,30 +453,39 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
         line: binDecl.span.start.line,
         scope: 'global',
       });
-      ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name });
+      ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name }, binDecl.span);
       for (const b of blob) {
         namedSection.sink.bytes.set(namedSection.sink.offset++, b & 0xff);
-        ctx.recordLoweredAsmItem({ kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] });
+        ctx.recordLoweredAsmItem(
+          { kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] },
+          binDecl.span,
+        );
       }
       return;
     }
     if (binDecl.section === 'code') {
       ctx.pending.push({ kind: 'data', name: binDecl.name, section: 'code', offset: ctx.codeOffsetRef.current, file: binDecl.span.file, line: binDecl.span.start.line, scope: 'global' });
       withTempSection('code', () => {
-        ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name });
+        ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name }, binDecl.span);
         for (const b of blob) {
           ctx.codeBytes.set(ctx.codeOffsetRef.current++, b & 0xff);
-          ctx.recordLoweredAsmItem({ kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] });
+          ctx.recordLoweredAsmItem(
+            { kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] },
+            binDecl.span,
+          );
         }
       });
       return;
     }
     ctx.pending.push({ kind: 'data', name: binDecl.name, section: 'data', offset: ctx.dataOffsetRef.current, file: binDecl.span.file, line: binDecl.span.start.line, scope: 'global' });
     withTempSection('data', () => {
-      ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name });
+      ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name }, binDecl.span);
       for (const b of blob) {
         ctx.dataBytes.set(ctx.dataOffsetRef.current++, b & 0xff);
-        ctx.recordLoweredAsmItem({ kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] });
+        ctx.recordLoweredAsmItem(
+          { kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] },
+          binDecl.span,
+        );
       }
     });
   };
@@ -532,16 +541,16 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
         line: decl.span.start.line,
         scope: 'global',
       });
-      ctx.recordLoweredAsmItem({ kind: 'label', name: decl.name });
+      ctx.recordLoweredAsmItem({ kind: 'label', name: decl.name }, decl.span);
     }
 
     const emitByte = (b: number): void => {
       namedSection.sink.bytes.set(namedSection.sink.offset, b & 0xff);
       namedSection.sink.offset++;
-      ctx.recordLoweredAsmItem({
-        kind: 'db',
-        values: [{ kind: 'literal', value: b & 0xff }],
-      });
+      ctx.recordLoweredAsmItem(
+        { kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] },
+        decl.span,
+      );
     };
     const emitByteNoRecord = (b: number): void => {
       namedSection.sink.bytes.set(namedSection.sink.offset, b & 0xff);
@@ -552,10 +561,10 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
       namedSection.sink.offset++;
       namedSection.sink.bytes.set(namedSection.sink.offset, (w >> 8) & 0xff);
       namedSection.sink.offset++;
-      ctx.recordLoweredAsmItem({
-        kind: 'dw',
-        values: [{ kind: 'literal', value: w & 0xffff }],
-      });
+      ctx.recordLoweredAsmItem(
+        { kind: 'dw', values: [{ kind: 'literal', value: w & 0xffff }] },
+        decl.span,
+      );
     };
 
     if (decl.directive === 'ds') {
@@ -568,11 +577,14 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
         ctx.diag(ctx.diagnostics, decl.span.file, `Raw data size for "${decl.name}" must be non-negative.`);
         return;
       }
-      ctx.recordLoweredAsmItem({
-        kind: 'ds',
-        size: ctx.lowerImmExprForLoweredAsm(decl.size),
-        fill: { kind: 'literal', value: 0 },
-      });
+      ctx.recordLoweredAsmItem(
+        {
+          kind: 'ds',
+          size: ctx.lowerImmExprForLoweredAsm(decl.size),
+          fill: { kind: 'literal', value: 0 },
+        },
+        decl.span,
+      );
       for (let i = 0; i < size; i++) emitByteNoRecord(0);
       return;
     }
@@ -604,10 +616,16 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
       ctx.diag(ctx.diagnostics, decl.span.file, `Failed to evaluate raw data value for "${decl.name}".`);
       if (decl.directive === 'db') {
         emitByte(0);
-        ctx.recordLoweredAsmItem({ kind: 'db', values: [{ kind: 'literal', value: 0 }] });
+        ctx.recordLoweredAsmItem(
+          { kind: 'db', values: [{ kind: 'literal', value: 0 }] },
+          decl.span,
+        );
       } else {
         emitWord(0);
-        ctx.recordLoweredAsmItem({ kind: 'dw', values: [{ kind: 'literal', value: 0 }] });
+        ctx.recordLoweredAsmItem(
+          { kind: 'dw', values: [{ kind: 'literal', value: 0 }] },
+          decl.span,
+        );
       }
     }
   };
@@ -648,11 +666,14 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
           line: constItem.span.start.line,
           scope: 'global',
         });
-        ctx.recordLoweredAsmItem({
-          kind: 'const',
-          name: constItem.name,
-          value: { kind: 'literal', value: v },
-        });
+        ctx.recordLoweredAsmItem(
+          {
+            kind: 'const',
+            name: constItem.name,
+            value: { kind: 'literal', value: v },
+          },
+          constItem.span,
+        );
       }
       return;
     }
@@ -702,10 +723,10 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
       const aligned = ctx.alignTo(current, v);
       const pad = aligned - current;
       if (pad > 0) {
-        ctx.recordLoweredAsmItem({
-          kind: 'ds',
-          size: { kind: 'literal', value: pad },
-        });
+        ctx.recordLoweredAsmItem(
+          { kind: 'ds', size: { kind: 'literal', value: pad } },
+          a.span,
+        );
       }
       if (namedSection) alignNamedSection(namedSection.sink, v);
       else ctx.advanceAlign(v);

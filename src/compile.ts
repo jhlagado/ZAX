@@ -510,6 +510,7 @@ export const compile: CompileFn = async (
       : {}),
     ...(options.defaultCodeBase !== undefined ? { defaultCodeBase: options.defaultCodeBase } : {}),
     namedSectionKeys: nonBankedSectionKeys,
+    sourceTexts,
   });
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };

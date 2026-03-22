@@ -35,7 +35,7 @@ export function lowerDataBlock(
         line: decl.span.start.line,
         scope: 'global',
       });
-      ctx.recordLoweredAsmItem({ kind: 'label', name: decl.name });
+      ctx.recordLoweredAsmItem({ kind: 'label', name: decl.name }, decl.span);
     }
 
     const type = decl.typeExpr;
@@ -44,20 +44,20 @@ export function lowerDataBlock(
     const emitByte = (b: number) => {
       target.bytes.set(target.offsetRef.current, b & 0xff);
       target.offsetRef.current++;
-      ctx.recordLoweredAsmItem({
-        kind: 'db',
-        values: [{ kind: 'literal', value: b & 0xff }],
-      });
+      ctx.recordLoweredAsmItem(
+        { kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] },
+        decl.span,
+      );
     };
     const emitWord = (w: number) => {
       target.bytes.set(target.offsetRef.current, w & 0xff);
       target.offsetRef.current++;
       target.bytes.set(target.offsetRef.current, (w >> 8) & 0xff);
       target.offsetRef.current++;
-      ctx.recordLoweredAsmItem({
-        kind: 'dw',
-        values: [{ kind: 'literal', value: w & 0xffff }],
-      });
+      ctx.recordLoweredAsmItem(
+        { kind: 'dw', values: [{ kind: 'literal', value: w & 0xffff }] },
+        decl.span,
+      );
     };
     const recordStartupInit = (
       kind: 'copy' | 'zero',
