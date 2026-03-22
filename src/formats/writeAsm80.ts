@@ -77,7 +77,9 @@ function formatItem(item: LoweredAsmItem): string[] {
     case 'const':
       return [`${item.name} EQU ${formatImmExpr(item.value)}`];
     case 'comment':
-      return [];
+      if (!item.text.trim()) return [];
+      if (item.origin === 'user') return [`; ${item.text}`];
+      return [`; ZAX: ${item.text}`];
     case 'db':
       return [`DB ${item.values.map(formatImmExpr).join(', ')}`];
     case 'dw':

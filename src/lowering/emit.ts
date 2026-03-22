@@ -204,6 +204,7 @@ export function emitProgram(
     rawTypedCallWarnings?: boolean;
     defaultCodeBase?: number;
     namedSectionKeys?: NonBankedSectionKeyCollection;
+    sourceTexts?: Map<string, string>;
   },
 ): {
   map: EmittedByteMap;
@@ -219,7 +220,7 @@ export function emitProgram(
   const codeAsmTrace: EmittedAsmTraceEntry[] = [];
   const loweredAsmStream: LoweredAsmStream = { blocks: [] };
   const loweredAsmBlocksByKey = new Map<string, LoweredAsmStreamBlock>();
-  let recordLoweredAsmItem: ((item: LoweredAsmItem) => void) | undefined;
+  let recordLoweredAsmItem: ((item: LoweredAsmItem, span?: SourceSpan) => void) | undefined;
   let lowerImmExprForLoweredAsm: ((expr: ImmExprNode) => LoweredImmExpr) | undefined;
   let lowerOperandForLoweredAsm: ((op: AsmOperandNode) => LoweredOperand) | undefined;
   let currentCodeSegmentTag: SourceSegmentTag | undefined;
@@ -370,16 +371,16 @@ export function emitProgram(
     });
   };
 
-  const traceLabel = (offset: number, name: string): void => {
+  const traceLabel = (offset: number, name: string, span?: SourceSpan): void => {
     const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
     trace.push({ kind: 'label', offset, name });
-    recordLoweredAsmItem?.({ kind: 'label', name });
+    recordLoweredAsmItem?.({ kind: 'label', name }, span);
   };
 
   const traceComment = (offset: number, text: string): void => {
     const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
     trace.push({ kind: 'comment', offset, text });
-    recordLoweredAsmItem?.({ kind: 'comment', text });
+    recordLoweredAsmItem?.({ kind: 'comment', text, origin: 'zax' });
   };
 
   const getCurrentCodeOffset = (): number => currentNamedSectionSink?.offset ?? codeOffset;
@@ -426,12 +427,15 @@ export function emitProgram(
     );
     if (!encoded) return false;
     if (recordLoweredAsmItem && lowerOperandForLoweredAsm) {
-      recordLoweredAsmItem({
-        kind: 'instr',
-        head,
-        operands: operands.map((op) => lowerOperandForLoweredAsm!(op)),
-        bytes: [...encoded],
-      });
+      recordLoweredAsmItem(
+        {
+          kind: 'instr',
+          head,
+          operands: operands.map((op) => lowerOperandForLoweredAsm!(op)),
+          bytes: [...encoded],
+        },
+        span,
+      );
     }
     emitCodeBytes(encoded, span.file);
     traceInstruction(start, encoded, formatAsmInstrForTrace(head, operands));
@@ -932,7 +936,40 @@ export function emitProgram(
     return block;
   };
 
-  const recordLoweredAsmItemImpl = (item: LoweredAsmItem): void => {
+  const commentByFileLine = new Map<string, Map<number, string>>();
+  const emittedUserCommentLines = new Set<string>();
+  if (options?.sourceTexts) {
+    for (const [file, text] of options.sourceTexts) {
+      const lines = text.split(/\r?\n/);
+      const lineMap = new Map<number, string>();
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i] ?? '';
+        const semi = line.indexOf(';');
+        if (semi < 0) continue;
+        const commentText = line.slice(semi + 1).trim();
+        if (!commentText) continue;
+        lineMap.set(i + 1, commentText);
+      }
+      if (lineMap.size > 0) commentByFileLine.set(file, lineMap);
+    }
+  }
+
+  const maybeRecordUserComment = (span?: SourceSpan): void => {
+    if (!span) return;
+    const lineMap = commentByFileLine.get(span.file);
+    if (!lineMap) return;
+    const text = lineMap.get(span.start.line);
+    if (!text) return;
+    const key = `${span.file}:${span.start.line}`;
+    if (emittedUserCommentLines.has(key)) return;
+    emittedUserCommentLines.add(key);
+    getLoweredAsmBlock().items.push({ kind: 'comment', text, origin: 'user' });
+  };
+
+  const recordLoweredAsmItemImpl = (item: LoweredAsmItem, span?: SourceSpan): void => {
+    if (item.kind !== 'comment' || item.origin !== 'user') {
+      maybeRecordUserComment(span);
+    }
     getLoweredAsmBlock().items.push(item);
   };
   recordLoweredAsmItem = recordLoweredAsmItemImpl;

@@ -35,7 +35,7 @@ type Context = {
   getCurrentCodeSegmentTag: () => SourceSegmentTag | undefined;
   setCurrentCodeSegmentTag: (tag: SourceSegmentTag | undefined) => void;
   taken: Set<string>;
-  traceLabel: (offset: number, name: string) => void;
+  traceLabel: (offset: number, name: string, span?: SourceSpan) => void;
   pending: Array<{
     kind: 'label' | 'data' | 'var';
     name: string;
@@ -212,7 +212,7 @@ export function createFunctionBodySetupHelpers({
       return;
     }
     taken.add(name);
-    traceLabel(getCodeOffset(), name);
+    traceLabel(getCodeOffset(), name, span);
     pending.push({
       kind: 'label',
       name,
