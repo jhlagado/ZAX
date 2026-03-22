@@ -1,4 +1,4 @@
-[← Typed Storage and Assignment](10-typed-storage-and-assignment.md) | [Part 1](README.md) | [Functions, Arguments, and Op →](12-functions-arguments-and-op.md)
+[← Functions and the IX Frame](10-functions-and-the-ix-frame.md) | [Part 1](README.md) | [Typed Assignment →](12-typed-assignment.md)
 
 # Chapter 11 — Structured Control Flow
 
@@ -303,30 +303,34 @@ to the effect — a reader must trace the label to understand the structure.
 **`find_max_cf` — with `while` and `if`:**
 
 ```zax
-func find_max_cf(): AF
+func find_max_cf(tbl: addr, len: byte): AF
   var
     running_max: byte = 0
   end
+  ld l, (ix+tbl+0)
+  ld h, (ix+tbl+1)
+  ld b, (ix+len+0)
   ld a, b
   or a
   while NZ
     ld a, (hl)
-    cp running_max
+    cp (ix+running_max+0)
     if NC
-      running_max := a
+      ld (ix+running_max+0), a
     end
     inc hl
     dec b
     ld a, b
     or a
   end
-  a := running_max
+  ld a, (ix+running_max+0)
 end
 ```
 
 No labels. `while NZ` expresses "loop while B is non-zero." `if NC` expresses
 "update if the current byte is not less than the running maximum." The condition
-and the consequence are adjacent and visually nested.
+and the consequence are adjacent and visually nested. Every frame access uses
+the raw IX-relative form from Chapter 10.
 
 This version uses `dec b` instead of `djnz` because `while` already handles
 the branch-back. `djnz` fused decrement-and-branch into one instruction; with
@@ -373,19 +377,24 @@ incremented.
 **`count_above_cf` — with typed local and `if`:**
 
 ```zax
-func count_above_cf(): AF
+func count_above_cf(tbl: addr, len: byte, threshold: byte): AF
   var
     cnt: byte = 0
   end
+  ld l, (ix+tbl+0)
+  ld h, (ix+tbl+1)
+  ld b, (ix+len+0)
   ld a, b
   or a
   while NZ
     ld a, (hl)
-    cp c
+    cp (ix+threshold+0)
     if NC
-      cp c
+      cp (ix+threshold+0)
       if NZ
-        succ cnt
+        ld a, (ix+cnt+0)
+        inc a
+        ld (ix+cnt+0), a
       end
     end
     inc hl
@@ -393,11 +402,11 @@ func count_above_cf(): AF
     ld a, b
     or a
   end
-  a := cnt
+  ld a, (ix+cnt+0)
 end
 ```
 
-The push/pop is gone (typed local `cnt` carries the count). The double `cp c` is
+The push/pop is gone (typed local `cnt` carries the count). The double `cp` is
 still present — the comparison logic itself has not changed, because "strictly
 greater than" still requires two tests — but the outer `if NC / inner if NZ`
 nesting makes the structure explicit: "if not-less-than, then if not-equal, then
@@ -448,11 +457,12 @@ jump. In the structured version, each is expressed by the keyword that carries i
 
 ## What Comes Next
 
-Chapter 12 introduces typed function parameters and the `op` construct. Typed
-parameters replace the register-passing convention that raw subroutines document
-in comments. `op` provides a lightweight named-operation form that expands inline
-without any call overhead.
+Chapter 12 introduces `:=`, the typed assignment operator. You have been writing
+`ld a, (ix+running_max+0)` and `ld (ix+cnt+0), a` by hand. `:=` automates
+these frame accesses — the compiler picks the right registers, handles
+word-sized slots, and checks types. By the time you read Chapter 12, you will
+understand exactly what `:=` generates.
 
 ---
 
-[← Typed Storage and Assignment](10-typed-storage-and-assignment.md) | [Part 1](README.md) | [Functions, Arguments, and Op →](12-functions-arguments-and-op.md)
+[← Functions and the IX Frame](10-functions-and-the-ix-frame.md) | [Part 1](README.md) | [Typed Assignment →](12-typed-assignment.md)
