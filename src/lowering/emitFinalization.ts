@@ -108,7 +108,7 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
     env: context.env,
   });
   for (const placed of placedContributions) {
-    const key = `${placed.sink.anchor.key.section}:${placed.sink.anchor.key.name}`;
+    const key = `contrib:${placed.sink.contribution.order}`;
     const replacement = emission.namedBytesByKey.get(key) ?? new Map<number, number>();
     const size = emission.blockSizesByKey.get(key);
     if (size !== undefined && size !== placed.sink.offset) {

@@ -83,6 +83,10 @@ function blockSectionKey(section: SectionKind, name?: string): string {
   return name ? `${section}:${name}` : `base:${section}`;
 }
 
+function namedContributionKey(contributionOrder?: number): string {
+  return `contrib:${contributionOrder ?? 'unknown'}`;
+}
+
 function emitLoweredAsmItemBytes(
   item: LoweredAsmItem,
   ctx: LoweredAsmByteEmissionContext,
@@ -172,7 +176,7 @@ export function emitLoweredAsmProgramBytes(
   for (const block of program.blocks) {
     if (block.kind !== 'section') continue;
     const section = block.section ?? 'code';
-    const key = blockSectionKey(section, block.name);
+    const key = block.name ? namedContributionKey(block.contributionOrder) : blockSectionKey(section);
     let target: Map<number, number>;
     if (block.name) {
       target = namedBytesByKey.get(key) ?? new Map<number, number>();

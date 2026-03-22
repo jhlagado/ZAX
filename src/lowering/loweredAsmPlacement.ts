@@ -25,7 +25,7 @@ export function collectNamedSectionOrigins(
 ): Map<string, number> {
   const origins = new Map<string, number>();
   for (const placed of contributions) {
-    const key = `${placed.sink.anchor.key.section}:${placed.sink.anchor.key.name}`;
+    const key = `${placed.sink.anchor.key.section}:${placed.sink.anchor.key.name}:${placed.sink.contribution.order}`;
     origins.set(key, placed.baseAddress);
   }
   return origins;
@@ -49,7 +49,7 @@ function resolveBlockOrigin(
   if (block.kind === 'base') {
     return baseOriginForSection(block.section, ctx.baseAddresses);
   }
-  const key = `${block.section}:${block.name ?? ''}`;
+  const key = `${block.section}:${block.name ?? ''}:${block.contributionOrder ?? 'unknown'}`;
   const origin = ctx.namedSectionOrigins.get(key);
   if (origin !== undefined) return origin;
   ctx.diag(
@@ -71,6 +71,7 @@ export function placeLoweredAsmStream(
       origin: resolveBlockOrigin(block, ctx),
       section: block.section,
       ...(block.name ? { name: block.name } : {}),
+      ...(block.contributionOrder !== undefined ? { contributionOrder: block.contributionOrder } : {}),
       items: block.items,
     });
   }
