@@ -7,6 +7,66 @@ import type { SectionKind } from './loweringTypes.js';
 import type { FinalizationContext } from './programLowering.js';
 import { parseNumberLiteral } from '../frontend/parseImm.js';
 
+export function computeSectionBases(
+  ctx: Pick<FinalizationContext, 'baseExprs' | 'evalImmExpr' | 'env' | 'diagnostics' | 'diag' | 'primaryFile' | 'alignTo' | 'codeOffset' | 'dataOffset'>,
+  defaultCodeBase?: number,
+  options?: { quiet?: boolean },
+): {
+  codeBase: number;
+  dataBase: number;
+  varBase: number;
+  codeOk: boolean;
+  dataOk: boolean;
+  varOk: boolean;
+} {
+  const diagnostics = options?.quiet ? [] : ctx.diagnostics;
+  const diagFn = options?.quiet ? () => {} : ctx.diag;
+  const evalBase = (kind: SectionKind): number | undefined => {
+    const at = ctx.baseExprs[kind];
+    if (!at) return undefined;
+    const value = ctx.evalImmExpr(at, ctx.env, diagnostics);
+    if (value === undefined) {
+      diagFn(diagnostics, at.span.file, `Failed to evaluate section "${kind}" base address.`);
+      return undefined;
+    }
+    if (value < 0 || value > 0xffff) {
+      diagFn(diagnostics, at.span.file, `Section "${kind}" base address out of range (0..65535).`);
+      return undefined;
+    }
+    return value;
+  };
+
+  const explicitCodeBase = evalBase('code');
+  const explicitDataBase = evalBase('data');
+  const explicitVarBase = evalBase('var');
+  const codeOk = explicitCodeBase !== undefined || !ctx.baseExprs.code;
+  const codeBase = explicitCodeBase ?? (defaultCodeBase ?? 0);
+  const dataBase =
+    explicitDataBase ??
+    (codeOk
+      ? ctx.alignTo(codeBase + ctx.codeOffset, 2)
+      : (diagFn(
+          diagnostics,
+          ctx.primaryFile,
+          `Cannot compute default data base address because code base address is invalid.`,
+        ),
+        0));
+  const dataOk = explicitDataBase !== undefined || (ctx.baseExprs.data === undefined && codeOk);
+  const varBase =
+    explicitVarBase ??
+    (dataOk
+      ? ctx.alignTo(dataBase + ctx.dataOffset, 2)
+      : (diagFn(
+          diagnostics,
+          ctx.primaryFile,
+          `Cannot compute default var base address because data base address is invalid.`,
+        ),
+        0));
+  const varOk = explicitVarBase !== undefined || (ctx.baseExprs.var === undefined && dataOk);
+
+  return { codeBase, dataBase, varBase, codeOk, dataOk, varOk };
+}
+
 export function finalizeProgramEmission(ctx: FinalizationContext): {
   codeBase: number;
   dataBase: number;
@@ -18,48 +78,10 @@ export function finalizeProgramEmission(ctx: FinalizationContext): {
   sourceSegments: EmittedSourceSegment[];
   asmTrace: EmittedAsmTraceEntry[];
 } {
-  const evalBase = (kind: SectionKind): number | undefined => {
-    const at = ctx.baseExprs[kind];
-    if (!at) return undefined;
-    const value = ctx.evalImmExpr(at, ctx.env, ctx.diagnostics);
-    if (value === undefined) {
-      ctx.diag(ctx.diagnostics, at.span.file, `Failed to evaluate section "${kind}" base address.`);
-      return undefined;
-    }
-    if (value < 0 || value > 0xffff) {
-      ctx.diag(ctx.diagnostics, at.span.file, `Section "${kind}" base address out of range (0..65535).`);
-      return undefined;
-    }
-    return value;
-  };
-
-  const explicitCodeBase = evalBase('code');
-  const explicitDataBase = evalBase('data');
-  const explicitVarBase = evalBase('var');
-  const codeOk = explicitCodeBase !== undefined || !ctx.baseExprs.code;
-  const codeBase = explicitCodeBase ?? (ctx.defaultCodeBase ?? 0);
-  const dataBase =
-    explicitDataBase ??
-    (codeOk
-      ? ctx.alignTo(codeBase + ctx.codeOffset, 2)
-      : (ctx.diag(
-          ctx.diagnostics,
-          ctx.primaryFile,
-          `Cannot compute default data base address because code base address is invalid.`,
-        ),
-        0));
-  const dataOk = explicitDataBase !== undefined || (ctx.baseExprs.data === undefined && codeOk);
-  const varBase =
-    explicitVarBase ??
-    (dataOk
-      ? ctx.alignTo(dataBase + ctx.dataOffset, 2)
-      : (ctx.diag(
-          ctx.diagnostics,
-          ctx.primaryFile,
-          `Cannot compute default var base address because data base address is invalid.`,
-        ),
-        0));
-  const varOk = explicitVarBase !== undefined || (ctx.baseExprs.var === undefined && dataOk);
+  const { codeBase, dataBase, varBase, codeOk, dataOk, varOk } = computeSectionBases(
+    ctx,
+    ctx.defaultCodeBase,
+  );
 
   const addrByNameLower = new Map<string, number>();
   for (const ps of ctx.pending) {
