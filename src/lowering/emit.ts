@@ -945,7 +945,7 @@ export function emitProgram(
     { lines: number[]; texts: Map<number, string>; index: number }
   >();
   const emittedUserCommentLines = new Set<string>();
-  const lastBlockByFile = new Map<string, LoweredAsmBlock>();
+  const lastBlockByFile = new Map<string, LoweredAsmStreamBlock>();
   if (options?.sourceTexts) {
     for (const [file, text] of options.sourceTexts) {
       const lines = text.split(/\r?\n/);
