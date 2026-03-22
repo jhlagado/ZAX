@@ -31,7 +31,7 @@ import {
   buildStartupInitRoutine,
   STARTUP_ENTRY_LABEL,
 } from './startupInit.js';
-import type { LoweredAsmStream } from './loweredAsmTypes.js';
+import type { LoweredAsmProgram, LoweredAsmStream } from './loweredAsmTypes.js';
 
 export type EmitFinalizationContext = {
   namedSectionSinks: NamedSectionContributionSink[];
@@ -69,6 +69,7 @@ export type EmitFinalizationContext = {
 export function finalizeEmitProgram(context: EmitFinalizationContext): {
   map: EmittedByteMap;
   symbols: SymbolEntry[];
+  placedLoweredAsmProgram: LoweredAsmProgram;
 } {
   const { placedContributions } = placeNonBankedSectionContributions(context.namedSectionSinks, {
     diagnostics: context.diagnostics,
@@ -289,5 +290,6 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
       ...(mergedAsmTrace.length > 0 ? { asmTrace: mergedAsmTrace } : {}),
     },
     symbols: context.symbols,
+    placedLoweredAsmProgram: placedProgram,
   };
 }

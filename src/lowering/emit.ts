@@ -205,7 +205,12 @@ export function emitProgram(
     defaultCodeBase?: number;
     namedSectionKeys?: NonBankedSectionKeyCollection;
   },
-): { map: EmittedByteMap; symbols: SymbolEntry[]; loweredAsmStream: LoweredAsmStream } {
+): {
+  map: EmittedByteMap;
+  symbols: SymbolEntry[];
+  loweredAsmStream: LoweredAsmStream;
+  placedLoweredAsmProgram: import('./loweredAsmTypes.js').LoweredAsmProgram;
+} {
   const bytes = new Map<number, number>();
   const codeBytes = new Map<number, number>();
   const dataBytes = new Map<number, number>();
