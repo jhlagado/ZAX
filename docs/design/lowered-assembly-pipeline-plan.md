@@ -135,7 +135,7 @@ Notes:
 ### ASM80 emitter path (new)
 
 - Add `writeAsm80(...)` (new writer, or new path inside `formats/`) that consumes `LoweredAsmProgram`.
-- The output artifact should use a temporary distinct name (e.g., `.lasm` or `.asm80`) until the trace `.asm` can be retired.
+- The output artifact should use a distinct name (currently `.z80`) until the trace `.asm` can be retired.
 - Tests/harnesses should run ASM80 parsing/validation on this artifact only (no CLI invocation in v1).
 
 ## Migration sequence (smallest safe first patch)
