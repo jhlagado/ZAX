@@ -1788,12 +1788,12 @@ ZAX uses a single “primary output path” to derive sibling artifacts.
     - Listing: `artifactBase + ".lst"`
     - Debug map (D8M v1): `artifactBase + ".d8dbg.json"`
     - Lowering trace source: `artifactBase + ".asm"`
-    - ASM80-compatible lowered source: `artifactBase + ".asm80"` (opt-in)
+    - ASM80-compatible lowered source: `artifactBase + ".z80"` (opt-in)
 
 Trace vs ASM80 note:
 
 - `.asm` is a compiler trace for inspection; it is not guaranteed assembler-valid.
-- `.asm80` is assembler-valid lowered output intended to assemble under ASM80.
+- `.z80` is assembler-valid lowered output intended to assemble under ASM80.
 
 Listing note:
 
@@ -1825,7 +1825,7 @@ Keep switches intentionally small:
 - `--nohex` Suppress `.hex`
 - `--nod8m` Suppress `.d8dbg.json`
 - `--noasm` Suppress `.asm` lowering trace output
-- `--asm80` Emit ASM80-compatible lowered source (`.asm80`)
+- `--asm80` Emit ASM80-compatible lowered source (`.z80`)
 - `-I, --include <dir>` Add import search path (repeatable)
 - `--case-style <mode>` Optional case-style linting for asm keywords/registers
   - supported: `off`, `upper`, `lower`, `consistent`

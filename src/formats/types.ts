@@ -194,7 +194,7 @@ export interface AsmArtifact {
 }
 
 /**
- * In-memory ASM80 `.asm80` artifact.
+ * In-memory ASM80 `.z80` artifact.
  */
 export interface Asm80Artifact {
   kind: 'asm80';
