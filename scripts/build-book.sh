@@ -22,9 +22,10 @@ PART1=(
   part1/07-stack-and-subroutines.md
   part1/08-io-and-ports.md
   part1/09-a-phase-a-program.md
-  part1/10-typed-storage-and-assignment.md
+  part1/10-functions-and-the-ix-frame.md
   part1/11-structured-control-flow.md
-  part1/12-functions-arguments-and-op.md
+  part1/12-typed-assignment.md
+  part1/13-op-macros-and-pseudo-opcodes.md
 )
 
 PART2=(

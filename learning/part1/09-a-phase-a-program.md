@@ -7,7 +7,7 @@ a data table, a DJNZ loop, subroutines called from the loop, conditional
 branches, and push/pop register preservation. By the end you will be able to
 follow and write a complete raw Z80 program in ZAX. You will also be able to
 see the specific places where writing raw Z80 gets unwieldy — which is exactly
-what Chapters 10–12 address.
+what Chapters 10–13 address.
 
 Prerequisites: Chapters 3–7.
 
@@ -218,29 +218,19 @@ the intent instead of the mechanism.
 
 ---
 
-## What the next three chapters address
+## What the next chapters address
 
-Chapters 10–12 introduce three things that each fix one of the problems above.
+Chapters 10–13 each fix one of the problems above.
 
-**Typed variables and `:=`** let you name a value — `count`, `running_max` —
-without tying it to a specific register. You write `count := 0` and the compiler
-puts it somewhere. No push/pop needed to protect inputs while you initialize
-something else.
+**ZAX functions** (Chapter 10) replace register-passing conventions with named parameters and local variables. The compiler builds an IX-relative stack frame; you access every value with standard `ld a, (ix+name+0)` instructions. No push/pop needed to protect inputs while you initialize something else.
 
-**Structured `if`** replaces the label-test-jump pattern. `if NC / ... / end`
-generates the same flag test and conditional branch as `cp c / jr nc, label /
-... / label:`, but you do not write the label. The source shows what the code
-is doing, not where jumps are going.
+**Structured control flow** (Chapter 11) replaces labels and jumps with `if`/`else` and `while`/`break`/`continue`. The compiler generates the same conditional branches — you just do not write the labels.
 
-**Structured `while`** replaces the loop-top label, the body, and the
-branch-back jump. `while NZ / ... / end` is a loop that tests flags before
-entering: if the condition is already false, the body does not run. This is
-different from the `jr nz, loop_top` form at the bottom of a loop, which always
-runs the body at least once. The label management disappears.
+**Typed assignment** (Chapter 12) introduces `:=`, which automates the IX-relative loads and stores you wrote by hand in Chapters 10–11. The compiler picks registers, handles word-sized slots, and checks types.
 
-None of this hides the machine. Everything translates to the same Z80
-instructions as before. What changes is that the source shows the intent, and
-the compiler writes the scaffolding.
+**Op macros** (Chapter 13) let you name a short instruction sequence and expand it inline at every call site, with no frame overhead.
+
+None of this hides the machine. Everything translates to the same Z80 instructions as before. What changes is that the source shows the intent, and the compiler writes the scaffolding.
 
 Chapter 10 starts there.
 
@@ -259,14 +249,15 @@ Chapter 10 starts there.
   programmer has to manage them correctly.
 - Push/pop pairs appear when a function needs to initialize a register that
   already holds an input. The real problem is not having named variables.
-- Chapters 10–12 — typed storage, `if`, and `while` — each address one of these
-  problems, while generating the same Z80 output.
+- Chapters 10–13 — ZAX functions, `if`/`while`, `:=`, and `op` — each address
+  one of these problems, while generating the same Z80 output.
 
 ## What Comes Next
 
-Chapter 10 introduces typed variables and `:=`: named storage that the compiler
-places on the stack, with no register chosen by hand.
+Chapter 10 introduces the first ZAX-specific feature beyond the program shell:
+functions with named parameters and local variables, accessed through raw
+IX-relative addressing.
 
 ---
 
-[← I/O and Ports](08-io-and-ports.md) | [Part 1](README.md) | [Typed Storage and Assignment →](10-typed-storage-and-assignment.md)
+[← I/O and Ports](08-io-and-ports.md) | [Part 1](README.md) | [Functions and the IX Frame →](10-functions-and-the-ix-frame.md)
