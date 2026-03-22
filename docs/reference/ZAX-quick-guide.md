@@ -112,14 +112,14 @@ Common outputs:
 | `.lst`        | deterministic byte dump with symbol table         |
 | `.d8dbg.json` | D8 Debug Map for Debug80 and compatible tools     |
 | `.asm`        | lowered trace — exactly what the compiler emitted |
-| `.asm80`      | ASM80-compatible lowered source (assembler-valid) |
+| `.z80`        | ASM80-compatible lowered source (assembler-valid) |
 
 By default, ZAX derives all artifact paths from the primary output path. Use `-o <file>` to set the primary output; `-t hex` or `-t bin` to choose the primary type (default: `hex`). Suppress individual outputs with `--nolist`, `--nobin`, `--nohex`, `--nod8m`, `--noasm`. Emit ASM80 output explicitly with `--asm80`.
 
 Trace vs ASM80 output:
 
 - `.asm` is a compiler trace for inspection; it is not guaranteed assembler-valid.
-- `.asm80` is assembler-valid lowered output intended for ASM80.
+- `.z80` is assembler-valid lowered output intended for ASM80.
 
 Useful diagnostic options:
 

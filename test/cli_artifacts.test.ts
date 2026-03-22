@@ -92,6 +92,22 @@ describe('cli artifacts', () => {
     await rm(work, { recursive: true, force: true });
   }, 20_000);
 
+  it('writes ASM80-compatible lowered source as .z80 when --asm80 is set', async () => {
+    const work = await mkdtemp(join(tmpdir(), 'zax-cli-z80-'));
+    const entry = join(work, 'main.zax');
+    await writeFile(entry, 'export func main()\n    nop\nend\n', 'utf8');
+
+    const outHex = join(work, 'out.hex');
+    const res = await runCli(['--asm80', '--nobin', '--nod8m', '--nolist', '--noasm', '-o', outHex, entry]);
+    expect(res.code).toBe(0);
+
+    expect(await exists(join(work, 'out.hex'))).toBe(true);
+    expect(await exists(join(work, 'out.z80'))).toBe(true);
+    expect(await exists(join(work, 'out.asm80'))).toBe(false);
+
+    await rm(work, { recursive: true, force: true });
+  }, 20_000);
+
   it('suppresses hex output for --type bin with --nohex', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-nohex-'));
     const entry = join(work, 'main.zax');

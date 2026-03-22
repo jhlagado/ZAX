@@ -41,7 +41,7 @@ function usage(): string {
     '      --nohex           Suppress .hex',
     '      --nod8m           Suppress .d8dbg.json',
     '      --noasm           Suppress .asm lowering trace',
-    '      --asm80           Emit ASM80-compatible lowered source (.asm80)',
+    '      --asm80           Emit ASM80-compatible lowered source (.z80)',
     '      --case-style <m>  Case-style lint mode: off|upper|lower|consistent',
     '      --op-stack-policy <m> Op stack-policy mode: off|warn|error',
     '      --raw-typed-call-warn Emit warnings for raw call to typed callable targets',
@@ -248,7 +248,7 @@ async function writeArtifacts(
   const d8mPath = `${base}.d8dbg.json`;
   const lstPath = `${base}.lst`;
   const asmPath = `${base}.asm`;
-  const asm80Path = `${base}.asm80`;
+  const asm80Path = `${base}.z80`;
 
   const writes: Array<Promise<void>> = [];
   const ensureDir = async (p: string) => mkdir(dirname(p), { recursive: true });
