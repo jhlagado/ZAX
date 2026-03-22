@@ -268,7 +268,7 @@ three before the call.
 
 Chapter 9 brings everything together: a complete program that uses every
 instruction form from Chapters 3–8. It also names the specific places where
-raw Z80 starts to get tedious — which sets up what Chapters 10–12 address.
+raw Z80 starts to get tedious — which sets up what Chapters 10–13 address.
 
 ---
 

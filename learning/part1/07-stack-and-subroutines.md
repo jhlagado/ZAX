@@ -144,7 +144,7 @@ end
 This is different from raw labeled subroutines — code you reach with `call
 label` but that is not wrapped in a ZAX `func`. Those are plain Z80: the
 assembler inserts nothing, so they **do** require an explicit `ret`. Chapter 9
-shows several such subroutines. In Chapters 10–12 you write ZAX `func` blocks
+shows several such subroutines. In Chapters 10–13 you write ZAX `func` blocks
 exclusively, and the compiler handles the return for you.
 
 Declaring `: void` when the function leaves a meaningful value in A is a bug:
@@ -432,7 +432,7 @@ connects them.
 
 Chapter 9 builds a complete program using everything from Chapters 3–7
 together, then shows the points where raw Z80 starts to get unwieldy — the
-same points that Chapters 10–12 address.
+same points that Chapters 10–13 address.
 
 ---
 

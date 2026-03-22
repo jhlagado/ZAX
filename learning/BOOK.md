@@ -1834,7 +1834,7 @@ end
 This is different from raw labeled subroutines — code you reach with `call
 label` but that is not wrapped in a ZAX `func`. Those are plain Z80: the
 assembler inserts nothing, so they **do** require an explicit `ret`. Chapter 9
-shows several such subroutines. In Chapters 10–12 you write ZAX `func` blocks
+shows several such subroutines. In Chapters 10–13 you write ZAX `func` blocks
 exclusively, and the compiler handles the return for you.
 
 Declaring `: void` when the function leaves a meaningful value in A is a bug:
@@ -2122,7 +2122,7 @@ connects them.
 
 Chapter 9 builds a complete program using everything from Chapters 3–7
 together, then shows the points where raw Z80 starts to get unwieldy — the
-same points that Chapters 10–12 address.
+same points that Chapters 10–13 address.
 
 # Chapter 8 — I/O and Ports
 
@@ -2392,7 +2392,7 @@ three before the call.
 
 Chapter 9 brings everything together: a complete program that uses every
 instruction form from Chapters 3–8. It also names the specific places where
-raw Z80 starts to get tedious — which sets up what Chapters 10–12 address.
+raw Z80 starts to get tedious — which sets up what Chapters 10–13 address.
 
 # Chapter 9 — A Complete Program
 
@@ -2401,7 +2401,7 @@ a data table, a DJNZ loop, subroutines called from the loop, conditional
 branches, and push/pop register preservation. By the end you will be able to
 follow and write a complete raw Z80 program in ZAX. You will also be able to
 see the specific places where writing raw Z80 gets unwieldy — which is exactly
-what Chapters 10–12 address.
+what Chapters 10–13 address.
 
 Prerequisites: Chapters 3–7.
 
@@ -2612,29 +2612,19 @@ the intent instead of the mechanism.
 
 ---
 
-## What the next three chapters address
+## What the next chapters address
 
-Chapters 10–12 introduce three things that each fix one of the problems above.
+Chapters 10–13 each fix one of the problems above.
 
-**Typed variables and `:=`** let you name a value — `count`, `running_max` —
-without tying it to a specific register. You write `count := 0` and the compiler
-puts it somewhere. No push/pop needed to protect inputs while you initialize
-something else.
+**ZAX functions** (Chapter 10) replace register-passing conventions with named parameters and local variables. The compiler builds an IX-relative stack frame; you access every value with standard `ld a, (ix+name+0)` instructions. No push/pop needed to protect inputs while you initialize something else.
 
-**Structured `if`** replaces the label-test-jump pattern. `if NC / ... / end`
-generates the same flag test and conditional branch as `cp c / jr nc, label /
-... / label:`, but you do not write the label. The source shows what the code
-is doing, not where jumps are going.
+**Structured control flow** (Chapter 11) replaces labels and jumps with `if`/`else` and `while`/`break`/`continue`. The compiler generates the same conditional branches — you just do not write the labels.
 
-**Structured `while`** replaces the loop-top label, the body, and the
-branch-back jump. `while NZ / ... / end` is a loop that tests flags before
-entering: if the condition is already false, the body does not run. This is
-different from the `jr nz, loop_top` form at the bottom of a loop, which always
-runs the body at least once. The label management disappears.
+**Typed assignment** (Chapter 12) introduces `:=`, which automates the IX-relative loads and stores you wrote by hand in Chapters 10–11. The compiler picks registers, handles word-sized slots, and checks types.
 
-None of this hides the machine. Everything translates to the same Z80
-instructions as before. What changes is that the source shows the intent, and
-the compiler writes the scaffolding.
+**Op macros** (Chapter 13) let you name a short instruction sequence and expand it inline at every call site, with no frame overhead.
+
+None of this hides the machine. Everything translates to the same Z80 instructions as before. What changes is that the source shows the intent, and the compiler writes the scaffolding.
 
 Chapter 10 starts there.
 
@@ -2653,310 +2643,223 @@ Chapter 10 starts there.
   programmer has to manage them correctly.
 - Push/pop pairs appear when a function needs to initialize a register that
   already holds an input. The real problem is not having named variables.
-- Chapters 10–12 — typed storage, `if`, and `while` — each address one of these
-  problems, while generating the same Z80 output.
+- Chapters 10–13 — ZAX functions, `if`/`while`, `:=`, and `op` — each address
+  one of these problems, while generating the same Z80 output.
 
 ## What Comes Next
 
-Chapter 10 introduces typed variables and `:=`: named storage that the compiler
-places on the stack, with no register chosen by hand.
+Chapter 10 introduces the first ZAX-specific feature beyond the program shell:
+functions with named parameters and local variables, accessed through raw
+IX-relative addressing.
 
-# Chapter 10 — Typed Storage and Assignment
+# Chapter 10 — Functions and the IX Frame
 
-This chapter introduces typed local variables and the `:=` assignment operator.
-After reading it you will be able to declare a typed local inside a function,
-read and write it with `:=`, use `succ` and `pred` to increment or decrement it,
-and explain what the compiler does differently from a raw `ld` instruction.
+Chapter 7 showed that `call` is just a `push` of the return address followed by a `jp`, and `ret` is just a `pop` of that address back into PC. You passed arguments in registers, documented the convention in a comment, and hoped every caller got the convention right. This works. It works right up to the point where you run out of registers, or forget which register carries what, or change a function's inputs and miss one of the twelve callers.
 
-Prerequisites: Chapters 3–8 (especially Chapter 9, which names the specific
-problems that typed variables address).
+This chapter introduces ZAX functions — the first feature in this book that is not raw Z80 assembly. A ZAX function declares its parameters and locals by name. The compiler builds a **stack frame** using IX as a base pointer, and you access every parameter and local through standard Z80 `ld` instructions with IX-relative offsets. No new syntax inside the function body. Just `ld a, (ix+name+0)` — the same displaced addressing you learned in Chapter 6.
 
 ---
 
-## What typed storage is
+## Why register passing runs out
 
-A typed local is a named variable declared inside a `var` block at the top of a
-function. It has a declared type (`byte`, `word`, or `addr`), and the compiler
-allocates a slot for it in the function's stack frame. The variable is referred
-to by name throughout the function body. No register is permanently assigned to
-hold its value.
-
-In raw Z80, a value that needs to persist across loop iterations has to live in
-a register — B for a loop counter, D for a running count, and so on. You choose
-the register. When two values need to persist at the same time, two registers
-have to be reserved, and any function that modifies those registers has to save
-and restore them with `push` and `pop`. Chapter 9 showed this in `count_above`:
-the `push bc / ld d, 0 / pop bc` block existed only because D needed to be
-initialized without disturbing B and C. The save and restore carried no logical
-meaning — it was just register traffic management.
-
-Typed locals remove that problem. You name the value; the compiler decides
-where to put it.
-
----
-
-## Declaring a typed local
-
-A `var` block appears at the start of a function body, before any instructions,
-and is terminated by its own `end`:
+Consider a subroutine that scans a byte table and returns the largest value. Chapter 7's version passed the table pointer in HL and the count in B:
 
 ```zax
-func example(): void
-  var
-    count: byte = 0
-    total: word = 0
-  end
-  ; instructions follow
-end
+; find_max: scan a byte table, return largest value.
+; Inputs:  HL = pointer to first byte, B = count
+; Outputs: A = maximum
 ```
 
-`count: byte = 0` declares a one-byte local named `count`, initialized to zero.
-`total: word = 0` declares a two-byte local named `total`, initialized to zero.
-Both are allocated as 16-bit slots in the block of stack memory ZAX reserves
-for the function's local variables.
+Two parameters, two registers. Now add a third parameter — a threshold value:
 
-A local initialized to zero does not need the `= 0` clause — uninitialized
-scalar locals start at zero by default — but writing it explicitly states the
-intent.
+```zax
+; count_above: count bytes strictly above a threshold.
+; Inputs:  HL = pointer, B = count, C = threshold
+; Outputs: A = count
+```
 
-Only scalar types are valid in `var` blocks: `byte`, `word`, `addr`, and `ptr`.
-Arrays and records can appear as aliases but do not get stack slots of their own.
-This chapter uses only `byte` and `word` locals.
+Three parameters, three registers. And inside `count_above`, the running count has to live somewhere too — that was D. Four values, four registers. You are already running low, and neither function does anything complicated.
+
+The problem compounds when functions call other functions. If `main` calls `find_max` and then `count_above`, it has to reload HL before the second call because `find_max` walked HL to the end of the table. The only way to know this is to read `find_max`'s body — the function signature says nothing about side effects.
+
+Raw register passing does not scale. It works for small programs where the programmer holds the entire register map in their head. Beyond that, you need a systematic way to pass values.
 
 ---
 
-## `:=` as the assignment surface
+## The stack frame
 
-`:=` is the typed assignment operator. It reads a value from the right-hand side
-and stores it into the left-hand side. Both sides must be readable storage
-expressions — registers or named typed storage:
+The solution is the same one that nearly every CPU architecture uses: dedicate a register as a **base pointer** into the stack, and place parameters and local variables at known offsets from that pointer.
 
-```zax
-count := a      ; store A into the typed local 'count'
-a := count      ; load the value of 'count' into A
-hl := total     ; load the 16-bit value of 'total' into HL
-total := hl     ; store HL into 'total'
-```
-
-The direction is left-to-right: the destination is on the left, the source on
-the right — the same direction as `ld destination, source`.
-
-`:=` is not just another spelling of `ld`. `ld` is a raw Z80 instruction: you
-choose the operand form and the assembler encodes it exactly as written. `:=`
-is a typed assignment: the compiler checks that the left side is writable
-storage, checks that the right side is a compatible value, and emits whatever
-instruction sequence is needed to make the transfer happen correctly.
-
-For word-sized stack variables, this is not a single instruction on the Z80.
-Stack locals are addressed through `(IX±offset)`, and the Z80 does not allow
-`ld h, (ix+d)` or `ld l, (ix+d)`. So the compiler uses DE as an intermediate
-register and wraps the load in `ex de, hl`. When you write `hl := count`, the
-compiler emits:
+On the Z80, that register is IX. When a ZAX function with parameters or locals is called, the compiler emits a three-instruction prologue:
 
 ```asm
-ex de, hl
-ld e, (ix-2)
-ld d, (ix-1)
-ex de, hl
+push ix          ; save the caller's IX
+ld   ix, 0
+add  ix, sp      ; IX = current stack pointer
 ```
 
-That sequence is correct, preserves all other registers, and is entirely
-compiler-managed. You do not write it; you write `hl := count`.
+After the prologue, IX points to the base of the frame. Parameters — which the caller pushed onto the stack before the `call` — sit at positive offsets from IX. Local variables sit at negative offsets. The compiler knows the exact offset of every named value.
+
+At function exit, the compiler emits the matching epilogue:
+
+```asm
+ld  sp, ix       ; discard locals
+pop ix           ; restore caller's IX
+ret
+```
+
+Six instructions of overhead — three in, three out — plus any register saves. A raw `call` and `ret` are two instructions with no frame at all. The frame is not free. For a tight inner loop calling a tiny helper, the overhead may matter. For a function called a handful of times from a larger program, the cost is small relative to what the function actually does, and the gain in clarity is real.
 
 ---
 
-## Bare-name access vs address dereference
+## Declaring a function with parameters
 
-ZAX distinguishes two forms: the bare name means "the typed value
-at this location" and `(name)` means "memory at this address." With typed
-locals, the bare form is the only form used for `:=`. Typed locals live at
-IX-relative offsets, not at fixed absolute addresses; the dereference form
-`(count)` would mean "memory at the address value stored in the count slot,"
-which is not the same thing. Use bare names with `:=` for all reads and writes
-of typed locals.
-
----
-
-## `succ` and `pred`
-
-`succ path` increments a typed scalar storage location in place.
-`pred path` decrements a typed scalar storage location in place.
+Here is the `find_max` subroutine rewritten as a ZAX function with typed parameters:
 
 ```zax
-succ count      ; count := count + 1
-pred count      ; count := count - 1
-```
-
-The compiler lowers each to the appropriate Z80 increment or decrement
-instruction sequence. Neither statement returns a value or sets flags in a
-guaranteed way — they are pure side-effecting mutations of the named location.
-
-`succ` and `pred` are the right tool when a typed local is used as a counter
-and the update is always by exactly one. They are shorter to write than
-`a := count / inc a / count := a` and communicate the intent directly: this
-location is being counted up or counted down.
-
-Do not use `succ` on a `byte` local that holds `$FF` and expect the result to be
-`$00` safely — there is no wrap-around guarantee. The programmer is responsible
-for range discipline.
-
----
-
-## Before and after: the same two loops
-
-The Chapter 9 program — finding the maximum value and counting entries above a
-threshold — shows the difference clearly. Here are both versions side by side.
-
-**Without typed variables (`08_phase_a_capstone.zax`):**
-
-```zax
-func find_max(): AF
-  ld a, 0                        ; A = running maximum (lives in A throughout)
-find_max_loop:
-  ld c, (hl)                     ; C = current table byte (C is a temporary)
-  cp c                           ; compare A with C
-  jr nc, find_max_no_update
-  ld a, c                        ; new maximum: update A
-find_max_no_update:
-  inc hl
-  djnz find_max_loop
-end
-```
-
-The running maximum lives in A throughout. A temporary register C holds each
-table byte. Neither name says what the value means — `a` and `c` are just
-whatever registers were free.
-
-**With typed variables (`09_typed_storage.zax`):**
-
-```zax
-func find_max_b(): AF
+func find_max_f(tbl: addr, len: byte): AF
   var
     running_max: byte = 0
   end
+
+  ; load parameters into registers using raw IX access
+  ld l, (ix+tbl+0)              ; low byte of tbl
+  ld h, (ix+tbl+1)              ; high byte of tbl
+  ld b, (ix+len+0)              ; len is a byte — just one load
+
 find_max_loop:
   ld a, (hl)
-  cp running_max
-  jr c, find_max_no_update
-  running_max := a               ; A >= running_max: update
-find_max_no_update:
+  cp (ix+running_max+0)
+  jr c, find_max_skip
+  ld (ix+running_max+0), a      ; new maximum
+find_max_skip:
   inc hl
   djnz find_max_loop
-  a := running_max               ; load result for caller
+
+  ld a, (ix+running_max+0)      ; return result in A
 end
 ```
 
-`running_max` is a named variable. Its name says what it holds. The compiler
-places it on the stack; you do not choose a register. The `a := running_max` at
-the end makes explicit what the raw version left implicit: the result has to be
-in A before returning.
+Look at what happened. The comment block is gone — the parameter names `tbl` and `len` say what the function expects. The local `running_max` says what it holds. And every access is a standard Z80 `ld` instruction with an IX-relative offset. The compiler resolves `(ix+tbl+0)` to the correct numeric displacement. You never count stack slots by hand.
 
-**Without typed variables (`08_phase_a_capstone.zax`):**
+`tbl: addr` is a 16-bit address parameter — it occupies a two-byte frame slot. To load it into HL you need two byte-wide loads: `(ix+tbl+0)` for the low byte into L, `(ix+tbl+1)` for the high byte into H.
 
-```zax
-func count_above(): AF
-  push bc                        ; save B and C
-  ld d, 0                        ; D = counter (must be initialized here)
-  pop bc                         ; restore B and C
-count_above_loop:
-  ld a, (hl)
-  cp c
-  jr c, count_above_skip
-  cp c                           ; compare again to check equality
-  jr z, count_above_skip
-  inc d                          ; D = running count
-count_above_skip:
-  inc hl
-  djnz count_above_loop
-  ld a, d
-end
-```
+`len: byte` is a one-byte parameter. It still occupies a 16-bit slot on the stack (everything is pushed as a word), but only the low byte matters: `(ix+len+0)` is all you need.
 
-The `push bc / ld d, 0 / pop bc` block has nothing to do with the algorithm.
-D must be zero before the loop, but B and C already hold inputs. The push/pop
-saves them temporarily so D can be set. It is there because there are no named
-variables — just registers that have to be juggled.
+`running_max: byte = 0` is a local variable initialized to zero. It sits at a negative offset from IX. You read it with `ld a, (ix+running_max+0)` and write it with `ld (ix+running_max+0), a`.
 
-**With typed variables (`09_typed_storage.zax`):**
-
-```zax
-func count_above_b(): AF
-  var
-    cnt: byte = 0
-  end
-count_above_loop:
-  ld a, (hl)
-  cp c
-  jr c, count_above_skip
-  jr z, count_above_skip
-  succ cnt                       ; cnt := cnt + 1
-count_above_skip:
-  inc hl
-  djnz count_above_loop
-  a := cnt
-end
-```
-
-`cnt` is a named typed local initialized to zero. No register needed. No
-push/pop. `succ cnt` increments it. `a := cnt` loads the result for the caller.
-The push/pop block is gone because `cnt` does not occupy a register that carries
-an input.
+The `+0` and `+1` suffixes select which byte of a slot you want. For a byte-sized value, `+0` is the only one you use. For a word-sized value, `+0` is the low byte and `+1` is the high byte — little-endian, as always on the Z80.
 
 ---
 
-## The example: `learning/part1/examples/09_typed_storage.zax`
+## Calling a function
 
-The example file rewrites the two subroutines above and calls them from the same
-`main` as Chapter 9. The data and expected results are identical — the table
-`{ 23, 47, 91, 5, 67, 12, 88, 34 }` produces a maximum of 91 and a count of 3
-entries above 64 — so you can compare the two directly.
+The caller names the arguments directly:
 
-Notice what stays the same:
+```zax
+find_max_f values, TableLen
+```
 
-- The `djnz` loop structure is kept. DJNZ is still the right counted-loop
-  primitive for a table of known length.
-- The `cp c` instruction for comparison is kept. `:=` covers assignment; it does
-  not replace flag-setting arithmetic instructions.
-- The `ld a, (hl)` inside the loop body is kept. Reading through a raw pointer
-  into a register is still written as raw Z80.
+The compiler emits the pushes for `values` and `TableLen`, the `call`, and the stack cleanup after return. You do not load HL or B yourself. The compiler matches each argument to its parameter, checks types, and generates the call sequence.
 
-Typed variables add names to values that need to persist. They do not change
-how arithmetic and pointer manipulation work.
+After the call returns, you read the result from whichever register the function declared:
 
-**Raw Z80 instructions can use typed local names directly.** In the typed
-version, `cp running_max` uses the typed local name as an operand to a raw Z80
-instruction — not a `:=` assignment. The compiler recognises typed local names
-in raw instruction operand positions and translates them to the correct
-`(IX±d)` addressing form. Writing `cp running_max` emits `cp (ix-N)` where N
-is the offset of `running_max` in the stack frame. This is different from
-`a := running_max` (which generates a register load sequence), but both refer
-to the same stored value.
+```zax
+find_max_f values, TableLen
+ld (max_val), a                  ; result is in A (declared : AF)
+```
+
+No register pre-loading. No comments explaining which register holds what.
+
+---
+
+## The return clause
+
+The return clause controls which registers carry the result and which ones the compiler saves and restores:
+
+| Declaration | Meaning | Compiler preserves |
+|-------------|---------|-------------------|
+| `func f(): void` | No return value | AF, BC, DE, HL all saved/restored |
+| `func f(): AF` | A carries the result | BC, DE, HL saved; AF is not |
+| `func f(): HL` | Typed return in HL (byte in L, H = 0) | AF, BC, DE saved; HL is not |
+
+`: AF` does **not** deliver A through a typed mechanism. It simply removes AF from the save/restore set, so whatever value A holds at function exit survives into the caller. This is the same convention from Chapter 7 — caller and callee agree that A carries the result. The declaration tells the compiler not to clobber it with a `pop AF` in the epilogue.
+
+`: HL` is the typed return: byte values go in L (H zeroed), word values fill all of HL.
+
+Declaring `: void` when the function leaves a meaningful value in A is a bug. The compiler's `pop AF` in the epilogue will overwrite A before the caller sees it.
+
+---
+
+## Raw access vs the `:=` operator
+
+Everything in this chapter uses raw Z80 instructions to access frame slots. You write `ld a, (ix+running_max+0)` and the compiler resolves the name to an offset. This is deliberate: you already know IX-relative addressing from Chapter 6. The frame is just a structured use of what you already learned.
+
+ZAX also provides a typed assignment operator — `:=` — that handles frame access at a higher level. It picks the right registers, handles word-sized slots that need multi-instruction sequences, and checks types. Chapter 12 covers `:=` in full. By the time you get there, you will understand exactly what it generates, because you will have written the raw version by hand.
+
+---
+
+## A second function: count_above
+
+```zax
+func count_above_f(tbl: addr, len: byte, threshold: byte): AF
+  var
+    cnt: byte = 0
+  end
+
+  ld l, (ix+tbl+0)
+  ld h, (ix+tbl+1)
+  ld b, (ix+len+0)
+
+count_loop:
+  ld a, (hl)
+  cp (ix+threshold+0)
+  jr c, count_skip               ; A < threshold: skip
+  jr z, count_skip               ; A = threshold: skip (strictly above)
+  ld a, (ix+cnt+0)
+  inc a
+  ld (ix+cnt+0), a               ; cnt = cnt + 1
+count_skip:
+  inc hl
+  djnz count_loop
+
+  ld a, (ix+cnt+0)               ; return count in A
+end
+```
+
+Three parameters and one local — four named values, each at its own IX-relative offset. In raw Z80, this function needed four registers (HL, B, C, D) and a `push bc / ld d, 0 / pop bc` dance just to initialize the counter without disturbing the inputs. Here, `cnt` has its own frame slot. No juggling.
+
+Notice that `cp (ix+threshold+0)` compares A directly against the frame slot. You do not have to load the threshold into a register first — `cp` accepts `(IX+d)` as its operand. This frees C, which the raw version had tied up holding the threshold.
+
+---
+
+## IXH, IXL, and the frame conflict
+
+Chapter 3 introduced the half-index registers IXH, IXL, IYH, and IYL. Inside a function that has parameters or locals, the compiler owns IX as the base pointer. That means IXH and IXL are off limits — using them would corrupt the frame pointer. IYH and IYL remain free unless IY is also in use.
+
+In frameless functions — those with no parameters and no locals, like `func main(): void` in all the earlier examples — IX is unclaimed, and all four halves are available as extra byte-sized scratch registers.
+
+---
+
+## Frameless vs framed
+
+Not every function pays the frame cost. A function with no parameters and no `var` block is **frameless**. The compiler emits no prologue and no epilogue — just the instructions you wrote, with a `ret` at the end. Every function before this chapter was frameless.
+
+The frame exists only to support named parameters and locals. If you do not need them — because the function is short enough that register passing works fine — skip the declaration and write a raw subroutine. The frame is a tool, not a tax.
 
 ---
 
 ## Summary
 
-- A `var` block inside a function declares typed locals. The compiler puts them
-  on the stack and tracks the offsets; you use their names.
-- `:=` assigns a value from the right side to the left side. The compiler checks
-  that the types are compatible and generates whatever Z80 sequence is needed.
-- `:=` is not `ld`. For word-sized stack variables, the compiler emits a
-  multi-instruction sequence using DE as an intermediate. You write one line;
-  the compiler figures out the rest.
-- Bare names refer to the typed value. Do not use `(name)` for typed locals —
-  that would mean "memory at the address stored in the slot," which is different.
-- `succ path` increments a typed scalar in place. `pred path` decrements it.
-  Neither returns a value or guarantees flag state.
-- The push/pop from Chapter 9's `count_above` disappears because `cnt` is a
-  named variable that does not occupy a register — so there is nothing to protect.
-- The DJNZ loop, `cp` comparison, and `ld a, (hl)` stay exactly as they were.
-  Typed variables are an addition to raw Z80, not a replacement for it.
-
-## What Comes Next
-
-Chapter 11 introduces `if`/`else` and `while`. The `count_above` double-`cp`
-pattern — two `jr` instructions just to distinguish less-than from greater-than
-— gets replaced with a readable `if` chain.
+- A ZAX `func` with parameters or locals gets a stack frame. IX is the base pointer.
+- The compiler emits a three-instruction prologue and epilogue. Frameless functions (no params, no locals) have none of this overhead.
+- Parameters sit at positive IX offsets; locals sit at negative offsets.
+- You access both with standard Z80 instructions: `ld a, (ix+name+0)` for a byte, `(ix+name+0)` / `(ix+name+1)` for the low/high bytes of a word.
+- The `+0` / `+1` suffix selects the byte lane within a slot.
+- The caller names arguments in the call; the compiler emits the pushes and cleanup.
+- The return clause (`: void`, `: AF`, `: HL`) controls which registers survive and which the compiler preserves.
+- IXH/IXL are unavailable inside framed functions. IYH/IYL remain free.
+- Chapter 12 introduces `:=`, which automates the frame access you wrote by hand here. By then you will know what it generates.
 
 # Chapter 11 — Structured Control Flow
 
@@ -3261,30 +3164,34 @@ to the effect — a reader must trace the label to understand the structure.
 **`find_max_cf` — with `while` and `if`:**
 
 ```zax
-func find_max_cf(): AF
+func find_max_cf(tbl: addr, len: byte): AF
   var
     running_max: byte = 0
   end
+  ld l, (ix+tbl+0)
+  ld h, (ix+tbl+1)
+  ld b, (ix+len+0)
   ld a, b
   or a
   while NZ
     ld a, (hl)
-    cp running_max
+    cp (ix+running_max+0)
     if NC
-      running_max := a
+      ld (ix+running_max+0), a
     end
     inc hl
     dec b
     ld a, b
     or a
   end
-  a := running_max
+  ld a, (ix+running_max+0)
 end
 ```
 
 No labels. `while NZ` expresses "loop while B is non-zero." `if NC` expresses
 "update if the current byte is not less than the running maximum." The condition
-and the consequence are adjacent and visually nested.
+and the consequence are adjacent and visually nested. Every frame access uses
+the raw IX-relative form from Chapter 10.
 
 This version uses `dec b` instead of `djnz` because `while` already handles
 the branch-back. `djnz` fused decrement-and-branch into one instruction; with
@@ -3331,19 +3238,24 @@ incremented.
 **`count_above_cf` — with typed local and `if`:**
 
 ```zax
-func count_above_cf(): AF
+func count_above_cf(tbl: addr, len: byte, threshold: byte): AF
   var
     cnt: byte = 0
   end
+  ld l, (ix+tbl+0)
+  ld h, (ix+tbl+1)
+  ld b, (ix+len+0)
   ld a, b
   or a
   while NZ
     ld a, (hl)
-    cp c
+    cp (ix+threshold+0)
     if NC
-      cp c
+      cp (ix+threshold+0)
       if NZ
-        succ cnt
+        ld a, (ix+cnt+0)
+        inc a
+        ld (ix+cnt+0), a
       end
     end
     inc hl
@@ -3351,11 +3263,11 @@ func count_above_cf(): AF
     ld a, b
     or a
   end
-  a := cnt
+  ld a, (ix+cnt+0)
 end
 ```
 
-The push/pop is gone (typed local `cnt` carries the count). The double `cp c` is
+The push/pop is gone (typed local `cnt` carries the count). The double `cp` is
 still present — the comparison logic itself has not changed, because "strictly
 greater than" still requires two tests — but the outer `if NC / inner if NZ`
 nesting makes the structure explicit: "if not-less-than, then if not-equal, then
@@ -3406,246 +3318,170 @@ jump. In the structured version, each is expressed by the keyword that carries i
 
 ## What Comes Next
 
-Chapter 12 introduces typed function parameters and the `op` construct. Typed
-parameters replace the register-passing convention that raw subroutines document
-in comments. `op` provides a lightweight named-operation form that expands inline
-without any call overhead.
+Chapter 12 introduces `:=`, the typed assignment operator. You have been writing
+`ld a, (ix+running_max+0)` and `ld (ix+cnt+0), a` by hand. `:=` automates
+these frame accesses — the compiler picks the right registers, handles
+word-sized slots, and checks types. By the time you read Chapter 12, you will
+understand exactly what `:=` generates.
 
-# Chapter 12 — Functions, Arguments, and `op`
+# Chapter 12 — Typed Assignment
 
-This chapter introduces typed function parameters, typed return values, the
-`op` construct, and two features that extend the Z80's native instruction set:
-undocumented half-index-register opcodes and ZAX pseudo-opcodes for 16-bit
-register moves. After reading it you will be able to write a ZAX `func` with
-named typed parameters and a typed return value, write an `op`, use IXH/IXL
-and the synthetic `ld hl, de` family, and explain the difference in cost between
-a typed `func` call, a raw `call`, and an `op` expansion.
+You have spent two chapters writing `ld a, (ix+running_max+0)` and `ld (ix+cnt+0), a` by hand. You know what each frame access costs, you know where the offsets come from, and you know the low-byte / high-byte drill for word-sized slots. This chapter introduces `:=`, the typed assignment operator, which automates all of that. It is not a new concept — it is shorthand for what you already do.
 
 Prerequisites: Chapters 3–11.
 
 ---
 
-## What raw subroutines required
+## `:=` as the assignment surface
 
-Raw subroutines passed all values through registers. The conventions were
-chosen by you and documented only in comments:
-
-```zax
-; find_max: scan a byte table and return the largest value.
-; Inputs:  HL = pointer to first byte, B = number of bytes
-; Outputs: A = maximum byte value found
-func find_max(): AF
-```
-
-Every caller had to know that HL held the table pointer and B held the count,
-and had to load those registers before each `call`. When `main` called
-`find_max` and then `count_above`, it had to reload HL before the second call
-because `find_max` advanced HL as a side effect — a fact visible only by reading
-the function body or running the program.
-
-The comment block was the only thing linking the register convention to the
-function's purpose. If the convention was wrong or out of date, the compiler did
-not notice.
-
----
-
-## Typed parameters: names and types in the signature
-
-A ZAX function with typed parameters moves the register-passing protocol into
-the compiler's hands. The function declares what inputs it needs and what type
-they have:
+`:=` reads a value from the right-hand side and stores it into the left-hand side. The destination is on the left, the source on the right — the same direction as `ld destination, source`:
 
 ```zax
-func find_max_f(tbl: addr, len: byte): HL
+count := a      ; store A into the typed local 'count'
+a := count      ; load the value of 'count' into A
+hl := total     ; load the 16-bit value of 'total' into HL
+total := hl     ; store HL into 'total'
 ```
 
-`tbl: addr` and `len: byte` are the parameters. A function call is a standalone
-statement — the function name appears alone on the line with its arguments:
+`:=` is not another spelling of `ld`. `ld` is a raw Z80 instruction — you choose the operand form and the assembler encodes it exactly as written. `:=` is a typed assignment: the compiler checks that the left side is writable storage, checks that the right side is a compatible value, and emits whatever instruction sequence is needed.
 
-```zax
-find_max_f values, TableLen
-ld a, l          ; byte result is in L after the call (H = 0 by convention)
-```
+For a byte-sized local, `count := a` emits a single `ld (ix-N), a` — exactly what you wrote by hand in Chapters 10 and 11.
 
-The compiler emits the pushes for `values` (the address of the table) and
-`TableLen` (the count), the `call`, and the stack cleanup after return. The
-caller does not load HL or B. The compiler matches the arguments to the
-parameters, checks types, and generates the call sequence. The result is read
-from the return register — L for a byte result from a `: HL` function — in the
-next instruction.
-
-There is no `a := func_name args` syntax in ZAX. A call cannot appear on the
-right-hand side of a `:=` assignment. Write the call as a standalone statement,
-then read from the return register explicitly.
-
-Inside the function, parameters are accessed by name using `:=`, just like
-typed locals:
-
-```zax
-hl := tbl           ; load the tbl parameter into HL
-b := len            ; load the len parameter into B
-```
-
-The compiler places each parameter in an IX-relative slot (starting at IX+4 for
-the first parameter). Accessing a parameter costs the same IX-relative
-load/store sequence as accessing a local.
-
----
-
-## The function frame: what it costs
-
-A function with parameters or locals carries setup overhead that a raw
-subroutine does not. The compiler emits three setup instructions at entry:
+For a word-sized local, the story is different. The Z80 cannot load HL directly from an IX-relative address. So when you write `hl := total`, the compiler emits:
 
 ```asm
-push ix
-ld   ix, 0
-add  ix, sp
+ex de, hl
+ld e, (ix-4)
+ld d, (ix-3)
+ex de, hl
 ```
 
-This saves the caller's IX and makes IX point to the current top of stack. Every
-local and every parameter is then accessible as a signed byte offset from IX.
-
-At function exit, the compiler emits matching cleanup instructions:
-
-```asm
-ld  sp, ix
-pop ix
-ret
-```
-
-For a void function that preserves BC, DE, HL, and AF, the epilogue also emits
-the register restore sequence before the final `ret`.
-
-**A ZAX `func` does not need a final `ret`.** The compiler emits the epilogue
-and `ret` automatically when it reaches `end`. Use `ret` inside a `func` only
-for early exits — places in the body where you want to return before `end` is
-reached. Conditional returns (`ret cc`) are also early exits and remain valid
-wherever they are needed.
-
-That is six instructions of overhead — three prologue, three epilogue — plus
-the register save/restore pushes. A raw `call` and `ret` are two instructions
-total with no frame at all.
-
-The frame overhead is not free. For a tight inner loop that calls a very short
-helper, it may outweigh the benefit. For a function that is called a few times
-from different places in a larger program, the frame cost is small relative to
-what the function does, and the gain in readability and safety is real.
-
-A function that has no parameters and no locals — like `func main(): void` in
-all the examples — is frameless. No prologue, no epilogue. The `ret` is emitted
-directly.
+It saves HL into DE, loads the word into DE using byte-lane access, then swaps back. The result is HL = total, with DE preserved. You could write this sequence yourself — you now know exactly how — but with `:=` you do not have to.
 
 ---
 
-## The return clause
+## Bare-name access vs address dereference
 
-The return clause on a function declaration controls which registers carry the
-result and which registers the compiler saves and restores around the frame.
-
-| Declaration | Meaning | What compiler preserves |
-|-------------|---------|-------------------------|
-| `func f(): void` | no return value | AF, BC, DE, HL all saved/restored |
-| `func f(): AF` | A survives if left there; AF not saved/restored by compiler | BC, DE, HL saved/restored; AF is not |
-| `func f(): HL` | typed byte/word return in HL (byte in L, H = 0) | AF, BC, DE saved/restored; HL is not |
-
-**Important distinction — two return patterns:**
-
-`: AF` does **not** deliver A through the typed call mechanism. What it does is
-remove AF from the compiler's save/restore set: the compiler does not emit
-`pop AF` before returning, so whatever value A held at function exit reaches the
-caller through raw register survival. This is the pattern from Chapter 7 —
-the caller and callee agree by convention that A carries the result, and the
-declaration `: AF` tells the compiler not to clobber it.
-
-`: HL` is the typed return pattern. The compiler treats HL as the return
-channel: byte values go in L (with H set to zero), word values fill all of HL.
-The caller reads the result from L (for bytes) or HL (for words) after the
-call returns.
-
-`find_max_f` and `count_above_f` use `: HL`. They place their byte result in L
-(with H = 0) just before returning. The caller retrieves it with `ld a, l`
-after the standalone call statement.
-
-Declaring `: void` when the function places a meaningful value in A is a bug.
-The compiler's `pop AF` in the epilogue overwrites A before the caller sees it.
-Chapter 7 established this rule; it applies to all three chapters.
+ZAX distinguishes two forms: the bare name means "the typed value at this location" and `(name)` means "memory at this address." With `:=`, always use the bare form for typed locals. Typed locals live at IX-relative offsets, not at fixed absolute addresses — the dereference form `(count)` would mean "memory at the address value stored in the count slot," which is not the same thing.
 
 ---
 
-## Undocumented opcodes: IXH, IXL, IYH, IYL
+## `succ` and `pred`
 
-Chapter 3 introduced the half-index registers IXH, IXL, IYH, and IYL and the
-prefix-byte constraint that prevents mixing halves from different register
-families in one instruction. ZAX supports all half-index instructions
-unconditionally.
+`succ path` increments a typed scalar in place. `pred path` decrements it:
 
 ```zax
-ld ixh, a       ; store A in the high half of IX
-ld a, iyl       ; load the low half of IY into A
-ld ixl, b       ; store B in IXL
-add a, ixh      ; add IXH to A
+succ count      ; count := count + 1
+pred count      ; count := count - 1
 ```
 
-The practical constraint that matters in this chapter is the **frame conflict**.
-The ZAX function frame uses IX as its base pointer: every parameter and local is
-accessed as an offset from IX. Inside any function that has parameters or typed
-locals, the compiler owns IX, and IXH/IXL are unavailable. IYH and IYL remain
-free unless IY is also in use.
+The compiler lowers each to the appropriate increment or decrement sequence. Neither returns a value or sets flags in a guaranteed way — they are pure mutations of the named location.
 
-In frameless functions — those with no parameters and no locals — IX is not
-claimed by the compiler, and all four halves are available as extra byte-sized
-scratch registers.
+In Chapter 11, you incremented a counter by hand:
+
+```zax
+ld a, (ix+cnt+0)
+inc a
+ld (ix+cnt+0), a
+```
+
+`succ cnt` does the same thing. It is shorter to write and communicates the intent directly: this location is being counted up.
 
 ---
 
-## ZAX pseudo-opcodes: synthetic 16-bit register moves
+## Before and after: the same two loops
 
-The Z80 has no instruction to copy one register pair into another. To copy HL
-into DE in raw Z80, you write two 8-bit moves:
+Here are the `find_max` and `count_above` functions rewritten with `:=` and `succ`, so you can compare them with the raw IX versions from Chapters 10 and 11.
 
-```zax
-ld d, h
-ld e, l
-```
-
-ZAX removes this chore. You can write the 16-bit form directly:
+**`find_max` — raw IX (Chapter 10):**
 
 ```zax
-ld hl, de       ; ZAX expands to: ld h, d / ld l, e
-ld de, hl       ; ZAX expands to: ld d, h / ld e, l
+  ld a, (hl)
+  cp (ix+running_max+0)
+  jr c, find_max_skip
+  ld (ix+running_max+0), a
+find_max_skip:
+  inc hl
+  djnz find_max_loop
+  ld a, (ix+running_max+0)
 ```
 
-The assembler emits the two-instruction sequence automatically. No new opcode is
-invented — the output is exactly the same pair of 8-bit moves you would write
-by hand. The pseudo-opcode exists to make the intent visible at a glance.
+**`find_max` — with `:=`:**
 
-ZAX supports the following synthetic 16-bit register transfers:
+```zax
+  ld a, (hl)
+  cp running_max
+  jr c, find_max_skip
+  running_max := a
+find_max_skip:
+  inc hl
+  djnz find_max_loop
+  a := running_max
+```
 
-| Pseudo-opcode | Expands to |
-|---------------|------------|
-| `ld hl, de` | `ld h, d` / `ld l, e` |
-| `ld hl, bc` | `ld h, b` / `ld l, c` |
-| `ld de, hl` | `ld d, h` / `ld e, l` |
-| `ld de, bc` | `ld d, b` / `ld e, c` |
-| `ld bc, hl` | `ld b, h` / `ld c, l` |
-| `ld bc, de` | `ld b, d` / `ld c, e` |
+The generated code is identical. `running_max := a` emits `ld (ix-N), a`. `a := running_max` emits `ld a, (ix-N)`. The names resolve to the same offsets. The `:=` form is just easier to read.
 
-Each expands to exactly two bytes of machine code (two one-byte `ld` instructions).
-The cost is the same as writing the pair by hand — ZAX adds nothing at run time.
+**`count_above` — raw IX (Chapter 10):**
 
-These pseudo-opcodes are always available. Use them freely wherever you would
-otherwise write the two-instruction sequence yourself.
+```zax
+  ld a, (ix+cnt+0)
+  inc a
+  ld (ix+cnt+0), a
+```
+
+**`count_above` — with `succ`:**
+
+```zax
+  succ cnt
+```
+
+One line instead of three. Same effect.
+
+---
+
+## Raw Z80 instructions can still use typed names
+
+`:=` does not replace raw Z80 instructions — it complements them. In the typed version of `find_max`, `cp running_max` uses the typed name as an operand to a raw Z80 instruction. The compiler recognises the name and emits `cp (ix-N)`. This is not a `:=` assignment; it is a raw `cp` with a compiler-resolved operand.
+
+You can freely mix raw instructions and `:=` in the same function. Use `:=` for loads and stores to frame slots. Use raw instructions for arithmetic, comparisons, and anything that does not have a `:=` equivalent.
+
+---
+
+## When to use `:=` vs raw IX access
+
+Use `:=` when you want the compiler to handle the register selection and multi-instruction sequences — especially for word-sized locals.
+
+Use raw `ld a, (ix+name+0)` when you need precise control: choosing which register gets the value, accessing a specific byte lane of a word slot, or when the context makes the raw form clearer.
+
+Both are always available. Neither is required. The choice is about clarity for the reader, not correctness for the compiler.
+
+---
+
+## Summary
+
+- `:=` assigns from right to left. The compiler checks types and emits the correct instruction sequence.
+- For byte locals, `:=` emits a single `ld (ix±d), reg` or `ld reg, (ix±d)` — the same instruction you would write by hand.
+- For word locals, `:=` emits a multi-instruction sequence using DE as an intermediate and `ex de, hl` to preserve registers.
+- `succ` and `pred` increment or decrement a typed scalar in place. They replace the three-instruction load-modify-store pattern.
+- Use bare names with `:=` for typed locals. Do not use `(name)` — that means something different.
+- Raw Z80 instructions can still use typed names as operands. The compiler resolves them to IX-relative offsets.
+- `:=` and raw access are complementary. Use whichever is clearest.
+
+## What Comes Next
+
+Chapter 13 introduces `op` — inline named operations that expand at every call site with no frame overhead — and the ZAX pseudo-opcodes for 16-bit register moves.
+
+# Chapter 13 — Op Macros and Pseudo-opcodes
+
+This chapter covers two features that extend the Z80's native instruction set without adding run-time cost: `op`, which lets you name a short instruction sequence and expand it inline at every call site, and the ZAX pseudo-opcodes, which let you write `ld hl, de` as if the Z80 had a 16-bit register copy instruction.
+
+Prerequisites: Chapters 3–12.
 
 ---
 
 ## `op`: inline named operations
 
-`op` defines a named operation that expands inline at every call site. There is
-no `call` instruction, no frame, and no `ret`. The body is substituted directly
-into the instruction stream where the op is invoked.
-
-A zero-parameter `op` is declared with no parentheses:
+`op` defines a named operation whose body is copied into the instruction stream at every call site. There is no `call`, no frame, and no `ret`. The body is pasted directly where the op is invoked, as if you had written the instructions there yourself.
 
 ```zax
 op load_and_or(src: reg8)
@@ -3661,27 +3497,20 @@ ld a, b
 or a
 ```
 
-exactly as if those two instructions were written at that position in the source.
+The "copy B into A and set flags" pattern appears before every `while NZ` loop and at every back edge. Without the op, you write those two instructions by hand in every place. With the op, you write them once in the declaration and once at each invocation. The reader sees `load_and_or B` and knows immediately what instruction pair will appear.
 
-The example file uses `load_and_or` to name the repeated "copy register into A
-and OR to establish flags" pattern that appears before every `while NZ` loop and
-at every back edge. Without `op`, that pattern is copied by hand in every place it appears. With
-the `op`, it appears once in the declaration and once at each invocation. The reader sees `load_and_or B` and knows immediately what
-instruction pair will appear there.
-
-**`reg8` parameters accept only physical register names.** At the call site, a
-`reg8` parameter must be passed as one of the seven physical registers: `A`,
-`B`, `C`, `D`, `E`, `H`, or `L`. A frame-slot name like `len` or a local like
-`count` is not a valid `reg8` operand. The reason is structural: an `op` has no
-frame of its own, so it cannot emit IX-relative loads inside the expanded body.
-The compiler substitutes the register token directly into the body instruction
-— `ld a, B` — and that substitution only makes sense if the operand is a
-register. If the value you want to pass lives in a frame slot, load it into a
-register first and pass that register:
+**`reg8` parameters accept only physical register names.** At the call site, a `reg8` parameter must be one of the seven physical registers: A, B, C, D, E, H, or L. A frame-slot name like `len` is not valid — the compiler substitutes the register token directly into the body instruction, and that substitution only makes sense if the operand is a register. If the value lives in a frame slot, load it into a register first:
 
 ```zax
-b := len       ; load frame slot into B
-load_and_or B  ; now B is a physical register token — valid reg8 operand
+ld b, (ix+len+0)      ; load frame slot into B
+load_and_or B          ; B is a physical register — valid
+```
+
+Or, if you have introduced `:=`:
+
+```zax
+b := len               ; load frame slot into B
+load_and_or B
 ```
 
 ---
@@ -3690,142 +3519,61 @@ load_and_or B  ; now B is a physical register token — valid reg8 operand
 
 Use `op` when:
 
-- a short sequence of instructions repeats in a mechanical way
-- the expansion is small enough that calling overhead would dominate the cost
+- a short sequence of instructions repeats mechanically
+- the expansion is small enough that call overhead would dominate the cost
 - you want accumulator-style or register-pair operations that read like opcodes
 - no frame slot allocation is needed (ops cannot have `var` blocks)
 
 Use `func` when:
 
 - the function is long enough that a `call`/`ret` pair is not the dominant cost
-- the function needs typed local variables (ops cannot have `var` blocks)
-- the function is called from many places and you want the compiler to enforce
-  the calling convention
-- a consistent preservation contract at the call boundary matters
+- the function needs typed local variables
+- the function is called from many places and you want the compiler to enforce the calling convention
+- a consistent register-preservation boundary at the call site matters
 
-`op` bodies do not have their own preservation boundary. Registers clobbered by
-an `op` body are clobbered in the caller's instruction stream, just as if the
-programmer had written those instructions directly. If `load_and_or` clobbers A,
-that clobber is visible in the function that invokes it. A `func` call, by
-contrast, preserves all registers not in the return clause — the compiler
-generates the save/restore sequence.
+`op` bodies have no preservation boundary of their own. Registers clobbered by an `op` body are clobbered in the caller's instruction stream, exactly as if you had written those instructions there yourself. A `func` call preserves all registers not in the return clause — the compiler generates the save/restore sequence.
 
 ---
 
-## The example: `learning/part1/examples/11_functions_and_op.zax`
+## ZAX pseudo-opcodes: synthetic 16-bit register moves
 
-The example file contains `main`, `find_max_f`, `count_above_f`, and the op
-`load_and_or`. It produces the same results as all previous capstone versions.
-
-The `main` function now calls with argument expressions:
+The Z80 has no instruction to copy one register pair into another. To copy HL into DE in raw Z80, you write two 8-bit moves:
 
 ```zax
-find_max_f values, TableLen
-ld a, l                    ; byte result is in L (H = 0)
-ld (max_val), a
-
-count_above_f values, TableLen, 64
-ld a, l                    ; byte result is in L (H = 0)
-ld (cnt_val), a
+ld d, h
+ld e, l
 ```
 
-No register pre-loading. No `ld hl, values / ld b, TableLen` before each call.
-The caller names the arguments in the call; the compiler emits the pushes.
-After the call returns, the caller reads the result from L (since both functions
-are declared `: HL` and return a byte value in L with H set to zero).
-
-Inside `find_max_f`, the parameter `tbl` is loaded into HL to walk the table,
-and `ptr` is a typed local that persists the current pointer across loop
-iterations:
+ZAX removes this chore. You can write the 16-bit form directly:
 
 ```zax
-hl := tbl
-ptr := hl
-
-b := len           ; load frame slot into B — op reg8 params require a physical register
-load_and_or B      ; establish flags from B before while
-while NZ
-  hl := ptr
-  ld a, (hl)
-  inc hl
-  ptr := hl
-  ; ...
-  b := len
-  dec b
-  len := b
-  load_and_or B    ; B still holds the decremented value; re-establish flags
-end
+ld hl, de       ; ZAX expands to: ld h, d / ld l, e
+ld de, hl       ; ZAX expands to: ld d, h / ld e, l
 ```
 
-`len` is a parameter. Parameters can be read and written with `:=` the same way
-locals can — writing to a parameter changes the frame slot, not a register the
-caller holds. Decrementing `len` each iteration is valid; the caller's value is
-already on the stack and this function's frame slot is a copy.
+The assembler emits the two-instruction sequence automatically. No new opcode is invented — the output is exactly the same pair of 8-bit moves. The pseudo-opcode exists to make the intent visible at a glance.
 
-The `op load_and_or` appears at both the loop entry and the back edge. This is
-intentional: the while condition is re-tested at the back edge (as established
-in Chapter 11) using the same flag state, so the same setup must be correct at
-both points.
+The full set of synthetic 16-bit register transfers:
 
-Notice that the call passes `B`, not `len`. This is required: `op` parameters
-typed `reg8` accept only physical register names at the call site. The frame
-slot `len` is not a register token — the compiler cannot substitute it into the
-`ld a, src` body of the op. Load the frame slot into a register first, then
-pass the register to the op.
+| Pseudo-opcode | Expands to |
+|---------------|------------|
+| `ld hl, de` | `ld h, d` / `ld l, e` |
+| `ld hl, bc` | `ld h, b` / `ld l, c` |
+| `ld de, hl` | `ld d, h` / `ld e, l` |
+| `ld de, bc` | `ld d, b` / `ld e, c` |
+| `ld bc, hl` | `ld b, h` / `ld c, l` |
+| `ld bc, de` | `ld b, d` / `ld c, e` |
 
----
-
-## Comparing the four versions
-
-`06_subroutines.zax` — raw subroutines, register conventions in comments.
-`08_phase_a_capstone.zax` — raw Z80 with DJNZ, push/pop, double-cp.
-`10_structured_control.zax` — typed locals and structured control, still raw register-passing for arguments.
-`11_functions_and_op.zax` — typed parameters, typed return, op, structured control.
-
-Each step removes one manual task:
-
-- Chapter 9 → Chapter 10: registers-as-variables replaced by typed locals.
-- Chapter 10 → Chapter 11: label management replaced by `if`/`while`.
-- Chapter 11 → Chapter 12: register-passing conventions replaced by typed parameters.
-
-Across Chapters 10–12, the compiler also handles frame setup, frame teardown,
-register preservation, and the final `ret` at `end`. A ZAX `func` never needs a
-trailing `ret`.
-
-The Z80 machine model has not changed. Registers, flags, the stack, and indexed
-addressing are all still present in Chapter 12. What has changed is how much
-of the repetitive work the compiler does for you.
+Each expands to exactly two bytes of machine code. The cost is the same as writing the pair by hand — ZAX adds nothing at run time.
 
 ---
 
 ## Summary
 
-- IXH, IXL, IYH, and IYL (Chapter 3) are supported unconditionally in ZAX.
-  Inside framed functions, IXH/IXL are unavailable because the compiler uses IX
-  for frame addressing. In frameless functions, all four halves are free.
-- ZAX pseudo-opcodes — `ld hl, de`, `ld de, bc`, and the other four pair-to-pair
-  combinations — expand to two 8-bit moves. They add no run-time cost and make
-  16-bit register transfers readable at a glance.
-- Typed function parameters move the register-passing protocol into the
-  compiler. The caller names the arguments; the compiler emits the pushes and
-  stack cleanup.
-- Parameters are accessible inside the function by name with `:=`, at the same
-  cost as IX-relative locals.
-- The function frame costs a three-instruction prologue and a three-instruction
-  epilogue plus register saves/restores. A frameless function (no params, no
-  locals) has none of this overhead.
-- The compiler emits the epilogue and `ret` automatically at `end`. A ZAX
-  `func` does not need a trailing `ret`. Use `ret` only for early exits inside
-  the function body.
-- The return clause controls which registers carry results and which the compiler
-  saves/restores. Declaring `: void` when the function leaves a result in A
-  causes the epilogue to overwrite it before the caller sees it.
-- `op` expands inline with no call overhead and no frame. Clobbers are visible
-  in the caller.
-- `func` provides a typed preservation boundary and compiler-enforced calling
-  convention, at the cost of the frame overhead.
-- Use `op` for short repeating patterns that need no frame. Use `func` for
-  anything that benefits from a clean call boundary and typed parameters.
+- `op` defines an inline expansion — no call, no frame, no `ret`. The body is pasted at each invocation.
+- `op` parameters typed `reg8` accept only physical register names at the call site. Load frame slots into registers first.
+- Use `op` for short repeating patterns. Use `func` for anything that benefits from a clean call boundary and typed parameters.
+- ZAX pseudo-opcodes — `ld hl, de`, `ld de, bc`, and the other four pair-to-pair combinations — expand to two 8-bit moves with no run-time cost.
 
 ---
 
@@ -3836,43 +3584,26 @@ You have completed Volume 1.
 By this point you can:
 
 - explain bytes, words, addresses, the Z80 registers, and the hardware stack
-- write raw Z80 instructions: `ld`, `add`, `sub`, `cp`, `and`, `or`, `jp`,
-  `jr`, `djnz`, `call`, `ret`, `push`, `pop`
+- write raw Z80 instructions: `ld`, `add`, `sub`, `cp`, `and`, `or`, `jp`, `jr`, `djnz`, `call`, `ret`, `push`, `pop`
 - use `section data` to declare named module storage
-- write typed locals with `var` and assign them with `:=`
-- use `succ` and `pred` for typed scalar update
-- write `if`/`else` and `while` loops with `break` and `continue`
-- write a ZAX `func` with typed parameters and a typed return value
-- use IXH/IXL/IYH/IYL and the ZAX pseudo-opcodes for 16-bit register moves
+- write a ZAX `func` with typed parameters and locals, accessed through raw IX-relative offsets
+- use `if`/`else` and `while` loops with `break` and `continue`
+- use `:=` for typed assignment and `succ`/`pred` for typed scalar update
 - write an `op` for inline named instruction sequences
-- explain what each construct in Chapters 10–12 does and what it replaces
+- use IXH/IXL/IYH/IYL and the ZAX pseudo-opcodes for 16-bit register moves
 
 **Volume 2: `learning/part2/`**
 
-The algorithms course (`learning/part2/README.md`) is the second stage. It
-assumes everything from Part 1 — typed storage, `:=`, `if`, `while`, `break`,
-`continue`, `succ`/`pred`, typed functions, and `op` — and uses it from the
-first chapter.
+The algorithms course (`learning/part2/README.md`) is the second stage. It assumes everything from Part 1 and uses it from the first chapter.
 
 Volume 2 covers the constructs and patterns needed for larger programs:
 
-- **Arrays and indexing** — typed arrays declared in `section data`, indexed
-  with register operands, 0-based with no runtime bounds checks
-- **Records** — struct-like types, field access with `.`, `sizeof` and
-  `offsetof` for layout arithmetic
-- **Strings** — null-terminated byte arrays, sentinel traversal with `while NZ`
-  and `break`
-- **Recursion** — recursive `func` calls, the IX frame per call level, returning
-  values across multiple call levels
-- **Modules and `import`** — splitting programs across files, qualifying names
-  with a module prefix, the `export` keyword
-- **Pointer structures** — typed reinterpretation with `<Type>base.field`,
-  linked-list and tree traversal using `addr` locals
-- **`select`/`case`** — dispatch on a value, the ZAX alternative to jump tables
-
-A reader who has finished Volume 1 through Chapter 12 can open any Volume 2
-example file and follow it without encountering unfamiliar ZAX syntax. The
-structures will be new; the language surface will not.
+- **Arrays and indexing** — typed arrays in `section data`, indexed with register operands
+- **Records** — struct-like types, field access, `sizeof` and `offsetof`
+- **Strings** — null-terminated byte arrays, sentinel traversal
+- **Recursion** — recursive calls, the IX frame per call level
+- **Modules and `import`** — splitting programs across files
+- **Pointer structures** — typed reinterpretation, linked lists, trees
 
 You are ready.
 
