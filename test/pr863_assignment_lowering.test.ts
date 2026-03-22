@@ -51,6 +51,7 @@ function makeHelper(overrides: Partial<Parameters<typeof createAsmInstructionLow
     symbolicTargetFromExpr: () => undefined,
     evalImmExpr: () => undefined,
     resolveScalarBinding: () => undefined,
+    resolveRawAliasTargetName: () => undefined,
     isModuleStorageName: () => false,
     isFrameSlotName: () => false,
     resolveScalarTypeForEa: () => undefined,
