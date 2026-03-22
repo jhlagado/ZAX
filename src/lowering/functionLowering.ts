@@ -66,7 +66,7 @@ export type FunctionLoweringSymbolContext = {
   taken: Set<string>;
   pending: PendingSymbol[];
   traceComment: (offset: number, text: string) => void;
-  traceLabel: (offset: number, name: string) => void;
+  traceLabel: (offset: number, name: string, span?: SourceSpan) => void;
   currentCodeSegmentTagRef: { current: SourceSegmentTag | undefined };
   generatedLabelCounterRef: { current: number };
 };
@@ -708,7 +708,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     diag(diagnostics, item.span.file, `Duplicate symbol name "${item.name}".`);
   } else {
     taken.add(item.name);
-    traceLabel(getCodeOffset(), item.name);
+    traceLabel(getCodeOffset(), item.name, item.span);
     pending.push({
       kind: 'label',
       name: item.name,
