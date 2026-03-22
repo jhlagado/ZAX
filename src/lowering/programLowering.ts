@@ -409,6 +409,15 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
     binDecl: BinDeclNode,
     namedSection?: { node: NamedSectionNode; sink: NamedSectionContributionSink },
   ): void => {
+    const withTempSection = (section: SectionKind, fn: () => void): void => {
+      const prev = ctx.activeSectionRef.current;
+      ctx.activeSectionRef.current = section;
+      try {
+        fn();
+      } finally {
+        ctx.activeSectionRef.current = prev;
+      }
+    };
     if (ctx.taken.has(binDecl.name)) {
       ctx.diag(ctx.diagnostics, binDecl.span.file, `Duplicate symbol name "${binDecl.name}".`);
       return;
@@ -453,19 +462,23 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
     }
     if (binDecl.section === 'code') {
       ctx.pending.push({ kind: 'data', name: binDecl.name, section: 'code', offset: ctx.codeOffsetRef.current, file: binDecl.span.file, line: binDecl.span.start.line, scope: 'global' });
-      ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name });
-      for (const b of blob) {
-        ctx.codeBytes.set(ctx.codeOffsetRef.current++, b & 0xff);
-        ctx.recordLoweredAsmItem({ kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] });
-      }
+      withTempSection('code', () => {
+        ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name });
+        for (const b of blob) {
+          ctx.codeBytes.set(ctx.codeOffsetRef.current++, b & 0xff);
+          ctx.recordLoweredAsmItem({ kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] });
+        }
+      });
       return;
     }
     ctx.pending.push({ kind: 'data', name: binDecl.name, section: 'data', offset: ctx.dataOffsetRef.current, file: binDecl.span.file, line: binDecl.span.start.line, scope: 'global' });
-    ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name });
-    for (const b of blob) {
-      ctx.dataBytes.set(ctx.dataOffsetRef.current++, b & 0xff);
-      ctx.recordLoweredAsmItem({ kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] });
-    }
+    withTempSection('data', () => {
+      ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name });
+      for (const b of blob) {
+        ctx.dataBytes.set(ctx.dataOffsetRef.current++, b & 0xff);
+        ctx.recordLoweredAsmItem({ kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] });
+      }
+    });
   };
   const symbolicTargetFromExpr = (
     expr: ImmExprNode,
