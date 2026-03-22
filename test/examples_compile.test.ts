@@ -8,6 +8,7 @@ import { defaultFormatWriters } from '../src/formats/index.js';
 import type {
   Artifact,
   AsmArtifact,
+  Asm80Artifact,
   BinArtifact,
   HexArtifact,
   ListingArtifact,
@@ -37,6 +38,10 @@ describe('examples', () => {
       case 'asm': {
         const asm = a as AsmArtifact;
         return { kind: 'asm', data: asm.text };
+      }
+      case 'asm80': {
+        const asm80 = a as Asm80Artifact;
+        return { kind: 'asm80', data: asm80.text };
       }
     }
   }

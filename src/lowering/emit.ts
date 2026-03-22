@@ -205,7 +205,12 @@ export function emitProgram(
     defaultCodeBase?: number;
     namedSectionKeys?: NonBankedSectionKeyCollection;
   },
-): { map: EmittedByteMap; symbols: SymbolEntry[]; loweredAsmStream: LoweredAsmStream } {
+): {
+  map: EmittedByteMap;
+  symbols: SymbolEntry[];
+  loweredAsmStream: LoweredAsmStream;
+  placedLoweredAsmProgram: import('./loweredAsmTypes.js').LoweredAsmProgram;
+} {
   const bytes = new Map<number, number>();
   const codeBytes = new Map<number, number>();
   const dataBytes = new Map<number, number>();
@@ -838,7 +843,12 @@ export function emitProgram(
   const firstModule = program.files[0];
   if (!firstModule) {
     diag(diagnostics, program.entryFile, 'No module files to compile.');
-    return { map: { bytes }, symbols, loweredAsmStream };
+    return {
+      map: { bytes },
+      symbols,
+      loweredAsmStream,
+      placedLoweredAsmProgram: { blocks: [] },
+    };
   }
 
   const primaryFile = firstModule.span.file ?? program.entryFile;
