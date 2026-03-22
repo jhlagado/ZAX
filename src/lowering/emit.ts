@@ -838,6 +838,7 @@ export function emitProgram(
     stackSlotTypes,
     localAliasTargets,
     storageTypes,
+    moduleAliasTargets,
     rawTypedCallWarningsEnabled,
   };
   const functionLoweringCallableResolutionContext: FunctionLoweringCallableResolutionContext = {

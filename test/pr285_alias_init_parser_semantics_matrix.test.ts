@@ -33,7 +33,7 @@ describe('PR285 parser/AST closure: alias-init vs value-init', () => {
     const messages = res.diagnostics.map((d) => d.message);
 
     expect(messages).toContain(
-      'Incompatible inferred alias binding for "bad_local": expected address expression on right-hand side.',
+      'Function-local alias "bad_local" must target a direct module-scope storage name.',
     );
   });
 
