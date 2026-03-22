@@ -70,13 +70,15 @@ We need two closely related lowered products because placement happens after the
 
 - Built after placement/finalization, when bases and named-section placement are known.
 - This is the assembler-valid product used by the ASM80 emitter.
+- Compiler-owned startup init (from `finalizeEmitProgram(...)` via `buildStartupInitRegion(...)` / `buildStartupInitRoutine(...)` / `appendStartupInitRegion(...)`) must be injected here so ASM80 output matches the final emitted program.
 
 Suggested flow:
 
 1. Lowering constructs a new `LoweredAsmStream` (pre-placement structure).
 2. A **placement pass** (after `finalizeProgramEmission(...)` and named-section placement) converts the stream into `LoweredAsmProgram` with ORG-anchored blocks.
-3. A **byte-emission consumer** walks the placed `LoweredAsmProgram` to produce `EmittedByteMap` (same outputs as today).
-4. A new **ASM80 emitter** walks the same placed `LoweredAsmProgram` to produce assembler-valid output.
+3. Inject compiler-owned startup init into the placed program (same point it is currently appended in `finalizeEmitProgram(...)`).
+4. A **byte-emission consumer** walks the placed `LoweredAsmProgram` to produce `EmittedByteMap` (same outputs as today).
+5. A new **ASM80 emitter** walks the same placed `LoweredAsmProgram` to produce assembler-valid output.
 
 This keeps the current binary/hex/d8m path stable while placing the assembler-valid product at the correct post-placement boundary.
 
@@ -152,6 +154,7 @@ Notes:
 ### Phase 2: Byte-map consumer
 
 - Introduce a placement pass that converts `LoweredAsmStream` -> placed `LoweredAsmProgram`.
+- Inject startup-init into the placed program (mirrors current `finalizeEmitProgram(...)` behavior).
 - Introduce a consumer that converts placed `LoweredAsmProgram` -> `EmittedByteMap`.
 - Switch `emitProgram(...)` to use the consumer for byte emission.
 - Keep output artifacts unchanged.
