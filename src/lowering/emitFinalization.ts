@@ -11,6 +11,7 @@ import {
   finalizeProgramEmission,
   type FinalizationContext,
 } from './programLowering.js';
+import { computeSectionBases } from './programLoweringFinalize.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
 import {
   collectPlacedNamedSectionSymbols,
@@ -18,11 +19,19 @@ import {
   resolvePlacedNamedSectionFixups,
 } from './sectionPlacement.js';
 import {
-  appendStartupInitRegion,
+  collectNamedSectionOrigins,
+  placeLoweredAsmStream,
+} from './loweredAsmPlacement.js';
+import {
+  emitLoweredAsmBlockBytes,
+  emitLoweredAsmProgramBytes,
+} from './loweredAsmByteEmission.js';
+import {
   buildStartupInitRegion,
   buildStartupInitRoutine,
   STARTUP_ENTRY_LABEL,
 } from './startupInit.js';
+import type { LoweredAsmStream } from './loweredAsmTypes.js';
 
 export type EmitFinalizationContext = {
   namedSectionSinks: NamedSectionContributionSink[];
@@ -33,6 +42,7 @@ export type EmitFinalizationContext = {
   baseExprs: FinalizationContext['baseExprs'];
   evalImmExpr: FinalizationContext['evalImmExpr'];
   env: CompileEnv;
+  loweredAsmStream: LoweredAsmStream;
   codeOffset: number;
   dataOffset: number;
   varOffset: number;
@@ -67,6 +77,49 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
   });
   const placedSymbols = collectPlacedNamedSectionSymbols(placedContributions, context.diagnostics);
   context.symbols.push(...placedSymbols);
+
+  const { codeBase, dataBase, varBase } = computeSectionBases(
+    {
+      baseExprs: context.baseExprs,
+      evalImmExpr: context.evalImmExpr,
+      env: context.env,
+      diagnostics: context.diagnostics,
+      diag: context.diag,
+      primaryFile: context.primaryFile,
+      alignTo: context.alignTo,
+      codeOffset: context.codeOffset,
+      dataOffset: context.dataOffset,
+    },
+    context.defaultCodeBase,
+    { quiet: true },
+  );
+  const namedSectionOrigins = collectNamedSectionOrigins(placedContributions);
+  const placedProgram = placeLoweredAsmStream(context.loweredAsmStream, {
+    diagnostics: context.diagnostics,
+    diag: context.diag,
+    primaryFile: context.primaryFile,
+    baseAddresses: { codeBase, dataBase, varBase },
+    namedSectionOrigins,
+  });
+  const emission = emitLoweredAsmProgramBytes(placedProgram, {
+    diagnostics: context.diagnostics,
+    diag: context.diag,
+    primaryFile: context.primaryFile,
+    env: context.env,
+  });
+  for (const placed of placedContributions) {
+    const key = `contrib:${placed.sink.contribution.order}`;
+    const replacement = emission.namedBytesByKey.get(key) ?? new Map<number, number>();
+    const size = emission.blockSizesByKey.get(key);
+    if (size !== undefined && size !== placed.sink.offset) {
+      context.diag(
+        context.diagnostics,
+        context.primaryFile,
+        `Lowered named section size mismatch for "${placed.sink.anchor.key.section} ${placed.sink.anchor.key.name}" (${size} vs ${placed.sink.offset}).`,
+      );
+    }
+    placed.sink.bytes = replacement;
+  }
 
   const placedSourceSegments: EmittedSourceSegment[] = [];
   const placedAsmTrace: EmittedAsmTraceEntry[] = [];
@@ -116,8 +169,8 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
     deferredExterns: context.deferredExterns,
     fixups: context.fixups,
     rel8Fixups: context.rel8Fixups,
-    codeBytes: context.codeBytes,
-    dataBytes: context.dataBytes,
+    codeBytes: emission.codeBytes,
+    dataBytes: emission.dataBytes,
     hexBytes: context.hexBytes,
     bytes: context.bytes,
     codeSourceSegments: context.codeSourceSegments,
@@ -153,12 +206,37 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
       (symbol): symbol is SymbolEntry & { kind: 'label' } =>
         symbol.kind === 'label' && symbol.name.toLowerCase() === 'main',
     );
+    const literalValues = (values: number[]) =>
+      values.map((value) => ({ kind: 'literal' as const, value }));
+    const highest = [...context.bytes.keys()].reduce((max, value) => (value > max ? value : max), -1);
     if (!mainEntry) {
-      const highest = [...context.bytes.keys()].reduce((max, value) => (value > max ? value : max), -1);
-      appendStartupInitRegion(context.bytes, context.diagnostics, context.primaryFile, startupInitRegion);
-      finalWrittenRange = { start: writtenRange.start, end: highest + startupInitRegion.encoded.length };
+      const start = highest + 1;
+      const end = start + startupInitRegion.encoded.length - 1;
+      if (end > 0xffff) {
+        context.diag(
+          context.diagnostics,
+          context.primaryFile,
+          'Compiler-owned startup init region exceeds 16-bit address space.',
+        );
+      } else {
+        const startupBlock = {
+          kind: 'absolute' as const,
+          origin: start,
+          items: [{ kind: 'db' as const, values: literalValues(startupInitRegion.encoded) }],
+        };
+        placedProgram.blocks.push(startupBlock);
+        const emitted = emitLoweredAsmBlockBytes(startupBlock, {
+          diagnostics: context.diagnostics,
+          diag: context.diag,
+          primaryFile: context.primaryFile,
+          env: context.env,
+        });
+        for (const [offset, value] of emitted.bytes) {
+          context.bytes.set(start + offset, value);
+        }
+        finalWrittenRange = { start: writtenRange.start, end: highest + startupInitRegion.encoded.length };
+      }
     } else {
-      const highest = [...context.bytes.keys()].reduce((max, value) => (value > max ? value : max), -1);
       const startupAddress = highest + 1;
       const startupTemplate = buildStartupInitRoutine(0, startupInitRegion, 0);
       const initRegionAddress = startupAddress + startupTemplate.length;
@@ -172,10 +250,25 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
           'Compiler-owned startup routine exceeds 16-bit address space.',
         );
       } else {
-        for (let i = 0; i < startupBytes.length; i++) {
-          context.bytes.set(startupAddress + i, startupBytes[i]!);
+        const startupBlock = {
+          kind: 'absolute' as const,
+          origin: startupAddress,
+          items: [
+            { kind: 'label' as const, name: STARTUP_ENTRY_LABEL },
+            { kind: 'db' as const, values: literalValues(startupBytes) },
+            { kind: 'db' as const, values: literalValues(startupInitRegion.encoded) },
+          ],
+        };
+        placedProgram.blocks.push(startupBlock);
+        const emitted = emitLoweredAsmBlockBytes(startupBlock, {
+          diagnostics: context.diagnostics,
+          diag: context.diag,
+          primaryFile: context.primaryFile,
+          env: context.env,
+        });
+        for (const [offset, value] of emitted.bytes) {
+          context.bytes.set(startupAddress + offset, value);
         }
-        appendStartupInitRegion(context.bytes, context.diagnostics, context.primaryFile, startupInitRegion);
         context.symbols.push({
           kind: 'label',
           name: STARTUP_ENTRY_LABEL,
