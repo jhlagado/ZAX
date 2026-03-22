@@ -58,19 +58,31 @@ This note plans the implementation of a new assembler-valid backend product base
 
 ### Proposed insertion point
 
-Create the lowered-assembly product **inside `emitProgram(...)`**, after lowering decisions are made but **before** encoding bytes into `codeBytes`/`dataBytes`.
+We need two closely related lowered products because placement happens after the first lowering pass.
+
+**Pre-placement lowered stream** (no ORG yet):
+
+- Built inside `emitProgram(...)` after lowering decisions but before byte encoding.
+- Captures ordered lowered items per section/key with unresolved bases.
+- This is the earliest stable boundary where frontend AST is gone and semantic lowering is complete.
+
+**Placed/anchored lowered program** (ORG-anchored):
+
+- Built after placement/finalization, when bases and named-section placement are known.
+- This is the assembler-valid product used by the ASM80 emitter.
 
 Suggested flow:
 
-1. Lowering constructs a new `LoweredAsmProgram` (new structure).
-2. A **byte-emission consumer** walks the `LoweredAsmProgram` to produce `EmittedByteMap` (same outputs as today).
-3. A new **ASM80 emitter** walks the same `LoweredAsmProgram` to produce assembler-valid output.
+1. Lowering constructs a new `LoweredAsmStream` (pre-placement structure).
+2. A **placement pass** (after `finalizeProgramEmission(...)` and named-section placement) converts the stream into `LoweredAsmProgram` with ORG-anchored blocks.
+3. A **byte-emission consumer** walks the placed `LoweredAsmProgram` to produce `EmittedByteMap` (same outputs as today).
+4. A new **ASM80 emitter** walks the same placed `LoweredAsmProgram` to produce assembler-valid output.
 
-This keeps the current binary/hex/d8m path stable while introducing the assembler-valid product as the primary internal artifact.
+This keeps the current binary/hex/d8m path stable while placing the assembler-valid product at the correct post-placement boundary.
 
 ### Minimum data shape (v1)
 
-Proposed minimal structure:
+Proposed minimal structure (placed form):
 
 ```
 LoweredAsmProgram {
@@ -90,26 +102,24 @@ LoweredAsmItem =
   | { kind: 'db', values: ImmExpr[] }
   | { kind: 'dw', values: ImmExpr[] }
   | { kind: 'ds', size: ImmExpr, fill?: ImmExpr }
-  | { kind: 'instr', head: string, operands: AsmOperandNode }
+  | { kind: 'instr', head: string, operands: LoweredOperand[] }
 ```
 
 Notes:
 - In v1, `org` can be implicit via `LoweredAsmBlock.origin` and omitted in item stream.
-- `ImmExpr` can be reused from the existing AST (`ImmExprNode`) to avoid a new expression layer.
-- `AsmOperandNode` can be reused as-is for lowered instructions (already compatible with `encodeInstruction`).
+- `ImmExpr` and `LoweredOperand` should be a normalized lowered form, not frontend AST nodes. The goal is a stable backend contract.
 - Deterministic synthetic labels should be generated in `emit.ts` where `traceLabel(...)` and `generatedLabelCounter` are already managed.
 
 ### Reuse candidates
 
-- Expression nodes from `/Users/johnhardy/.codex/worktrees/7e4e/ZAX/src/frontend/ast.ts` for constants and DB/DW/DS.
-- Operand nodes for lowered instructions from `AsmInstructionNode` in `emit.ts`.
 - Existing section placement/layout logic (`sectionLayout.ts`, `sectionContributions.ts`) can still drive the final ORG ordering used to form blocks.
+- The lowered operand and imm shapes should be small and purpose-built; reuse only the minimal imm-expression evaluator logic, not the full frontend AST surface.
 
 ## Consumer arrangement
 
 ### Direct object emission (existing path)
 
-- Add a `loweredAsmToByteMap(...)` step (or equivalent) that walks `LoweredAsmProgram` and:
+- Add a `loweredAsmToByteMap(...)` step (or equivalent) that walks placed `LoweredAsmProgram` and:
   - produces `codeBytes`, `dataBytes`, fixups, rel8 fixups
   - fills `EmittedByteMap` the same way `emitProgram(...)` currently does
 - This becomes the new primary path for `writeBin`, `writeHex`, `writeD8m`, `writeListing`.
@@ -135,19 +145,20 @@ Notes:
 
 ### Phase 1: Produce lowered-assembly in `emitProgram(...)`
 
-- Construct `LoweredAsmProgram` alongside existing byte emission.
+- Construct `LoweredAsmStream` alongside existing byte emission.
 - Still emit bytes directly (no consumer yet).
 - Keep byte map and trace intact.
 
 ### Phase 2: Byte-map consumer
 
-- Introduce a consumer that converts `LoweredAsmProgram` -> `EmittedByteMap`.
+- Introduce a placement pass that converts `LoweredAsmStream` -> placed `LoweredAsmProgram`.
+- Introduce a consumer that converts placed `LoweredAsmProgram` -> `EmittedByteMap`.
 - Switch `emitProgram(...)` to use the consumer for byte emission.
 - Keep output artifacts unchanged.
 
 ### Phase 3: ASM80 emitter + tests
 
-- Add an ASM80 emitter that consumes the lowered assembly product.
+- Add an ASM80 emitter that consumes the placed lowered assembly product.
 - Add ASM80 validation in tests/harnesses (no CLI invocation).
 - Keep trace `.asm` unchanged and separate.
 
@@ -184,19 +195,20 @@ Notes:
 
 ## Proposed insertion point (summary)
 
-- Primary: inside `emitProgram(...)` in `emit.ts`, directly after lowering decisions are made and before encoding bytes.
+- Primary: pre-placement `LoweredAsmStream` built in `emitProgram(...)` in `emit.ts`.
+- Placed `LoweredAsmProgram` constructed after placement/finalization.
 - Consumers: one for byte emission (existing behavior), one for ASM80 output (new).
 
 ## Minimal data model (summary)
 
 - `LoweredAsmProgram` consisting of ordered ORG blocks with:
   - labels, constants, `DB`/`DW`/`DS`, and lowered instructions.
-- Reuse `ImmExprNode` and `AsmOperandNode` to avoid new expression layers.
+- Use normalized lowered operand/imm shapes, not frontend AST nodes.
 
 ## Migration sequence (summary)
 
 1. Add data model types.
 2. Emit lowered-assembly alongside current byte emission.
-3. Switch byte emission to consume lowered-assembly.
+3. Add placement pass and switch byte emission to consume placed lowered-assembly.
 4. Add ASM80 emitter + validation in tests.
 5. Defer trace `.asm` changes and CLI until later.
