@@ -843,7 +843,12 @@ export function emitProgram(
   const firstModule = program.files[0];
   if (!firstModule) {
     diag(diagnostics, program.entryFile, 'No module files to compile.');
-    return { map: { bytes }, symbols, loweredAsmStream };
+    return {
+      map: { bytes },
+      symbols,
+      loweredAsmStream,
+      placedLoweredAsmProgram: { blocks: [] },
+    };
   }
 
   const primaryFile = firstModule.span.file ?? program.entryFile;
