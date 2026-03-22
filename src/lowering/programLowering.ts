@@ -37,6 +37,7 @@ import type {
   PendingSymbol,
   SectionKind,
 } from './loweringTypes.js';
+import type { LoweredAsmItem, LoweredImmExpr } from './loweredAsmTypes.js';
 import type { AggregateType, ScalarKind } from './typeResolution.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { lowerDataBlock } from './programLoweringData.js';
@@ -94,6 +95,8 @@ export type Context = FunctionLoweringSharedContext & {
     diagnostics: Diagnostic[],
   ) => number | undefined;
   lowerFunctionDecl: (ctx: FunctionLoweringContext) => void;
+  recordLoweredAsmItem: (item: LoweredAsmItem) => void;
+  lowerImmExprForLoweredAsm: (expr: ImmExprNode) => LoweredImmExpr;
   namedSectionSinksByNode: Map<NamedSectionNode, NamedSectionContributionSink>;
   withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T) => T;
 };
@@ -406,6 +409,15 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
     binDecl: BinDeclNode,
     namedSection?: { node: NamedSectionNode; sink: NamedSectionContributionSink },
   ): void => {
+    const withTempSection = (section: SectionKind, fn: () => void): void => {
+      const prev = ctx.activeSectionRef.current;
+      ctx.activeSectionRef.current = section;
+      try {
+        fn();
+      } finally {
+        ctx.activeSectionRef.current = prev;
+      }
+    };
     if (ctx.taken.has(binDecl.name)) {
       ctx.diag(ctx.diagnostics, binDecl.span.file, `Duplicate symbol name "${binDecl.name}".`);
       return;
@@ -441,16 +453,32 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
         line: binDecl.span.start.line,
         scope: 'global',
       });
-      for (const b of blob) namedSection.sink.bytes.set(namedSection.sink.offset++, b & 0xff);
+      ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name });
+      for (const b of blob) {
+        namedSection.sink.bytes.set(namedSection.sink.offset++, b & 0xff);
+        ctx.recordLoweredAsmItem({ kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] });
+      }
       return;
     }
     if (binDecl.section === 'code') {
       ctx.pending.push({ kind: 'data', name: binDecl.name, section: 'code', offset: ctx.codeOffsetRef.current, file: binDecl.span.file, line: binDecl.span.start.line, scope: 'global' });
-      for (const b of blob) ctx.codeBytes.set(ctx.codeOffsetRef.current++, b & 0xff);
+      withTempSection('code', () => {
+        ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name });
+        for (const b of blob) {
+          ctx.codeBytes.set(ctx.codeOffsetRef.current++, b & 0xff);
+          ctx.recordLoweredAsmItem({ kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] });
+        }
+      });
       return;
     }
     ctx.pending.push({ kind: 'data', name: binDecl.name, section: 'data', offset: ctx.dataOffsetRef.current, file: binDecl.span.file, line: binDecl.span.start.line, scope: 'global' });
-    for (const b of blob) ctx.dataBytes.set(ctx.dataOffsetRef.current++, b & 0xff);
+    withTempSection('data', () => {
+      ctx.recordLoweredAsmItem({ kind: 'label', name: binDecl.name });
+      for (const b of blob) {
+        ctx.dataBytes.set(ctx.dataOffsetRef.current++, b & 0xff);
+        ctx.recordLoweredAsmItem({ kind: 'db', values: [{ kind: 'literal', value: b & 0xff }] });
+      }
+    });
   };
   const symbolicTargetFromExpr = (
     expr: ImmExprNode,
@@ -504,15 +532,30 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
         line: decl.span.start.line,
         scope: 'global',
       });
+      ctx.recordLoweredAsmItem({ kind: 'label', name: decl.name });
     }
 
     const emitByte = (b: number): void => {
       namedSection.sink.bytes.set(namedSection.sink.offset, b & 0xff);
       namedSection.sink.offset++;
+      ctx.recordLoweredAsmItem({
+        kind: 'db',
+        values: [{ kind: 'literal', value: b & 0xff }],
+      });
+    };
+    const emitByteNoRecord = (b: number): void => {
+      namedSection.sink.bytes.set(namedSection.sink.offset, b & 0xff);
+      namedSection.sink.offset++;
     };
     const emitWord = (w: number): void => {
-      emitByte(w & 0xff);
-      emitByte((w >> 8) & 0xff);
+      namedSection.sink.bytes.set(namedSection.sink.offset, w & 0xff);
+      namedSection.sink.offset++;
+      namedSection.sink.bytes.set(namedSection.sink.offset, (w >> 8) & 0xff);
+      namedSection.sink.offset++;
+      ctx.recordLoweredAsmItem({
+        kind: 'dw',
+        values: [{ kind: 'literal', value: w & 0xffff }],
+      });
     };
 
     if (decl.directive === 'ds') {
@@ -525,15 +568,23 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
         ctx.diag(ctx.diagnostics, decl.span.file, `Raw data size for "${decl.name}" must be non-negative.`);
         return;
       }
-      for (let i = 0; i < size; i++) emitByte(0);
+      ctx.recordLoweredAsmItem({
+        kind: 'ds',
+        size: ctx.lowerImmExprForLoweredAsm(decl.size),
+      });
+      for (let i = 0; i < size; i++) emitByteNoRecord(0);
       return;
     }
 
     for (const value of decl.values) {
+      const loweredValue = ctx.lowerImmExprForLoweredAsm(value);
       const v = ctx.evalImmExpr(value, ctx.env, ctx.diagnostics);
       if (v !== undefined) {
-        if (decl.directive === 'db') emitByte(v);
-        else emitWord(v);
+        if (decl.directive === 'db') {
+          emitByte(v);
+        } else {
+          emitWord(v);
+        }
         continue;
       }
       if (decl.directive === 'dw') {
@@ -550,8 +601,13 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
         }
       }
       ctx.diag(ctx.diagnostics, decl.span.file, `Failed to evaluate raw data value for "${decl.name}".`);
-      if (decl.directive === 'db') emitByte(0);
-      else emitWord(0);
+      if (decl.directive === 'db') {
+        emitByte(0);
+        ctx.recordLoweredAsmItem({ kind: 'db', values: [{ kind: 'literal', value: 0 }] });
+      } else {
+        emitWord(0);
+        ctx.recordLoweredAsmItem({ kind: 'dw', values: [{ kind: 'literal', value: 0 }] });
+      }
     }
   };
   const lowerItem = (
@@ -590,6 +646,11 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
           file: constItem.span.file,
           line: constItem.span.start.line,
           scope: 'global',
+        });
+        ctx.recordLoweredAsmItem({
+          kind: 'const',
+          name: constItem.name,
+          value: { kind: 'literal', value: v },
         });
       }
       return;

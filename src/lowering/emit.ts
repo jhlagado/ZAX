@@ -58,6 +58,7 @@ import type {
   DataBlockNode,
   DataDeclNode,
   EaExprNode,
+  EaIndexNode,
   EnumDeclNode,
   ExternDeclNode,
   ExternFuncNode,
@@ -154,11 +155,21 @@ import {
 } from './sectionLayout.js';
 import {
   formatAsmInstrForTrace,
+  formatImmExprForAsm,
   formatIxDisp,
   toHexByte,
   toHexWord,
 } from './traceFormat.js';
 import { createTypeResolutionHelpers } from './typeResolution.js';
+import type {
+  LoweredAsmItem,
+  LoweredAsmStream,
+  LoweredAsmStreamBlock,
+  LoweredEaExpr,
+  LoweredImmExpr,
+  LoweredIndexExpr,
+  LoweredOperand,
+} from './loweredAsmTypes.js';
 
 type ProgramLoweringPhaseResult = {
   prescan: ProgramPrescanResult;
@@ -194,13 +205,18 @@ export function emitProgram(
     defaultCodeBase?: number;
     namedSectionKeys?: NonBankedSectionKeyCollection;
   },
-): { map: EmittedByteMap; symbols: SymbolEntry[] } {
+): { map: EmittedByteMap; symbols: SymbolEntry[]; loweredAsmStream: LoweredAsmStream } {
   const bytes = new Map<number, number>();
   const codeBytes = new Map<number, number>();
   const dataBytes = new Map<number, number>();
   const hexBytes = new Map<number, number>();
   const codeSourceSegments: EmittedSourceSegment[] = [];
   const codeAsmTrace: EmittedAsmTraceEntry[] = [];
+  const loweredAsmStream: LoweredAsmStream = { blocks: [] };
+  const loweredAsmBlocksByKey = new Map<string, LoweredAsmStreamBlock>();
+  let recordLoweredAsmItem: ((item: LoweredAsmItem) => void) | undefined;
+  let lowerImmExprForLoweredAsm: ((expr: ImmExprNode) => LoweredImmExpr) | undefined;
+  let lowerOperandForLoweredAsm: ((op: AsmOperandNode) => LoweredOperand) | undefined;
   let currentCodeSegmentTag: SourceSegmentTag | undefined;
   const absoluteSymbols: SymbolEntry[] = [];
   const symbols: SymbolEntry[] = [];
@@ -352,11 +368,13 @@ export function emitProgram(
   const traceLabel = (offset: number, name: string): void => {
     const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
     trace.push({ kind: 'label', offset, name });
+    recordLoweredAsmItem?.({ kind: 'label', name });
   };
 
   const traceComment = (offset: number, text: string): void => {
     const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
     trace.push({ kind: 'comment', offset, text });
+    recordLoweredAsmItem?.({ kind: 'comment', text });
   };
 
   const getCurrentCodeOffset = (): number => currentNamedSectionSink?.offset ?? codeOffset;
@@ -402,6 +420,13 @@ export function emitProgram(
       diagnostics,
     );
     if (!encoded) return false;
+    if (recordLoweredAsmItem && lowerOperandForLoweredAsm) {
+      recordLoweredAsmItem({
+        kind: 'instr',
+        head,
+        operands: operands.map((op) => lowerOperandForLoweredAsm!(op)),
+      });
+    }
     emitCodeBytes(encoded, span.file);
     traceInstruction(start, encoded, formatAsmInstrForTrace(head, operands));
     applySpTracking?.(head, operands);
@@ -461,6 +486,114 @@ export function emitProgram(
     const scratch: Diagnostic[] = [];
     return evalImmExpr(expr, env, scratch);
   };
+
+  const lowerImmExprForLoweredAsmImpl = (expr: ImmExprNode): LoweredImmExpr => {
+    const value = evalImmNoDiag(expr);
+    if (value !== undefined) return { kind: 'literal', value };
+    if (expr.kind !== 'ImmName') {
+      const symbolic = symbolicTargetFromExpr(expr);
+      if (symbolic) {
+        return { kind: 'symbol', name: symbolic.baseLower, addend: symbolic.addend };
+      }
+    }
+    switch (expr.kind) {
+      case 'ImmLiteral':
+        return { kind: 'literal', value: expr.value };
+      case 'ImmName':
+        return { kind: 'symbol', name: expr.name, addend: 0 };
+      case 'ImmUnary':
+        return {
+          kind: 'unary',
+          op: expr.op,
+          expr: lowerImmExprForLoweredAsmImpl(expr.expr),
+        };
+      case 'ImmBinary':
+        return {
+          kind: 'binary',
+          op: expr.op,
+          left: lowerImmExprForLoweredAsmImpl(expr.left),
+          right: lowerImmExprForLoweredAsmImpl(expr.right),
+        };
+      default:
+        return { kind: 'opaque', text: formatImmExprForAsm(expr) };
+    }
+  };
+
+  const lowerEaExprForLoweredAsm = (expr: EaExprNode): LoweredEaExpr => {
+    switch (expr.kind) {
+      case 'EaName':
+        return { kind: 'name', name: expr.name };
+      case 'EaImm':
+        return { kind: 'imm', expr: lowerImmExprForLoweredAsmImpl(expr.expr) };
+      case 'EaReinterpret':
+        return {
+          kind: 'reinterpret',
+          typeName: typeDisplay(expr.typeExpr),
+          base: lowerEaExprForLoweredAsm(expr.base),
+        };
+      case 'EaField':
+        return { kind: 'field', base: lowerEaExprForLoweredAsm(expr.base), field: expr.field };
+      case 'EaAdd':
+        return {
+          kind: 'add',
+          base: lowerEaExprForLoweredAsm(expr.base),
+          offset: lowerImmExprForLoweredAsmImpl(expr.offset),
+        };
+      case 'EaSub':
+        return {
+          kind: 'sub',
+          base: lowerEaExprForLoweredAsm(expr.base),
+          offset: lowerImmExprForLoweredAsmImpl(expr.offset),
+        };
+      case 'EaIndex': {
+        const lowerIndexExpr = (index: EaIndexNode): LoweredIndexExpr => {
+          switch (index.kind) {
+            case 'IndexImm':
+              return { kind: 'imm', value: lowerImmExprForLoweredAsmImpl(index.value) };
+            case 'IndexReg8':
+              return { kind: 'reg8', reg: index.reg };
+            case 'IndexReg16':
+              return { kind: 'reg16', reg: index.reg };
+            case 'IndexMemHL':
+              return { kind: 'memHL' };
+            case 'IndexMemIxIy':
+              return {
+                kind: 'memIxIy',
+                base: index.base,
+                ...(index.disp ? { disp: lowerImmExprForLoweredAsmImpl(index.disp) } : {}),
+              };
+            case 'IndexEa':
+              return { kind: 'ea', expr: lowerEaExprForLoweredAsm(index.expr) };
+          }
+        };
+        return {
+          kind: 'index',
+          base: lowerEaExprForLoweredAsm(expr.base),
+          index: lowerIndexExpr(expr.index),
+        };
+      }
+    }
+  };
+
+  const lowerOperandForLoweredAsmImpl = (operand: AsmOperandNode): LoweredOperand => {
+    switch (operand.kind) {
+      case 'Reg':
+        return { kind: 'reg', name: operand.name };
+      case 'Imm':
+        return { kind: 'imm', expr: lowerImmExprForLoweredAsmImpl(operand.expr) };
+      case 'Ea':
+        return { kind: 'ea', expr: lowerEaExprForLoweredAsm(operand.expr) };
+      case 'Mem':
+        return { kind: 'mem', expr: lowerEaExprForLoweredAsm(operand.expr) };
+      case 'PortImm8':
+        return { kind: 'portImm8', expr: lowerImmExprForLoweredAsmImpl(operand.expr) };
+      case 'PortC':
+        return { kind: 'portC' };
+    }
+  };
+
+  lowerImmExprForLoweredAsm = lowerImmExprForLoweredAsmImpl;
+  lowerOperandForLoweredAsm = lowerOperandForLoweredAsmImpl;
   const isIxIyIndexedMem = (op: AsmOperandNode): boolean =>
     op.kind === 'Mem' &&
     ((op.expr.kind === 'EaName' && /^(IX|IY)$/i.test(op.expr.name)) ||
@@ -681,7 +814,7 @@ export function emitProgram(
   const firstModule = program.files[0];
   if (!firstModule) {
     diag(diagnostics, program.entryFile, 'No module files to compile.');
-    return { map: { bytes }, symbols };
+    return { map: { bytes }, symbols, loweredAsmStream };
   }
 
   const primaryFile = firstModule.span.file ?? program.entryFile;
@@ -740,6 +873,29 @@ export function emitProgram(
       varOffset = value;
     },
   };
+
+  const getLoweredAsmBlock = (): LoweredAsmStreamBlock => {
+    const section = activeSectionRef.current;
+    const namedNode = currentNamedSectionSink?.contribution.node;
+    const key = namedNode ? `named:${section}:${namedNode.name}` : `base:${section}`;
+    let block = loweredAsmBlocksByKey.get(key);
+    if (!block) {
+      block = {
+        kind: namedNode ? 'named' : 'base',
+        section,
+        ...(namedNode ? { name: namedNode.name } : {}),
+        items: [],
+      };
+      loweredAsmBlocksByKey.set(key, block);
+      loweredAsmStream.blocks.push(block);
+    }
+    return block;
+  };
+
+  const recordLoweredAsmItemImpl = (item: LoweredAsmItem): void => {
+    getLoweredAsmBlock().items.push(item);
+  };
+  recordLoweredAsmItem = recordLoweredAsmItemImpl;
 
   const currentCodeSegmentTagRef: FunctionLoweringSymbolContext['currentCodeSegmentTagRef'] = {
     get current() {
@@ -908,6 +1064,8 @@ export function emitProgram(
     resolveAggregateType,
     sizeOfTypeExpr,
     lowerFunctionDecl,
+    recordLoweredAsmItem: recordLoweredAsmItemImpl,
+    lowerImmExprForLoweredAsm: lowerImmExprForLoweredAsmImpl,
     namedSectionSinksByNode,
     withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T): T => {
       const prevSink = currentNamedSectionSink;
@@ -923,7 +1081,7 @@ export function emitProgram(
 
   const { lowered } = runProgramLoweringPhases(programLoweringContext);
 
-  return finalizeEmitProgram({
+  const finalized = finalizeEmitProgram({
     namedSectionSinks,
     diagnostics,
     diag,
@@ -954,4 +1112,5 @@ export function emitProgram(
     rebaseAsmTrace,
     ...(options?.defaultCodeBase !== undefined ? { defaultCodeBase: options.defaultCodeBase } : {}),
   });
+  return { ...finalized, loweredAsmStream };
 }
