@@ -22,6 +22,7 @@ type CliOptions = {
   emitD8m: boolean;
   emitListing: boolean;
   emitAsm: boolean;
+  emitAsm80: boolean;
   caseStyle: CaseStyleMode;
   opStackPolicy: OpStackPolicyMode;
   rawTypedCallWarnings: boolean;
@@ -40,6 +41,7 @@ function usage(): string {
     '      --nohex           Suppress .hex',
     '      --nod8m           Suppress .d8dbg.json',
     '      --noasm           Suppress .asm lowering trace',
+    '      --asm80           Emit ASM80-compatible lowered source (.asm80)',
     '      --case-style <m>  Case-style lint mode: off|upper|lower|consistent',
     '      --op-stack-policy <m> Op stack-policy mode: off|warn|error',
     '      --raw-typed-call-warn Emit warnings for raw call to typed callable targets',
@@ -66,6 +68,7 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
   let emitD8m = true;
   let emitListing = true;
   let emitAsm = true;
+  let emitAsm80 = false;
   let caseStyle: CaseStyleMode = 'off';
   let opStackPolicy: OpStackPolicyMode = 'off';
   let rawTypedCallWarnings = false;
@@ -131,6 +134,10 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
     }
     if (a === '--noasm') {
       emitAsm = false;
+      continue;
+    }
+    if (a === '--asm80') {
+      emitAsm80 = true;
       continue;
     }
     if (a === '--case-style' || a.startsWith('--case-style=')) {
@@ -207,6 +214,7 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
     emitD8m,
     emitListing,
     emitAsm,
+    emitAsm80,
     caseStyle,
     opStackPolicy,
     rawTypedCallWarnings,
@@ -240,6 +248,7 @@ async function writeArtifacts(
   const d8mPath = `${base}.d8dbg.json`;
   const lstPath = `${base}.lst`;
   const asmPath = `${base}.asm`;
+  const asm80Path = `${base}.asm80`;
 
   const writes: Array<Promise<void>> = [];
   const ensureDir = async (p: string) => mkdir(dirname(p), { recursive: true });
@@ -268,6 +277,11 @@ async function writeArtifacts(
   if (asm && asm.kind === 'asm') {
     await ensureDir(asmPath);
     writes.push(writeFile(asmPath, asm.text, 'utf8'));
+  }
+  const asm80 = byKind.get('asm80');
+  if (asm80 && asm80.kind === 'asm80') {
+    await ensureDir(asm80Path);
+    writes.push(writeFile(asm80Path, asm80.text, 'utf8'));
   }
 
   await Promise.all(writes);
@@ -322,6 +336,7 @@ export async function runCli(argv: string[]): Promise<number> {
         emitD8m: parsed.emitD8m,
         emitListing: parsed.emitListing,
         emitAsm: parsed.emitAsm,
+        emitAsm80: parsed.emitAsm80,
         caseStyle: parsed.caseStyle,
         opStackPolicy: parsed.opStackPolicy,
         rawTypedCallWarnings: parsed.rawTypedCallWarnings,
