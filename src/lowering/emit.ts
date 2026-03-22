@@ -468,14 +468,17 @@ export function emitProgram(
     pushFixup: pushCurrentFixup,
     pushRel8Fixup: pushCurrentRel8Fixup,
     traceInstruction,
-    recordLoweredInstr: (bytes) => {
+    recordLoweredInstr: (bytes, _asmText, span) => {
       if (recordLoweredAsmItem) {
-        recordLoweredAsmItem({
-          kind: 'instr',
-          head: '@raw',
-          operands: [],
-          bytes: [...bytes],
-        });
+        recordLoweredAsmItem(
+          {
+            kind: 'instr',
+            head: '@raw',
+            operands: [],
+            bytes: [...bytes],
+          },
+          span,
+        );
       }
     },
     evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
