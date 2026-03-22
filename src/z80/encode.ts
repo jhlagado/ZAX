@@ -185,16 +185,6 @@ function memIndexed(
     if (base !== 'IX' && base !== 'IY') return undefined;
     const rawDisp = evalImmExpr(dispExpr, env);
     if (rawDisp === undefined) return undefined;
-    if (rawDisp < -128 || rawDisp > 127) {
-      if (diagnostics) {
-        diag(
-          diagnostics,
-          op,
-          `IX/IY displacement out of range (-128..127): ${rawDisp}.`,
-        );
-      }
-      return undefined;
-    }
     const prefix = base === 'IX' ? 0xdd : 0xfd;
     return { prefix, disp: negate ? -rawDisp : rawDisp };
   };
