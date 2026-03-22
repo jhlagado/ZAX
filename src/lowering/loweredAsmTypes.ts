@@ -17,7 +17,10 @@ export type LoweredAsmProgram = {
 };
 
 export type LoweredAsmBlock = {
+  kind: 'section' | 'absolute';
   origin: number;
+  section?: SectionKind;
+  name?: string;
   items: LoweredAsmItem[];
 };
 
@@ -31,7 +34,7 @@ export type LoweredAsmItem =
   | { kind: 'db'; values: LoweredImmExpr[] }
   | { kind: 'dw'; values: LoweredImmExpr[] }
   | { kind: 'ds'; size: LoweredImmExpr; fill?: LoweredImmExpr }
-  | { kind: 'instr'; head: string; operands: LoweredOperand[] }
+  | { kind: 'instr'; head: string; operands: LoweredOperand[]; bytes?: number[] }
   | { kind: 'comment'; text: string };
 
 export type LoweredOperand =
