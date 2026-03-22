@@ -135,6 +135,7 @@ async function loadProgram(
     sourceText: string,
     includeStack: string[],
   ): Promise<ExpandedSource | undefined> => {
+    if (!sourceTexts.has(modulePath)) sourceTexts.set(modulePath, sourceText);
     const lines = sourceText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
     const out: string[] = [];
     const lineFiles: string[] = [];
@@ -163,6 +164,7 @@ async function loadProgram(
           // eslint-disable-next-line no-await-in-loop
           resolvedText = await readFile(c, 'utf8');
           resolved = c;
+          if (!sourceTexts.has(c)) sourceTexts.set(c, resolvedText);
           break;
         } catch (err) {
           if (isIgnorableImportProbeError(err)) {
@@ -253,6 +255,7 @@ async function loadProgram(
       return;
     }
 
+    if (!sourceTexts.has(p)) sourceTexts.set(p, sourceText);
     const expanded = await expandIncludes(p, sourceText, [p]);
     if (expanded === undefined) return;
 
@@ -273,7 +276,6 @@ async function loadProgram(
     }
 
     modules.set(p, moduleFile);
-    sourceTexts.set(p, expanded.text);
     edges.set(p, new Map());
 
     for (const imp of importTargets(moduleFile)) {

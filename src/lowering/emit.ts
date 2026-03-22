@@ -940,7 +940,12 @@ export function emitProgram(
   };
 
   const commentByFileLine = new Map<string, Map<number, string>>();
+  const pendingUserComments = new Map<
+    string,
+    { lines: number[]; texts: Map<number, string>; index: number }
+  >();
   const emittedUserCommentLines = new Set<string>();
+  const lastBlockByFile = new Map<string, LoweredAsmBlock>();
   if (options?.sourceTexts) {
     for (const [file, text] of options.sourceTexts) {
       const lines = text.split(/\r?\n/);
@@ -953,25 +958,40 @@ export function emitProgram(
         if (!commentText) continue;
         lineMap.set(i + 1, commentText);
       }
-      if (lineMap.size > 0) commentByFileLine.set(file, lineMap);
+      if (lineMap.size > 0) {
+        commentByFileLine.set(file, lineMap);
+        pendingUserComments.set(file, {
+          lines: [...lineMap.keys()].sort((a, b) => a - b),
+          texts: lineMap,
+          index: 0,
+        });
+      }
     }
   }
 
-  const maybeRecordUserComment = (span?: SourceSpan): void => {
+  const emitPendingUserComments = (span?: SourceSpan): void => {
     if (!span) return;
-    const lineMap = commentByFileLine.get(span.file);
-    if (!lineMap) return;
-    const text = lineMap.get(span.start.line);
-    if (!text) return;
-    const key = `${span.file}:${span.start.line}`;
-    if (emittedUserCommentLines.has(key)) return;
-    emittedUserCommentLines.add(key);
-    getLoweredAsmBlock().items.push({ kind: 'comment', text, origin: 'user' });
+    const pending = pendingUserComments.get(span.file);
+    if (!pending) return;
+    while (pending.index < pending.lines.length) {
+      const line = pending.lines[pending.index]!;
+      if (line > span.start.line) break;
+      pending.index += 1;
+      const key = `${span.file}:${line}`;
+      if (emittedUserCommentLines.has(key)) continue;
+      const text = pending.texts.get(line);
+      if (!text) continue;
+      emittedUserCommentLines.add(key);
+      getLoweredAsmBlock().items.push({ kind: 'comment', text, origin: 'user' });
+    }
   };
 
   const recordLoweredAsmItemImpl = (item: LoweredAsmItem, span?: SourceSpan): void => {
     if (item.kind !== 'comment' || item.origin !== 'user') {
-      maybeRecordUserComment(span);
+      emitPendingUserComments(span);
+    }
+    if (span) {
+      lastBlockByFile.set(span.file, getLoweredAsmBlock());
     }
     getLoweredAsmBlock().items.push(item);
   };
@@ -1160,6 +1180,22 @@ export function emitProgram(
   };
 
   const { lowered } = runProgramLoweringPhases(programLoweringContext);
+
+  for (const [file, pending] of pendingUserComments) {
+    if (pending.index >= pending.lines.length) continue;
+    const block = lastBlockByFile.get(file);
+    if (!block) continue;
+    while (pending.index < pending.lines.length) {
+      const line = pending.lines[pending.index]!;
+      pending.index += 1;
+      const key = `${file}:${line}`;
+      if (emittedUserCommentLines.has(key)) continue;
+      const text = pending.texts.get(line);
+      if (!text) continue;
+      emittedUserCommentLines.add(key);
+      block.items.push({ kind: 'comment', text, origin: 'user' });
+    }
+  }
 
   const finalized = finalizeEmitProgram({
     namedSectionSinks,
