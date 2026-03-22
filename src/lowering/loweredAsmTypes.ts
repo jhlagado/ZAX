@@ -37,7 +37,7 @@ export type LoweredAsmItem =
   | { kind: 'dw'; values: LoweredImmExpr[] }
   | { kind: 'ds'; size: LoweredImmExpr; fill?: LoweredImmExpr }
   | { kind: 'instr'; head: string; operands: LoweredOperand[]; bytes?: number[] }
-  | { kind: 'comment'; text: string };
+  | { kind: 'comment'; text: string; origin: 'user' | 'zax' };
 
 export type LoweredOperand =
   | { kind: 'reg'; name: string }

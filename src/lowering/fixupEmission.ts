@@ -34,13 +34,13 @@ type Context = {
   pushFixup: (fixup: FixupRecord) => void;
   pushRel8Fixup: (fixup: Rel8FixupRecord) => void;
   traceInstruction: TraceInstruction;
-  recordLoweredInstr?: (bytes: Uint8Array, asmText: string) => void;
+  recordLoweredInstr?: (bytes: Uint8Array, asmText: string, span: SourceSpan) => void;
   evalImmExpr: EvalImmExpr;
 };
 
 export function createFixupEmissionHelpers(ctx: Context) {
-  const recordLoweredInstr = (bytes: Uint8Array, asmText: string): void => {
-    ctx.recordLoweredInstr?.(bytes, asmText);
+  const recordLoweredInstr = (bytes: Uint8Array, asmText: string, span: SourceSpan): void => {
+    ctx.recordLoweredInstr?.(bytes, asmText, span);
   };
 
   const emitAbs16Fixup = (
@@ -60,7 +60,7 @@ export function createFixupEmissionHelpers(ctx: Context) {
     const bytes = Uint8Array.of(opcode, 0x00, 0x00);
     const text = asmText ?? formatAbs16FixupAsm(opcode, baseLower, addend);
     ctx.traceInstruction(start, bytes, text);
-    recordLoweredInstr(bytes, text);
+    recordLoweredInstr(bytes, text, span);
   };
 
   const emitAbs16FixupEd = (
@@ -81,7 +81,7 @@ export function createFixupEmissionHelpers(ctx: Context) {
     const bytes = Uint8Array.of(0xed, opcode2, 0x00, 0x00);
     const text = asmText ?? formatAbs16FixupEdAsm(opcode2, baseLower, addend);
     ctx.traceInstruction(start, bytes, text);
-    recordLoweredInstr(bytes, text);
+    recordLoweredInstr(bytes, text, span);
   };
 
   const emitAbs16FixupPrefixed = (
@@ -103,7 +103,7 @@ export function createFixupEmissionHelpers(ctx: Context) {
     const bytes = Uint8Array.of(prefix, opcode2, 0x00, 0x00);
     const text = asmText ?? formatAbs16FixupPrefixedAsm(prefix, opcode2, baseLower, addend);
     ctx.traceInstruction(start, bytes, text);
-    recordLoweredInstr(bytes, text);
+    recordLoweredInstr(bytes, text, span);
   };
 
   const emitRel8Fixup = (
@@ -130,7 +130,7 @@ export function createFixupEmissionHelpers(ctx: Context) {
     const bytes = Uint8Array.of(opcode, 0x00);
     const text = asmText ?? `${mnemonic} ${baseLower}`;
     ctx.traceInstruction(start, bytes, text);
-    recordLoweredInstr(bytes, text);
+    recordLoweredInstr(bytes, text, span);
   };
 
   const conditionOpcodeFromName = (nameRaw: string): number | undefined => {

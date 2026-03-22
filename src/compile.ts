@@ -112,6 +112,7 @@ function isIgnorableImportProbeError(err: unknown): boolean {
 type LoadedProgram = {
   program: ProgramNode;
   sourceTexts: Map<string, string>;
+  sourceLineComments: Map<string, Map<number, string>>;
   moduleTraversal: string[];
   resolvedImportGraph: Map<string, string[]>;
 };
@@ -124,17 +125,41 @@ async function loadProgram(
   const entryPath = normalizePath(entryFile);
   const modules = new Map<string, ModuleFileNode>();
   const sourceTexts = new Map<string, string>();
+  const sourceLineComments = new Map<string, Map<number, string>>();
   const edges = new Map<string, Map<string, { line: number; column: number }>>();
   const includeDirs = (options.includeDirs ?? []).map(normalizePath);
   const moduleIdRootDir = dirname(entryPath);
 
   type ExpandedSource = { text: string; lineFiles: string[]; lineBaseLines: number[] };
 
+  const recordSourceLineComments = (expanded: ExpandedSource): void => {
+    const lines = expanded.text.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i] ?? '';
+      const semi = line.indexOf(';');
+      if (semi < 0) continue;
+      const commentText = line.slice(semi + 1).trim();
+      if (!commentText) continue;
+      const fileRaw = expanded.lineFiles[i];
+      if (!fileRaw) continue;
+      const file = normalizePath(fileRaw);
+      const lineNo = expanded.lineBaseLines[i] ?? i + 1;
+      let lineMap = sourceLineComments.get(file);
+      if (!lineMap) {
+        lineMap = new Map();
+        sourceLineComments.set(file, lineMap);
+      }
+      lineMap.set(lineNo, commentText);
+    }
+  };
+
   const expandIncludes = async (
     modulePath: string,
     sourceText: string,
     includeStack: string[],
   ): Promise<ExpandedSource | undefined> => {
+    const moduleKey = normalizePath(modulePath);
+    if (!sourceTexts.has(moduleKey)) sourceTexts.set(moduleKey, sourceText);
     const lines = sourceText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
     const out: string[] = [];
     const lineFiles: string[] = [];
@@ -163,6 +188,8 @@ async function loadProgram(
           // eslint-disable-next-line no-await-in-loop
           resolvedText = await readFile(c, 'utf8');
           resolved = c;
+          const resolvedKey = normalizePath(c);
+          if (!sourceTexts.has(resolvedKey)) sourceTexts.set(resolvedKey, resolvedText);
           break;
         } catch (err) {
           if (isIgnorableImportProbeError(err)) {
@@ -253,6 +280,7 @@ async function loadProgram(
       return;
     }
 
+    if (!sourceTexts.has(p)) sourceTexts.set(p, sourceText);
     const expanded = await expandIncludes(p, sourceText, [p]);
     if (expanded === undefined) return;
 
@@ -273,7 +301,7 @@ async function loadProgram(
     }
 
     modules.set(p, moduleFile);
-    sourceTexts.set(p, expanded.text);
+    recordSourceLineComments(expanded);
     edges.set(p, new Map());
 
     for (const imp of importTargets(moduleFile)) {
@@ -418,6 +446,7 @@ async function loadProgram(
   return {
     program: { kind: 'Program', span: entryModule.span, entryFile: entryPath, files: moduleFiles },
     sourceTexts,
+    sourceLineComments,
     moduleTraversal,
     resolvedImportGraph: new Map(
       Array.from(edges.entries(), ([modulePath, moduleEdges]) => [modulePath, Array.from(moduleEdges.keys())]),
@@ -443,7 +472,7 @@ export const compile: CompileFn = async (
   const diagnostics: Diagnostic[] = [];
   const loaded = await loadProgram(entryPath, diagnostics, options);
   if (!loaded) return { diagnostics, artifacts: [] };
-  const { program, sourceTexts, moduleTraversal, resolvedImportGraph } = loaded;
+  const { program, sourceTexts, sourceLineComments, moduleTraversal, resolvedImportGraph } = loaded;
 
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };
@@ -510,6 +539,8 @@ export const compile: CompileFn = async (
       : {}),
     ...(options.defaultCodeBase !== undefined ? { defaultCodeBase: options.defaultCodeBase } : {}),
     namedSectionKeys: nonBankedSectionKeys,
+    sourceTexts,
+    sourceLineComments,
   });
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };

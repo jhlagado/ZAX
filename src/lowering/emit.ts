@@ -204,6 +204,8 @@ export function emitProgram(
     rawTypedCallWarnings?: boolean;
     defaultCodeBase?: number;
     namedSectionKeys?: NonBankedSectionKeyCollection;
+    sourceTexts?: Map<string, string>;
+    sourceLineComments?: Map<string, Map<number, string>>;
   },
 ): {
   map: EmittedByteMap;
@@ -219,7 +221,7 @@ export function emitProgram(
   const codeAsmTrace: EmittedAsmTraceEntry[] = [];
   const loweredAsmStream: LoweredAsmStream = { blocks: [] };
   const loweredAsmBlocksByKey = new Map<string, LoweredAsmStreamBlock>();
-  let recordLoweredAsmItem: ((item: LoweredAsmItem) => void) | undefined;
+  let recordLoweredAsmItem: ((item: LoweredAsmItem, span?: SourceSpan) => void) | undefined;
   let lowerImmExprForLoweredAsm: ((expr: ImmExprNode) => LoweredImmExpr) | undefined;
   let lowerOperandForLoweredAsm: ((op: AsmOperandNode) => LoweredOperand) | undefined;
   let currentCodeSegmentTag: SourceSegmentTag | undefined;
@@ -370,16 +372,16 @@ export function emitProgram(
     });
   };
 
-  const traceLabel = (offset: number, name: string): void => {
+  const traceLabel = (offset: number, name: string, span?: SourceSpan): void => {
     const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
     trace.push({ kind: 'label', offset, name });
-    recordLoweredAsmItem?.({ kind: 'label', name });
+    recordLoweredAsmItem?.({ kind: 'label', name }, span);
   };
 
   const traceComment = (offset: number, text: string): void => {
     const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
     trace.push({ kind: 'comment', offset, text });
-    recordLoweredAsmItem?.({ kind: 'comment', text });
+    recordLoweredAsmItem?.({ kind: 'comment', text, origin: 'zax' });
   };
 
   const getCurrentCodeOffset = (): number => currentNamedSectionSink?.offset ?? codeOffset;
@@ -426,12 +428,15 @@ export function emitProgram(
     );
     if (!encoded) return false;
     if (recordLoweredAsmItem && lowerOperandForLoweredAsm) {
-      recordLoweredAsmItem({
-        kind: 'instr',
-        head,
-        operands: operands.map((op) => lowerOperandForLoweredAsm!(op)),
-        bytes: [...encoded],
-      });
+      recordLoweredAsmItem(
+        {
+          kind: 'instr',
+          head,
+          operands: operands.map((op) => lowerOperandForLoweredAsm!(op)),
+          bytes: [...encoded],
+        },
+        span,
+      );
     }
     emitCodeBytes(encoded, span.file);
     traceInstruction(start, encoded, formatAsmInstrForTrace(head, operands));
@@ -464,14 +469,17 @@ export function emitProgram(
     pushFixup: pushCurrentFixup,
     pushRel8Fixup: pushCurrentRel8Fixup,
     traceInstruction,
-    recordLoweredInstr: (bytes) => {
+    recordLoweredInstr: (bytes, _asmText, span) => {
       if (recordLoweredAsmItem) {
-        recordLoweredAsmItem({
-          kind: 'instr',
-          head: '@raw',
-          operands: [],
-          bytes: [...bytes],
-        });
+        recordLoweredAsmItem(
+          {
+            kind: 'instr',
+            head: '@raw',
+            operands: [],
+            bytes: [...bytes],
+          },
+          span,
+        );
       }
     },
     evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
@@ -932,7 +940,70 @@ export function emitProgram(
     return block;
   };
 
-  const recordLoweredAsmItemImpl = (item: LoweredAsmItem): void => {
+  const commentByFileLine = new Map<string, Map<number, string>>();
+  const pendingUserComments = new Map<
+    string,
+    { lines: number[]; texts: Map<number, string>; index: number }
+  >();
+  const emittedUserCommentLines = new Set<string>();
+  const lastBlockByFile = new Map<string, LoweredAsmStreamBlock>();
+  if (options?.sourceLineComments) {
+    for (const [file, lineMap] of options.sourceLineComments) {
+      if (lineMap.size === 0) continue;
+      commentByFileLine.set(file, lineMap);
+      pendingUserComments.set(file, {
+        lines: [...lineMap.keys()].sort((a, b) => a - b),
+        texts: lineMap,
+        index: 0,
+      });
+    }
+  } else if (options?.sourceTexts) {
+    for (const [file, text] of options.sourceTexts) {
+      const lines = text.split(/\r?\n/);
+      const lineMap = new Map<number, string>();
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i] ?? '';
+        const semi = line.indexOf(';');
+        if (semi < 0) continue;
+        const commentText = line.slice(semi + 1).trim();
+        if (!commentText) continue;
+        lineMap.set(i + 1, commentText);
+      }
+      if (lineMap.size > 0) {
+        commentByFileLine.set(file, lineMap);
+        pendingUserComments.set(file, {
+          lines: [...lineMap.keys()].sort((a, b) => a - b),
+          texts: lineMap,
+          index: 0,
+        });
+      }
+    }
+  }
+
+  const emitPendingUserComments = (span?: SourceSpan): void => {
+    if (!span) return;
+    const pending = pendingUserComments.get(span.file);
+    if (!pending) return;
+    while (pending.index < pending.lines.length) {
+      const line = pending.lines[pending.index]!;
+      if (line > span.start.line) break;
+      pending.index += 1;
+      const key = `${span.file}:${line}`;
+      if (emittedUserCommentLines.has(key)) continue;
+      const text = pending.texts.get(line);
+      if (!text) continue;
+      emittedUserCommentLines.add(key);
+      getLoweredAsmBlock().items.push({ kind: 'comment', text, origin: 'user' });
+    }
+  };
+
+  const recordLoweredAsmItemImpl = (item: LoweredAsmItem, span?: SourceSpan): void => {
+    if (item.kind !== 'comment' || item.origin !== 'user') {
+      emitPendingUserComments(span);
+    }
+    if (span) {
+      lastBlockByFile.set(span.file, getLoweredAsmBlock());
+    }
     getLoweredAsmBlock().items.push(item);
   };
   recordLoweredAsmItem = recordLoweredAsmItemImpl;
@@ -1120,6 +1191,22 @@ export function emitProgram(
   };
 
   const { lowered } = runProgramLoweringPhases(programLoweringContext);
+
+  for (const [file, pending] of pendingUserComments) {
+    if (pending.index >= pending.lines.length) continue;
+    const block = lastBlockByFile.get(file);
+    if (!block) continue;
+    while (pending.index < pending.lines.length) {
+      const line = pending.lines[pending.index]!;
+      pending.index += 1;
+      const key = `${file}:${line}`;
+      if (emittedUserCommentLines.has(key)) continue;
+      const text = pending.texts.get(line);
+      if (!text) continue;
+      emittedUserCommentLines.add(key);
+      block.items.push({ kind: 'comment', text, origin: 'user' });
+    }
+  }
 
   const finalized = finalizeEmitProgram({
     namedSectionSinks,
