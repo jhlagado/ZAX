@@ -571,6 +571,7 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
       ctx.recordLoweredAsmItem({
         kind: 'ds',
         size: ctx.lowerImmExprForLoweredAsm(decl.size),
+        fill: { kind: 'literal', value: 0 },
       });
       for (let i = 0; i < size; i++) emitByteNoRecord(0);
       return;
@@ -690,6 +691,21 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
       if (v <= 0) {
         ctx.diag(ctx.diagnostics, a.span.file, `align value must be > 0.`);
         return;
+      }
+      const current = namedSection
+        ? namedSection.sink.offset
+        : ctx.activeSectionRef.current === 'code'
+          ? ctx.codeOffsetRef.current
+          : ctx.activeSectionRef.current === 'data'
+            ? ctx.dataOffsetRef.current
+            : ctx.varOffsetRef.current;
+      const aligned = ctx.alignTo(current, v);
+      const pad = aligned - current;
+      if (pad > 0) {
+        ctx.recordLoweredAsmItem({
+          kind: 'ds',
+          size: { kind: 'literal', value: pad },
+        });
       }
       if (namedSection) alignNamedSection(namedSection.sink, v);
       else ctx.advanceAlign(v);

@@ -425,6 +425,7 @@ export function emitProgram(
         kind: 'instr',
         head,
         operands: operands.map((op) => lowerOperandForLoweredAsm!(op)),
+        bytes: [...encoded],
       });
     }
     emitCodeBytes(encoded, span.file);
@@ -458,6 +459,16 @@ export function emitProgram(
     pushFixup: pushCurrentFixup,
     pushRel8Fixup: pushCurrentRel8Fixup,
     traceInstruction,
+    recordLoweredInstr: (bytes) => {
+      if (recordLoweredAsmItem) {
+        recordLoweredAsmItem({
+          kind: 'instr',
+          head: '@raw',
+          operands: [],
+          bytes: [...bytes],
+        });
+      }
+    },
     evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
   });
 
@@ -477,6 +488,19 @@ export function emitProgram(
     emitAbs16Fixup,
     emitAbs16FixupEd,
   }));
+
+  const emitRawCodeBytesImpl = emitRawCodeBytes;
+  emitRawCodeBytes = (bs: Uint8Array, file: string, traceText: string): void => {
+    if (recordLoweredAsmItem) {
+      recordLoweredAsmItem({
+        kind: 'instr',
+        head: '@raw',
+        operands: [],
+        bytes: [...bs],
+      });
+    }
+    emitRawCodeBytesImpl(bs, file, traceText);
+  };
 
   const { normalizeFixedToken } = createAsmUtilityHelpers({
     isEnumName: (name) => env.enums.has(name),
@@ -1090,6 +1114,7 @@ export function emitProgram(
     baseExprs,
     evalImmExpr,
     env,
+    loweredAsmStream,
     codeOffset: lowered.codeOffset,
     dataOffset: lowered.dataOffset,
     varOffset: lowered.varOffset,
