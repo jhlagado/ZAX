@@ -205,6 +205,7 @@ export function emitProgram(
     defaultCodeBase?: number;
     namedSectionKeys?: NonBankedSectionKeyCollection;
     sourceTexts?: Map<string, string>;
+    sourceLineComments?: Map<string, Map<number, string>>;
   },
 ): {
   map: EmittedByteMap;
@@ -946,7 +947,17 @@ export function emitProgram(
   >();
   const emittedUserCommentLines = new Set<string>();
   const lastBlockByFile = new Map<string, LoweredAsmStreamBlock>();
-  if (options?.sourceTexts) {
+  if (options?.sourceLineComments) {
+    for (const [file, lineMap] of options.sourceLineComments) {
+      if (lineMap.size === 0) continue;
+      commentByFileLine.set(file, lineMap);
+      pendingUserComments.set(file, {
+        lines: [...lineMap.keys()].sort((a, b) => a - b),
+        texts: lineMap,
+        index: 0,
+      });
+    }
+  } else if (options?.sourceTexts) {
     for (const [file, text] of options.sourceTexts) {
       const lines = text.split(/\r?\n/);
       const lineMap = new Map<number, string>();
