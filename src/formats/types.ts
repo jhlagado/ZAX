@@ -148,6 +148,16 @@ export interface WriteAsmOptions {
 }
 
 /**
+ * Options for ASM80 source emission.
+ */
+export interface WriteAsm80Options {
+  /**
+   * Line ending to use when emitting text formats.
+   */
+  lineEnding?: '\n' | '\r\n';
+}
+
+/**
  * In-memory Intel HEX artifact.
  */
 export interface HexArtifact {
@@ -184,6 +194,15 @@ export interface AsmArtifact {
 }
 
 /**
+ * In-memory ASM80 `.asm` artifact.
+ */
+export interface Asm80Artifact {
+  kind: 'asm80';
+  path?: string;
+  text: string;
+}
+
+/**
  * In-memory D8 Debug Map (D8M) artifact.
  */
 export interface D8mArtifact {
@@ -195,7 +214,13 @@ export interface D8mArtifact {
 /**
  * Union of all artifact kinds produced by the compiler.
  */
-export type Artifact = HexArtifact | BinArtifact | ListingArtifact | D8mArtifact | AsmArtifact;
+export type Artifact =
+  | HexArtifact
+  | BinArtifact
+  | ListingArtifact
+  | D8mArtifact
+  | AsmArtifact
+  | Asm80Artifact;
 
 /**
  * Minimal D8 Debug Map (D8M) v1 JSON shape.
@@ -222,4 +247,8 @@ export interface FormatWriters {
     opts?: WriteListingOptions,
   ): ListingArtifact;
   writeAsm?(map: EmittedByteMap, symbols: SymbolEntry[], opts?: WriteAsmOptions): AsmArtifact;
+  writeAsm80?(
+    program: import('../lowering/loweredAsmTypes.js').LoweredAsmProgram,
+    opts?: WriteAsm80Options,
+  ): Asm80Artifact;
 }
