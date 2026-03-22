@@ -169,6 +169,7 @@ export type FunctionLoweringStorageContext = {
   stackSlotTypes: Map<string, TypeExprNode>;
   localAliasTargets: Map<string, EaExprNode>;
   storageTypes: Map<string, TypeExprNode>;
+  moduleAliasTargets: Map<string, EaExprNode>;
   rawTypedCallWarningsEnabled: boolean;
 };
 
@@ -298,7 +299,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     pushZeroExtendedReg8,
     loadImm16ToHL,
   } = ctx;
-  const { stackSlotOffsets, stackSlotTypes, localAliasTargets, storageTypes } = ctx;
+  const { stackSlotOffsets, stackSlotTypes, localAliasTargets, storageTypes, moduleAliasTargets } = ctx;
   const { rawTypedCallWarningsEnabled, resolveCallable, resolveOpCandidates, opStackPolicyMode } = ctx;
   const { formatAsmOperandForOpDiag, selectOpOverload, summarizeOpStackEffect } = ctx;
   const { cloneImmExpr, cloneEaExpr, cloneOperand } = ctx;
@@ -310,6 +311,19 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     currentCodeSegmentTagRef.current = tag;
   };
   const emitInstr = emitInstrBase;
+
+  const resolveLocalAliasTargetName = (nameLower: string): string | undefined => {
+    const target = localAliasTargets.get(nameLower);
+    return target && target.kind === 'EaName' ? target.name : undefined;
+  };
+
+  const findLocalAliasInImmExpr = (expr: ImmExprNode): string | undefined => {
+    const names = collectImmExprNames(expr);
+    for (const name of names) {
+      if (localAliasTargets.has(name.toLowerCase())) return name;
+    }
+    return undefined;
+  };
 
   const rewriteImmExprForFrameOffsets = (
     expr: ImmExprNode,
@@ -334,13 +348,9 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
           }
           return { expr: { kind: 'ImmLiteral', span: expr.span, value: slotOffset }, ok: true };
         }
-        if (localAliasTargets.has(lower)) {
-          diagAt(
-            diagnostics,
-            expr.span,
-            `Alias "${expr.name}" has no frame slot; cannot be used as a raw IX offset.`,
-          );
-          return { expr, ok: false };
+        const aliasTarget = resolveLocalAliasTargetName(lower);
+        if (aliasTarget) {
+          return { expr: { ...expr, name: aliasTarget }, ok: true };
         }
         return { expr, ok: true };
       }
@@ -373,8 +383,13 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     ea: EaExprNode,
   ): { expr: EaExprNode; ok: boolean } => {
     switch (ea.kind) {
-      case 'EaName':
+      case 'EaName': {
+        const aliasTarget = resolveLocalAliasTargetName(ea.name.toLowerCase());
+        if (aliasTarget) {
+          return { expr: { ...ea, name: aliasTarget }, ok: true };
+        }
         return { expr: ea, ok: true };
+      }
       case 'EaImm': {
         const rewritten = rewriteImmExprForFrameOffsets(ea.expr);
         return { expr: { ...ea, expr: rewritten.expr }, ok: rewritten.ok };
@@ -391,6 +406,23 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       case 'EaSub': {
         const base = rewriteEaExprForFrameOffsets(ea.base);
         const offset = rewriteImmExprForFrameOffsets(ea.offset);
+        if (
+          base.expr.kind === 'EaName' &&
+          (base.expr.name.toUpperCase() === 'IX' || base.expr.name.toUpperCase() === 'IY')
+        ) {
+          const aliasName = findLocalAliasInImmExpr(ea.offset);
+          if (aliasName) {
+            diagAt(
+              diagnostics,
+              ea.offset.span,
+              `Alias "${aliasName}" has no frame slot; cannot be used as a raw IX offset.`,
+            );
+            return {
+              expr: { ...ea, base: base.expr, offset: offset.expr },
+              ok: false,
+            };
+          }
+        }
         return {
           expr: { ...ea, base: base.expr, offset: offset.expr },
           ok: base.ok && offset.ok,
@@ -446,6 +478,18 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     }
   };
 
+  const rewriteAsmInstructionForFrameOffsets = (
+    asmItem: AsmInstructionNode,
+  ): AsmInstructionNode | undefined => {
+    const rewritten: AsmOperandNode[] = [];
+    for (const op of asmItem.operands) {
+      const next = rewriteAsmOperandForFrameOffsets(op);
+      if (!next.ok) return undefined;
+      rewritten.push(next.op);
+    }
+    return { ...asmItem, operands: rewritten };
+  };
+
   const evalImmExprForAsm = (expr: ImmExprNode): number | undefined => {
     const rewritten = rewriteImmExprForFrameOffsets(expr);
     if (!rewritten.ok) return undefined;
@@ -455,17 +499,11 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const symbolicTargetFromExprForAsm = (
     expr: ImmExprNode,
   ): { baseLower: string; addend: number } | undefined => {
-    const symbolic = symbolicTargetFromExpr(expr);
+    const rewritten = rewriteImmExprForFrameOffsets(expr);
+    if (!rewritten.ok) return undefined;
+    const symbolic = symbolicTargetFromExpr(rewritten.expr);
     if (!symbolic) return undefined;
     if (stackSlotOffsets.has(symbolic.baseLower)) return undefined;
-    if (localAliasTargets.has(symbolic.baseLower)) {
-      diagAt(
-        diagnostics,
-        expr.span,
-        `Alias "${symbolic.baseLower}" has no frame slot; cannot be used as a raw IX offset.`,
-      );
-      return undefined;
-    }
     return symbolic;
   };
 
@@ -508,6 +546,13 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   localAliasTargets.clear();
 
   const localDecls = item.locals.decls;
+  const localAliasNames = new Set(
+    localDecls.filter((decl) => decl.form === 'alias').map((decl) => decl.name.toLowerCase()),
+  );
+  const localTypedNames = new Set(
+    localDecls.filter((decl) => decl.form === 'typed').map((decl) => decl.name.toLowerCase()),
+  );
+  const paramNames = new Set(item.params.map((param) => param.name.toLowerCase()));
   const returnRegs = item.returnRegs.map((r: string) => r.toUpperCase());
   const basePreserveOrder: string[] = ['AF', 'BC', 'DE', 'HL'];
   let preserveSet = basePreserveOrder.filter((r) => !returnRegs.includes(r));
@@ -549,6 +594,47 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       continue;
     }
     const init = decl.initializer;
+    if (init.expr.kind !== 'EaName') {
+      diagAt(
+        diagnostics,
+        decl.span,
+        `Function-local alias "${decl.name}" must target a direct module-scope storage name.`,
+      );
+      continue;
+    }
+    const targetLower = init.expr.name.toLowerCase();
+    if (paramNames.has(targetLower)) {
+      diagAt(
+        diagnostics,
+        decl.span,
+        `Function-local alias "${decl.name}" cannot target parameter "${init.expr.name}".`,
+      );
+      continue;
+    }
+    if (localAliasNames.has(targetLower) || moduleAliasTargets.has(targetLower)) {
+      diagAt(
+        diagnostics,
+        decl.span,
+        `Function-local alias "${decl.name}" cannot target alias "${init.expr.name}".`,
+      );
+      continue;
+    }
+    if (localTypedNames.has(targetLower)) {
+      diagAt(
+        diagnostics,
+        decl.span,
+        `Function-local alias "${decl.name}" cannot target local "${init.expr.name}".`,
+      );
+      continue;
+    }
+    if (!storageTypes.has(targetLower)) {
+      diagAt(
+        diagnostics,
+        decl.span,
+        `Function-local alias "${decl.name}" must target a direct module-scope storage name.`,
+      );
+      continue;
+    }
     localAliasTargets.set(declLower, init.expr);
     const inferred = resolveEaTypeExpr(init.expr);
     if (!inferred) {
@@ -999,6 +1085,12 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     flowRef,
   });
 
+  const lowerAsmInstructionDispatcherWithRewrite = (asmItem: AsmInstructionNode): void => {
+    const rewritten = rewriteAsmInstructionForFrameOffsets(asmItem);
+    if (!rewritten) return;
+    lowerAsmInstructionDispatcher(rewritten);
+  };
+
   const { emitAsmInstruction, lowerAsmRange } = createFunctionCallLoweringHelpers({
     diagnostics,
     asmItemSpanSourceTag: (span) => sourceTagForSpan(span, opExpansionStack),
@@ -1061,7 +1153,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     normalizeFixedToken,
     inverseConditionName,
     newHiddenLabel,
-    lowerAsmInstructionDispatcher,
+    lowerAsmInstructionDispatcher: lowerAsmInstructionDispatcherWithRewrite,
     defineCodeLabel,
     flowRef,
     syncFromFlow,
