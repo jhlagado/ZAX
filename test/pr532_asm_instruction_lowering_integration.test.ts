@@ -50,6 +50,7 @@ describe('PR532 asm instruction lowering integration', () => {
       },
       evalImmExpr: (expr) => (expr.kind === 'ImmLiteral' ? expr.value : undefined),
       resolveScalarBinding: () => undefined,
+      resolveRawAliasTargetName: () => undefined,
       isModuleStorageName: () => false,
       isFrameSlotName: () => false,
       resolveScalarTypeForEa: () => undefined,
