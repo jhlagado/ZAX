@@ -20,17 +20,17 @@ export function computeSectionBases(
   varOk: boolean;
 } {
   const diagnostics = options?.quiet ? [] : ctx.diagnostics;
-  const diag = options?.quiet ? () => {} : ctx.diag;
+  const diagFn = options?.quiet ? () => {} : ctx.diag;
   const evalBase = (kind: SectionKind): number | undefined => {
     const at = ctx.baseExprs[kind];
     if (!at) return undefined;
     const value = ctx.evalImmExpr(at, ctx.env, diagnostics);
     if (value === undefined) {
-      diag(diagnostics, at.span.file, `Failed to evaluate section "${kind}" base address.`);
+      diagFn(diagnostics, at.span.file, `Failed to evaluate section "${kind}" base address.`);
       return undefined;
     }
     if (value < 0 || value > 0xffff) {
-      diag(diagnostics, at.span.file, `Section "${kind}" base address out of range (0..65535).`);
+      diagFn(diagnostics, at.span.file, `Section "${kind}" base address out of range (0..65535).`);
       return undefined;
     }
     return value;
@@ -45,7 +45,7 @@ export function computeSectionBases(
     explicitDataBase ??
     (codeOk
       ? ctx.alignTo(codeBase + ctx.codeOffset, 2)
-      : (diag(
+      : (diagFn(
           diagnostics,
           ctx.primaryFile,
           `Cannot compute default data base address because code base address is invalid.`,
@@ -56,7 +56,7 @@ export function computeSectionBases(
     explicitVarBase ??
     (dataOk
       ? ctx.alignTo(dataBase + ctx.dataOffset, 2)
-      : (diag(
+      : (diagFn(
           diagnostics,
           ctx.primaryFile,
           `Cannot compute default var base address because data base address is invalid.`,

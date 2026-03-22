@@ -901,13 +901,16 @@ export function emitProgram(
   const getLoweredAsmBlock = (): LoweredAsmStreamBlock => {
     const section = activeSectionRef.current;
     const namedNode = currentNamedSectionSink?.contribution.node;
-    const key = namedNode ? `named:${section}:${namedNode.name}` : `base:${section}`;
+    const namedOrder = currentNamedSectionSink?.contribution.order;
+    const key = namedNode
+      ? `named:${section}:${namedNode.name}:${namedOrder ?? 'unknown'}`
+      : `base:${section}`;
     let block = loweredAsmBlocksByKey.get(key);
     if (!block) {
       block = {
         kind: namedNode ? 'named' : 'base',
         section,
-        ...(namedNode ? { name: namedNode.name } : {}),
+        ...(namedNode ? { name: namedNode.name, contributionOrder: namedOrder } : {}),
         items: [],
       };
       loweredAsmBlocksByKey.set(key, block);

@@ -8,6 +8,7 @@ export type LoweredAsmStreamBlock = {
   kind: 'base' | 'named';
   section: SectionKind;
   name?: string;
+  contributionOrder?: number;
   items: LoweredAsmItem[];
 };
 
@@ -21,6 +22,7 @@ export type LoweredAsmBlock = {
   origin: number;
   section?: SectionKind;
   name?: string;
+  contributionOrder?: number;
   items: LoweredAsmItem[];
 };
 
