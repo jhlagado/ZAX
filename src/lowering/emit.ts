@@ -907,10 +907,13 @@ export function emitProgram(
       : `base:${section}`;
     let block = loweredAsmBlocksByKey.get(key);
     if (!block) {
+      const namedFields: { name?: string; contributionOrder?: number } = {};
+      if (namedNode) namedFields.name = namedNode.name;
+      if (namedOrder !== undefined) namedFields.contributionOrder = namedOrder;
       block = {
         kind: namedNode ? 'named' : 'base',
         section,
-        ...(namedNode ? { name: namedNode.name, contributionOrder: namedOrder } : {}),
+        ...namedFields,
         items: [],
       };
       loweredAsmBlocksByKey.set(key, block);
