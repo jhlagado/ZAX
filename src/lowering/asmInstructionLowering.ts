@@ -43,6 +43,7 @@ type Context = {
   ) => { baseLower: string; addend: number } | undefined;
   evalImmExpr: (expr: Extract<AsmOperandNode, { kind: 'Imm' }>['expr']) => number | undefined;
   resolveScalarBinding: (name: string) => 'byte' | 'word' | 'addr' | undefined;
+  resolveRawAliasTargetName: (name: string) => string | undefined;
   isModuleStorageName: (name: string) => boolean;
   isFrameSlotName: (name: string) => boolean;
   resolveScalarTypeForEa: (ea: EaExprNode) => ScalarKind | undefined;
@@ -225,8 +226,13 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     return false;
   };
 
-  const isRawLdLabelName = (name: string): boolean =>
-    ctx.isModuleStorageName(name) && !ctx.isFrameSlotName(name);
+  const resolveRawLabelName = (name: string): string =>
+    ctx.resolveRawAliasTargetName(name) ?? name;
+
+  const isRawLdLabelName = (name: string): boolean => {
+    const resolved = resolveRawLabelName(name);
+    return ctx.isModuleStorageName(resolved) && !ctx.isFrameSlotName(resolved);
+  };
 
   const emitAbs16LdFixup = (
     dst: AsmOperandNode,
@@ -237,7 +243,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     const srcName = src.kind === 'Reg' ? src.name.toUpperCase() : undefined;
     const memExpr = dst.kind === 'Mem' ? dst.expr : src.kind === 'Mem' ? src.expr : undefined;
     if (!memExpr || memExpr.kind !== 'EaName') return false;
-    const baseLower = memExpr.name.toLowerCase();
+    const baseLower = resolveRawLabelName(memExpr.name).toLowerCase();
     if (ctx.isFrameSlotName(baseLower)) return false;
 
     if (dst.kind === 'Reg' && src.kind === 'Mem') {
@@ -302,6 +308,18 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       }
     }
 
+    return false;
+  };
+
+  const isRegisterLikeMemEa = (ea: EaExprNode): boolean => {
+    if (ea.kind === 'EaName') {
+      const upper = ea.name.toUpperCase();
+      return ctx.reg16.has(upper);
+    }
+    if ((ea.kind === 'EaAdd' || ea.kind === 'EaSub') && ea.base.kind === 'EaName') {
+      const upper = ea.base.name.toUpperCase();
+      return upper === 'IX' || upper === 'IY';
+    }
     return false;
   };
 
@@ -665,7 +683,8 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       ) {
         const v = ctx.evalImmExpr(srcOp.expr);
         if (v === undefined) {
-          ctx.emitAbs16Fixup(opcode, srcOp.expr.name.toLowerCase(), 0, asmItem.span);
+          const baseLower = resolveRawLabelName(srcOp.expr.name).toLowerCase();
+          ctx.emitAbs16Fixup(opcode, baseLower, 0, asmItem.span);
           ctx.syncToFlow();
           return;
         }
@@ -678,7 +697,8 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       ) {
         const v = ctx.evalImmExpr(srcOp.expr);
         if (v === undefined) {
-          ctx.emitAbs16FixupPrefixed(dst === 'IX' ? 0xdd : 0xfd, 0x21, srcOp.expr.name.toLowerCase(), 0, asmItem.span);
+          const baseLower = resolveRawLabelName(srcOp.expr.name).toLowerCase();
+          ctx.emitAbs16FixupPrefixed(dst === 'IX' ? 0xdd : 0xfd, 0x21, baseLower, 0, asmItem.span);
           ctx.syncToFlow();
           return;
         }
@@ -745,6 +765,29 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       }
       ctx.diagAt(ctx.diagnostics, asmItem.span, `":=" form is not supported.`);
       return;
+    }
+
+    const isRegisterLikeMemEa = (ea: EaExprNode): boolean => {
+      if (ea.kind === 'EaName') {
+        return ctx.reg16.has(ea.name.toUpperCase());
+      }
+      if ((ea.kind === 'EaAdd' || ea.kind === 'EaSub') && ea.base.kind === 'EaName') {
+        const base = ea.base.name.toUpperCase();
+        return base === 'IX' || base === 'IY';
+      }
+      return false;
+    };
+
+    if (
+      head === 'ld' &&
+      asmItem.operands.some(
+        (op) => op.kind === 'Mem' && op.expr.kind !== 'EaImm' && !isRegisterLikeMemEa(op.expr),
+      )
+    ) {
+      if (ctx.lowerLdWithEa(asmItem)) {
+        ctx.syncToFlow();
+        return;
+      }
     }
 
     if (head === 'ld' && asmItem.operands.some(isTypedStorageLdOperand)) {

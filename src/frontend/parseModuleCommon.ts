@@ -219,6 +219,15 @@ export function parseVarDeclLine(
       );
       return undefined;
     }
+    if (scope === 'var' && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(rhsText)) {
+      diag(
+        diagnostics,
+        modulePath,
+        `Function-local alias "${name}" must target a direct module-scope storage name.`,
+        { line: lineNo, column: 1 },
+      );
+      return undefined;
+    }
     const rhsEa = parseEaExprFromText(modulePath, rhsText, declSpan, diagnostics);
     if (!rhsEa) {
       diag(

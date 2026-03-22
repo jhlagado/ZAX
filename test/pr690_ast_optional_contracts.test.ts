@@ -16,7 +16,7 @@ describe('PR690 AST optional contract hardening', () => {
       modulePath: file.path,
       isReservedTopLevelName: () => false,
     });
-    const alias = parseVarDeclLine('slot = arr[idx]', lineSpan, 2, 'var', {
+    const alias = parseVarDeclLine('slot = table', lineSpan, 2, 'var', {
       diagnostics,
       modulePath: file.path,
       isReservedTopLevelName: () => false,

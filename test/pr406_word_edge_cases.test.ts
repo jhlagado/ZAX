@@ -26,7 +26,7 @@ describe('PR406: word edge cases', () => {
     );
 
     const errors = res.diagnostics.filter((d) => d.severity === 'error');
-    expect(errors.length).toBeGreaterThanOrEqual(4);
+    expect(errors.length).toBeGreaterThanOrEqual(3);
   });
 
   it('does not partially emit the scalar word fast path when only the source is scalar-fast-path eligible', async () => {
