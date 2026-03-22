@@ -31,6 +31,8 @@ export interface CompilerOptions {
   emitListing?: boolean;
   /** Emit lowering trace source (`.asm`). */
   emitAsm?: boolean;
+  /** Emit ASM80-compatible lowered source (`.asm80`). */
+  emitAsm80?: boolean;
   /** Optional case-style lint mode for asm keywords/register tokens. */
   caseStyle?: CaseStyleMode;
   /** Optional op stack-policy static risk mode (`off` by default). */
