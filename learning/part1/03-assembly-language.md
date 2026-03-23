@@ -2,13 +2,13 @@
 
 # Chapter 3 — Assembly Language
 
-Chapter 2 ended with ten bytes of machine code and the observation that nobody writes a real program that way. This chapter introduces assembly language properly: the `LD` instruction that moves data everywhere, the ZAX program structure that wraps it, and the handful of rules the hardware imposes on you whether you like it or not.
+You now know what the machine looks like and what a program looks like as raw bytes. Nobody writes real programs that way. This chapter introduces assembly language: the `LD` instruction that moves data everywhere, a handful of other essentials, and the rules the hardware imposes on you whether you like it or not.
 
 ---
 
-## A First ZAX Program
+## A First Program
 
-Here is the addition program from Chapter 2, rewritten in ZAX:
+Here is the addition program from Chapter 2, rewritten in assembly. To run it in ZAX, the code needs a thin wrapper that tells the assembler where things go in memory — but everything inside the function body is standard Z80.
 
 ```zax
 section data state at $8000
@@ -26,17 +26,11 @@ section code app at $0100
 end
 ```
 
-`section data state at $8000` declares a data section. The variables inside will be placed in memory starting at address `$8000`. The assembler tracks each variable's address for you.
+Ignore the `section` and `export func` lines for now — they are scaffolding that tells ZAX where to place the code and data. The important thing is what happens inside:
 
-`var result: byte` declares one byte of named storage. The name `result` behaves as a label — everywhere you write `result` in the code, the assembler substitutes the actual address. Add more variables before it and every reference updates automatically.
+`ld a, 5` loads the value 5 into A. `ld b, a` copies A into B. `ld a, 3` replaces A with 3. `add a, b` adds B (still 5) to A (now 3), leaving 8 in A.
 
-`section code app at $0100` declares a code section starting at `$0100`. The address depends on your target system. This example uses `$0100`, which is where CP/M loads programs — a different board might use `$0000`, `$4000`, or any other address. You set it to match whatever hardware or loader you are targeting.
-
-`export func main(): void` declares the entry point. ZAX generates the function header automatically, and the closing `end` emits a `ret` instruction.
-
-`ld (result), a` stores A into the byte at the address of `result`. The parentheses mean "the memory address of." The assembler substitutes the address, so this becomes `LD ($8000), A` in the output.
-
-The bytes this produces are identical to the ones from Chapter 2 — same opcodes, starting at `$0100` instead of `$0000`. ZAX does not change what the program does. It changes how you write and maintain it.
+`ld (result), a` stores A into the byte named `result`. The parentheses mean "the memory address of" — the assembler substitutes the actual address, so this becomes `LD ($8000), A` in the output. The bytes are identical to the ones from Chapter 2. Same opcodes, same behaviour. The assembler just lets you write it in a way that a human being can actually read.
 
 ---
 
@@ -50,9 +44,9 @@ ld destination, source
 
 `LD` does not affect the flags register. It is a pure copy — the source is unchanged, the destination receives the value, nothing else happens.
 
-One rule to internalise now: **parentheses always indicate a memory access.** `LD A, B` copies the register B into A. `LD A, (HL)` reads the byte from memory at the address stored in HL. The parentheses change the meaning entirely. This convention applies everywhere in Z80 assembly, not just to `LD`.
+One rule to internalise now: **parentheses always indicate a memory access.** `LD A, B` copies the register B into A. `LD A, (HL)` reads the byte from memory at the address stored in HL. The parentheses change the meaning entirely. This convention applies everywhere in Z80 assembly, not just to `LD`. If you forget the parentheses, you get a completely different instruction and no error message — just wrong behaviour. This will bite you at some point. Be warned.
 
-Not every combination of source and destination is legal. The Z80's hardware supports specific pairings, and asking for an unsupported one produces an assembler error. The rules are worth knowing in full.
+Not every combination of source and destination is legal. The Z80's hardware supports specific pairings, and asking for an unsupported one produces an assembler error. The rules are worth knowing in full, because you will be writing `LD` constantly.
 
 ### 8-bit register to register
 
@@ -78,7 +72,7 @@ ld ix, $4000    ; IX = $4000
 
 ### Memory access through HL
 
-HL is the primary indirect address register. `(HL)` means "the byte at the address currently in HL." This is what makes HL the most useful 16-bit register on the Z80.
+HL is the primary indirect address register. `(HL)` means "the byte at the address currently in HL." This is what makes HL the most useful 16-bit register on the Z80 — it can reach any byte in memory, and it works with every 8-bit register.
 
 ```zax
 ld a, (hl)     ; A = byte at address HL
@@ -87,7 +81,7 @@ ld b, (hl)     ; B = byte at address HL
 ld (hl), 19    ; byte at address HL = 19
 ```
 
-Any of A, B, C, D, E, H, L can appear on either side when the other side is `(HL)`. BC and DE also have indirect forms, but only with A — `ld a, (bc)` and `ld (de), a` — and nothing else. HL works with every byte register, supports `INC (HL)` and `DEC (HL)` to modify memory in place, and is the base for indexed addressing. You will load an address into HL, use `(HL)` to read or write at that address, increment HL, and repeat. This pattern appears in almost every Z80 program.
+Any of A, B, C, D, E, H, L can appear on either side when the other side is `(HL)`. BC and DE also have indirect forms, but only with A — `ld a, (bc)` and `ld (de), a` — and nothing else. HL supports `INC (HL)` and `DEC (HL)` to modify a byte in place. The standard pattern is: load an address into HL, read or write with `(HL)`, increment HL, repeat. You will see this in almost every Z80 program.
 
 ### Indexed memory access through IX and IY
 
@@ -100,7 +94,7 @@ ld (iy-2), a    ; byte at address IY-2 = A
 ld (ix+1), $3F  ; byte at address IX+1 = $3F
 ```
 
-This is how structure field access and array element access work — set IX or IY to the start of a structure, then reach each field at its known offset.
+You set IX or IY to point at the start of some region of memory, then access individual bytes at known offsets. This turns out to be extremely useful — you will see why when we get to functions and data tables.
 
 ### Memory access through BC or DE
 
@@ -111,7 +105,7 @@ ld a, (bc)     ; A = byte at address BC
 ld (de), a     ; byte at address DE = A
 ```
 
-Neither `LD B, (BC)` nor `LD (DE), H` is legal.
+Neither `LD B, (BC)` nor `LD (DE), H` is legal. If you try, the assembler will tell you.
 
 ### Direct memory address
 
@@ -135,6 +129,8 @@ There is no instruction that copies one memory address directly to another. You 
 ld a, ($8000)
 ld ($8001), a
 ```
+
+This catches everyone at first. The CPU can talk to memory or to its own registers, but it cannot move data from one memory location to another without passing it through a register on the way. That is simply how the hardware works.
 
 ### Summary of LD forms
 
@@ -160,7 +156,7 @@ ld ($8001), a
 
 ## Signed and Unsigned Values
 
-The Z80 can interpret a byte two ways.
+The same byte can mean two different things depending on how you choose to read it.
 
 As an **unsigned** value, the byte holds 0 to 255. The bit pattern `$FF` is 255.
 
@@ -168,7 +164,7 @@ As a **signed** value using two's complement, bit 7 is the sign bit. If bit 7 is
 
 To compute the two's complement of a positive value: invert all bits and add one. The two's complement of `$01` (`%00000001`) is `%11111110 + 1 = %11111111 = $FF`, which is −1.
 
-The CPU does not distinguish. `ADD A, B` performs the same bitwise addition regardless of whether you intend the values as signed or unsigned — the result is the same bit pattern either way. Only the meaning you assign to the result, and which flags you check afterward, determines the signed/unsigned interpretation. Chapter 4 covers flags in detail.
+Here is the important part: the CPU does not know which interpretation you intend. `ADD A, B` performs the same bitwise addition regardless. The result is the same bit pattern either way. Only the meaning you assign to it, and which flags you check afterward, determines the interpretation. Chapter 4 covers flags in detail.
 
 ---
 
@@ -183,13 +179,13 @@ const BaseAddr  = $8000
 
 The assembler substitutes the value everywhere the name appears. `ld a, MaxCount` becomes `ld a, 10`. `ld hl, BaseAddr` becomes `ld hl, $8000`. Constants produce no bytes in the output and occupy no memory at run time.
 
-The difference between a constant and a label: a constant is a value you write down — `10`, `$8000`. A label is an address the assembler computes from where things land in the output.
+The difference between a constant and a label: a constant is a value you write down — `10`, `$8000`. A label is an address the assembler computes from where things end up in the output.
 
 ---
 
 ## Named Storage
 
-The `section data` block declares named storage at a specific address:
+You have already seen `var result: byte` in the data section. More generally, named storage is declared like this:
 
 ```zax
 section data vars at $8000
@@ -198,7 +194,7 @@ section data vars at $8000
 end
 ```
 
-The assembler places `count` at `$8000` (one byte, initial value 0) and `scratch` at `$8001` (two bytes, initial value 0). You access them with the parentheses notation — the same notation you use for any memory address:
+The assembler places `count` at `$8000` (one byte, initial value 0) and `scratch` at `$8001` (two bytes, initial value 0). You access them with parentheses — the same notation you use for any memory address:
 
 ```zax
 ld a, (count)         ; A = byte at address of count
@@ -209,7 +205,7 @@ ld (scratch), hl      ; word at address of scratch = HL
 ld hl, (scratch)      ; HL = word at address of scratch
 ```
 
-The parentheses mean the same thing whether the operand is a register, a name, or a literal address:
+The parentheses mean the same thing everywhere:
 
 | Notation | Meaning |
 |----------|---------|
@@ -227,14 +223,14 @@ IX and IY are 16-bit index registers. Each splits into 8-bit halves — IXH/IXL 
 
 Zilog's original documentation did not list these halves as supported instructions. Programmers discovered them by noticing that the prefix-byte encoding made them work, and they have been in common use since the early 1980s. Modern assemblers — ZAX included — support them without qualification.
 
-There is a hardware constraint. The Z80 encodes H, L, IXH, IXL, IYH, and IYL using the same bit positions in the instruction byte, resolving the ambiguity with a prefix: unprefixed means H/L, `$DD` means IXH/IXL, `$FD` means IYH/IYL. Since one instruction can carry only one prefix, you cannot mix halves from different groups:
+There is a hardware constraint you need to know about. The Z80 encodes H, L, IXH, IXL, IYH, and IYL using the same bit positions in the instruction byte, resolving the ambiguity with a prefix: unprefixed means H/L, `$DD` means IXH/IXL, `$FD` means IYH/IYL. Since one instruction can carry only one prefix, you cannot mix halves from different groups:
 
 - `ld ixh, ixl` — valid, both share `$DD`
 - `ld l, h` — valid, both unprefixed
 - `ld h, ixl` — **impossible**, H is unprefixed, IXL needs `$DD`
 - `ld iyh, ixl` — **impossible**, IYH needs `$FD`, IXL needs `$DD`
 
-The rule: in any single instruction, the halves of HL, IX, and IY are mutually exclusive. You can freely combine A, B, C, D, E with any of them, but you cannot cross the HL/IX/IY boundary within one instruction.
+The rule: in any single instruction, the halves of HL, IX, and IY are mutually exclusive. You can freely combine A, B, C, D, E with any of them, but you cannot cross the HL/IX/IY boundary within one instruction. The assembler enforces this — you will get an error if you try.
 
 ---
 
@@ -276,7 +272,9 @@ Two other exchange instructions exist: `EX AF, AF'` swaps AF with its shadow cou
 
 ## Arithmetic Instructions Are Not Operators
 
-In a language like C, `a + b` produces a result without changing either variable. In Z80 assembly, `ADD A, B` adds B to A and **writes the result back into A**, destroying whatever A held before. The instruction is not an operator — it is a complete operation that modifies the destination register.
+This is the section that saves you from your first truly baffling bug.
+
+In a language like C, `a + b` produces a result without changing either variable. In Z80 assembly, `ADD A, B` adds B to A and **writes the result back into A**, destroying whatever A held before. The instruction is not an operator that produces a value — it is a complete operation that modifies a register. Every instruction after it sees the new value of A, not the old one.
 
 This matters as soon as you write code longer than a few lines. Here is a calculation of a rectangle's perimeter, with width and height stored in memory:
 
@@ -304,31 +302,15 @@ ld (Perim), a       ; stores the wrong value
 
 The final `ADD A, A` does not double the original width — it doubles the running total, which by that point is already Height + 2 × Width. The result is 2 × Width too large.
 
-The mistake is natural if you think of `ADD` as algebra. It is not. It replaces the contents of A with a new value, and every subsequent instruction sees the new value, not the original. This kind of ordering bug is common in assembly, easy to miss, and produces no error message — just a wrong answer.
+The mistake is natural if you think of `ADD` as algebra. It is not. Every instruction modifies its destination in place, and every subsequent instruction sees the modified value. This kind of ordering bug is common in assembly, easy to miss, and produces no error message — just a wrong answer. Be prepared for it.
 
 Besides `ADD`, the Z80 has `INC` (increment by one) and `DEC` (decrement by one). `INC A` adds 1 to A; `DEC B` subtracts 1 from B. Both affect the flags register — importantly, `DEC` sets the Zero flag when the result reaches zero, which makes it useful for counting loops. All three instructions share the same trait: they modify their operand in place.
 
 ---
 
-## What ZAX Adds
-
-Most assemblers stop at mnemonics and labels. ZAX goes further:
-
-**Typed variables.** `var result: byte` names and sizes the storage. ZAX uses the size information to generate correct load and store sequences and catches mismatches at assembly time.
-
-**Typed function parameters.** Functions declare what they receive and return. The assembler generates correct sequences at call sites.
-
-**Structured control flow.** `if`, `while`, `break`, and `continue` generate correct conditional jumps and loop structures. You write the structure; the assembler produces the bytes.
-
-**`op` — inline expansion.** An `op` block is copied inline at every call site, giving you named reuse without subroutine overhead.
-
-These features appear in later chapters. For now, everything is raw Z80 instructions inside the ZAX program shell.
-
----
-
 ## The Examples
 
-Three example files accompany this chapter, each demonstrating a different aspect of what you have learned.
+Three example files accompany this chapter. Each one is a complete program you can assemble and run.
 
 ### `00_first_program.zax`
 
@@ -355,7 +337,7 @@ end
 
 `ld hl, $1234` loads a 16-bit immediate into HL: H gets `$12`, L gets `$34`. The instruction encodes as three bytes — the opcode, then the value in little-endian order (`$34` then `$12`).
 
-Notice that `ld de, $5678` overwrites both D and E, replacing the `$FF` that was in D after the earlier copy. Every instruction overwrites its destination completely.
+Notice that `ld de, $5678` overwrites both D and E, replacing the `$FF` that was in D after the earlier copy. Every instruction overwrites its destination completely. If you were relying on D still being `$FF` after this point, too bad — it is gone.
 
 The final two instructions, `ld d, h` and `ld e, l`, copy HL into DE one byte at a time. After both, DE holds `$1234`. There is no single instruction that copies one register pair into another; you always do it as two 8-bit moves.
 
@@ -384,11 +366,11 @@ export func main(): void
 end
 ```
 
-`ld a, MaxCount` — the constant `MaxCount` is substituted as `10`. This is an immediate load.
+`ld a, MaxCount` — the constant `MaxCount` is substituted as `10`. This is an immediate load; no memory access happens.
 
 `ld (count), a` — stores A at the address of `count`. The parentheses mean "memory at this address."
 
-`ld hl, BaseAddr` loads `$8000` into HL. Since `BaseAddr` and the address of `count` are both `$8000`, the next instruction `ld a, (hl)` reads the same byte that `count` names — the value `10` we just stored. This shows that named storage and pointer-based access are just two ways of reaching the same memory.
+`ld hl, BaseAddr` loads `$8000` into HL. Since `BaseAddr` and the address of `count` are both `$8000`, the next instruction `ld a, (hl)` reads the same byte — the value `10` we just stored. This demonstrates something important: named storage and pointer-based access are just two ways of reaching the same memory. The computer does not care which way you get there.
 
 `ld (scratch), hl` and `ld hl, (scratch)` demonstrate word-sized storage: the full 16-bit value in HL is written to and read from the two-byte variable.
 
@@ -396,15 +378,14 @@ end
 
 ## Summary
 
-- A ZAX source file is organised into `section` and `func` blocks; the assembler handles addresses, entry/exit code, and label resolution
 - `LD` copies a value from source to destination without affecting flags; not all combinations are legal — consult the forms table
 - Parentheses always mean "memory at this address" — whether in `(HL)`, `(count)`, or `($8000)`
-- Two memory locations cannot appear in a single `LD`; go through a register
+- Two memory locations cannot appear in a single `LD`; you must go through a register
 - Unsigned bytes hold 0–255; signed bytes use two's complement (bit 7 = sign, range −128 to +127)
 - `const` names a fixed value substituted at assembly time; it produces no output bytes
 - IXH, IXL, IYH, IYL are usable as extra byte registers, but cannot be mixed with H/L or each other's pair in one instruction
 - `EX DE, HL` swaps the two pairs in one instruction
-- Arithmetic instructions modify the destination register — `ADD A, B` destroys A's old value; ordering matters
+- Arithmetic instructions modify the destination register in place — `ADD A, B` destroys A's old value; ordering matters
 - `INC` and `DEC` add or subtract 1 and affect the flags register
 
 ---
