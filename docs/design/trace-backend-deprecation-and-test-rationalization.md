@@ -125,6 +125,14 @@ CLI tests should not treat `.asm` as special beyond its declared artifact role.
 
 ## Migration plan
 
+## Tracking issues
+
+- `#992` Add placed lowered-program test helpers and first migrations
+- `#993` Migrate lowering regression tests off legacy trace `.asm`
+- `#994` Rationalize curated codegen corpus around `.hex` and `.z80`
+- `#995` Demote legacy trace `.asm` in CLI and reference docs
+- `#996` Reduce legacy trace `.asm` coverage to a narrow smoke suite
+
 ### Phase 1 — Add lowered-program test helpers
 
 Add stable test helpers for the placed lowered program and use them in one or two representative lowering tests.
