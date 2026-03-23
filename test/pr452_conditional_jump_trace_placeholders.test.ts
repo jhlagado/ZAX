@@ -21,21 +21,45 @@ describe('PR452: conditional jump trace placeholders', () => {
     ];
 
     const formatted: string[] = [];
+    const instrsAll = [];
     for (const entry of entries) {
       const res = await compilePlacedProgram(entry);
       expect(res.diagnostics).toEqual([]);
       const instrs = flattenLoweredInstructions(res.program);
       formatted.push(...instrs.map((ins) => formatLoweredInstruction(ins).toUpperCase()));
+      instrsAll.push(...instrs);
     }
 
-    const jumpLines = formatted.filter((line) => line.startsWith('JP ') || line.startsWith('JR '));
-    expect(jumpLines).not.toContain('JP CC');
-    expect(jumpLines).not.toContain('JP CC,');
-    expect(jumpLines).not.toContain('JR CC');
-    expect(jumpLines).not.toContain('JR CC,');
-    expect(
-      jumpLines.some((line) => /^(JP|JR)\s+(Z|NZ|NC|C|PO|PE|P|M),/u.test(line)),
-    ).toBe(true);
+    const conds = new Set(['Z', 'NZ', 'NC', 'C', 'PO', 'PE', 'P', 'M']);
+    const hasConditionalHead = instrsAll.some((ins) => {
+      const head = ins.head.toUpperCase();
+      if (head.startsWith('JP ') || head.startsWith('JR ')) {
+        const cond = head.split(/\s+/u)[1] ?? '';
+        return conds.has(cond);
+      }
+      return false;
+    });
+    const hasConditionalOperand = instrsAll.some((ins) => {
+      const head = ins.head.toUpperCase();
+      if (head !== 'JP' && head !== 'JR') return false;
+      const first = ins.operands[0];
+      return first?.kind === 'reg' && conds.has(first.name.toUpperCase());
+    });
+
+    const hasPlaceholderHead = instrsAll.some((ins) => {
+      const head = ins.head.toUpperCase();
+      return head.startsWith('JP CC') || head.startsWith('JR CC');
+    });
+    const hasPlaceholderOperand = instrsAll.some((ins) => {
+      const head = ins.head.toUpperCase();
+      if (head !== 'JP' && head !== 'JR') return false;
+      const first = ins.operands[0];
+      return first?.kind === 'reg' && first.name.toUpperCase() === 'CC';
+    });
+
+    expect(hasPlaceholderHead).toBe(false);
+    expect(hasPlaceholderOperand).toBe(false);
+    expect(hasConditionalHead || hasConditionalOperand).toBe(true);
   });
 
   it('removes jp cc placeholders from the touched checked-in traces', async () => {
