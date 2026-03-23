@@ -35,6 +35,8 @@ Current active docs:
 - `docs/design/configurable-assembler-backends.md`
 - `docs/design/exact-size-layout-and-indexing.md`
 - `docs/design/grammar-parser-convergence-plan.md`
+- `docs/design/lowered-assembly-pipeline-plan.md`
+- `docs/design/trace-backend-deprecation-and-test-rationalization.md`
 - `docs/design/z80-programming-with-zax.md`
 - `docs/design/zax-algorithms-course.md`
 
