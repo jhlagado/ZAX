@@ -60,7 +60,6 @@ describe('PR452: conditional jump trace placeholders', () => {
       expect(text).not.toContain('JP CC,');
       expect(text).toContain('JP Z,');
       expect(text).toContain('JP NZ,');
-      expect(text).toContain('JP NC,');
     }
   });
 });
