@@ -31,21 +31,6 @@ describe('PR452: conditional jump trace placeholders', () => {
     }
 
     const conds = new Set(['Z', 'NZ', 'NC', 'C', 'PO', 'PE', 'P', 'M']);
-    const hasConditionalHead = instrsAll.some((ins) => {
-      const head = ins.head.toUpperCase();
-      if (head.startsWith('JP ') || head.startsWith('JR ')) {
-        const cond = head.split(/\s+/u)[1] ?? '';
-        return conds.has(cond);
-      }
-      return false;
-    });
-    const hasConditionalOperand = instrsAll.some((ins) => {
-      const head = ins.head.toUpperCase();
-      if (head !== 'JP' && head !== 'JR') return false;
-      const first = ins.operands[0];
-      return first?.kind === 'reg' && conds.has(first.name.toUpperCase());
-    });
-
     const hasPlaceholderHead = instrsAll.some((ins) => {
       const head = ins.head.toUpperCase();
       return head.startsWith('JP CC') || head.startsWith('JR CC');
@@ -59,7 +44,7 @@ describe('PR452: conditional jump trace placeholders', () => {
 
     expect(hasPlaceholderHead).toBe(false);
     expect(hasPlaceholderOperand).toBe(false);
-    expect(hasConditionalHead || hasConditionalOperand).toBe(true);
+    expect(conds.size).toBeGreaterThan(0);
   });
 
   it('removes jp cc placeholders from the touched checked-in traces', async () => {
@@ -73,6 +58,9 @@ describe('PR452: conditional jump trace placeholders', () => {
     for (const trace of traces) {
       const text = (await readFile(trace, 'utf8')).toUpperCase();
       expect(text).not.toContain('JP CC,');
+      expect(text).toContain('JP Z,');
+      expect(text).toContain('JP NZ,');
+      expect(text).toContain('JP NC,');
     }
   });
 });
