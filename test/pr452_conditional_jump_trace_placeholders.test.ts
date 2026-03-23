@@ -3,7 +3,11 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { compilePlacedProgram, flattenLoweredInstructions } from './helpers/lowered_program.js';
+import {
+  compilePlacedProgram,
+  flattenLoweredInstructions,
+  formatLoweredInstruction,
+} from './helpers/lowered_program.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -16,18 +20,18 @@ describe('PR452: conditional jump trace placeholders', () => {
       join(__dirname, '..', 'test', 'codegen-corpus', 'pr258_op_cc_matcher.zax'),
     ];
 
-    const heads: string[] = [];
+    const formatted: string[] = [];
     for (const entry of entries) {
       const res = await compilePlacedProgram(entry);
       expect(res.diagnostics).toEqual([]);
       const instrs = flattenLoweredInstructions(res.program);
-      heads.push(...instrs.map((ins) => ins.head.toUpperCase()));
+      formatted.push(...instrs.map((ins) => formatLoweredInstruction(ins).toUpperCase()));
     }
 
-    expect(heads).not.toContain('JP CC');
-    expect(heads).toContain('JP Z');
-    expect(heads).toContain('JP NZ');
-    expect(heads).toContain('JP NC');
+    expect(formatted).not.toContain('JP CC');
+    expect(formatted).toContain('JP Z,');
+    expect(formatted).toContain('JP NZ,');
+    expect(formatted).toContain('JP NC,');
   });
 
   it('removes jp cc placeholders from the touched checked-in traces', async () => {
