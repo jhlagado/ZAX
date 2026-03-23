@@ -3,9 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
+import { compilePlacedProgram, flattenLoweredInstructions } from './helpers/lowered_program.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -18,25 +16,18 @@ describe('PR452: conditional jump trace placeholders', () => {
       join(__dirname, '..', 'test', 'codegen-corpus', 'pr258_op_cc_matcher.zax'),
     ];
 
-    const asmTexts: string[] = [];
+    const heads: string[] = [];
     for (const entry of entries) {
-      const res = await compile(
-        entry,
-        { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-        { formats: defaultFormatWriters },
-      );
-
+      const res = await compilePlacedProgram(entry);
       expect(res.diagnostics).toEqual([]);
-      const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-      expect(asm).toBeDefined();
-      asmTexts.push(asm!.text.toUpperCase());
+      const instrs = flattenLoweredInstructions(res.program);
+      heads.push(...instrs.map((ins) => ins.head.toUpperCase()));
     }
 
-    const combined = asmTexts.join('\n');
-    expect(combined).not.toContain('JP CC,');
-    expect(combined).toContain('JP Z,');
-    expect(combined).toContain('JP NZ,');
-    expect(combined).toContain('JP NC,');
+    expect(heads).not.toContain('JP CC');
+    expect(heads).toContain('JP Z');
+    expect(heads).toContain('JP NZ');
+    expect(heads).toContain('JP NC');
   });
 
   it('removes jp cc placeholders from the touched checked-in traces', async () => {
