@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 import {
   compilePlacedProgram,
   flattenLoweredInstructions,
-  formatLoweredInstruction,
 } from './helpers/lowered_program.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,13 +19,11 @@ describe('PR452: conditional jump trace placeholders', () => {
       join(__dirname, '..', 'test', 'codegen-corpus', 'pr258_op_cc_matcher.zax'),
     ];
 
-    const formatted: string[] = [];
     const instrsAll = [];
     for (const entry of entries) {
       const res = await compilePlacedProgram(entry);
       expect(res.diagnostics).toEqual([]);
       const instrs = flattenLoweredInstructions(res.program);
-      formatted.push(...instrs.map((ins) => formatLoweredInstruction(ins).toUpperCase()));
       instrsAll.push(...instrs);
     }
 
@@ -42,10 +39,20 @@ describe('PR452: conditional jump trace placeholders', () => {
     });
 
     const seenConds = new Set<string>();
-    const condPattern = /^(JP|JR)\s+([A-Z]{1,2})\b/;
-    for (const line of formatted) {
-      const match = condPattern.exec(line);
-      if (match?.[2]) seenConds.add(match[2]);
+    const condSet = new Set(['Z', 'NZ', 'NC', 'C', 'PO', 'PE', 'P', 'M']);
+    for (const ins of instrsAll) {
+      const head = ins.head.toUpperCase();
+      if (!head.startsWith('JP') && !head.startsWith('JR')) continue;
+      const headParts = head.split(/\s+/);
+      if (headParts.length > 1 && condSet.has(headParts[1])) {
+        seenConds.add(headParts[1]);
+        continue;
+      }
+      const first = ins.operands[0];
+      if (first?.kind === 'reg') {
+        const name = first.name.toUpperCase();
+        if (condSet.has(name)) seenConds.add(name);
+      }
     }
 
     expect(hasPlaceholderHead).toBe(false);
