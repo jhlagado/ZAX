@@ -42,7 +42,7 @@ describe('PR452: conditional jump trace placeholders', () => {
     });
 
     const seenConds = new Set<string>();
-    const condPattern = /^(JP|JR)\s+([A-Z]{1,2}),/;
+    const condPattern = /^(JP|JR)\s+([A-Z]{1,2})\b/;
     for (const line of formatted) {
       const match = condPattern.exec(line);
       if (match?.[2]) seenConds.add(match[2]);
