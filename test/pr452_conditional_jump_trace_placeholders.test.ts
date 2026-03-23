@@ -44,8 +44,9 @@ describe('PR452: conditional jump trace placeholders', () => {
       const head = ins.head.toUpperCase();
       if (!head.startsWith('JP') && !head.startsWith('JR')) continue;
       const headParts = head.split(/\s+/);
-      if (headParts.length > 1 && condSet.has(headParts[1])) {
-        seenConds.add(headParts[1]);
+      const headCond = headParts[1];
+      if (headCond && condSet.has(headCond)) {
+        seenConds.add(headCond);
         continue;
       }
       const first = ins.operands[0];
