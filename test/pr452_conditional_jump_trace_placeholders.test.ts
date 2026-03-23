@@ -45,7 +45,7 @@ describe('PR452: conditional jump trace placeholders', () => {
     const condPattern = /^(JP|JR)\s+([A-Z]{1,2}),/;
     for (const line of formatted) {
       const match = condPattern.exec(line);
-      if (match) seenConds.add(match[2]);
+      if (match?.[2]) seenConds.add(match[2]);
     }
 
     expect(hasPlaceholderHead).toBe(false);
