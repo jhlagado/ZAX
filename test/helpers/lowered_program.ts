@@ -14,6 +14,7 @@ import type {
 export type LoweredInstrView = {
   head: string;
   operands: LoweredOperand[];
+  bytes?: number[];
   block: LoweredAsmBlock;
 };
 
@@ -45,7 +46,7 @@ export function flattenLoweredInstructions(program: LoweredAsmProgram): LoweredI
   for (const block of program.blocks) {
     for (const item of block.items) {
       if (item.kind === 'instr') {
-        out.push({ head: item.head, operands: item.operands, block });
+        out.push({ head: item.head, operands: item.operands, bytes: item.bytes, block });
       }
     }
   }

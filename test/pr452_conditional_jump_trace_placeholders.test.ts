@@ -40,20 +40,38 @@ describe('PR452: conditional jump trace placeholders', () => {
 
     const seenConds = new Set<string>();
     const condSet = new Set(['Z', 'NZ', 'NC', 'C', 'PO', 'PE', 'P', 'M']);
+    const opcodeCond: Record<number, string> = {
+      0xc2: 'NZ',
+      0xca: 'Z',
+      0xd2: 'NC',
+      0xda: 'C',
+      0xe2: 'PO',
+      0xea: 'PE',
+      0xf2: 'P',
+      0xfa: 'M',
+      0x20: 'NZ',
+      0x28: 'Z',
+      0x30: 'NC',
+      0x38: 'C',
+    };
     for (const ins of instrsAll) {
       const head = ins.head.toUpperCase();
-      if (!head.startsWith('JP') && !head.startsWith('JR')) continue;
-      const headParts = head.split(/\s+/);
-      const headCond = headParts[1];
-      if (headCond && condSet.has(headCond)) {
-        seenConds.add(headCond);
-        continue;
+      if (head.startsWith('JP') || head.startsWith('JR')) {
+        const headParts = head.split(/\s+/);
+        const headCond = headParts[1];
+        if (headCond && condSet.has(headCond)) {
+          seenConds.add(headCond);
+          continue;
+        }
+        const first = ins.operands[0];
+        if (first?.kind === 'reg') {
+          const name = first.name.toUpperCase();
+          if (condSet.has(name)) seenConds.add(name);
+        }
       }
-      const first = ins.operands[0];
-      if (first?.kind === 'reg') {
-        const name = first.name.toUpperCase();
-        if (condSet.has(name)) seenConds.add(name);
-      }
+      const opcode = ins.bytes?.[0];
+      const opcodeName = opcode === undefined ? undefined : opcodeCond[opcode];
+      if (opcodeName) seenConds.add(opcodeName);
     }
 
     expect(hasPlaceholderHead).toBe(false);
