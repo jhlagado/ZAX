@@ -28,10 +28,14 @@ describe('PR452: conditional jump trace placeholders', () => {
       formatted.push(...instrs.map((ins) => formatLoweredInstruction(ins).toUpperCase()));
     }
 
-    const jpLines = formatted.filter((line) => line.startsWith('JP '));
-    expect(jpLines).not.toContain('JP CC');
-    expect(jpLines).not.toContain('JP CC,');
-    expect(jpLines.some((line) => /JP\s+(Z|NZ|NC),/u.test(line))).toBe(true);
+    const jumpLines = formatted.filter((line) => line.startsWith('JP ') || line.startsWith('JR '));
+    expect(jumpLines).not.toContain('JP CC');
+    expect(jumpLines).not.toContain('JP CC,');
+    expect(jumpLines).not.toContain('JR CC');
+    expect(jumpLines).not.toContain('JR CC,');
+    expect(
+      jumpLines.some((line) => /^(JP|JR)\s+(Z|NZ|NC|C|PO|PE|P|M),/u.test(line)),
+    ).toBe(true);
   });
 
   it('removes jp cc placeholders from the touched checked-in traces', async () => {
