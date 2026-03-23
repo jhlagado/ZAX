@@ -30,7 +30,6 @@ describe('PR452: conditional jump trace placeholders', () => {
       instrsAll.push(...instrs);
     }
 
-    const conds = new Set(['Z', 'NZ', 'NC', 'C', 'PO', 'PE', 'P', 'M']);
     const hasPlaceholderHead = instrsAll.some((ins) => {
       const head = ins.head.toUpperCase();
       return head.startsWith('JP CC') || head.startsWith('JR CC');
@@ -42,9 +41,16 @@ describe('PR452: conditional jump trace placeholders', () => {
       return first?.kind === 'reg' && first.name.toUpperCase() === 'CC';
     });
 
+    const seenConds = new Set<string>();
+    const condPattern = /^(JP|JR)\s+([A-Z]{1,2}),/;
+    for (const line of formatted) {
+      const match = condPattern.exec(line);
+      if (match) seenConds.add(match[2]);
+    }
+
     expect(hasPlaceholderHead).toBe(false);
     expect(hasPlaceholderOperand).toBe(false);
-    expect(conds.size).toBeGreaterThan(0);
+    expect(seenConds.size).toBeGreaterThan(0);
   });
 
   it('removes jp cc placeholders from the touched checked-in traces', async () => {
