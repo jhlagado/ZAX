@@ -46,7 +46,12 @@ export function flattenLoweredInstructions(program: LoweredAsmProgram): LoweredI
   for (const block of program.blocks) {
     for (const item of block.items) {
       if (item.kind === 'instr') {
-        out.push({ head: item.head, operands: item.operands, bytes: item.bytes, block });
+        out.push({
+          head: item.head,
+          operands: item.operands,
+          ...(item.bytes ? { bytes: item.bytes } : {}),
+          block,
+        });
       }
     }
   }
