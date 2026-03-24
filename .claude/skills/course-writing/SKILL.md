@@ -7,7 +7,7 @@ description: This skill should be used whenever the user asks to write, draft, r
 
 This skill governs all prose written for the ZAX learning course. It applies equally in writer mode (drafting or rewriting) and reviewer mode (critiquing existing prose). Both modes share the same principles; the difference is whether you are producing text or evaluating it.
 
-For the full rules with before/after examples, read `references/banned-patterns.md`.
+For the full rules with before/after examples, read `references/banned-patterns.md` (20 banned patterns).
 For the teacher/student model and knowledge assumptions, read `references/reader-model.md`.
 For the structured review checklist, read `references/review-checklist.md`.
 
@@ -64,7 +64,7 @@ When drafting or rewriting course prose, follow this sequence for each section:
 
 6. **Use "you".** Never write "the reader" or "the programmer" or "one". If you would not say it to someone sitting next to you, do not write it.
 
-Before producing any prose, read `references/banned-patterns.md` to load all 16 banned patterns. After drafting, run a self-check against the AI-specific tic list in that file.
+Before producing any prose, read `references/banned-patterns.md` to load all 20 banned patterns. After drafting, run a self-check against the AI-specific tic list in that file. Pay particular attention to Rules 17–20 (false uplift structures, bold-term lists, em dash count, stock filler phrases) — these are the patterns most likely to survive a first-pass review.
 
 ---
 
