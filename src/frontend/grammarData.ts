@@ -49,7 +49,15 @@ export const ASSIGNMENT_REGISTER_NAMES = new Set<string>([
   'IY',
 ]);
 export const RETURN_REGISTERS = new Set<string>(['HL', 'DE', 'BC', 'AF']);
-export const LEGACY_RETURN_KEYWORD_LIST = ['VOID', 'BYTE', 'WORD', 'LONG', 'VERYLONG', 'NONE', 'FLAGS'] as const;
+export const LEGACY_RETURN_KEYWORD_LIST = [
+  'VOID',
+  'BYTE',
+  'WORD',
+  'LONG',
+  'VERYLONG',
+  'NONE',
+  'FLAGS',
+] as const;
 export const LEGACY_RETURN_KEYWORDS = new Set<string>(LEGACY_RETURN_KEYWORD_LIST);
 
 export const CONDITION_CODE_LIST = ['z', 'nz', 'c', 'nc', 'pe', 'po', 'm', 'p'] as const;
@@ -111,7 +119,20 @@ export const MATCHER_TYPE_LIST = [
   'mem16',
 ] as const;
 export const MATCHER_TYPES = new Set<string>(MATCHER_TYPE_LIST);
-export const MATCHER_KIND_BY_TYPE: Readonly<Record<(typeof MATCHER_TYPE_LIST)[number], 'MatcherReg8' | 'MatcherReg16' | 'MatcherIdx16' | 'MatcherCc' | 'MatcherImm8' | 'MatcherImm16' | 'MatcherEa' | 'MatcherMem8' | 'MatcherMem16'>> = {
+export const MATCHER_KIND_BY_TYPE: Readonly<
+  Record<
+    (typeof MATCHER_TYPE_LIST)[number],
+    | 'MatcherReg8'
+    | 'MatcherReg16'
+    | 'MatcherIdx16'
+    | 'MatcherCc'
+    | 'MatcherImm8'
+    | 'MatcherImm16'
+    | 'MatcherEa'
+    | 'MatcherMem8'
+    | 'MatcherMem16'
+  >
+> = {
   reg8: 'MatcherReg8',
   reg16: 'MatcherReg16',
   idx16: 'MatcherIdx16',
