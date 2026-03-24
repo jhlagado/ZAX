@@ -58,6 +58,24 @@ export function flattenLoweredInstructions(program: LoweredAsmProgram): LoweredI
   return out;
 }
 
+export function hasRawOpcode(
+  instrs: LoweredInstrView[],
+  opcode: number,
+  opcode2?: number,
+): boolean {
+  return instrs.some((ins) => {
+    if (ins.head !== '@raw' || !ins.bytes) return false;
+    if (ins.bytes[0] !== opcode) return false;
+    if (opcode2 === undefined) return true;
+    return ins.bytes[1] === opcode2;
+  });
+}
+
+export function findInstructions(program: LoweredAsmProgram, head: string): LoweredInstrView[] {
+  const want = head.toUpperCase();
+  return flattenLoweredInstructions(program).filter((ins) => ins.head.toUpperCase() === want);
+}
+
 export function flattenLoweredItems(program: LoweredAsmProgram): LoweredAsmItem[] {
   const out: LoweredAsmItem[] = [];
   for (const block of program.blocks) {
@@ -154,12 +172,38 @@ export function operandUsesIx(op: LoweredOperand): boolean {
   return usesIx(op.expr);
 }
 
-export function isReg(op: LoweredOperand, name: string): boolean {
-  return op.kind === 'reg' && op.name.toUpperCase() === name.toUpperCase();
+export function isReg(op: LoweredOperand | undefined, name: string): boolean {
+  return !!op && op.kind === 'reg' && op.name.toUpperCase() === name.toUpperCase();
 }
 
-export function isMemIxDisp(op: LoweredOperand, disp: number): boolean {
-  if (op.kind !== 'mem') return false;
+export function isImmSymbol(op: LoweredOperand | undefined, name: string, addend = 0): boolean {
+  return (
+    !!op &&
+    op.kind === 'imm' &&
+    op.expr.kind === 'symbol' &&
+    op.expr.name.toUpperCase() === name.toUpperCase() &&
+    op.expr.addend === addend
+  );
+}
+
+export function isMemSymbol(op: LoweredOperand | undefined, name: string, addend = 0): boolean {
+  return (
+    !!op &&
+    op.kind === 'mem' &&
+    op.expr.kind === 'add' &&
+    op.expr.base.kind === 'name' &&
+    op.expr.base.name.toUpperCase() === name.toUpperCase() &&
+    op.expr.offset.kind === 'literal' &&
+    op.expr.offset.value === addend
+  );
+}
+
+export function isMemName(op: LoweredOperand | undefined, name: string): boolean {
+  return !!op && op.kind === 'mem' && op.expr.kind === 'name' && op.expr.name.toUpperCase() === name.toUpperCase();
+}
+
+export function isMemIxDisp(op: LoweredOperand | undefined, disp: number): boolean {
+  if (!op || op.kind !== 'mem') return false;
   const expr = op.expr;
   if (expr.kind === 'add' || expr.kind === 'sub') {
     if (expr.base.kind !== 'name' || expr.base.name.toUpperCase() !== 'IX') return false;
