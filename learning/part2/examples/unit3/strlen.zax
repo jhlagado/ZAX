@@ -26,9 +26,7 @@ export func strlen_demo(): HL
 
     inc hl
 
-    de := count_value
-    inc de
-    count_value := de
+    succ count_value
 
     ld a, 1
     or a
