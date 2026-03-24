@@ -1,4 +1,4 @@
-import type { AddressRange, EmittedAsmTraceEntry, EmittedSourceSegment } from '../formats/types.js';
+import type { AddressRange, EmittedSourceSegment } from '../formats/types.js';
 
 type LayoutDiag = (message: string) => void;
 
@@ -55,11 +55,3 @@ export function rebaseCodeSourceSegments(
     );
 }
 
-export function rebaseAsmTrace(
-  codeBase: number,
-  asmTrace: EmittedAsmTraceEntry[],
-): EmittedAsmTraceEntry[] {
-  return asmTrace
-    .map((entry) => ({ ...entry, offset: codeBase + entry.offset }))
-    .filter((entry) => entry.offset >= 0 && entry.offset <= 0xffff);
-}

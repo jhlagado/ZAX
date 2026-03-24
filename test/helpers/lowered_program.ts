@@ -32,7 +32,7 @@ export async function compilePlacedProgram(entry: string): Promise<{
   };
   const res = await compile(
     entry,
-    { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false, emitAsm: false },
+    { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
     { formats },
   );
   if (!captured) {

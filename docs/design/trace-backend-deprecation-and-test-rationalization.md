@@ -1,6 +1,16 @@
 # Trace Backend Deprecation and Test Rationalization Plan
 
-## Purpose
+## Status: COMPLETE — Full removal completed
+
+The `.asm` trace backend has been fully removed. `.z80` is now the only textual lowered-output artifact.
+
+## Phase 5 — Full removal completed
+
+All `.asm` artifacts, supporting code, tests, and fixture files have been deleted. The migration tracked by this document is complete.
+
+---
+
+## Historical context
 
 ZAX now has a real assembler-valid lowered backend:
 
@@ -9,9 +19,9 @@ ZAX now has a real assembler-valid lowered backend:
 - ASM80-compatible lowered source (`.z80`)
 - differential validation against ASM80
 
-The legacy `.asm` artifact is no longer the canonical textual backend. It is now a debug trace/listing-style output. The main remaining reason it cannot be removed is that a large part of the current regression suite still depends on its exact text shape.
+The legacy `.asm` artifact was a debug trace/listing-style output. The main remaining reason it could not be removed was that a large part of the regression suite still depended on its exact text shape.
 
-This document defines how to shrink that dependency without losing coverage.
+This document defined how to shrink that dependency without losing coverage.
 
 ## Current state
 

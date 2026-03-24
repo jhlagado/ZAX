@@ -3,7 +3,6 @@ import { writeBin } from './writeBin.js';
 import { writeD8m } from './writeD8m.js';
 import { writeHex } from './writeHex.js';
 import { writeListing } from './writeListing.js';
-import { writeAsm } from './writeAsm.js';
 import { writeAsm80 } from './writeAsm80.js';
 
 /**
@@ -16,6 +15,5 @@ export const defaultFormatWriters: FormatWriters = {
   writeBin,
   writeD8m,
   writeListing,
-  writeAsm,
   writeAsm80,
 };

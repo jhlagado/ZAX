@@ -25,7 +25,6 @@ import type {
 import type { Diagnostic } from '../diagnostics/types.js';
 import type {
   AddressRange,
-  EmittedAsmTraceEntry,
   EmittedSourceSegment,
   SymbolEntry,
 } from '../formats/types.js';
@@ -159,7 +158,6 @@ export type FinalizationContext = {
   hexBytes: Map<number, number>;
   bytes: Map<number, number>;
   codeSourceSegments: EmittedSourceSegment[];
-  codeAsmTrace: EmittedAsmTraceEntry[];
   defaultCodeBase?: number;
   alignTo: (n: number, alignment: number) => number;
   writeSection: (
@@ -173,7 +171,6 @@ export type FinalizationContext = {
     codeBase: number,
     segments: EmittedSourceSegment[],
   ) => EmittedSourceSegment[];
-  rebaseAsmTrace: (codeBase: number, trace: EmittedAsmTraceEntry[]) => EmittedAsmTraceEntry[];
 };
 
 export function preScanProgramDeclarations(ctx: Context): PrescanResult {
