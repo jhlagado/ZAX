@@ -225,6 +225,8 @@ This catches everyone at first. The CPU can talk to memory or to its own registe
 | (nn) ← reg16 | `ld ($8004), hl` | Write 16-bit word to memory |
 | SP ← reg16 | `ld sp, hl` | SP = HL (or IX or IY) |
 
+For a compact LD quick table and the full addressing-shape reference, see [Appendix 3](../appendices/03-addressing-prefixes-and-instruction-forms.md).
+
 ---
 
 ## Signed and Unsigned Values
@@ -244,7 +246,9 @@ $01` gives `$81`. Read as unsigned that is 128 + 1 = 129. Read as signed that
 is −128 + 1 = −127. Same instruction, same output, two different numbers. The
 bug appears when one part of your program writes a value intending it as signed
 and another reads it as unsigned. Chapter 4 shows how the flags let you select
-which interpretation the CPU acts on.
+which interpretation the CPU acts on. The common landmark values (`$00`, `$7F`,
+`$80`, `$FF`) and their signed and unsigned meanings are in
+[Appendix 2](../appendices/02-registers-flags-and-conditions.md).
 
 ---
 

@@ -4,8 +4,9 @@
 
 Every program makes decisions. The Z80 makes them by recording the outcome of
 each operation in the flags register, then testing those flags with a
-conditional jump. This chapter introduces both: what the flags record, how `cp`
-and `or a` set them, and how `jp` uses them to direct execution.
+conditional jump. This chapter introduces both: what the flags record, how `cp`,
+`or a`, and the logical operations set them, and how `jp` uses them to direct
+execution.
 
 ---
 
@@ -26,7 +27,8 @@ The four flags you will use most often are:
 | P/V | Parity/Overflow | Result parity is even; or signed overflow occurred |
 
 The Z and C flags appear in almost every conditional branch. S and P/V appear
-in more specialized cases.
+in more specialized cases. For the full flags reference and all condition codes,
+see [Appendix 2](../appendices/02-registers-flags-and-conditions.md).
 
 ---
 
@@ -53,6 +55,10 @@ than 5 — unsigned borrow is treated as carry).
 
 After `cp n`, Z is set if A equals n, and C is set if A is less than n (unsigned).
 
+`sub n` does the same subtraction and sets the same flags, but writes the result
+back into A. Use `cp` when you only want the flags; use `sub` when you need the
+computed value.
+
 ---
 
 ## `or a`: test whether A is zero
@@ -71,6 +77,59 @@ or a       ; Z is clear because A is non-zero
 
 `or a` reflects whether A is currently zero — one byte, no comparison value.
 (`cp 0` would do the same job in two bytes.)
+
+---
+
+## Logical operations: `and`, `or`, `xor`
+
+The three logical instructions each take a value, apply a bitwise operation
+against A, and store the result back in A. All three clear the carry flag and
+set Z if the result is zero.
+
+`and n` keeps only the bits where the mask has 1. Use it to isolate part of a
+byte:
+
+```zax
+ld a, $F3          ; A = %11110011
+and $0F            ; A = %00000011 — upper nibble cleared, lower kept
+```
+
+`or n` sets bits where the mask has 1 and leaves others unchanged:
+
+```zax
+ld a, $03
+or $80             ; A = %10000011 — bit 7 now set
+```
+
+`xor n` toggles bits where the mask has 1:
+
+```zax
+ld a, $FF
+xor $0F            ; A = %11110000 — lower nibble flipped
+```
+
+The most-used form is `xor a`. A XOR'd against itself is always zero — every
+bit cancels. In one instruction: A is zeroed, Z is set, C is cleared. This is
+the standard way to zero A and put the flags in a known state. `ld a, 0` also
+zeros A but leaves the flags unchanged; when you need a guaranteed clean state
+in both A and the carry, reach for `xor a`.
+
+```zax
+xor a              ; A = 0; Z is set; C is clear
+```
+
+Testing whether a specific bit is set uses `and` with a single-bit mask. The
+result is zero only if that bit was 0 in A:
+
+```zax
+ld a, (status)
+and $04            ; keep only bit 2; Z is set if bit 2 was clear
+jp z, bit_clear    ; branch if that bit was not set
+```
+
+All three instructions accept a register, an immediate byte, `(HL)`, or an
+index register form. The quick reference for arithmetic and logical instruction
+forms is in [Appendix 3](../appendices/03-addressing-prefixes-and-instruction-forms.md).
 
 ---
 
@@ -109,8 +168,13 @@ four main flags are:
 | `c` | Jump if C is set |
 | `nc` | Jump if C is clear |
 
+These four handle most branch conditions. `jp` also supports `m` (S set), `p`
+(S clear), `pe` (P/V set), and `po` (P/V clear) for signed arithmetic and
+parity tests. The full list is in
+[Appendix 2](../appendices/02-registers-flags-and-conditions.md).
+
 A conditional branch is the raw Z80 equivalent of an if-statement. There is no
-structured keyword. Instead, you set the flags with `cp` or an arithmetic
+structured keyword; you set the flags with `cp`, `or a`, or a logical
 instruction, then use a conditional `jp` to skip over the "then" block:
 
 ```zax
@@ -151,7 +215,9 @@ The practical differences:
 
 Use `jr` when the target is close and you want compact code. Use `jp` when the
 target may be far away, or when you need the `pe`, `po`, `m`, or `p` conditions
-that `jr` does not support.
+that `jr` does not support. Branch range limits for `jr` and the related `djnz`
+instruction (Chapter 5) are summarised in
+[Appendix 2](../appendices/02-registers-flags-and-conditions.md).
 
 ---
 
@@ -189,7 +255,7 @@ in a signed byte, so the bit pattern (`$80`) is unchanged.
 
 Every conditional block in raw Z80 has the same skeleton:
 
-1. Set the flags (using `cp`, `or a`, arithmetic, or another instruction).
+1. Set the flags (using `cp`, `or a`, `and`, `xor`, arithmetic, or another instruction).
 2. Conditionally jump over the block you want to skip.
 3. Write the block.
 4. Place an exit label after the block.
@@ -244,6 +310,14 @@ loop_top:
   ld (counter), a
   dec b
   jp nz, loop_top
+
+  ld a, $F3
+  and $0F
+  ld a, $03
+  or $80
+  ld a, $FF
+  xor $0F
+  xor a
 end
 ```
 
@@ -279,20 +353,38 @@ After the loop, `counter` holds 5. B holds 0. The loop ran exactly five times.
 touches flags. `jp nz` reads whatever `dec b` left. Always identify which
 instruction sets the flag before the branch that reads it.
 
+**Section D — logical operations.** `and $0F` masks A to its low nibble: bits
+7–4 are cleared, bits 3–0 are kept. `$F3 & $0F = $03`. Z is clear.
+
+`or $80` sets bit 7 of A regardless of its previous value. `$03 | $80 = $83`.
+Z is clear.
+
+`xor $0F` flips the low nibble of A. `$FF ^ $0F = $F0`. Z is clear.
+
+`xor a` computes A XOR A. Every bit cancels. A is zeroed, Z is set, C is
+cleared — in one instruction.
+
 ---
 
 ## Summary
 
 - The Z, C, S, and P/V flags record the outcome of the last instruction that
-  affected them. Most `ld` instructions do not affect flags; arithmetic and
-  comparison instructions do.
+  affected them. Most `ld` instructions do not affect flags; arithmetic,
+  comparison, and logical instructions do.
 - `cp n` subtracts n from A and sets flags without changing A. Z is set if
   A = n; C is set if A < n (unsigned).
+- `sub n` subtracts n from A and sets the same flags, but stores the result
+  in A. Use `cp` for testing; use `sub` for computing.
 - `or a` sets Z if A is zero, without changing A. Use it to test A for zero
   without a comparison value.
+- `and n` keeps bits where the mask has 1 (clears others); `or n` sets bits
+  where the mask has 1; `xor n` toggles bits where the mask has 1. All three
+  clear C and update Z.
+- `xor a` zeroes A, sets Z, and clears C in one instruction. Prefer it over
+  `ld a, 0` when you need a known flag state.
 - `jp label` jumps unconditionally to the address of `label`.
 - `jp nz, label` jumps if Z is clear; `jp z, label` jumps if Z is set; `jp c`
-  and `jp nc` test the C flag.
+  and `jp nc` test C. The full condition-code list is in Appendix 2.
 - `jr` is a shorter, range-limited relative jump. Use it for nearby branches;
   use `jp` when the target might be more than 127 bytes away.
 - A conditional block in raw Z80 uses a flag-setting instruction, a conditional
