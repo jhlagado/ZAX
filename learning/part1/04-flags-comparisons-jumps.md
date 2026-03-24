@@ -2,13 +2,10 @@
 
 # Chapter 4 — Flags, Comparisons, and Jumps
 
-This chapter explains the flag register, shows how `cp` and `or a` set flags,
-and demonstrates how conditional and unconditional jump instructions use those
-flags to control which instructions execute next. After reading it you will be
-able to follow a short raw Z80 control-flow sequence, trace through a simple
-conditional branch, and read a label-based counted loop.
-
-Prerequisites: Chapter 3 (bytes, registers, LD modes, labels).
+Every program makes decisions. The Z80 makes them by recording the outcome of
+each operation in the flags register, then testing those flags with a
+conditional jump. This chapter introduces both: what the flags record, how `cp`
+and `or a` set them, and how `jp` uses them to direct execution.
 
 ---
 
@@ -40,8 +37,6 @@ in more specialized cases.
 but does **not** store the result back in A. After `cp n`, A is unchanged and
 the flags reflect `A - n`.
 
-This is the standard way to test a relationship between A and a value:
-
 ```zax
 ld a, 5
 cp 5      ; A - 5 = 0; Z flag is set, C flag is clear
@@ -68,9 +63,6 @@ n (unsigned).
 A, so A is unchanged. The flags are updated: Z is set if A is zero, C is
 cleared.
 
-This is the standard way to test whether A holds zero without a separate
-comparison:
-
 ```zax
 ld a, 0
 or a       ; Z is set because A is zero
@@ -79,9 +71,8 @@ ld a, $FF
 or a       ; Z is clear because A is non-zero
 ```
 
-`or a` does not require knowing what value to compare against; it simply
-reflects whether A is currently zero. It is also shorter than `cp 0` — one
-byte instead of two.
+`or a` reflects whether A is currently zero — one byte, no comparison value.
+(`cp 0` would do the same job in two bytes.)
 
 ---
 
@@ -101,8 +92,7 @@ done:
 ```
 
 The assembler resolves the label `done` to its address and encodes that address
-into the `jp` instruction. This is the unconditional jump: it always branches,
-no matter what the flags say.
+into the `jp` instruction. The jump always happens — the flags are not consulted.
 
 ---
 
@@ -193,8 +183,8 @@ bits — the only difference is how you interpret bit 7. Comparing against `$80`
 is the dividing line between the two halves: 0–127 (non-negative) and 128–255
 (negative when read as signed).
 
-Note that `neg` applied to -128 gives -128 — the mathematical result (+128)
-does not fit in a signed byte, so the bit pattern (`$80`) is unchanged.
+`neg` applied to −128 gives −128 — the mathematical result (+128) does not fit
+in a signed byte, so the bit pattern (`$80`) is unchanged.
 
 ---
 
@@ -216,7 +206,7 @@ A simple loop has a similar skeleton:
 5. Test the exit condition.
 6. Conditionally jump back to the loop-top label.
 
-Both structures are visible in the example file.
+The example file below runs both back to back — trace each one and watch which instruction sets the flag before the branch reads it.
 
 ---
 
@@ -314,12 +304,6 @@ counter. Always identify which instruction sets the flag you are about to test.
   body, a decrement, and `jp nz` back to the loop-top label.
 - Always identify which instruction sets the flag before the branch that reads
   it.
-
-## What Comes Next
-
-Chapter 5 introduces `djnz`, the Z80's dedicated decrement-and-branch-if-not-
-zero instruction, and shows how it reduces the two-instruction counter-decrement-
-and-test pattern to a single instruction.
 
 ---
 

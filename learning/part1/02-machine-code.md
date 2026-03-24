@@ -80,7 +80,7 @@ Result:          ; the assembler records "Result" as the current address
 
 Labels also name positions within the code — the targets of jumps and branches. Instead of writing `JP $0034`, you write `JP loop_top`, and the assembler works out the address of `loop_top` itself.
 
-This is the single most important difference between machine code and assembly. Machine code is just bytes. Assembly adds names for addresses.
+Machine code is just bytes. Assembly adds names for addresses.
 
 ---
 
@@ -96,7 +96,7 @@ The program above was ten bytes. Real programs are thousands. Writing them as ra
 
 **No structure.** Machine code has no subroutines, no loops, no conditionals — just bytes and addresses. Everything that programs need beyond raw arithmetic must be built by hand from jumps to raw addresses.
 
-An assembler does not change the fact that the CPU sees bytes. It changes what you, the programmer, have to write and maintain.
+The CPU still sees bytes — the assembler changes what you write and maintain.
 
 ---
 
