@@ -28,7 +28,6 @@ describe('cli artifacts', () => {
     expect(await exists(join(work, 'out.bin'))).toBe(true);
     expect(await exists(join(work, 'out.d8dbg.json'))).toBe(true);
     expect(await exists(join(work, 'out.lst'))).toBe(true);
-    expect(await exists(join(work, 'out.asm'))).toBe(true);
 
     await rm(work, { recursive: true, force: true });
   }, 20_000);
@@ -46,7 +45,6 @@ describe('cli artifacts', () => {
     expect(await exists(join(work, 'main.bin'))).toBe(true);
     expect(await exists(join(work, 'main.d8dbg.json'))).toBe(true);
     expect(await exists(join(work, 'main.lst'))).toBe(true);
-    expect(await exists(join(work, 'main.asm'))).toBe(true);
 
     await rm(work, { recursive: true, force: true });
   }, 20_000);
@@ -80,14 +78,13 @@ describe('cli artifacts', () => {
     await writeFile(entry, 'export func main()\n    nop\nend\n', 'utf8');
 
     const outHex = join(work, 'out.hex');
-    const res = await runCli(['--nobin', '--nod8m', '--nolist', '--noasm', '-o', outHex, entry]);
+    const res = await runCli(['--nobin', '--nod8m', '--nolist', '-o', outHex, entry]);
     expect(res.code).toBe(0);
 
     expect(await exists(join(work, 'out.hex'))).toBe(true);
     expect(await exists(join(work, 'out.bin'))).toBe(false);
     expect(await exists(join(work, 'out.d8dbg.json'))).toBe(false);
     expect(await exists(join(work, 'out.lst'))).toBe(false);
-    expect(await exists(join(work, 'out.asm'))).toBe(false);
 
     await rm(work, { recursive: true, force: true });
   }, 20_000);
@@ -98,7 +95,7 @@ describe('cli artifacts', () => {
     await writeFile(entry, 'export func main()\n    nop\nend\n', 'utf8');
 
     const outHex = join(work, 'out.hex');
-    const res = await runCli(['--asm80', '--nobin', '--nod8m', '--nolist', '--noasm', '-o', outHex, entry]);
+    const res = await runCli(['--asm80', '--nobin', '--nod8m', '--nolist', '-o', outHex, entry]);
     expect(res.code).toBe(0);
 
     expect(await exists(join(work, 'out.hex'))).toBe(true);
@@ -118,7 +115,6 @@ describe('cli artifacts', () => {
       '--nohex',
       '--nod8m',
       '--nolist',
-      '--noasm',
       '--type',
       'bin',
       '-o',
@@ -132,7 +128,6 @@ describe('cli artifacts', () => {
     expect(await exists(join(work, 'out.hex'))).toBe(false);
     expect(await exists(join(work, 'out.d8dbg.json'))).toBe(false);
     expect(await exists(join(work, 'out.lst'))).toBe(false);
-    expect(await exists(join(work, 'out.asm'))).toBe(false);
 
     await rm(work, { recursive: true, force: true });
   }, 20_000);

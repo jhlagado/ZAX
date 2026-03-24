@@ -1,0 +1,96 @@
+; ZAX lowered ASM80 output
+
+ORG $0100
+; ZAX: func add_words begin
+add_words:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+ex de, hl
+ld e, (IX+$04)
+ld d, (IX+$05)
+ex de, hl
+ld e, (IX+$06)
+ld d, (IX+$07)
+add hl, de
+__zax_epilogue_0:
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func add_words end
+; ZAX: func bump_byte begin
+bump_byte:
+push ix
+ld ix, $00
+add ix, sp
+ld hl, $00
+push hl
+push af
+push bc
+push de
+ex de, hl
+ld e, (IX+$04)
+ex de, hl
+ld h, $00
+inc l
+ex de, hl
+ld (IX-$02), e
+ld (IX-$01), d
+ex de, hl
+ex de, hl
+ld e, (IX-$02)
+ld d, (IX-$01)
+ex de, hl
+__zax_epilogue_1:
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func bump_byte end
+; ZAX: func main begin
+main:
+push ix
+ld ix, $00
+add ix, sp
+push hl
+ld hl, $00
+ex (SP), hl
+push af
+push bc
+push de
+push hl
+ld hl, $14
+push hl
+ld hl, $0A
+push hl
+DB $CD, $00, $00
+inc sp
+inc sp
+inc sp
+inc sp
+ex de, hl
+ld (IX-$02), e
+ld (IX-$01), d
+ex de, hl
+ld hl, $07
+push hl
+DB $CD, $00, $00
+inc sp
+inc sp
+__zax_epilogue_2:
+pop hl
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func main end

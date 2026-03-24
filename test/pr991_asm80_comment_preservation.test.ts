@@ -16,7 +16,6 @@ describe('ASM80 comment preservation', () => {
       entry,
       {
         emitAsm80: true,
-        emitAsm: false,
         emitBin: false,
         emitHex: false,
         emitListing: false,

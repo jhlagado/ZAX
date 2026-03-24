@@ -225,12 +225,11 @@ export function createFunctionBodySetupHelpers({
   };
 
   const emitJumpTo = (label: string, span: SourceSpan): void => {
-    emitAbs16Fixup(0xc3, label.toLowerCase(), 0, span, `jp ${label}`);
+    emitAbs16Fixup(0xc3, label.toLowerCase(), 0, span);
   };
 
   const emitJumpCondTo = (op: number, label: string, span: SourceSpan): void => {
-    const ccName = conditionNameFromOpcode(op) ?? 'cc';
-    emitAbs16Fixup(op, label.toLowerCase(), 0, span, `jp ${ccName.toLowerCase()}, ${label}`);
+    emitAbs16Fixup(op, label.toLowerCase(), 0, span);
   };
 
   const emitJumpIfFalse = (cc: string, label: string, span: SourceSpan): boolean => {

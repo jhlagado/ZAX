@@ -1,0 +1,98 @@
+; ZAX lowered ASM80 output
+
+ORG $1000
+mode_value:
+DB $00
+
+ORG $0100
+; ZAX: func run_once begin
+run_once:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+push hl
+DB $3A, $00, $00
+or a
+DB $C2, $00, $00
+ld a, $01
+DB $C3, $00, $00
+__zax_if_else_1:
+ld a, $02
+__zax_if_end_2:
+__zax_while_cond_3:
+DB $CA, $00, $00
+dec a
+DB $C3, $00, $00
+__zax_while_end_4:
+ld a, $01
+__zax_repeat_body_5:
+dec a
+__zax_repeat_cond_6:
+DB $C2, $00, $00
+__zax_repeat_end_7:
+DB $3A, $00, $00
+DB $C3, $00, $00
+__zax_case_10:
+ld a, $0A
+DB $C3, $00, $00
+__zax_case_11:
+ld a, $14
+DB $C3, $00, $00
+__zax_select_else_12:
+ld a, $1E
+DB $C3, $00, $00
+__zax_select_dispatch_8:
+push hl
+ld h, $00
+ld l, a
+DB $7D
+DB $FE, $00
+DB $C2, $00, $00
+pop hl
+DB $C3, $00, $00
+__zax_select_next_13:
+DB $FE, $01
+DB $C2, $00, $00
+pop hl
+DB $C3, $00, $00
+__zax_select_next_14:
+pop hl
+DB $C3, $00, $00
+__zax_select_end_9:
+DB $32, $00, $00
+__zax_epilogue_0:
+pop hl
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func run_once end
+; ZAX: func main begin
+main:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+push hl
+DB $CD, $00, $00
+__zax_epilogue_15:
+pop hl
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func main end
+
+ORG $1001
+__zax_startup:
+DB $21, $49, $10, $4E, $23, $46, $23, $78, $B1, $28, $1B, $C5, $5E, $23, $56, $23, $4E, $23, $46, $23, $E5, $21, $53, $10, $09, $E3, $4E, $23, $46, $23, $E3, $ED, $B0, $E1, $C1, $0B, $18, $E1, $4E, $23, $46, $23, $78, $B1, $28, $17, $C5, $5E, $23, $56, $23, $4E, $23, $46, $23, $78, $B1, $28, $06, $AF, $12, $13, $0B, $18, $F6, $C1, $0B, $18, $E5, $C3, $63, $01
+DB $01, $00, $00, $10, $00, $00, $01, $00, $00, $00, $00

@@ -1,0 +1,112 @@
+; ZAX lowered ASM80 output
+
+ORG $0100
+; ZAX: func fib begin
+fib:
+push ix
+ld ix, $00
+add ix, sp
+ld hl, $00
+push hl
+ld hl, $01
+push hl
+ld hl, $00
+push hl
+ld hl, $00
+push hl
+push af
+push bc
+push de
+__zax_while_cond_1:
+DB $CA, $00, $00
+ex de, hl
+ld e, (IX-$06)
+ld d, (IX-$05)
+ex de, hl
+ld e, (IX+$04)
+ld d, (IX+$05)
+xor a
+sbc hl, de
+DB $C2, $00, $00
+ex de, hl
+ld e, (IX-$02)
+ld d, (IX-$01)
+ex de, hl
+DB $C3, $00, $00
+__zax_if_else_3:
+ex de, hl
+ld e, (IX-$02)
+ld d, (IX-$01)
+ex de, hl
+ld e, (IX-$04)
+ld d, (IX-$03)
+add hl, de
+ex de, hl
+ld (IX-$08), e
+ld (IX-$07), d
+ex de, hl
+push de
+ld e, (IX-$04)
+ld d, (IX-$03)
+ld (IX-$02), e
+ld (IX-$01), d
+pop de
+push de
+ld e, (IX-$08)
+ld d, (IX-$07)
+ld (IX-$04), e
+ld (IX-$03), d
+pop de
+push de
+push bc
+push af
+ld e, (IX-$06)
+ld d, (IX-$05)
+inc de
+ld (IX-$06), e
+ld (IX-$05), d
+ld a, d
+or e
+pop bc
+ld a, b
+pop bc
+pop de
+ld a, $01
+or a
+DB $C3, $00, $00
+__zax_while_end_2:
+ex de, hl
+ld e, (IX-$02)
+ld d, (IX-$01)
+ex de, hl
+__zax_epilogue_0:
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func fib end
+; ZAX: func main begin
+main:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+push hl
+ld hl, $0A
+push hl
+DB $CD, $00, $00
+inc sp
+inc sp
+__zax_epilogue_5:
+pop hl
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func main end

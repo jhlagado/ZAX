@@ -6,7 +6,6 @@ type Context = {
   setCodeOffset: (value: number) => void;
   setCodeByte: (offset: number, value: number) => void;
   recordCodeSourceRange: (start: number, end: number) => void;
-  traceInstruction: (start: number, bytes: Uint8Array, traceText: string) => void;
   emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
   loadImm16ToDE: (value: number, span: SourceSpan) => boolean;
   loadImm16ToHL: (value: number, span: SourceSpan) => boolean;
@@ -15,14 +14,12 @@ type Context = {
     baseLower: string,
     addend: number,
     span: SourceSpan,
-    asmText?: string,
   ) => void;
   emitAbs16FixupEd: (
     opcode2: number,
     baseLower: string,
     addend: number,
     span: SourceSpan,
-    asmText?: string,
   ) => void;
 };
 
@@ -39,9 +36,8 @@ export function createEmissionCoreHelpers(ctx: Context) {
     return start;
   };
 
-  const emitRawCodeBytes = (bs: Uint8Array, _file: string, traceText: string): void => {
-    const start = emitCodeBytes(bs, _file);
-    ctx.traceInstruction(start, bs, traceText);
+  const emitRawCodeBytes = (bs: Uint8Array, _file: string, _traceText: string): void => {
+    emitCodeBytes(bs, _file);
   };
 
   const emitStepPipeline = (pipe: StepPipeline, span: SourceSpan): boolean => {
@@ -140,11 +136,10 @@ export function createEmissionCoreHelpers(ctx: Context) {
             step.glob.toLowerCase(),
             0,
             span,
-            renderStepInstr(step),
           );
           return true;
         case 'ldHlPtrGlob':
-          ctx.emitAbs16Fixup(0x2a, step.glob.toLowerCase(), 0, span, renderStepInstr(step));
+          ctx.emitAbs16Fixup(0x2a, step.glob.toLowerCase(), 0, span);
           return true;
         case 'ldRpPtrGlob':
           ctx.emitAbs16FixupEd(
@@ -152,19 +147,17 @@ export function createEmissionCoreHelpers(ctx: Context) {
             step.glob.toLowerCase(),
             0,
             span,
-            renderStepInstr(step),
           );
           return true;
         case 'ldPtrGlobRp':
           if (step.rp === 'HL') {
-            ctx.emitAbs16Fixup(0x22, step.glob.toLowerCase(), 0, span, renderStepInstr(step));
+            ctx.emitAbs16Fixup(0x22, step.glob.toLowerCase(), 0, span);
           } else {
             ctx.emitAbs16FixupEd(
               step.rp === 'BC' ? 0x43 : 0x53,
               step.glob.toLowerCase(),
               0,
               span,
-              renderStepInstr(step),
             );
           }
           return true;

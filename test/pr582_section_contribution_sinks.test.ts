@@ -62,7 +62,6 @@ describe('PR582 named section contribution sinks', () => {
       expect(sink.fixups).toEqual([]);
       expect(sink.rel8Fixups).toEqual([]);
       expect(sink.sourceSegments).toEqual([]);
-      expect(sink.asmTrace).toEqual([]);
       expect(sink.currentSourceTag).toBeUndefined();
     }
   });

@@ -105,7 +105,6 @@ describe('ASM80 emitter', () => {
           emitBin: false,
           emitD8m: false,
           emitListing: false,
-          emitAsm: false,
           emitAsm80: true,
         },
         { formats: defaultFormatWriters },

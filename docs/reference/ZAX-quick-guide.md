@@ -20,7 +20,7 @@ ZAX combines:
 - compile-time expressions (`const`, `sizeof`, `offsetof`, `enum`)
 - inline macro-instructions (`op`) with AST-level operand matching and overload resolution
 
-The compiler adds structure and names to assembly decisions — it does not make those decisions for you. You choose registers, manage flags, and decide what lives in ROM vs RAM. Where compiler-generated code appears (function prologues, epilogues, call wrappers, index-scaling sequences), it is deterministic and inspectable via the assembler-valid `.z80` output or the legacy `.asm`/`.lst` trace outputs.
+The compiler adds structure and names to assembly decisions — it does not make those decisions for you. You choose registers, manage flags, and decide what lives in ROM vs RAM. Where compiler-generated code appears (function prologues, epilogues, call wrappers, index-scaling sequences), it is deterministic and inspectable via the assembler-valid `.z80` output or the `.lst` listing output.
 
 ### 1.2 Why Use It
 
@@ -112,14 +112,12 @@ Common outputs:
 | `.lst`        | deterministic byte dump with symbol table         |
 | `.d8dbg.json` | D8 Debug Map for Debug80 and compatible tools     |
 | `.z80`        | ASM80-compatible lowered source (assembler-valid) |
-| `.asm`        | legacy lowered trace (not assembler-valid)        |
 
-By default, ZAX derives all artifact paths from the primary output path. Use `-o <file>` to set the primary output; `-t hex` or `-t bin` to choose the primary type (default: `hex`). Suppress individual outputs with `--nolist`, `--nobin`, `--nohex`, `--nod8m`, `--noasm`. Emit ASM80 output explicitly with `--asm80`.
+By default, ZAX derives all artifact paths from the primary output path. Use `-o <file>` to set the primary output; `-t hex` or `-t bin` to choose the primary type (default: `hex`). Suppress individual outputs with `--nolist`, `--nobin`, `--nohex`, `--nod8m`. Emit ASM80 output explicitly with `--asm80`.
 
-ASM80 vs trace output:
+ASM80 output:
 
 - `.z80` is assembler-valid lowered output intended for ASM80.
-- `.asm` is a legacy compiler trace for inspection; it is not guaranteed assembler-valid.
 
 Useful diagnostic options:
 
@@ -1131,7 +1129,7 @@ ld (ix+d+1), d    ; D = high byte of original HL
 ex de, hl         ; HL restored
 ```
 
-This is entirely compiler-generated and transparent in normal use. It becomes visible when reading the `.asm` or `.lst` output to understand exactly what was emitted for a given source line.
+This is entirely compiler-generated and transparent in normal use. It becomes visible when reading the `.z80` or `.lst` output to understand exactly what was emitted for a given source line.
 
 ### 6.8 SP Tracking and Stack-Depth Constraints
 
@@ -1974,7 +1972,7 @@ Circular imports are a compile error.
 You can also insert raw text before parsing:
 
 ```zax
-include "legacy/uart.asm"
+include "legacy/uart.inc"
 ```
 
 `include` is a literal text insertion and has no module semantics. It can appear anywhere, and path resolution uses the same rules as `import "<path>"`.
@@ -2561,5 +2559,5 @@ Working in ZAX means keeping the lowering predictable. A few habits help:
 - **Keep `op` bodies small and mechanical.** If an op body is doing significant work, consider whether a `func` with its typed boundary guarantees would be clearer.
 - **Use `sizeof` and `offsetof` everywhere.** Never hardcode a field offset. If the type changes, the built-ins update automatically.
 - **Use qualified enum names everywhere.** `Mode.Run` everywhere, never bare `Run`. Unqualified references are compile errors in the current language — this is enforced, not advisory.
-- **Check the `.z80`, `.asm`, or `.lst` output when something looks wrong.** The lowered outputs show exactly what the compiler emitted. The IX byte-lane shuttle (`ex de, hl` / `ld e, (ix+d)` / ...) is particularly visible here; `.asm` remains a legacy trace.
+- **Check the `.z80` or `.lst` output when something looks wrong.** The lowered outputs show exactly what the compiler emitted. The IX byte-lane shuttle (`ex de, hl` / `ld e, (ix+d)` / ...) is particularly visible here.
 - **Treat `docs/spec/zax-spec.md` as the final authority.** This guide is instructional; the spec is normative.

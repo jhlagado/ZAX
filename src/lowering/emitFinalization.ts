@@ -1,10 +1,5 @@
 import type { Diagnostic } from '../diagnostics/types.js';
-import type {
-  EmittedAsmTraceEntry,
-  EmittedByteMap,
-  EmittedSourceSegment,
-  SymbolEntry,
-} from '../formats/types.js';
+import type { EmittedByteMap, EmittedSourceSegment, SymbolEntry } from '../formats/types.js';
 import type { SourceSpan } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import {
@@ -57,12 +52,10 @@ export type EmitFinalizationContext = {
   hexBytes: FinalizationContext['hexBytes'];
   bytes: Map<number, number>;
   codeSourceSegments: EmittedSourceSegment[];
-  codeAsmTrace: EmittedAsmTraceEntry[];
   alignTo: FinalizationContext['alignTo'];
   writeSection: FinalizationContext['writeSection'];
   computeWrittenRange: FinalizationContext['computeWrittenRange'];
   rebaseCodeSourceSegments: FinalizationContext['rebaseCodeSourceSegments'];
-  rebaseAsmTrace: FinalizationContext['rebaseAsmTrace'];
   defaultCodeBase?: number;
 };
 
@@ -123,7 +116,6 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
   }
 
   const placedSourceSegments: EmittedSourceSegment[] = [];
-  const placedAsmTrace: EmittedAsmTraceEntry[] = [];
   for (const placed of placedContributions) {
     const sink = placed.sink;
     for (const [offset, value] of sink.bytes) {
@@ -150,11 +142,10 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
       placedSourceSegments.push(
         ...context.rebaseCodeSourceSegments(placed.baseAddress, sink.sourceSegments),
       );
-      placedAsmTrace.push(...context.rebaseAsmTrace(placed.baseAddress, sink.asmTrace));
     }
   }
 
-  const { writtenRange, sourceSegments, asmTrace } = finalizeProgramEmission({
+  const { writtenRange, sourceSegments } = finalizeProgramEmission({
     diagnostics: context.diagnostics,
     diag: context.diag,
     primaryFile: context.primaryFile,
@@ -175,12 +166,10 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
     hexBytes: context.hexBytes,
     bytes: context.bytes,
     codeSourceSegments: context.codeSourceSegments,
-    codeAsmTrace: context.codeAsmTrace,
     alignTo: context.alignTo,
     writeSection: context.writeSection,
     computeWrittenRange: context.computeWrittenRange,
     rebaseCodeSourceSegments: context.rebaseCodeSourceSegments,
-    rebaseAsmTrace: context.rebaseAsmTrace,
     ...(context.defaultCodeBase !== undefined
       ? { defaultCodeBase: context.defaultCodeBase }
       : {}),
@@ -195,9 +184,6 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
 
   const mergedSourceSegments = [...placedSourceSegments, ...sourceSegments].sort((a, b) =>
     a.start === b.start ? a.end - b.end : a.start - b.start,
-  );
-  const mergedAsmTrace = [...placedAsmTrace, ...asmTrace].sort((a, b) =>
-    a.offset === b.offset ? a.kind.localeCompare(b.kind) : a.offset - b.offset,
   );
 
   const startupInitRegion = buildStartupInitRegion(placedContributions);
@@ -287,7 +273,6 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
       bytes: context.bytes,
       writtenRange: finalWrittenRange,
       ...(mergedSourceSegments.length > 0 ? { sourceSegments: mergedSourceSegments } : {}),
-      ...(mergedAsmTrace.length > 0 ? { asmTrace: mergedAsmTrace } : {}),
     },
     symbols: context.symbols,
     placedLoweredAsmProgram: placedProgram,

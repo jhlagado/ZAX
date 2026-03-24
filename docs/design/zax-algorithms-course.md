@@ -790,7 +790,7 @@ author and the language — a record of what comes next.
 ## 10. Execution Plan
 
 The course is written in tranches. Each tranche produces working, compiled
-example files, a style check against the `.asm` output, and a friction log
+example files, a style check against the `.z80` output, and a friction log
 recorded in `docs/design/`.
 
 ### Tranche 1 — Unit 2: Foundations

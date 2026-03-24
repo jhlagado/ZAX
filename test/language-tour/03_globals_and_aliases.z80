@@ -1,0 +1,76 @@
+; ZAX lowered ASM80 output
+
+ORG $1000
+counter:
+DW $00
+
+ORG $0100
+; ZAX: func read_counter begin
+read_counter:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+DB $2A, $00, $00
+__zax_epilogue_0:
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func read_counter end
+; ZAX: func write_counter begin
+write_counter:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+push hl
+push de
+ld e, (IX+$04)
+ld d, (IX+$05)
+DB $ED, $53, $00, $00
+pop de
+__zax_epilogue_1:
+pop hl
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func write_counter end
+; ZAX: func main begin
+main:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+push hl
+ld hl, $7B
+push hl
+DB $CD, $00, $00
+inc sp
+inc sp
+DB $2A, $00, $00
+__zax_epilogue_2:
+pop hl
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func main end
+
+ORG $1002
+__zax_startup:
+DB $21, $4A, $10, $4E, $23, $46, $23, $78, $B1, $28, $1B, $C5, $5E, $23, $56, $23, $4E, $23, $46, $23, $E5, $21, $54, $10, $09, $E3, $4E, $23, $46, $23, $E3, $ED, $B0, $E1, $C1, $0B, $18, $E1, $4E, $23, $46, $23, $78, $B1, $28, $17, $C5, $5E, $23, $56, $23, $4E, $23, $46, $23, $78, $B1, $28, $06, $AF, $12, $13, $0B, $18, $F6, $C1, $0B, $18, $E5, $C3, $37, $01
+DB $01, $00, $00, $10, $00, $00, $02, $00, $00, $00, $00, $00

@@ -23,23 +23,7 @@ export interface EmittedByteMap {
    * Addresses are absolute in the final 16-bit address space.
    */
   sourceSegments?: EmittedSourceSegment[];
-  /**
-   * Optional deterministic lowering trace for emitted code bytes.
-   *
-   * This is used by the `.asm` writer to produce human-inspectable output without a disassembler.
-   */
-  asmTrace?: EmittedAsmTraceEntry[];
 }
-
-/**
- * Lowering trace entry for generated assembly output.
- *
- * `offset` is absolute in the final 16-bit address space.
- */
-export type EmittedAsmTraceEntry =
-  | { kind: 'comment'; offset: number; text: string }
-  | { kind: 'label'; offset: number; name: string }
-  | { kind: 'instruction'; offset: number; text: string; bytes: number[] };
 
 /**
  * Source-attributed emitted range used by debug-map writers.
@@ -138,16 +122,6 @@ export interface WriteListingOptions {
 }
 
 /**
- * Options for `.asm` source emission.
- */
-export interface WriteAsmOptions {
-  /**
-   * Line ending to use when emitting text formats.
-   */
-  lineEnding?: '\n' | '\r\n';
-}
-
-/**
  * Options for ASM80 source emission.
  */
 export interface WriteAsm80Options {
@@ -185,15 +159,6 @@ export interface ListingArtifact {
 }
 
 /**
- * In-memory `.asm` artifact.
- */
-export interface AsmArtifact {
-  kind: 'asm';
-  path?: string;
-  text: string;
-}
-
-/**
  * In-memory ASM80 `.z80` artifact.
  */
 export interface Asm80Artifact {
@@ -219,7 +184,6 @@ export type Artifact =
   | BinArtifact
   | ListingArtifact
   | D8mArtifact
-  | AsmArtifact
   | Asm80Artifact;
 
 /**
@@ -246,7 +210,6 @@ export interface FormatWriters {
     symbols: SymbolEntry[],
     opts?: WriteListingOptions,
   ): ListingArtifact;
-  writeAsm?(map: EmittedByteMap, symbols: SymbolEntry[], opts?: WriteAsmOptions): AsmArtifact;
   writeAsm80?(
     program: import('../lowering/loweredAsmTypes.js').LoweredAsmProgram,
     opts?: WriteAsm80Options,

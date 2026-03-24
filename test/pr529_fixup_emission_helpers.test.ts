@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createFixupEmissionHelpers } from '../src/lowering/fixupEmission.js';
 
 describe('PR529 fixup emission helpers', () => {
-  it('emits abs16 and rel8 fixups with the current trace shape', () => {
+  it('emits abs16 and rel8 fixups deterministically', () => {
     let codeOffset = 0;
     const bytes = new Map<number, number>();
     const fixups: Array<{ offset: number; baseLower: string; addend: number; file: string }> = [];
@@ -15,7 +15,6 @@ describe('PR529 fixup emission helpers', () => {
       file: string;
       mnemonic: string;
     }> = [];
-    const traces: Array<{ start: number; bytes: number[]; asmText: string }> = [];
     const ranges: Array<[number, number]> = [];
 
     const helpers = createFixupEmissionHelpers({
@@ -34,9 +33,6 @@ describe('PR529 fixup emission helpers', () => {
       },
       pushRel8Fixup: (fixup) => {
         rel8Fixups.push(fixup);
-      },
-      traceInstruction: (start, emitted, asmText) => {
-        traces.push({ start, bytes: [...emitted], asmText });
       },
       evalImmExpr: (expr) => {
         if (expr.kind === 'ImmLiteral') return expr.value;
@@ -76,10 +72,6 @@ describe('PR529 fixup emission helpers', () => {
       [0, 3],
       [3, 5],
     ]);
-    expect(traces).toEqual([
-      { start: 0, bytes: [0x21, 0x00, 0x00], asmText: 'ld HL, glob_w + 2' },
-      { start: 3, bytes: [0x18, 0x00], asmText: 'jr loop' },
-    ]);
   });
 
   it('keeps condition helpers and symbolic targets stable', () => {
@@ -90,7 +82,6 @@ describe('PR529 fixup emission helpers', () => {
       recordCodeSourceRange: () => {},
       pushFixup: () => {},
       pushRel8Fixup: () => {},
-      traceInstruction: () => {},
       evalImmExpr: (expr) => (expr.kind === 'ImmLiteral' ? expr.value : undefined),
     });
 
