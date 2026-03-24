@@ -5,7 +5,12 @@ import { describe, expect, it } from 'vitest';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact, BinArtifact } from '../src/formats/types.js';
+import type { BinArtifact } from '../src/formats/types.js';
+import {
+  compilePlacedProgram,
+  flattenLoweredInstructions,
+  isReg,
+} from './helpers/lowered_program.js';
 
 type IndexedFamily = {
   prefix: number;
@@ -38,11 +43,12 @@ async function compileSource(source: string) {
   const dir = await mkdtemp(join(tmpdir(), 'zax-pr447-'));
   const entry = join(dir, 'main.zax');
   await writeFile(entry, source, 'utf8');
-  return compile(
+  const res = await compile(
     entry,
     { emitAsm: true, emitBin: true, emitHex: false, emitListing: false, emitD8m: false },
     { formats: defaultFormatWriters },
   );
+  return { entry, res };
 }
 
 function buildProgram(lines: readonly string[]): string {
@@ -72,20 +78,24 @@ describe('PR447: direct IXH/IXL/IYH/IYL forms', () => {
     }
     expected.push(0xc9);
 
-    const res = await compileSource(buildProgram(lines));
+    const { entry, res } = await compileSource(buildProgram(lines));
     expect(res.diagnostics).toEqual([]);
 
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
-    expect(asm).toBeDefined();
     expect(bin).toBeDefined();
 
     expect(Array.from(bin!.bytes)).toEqual(expected);
 
-    const text = asm!.text.toUpperCase();
-    expect(text).not.toContain('PUSH ');
-    expect(text).not.toContain('POP ');
-    expect(text).not.toContain('EX DE, HL');
+    const lowered = await compilePlacedProgram(entry);
+    expect(lowered.diagnostics).toEqual([]);
+    const instrs = flattenLoweredInstructions(lowered.program);
+    expect(instrs.some((ins) => ins.head === 'push')).toBe(false);
+    expect(instrs.some((ins) => ins.head === 'pop')).toBe(false);
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ex' && isReg(ins.operands[0], 'DE') && isReg(ins.operands[1], 'HL'),
+      ),
+    ).toBe(false);
   });
 
   it('rejects the explicit unsupported edge of the first slice', async () => {
@@ -104,7 +114,7 @@ describe('PR447: direct IXH/IXL/IYH/IYL forms', () => {
       'ld iyl, ixl',
     ];
 
-    const res = await compileSource(buildProgram(lines));
+    const { res } = await compileSource(buildProgram(lines));
     const messages = res.diagnostics.map((d) => d.message);
 
     expect(messages).toContain('ld with IX*/IY* does not support legacy H/L counterpart operands');
