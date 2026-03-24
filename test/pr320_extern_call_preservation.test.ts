@@ -36,7 +36,7 @@ describe('PR320 extern typed-call preservation', () => {
       .map((item) => ({
         head: item.head,
         operands: item.operands,
-        bytes: item.bytes,
+        ...(item.bytes ? { bytes: item.bytes } : {}),
       }));
 
     const isCall = (ins: { head: string; bytes?: number[] }) =>
@@ -44,7 +44,9 @@ describe('PR320 extern typed-call preservation', () => {
 
     const callIdxs: number[] = [];
     for (let i = 0; i < mainInstrs.length; i += 1) {
-      if (isCall(mainInstrs[i])) callIdxs.push(i);
+      const ins = mainInstrs[i];
+      if (!ins) continue;
+      if (isCall(ins)) callIdxs.push(i);
     }
     expect(callIdxs.length).toBeGreaterThanOrEqual(2);
 
