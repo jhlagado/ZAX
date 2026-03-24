@@ -5,6 +5,10 @@ import type { ImmExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import type { EaResolution } from './eaResolution.js';
 import type { LdForm } from './ldFormSelection.js';
+import {
+  planAssignmentMemTransfer,
+  type AssignmentMemTransferPlan,
+} from './ldTransferPlan.js';
 import type { ScalarKind } from './typeResolution.js';
 
 export type LdEncodingContext = {
@@ -125,92 +129,9 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
     const isAssignmentForm = inst.head.toLowerCase() === ':=';
     const halfIndexRegs = new Set(['IXH', 'IXL', 'IYH', 'IYL']);
     const isHalfIndexReg = (name: string): boolean => halfIndexRegs.has(name.toUpperCase());
-    const regPairForReg8 = (name: string): 'AF' | 'BC' | 'DE' | undefined => {
-      switch (name.toUpperCase()) {
-        case 'A':
-          return 'AF';
-        case 'B':
-        case 'C':
-          return 'BC';
-        case 'D':
-        case 'E':
-          return 'DE';
-        default:
-          return undefined;
-      }
-    };
     const regOperand = (name: string): AsmOperandNode => ({ kind: 'Reg', span: inst.span, name });
     const pushReg = (name: string): boolean => emitInstr('push', [regOperand(name)], inst.span);
     const popReg = (name: string): boolean => emitInstr('pop', [regOperand(name)], inst.span);
-    const immExprUsesAnyRegister = (expr: ImmExprNode, names: ReadonlySet<string>): boolean => {
-      switch (expr.kind) {
-        case 'ImmLiteral':
-        case 'ImmSizeof':
-          return false;
-        case 'ImmName':
-          return names.has(expr.name.toUpperCase());
-        case 'ImmOffsetof':
-          return expr.path.steps.some((step) =>
-            step.kind === 'OffsetofIndex' ? immExprUsesAnyRegister(step.expr, names) : false,
-          );
-        case 'ImmUnary':
-          return immExprUsesAnyRegister(expr.expr, names);
-        case 'ImmBinary':
-          return (
-            immExprUsesAnyRegister(expr.left, names) || immExprUsesAnyRegister(expr.right, names)
-          );
-      }
-    };
-    const eaUsesAnyRegister = (ea: EaExprNode, names: ReadonlySet<string>): boolean => {
-      switch (ea.kind) {
-        case 'EaName':
-          return names.has(ea.name.toUpperCase());
-        case 'EaImm':
-          return immExprUsesAnyRegister(ea.expr, names);
-        case 'EaReinterpret':
-          return eaUsesAnyRegister(ea.base, names);
-        case 'EaField':
-          return eaUsesAnyRegister(ea.base, names);
-        case 'EaAdd':
-        case 'EaSub':
-          return eaUsesAnyRegister(ea.base, names) || immExprUsesAnyRegister(ea.offset, names);
-        case 'EaIndex':
-          switch (ea.index.kind) {
-            case 'IndexImm':
-              return (
-                eaUsesAnyRegister(ea.base, names) ||
-                immExprUsesAnyRegister(ea.index.value, names)
-              );
-            case 'IndexReg8':
-              return eaUsesAnyRegister(ea.base, names) || names.has(ea.index.reg.toUpperCase());
-            case 'IndexReg16':
-              return eaUsesAnyRegister(ea.base, names) || names.has(ea.index.reg.toUpperCase());
-            case 'IndexMemHL':
-              return eaUsesAnyRegister(ea.base, names) || names.has('HL');
-            case 'IndexMemIxIy':
-              return eaUsesAnyRegister(ea.base, names) || names.has(ea.index.base.toUpperCase());
-            case 'IndexEa':
-              return eaUsesAnyRegister(ea.base, names) || eaUsesAnyRegister(ea.index.expr, names);
-          }
-      }
-    };
-    const anyEaUsesAnyRegister = (
-      eas: ReadonlyArray<EaExprNode | undefined>,
-      names: ReadonlySet<string>,
-    ): boolean => eas.some((ea) => (ea ? eaUsesAnyRegister(ea, names) : false));
-    const pickHiddenByteReg = (...eas: Array<EaExprNode | undefined>): 'A' | 'B' | 'C' | 'D' | 'E' => {
-      for (const candidate of ['A', 'B', 'C', 'D', 'E'] as const) {
-        if (!anyEaUsesAnyRegister(eas, new Set([candidate]))) return candidate;
-      }
-      return 'A';
-    };
-    const pickHiddenWordPair = (...eas: Array<EaExprNode | undefined>): 'DE' | 'BC' | undefined => {
-      const usesDE = anyEaUsesAnyRegister(eas, new Set(['DE', 'D', 'E']));
-      const usesBC = anyEaUsesAnyRegister(eas, new Set(['BC', 'B', 'C']));
-      if (!usesDE) return 'DE';
-      if (!usesBC) return 'BC';
-      return undefined;
-    };
     const makeSubForm = (
       nextDst: AsmOperandNode,
       nextSrc: AsmOperandNode,
@@ -244,19 +165,6 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
       }
       return pushReg('HL') && popReg('BC');
     };
-    const canDirectLoadByteToReg8 = (_regUp: string, resolved: EaResolution | undefined): boolean => {
-      if (resolved?.kind === 'abs') return true;
-      return resolved?.kind === 'stack' && resolved.ixDisp >= -0x80 && resolved.ixDisp <= 0x7f;
-    };
-    const canDirectStoreByteFromReg8 = (_regUp: string, resolved: EaResolution | undefined): boolean => {
-      if (resolved?.kind === 'abs') return true;
-      return resolved?.kind === 'stack' && resolved.ixDisp >= -0x80 && resolved.ixDisp <= 0x7f;
-    };
-    const canDirectLoadWordToPair = (resolved: EaResolution | undefined): boolean =>
-      resolved?.kind === 'abs' || resolved?.kind === 'stack';
-    const canDirectStoreWordFromPair = (resolved: EaResolution | undefined): boolean =>
-      resolved?.kind === 'abs' || resolved?.kind === 'stack';
-
     const ixDispMem = (disp: number): AsmOperandNode => ({
       kind: 'Mem',
       span: inst.span,
@@ -271,70 +179,53 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
       },
     });
 
+    const runAssignmentMemTransferPlan = (plan: AssignmentMemTransferPlan): boolean => {
+      switch (plan.kind) {
+        case 'addressOf': {
+          const { hiddenPair, preserveHl } = plan;
+          if (!pushReg(hiddenPair)) return false;
+          if (preserveHl && !pushReg('HL')) return false;
+          const addrSrc = form.src;
+          if (addrSrc.kind !== 'Ea' || !addrSrc.explicitAddressOf) return false;
+          if (!materializeEaAddressToHL(addrSrc.expr, inst.span)) return false;
+          if (!copyHlIntoPair(hiddenPair)) return false;
+          if (!emitLdForm(makeSubForm(dst, regOperand(hiddenPair)))) return false;
+          if (preserveHl && !popReg('HL')) return false;
+          if (!popReg(hiddenPair)) return false;
+          return true;
+        }
+        case 'byteMemToMem': {
+          const { hiddenReg, preservePair, preserveHl } = plan;
+          if (!pushReg(preservePair)) return false;
+          if (preserveHl && !pushReg('HL')) return false;
+          if (!emitLdForm(makeSubForm(regOperand(hiddenReg), src))) return false;
+          if (!emitLdForm(makeSubForm(dst, regOperand(hiddenReg)))) return false;
+          if (preserveHl && !popReg('HL')) return false;
+          if (!popReg(preservePair)) return false;
+          return true;
+        }
+        case 'wordMemToMem': {
+          const { hiddenPair, preserveHl } = plan;
+          if (!pushReg(hiddenPair)) return false;
+          if (preserveHl && !pushReg('HL')) return false;
+          if (!emitLdForm(makeSubForm(regOperand(hiddenPair), src))) return false;
+          if (!emitLdForm(makeSubForm(dst, regOperand(hiddenPair)))) return false;
+          if (preserveHl && !popReg('HL')) return false;
+          if (!popReg(hiddenPair)) return false;
+          return true;
+        }
+      }
+    };
+
     const emitAssignmentMemTransfer = (): boolean => {
       if (dst.kind !== 'Mem') return false;
-      if (src.kind === 'Ea' && src.explicitAddressOf) {
-        if (!isWordCompatibleScalarKind(dstScalarExact)) {
-          diagAt(diagnostics, inst.span, 'Address transfer requires a word/addr destination.');
-          return true;
-        }
-        const hiddenPair = pickHiddenWordPair(src.expr, dst.expr);
-        if (!hiddenPair) {
-          diagAt(diagnostics, inst.span, '":=" address transfer cannot preserve destination address registers cleanly.');
-          return true;
-        }
-        if (!pushReg(hiddenPair)) return false;
-        const preserveHl = !canDirectStoreWordFromPair(dstResolved);
-        if (preserveHl && !pushReg('HL')) return false;
-        if (!materializeEaAddressToHL(src.expr, inst.span)) return false;
-        if (!copyHlIntoPair(hiddenPair)) return false;
-        if (!emitLdForm(makeSubForm(dst, regOperand(hiddenPair)))) return false;
-        if (preserveHl && !popReg('HL')) return false;
-        if (!popReg(hiddenPair)) return false;
+      const planned = planAssignmentMemTransfer(form, isWordCompatibleScalarKind);
+      if (planned.kind === 'reject') return false;
+      if (planned.kind === 'diagnostic') {
+        diagAt(diagnostics, inst.span, planned.message);
         return true;
       }
-      if (src.kind !== 'Mem') return false;
-      if (
-        (srcScalarExact === 'byte' && isWordCompatibleScalarKind(dstScalarExact)) ||
-        (dstScalarExact === 'byte' && isWordCompatibleScalarKind(srcScalarExact))
-      ) {
-        diagAt(diagnostics, inst.span, 'Word mem->mem transfer requires word-typed source and destination.');
-        return true;
-      }
-      if (scalarMemToMem === 'byte') {
-        const hiddenReg = pickHiddenByteReg(src.expr, dst.expr);
-        const preservePair = regPairForReg8(hiddenReg);
-        if (!preservePair) {
-          diagAt(diagnostics, inst.span, '":=" byte transfer could not choose a hidden transfer register.');
-          return true;
-        }
-        if (!pushReg(preservePair)) return false;
-        const preserveHl =
-          !canDirectLoadByteToReg8(hiddenReg, srcResolved) ||
-          !canDirectStoreByteFromReg8(hiddenReg, dstResolved);
-        if (preserveHl && !pushReg('HL')) return false;
-        if (!emitLdForm(makeSubForm(regOperand(hiddenReg), src))) return false;
-        if (!emitLdForm(makeSubForm(dst, regOperand(hiddenReg)))) return false;
-        if (preserveHl && !popReg('HL')) return false;
-        if (!popReg(preservePair)) return false;
-        return true;
-      }
-      if (!scalarMemToMem) return false;
-      const hiddenPair = pickHiddenWordPair(src.expr, dst.expr);
-      if (!hiddenPair) {
-        diagAt(diagnostics, inst.span, '":=" word transfer cannot preserve destination address registers cleanly.');
-        return true;
-      }
-      if (!pushReg(hiddenPair)) return false;
-      const preserveHl =
-        !canDirectLoadWordToPair(srcResolved) ||
-        !canDirectStoreWordFromPair(dstResolved);
-      if (preserveHl && !pushReg('HL')) return false;
-      if (!emitLdForm(makeSubForm(regOperand(hiddenPair), src))) return false;
-      if (!emitLdForm(makeSubForm(dst, regOperand(hiddenPair)))) return false;
-      if (preserveHl && !popReg('HL')) return false;
-      if (!popReg(hiddenPair)) return false;
-      return true;
+      return runAssignmentMemTransferPlan(planned.plan);
     };
 
     const emitByteMemLoadToReg8 = (regUp: string): boolean => {
