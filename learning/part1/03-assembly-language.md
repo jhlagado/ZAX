@@ -178,13 +178,6 @@ These are compact single-byte opcodes with A hardcoded in the instruction
 encoding. The Z80 simply has no opcodes for `LD B, (BC)` or any other register
 with those indirect modes — the assembler will tell you if you try.
 
-The Z80 instruction set is full of exceptions like this. Opcodes were allocated
-for the combinations that mattered most to the original designers, not to
-satisfy a consistent scheme. You cannot predict all the valid forms from a rule;
-you build up the picture through use. [Appendix 4](../appendices/04-classic-z80-instruction-support.md)
-has the complete searchable list for when you need to check a particular
-combination.
-
 ### Direct memory address
 
 A can be loaded from or stored to a fixed 16-bit address. Register pairs can also transfer both bytes in one instruction (little-endian, as always):
@@ -208,7 +201,16 @@ ld a, ($8000)
 ld ($8001), a
 ```
 
-This catches everyone at first. The CPU can talk to memory or to its own registers, but it cannot move data from one memory location to another without passing it through a register on the way.
+This catches everyone at first. The CPU can talk to memory or to its own
+registers, but it cannot move data from one memory location to another without
+passing it through a register on the way.
+
+Both this and the `(BC)`/`(DE)` restriction above are examples of the same
+reality: the Z80's instruction set was built from the combinations that fit the
+original opcode space, not from a consistent scheme. You cannot predict which
+forms exist from a general rule; you learn them through use.
+[Appendix 4](../appendices/04-classic-z80-instruction-support.md) has the
+complete searchable list.
 
 ### Summary of LD forms
 
