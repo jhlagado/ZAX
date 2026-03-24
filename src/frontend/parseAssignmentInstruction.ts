@@ -2,27 +2,8 @@ import type { AsmInstructionNode, AsmOperandNode, EaExprNode, SourceSpan } from 
 import type { Diagnostic } from '../diagnostics/types.js';
 import { parseImmExprFromText } from './parseImm.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
-import { ALL_REGISTER_NAMES } from './grammarData.js';
+import { ALL_REGISTER_NAMES, ASSIGNMENT_REGISTER_NAMES } from './grammarData.js';
 import { canonicalRegisterToken, parseEaExprFromText } from './parseOperands.js';
-
-const ASSIGNMENT_REGISTER_NAMES = new Set<string>([
-  'A',
-  'B',
-  'C',
-  'D',
-  'E',
-  'H',
-  'L',
-  'IXH',
-  'IXL',
-  'IYH',
-  'IYL',
-  'BC',
-  'DE',
-  'HL',
-  'IX',
-  'IY',
-]);
 
 export function parseAssignmentInstruction(
   filePath: string,
