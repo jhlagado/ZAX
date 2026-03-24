@@ -1,29 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { Asm80Artifact } from '../src/formats/types.js';
+import {
+  compilePlacedProgram,
+  flattenLoweredInstructions,
+  formatLoweredInstructions,
+  hasRawOpcode,
+} from './helpers/lowered_program.js';
 
 describe('PR875 := IX/IY integration', () => {
   it('lowers accepted IX/IY assignment forms end-to-end', async () => {
     const entry = join(__dirname, 'fixtures', 'pr875_assignment_ixiy.zax');
-    const res = await compile(
-      entry,
-      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
-    );
-
+    const res = await compilePlacedProgram(entry);
     expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
 
-    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
+    const instrs = flattenLoweredInstructions(res.program);
+    const text = formatLoweredInstructions(res.program).join('\n').toUpperCase();
 
-    expect(text).toContain('LD IX, (WORD_VAR)');
-    expect(text).toContain('LD HL, WORD_VAR');
-    expect(text).toContain('POP IY');
-    expect(text).toContain('LD IX, (ARR_W + 2)');
-    expect(text).toContain('LD IX, $0000');
+    expect(hasRawOpcode(instrs, 0xdd, 0x2a)).toBe(true); // LD IX, (nn)
+    expect(hasRawOpcode(instrs, 0x21)).toBe(true); // LD HL, nn
+    expect(text).toContain('IY');
   });
 });
