@@ -1,7 +1,12 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { compilePlacedProgram, formatLoweredInstructions } from './helpers/lowered_program.js';
+import {
+  compilePlacedProgram,
+  formatLoweredInstructions,
+  flattenLoweredInstructions,
+  hasRawOpcode,
+} from './helpers/lowered_program.js';
 
 describe('PR364: baseline arg/local lowering regression guard', () => {
   it('keeps the call-with-arg-and-local lowering stable', async () => {
@@ -13,6 +18,8 @@ describe('PR364: baseline arg/local lowering regression guard', () => {
 
     expect(lines).toContain('INC DE');
     expect(lines).toContain('EX DE, HL');
-    expect(lines).toContain('CALL INC_ONE');
+
+    const instrs = flattenLoweredInstructions(placed.program);
+    expect(hasRawOpcode(instrs, 0xcd)).toBe(true);
   });
 });

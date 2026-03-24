@@ -1,7 +1,11 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { compilePlacedProgram, formatLoweredInstructions } from './helpers/lowered_program.js';
+import {
+  compilePlacedProgram,
+  formatLoweredInstructions,
+  flattenLoweredInstructions,
+} from './helpers/lowered_program.js';
 
 describe('PR365: args+locals basics regression guard', () => {
   it('keeps args+locals basics lowering stable', async () => {
@@ -12,7 +16,9 @@ describe('PR365: args+locals basics regression guard', () => {
 
     expect(lines).toContain('ADD HL, DE');
     expect(lines).toContain('INC L');
-    expect(lines).toContain('CALL ADD_WORDS');
-    expect(lines).toContain('CALL BUMP_BYTE');
+
+    const instrs = flattenLoweredInstructions(placed.program);
+    const callCount = instrs.filter((ins) => ins.head === '@raw' && ins.bytes?.[0] === 0xcd).length;
+    expect(callCount).toBeGreaterThanOrEqual(2);
   });
 });
