@@ -1,26 +1,18 @@
-; Chapter 02 example: EQU-style constants, named storage, load/store via labels
+; Chapter 3 example: constants, named storage, load/store via labels
 
 const MaxCount  = 10             ; a named constant: value 10
-const BaseAddr  = $8000          ; a named constant: an address value
 
-section data vars at $8000
-  count:   byte = 0              ; one byte of RAM
-  scratch: word = 0              ; one word (two bytes) of RAM
-end
-
-export func main(): void
-  ; Load a constant value into A and store it to named RAM
+export func main()
   ld a, MaxCount                 ; A = 10  (const: value substituted directly)
   ld (count), a                  ; store A at the address of count
 
-  ; Load a 16-bit constant into HL and read back via (HL)
-  ; HL holds the address $8000, and (hl) reads the byte at that address.
-  ld hl, BaseAddr                ; HL = $8000 (the address of count)
-  ld a, (hl)                     ; A = byte at address HL
-
-  ; Store a word value into named word storage and read it back
   ld hl, $1234
   ld (scratch), hl               ; store HL at the address of scratch
 
   ld hl, (scratch)               ; read word back from scratch into HL
+end
+
+section data state at $8000
+  count:   byte = 0              ; one byte of storage
+  scratch: word = 0              ; one word (two bytes) of storage
 end

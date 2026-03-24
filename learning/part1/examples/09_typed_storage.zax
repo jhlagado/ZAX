@@ -16,7 +16,7 @@ section data vars at $8020
   above_64:  byte = 0          ; result: count of entries > 64
 end
 
-export func main(): void
+export func main()
   ; find_max_b receives HL = table base, B = length; returns A = max
   ld hl, values
   ld b, TableLen

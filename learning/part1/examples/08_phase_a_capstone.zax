@@ -13,7 +13,7 @@ section data vars at $8020
   above_64:  byte = 0            ; count of entries > 64
 end
 
-export func main(): void
+export func main()
   ; Step 1: find the maximum value in 'values'.
   ; Pass: HL = table base, B = table length
   ; Return: A = maximum byte found
