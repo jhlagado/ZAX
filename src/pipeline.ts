@@ -29,7 +29,7 @@ export interface CompilerOptions {
   emitD8m?: boolean;
   /** Emit listing (`.lst`). */
   emitListing?: boolean;
-  /** Emit lowering trace source (`.asm`). */
+  /** Emit legacy lowering trace source (`.asm`). */
   emitAsm?: boolean;
   /** Emit ASM80-compatible lowered source (`.z80`). */
   emitAsm80?: boolean;
