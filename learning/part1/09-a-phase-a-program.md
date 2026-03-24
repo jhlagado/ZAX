@@ -62,7 +62,7 @@ which tells ZAX not to save and restore AF, leaving A intact for the caller.
 ## `main`: the calling sequence
 
 ```zax
-export func main(): void
+export func main()
   ld hl, values
   ld b, TableLen
   call find_max
