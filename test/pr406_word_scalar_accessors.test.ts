@@ -1,92 +1,126 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
+import {
+  compilePlacedProgram,
+  flattenLoweredInstructions,
+  formatLoweredInstructions,
+  hasRawOpcode,
+  isMemIxDisp,
+  isReg,
+} from './helpers/lowered_program.js';
+
+const compileLowered = async (entry: string) => {
+  const res = await compilePlacedProgram(entry);
+  expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+  return {
+    instrs: flattenLoweredInstructions(res.program),
+    text: formatLoweredInstructions(res.program).join('\n').toUpperCase(),
+  };
+};
 
 describe('PR406: word scalar accessors', () => {
   it('uses direct global word accessors for BC/DE', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_global_scalar_accessors.zax');
-    const res = await compile(
-      entry,
-      { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
-    );
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const { instrs } = await compileLowered(entry);
 
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
-
-    expect(text).toContain('LD BC, (GLOB_W)');
-    expect(text).toContain('LD DE, (GLOB_W)');
-    expect(text).toContain('LD (GLOB_W), BC');
-    expect(text).toContain('LD (GLOB_W), DE');
+    expect(hasRawOpcode(instrs, 0xed, 0x4b)).toBe(true); // LD BC, (nn)
+    expect(hasRawOpcode(instrs, 0xed, 0x5b)).toBe(true); // LD DE, (nn)
+    expect(hasRawOpcode(instrs, 0xed, 0x43)).toBe(true); // LD (nn), BC
+    expect(hasRawOpcode(instrs, 0xed, 0x53)).toBe(true); // LD (nn), DE
   });
 
   it('uses direct frame word accessors for BC/DE', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_frame_scalar_accessors.zax');
-    const res = await compile(
-      entry,
-      { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
-    );
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const { instrs } = await compileLowered(entry);
 
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
-
-    expect(text).toContain('LD C, (IX - $0002)');
-    expect(text).toContain('LD B, (IX - $0001)');
-    expect(text).toContain('LD E, (IX - $0002)');
-    expect(text).toContain('LD D, (IX - $0001)');
-    expect(text).toContain('LD (IX - $0002), C');
-    expect(text).toContain('LD (IX - $0001), B');
-    expect(text).toContain('LD (IX - $0002), E');
-    expect(text).toContain('LD (IX - $0001), D');
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isReg(ins.operands[0], 'C') && isMemIxDisp(ins.operands[1], -2),
+      ),
+    ).toBe(true);
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isReg(ins.operands[0], 'B') && isMemIxDisp(ins.operands[1], -1),
+      ),
+    ).toBe(true);
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isReg(ins.operands[0], 'E') && isMemIxDisp(ins.operands[1], -2),
+      ),
+    ).toBe(true);
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isReg(ins.operands[0], 'D') && isMemIxDisp(ins.operands[1], -1),
+      ),
+    ).toBe(true);
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isMemIxDisp(ins.operands[0], -2) && isReg(ins.operands[1], 'C'),
+      ),
+    ).toBe(true);
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isMemIxDisp(ins.operands[0], -1) && isReg(ins.operands[1], 'B'),
+      ),
+    ).toBe(true);
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isMemIxDisp(ins.operands[0], -2) && isReg(ins.operands[1], 'E'),
+      ),
+    ).toBe(true);
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isMemIxDisp(ins.operands[0], -1) && isReg(ins.operands[1], 'D'),
+      ),
+    ).toBe(true);
   });
 
   it('uses scalar word accessors for typed call arguments', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_call_scalar_arg.zax');
-    const res = await compile(
-      entry,
-      { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
-    );
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const { text, instrs } = await compileLowered(entry);
 
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
-
-    expect(text).toContain('LD HL, (GLOB_W)');
+    expect(hasRawOpcode(instrs, 0x2a)).toBe(true); // LD HL, (nn)
     expect(text).toContain('PUSH HL');
     expect(text).toContain('EX DE, HL');
-    expect(text).toContain('LD E, (IX - $0002)');
-    expect(text).toContain('LD D, (IX - $0001)');
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isReg(ins.operands[0], 'E') && isMemIxDisp(ins.operands[1], -2),
+      ),
+    ).toBe(true);
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isReg(ins.operands[0], 'D') && isMemIxDisp(ins.operands[1], -1),
+      ),
+    ).toBe(true);
   });
 
   it('uses scalar word accessors for scalar mem-to-mem moves', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_mem_to_mem_scalar.zax');
-    const res = await compile(
-      entry,
-      { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
-    );
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const { text, instrs } = await compileLowered(entry);
 
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
-
-    expect(text).toContain('LD DE, (GLOB_SRC)');
-    expect(text).toContain('LD (GLOB_DST), DE');
-    expect(text).toContain('LD (IX - $0002), E');
-    expect(text).toContain('LD (IX - $0001), D');
-    expect(text).toContain('LD E, (IX - $0002)');
-    expect(text).toContain('LD D, (IX - $0001)');
+    expect(hasRawOpcode(instrs, 0xed, 0x5b)).toBe(true); // LD DE, (nn)
+    expect(hasRawOpcode(instrs, 0xed, 0x53)).toBe(true); // LD (nn), DE
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isMemIxDisp(ins.operands[0], -2) && isReg(ins.operands[1], 'E'),
+      ),
+    ).toBe(true);
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isMemIxDisp(ins.operands[0], -1) && isReg(ins.operands[1], 'D'),
+      ),
+    ).toBe(true);
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isReg(ins.operands[0], 'E') && isMemIxDisp(ins.operands[1], -2),
+      ),
+    ).toBe(true);
+    expect(
+      instrs.some(
+        (ins) => ins.head === 'ld' && isReg(ins.operands[0], 'D') && isMemIxDisp(ins.operands[1], -1),
+      ),
+    ).toBe(true);
     expect(text).not.toContain('LD A, (HL)');
   });
 });

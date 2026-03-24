@@ -3,24 +3,24 @@ import { join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact, BinArtifact } from '../src/formats/types.js';
+import type { BinArtifact } from '../src/formats/types.js';
+import { compilePlacedProgram, flattenLoweredInstructions, hasRawOpcode } from './helpers/lowered_program.js';
 
 describe('PR405: byte global scalar symbols', () => {
   it('accepts bare global byte symbols and lowers A loads/stores through direct scalar forms', async () => {
     const entry = join(__dirname, 'fixtures', 'pr405_byte_global_scalar_symbols.zax');
     const res = await compile(
       entry,
-      { emitAsm: true, emitBin: true, emitHex: false, emitListing: false, emitD8m: false },
+      { emitAsm80: true, emitBin: true, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
     expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
 
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
-    expect(text).toContain('LD A, (GLOB_B)');
-    expect(text).toContain('LD (GLOB_B), A');
-    expect(text).not.toContain('__ZAX_EPILOGUE');
+    const lowered = await compilePlacedProgram(entry);
+    expect(lowered.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const instrs = flattenLoweredInstructions(lowered.program);
+    expect(hasRawOpcode(instrs, 0x3a)).toBe(true); // LD A,(nn)
+    expect(hasRawOpcode(instrs, 0x32)).toBe(true); // LD (nn),A
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();

@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
+import type { Asm80Artifact } from '../src/formats/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,11 +13,11 @@ describe('#509 lowerLdWithEa integration', () => {
   it('still lowers representative byte and word ld shapes through the moved helper', async () => {
     const byteEntry = join(__dirname, 'fixtures', 'pr405_byte_global_non_a_symbols.zax');
     const byteRes = await compile(byteEntry, {}, { formats: defaultFormatWriters });
-    const byteAsm = byteRes.artifacts.find((artifact: unknown): artifact is AsmArtifact =>
+    const byteAsm = byteRes.artifacts.find((artifact: unknown): artifact is Asm80Artifact =>
       typeof artifact === 'object' &&
       artifact !== null &&
       'kind' in artifact &&
-      (artifact as AsmArtifact).kind === 'asm',
+      (artifact as Asm80Artifact).kind === 'asm80',
     );
     expect(byteRes.diagnostics).toEqual([]);
     expect(byteAsm).toBeDefined();
@@ -27,11 +27,11 @@ describe('#509 lowerLdWithEa integration', () => {
 
     const wordEntry = join(__dirname, 'fixtures', 'pr406_word_mem_to_mem_mixed_reverse.zax');
     const wordRes = await compile(wordEntry, {}, { formats: defaultFormatWriters });
-    const wordAsm = wordRes.artifacts.find((artifact: unknown): artifact is AsmArtifact =>
+    const wordAsm = wordRes.artifacts.find((artifact: unknown): artifact is Asm80Artifact =>
       typeof artifact === 'object' &&
       artifact !== null &&
       'kind' in artifact &&
-      (artifact as AsmArtifact).kind === 'asm',
+      (artifact as Asm80Artifact).kind === 'asm80',
     );
     expect(wordRes.diagnostics).toEqual([]);
     expect(wordAsm).toBeDefined();

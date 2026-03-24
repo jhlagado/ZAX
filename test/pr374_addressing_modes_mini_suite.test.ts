@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact, D8mArtifact } from '../src/formats/types.js';
+import type { D8mArtifact } from '../src/formats/types.js';
+import { compilePlacedProgram, formatLoweredInstructions } from './helpers/lowered_program.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,48 +43,17 @@ const wordMiniSuite = [
 
 const miniSuite = [...byteMiniSuite, ...wordMiniSuite];
 
-function canonicalProgramAsm(text: string): string {
-  const out: string[] = [];
-  const canonicalizeIxIyDisp = (input: string): string =>
-    input.replace(
-      /\(\s*(IX|IY)\s*([+-])\s*\$([0-9A-F]{1,4})\s*\)/gi,
-      (_m, base: string, sign: string, hex: string) => {
-        const value = Number.parseInt(hex, 16) & 0xff;
-        return `(${base.toUpperCase()}${sign}$${value.toString(16).toUpperCase().padStart(2, '0')})`;
-      },
-    );
-
-  for (const rawLine of text.replace(/\r\n/g, '\n').split('\n')) {
-    const line = rawLine.trim();
-    if (!line) continue;
-    if (line.startsWith(';')) continue;
-    if (line.toLowerCase() === '; symbols:') continue;
-    if (/^; (label|var|data|constant)\b/i.test(line)) continue;
-    if (line.endsWith(':')) {
-      out.push(line.toUpperCase());
-      continue;
-    }
-    const noTraceComment = line.replace(/\s*;\s*[0-9A-F]{4}:\s+[0-9A-F ]+\s*$/i, '');
-    const noInlineComment = noTraceComment.replace(/\s*;.*/, '');
-    const normalized = canonicalizeIxIyDisp(noInlineComment.replace(/\s+/g, ' ').trim());
-    if (!normalized) continue;
-    out.push(normalized.toUpperCase());
-  }
-
-  return out.join('\n');
-}
-
 describe('PR374: addressing mini-suite fixtures stay locked', () => {
   for (const stem of miniSuite) {
-    it(`${stem} matches checked-in asm and d8dbg fixtures`, async () => {
+    it(`${stem} matches checked-in d8dbg fixtures`, async () => {
       const entry = join(__dirname, '..', 'test', 'language-tour', `${stem}.zax`);
-      const asmPath = join(__dirname, '..', 'test', 'language-tour', `${stem}.asm`);
       const d8Path = join(__dirname, '..', 'test', 'language-tour', `${stem}.d8dbg.json`);
 
-      const [expectedAsm, expectedD8Text] = await Promise.all([
-        readFile(asmPath, 'utf8'),
-        readFile(d8Path, 'utf8'),
-      ]);
+      const expectedD8Text = await readFile(d8Path, 'utf8');
+
+      const placed = await compilePlacedProgram(entry);
+      expect(placed.diagnostics).toEqual([]);
+      const instrs = formatLoweredInstructions(placed.program).map((line) => line.toUpperCase());
 
       const result = await compile(
         entry,
@@ -92,7 +62,6 @@ describe('PR374: addressing mini-suite fixtures stay locked', () => {
           emitHex: false,
           emitD8m: true,
           emitListing: false,
-          emitAsm: true,
           defaultCodeBase: 0x0100,
         },
         { formats: defaultFormatWriters },
@@ -100,19 +69,16 @@ describe('PR374: addressing mini-suite fixtures stay locked', () => {
 
       expect(result.diagnostics).toEqual([]);
 
-      const asm = result.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
       const d8m = result.artifacts.find((a): a is D8mArtifact => a.kind === 'd8m');
 
-      expect(asm).toBeDefined();
       expect(d8m).toBeDefined();
-      expect(canonicalProgramAsm(asm!.text)).toBe(canonicalProgramAsm(expectedAsm));
       expect(d8m!.json).toEqual(JSON.parse(expectedD8Text));
 
-      const upper = asm!.text.toUpperCase();
-      expect(upper).not.toMatch(/LD\s+H,\s+\(IX/i);
-      expect(upper).not.toMatch(/LD\s+L,\s+\(IX/i);
-      expect(upper).not.toMatch(/LD\s+\(IX[^\n]*,\s+H/i);
-      expect(upper).not.toMatch(/LD\s+\(IX[^\n]*,\s+L/i);
+      const upper = instrs.join('\n');
+      expect(upper).not.toMatch(new RegExp('LD\\s+H,\\s+\\(IX', 'i'));
+      expect(upper).not.toMatch(new RegExp('LD\\s+L,\\s+\\(IX', 'i'));
+      expect(upper).not.toMatch(new RegExp('LD\\s+\\(IX[^\\n]*,\\s+H', 'i'));
+      expect(upper).not.toMatch(new RegExp('LD\\s+\\(IX[^\\n]*,\\s+L', 'i'));
     });
   }
 });

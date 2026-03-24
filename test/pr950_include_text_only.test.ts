@@ -3,18 +3,18 @@ import { join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
+import type { Asm80Artifact } from '../src/formats/types.js';
 
 describe('PR950: text-only include directive', () => {
   it('inlines included text before parsing', async () => {
     const entry = join(__dirname, 'fixtures', 'pr950_include_entry.zax');
     const res = await compile(
       entry,
-      { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
     expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
+    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
     expect(asm).toBeDefined();
     expect(asm!.text.toUpperCase()).toMatch(/LD A, \$0*1/);
   });
@@ -34,11 +34,11 @@ describe('PR950: text-only include directive', () => {
     const includeDir = join(__dirname, 'fixtures', 'includes');
     const res = await compile(
       entry,
-      { includeDirs: [includeDir], emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+      { includeDirs: [includeDir], emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
     expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
+    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
     expect(asm).toBeDefined();
     expect(asm!.text.toUpperCase()).toContain('LD A, $0002');
   });
