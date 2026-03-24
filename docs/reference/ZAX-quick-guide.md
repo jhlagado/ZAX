@@ -90,7 +90,7 @@ end
 Key ideas this demonstrates:
 
 - `data` declares initialized storage in the `data` section; `var` reserves stack-frame locals in the function body.
-- `p` is a scalar local of type `addr` — `p := hl` and `hl := p` use value semantics (compiler emits the IX-relative load/store).
+- `p` is a scalar local of type `addr` — `p := hl` and `hl := p` use value semantics (compiler emits the IX-relative load/store). Here `HL` is still needed for the raw `ld a, (hl)` idiom; when you only copy between typed scalar paths with no raw memory operand in between, prefer path-to-path `:=` (for example `ptr := data`) instead of shuttling through a register pair.
 - `bios_putc` is an external function bound to a fixed ROM address.
 - `push bc` / `pop bc` around the call is necessary because `extern func` carries no register preservation guarantee.
 - Structured control flow (`repeat ... until`) lowers to compiler-generated labels and branches.
@@ -357,15 +357,12 @@ section data vars at $8000
 end
 
 func example(): void
-  hl := count     ; load the 16-bit value stored in 'count' into HL
-  inc hl
-  count := hl     ; store HL back into 'count'
-
-  a := mode       ; load the byte stored in 'mode' into A
-  inc a
-  mode := a       ; store A back into 'mode'
+  succ count      ; in-place increment of the word in 'count'
+  succ mode       ; in-place increment of the byte in 'mode'
 end
 ```
+
+Use `pred` for the symmetric decrement. When you need the loaded value in a register for further arithmetic or flag tests, `a := place` / `inc a` / `place := a` (or the word analogue through `HL`) is still the right shape.
 
 Explicit parentheses on scalar symbols are still accepted but are redundant. In operand position, parentheses always mean memory dereference and may enclose a full `imm` expression, e.g. `ld a, (3 + 2)`.
 
@@ -379,12 +376,10 @@ section data vars at $8000
 end
 
 func update(): void
-  a := player.x       ; read player.x (byte) into A
-  inc a
-  player.x := a       ; write A back to player.x
+  succ player.x       ; in-place increment of the byte field
 
   hl := player.flags  ; read player.flags (word) into HL
-  set 0, l
+  set 0, l            ; bit twiddle still uses a register
   player.flags := hl  ; write back
 end
 ```
@@ -416,9 +411,7 @@ end
 
 func step_sprite(idx: byte): void
   l := idx            ; put index in L (8-bit register)
-  a := sprites[L].x   ; read x field of sprites[L]
-  inc a
-  sprites[L].x := a   ; write back
+  succ sprites[L].x   ; in-place increment of the x field
 end
 ```
 
@@ -1162,9 +1155,8 @@ func sum_bytes(data: addr, count: byte): word
     ptr:   addr
   end
 
-  ; Initialise pointer from argument
-  hl := data
-  ptr := hl
+  ; Initialise pointer from argument (path-to-path; no HL shuttle)
+  ptr := data
 
   b := count       ; loop counter in B
   ld hl, 0            ; running total in HL
@@ -1189,7 +1181,7 @@ Notes:
 - `ptr` is an `addr` local used to persist the pointer across loop iterations.
 - `djnz` uses `B` as the decrement-and-branch counter. Keep `B` free inside the loop body.
 - The result is in `HL` at function exit — the compiler uses this as the `word` return channel.
-- `data` is an `addr` argument: `hl := data` reads the 16-bit value from the IX-relative slot via the compiler's DE-shuttle lowering.
+- `data` is an `addr` argument: `ptr := data` copies that 16-bit value into the `ptr` local using the same value-semantics lowering (no register temporary required for this copy).
 
 ---
 
@@ -1686,12 +1678,10 @@ section data vars at $8000
 end
 
 func update(): void
-  a := player.x       ; read player.x byte into A (value semantics)
-  inc a
-  player.x := a       ; write A back to player.x (value semantics)
+  succ player.x       ; in-place increment of the byte field (value semantics)
 
   hl := player.flags  ; read player.flags word into HL (value semantics)
-  set 0, l               ; set bit 0
+  set 0, l            ; set bit 0
   player.flags := hl  ; write back
 end
 ```
@@ -1773,9 +1763,7 @@ func move_all(): void
   ld b, MaxSprites
   ld hl, 0              ; element index (0-based integer, not byte offset)
 loop:
-  a := sprites[HL].x ; load x field of sprites[HL] (value semantics)
-  inc a
-  sprites[HL].x := a ; write back
+  succ sprites[HL].x ; in-place increment of x (value semantics)
 
   inc hl                ; advance to next index
   djnz loop
@@ -2491,10 +2479,8 @@ func isr_handler(): void
   ld a, 1
   irq_pending := a
 
-  ; Increment counter
-  hl := irq_count    ; value semantics: loads the current count
-  inc hl
-  irq_count := hl    ; store back
+  ; Increment counter (typed in-place update)
+  succ irq_count
 
   restore_all
   reti                ; raw reti — NOT rewritten to epilogue jump

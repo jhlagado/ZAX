@@ -505,6 +505,10 @@ Example: arrays of records lower through storage-path access (informative):
 hl := sprites[C].x   ; load word at sprites[C].x
 sprites[C].x := hl   ; store word to sprites[C].x
 
+; In-place scalar updates prefer succ/pred on the path (no register shuttle):
+succ sprites[C].x
+pred sprites[C].x
+
 ```
 
 ### 5.3 Unions (Overlays)
