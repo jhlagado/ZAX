@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -79,17 +78,22 @@ describe('PR452: conditional jump trace placeholders', () => {
     expect(seenConds.size).toBeGreaterThan(0);
   });
 
-  it('removes jp cc placeholders from the touched checked-in z80 outputs', async () => {
-    const traces = [
-      join(__dirname, '..', 'test', 'codegen-corpus', 'basic_control_flow.z80'),
-      join(__dirname, '..', 'test', 'codegen-corpus', 'pr222_locals_retcc_and_ret.z80'),
-      join(__dirname, '..', 'test', 'codegen-corpus', 'pr258_op_cc_matcher.z80'),
-      join(__dirname, '..', 'test', 'fixtures', 'corpus', 'golden', 'basic_control_flow.z80'),
-    ];
+  it('no jp/jr placeholder conditions in IR for basic_control_flow corpus case', async () => {
+    const entry = join(__dirname, '..', 'test', 'codegen-corpus', 'basic_control_flow.zax');
+    const res = await compilePlacedProgram(entry);
+    expect(res.diagnostics).toEqual([]);
+    const instrs = flattenLoweredInstructions(res.program);
 
-    for (const trace of traces) {
-      const text = (await readFile(trace, 'utf8')).toUpperCase();
-      expect(text).not.toContain('JP CC,');
-    }
+    const hasPlaceholder = instrs.some((ins) => {
+      const head = ins.head.toUpperCase();
+      if (head.startsWith('JP CC') || head.startsWith('JR CC')) return true;
+      if (head === 'JP' || head === 'JR') {
+        const first = ins.operands[0];
+        return first?.kind === 'reg' && first.name.toUpperCase() === 'CC';
+      }
+      return false;
+    });
+
+    expect(hasPlaceholder).toBe(false);
   });
 });
