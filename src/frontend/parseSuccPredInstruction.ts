@@ -53,10 +53,15 @@ export function parseSuccPredInstruction(
     return undefined;
   }
   if (!isAssignmentStoragePath(ea)) {
-    diag(diagnostics, filePath, `"${head}" requires a typed storage path, not an affine address expression`, {
-      line: instrSpan.start.line,
-      column: instrSpan.start.column,
-    });
+    diag(
+      diagnostics,
+      filePath,
+      `"${head}" requires a typed storage path, not an affine address expression`,
+      {
+        line: instrSpan.start.line,
+        column: instrSpan.start.column,
+      },
+    );
     return undefined;
   }
 
