@@ -28,19 +28,40 @@ describe('PR320 extern typed-call preservation', () => {
 
     // extern call site should not push preserves around callee_extern
     const instrs = flattenLoweredInstructions(program);
-    const callIdx = instrs.findIndex(
-      (ins) => ins.head.toUpperCase() === 'CALL' && isImmSymbol(ins.operands[0], 'callee_extern'),
-    );
-    expect(callIdx).toBeGreaterThanOrEqual(0);
-    const window = instrs.slice(Math.max(0, callIdx - 3), callIdx + 1);
-    const hasPush = (reg: string) =>
-      window.some(
-        (ins) =>
-          ins.head.toUpperCase() === 'PUSH' &&
-          isReg(ins.operands[0], reg),
-      );
-    expect(hasPush('AF')).toBe(false);
-    expect(hasPush('BC')).toBe(false);
-    expect(hasPush('DE')).toBe(false);
+    const mainLabelIdx = items.findIndex((item) => item.kind === 'label' && item.name === 'main');
+    expect(mainLabelIdx).toBeGreaterThanOrEqual(0);
+    const mainBlock = items.slice(mainLabelIdx + 1);
+    const mainInstrs = mainBlock
+      .filter((item) => item.kind === 'instr')
+      .map((item) => ({
+        head: item.head,
+        operands: item.operands,
+        bytes: item.bytes,
+      }));
+
+    const isCall = (ins: { head: string; bytes?: number[] }) =>
+      ins.head.toUpperCase() === 'CALL' || (ins.head === '@raw' && ins.bytes?.[0] === 0xcd);
+
+    const callIdxs: number[] = [];
+    for (let i = 0; i < mainInstrs.length; i += 1) {
+      if (isCall(mainInstrs[i])) callIdxs.push(i);
+    }
+    expect(callIdxs.length).toBeGreaterThanOrEqual(2);
+
+    const hasPreservePushes = (idx: number) => {
+      const window = mainInstrs.slice(Math.max(0, idx - 3), idx + 1);
+      const hasPush = (reg: string) =>
+        window.some(
+          (ins) =>
+            ins.head.toUpperCase() === 'PUSH' &&
+            isReg(ins.operands[0], reg),
+        );
+      return hasPush('AF') || hasPush('BC') || hasPush('DE');
+    };
+
+    // Caller-side preservation should not wrap typed calls in main().
+    for (const idx of callIdxs) {
+      expect(hasPreservePushes(idx)).toBe(false);
+    }
   });
 });
