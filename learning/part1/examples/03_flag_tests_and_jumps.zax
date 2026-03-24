@@ -40,13 +40,13 @@ loop_top:
 
   ; --- Part 4: logical operations (and, or, xor) ---
   ld a, $F3                      ; A = %11110011
-  and $0F                        ; A = %00000011; upper nibble cleared; Z clear, C clear
+  and $0F                        ; A = %00000011; upper four bits cleared; Z clear, C clear
 
   ld a, $03                      ; A = %00000011
   or $80                         ; A = %10000011; bit 7 set; Z clear
 
   ld a, $FF                      ; A = %11111111
-  xor $0F                        ; A = %11110000; lower nibble flipped; Z clear
+  xor $0F                        ; A = %11110000; lower four bits flipped; Z clear
 
   xor a                          ; A = 0; Z is set; C is clear
 end
