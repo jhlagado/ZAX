@@ -1,6 +1,5 @@
 import type {
   AddressRange,
-  EmittedAsmTraceEntry,
   EmittedSourceSegment,
 } from '../formats/types.js';
 import type { SectionKind } from './loweringTypes.js';
@@ -76,7 +75,6 @@ export function finalizeProgramEmission(ctx: FinalizationContext): {
   varOk: boolean;
   writtenRange: AddressRange;
   sourceSegments: EmittedSourceSegment[];
-  asmTrace: EmittedAsmTraceEntry[];
 } {
   const { codeBase, dataBase, varBase, codeOk, dataOk, varOk } = computeSectionBases(
     ctx,
@@ -228,6 +226,5 @@ export function finalizeProgramEmission(ctx: FinalizationContext): {
     varOk,
     writtenRange: ctx.computeWrittenRange(ctx.bytes),
     sourceSegments: codeOk ? ctx.rebaseCodeSourceSegments(codeBase, ctx.codeSourceSegments) : [],
-    asmTrace: codeOk ? ctx.rebaseAsmTrace(codeBase, ctx.codeAsmTrace) : [],
   };
 }

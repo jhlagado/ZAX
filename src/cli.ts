@@ -21,7 +21,6 @@ type CliOptions = {
   emitHex: boolean;
   emitD8m: boolean;
   emitListing: boolean;
-  emitAsm: boolean;
   emitAsm80: boolean;
   caseStyle: CaseStyleMode;
   opStackPolicy: OpStackPolicyMode;
@@ -40,7 +39,6 @@ function usage(): string {
     '      --nobin           Suppress .bin',
     '      --nohex           Suppress .hex',
     '      --nod8m           Suppress .d8dbg.json',
-    '      --noasm           Suppress legacy .asm lowering trace',
     '      --asm80           Emit assembler-valid lowered source (.z80)',
     '      --case-style <m>  Case-style lint mode: off|upper|lower|consistent',
     '      --op-stack-policy <m> Op stack-policy mode: off|warn|error',
@@ -67,7 +65,6 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
   let emitHex = true;
   let emitD8m = true;
   let emitListing = true;
-  let emitAsm = true;
   let emitAsm80 = false;
   let caseStyle: CaseStyleMode = 'off';
   let opStackPolicy: OpStackPolicyMode = 'off';
@@ -130,10 +127,6 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
     }
     if (a === '--nod8m') {
       emitD8m = false;
-      continue;
-    }
-    if (a === '--noasm') {
-      emitAsm = false;
       continue;
     }
     if (a === '--asm80') {
@@ -213,7 +206,6 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
     emitHex,
     emitD8m,
     emitListing,
-    emitAsm,
     emitAsm80,
     caseStyle,
     opStackPolicy,
@@ -247,7 +239,6 @@ async function writeArtifacts(
   const binPath = `${base}.bin`;
   const d8mPath = `${base}.d8dbg.json`;
   const lstPath = `${base}.lst`;
-  const asmPath = `${base}.asm`;
   const asm80Path = `${base}.z80`;
 
   const writes: Array<Promise<void>> = [];
@@ -272,11 +263,6 @@ async function writeArtifacts(
   if (lst && lst.kind === 'lst') {
     await ensureDir(lstPath);
     writes.push(writeFile(lstPath, lst.text, 'utf8'));
-  }
-  const asm = byKind.get('asm');
-  if (asm && asm.kind === 'asm') {
-    await ensureDir(asmPath);
-    writes.push(writeFile(asmPath, asm.text, 'utf8'));
   }
   const asm80 = byKind.get('asm80');
   if (asm80 && asm80.kind === 'asm80') {
@@ -335,7 +321,6 @@ export async function runCli(argv: string[]): Promise<number> {
         emitHex: parsed.emitHex,
         emitD8m: parsed.emitD8m,
         emitListing: parsed.emitListing,
-        emitAsm: parsed.emitAsm,
         emitAsm80: parsed.emitAsm80,
         caseStyle: parsed.caseStyle,
         opStackPolicy: parsed.opStackPolicy,

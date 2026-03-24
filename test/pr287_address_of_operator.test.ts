@@ -13,7 +13,7 @@ describe('PR287 explicit address-of operator (@place)', () => {
     const entry = join(__dirname, 'fixtures', 'pr287_address_of_positive.zax');
     const res = await compile(
       entry,
-      { emitBin: false, emitHex: false, emitD8m: false, emitListing: false, emitAsm: false },
+      { emitBin: false, emitHex: false, emitD8m: false, emitListing: false },
       { formats: defaultFormatWriters },
     );
 

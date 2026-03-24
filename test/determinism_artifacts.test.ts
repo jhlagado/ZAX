@@ -36,8 +36,6 @@ function artifactSnapshot(a: Artifact): { kind: string; data: string } | undefin
       const asm80 = a as Asm80Artifact;
       return { kind: 'asm80', data: asm80.text };
     }
-    case 'asm':
-      return undefined;
   }
 }
 

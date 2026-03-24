@@ -44,7 +44,6 @@ import {
 } from '../addressing/steps.js';
 import type { Diagnostic } from '../diagnostics/types.js';
 import type {
-  EmittedAsmTraceEntry,
   EmittedByteMap,
   EmittedSourceSegment,
   SymbolEntry,
@@ -149,12 +148,10 @@ import {
 import {
   alignTo,
   computeWrittenRange,
-  rebaseAsmTrace,
   rebaseCodeSourceSegments,
   writeSection,
 } from './sectionLayout.js';
 import {
-  formatAsmInstrForTrace,
   formatImmExprForAsm,
   formatIxDisp,
   toHexByte,
@@ -218,7 +215,6 @@ export function emitProgram(
   const dataBytes = new Map<number, number>();
   const hexBytes = new Map<number, number>();
   const codeSourceSegments: EmittedSourceSegment[] = [];
-  const codeAsmTrace: EmittedAsmTraceEntry[] = [];
   const loweredAsmStream: LoweredAsmStream = { blocks: [] };
   const loweredAsmBlocksByKey = new Map<string, LoweredAsmStreamBlock>();
   let recordLoweredAsmItem: ((item: LoweredAsmItem, span?: SourceSpan) => void) | undefined;
@@ -361,26 +357,14 @@ export function emitProgram(
     segments.push({ ...currentCodeSegmentTag, start, end });
   };
 
-  const traceInstruction = (offset: number, bytesOut: Uint8Array, text: string): void => {
-    if (bytesOut.length === 0) return;
-    const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
-    trace.push({
-      kind: 'instruction',
-      offset,
-      text,
-      bytes: [...bytesOut],
-    });
-  };
+  // traceInstruction kept as a no-op callback for helpers that still accept it as a parameter.
+  const traceInstruction = (_offset: number, _bytesOut: Uint8Array, _text: string): void => {};
 
-  const traceLabel = (offset: number, name: string, span?: SourceSpan): void => {
-    const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
-    trace.push({ kind: 'label', offset, name });
+  const traceLabel = (_offset: number, name: string, span?: SourceSpan): void => {
     recordLoweredAsmItem?.({ kind: 'label', name }, span);
   };
 
-  const traceComment = (offset: number, text: string): void => {
-    const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
-    trace.push({ kind: 'comment', offset, text });
+  const traceComment = (_offset: number, text: string): void => {
     recordLoweredAsmItem?.({ kind: 'comment', text, origin: 'zax' });
   };
 
@@ -439,7 +423,6 @@ export function emitProgram(
       );
     }
     emitCodeBytes(encoded, span.file);
-    traceInstruction(start, encoded, formatAsmInstrForTrace(head, operands));
     applySpTracking?.(head, operands);
     return true;
   };
@@ -1232,12 +1215,10 @@ export function emitProgram(
     hexBytes: lowered.hexBytes,
     bytes,
     codeSourceSegments,
-    codeAsmTrace,
     alignTo,
     writeSection,
     computeWrittenRange,
     rebaseCodeSourceSegments,
-    rebaseAsmTrace,
     ...(options?.defaultCodeBase !== undefined ? { defaultCodeBase: options.defaultCodeBase } : {}),
   });
   return { ...finalized, loweredAsmStream };

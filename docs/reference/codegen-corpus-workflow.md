@@ -48,8 +48,7 @@ Inspectable mirror output lives in:
 - `test/codegen-corpus/`
 
 The mirror is committed so the curated source files and generated `.z80` /
-`.bin` / `.hex` artifacts can be reviewed side by side. Legacy `.asm` trace
-output may still appear in the mirror for debugging, but it is not canonical.
+`.bin` / `.hex` artifacts can be reviewed side by side.
 The automated golden references remain under `test/fixtures/corpus/`.
 
 ## Supported regeneration command
