@@ -1,6 +1,10 @@
 import type { AsmOperandNode, EaExprNode, ImmExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';
 import type { EaResolution } from './eaResolution.js';
 import type { ValueMaterializationContext } from './valueMaterializationContext.js';
+import {
+  createExactSizeIndexScaling,
+  tryPushRegIndexedArrayAddressWhenUnresolvedEa,
+} from './valueMaterializationIndexing.js';
 import { createHlWordTransport } from './valueMaterializationTransport.js';
 
 export function createValueMaterializationHelpers(ctx: ValueMaterializationContext) {
@@ -27,49 +31,7 @@ export function createValueMaterializationHelpers(ctx: ValueMaterializationConte
     expr: ixDispMemExpr(disp, span),
   });
 
-  const getPow2ShiftCount = (elemSize: number | undefined): number | undefined => {
-    if (elemSize === undefined || !Number.isInteger(elemSize) || elemSize < 1) return undefined;
-    let n = elemSize;
-    let shiftCount = 0;
-    while (n > 1 && (n & 1) === 0) {
-      n >>= 1;
-      shiftCount++;
-    }
-    if (n !== 1 || shiftCount > 15) return undefined;
-    return shiftCount;
-  };
-
-  const emitExactScaleInHl = (elemSize: number, span: SourceSpan): boolean => {
-    const shiftCount = getPow2ShiftCount(elemSize);
-    if (shiftCount !== undefined) {
-      for (let i = 0; i < shiftCount; i++) {
-        if (!ctx.emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'HL' }], span))
-          return false;
-      }
-      return true;
-    }
-
-    if (!Number.isInteger(elemSize) || elemSize < 1) {
-      ctx.diagAt(ctx.diagnostics, span, `Runtime indexing requires a positive exact element size (got ${elemSize}).`);
-      return false;
-    }
-    if (elemSize === 1) return true;
-    if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
-    if (!ctx.emitInstr('ld', [{ kind: 'Reg', span, name: 'D' }, { kind: 'Reg', span, name: 'H' }], span))
-      return false;
-    if (!ctx.emitInstr('ld', [{ kind: 'Reg', span, name: 'E' }, { kind: 'Reg', span, name: 'L' }], span))
-      return false;
-    for (const bit of elemSize.toString(2).slice(1)) {
-      if (!ctx.emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'HL' }], span))
-        return false;
-      if (bit === '1') {
-        if (!ctx.emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span))
-          return false;
-      }
-    }
-    return ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span);
-  };
-
+  const { emitExactScaleInHl } = createExactSizeIndexScaling(ctx);
   const { emitLoadWordFromHlAddress, emitStoreWordToHlAddress } = createHlWordTransport(ctx);
 
   let pushEaAddress: (ea: EaExprNode, span: SourceSpan) => boolean;
@@ -271,72 +233,10 @@ export function createValueMaterializationHelpers(ctx: ValueMaterializationConte
   };
 
   pushEaAddress = (ea: EaExprNode, span: SourceSpan): boolean => {
+    const regIndexedFast = tryPushRegIndexedArrayAddressWhenUnresolvedEa(ctx, ea, span, emitExactScaleInHl);
+    if (regIndexedFast !== null) return regIndexedFast;
+
     const r = ctx.resolveEa(ea, span);
-    if (!r && ea.kind === 'EaIndex' && (ea.index.kind === 'IndexReg8' || ea.index.kind === 'IndexReg16')) {
-      const baseResolved = ctx.resolveEa(ea.base, span);
-      const baseType = ctx.resolveEaTypeExpr(ea.base);
-      if (!baseResolved || !baseType || baseType.kind !== 'ArrayType') return false;
-      const elemSize = ctx.sizeOfTypeExpr(baseType.element);
-      if (elemSize === undefined || !Number.isInteger(elemSize) || elemSize < 1) return false;
-
-      const loadIndexToHL = (): boolean => {
-        const index = ea.index;
-        if (index.kind === 'IndexReg16') {
-          const r16 = index.reg.toUpperCase();
-          if (r16 === 'HL') return true;
-          if (r16 === 'DE' || r16 === 'BC') {
-            const hi = r16 === 'DE' ? 'D' : 'B';
-            const lo = r16 === 'DE' ? 'E' : 'C';
-            return (
-              ctx.emitInstr('ld', [{ kind: 'Reg', span, name: 'H' }, { kind: 'Reg', span, name: hi }], span) &&
-              ctx.emitInstr('ld', [{ kind: 'Reg', span, name: 'L' }, { kind: 'Reg', span, name: lo }], span)
-            );
-          }
-          ctx.diagAt(ctx.diagnostics, span, `Invalid reg16 index "${index.reg}".`);
-          return false;
-        }
-        if (index.kind !== 'IndexReg8') return false;
-        const r8 = index.reg.toUpperCase();
-        if (!ctx.reg8.has(r8)) {
-          ctx.diagAt(ctx.diagnostics, span, `Invalid reg8 index "${index.reg}".`);
-          return false;
-        }
-        return (
-          ctx.emitInstr(
-            'ld',
-            [{ kind: 'Reg', span, name: 'H' }, { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }],
-            span,
-          ) &&
-          ctx.emitInstr('ld', [{ kind: 'Reg', span, name: 'L' }, { kind: 'Reg', span, name: r8 }], span)
-        );
-      };
-
-      if (!loadIndexToHL()) return false;
-      if (!emitExactScaleInHl(elemSize, span)) return false;
-
-      if (baseResolved.kind === 'abs') {
-        ctx.emitAbs16Fixup(0x11, baseResolved.baseLower, baseResolved.addend, span);
-        if (!ctx.emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span))
-          return false;
-        return ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
-      }
-
-      if (!ctx.emitInstr('ex', [{ kind: 'Reg', span, name: 'DE' }, { kind: 'Reg', span, name: 'HL' }], span))
-        return false;
-      if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
-      if (!ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'IX' }], span)) return false;
-      if (!ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'HL' }], span)) return false;
-      if (baseResolved.ixDisp !== 0) {
-        if (!ctx.loadImm16ToDE(baseResolved.ixDisp, span)) return false;
-        if (!ctx.emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span))
-          return false;
-      }
-      if (!ctx.emitInstr('pop', [{ kind: 'Reg', span, name: 'DE' }], span)) return false;
-      if (!ctx.emitInstr('add', [{ kind: 'Reg', span, name: 'HL' }, { kind: 'Reg', span, name: 'DE' }], span))
-        return false;
-      return ctx.emitInstr('push', [{ kind: 'Reg', span, name: 'HL' }], span);
-    }
-
     if (!r) {
       type RuntimeLinear = {
         constTerm: number;
