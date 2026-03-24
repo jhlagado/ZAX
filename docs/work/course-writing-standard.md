@@ -284,13 +284,24 @@ The tightest form of this failure is the "inversion pair": one sentence states
 the negative, the next states the positive. The positive sentence already
 contains everything the reader needs. Cut the negative one.
 
+But stripping the negative is only the first step. The better fix is to deepen
+the positive with a concrete verb or specific detail — not just restate it more
+cleanly.
+
 Bad:
 > A sentinel loop does not count iterations. It tests each element against a
 > known value and stops when it finds a match.
 
-Better:
+Stripped (better, but still flat):
 > A sentinel loop tests each element against a known value and stops when it
 > finds a match.
+
+Deepened (best):
+> A sentinel loop tests each element against a known value. The data tells it
+> when to stop; there is no count to set in advance.
+
+The last version teaches something the stripped version does not: why you would
+choose this shape over a counted loop.
 
 ### 2. Empty rhetoric
 
@@ -437,6 +448,113 @@ If you would not say it aloud to someone sitting next to you learning Z80 for
 the first time, do not write it in the course.
 
 Ask: what am I actually trying to say? Then say that, in plain words.
+
+### 12. Discourse connectors used as padding
+
+"However", "therefore", "moreover", "in addition", "as a result", "in other
+words", "on the other hand" — these are essay connectors. They belong in
+argumentative prose that builds a case step by step. Course teaching is not
+argumentative; it is sequential. When a connector appears, it usually means the
+writer is explaining a relationship they could have just shown directly.
+
+Bad:
+> The Z flag is set after `cp`. However, `ld` does not affect flags.
+
+Better:
+> `cp` sets the Z flag. `ld` does not touch flags at all.
+
+The second version shows the difference directly and costs no extra words. The
+connector "however" implied a contrast the reader had to interpret. Just state
+both facts.
+
+Other signals: "in other words" means the previous sentence was unclear. Fix
+the previous sentence instead of adding a restatement.
+
+### 13. Placeholder nouns
+
+Generic nouns standing in for a specific one:
+
+- "thing" / "things" / "stuff"
+- "aspect" / "aspects"
+- "element" / "elements"
+- "area" / "areas"
+- "part" / "parts"
+
+When these appear as the subject of a sentence, the writer has not decided what
+they are actually talking about. Replace with the specific noun.
+
+Bad:
+> One important aspect to note is that the carry flag is set.
+
+Better:
+> The carry flag is set.
+
+### 14. Weak main verbs
+
+When "make", "get", "have", "use", "do" is the main verb of a sentence, the
+sentence usually has no real precision. Find the specific verb.
+
+Bad:
+> `LD` does the job of copying a value from source to destination.
+
+Better:
+> `LD` copies a value from source to destination.
+
+"Does the job of copying" is three words doing the work of one. The specific
+verb is "copies". Use it.
+
+### 15. Sentence rhythm: S-V-O monotony
+
+A sequence of short sentences all following Subject-Verb-Object locks the prose
+into a flat, mechanical beat. Vary sentence length and opening: start one with
+a clause, end one with the key point, let one sentence carry two related things
+where they belong together. Monotony is its own signal — if you read a
+paragraph aloud and it sounds like a robot listing facts, the structure needs
+changing even if every fact is correct.
+
+This rule is about rhythm, not length. Some short sentences are good. Several in
+a row with the same structure are not.
+
+### 16. Forbidden words (hard blacklist)
+
+These should not appear in course prose under any circumstances:
+
+- `delve` / `dive into`
+- `testament`
+- `vibrant`
+- `comprehensive`
+- `robust` (unless comparing memory architectures)
+- `elegant` / `powerful` / `sophisticated` — let the code prove it
+- `leverage` (use "use")
+- `streamline`
+- `in conclusion`
+- `looking ahead`
+- `navigate` (as a metaphor)
+- `embark`
+
+These words are AI reflex choices. Their presence is a reliable sign that
+the sentence is filling space rather than teaching something.
+
+## Two-level reading
+
+Every section should work on two levels simultaneously.
+
+The **information level** carries facts: what the instruction does, what the
+register holds, what the flag means. This is the minimum. A section that only
+delivers facts is a reference manual, not a course.
+
+The **intent level** carries the reason it matters: why you reach for this
+instruction over that one, what goes wrong when you miss it, where this pattern
+saves time or prevents a bug. A reader should be able to say not just "what did
+I learn" but "why did that matter."
+
+Both levels must be present. A section that only delivers facts is too thin.
+A section that only explains why without grounding in concrete mechanics is
+too vague.
+
+When a section feels weak, ask: does it have both? If the facts are there but
+the intent is missing, add a sentence that connects the mechanics to the
+consequence. If the intent is there but the facts are thin, add an example.
 
 ## Positive writing model
 
@@ -668,7 +786,8 @@ Ask: what is the sentence actually saying, and can it say it directly?
 every occurrence:
 
 - `"is not"` / `"are not"` / `"does not"` — is the negative form followed by a
-  positive that would work alone? Cut the negative.
+  positive that would work alone? Cut the negative. Then deepen the positive with
+  a concrete verb or specific detail rather than just restating it.
 - `"simply"` / `"just"` / `"of course"` — these minimise what the reader may
   find hard. Cut them.
 - `"It is worth"` / `"Note that"` / `"Notice that"` — replace with the direct
@@ -682,6 +801,16 @@ every occurrence:
 - `"That is how X works."` / `"That is simply the way."` — hollow landings that
   restate what was just shown. Cut and end on the last sentence that taught
   something.
+- `"however"` / `"therefore"` / `"moreover"` / `"in addition"` / `"as a result"` /
+  `"in other words"` — essay connectors. Replace with a direct statement of the
+  same relationship. "However, LD does not affect flags" → "LD does not touch
+  flags."
+- `"aspect"` / `"element"` / `"area"` / `"part"` / `"thing"` as a subject noun —
+  placeholder. Replace with the specific thing.
+- `"make"` / `"get"` / `"use"` / `"have"` as the main verb — find the specific verb.
+  "does the job of copying" → "copies".
+- `"delve"` / `"testament"` / `"vibrant"` / `"comprehensive"` / `"robust"` /
+  `"leverage"` / `"elegant"` — hard blacklist. Delete.
 
 **Internal vocabulary**: Search for "idiom", "discipline", "invariant",
 "ergonomic", "bookkeeping cost", "naming pressure", "Phase A", "Phase B",
