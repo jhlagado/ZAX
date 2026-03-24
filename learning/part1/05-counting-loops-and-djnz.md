@@ -6,7 +6,7 @@ There are no loops in assembly. There are no subroutines, no if-statements, no
 structured blocks of any kind. The language is nothing but individual
 instructions, one after another. Every structure that exists in high-level
 languages — loops, conditionals, function calls — you build yourself out of
-jumps and labels. The CPU does exactly what you write, nothing more.
+jumps and labels.
 
 ---
 
@@ -81,9 +81,8 @@ wraps to 255 (`$FF`), the result is non-zero, and the jump is taken. The loop
 continues from B = 255 and runs a further 255 times before B reaches zero again.
 Total: 256 iterations.
 
-This is not a programming error that the hardware catches. It is documented
-hardware behaviour. `ld b, 0 / djnz label` is a valid way to write a 256-
-iteration loop, and some programs use it intentionally. But if you meant *zero*
+The hardware does this deliberately — `ld b, 0 / djnz label` is a valid way
+to write a 256-iteration loop, and some programs use it for exactly that reason. But if you meant *zero*
 iterations and wrote `ld b, 0`, you will get 256. The two are indistinguishable
 to the CPU.
 
@@ -108,8 +107,8 @@ pre-test is needed.
 
 ## What the Registers Hold After a Loop
 
-It is worth pausing to think about what state the CPU is in after a loop
-finishes. Consider this loop, which sums the five bytes `{ 3, 7, 2, 8, 5 }`:
+After a loop exits, all three registers that the loop touched have changed.
+Consider this loop, which sums the five bytes `{ 3, 7, 2, 8, 5 }`:
 
 ```zax
 ld hl, addends
@@ -138,10 +137,9 @@ responsibility — you must track where your pointers end up.
 
 ## Sentinel Loops
 
-A sentinel loop does not count iterations. It tests each element against a
-known value — the **sentinel** — and stops when it finds a match. This is the
-right shape when you do not know how many elements to process; the data tells
-you when to stop.
+A sentinel loop tests each element against a known value — the **sentinel** —
+and stops when it finds a match. Use this shape when the data tells you when
+to stop, not a count you set in advance.
 
 The structure uses `cp` and `jr z` instead of DJNZ as the exit mechanism:
 

@@ -48,8 +48,6 @@ branch that reads it.
 but does **not** store the result back in A. After `cp n`, A is unchanged and
 the flags reflect `A − n`.
 
-This is the standard way to test a relationship between A and a value:
-
 ```zax
 ld a, 5
 cp 5      ; A - 5 = 0; Z flag is set, C flag is clear
@@ -86,9 +84,8 @@ ld a, $FF
 or a       ; Z is clear because A is non-zero
 ```
 
-`or a` does not require knowing what value to compare against — it simply
-reflects whether A is currently zero. It is also shorter than `cp 0`: one
-byte instead of two. You will see it constantly.
+`or a` doesn't need a comparison value — it reflects whether A is currently
+zero. It is also one byte shorter than `cp 0`. You will see it constantly.
 
 ---
 
@@ -108,7 +105,7 @@ done:
 ```
 
 The assembler resolves `done` to its address and encodes it into the instruction.
-This is the unconditional jump: it always branches, no matter what the flags say.
+The jump always happens — the flags are not consulted.
 
 ---
 
@@ -194,9 +191,8 @@ above: bit 7 is set, the value is negative, and `neg` flips the sign.
 
 This works because signed and unsigned representations share the same bits. The
 value 128 is the dividing line: 0–127 on the non-negative side, 128–255 on the
-negative side when read as signed. Note that `neg` applied to −128 gives −128
-again — the mathematical result (+128) does not fit in a signed byte, so the
-bit pattern `$80` is unchanged.
+negative side when read as signed. `neg` applied to −128 gives −128 again — the mathematical result (+128) does
+not fit in a signed byte, so the bit pattern `$80` is unchanged.
 
 ---
 
@@ -218,7 +214,7 @@ A simple loop has a similar shape:
 5. Test the exit condition.
 6. Conditionally jump back to the loop-top label.
 
-Both structures are visible in the example file.
+The example file below runs both back to back so you can trace each one.
 
 ---
 
