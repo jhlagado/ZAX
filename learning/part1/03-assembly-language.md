@@ -67,7 +67,7 @@ section data state at $8000
 end
 ```
 
-The `state` part is just a name for the block. The important part is `data` and
+The `state` part is a user-chosen name for the block. The important part is `data` and
 `at $8000`: this is data storage, and it begins at address `$8000`.
 
 Do not treat the section line as decoration. It is the line that tells the
@@ -104,10 +104,10 @@ ld destination, source
 `LD` does not affect the flags register. It is a pure copy — the source stays
 as it was, the destination receives the value, and nothing else happens.
 
-The easy mistake is to think `LD` means "put anything anywhere." It does not.
-The Z80 implements specific load forms and no others. Some go between
-registers. Some go between a register and memory. Some take an immediate
-constant. The hardware decides which combinations exist.
+The easy mistake is thinking `LD` means "put anything anywhere" — the Z80
+implements specific load forms and no others. Some go between registers. Some
+go between a register and memory. Some take an immediate constant. The hardware
+decides which combinations exist.
 
 One rule to internalise now: **parentheses always indicate a memory access.**
 `LD A, B` copies the register B into A. `LD A, (HL)` reads the byte from
@@ -169,7 +169,7 @@ ld (iy-2), a    ; byte at address IY-2 = A
 ld (ix+1), $3F  ; byte at address IX+1 = $3F
 ```
 
-You set IX or IY to point at the start of some region of memory, then access individual bytes at known offsets. This turns out to be extremely useful — you will see why when we get to functions and data tables.
+Point IX at the start of a data record and `(IX+0)`, `(IX+1)`, `(IX+2)` address each field directly — no reloading the base address between accesses. That makes IX the natural choice for iterating over fixed-size records.
 
 ### Memory access through BC or DE
 
@@ -205,7 +205,7 @@ ld a, ($8000)
 ld ($8001), a
 ```
 
-This catches everyone at first. The CPU can talk to memory or to its own registers, but it cannot move data from one memory location to another without passing it through a register on the way. That is simply how the hardware works.
+This catches everyone at first. The CPU can talk to memory or to its own registers, but it cannot move data from one memory location to another without passing it through a register on the way.
 
 ### Summary of LD forms
 
@@ -239,7 +239,7 @@ As a **signed** value using two's complement, bit 7 is the sign bit. If bit 7 is
 
 To compute the two's complement of a positive value: invert all bits and add one. The two's complement of `$01` (`%00000001`) is `%11111110 + 1 = %11111111 = $FF`, which is −1.
 
-Here is the important part: the CPU does not know which interpretation you intend. `ADD A, B` performs the same bitwise addition regardless. The result is the same bit pattern either way. Only the meaning you assign to it, and which flags you check afterward, determines the interpretation. Chapter 4 covers flags in detail.
+The CPU does not know which interpretation you intend. `ADD A, B` performs the same bitwise addition regardless. The result is the same bit pattern either way. Only the meaning you assign to it, and which flags you check afterward, determines the interpretation. Chapter 4 covers flags in detail.
 
 ---
 
@@ -353,8 +353,6 @@ Two other exchange instructions exist: `EX AF, AF'` swaps AF with its shadow cou
 ---
 
 ## Arithmetic Instructions Are Not Operators
-
-This is the section that saves you from your first truly baffling bug.
 
 In a language like C, `a + b` produces a result without changing either variable. In Z80 assembly, `ADD A, B` adds B to A and **writes the result back into A**, destroying whatever A held before. The instruction is not an operator that produces a value — it is a complete operation that modifies a register. Every instruction after it sees the new value of A, not the old one.
 
