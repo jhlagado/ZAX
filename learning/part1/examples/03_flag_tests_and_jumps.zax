@@ -1,4 +1,4 @@
-; Chapter 03 example: cp, or a, conditional jp, and a label-based counted loop
+; Chapter 04 example: cp, or a, conditional jp, label-based counted loop, and logical ops
 
 const Limit = 5                  ; loop will run this many times
 
@@ -37,4 +37,16 @@ loop_top:
   ld (counter), a                ; counter++
   dec b                          ; B--; sets Z when B reaches 0
   jp nz, loop_top                ; repeat while B != 0
+
+  ; --- Part 4: logical operations (and, or, xor) ---
+  ld a, $F3                      ; A = %11110011
+  and $0F                        ; A = %00000011; upper nibble cleared; Z clear, C clear
+
+  ld a, $03                      ; A = %00000011
+  or $80                         ; A = %10000011; bit 7 set; Z clear
+
+  ld a, $FF                      ; A = %11111111
+  xor $0F                        ; A = %11110000; lower nibble flipped; Z clear
+
+  xor a                          ; A = 0; Z is set; C is clear
 end
