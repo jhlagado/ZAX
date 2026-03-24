@@ -137,8 +137,8 @@ ld ix, $4000    ; IX = $4000
 
 ### Memory access through HL
 
-HL is the primary indirect address register. `(HL)` means "the byte at the
-address currently in HL." Once an address is in HL, you can read or write the byte there directly.
+Load an address into HL and it points to that location in memory. `(HL)` means
+the byte at the address HL holds — you can read or write it directly.
 
 ```zax
 ld a, (hl)     ; A = byte at address HL
