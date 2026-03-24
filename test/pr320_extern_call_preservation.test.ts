@@ -5,7 +5,6 @@ import {
   compilePlacedProgram,
   flattenLoweredItems,
   flattenLoweredInstructions,
-  formatLoweredInstruction,
 } from './helpers/lowered_program.js';
 
 const fixture = join(__dirname, 'fixtures', 'pr320_extern_and_internal_calls.zax');
@@ -20,17 +19,16 @@ describe('PR320 extern typed-call preservation', () => {
     const labelIdx = items.findIndex((item) => item.kind === 'label' && item.name === 'callee_internal');
     expect(labelIdx).toBeGreaterThanOrEqual(0);
     const prologueItems = items.slice(labelIdx + 1, labelIdx + 12).filter((item) => item.kind === 'instr');
-    const prologueLines = prologueItems.map((item) =>
-      formatLoweredInstruction({
-        head: item.head,
-        operands: item.operands,
-        ...(item.bytes ? { bytes: item.bytes } : {}),
-        block: program.blocks[0],
-      }).toUpperCase(),
-    );
-    expect(prologueLines).toContain('PUSH AF');
-    expect(prologueLines).toContain('PUSH BC');
-    expect(prologueLines).toContain('PUSH DE');
+    const hasProloguePush = (reg: string) =>
+      prologueItems.some(
+        (item) =>
+          item.head.toUpperCase() === 'PUSH' &&
+          item.operands[0]?.kind === 'reg' &&
+          item.operands[0].name.toUpperCase() === reg,
+      );
+    expect(hasProloguePush('AF')).toBe(true);
+    expect(hasProloguePush('BC')).toBe(true);
+    expect(hasProloguePush('DE')).toBe(true);
 
     // extern call site should not push preserves around callee_extern
     const instrs = flattenLoweredInstructions(program);
