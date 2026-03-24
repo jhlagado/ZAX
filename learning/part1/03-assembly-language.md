@@ -114,10 +114,9 @@ instructions look similar, but they do completely different things. Miss the
 parentheses and you have written a different instruction. This is one of the
 first easy mistakes in assembly.
 
-The easy temptation is to think `LD` means "put anything anywhere." It does
-not. The Z80 implements specific load forms and no others. The hardware decides
-which combinations exist. The legal forms fall into a small number of families;
-learn the family, and the individual examples inside it make sense.
+The Z80 implements specific load forms and no others. The hardware decides
+which combinations exist. Learn the family, and the individual examples inside
+it make sense.
 
 ### 8-bit register to register
 
@@ -212,7 +211,7 @@ ld ($8001), a
 
 This catches everyone at first. The CPU can talk to memory or to its own
 registers, but it cannot move data from one memory location to another without
-passing it through a register on the way. That is simply how the hardware works.
+passing it through a register on the way.
 
 ### Summary of LD forms
 
@@ -250,10 +249,10 @@ To compute the two's complement of a positive value: invert all bits and add
 one. The two's complement of `$01` (`%00000001`) is `%11111110 + 1 =
 %11111111 = $FF`, which is −1.
 
-The important part: the CPU does not know which interpretation you intend.
-`ADD A, B` performs the same bitwise addition regardless. Only the meaning you
-assign to the result — and which flags you check afterward — determines the
-interpretation. Chapter 4 covers flags in detail.
+`ADD A, B` performs the same bitwise addition regardless of interpretation.
+The result is the same bit pattern either way. Which flags you check afterward
+is what separates a signed from an unsigned calculation. Chapter 4 covers flags
+in detail.
 
 ---
 
@@ -388,13 +387,10 @@ For now, `EX DE, HL` is the one you will use.
 
 ## Arithmetic Instructions Are Not Operators
 
-This is the section that saves you from your first truly baffling bug.
-
 In a language like C, `a + b` produces a result without changing either
 variable. In Z80 assembly, `ADD A, B` adds B to A and **writes the result back
-into A**, destroying whatever A held before. The instruction is not an operator
-that produces a value — it is a complete operation that modifies a register.
-Every instruction after it sees the new value of A, not the old one.
+into A**, destroying whatever A held before. Every instruction after it sees
+the new value of A.
 
 This matters as soon as you write code longer than a few lines. Here is a
 calculation of a rectangle's perimeter, with width and height stored in memory:
@@ -426,10 +422,10 @@ The final `ADD A, A` does not double the original width — it doubles the
 running total, which by that point is already Height + 2 × Width. The result is
 2 × Width too large.
 
-The mistake is natural if you think of `ADD` as algebra. It is not. Every
-instruction modifies its destination in place, and every subsequent instruction
-sees the modified value. This kind of ordering bug is common in assembly, easy
-to miss, and produces no error message — just a wrong answer. Be prepared for it.
+Every instruction modifies its destination in place. The next instruction sees
+the new value. If you were thinking of `ADD` like an algebraic operator — one
+that produces a value without touching its inputs — that assumption will produce
+bugs that generate no error message, just a wrong answer.
 
 Besides `ADD`, the Z80 has `INC` (increment by one) and `DEC` (decrement by
 one). `INC A` adds 1 to A; `DEC B` subtracts 1 from B. Both affect the flags

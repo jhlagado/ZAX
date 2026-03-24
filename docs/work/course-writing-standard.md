@@ -280,6 +280,18 @@ Z well enough for the contrast to teach something.
 If the reader does not understand the negated thing, the paragraph teaches
 nothing.
 
+The tightest form of this failure is the "inversion pair": one sentence states
+the negative, the next states the positive. The positive sentence already
+contains everything the reader needs. Cut the negative one.
+
+Bad:
+> A sentinel loop does not count iterations. It tests each element against a
+> known value and stops when it finds a match.
+
+Better:
+> A sentinel loop tests each element against a known value and stops when it
+> finds a match.
+
 ### 2. Empty rhetoric
 
 Avoid words and phrases like:
@@ -319,6 +331,89 @@ Watch for this failure mode:
 - none of the three sentences actually teach anything
 
 Cut this aggressively.
+
+### 7. Hollow landing sentences
+
+These sentences appear at the end of a paragraph or section and look like they
+are drawing a conclusion. They are not. They restate what was just shown, add
+"that is just how it works", and teach nothing.
+
+Patterns to cut:
+
+- "That is simply how the hardware works."
+- "The CPU does exactly what you write, nothing more."
+- "This is just the way Z80 assembly operates."
+- "There is no way around this."
+- "Nothing happens unless you ask for it."
+
+These are closing flourishes. If the explanation before them was clear, the
+sentence adds nothing. If it was not clear, the sentence does not fix it. Cut
+them and end on the last sentence that actually teaches.
+
+### 8. "This is the standard way to..."
+
+Avoid classifying an idiom before showing it. The classification adds no
+information — it tells the reader how to feel about what follows, not what
+follows. Show the pattern, explain what it does and why. If it is common, the
+reader will discover that through use.
+
+Bad:
+> This is the standard way to test whether A holds zero without a comparison.
+> `or a` / `jr z, target`
+
+Better:
+> `or a` sets Z if A is zero, without changing A and without needing a
+> comparison value. One byte instead of two.
+
+### 9. Performative section openers
+
+Avoid sentences that announce the importance of what follows rather than
+delivering it:
+
+- "This is the section that saves you from your first truly baffling bug."
+- "This is the key insight."
+- "What follows is the most important rule in this chapter."
+
+These are stage directions. They create an expectation and then make the reader
+wait for the real content. Start with the content.
+
+### 10. "It is worth..." and "Note that..."
+
+Cut on sight:
+
+- "It is worth noting that..."
+- "It is worth pausing to consider..."
+- "Note that..."
+- "Notice that..."
+- "It should be mentioned that..."
+
+These are hedges the writer uses instead of stating a thing directly. Every
+one of them can be replaced by just stating the thing.
+
+Bad:
+> It is worth pausing to think about what state the CPU is in after a loop.
+
+Better:
+> After a loop exits, all three registers the loop touched have changed.
+
+### 11. Redundant intensifiers at sentence end
+
+Watch for phrases appended to a sentence that already made its point:
+
+- "nothing more"
+- "no matter what"
+- "regardless"
+- "in any case"
+- "at all times"
+
+Bad:
+> The CPU does exactly what you write, nothing more.
+
+Better:
+> The CPU does exactly what you write.
+
+The word "exactly" already closes the claim. "Nothing more" is the writer
+making sure you heard it — which is not the writer's job.
 
 ### 5. Historical name-dropping without teaching value
 
@@ -568,6 +663,25 @@ manual? If yes, rewrite it as something a person would say.
 "It is", "This is", or "That is" and do no teaching work. Some are fine — but
 when a section has several in a row, each one is probably deferring real content.
 Ask: what is the sentence actually saying, and can it say it directly?
+
+**AI-specific tic check**: Search the text for these exact strings and challenge
+every occurrence:
+
+- `"is not"` / `"are not"` / `"does not"` — is the negative form followed by a
+  positive that would work alone? Cut the negative.
+- `"simply"` / `"just"` / `"of course"` — these minimise what the reader may
+  find hard. Cut them.
+- `"It is worth"` / `"Note that"` / `"Notice that"` — replace with the direct
+  statement the writer was about to hedge.
+- `"This is the standard way"` / `"This is the primary"` / `"This is the most
+  common"` — cut the classification; the explanation that follows stands alone.
+- `"nothing more"` / `"no more than"` / `"no less than"` — redundant intensifiers
+  that follow a sentence that already closed its claim.
+- `"as we will see later"` / `"you will see why"` / `"this will become clear"` —
+  either earn the payoff now or cut the deferral.
+- `"That is how X works."` / `"That is simply the way."` — hollow landings that
+  restate what was just shown. Cut and end on the last sentence that taught
+  something.
 
 **Internal vocabulary**: Search for "idiom", "discipline", "invariant",
 "ergonomic", "bookkeeping cost", "naming pressure", "Phase A", "Phase B",
