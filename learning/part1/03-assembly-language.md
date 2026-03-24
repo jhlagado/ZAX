@@ -104,18 +104,16 @@ ld destination, source
 `LD` does not affect the flags register. It is a pure copy — the source stays
 as it was, the destination receives the value, and nothing else happens.
 
-The easy mistake is thinking `LD` means "put anything anywhere" — the Z80
-implements specific load forms and no others. Some go between registers. Some
-go between a register and memory. Some take an immediate constant. The hardware
-decides which combinations exist.
+Every legal `LD` has a source and a destination. A source can be a register,
+an immediate constant encoded directly in the instruction, or a byte in memory.
+A destination can be a register or a byte in memory. **Parentheses always mean
+memory**: `LD A, B` copies register B into A, while `LD A, (HL)` reads the
+byte at the address held in HL. Miss the parentheses and you have written a
+completely different instruction.
 
-One rule to internalise now: **parentheses always indicate a memory access.**
-`LD A, B` copies the register B into A. `LD A, (HL)` reads the byte from
-memory at the address stored in HL. Miss the parentheses and you have written a
-different instruction. This is one of the first easy mistakes in assembly.
-
-The legal forms fall into a small number of families. Learn the family, then
-the individual examples inside it make sense.
+The Z80 implements specific pairings of those source and destination types —
+not all combinations are legal. The families below show exactly which ones
+exist.
 
 ### 8-bit register to register
 
@@ -180,7 +178,9 @@ ld a, (bc)     ; A = byte at address BC
 ld (de), a     ; byte at address DE = A
 ```
 
-Neither `LD B, (BC)` nor `LD (DE), H` is legal. If you try, the assembler will tell you.
+These are compact single-byte opcodes with A hardcoded in the instruction
+encoding. The Z80 simply has no opcodes for `LD B, (BC)` or any other register
+with those indirect modes — the assembler will tell you if you try.
 
 ### Direct memory address
 
@@ -239,7 +239,14 @@ As a **signed** value using two's complement, bit 7 is the sign bit. If bit 7 is
 
 To compute the two's complement of a positive value: invert all bits and add one. The two's complement of `$01` (`%00000001`) is `%11111110 + 1 = %11111111 = $FF`, which is −1.
 
-The CPU does not know which interpretation you intend. `ADD A, B` performs the same bitwise addition regardless. The result is the same bit pattern either way. Only the meaning you assign to it, and which flags you check afterward, determines the interpretation. Chapter 4 covers flags in detail.
+The CPU does not know which interpretation you intend. `ADD A, B` performs the
+same bitwise addition regardless — the result byte is identical whether you
+treat the inputs as signed or unsigned. Where the difference surfaces: `$80 +
+$01` gives `$81`. Read as unsigned that is 128 + 1 = 129. Read as signed that
+is −128 + 1 = −127. Same instruction, same output, two different numbers. The
+bug appears when one part of your program writes a value intending it as signed
+and another reads it as unsigned. Chapter 4 shows how the flags let you select
+which interpretation the CPU acts on.
 
 ---
 
@@ -272,9 +279,11 @@ section data state at $8000
 end
 ```
 
-`count` starts at `$8000`. `scratch` follows immediately after it at `$8001`,
-because `count` is one byte wide. Since `scratch` is a word, it occupies two
-bytes: `$8001` and `$8002`.
+`count` starts at `$8000`. `scratch` follows immediately at `$8001`, because
+`count` is one byte wide. Since `scratch` is a word, it occupies two bytes:
+`$8001` and `$8002`. The assembler computes all of this — you declare the
+variables in order and it assigns the addresses. Change `count` to a word later
+and every address below it shifts without touching the code that accesses them.
 
 You access named storage with parentheses — the same notation you use for any
 memory address:
@@ -352,39 +361,17 @@ Two other exchange instructions exist: `EX AF, AF'` swaps AF with its shadow cou
 
 ---
 
-## Arithmetic Instructions Are Not Operators
+## ADD, INC, and DEC
 
-In a language like C, `a + b` produces a result without changing either variable. In Z80 assembly, `ADD A, B` adds B to A and **writes the result back into A**, destroying whatever A held before. The instruction is not an operator that produces a value — it is a complete operation that modifies a register. Every instruction after it sees the new value of A, not the old one.
+`ADD A, B` adds B to A and **writes the result back into A**. The original
+value of A is gone after the instruction; the next instruction sees A's new
+value. If you need A's original value later, copy it to another register before
+the `ADD`.
 
-This matters as soon as you write code longer than a few lines. Here is a calculation of a rectangle's perimeter, with width and height stored in memory:
-
-```zax
-ld a, (Width)       ; A = Width
-add a, a            ; A = Width × 2
-ld b, a             ; B = Width × 2
-ld a, (Height)      ; A = Height
-add a, a            ; A = Height × 2
-add a, b            ; A = Height×2 + Width×2
-ld (Perim), a       ; store result
-```
-
-Correct: 2 × Width + 2 × Height. Now consider rearranging the additions, thinking that addition is commutative and the order does not matter:
-
-```zax
-ld a, (Width)       ; A = Width
-ld b, a             ; B = Width
-ld a, (Height)      ; A = Height
-add a, b            ; A = Height + Width
-add a, b            ; A = Height + Width + Width
-add a, a            ; A = (Height + 2×Width) × 2    ← WRONG
-ld (Perim), a       ; stores the wrong value
-```
-
-The final `ADD A, A` does not double the original width — it doubles the running total, which by that point is already Height + 2 × Width. The result is 2 × Width too large.
-
-The mistake is natural if you think of `ADD` as algebra. It is not. Every instruction modifies its destination in place, and every subsequent instruction sees the modified value. This kind of ordering bug is common in assembly, easy to miss, and produces no error message — just a wrong answer. Be prepared for it.
-
-Besides `ADD`, the Z80 has `INC` (increment by one) and `DEC` (decrement by one). `INC A` adds 1 to A; `DEC B` subtracts 1 from B. Both affect the flags register — importantly, `DEC` sets the Zero flag when the result reaches zero, which makes it useful for counting loops. All three instructions share the same trait: they modify their operand in place.
+`INC r` adds 1 to register r; `DEC r` subtracts 1. Both modify the register in
+place and update the flags. `DEC` in particular sets the Zero flag when the
+result reaches zero — that flag is the exit condition for the counted-loop
+patterns in Chapters 4 and 5.
 
 ---
 
@@ -463,8 +450,8 @@ single byte.
 - `const` names a fixed value substituted at assembly time; it produces no output bytes
 - IXH, IXL, IYH, IYL are usable as extra byte registers, but cannot be mixed with H/L or each other's pair in one instruction
 - `EX DE, HL` swaps the two pairs in one instruction
-- Arithmetic instructions modify the destination register in place — `ADD A, B` destroys A's old value; ordering matters
-- `INC` and `DEC` add or subtract 1 and affect the flags register
+- `ADD A, B` writes the result back into A, destroying its previous value; copy A to another register first if you need it later
+- `INC r` and `DEC r` add or subtract 1 in place and update the flags; `DEC` sets the Zero flag at zero, making it useful as a loop counter
 
 ---
 
