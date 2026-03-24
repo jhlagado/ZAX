@@ -15,10 +15,7 @@ import {
 } from './parseImm.js';
 import { parseDiag as diag, parseDiagAtWithId } from './parseDiagnostics.js';
 import { ALL_REGISTER_NAMES, INDEX_REG16_NAMES, INDEX_REG8_NAMES } from './grammarData.js';
-import {
-  isAssignmentStoragePath,
-  parseAssignmentInstruction,
-} from './parseAssignmentInstruction.js';
+import { parseAssignmentInstruction } from './parseAssignmentInstruction.js';
 import { parseSuccPredInstruction } from './parseSuccPredInstruction.js';
 
 function parseBalancedContent(
