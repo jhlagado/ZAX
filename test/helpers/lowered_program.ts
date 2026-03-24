@@ -153,6 +153,10 @@ export function formatLoweredInstruction(view: LoweredInstrView): string {
   return ops.length ? `${head} ${ops.join(', ')}` : head;
 }
 
+export function formatLoweredInstructions(program: LoweredAsmProgram): string[] {
+  return flattenLoweredInstructions(program).map(formatLoweredInstruction);
+}
+
 export function operandUsesIx(op: LoweredOperand): boolean {
   if (op.kind !== 'mem' && op.kind !== 'ea') return false;
   const usesIx = (expr: LoweredEaExpr): boolean => {

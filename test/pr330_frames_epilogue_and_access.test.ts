@@ -3,29 +3,29 @@ import { join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
-import { DiagnosticIds } from '../src/diagnostics/types.js';
+import { compilePlacedProgram, flattenLoweredInstructions, isMemIxDisp, operandUsesIx } from './helpers/lowered_program.js';
 
 describe('PR330: frame access + synthetic epilogue rules', () => {
   it('loads/stores frame slots without illegal IX+H/L forms and uses DE shuttle', async () => {
     const entry = join(__dirname, 'fixtures', 'pr330_frame_access_positive.zax');
-    const res = await compile(
-      entry,
-      { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
-    );
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const { program, diagnostics } = await compilePlacedProgram(entry);
+    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
 
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
+    const instrs = flattenLoweredInstructions(program);
+    const hasLdRegFromIx = (reg: string, disp: number) =>
+      instrs.some((ins) => ins.head.toUpperCase() === 'LD' && ins.operands[0]?.kind === 'reg' && ins.operands[0].name.toUpperCase() === reg && isMemIxDisp(ins.operands[1], disp));
+    const hasLdIxFromReg = (disp: number, reg: string) =>
+      instrs.some((ins) => ins.head.toUpperCase() === 'LD' && isMemIxDisp(ins.operands[0], disp) && ins.operands[1]?.kind === 'reg' && ins.operands[1].name.toUpperCase() === reg);
 
-    expect(text).toContain('LD E, (IX + $0004)');
-    expect(text).toContain('LD D, (IX + $0005)');
-    expect(text).toContain('LD (IX - $0002), E');
-    expect(text).toContain('LD (IX - $0001), D');
-    expect(text).not.toMatch(/LD\s+L, \(IX/i);
-    expect(text).not.toMatch(/LD\s+H, \(IX/i);
+    expect(hasLdRegFromIx('E', 4)).toBe(true);
+    expect(hasLdRegFromIx('D', 5)).toBe(true);
+    expect(hasLdIxFromReg(-2, 'E')).toBe(true);
+    expect(hasLdIxFromReg(-1, 'D')).toBe(true);
+
+    const hasLdLFromIx = instrs.some((ins) => ins.head.toUpperCase() === 'LD' && ins.operands[0]?.kind === 'reg' && ins.operands[0].name.toUpperCase() === 'L' && ins.operands[1] && operandUsesIx(ins.operands[1]));
+    const hasLdHFromIx = instrs.some((ins) => ins.head.toUpperCase() === 'LD' && ins.operands[0]?.kind === 'reg' && ins.operands[0].name.toUpperCase() === 'H' && ins.operands[1] && operandUsesIx(ins.operands[1]));
+    expect(hasLdLFromIx).toBe(false);
+    expect(hasLdHFromIx).toBe(false);
   });
 
   it('rejects retn/reti when a framed function requires epilogue cleanup', async () => {

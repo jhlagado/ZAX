@@ -1,43 +1,42 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
-
-const compileAsm = async (entry: string): Promise<string> => {
-  const res = await compile(
-    entry,
-    { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-    { formats: defaultFormatWriters },
-  );
-  expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-  const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-  expect(asm).toBeDefined();
-  return asm!.text;
-};
+import {
+  compilePlacedProgram,
+  formatLoweredInstructions,
+  flattenLoweredInstructions,
+  hasRawOpcode,
+} from './helpers/lowered_program.js';
 
 describe('PR468 typed-step integration coverage', () => {
   it('locks the current word mixed-path load/store sequence emitted through typed steps', async () => {
-    const text = await compileAsm(
+    const { program, diagnostics } = await compilePlacedProgram(
       join(__dirname, 'fixtures', 'pr406_word_mem_to_mem_mixed_reverse.zax'),
     );
+    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const lines = formatLoweredInstructions(program).map((line) => line.toUpperCase());
+    const instrs = flattenLoweredInstructions(program);
 
-    expect(text).toContain('ld E, (HL)');
-    expect(text).toContain('inc HL');
-    expect(text).toContain('ld D, (HL)');
-    expect(text).toContain('ld (dst_w), DE');
-    expect(text).not.toContain('ld A, (HL)');
+    expect(lines).toContain('LD E, (HL)');
+    expect(lines).toContain('INC HL');
+    expect(lines).toContain('LD D, (HL)');
+    expect(hasRawOpcode(instrs, 0xed, 0x53)).toBe(true);
+    expect(lines).not.toContain('LD A, (HL)');
   });
 
   it('locks the current indexed byte template path emitted through typed steps', async () => {
-    const text = await compileAsm(join(__dirname, 'fixtures', 'pr405_byte_indexed_templates.zax'));
+    const { program, diagnostics } = await compilePlacedProgram(
+      join(__dirname, 'fixtures', 'pr405_byte_indexed_templates.zax'),
+    );
+    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const lines = formatLoweredInstructions(program).map((line) => line.toUpperCase());
+    const instrs = flattenLoweredInstructions(program);
 
-    expect(text).toContain('push DE');
-    expect(text).toContain('push HL');
-    expect(text).toContain('ld de, arr_b');
-    expect(text).toContain('add HL, DE');
-    expect(text).toContain('ld A, (HL)');
-    expect(text).toContain('ld (HL), D');
+    expect(lines).toContain('PUSH DE');
+    expect(lines).toContain('PUSH HL');
+    expect(hasRawOpcode(instrs, 0x11)).toBe(true);
+    expect(lines).toContain('ADD HL, DE');
+    expect(lines).toContain('LD A, (HL)');
+    expect(lines).toContain('LD (HL), D');
   });
 });

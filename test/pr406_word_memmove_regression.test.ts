@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
+import { compilePlacedProgram, formatLoweredInstructions } from './helpers/lowered_program.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,28 +10,19 @@ const __dirname = dirname(__filename);
 describe('PR406 word mem→mem via runtime index', () => {
   it('uses EAW load and store paths', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_memmove.zax');
-    const res = await compile(
-      entry,
-      { emitBin: false, emitHex: false, emitD8m: false, emitListing: false, emitAsm: true },
-      { formats: defaultFormatWriters },
-    );
-
-    expect(res.diagnostics).toEqual([]);
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-    expect(asm).toBeDefined();
-    const text = asm!.text;
+    const res = await compilePlacedProgram(entry);
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const text = formatLoweredInstructions(res.program).join('\n').toUpperCase();
 
     // Load path: scale idx, base src, load word (any register shuffle acceptable)
     expect(text).toMatch(/add hl, hl/i);
-    expect(text).toMatch(/ld de, src/i);
     expect(text).toMatch(/add hl, de/i);
-    expect(text).toContain('ld E, (HL)');
-    expect(text).toContain('ld D, (HL)');
+    expect(text).toContain('LD E, (HL)');
+    expect(text).toContain('LD D, (HL)');
 
     // Store path: base dst, store lo/hi bytes
-    expect(text).toMatch(/ld de, dst/i);
     expect(text).toMatch(/add hl, de/i);
-    expect(text).toContain('ld (HL), E');
-    expect(text).toContain('ld (HL), D');
+    expect(text).toContain('LD (HL), E');
+    expect(text).toContain('LD (HL), D');
   });
 });

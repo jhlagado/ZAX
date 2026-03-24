@@ -7,7 +7,6 @@ import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import type {
   Artifact,
-  AsmArtifact,
   Asm80Artifact,
   BinArtifact,
   HexArtifact,
@@ -18,7 +17,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 describe('examples', () => {
-  function artifactSnapshot(a: Artifact): { kind: string; data: string } {
+  function artifactSnapshot(a: Artifact): { kind: string; data: string } | undefined {
     switch (a.kind) {
       case 'bin': {
         const bin = a as BinArtifact;
@@ -35,14 +34,12 @@ describe('examples', () => {
         const lst = a as ListingArtifact;
         return { kind: 'lst', data: lst.text };
       }
-      case 'asm': {
-        const asm = a as AsmArtifact;
-        return { kind: 'asm', data: asm.text };
-      }
-      case 'asm80': {
-        const asm80 = a as Asm80Artifact;
-        return { kind: 'asm80', data: asm80.text };
-      }
+    case 'asm80': {
+      const asm80 = a as Asm80Artifact;
+      return { kind: 'asm80', data: asm80.text };
+    }
+    case 'asm':
+      return undefined;
     }
   }
 
@@ -76,12 +73,12 @@ describe('examples', () => {
     for (const entry of entries) {
       const first = await compile(entry, {}, { formats: defaultFormatWriters });
       expect(first.diagnostics.length).toBeGreaterThanOrEqual(0);
-      const firstSnap = first.artifacts.map(artifactSnapshot);
+      const firstSnap = first.artifacts.map(artifactSnapshot).filter(Boolean);
 
       for (let i = 0; i < 3; i++) {
         const next = await compile(entry, {}, { formats: defaultFormatWriters });
         expect(next.diagnostics.length).toBeGreaterThanOrEqual(0);
-        expect(next.artifacts.map(artifactSnapshot).length).toBe(firstSnap.length);
+        expect(next.artifacts.map(artifactSnapshot).filter(Boolean).length).toBe(firstSnap.length);
       }
     }
   });

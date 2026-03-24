@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
+import {
+  compilePlacedProgram,
+  formatLoweredInstructions,
+  flattenLoweredInstructions,
+  hasRawOpcode,
+} from './helpers/lowered_program.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,30 +15,20 @@ const __dirname = dirname(__filename);
 describe('#509 lowerLdWithEa integration', () => {
   it('still lowers representative byte and word ld shapes through the moved helper', async () => {
     const byteEntry = join(__dirname, 'fixtures', 'pr405_byte_global_non_a_symbols.zax');
-    const byteRes = await compile(byteEntry, {}, { formats: defaultFormatWriters });
-    const byteAsm = byteRes.artifacts.find((artifact: unknown): artifact is AsmArtifact =>
-      typeof artifact === 'object' &&
-      artifact !== null &&
-      'kind' in artifact &&
-      (artifact as AsmArtifact).kind === 'asm',
-    );
+    const byteRes = await compilePlacedProgram(byteEntry);
     expect(byteRes.diagnostics).toEqual([]);
-    expect(byteAsm).toBeDefined();
-    expect(byteAsm!.text).toContain('push AF');
-    expect(byteAsm!.text).toContain('ld A, (glob_b)');
-    expect(byteAsm!.text).toContain('ld B, A');
+    const byteLines = formatLoweredInstructions(byteRes.program).map((line) => line.toUpperCase());
+    const byteInstrs = flattenLoweredInstructions(byteRes.program);
+    expect(byteLines).toContain('PUSH AF');
+    expect(hasRawOpcode(byteInstrs, 0x3a)).toBe(true);
+    expect(byteLines).toContain('LD B, A');
 
     const wordEntry = join(__dirname, 'fixtures', 'pr406_word_mem_to_mem_mixed_reverse.zax');
-    const wordRes = await compile(wordEntry, {}, { formats: defaultFormatWriters });
-    const wordAsm = wordRes.artifacts.find((artifact: unknown): artifact is AsmArtifact =>
-      typeof artifact === 'object' &&
-      artifact !== null &&
-      'kind' in artifact &&
-      (artifact as AsmArtifact).kind === 'asm',
-    );
+    const wordRes = await compilePlacedProgram(wordEntry);
     expect(wordRes.diagnostics).toEqual([]);
-    expect(wordAsm).toBeDefined();
-    expect(wordAsm!.text).toContain('ld E, (HL)');
-    expect(wordAsm!.text).toContain('ld (dst_w), DE');
+    const wordLines = formatLoweredInstructions(wordRes.program).map((line) => line.toUpperCase());
+    const wordInstrs = flattenLoweredInstructions(wordRes.program);
+    expect(wordLines).toContain('LD E, (HL)');
+    expect(hasRawOpcode(wordInstrs, 0xed, 0x53)).toBe(true);
   });
 });

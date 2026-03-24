@@ -45,7 +45,7 @@ async function compileSource(source: string) {
   await writeFile(entry, source, 'utf8');
   const res = await compile(
     entry,
-    { emitAsm: true, emitBin: true, emitHex: false, emitListing: false, emitD8m: false },
+    { emitAsm: false, emitBin: true, emitHex: false, emitListing: false, emitD8m: false },
     { formats: defaultFormatWriters },
   );
   return { entry, res };

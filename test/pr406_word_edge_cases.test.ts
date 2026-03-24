@@ -18,7 +18,7 @@ describe('PR406: word edge cases', () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_invalid_nonscalar_index_name.zax');
     const res = await compile(
       entry,
-      { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
 
@@ -29,7 +29,7 @@ describe('PR406: word edge cases', () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_invalid_scalar_widths.zax');
     const res = await compile(
       entry,
-      { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
 

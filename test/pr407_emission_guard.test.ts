@@ -8,7 +8,7 @@ import type { AsmArtifact } from '../src/formats/types.js';
 const compileAsm = async (entry: string): Promise<string> => {
   const res = await compile(
     entry,
-    { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+    { emitAsm: true, emitAsm80: false, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
     { formats: defaultFormatWriters },
   );
   expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
