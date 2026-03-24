@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
+import type { Asm80Artifact } from '../src/formats/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -16,7 +16,7 @@ describe('LOWER-01 typed reinterpretation integration', () => {
 
     expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
 
-    const asm = res.artifacts.find((artifact): artifact is AsmArtifact => artifact.kind === 'asm');
+    const asm = res.artifacts.find((artifact): artifact is Asm80Artifact => artifact.kind === 'asm80');
     expect(asm).toBeDefined();
 
     const text = asm!.text.toUpperCase();

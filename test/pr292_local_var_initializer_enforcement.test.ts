@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
+import type { Asm80Artifact } from '../src/formats/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,14 +14,14 @@ describe('PR292 local var initializer completeness', () => {
     const entry = join(__dirname, 'fixtures', 'pr292_local_scalar_init_and_alias_positive.zax');
     const res = await compile(
       entry,
-      { emitBin: false, emitHex: false, emitD8m: false, emitListing: false, emitAsm: true },
+      { emitBin: false, emitHex: false, emitD8m: false, emitListing: false, emitAsm80: true },
       { formats: defaultFormatWriters },
     );
 
     const errors = res.diagnostics.filter((d) => d.severity === 'error');
     expect(errors).toEqual([]);
 
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
+    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
     expect(asm).toBeDefined();
     const text = asm!.text;
 

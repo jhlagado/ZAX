@@ -19,7 +19,7 @@ describe('PR508: extracted runtime-immediate helpers', () => {
   it('preserves byte call-arg zero-extension materialization', async () => {
     const entry = join(__dirname, 'fixtures', 'pr405_byte_call_scalar_arg.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    const asm = res.artifacts.find((a) => a.kind === 'asm');
+    const asm = res.artifacts.find((a) => a.kind === 'asm80');
 
     expect(res.diagnostics).toEqual([]);
     expect(asm?.kind).toBe('asm');

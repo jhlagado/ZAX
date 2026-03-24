@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { compile } from '../src/compile.js';
 import { DiagnosticIds } from '../src/diagnostics/types.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact, D8mArtifact } from '../src/formats/types.js';
+import type { Asm80Artifact, D8mArtifact } from '../src/formats/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,7 +31,7 @@ describe('PR283: hidden-lowering risk matrix focused coverage', () => {
       { formats: defaultFormatWriters },
     );
     expect(typedPreserve.diagnostics).toEqual([]);
-    const typedAsm = typedPreserve.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
+    const typedAsm = typedPreserve.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
     expect(typedAsm).toBeDefined();
     expect(typedAsm!.text).toContain('call ping');
     expect(typedAsm!.text).toContain('call getb');
@@ -47,12 +47,12 @@ describe('PR283: hidden-lowering risk matrix focused coverage', () => {
         emitHex: false,
         emitD8m: false,
         emitListing: false,
-        emitAsm: true,
+        emitAsm80: true,
       },
       { formats: defaultFormatWriters },
     );
     expect(frameAccess.diagnostics).toEqual([]);
-    const asm = frameAccess.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
+    const asm = frameAccess.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
     expect(asm).toBeDefined();
     expect(asm!.text).toContain('; func main begin');
     expect(asm!.text).toContain('__zax_epilogue_');

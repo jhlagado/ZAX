@@ -3,20 +3,20 @@ import { join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
+import type { Asm80Artifact } from '../src/formats/types.js';
 
 describe('PR875 := IX/IY integration', () => {
   it('lowers accepted IX/IY assignment forms end-to-end', async () => {
     const entry = join(__dirname, 'fixtures', 'pr875_assignment_ixiy.zax');
     const res = await compile(
       entry,
-      { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
 
     expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
 
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
+    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
     expect(asm).toBeDefined();
     const text = asm!.text.toUpperCase();
 

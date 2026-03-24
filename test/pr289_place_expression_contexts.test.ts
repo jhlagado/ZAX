@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { compile } from '../src/compile.js';
 import { DiagnosticIds } from '../src/diagnostics/types.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
+import type { Asm80Artifact } from '../src/formats/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,13 +20,13 @@ describe('PR289: place-expression semantics for field/element operands', () => {
         emitHex: false,
         emitD8m: false,
         emitListing: false,
-        emitAsm: true,
+        emitAsm80: true,
       },
       { formats: defaultFormatWriters },
     );
 
     expect(res.diagnostics).toEqual([]);
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
+    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
     expect(asm).toBeDefined();
 
     // Field place-expression in value/store contexts.
