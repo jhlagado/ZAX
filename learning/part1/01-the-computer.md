@@ -56,7 +56,7 @@ So `%01110101 = $75`. Confirm in the other direction: `$75 = 7 × 16 + 5 = 112 +
 
 The same holds for 16-bit words: `$FFFF` is `%1111111111111111`, and a four-digit hex number always represents exactly sixteen bits. Addresses in the Z80 are always four hex digits, running from `$0000` to `$FFFF`.
 
-You will see hex constantly in Z80 work. Every opcode, every address, every constant value is typically written this way. Spend a few minutes converting numbers in both directions until it feels natural.
+You will see hex constantly in Z80 work. Every opcode, every address, every constant value is typically written this way. Spend a few minutes converting numbers in both directions until it feels natural. A hex-to-binary-to-decimal digit table is in [Appendix 1](../appendices/01-numbers-notation-and-ascii.md).
 
 ---
 
@@ -124,7 +124,7 @@ Here is the complete Z80 register set:
 
 When B and C are used as the pair BC, B holds the high byte and C holds the low byte — the same pattern as DE (D high, E low) and HL (H high, L low). IX and IY follow the same rule with their halves. So for example if HL = `$1A2B`, then H = `$1A` and L = `$2B`.
 
-The Z80 also has a second, hidden copy of A, F, B, C, D, E, H, and L called the **shadow registers**. They are covered in Chapter 7, where you will have a practical reason to use them.
+The Z80 also has a second, hidden copy of A, F, B, C, D, E, H, and L called the **shadow registers**. They are covered in Chapter 7, where you will have a practical reason to use them. For a compact register reference, see [Appendix 2](../appendices/02-registers-flags-and-conditions.md).
 
 ---
 
@@ -143,7 +143,7 @@ The flags register F contains eight bits, each of which records something about 
 | 1 | N | Subtract | Set if the last operation was a subtraction. Used internally for BCD correction. |
 | 0 | C | Carry | Set if the last operation produced a carry out of bit 7, or a borrow in the case of subtraction. |
 
-Not every instruction updates every flag. Some instructions update all flags; some update only Z and C; some leave all flags unchanged.
+Not every instruction updates every flag. Some instructions update all flags; some update only Z and C; some leave all flags unchanged. A compact flags and condition-codes reference is in [Appendix 2](../appendices/02-registers-flags-and-conditions.md).
 
 ---
 
