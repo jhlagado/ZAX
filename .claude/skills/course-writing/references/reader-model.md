@@ -89,17 +89,20 @@ Do not assume any of the following without earning it in earlier chapters:
 - Constants (`const`) vs labels vs named storage
 - Signed/unsigned, two's complement
 - `INC`, `DEC`, `ADD` and their in-place semantics
-- The IX/IY half-register restriction
 - `EX DE, HL`
 
 ### After Chapter 4
 - The flags register in practice (Z, C, S, P/V as used by branches)
 - `cp n` — what it does, what flags it sets
+- `sub n` — same flags as cp, stores result in A
 - `or a` — what it does, when to use it
+- `and n`, `or n`, `xor n` — bitwise logical ops; all clear C and set Z
+- `xor a` — canonical zero-A-and-clear-flags idiom
 - `jp label`, `jp cc, label` — unconditional and conditional jumps
 - `jr` — relative jump, range limitation
 - The label-based if/loop skeleton
 - `neg`
+- The `cp $80` technique for detecting a negative signed byte
 
 ### After Chapter 5
 - `djnz` — what it does, how it differs from `dec b / jp nz`
