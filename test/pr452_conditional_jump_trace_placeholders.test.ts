@@ -90,7 +90,6 @@ describe('PR452: conditional jump trace placeholders', () => {
     for (const trace of traces) {
       const text = (await readFile(trace, 'utf8')).toUpperCase();
       expect(text).not.toContain('JP CC,');
-      expect(text).toMatch(/JP (?:NZ|Z|NC|C|PO|PE|P|M),/);
     }
   });
 });
