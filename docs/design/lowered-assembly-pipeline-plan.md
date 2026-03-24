@@ -1,5 +1,7 @@
 # Lowered-Assembly Pipeline Plan (ASM80 Valid)
 
+Status: historical plan — implementation complete. The `.asm` trace backend has been fully removed; `.z80` is now the only textual lowered-output artifact.
+
 ## Scope and fixed decisions
 
 This note plans the implementation of a new assembler-valid backend product based on the agreed decisions:

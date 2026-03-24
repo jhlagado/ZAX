@@ -54,7 +54,6 @@ function fakeSink(
     fixups: [],
     rel8Fixups: [],
     sourceSegments: [],
-    asmTrace: [],
     currentSourceTag: undefined,
     startupInitActions,
   };

@@ -1,6 +1,6 @@
 # Configurable Assembler Output Backends
 
-Status: active design brief
+Status: historical design brief — implementation complete. The `.asm` trace backend has been fully removed; `.z80` is now the only textual lowered-output artifact.
 Audience: compiler contributors, reviewers
 
 ## Purpose

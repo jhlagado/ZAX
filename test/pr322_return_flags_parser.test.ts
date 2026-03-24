@@ -9,7 +9,7 @@ describe('PR322: return flags modifier removed', () => {
   it('rejects legacy flags modifier; use AF in return list instead', async () => {
     const res = await compile(
       flagsFixture,
-      { emitAsm: false, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+      { emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
 
