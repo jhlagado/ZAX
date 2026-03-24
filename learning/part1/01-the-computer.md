@@ -14,7 +14,7 @@ This chapter describes the Z80 itself: its memory, its registers, and the cycle 
 
 ## Bits and Bytes
 
-The memory of any computer stores only two values: 0 and 1. Each individual 0 or 1 is called a **bit** (from *binary digit*). The Z80 cannot access individual bits directly, however. It always handles memory in groups of eight bits at a time. A group of eight bits is a **byte**.
+The memory of any computer stores only two values: 0 and 1. Each individual 0 or 1 is called a **bit** (from *binary digit*). The Z80 always handles memory in groups of eight bits at a time — it has no instruction that reads or writes a single bit. A group of eight bits is a **byte**.
 
 The eight bits in a byte are numbered from position 7 down to position 0. The numbering reflects each bit's contribution to the byte's total value: bit 7 represents 2<sup>7</sup> = 128, bit 6 represents 2<sup>6</sup> = 64, and so on down to bit 0, which represents 2<sup>0</sup> = 1. To find the numeric value of a byte, multiply each bit by its positional value and add up the results.
 
@@ -56,7 +56,7 @@ So `%01110101 = $75`. Confirm in the other direction: `$75 = 7 × 16 + 5 = 112 +
 
 The same holds for 16-bit words: `$FFFF` is `%1111111111111111`, and a four-digit hex number always represents exactly sixteen bits. Addresses in the Z80 are always four hex digits, running from `$0000` to `$FFFF`.
 
-You will see hex constantly in Z80 work. Every opcode, every address, every constant value is typically written this way. It is worth spending a few minutes converting numbers in both directions until it feels natural.
+You will see hex constantly in Z80 work. Every opcode, every address, every constant value is typically written this way. Spend a few minutes converting numbers in both directions until it feels natural.
 
 ---
 
@@ -102,7 +102,7 @@ Read it back: the byte at `$8000` is `$2B` (low), the byte at `$8001` is `$1A` (
 
 The CPU (central processing unit) is the chip that does the work. It reads bytes from memory, interprets them as instructions, and carries them out one after another. To carry out those instructions, the CPU needs a small amount of very fast internal storage. That storage is called the **registers**.
 
-Registers are not part of RAM. They are built into the CPU itself, much faster to access than any external memory. The Z80 has only 26 bytes of register storage in total — a tiny amount compared to the 64K of addressable memory. Each register has its own name and its own special roles. Almost every instruction you write uses at least one register, and almost every calculation must pass through them — there are very few Z80 operations that work directly on memory without involving a register.
+The Z80 builds register storage directly into the chip — far faster than external memory and totalling just 26 bytes against the 64K of addressable RAM beyond it. Each register has its own name and its own special roles. Almost every instruction you write uses at least one register, and almost every calculation must pass through them — there are very few Z80 operations that work directly on memory without involving a register.
 
 Here is the complete Z80 register set:
 
