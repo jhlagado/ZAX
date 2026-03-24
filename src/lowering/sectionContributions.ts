@@ -1,4 +1,4 @@
-import type { EmittedAsmTraceEntry, EmittedSourceSegment } from '../formats/types.js';
+import type { EmittedSourceSegment } from '../formats/types.js';
 import type { PendingSymbol, SourceSegmentTag } from './loweringTypes.js';
 import type {
   NonBankedSectionKeyCollection,
@@ -43,7 +43,6 @@ export type NamedSectionContributionSink = {
   fixups: AbsoluteFixupRecord[];
   rel8Fixups: Rel8FixupRecord[];
   sourceSegments: EmittedSourceSegment[];
-  asmTrace: EmittedAsmTraceEntry[];
   currentSourceTag: SourceSegmentTag | undefined;
   startupInitActions: StartupInitAction[];
 };
@@ -65,7 +64,6 @@ export function createNamedSectionContributionSinks(
       fixups: [],
       rel8Fixups: [],
       sourceSegments: [],
-      asmTrace: [],
       currentSourceTag: undefined,
       startupInitActions: [],
     });

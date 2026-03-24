@@ -28,8 +28,7 @@ This folder is the side-by-side review mirror:
 - `test/codegen-corpus/*.bin`
 - `test/codegen-corpus/*.hex`
 
-Legacy `.asm` trace output may still appear here for debugging, but it is not
-canonical.
+Legacy trace output is no longer produced; `.z80` is the canonical textual mirror.
 
 ## Supported regeneration
 

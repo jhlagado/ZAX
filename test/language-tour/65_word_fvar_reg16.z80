@@ -1,0 +1,102 @@
+; ZAX lowered ASM80 output
+
+ORG $2000
+glob_words:
+DW $6001
+DW $6002
+DW $6003
+DW $6004
+DW $6005
+DW $6006
+DW $6007
+DW $6008
+
+ORG $0100
+; ZAX: func word_fvar_reg16 begin
+word_fvar_reg16:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+ex de, hl
+ld e, (IX+$06)
+ld d, (IX+$07)
+ex de, hl
+add hl, hl
+ex de, hl
+push de
+push ix
+pop hl
+ld de, $04
+add hl, de
+pop de
+add hl, de
+push hl
+pop hl
+push de
+ld e, (HL)
+inc hl
+ld d, (HL)
+ld c, e
+ld b, d
+pop de
+add hl, hl
+ex de, hl
+push de
+push ix
+pop hl
+ld de, $04
+add hl, de
+pop de
+add hl, de
+push hl
+pop hl
+ld e, c
+ld d, b
+ld (HL), e
+inc hl
+ld (HL), d
+ld h, b
+ld l, c
+__zax_epilogue_0:
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func word_fvar_reg16 end
+; ZAX: func main begin
+main:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+push hl
+ld hl, $06
+push hl
+DB $21, $00, $00
+push hl
+DB $CD, $00, $00
+inc sp
+inc sp
+inc sp
+inc sp
+__zax_epilogue_1:
+pop hl
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func main end
+
+ORG $2010
+__zax_startup:
+DB $21, $58, $20, $4E, $23, $46, $23, $78, $B1, $28, $1B, $C5, $5E, $23, $56, $23, $4E, $23, $46, $23, $E5, $21, $62, $20, $09, $E3, $4E, $23, $46, $23, $E3, $ED, $B0, $E1, $C1, $0B, $18, $E1, $4E, $23, $46, $23, $78, $B1, $28, $17, $C5, $5E, $23, $56, $23, $4E, $23, $46, $23, $78, $B1, $28, $06, $AF, $12, $13, $0B, $18, $F6, $C1, $0B, $18, $E5, $C3, $45, $01
+DB $01, $00, $00, $20, $00, $00, $10, $00, $00, $00, $01, $60, $02, $60, $03, $60, $04, $60, $05, $60, $06, $60, $07, $60, $08, $60

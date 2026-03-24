@@ -1,0 +1,78 @@
+; ZAX lowered ASM80 output
+
+ORG $2000
+glob_bytes:
+DB $00
+DB $01
+DB $02
+DB $03
+DB $04
+DB $05
+DB $06
+DB $07
+
+ORG $0100
+; ZAX: func byte_glob_reg16 begin
+byte_glob_reg16:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+ex de, hl
+ld e, (IX+$04)
+ld d, (IX+$05)
+ex de, hl
+push de
+push hl
+DB $11, $00, $00
+add hl, de
+ld a, (HL)
+pop hl
+pop de
+push de
+push hl
+DB $11, $00, $00
+add hl, de
+ld (HL), a
+pop hl
+pop de
+ld h, $00
+ld l, a
+__zax_epilogue_0:
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func byte_glob_reg16 end
+; ZAX: func main begin
+main:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+push hl
+ld hl, $04
+push hl
+DB $CD, $00, $00
+inc sp
+inc sp
+__zax_epilogue_1:
+pop hl
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func main end
+
+ORG $2008
+__zax_startup:
+DB $21, $50, $20, $4E, $23, $46, $23, $78, $B1, $28, $1B, $C5, $5E, $23, $56, $23, $4E, $23, $46, $23, $E5, $21, $5A, $20, $09, $E3, $4E, $23, $46, $23, $E3, $ED, $B0, $E1, $C1, $0B, $18, $E1, $4E, $23, $46, $23, $78, $B1, $28, $17, $C5, $5E, $23, $56, $23, $4E, $23, $46, $23, $78, $B1, $28, $06, $AF, $12, $13, $0B, $18, $F6, $C1, $0B, $18, $E5, $C3, $30, $01
+DB $01, $00, $00, $20, $00, $00, $08, $00, $00, $00, $00, $01, $02, $03, $04, $05, $06, $07

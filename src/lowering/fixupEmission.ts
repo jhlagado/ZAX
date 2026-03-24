@@ -1,11 +1,5 @@
 import type { Diagnostic } from '../diagnostics/types.js';
 import type { AsmOperandNode, ImmExprNode, SourceSpan } from '../frontend/ast.js';
-import {
-  formatAbs16FixupAsm,
-  formatAbs16FixupEdAsm,
-  formatAbs16FixupPrefixedAsm,
-} from './traceFormat.js';
-
 type FixupRecord = {
   offset: number;
   baseLower: string;
@@ -24,8 +18,6 @@ type Rel8FixupRecord = {
 
 type EvalImmExpr = (expr: ImmExprNode) => number | undefined;
 
-type TraceInstruction = (start: number, bytes: Uint8Array, asmText: string) => void;
-
 type Context = {
   getCodeOffset: () => number;
   setCodeOffset: (value: number) => void;
@@ -33,14 +25,13 @@ type Context = {
   recordCodeSourceRange: (start: number, end: number) => void;
   pushFixup: (fixup: FixupRecord) => void;
   pushRel8Fixup: (fixup: Rel8FixupRecord) => void;
-  traceInstruction: TraceInstruction;
-  recordLoweredInstr?: (bytes: Uint8Array, asmText: string, span: SourceSpan) => void;
+  recordLoweredInstr?: (bytes: Uint8Array, span: SourceSpan) => void;
   evalImmExpr: EvalImmExpr;
 };
 
 export function createFixupEmissionHelpers(ctx: Context) {
-  const recordLoweredInstr = (bytes: Uint8Array, asmText: string, span: SourceSpan): void => {
-    ctx.recordLoweredInstr?.(bytes, asmText, span);
+  const recordLoweredInstr = (bytes: Uint8Array, span: SourceSpan): void => {
+    ctx.recordLoweredInstr?.(bytes, span);
   };
 
   const emitAbs16Fixup = (
@@ -48,7 +39,6 @@ export function createFixupEmissionHelpers(ctx: Context) {
     baseLower: string,
     addend: number,
     span: SourceSpan,
-    asmText?: string,
   ): void => {
     const start = ctx.getCodeOffset();
     ctx.setCodeByte(start, opcode);
@@ -58,9 +48,7 @@ export function createFixupEmissionHelpers(ctx: Context) {
     ctx.recordCodeSourceRange(start, start + 3);
     ctx.pushFixup({ offset: start + 1, baseLower, addend, file: span.file });
     const bytes = Uint8Array.of(opcode, 0x00, 0x00);
-    const text = asmText ?? formatAbs16FixupAsm(opcode, baseLower, addend);
-    ctx.traceInstruction(start, bytes, text);
-    recordLoweredInstr(bytes, text, span);
+    recordLoweredInstr(bytes, span);
   };
 
   const emitAbs16FixupEd = (
@@ -68,7 +56,6 @@ export function createFixupEmissionHelpers(ctx: Context) {
     baseLower: string,
     addend: number,
     span: SourceSpan,
-    asmText?: string,
   ): void => {
     const start = ctx.getCodeOffset();
     ctx.setCodeByte(start, 0xed);
@@ -79,9 +66,7 @@ export function createFixupEmissionHelpers(ctx: Context) {
     ctx.recordCodeSourceRange(start, start + 4);
     ctx.pushFixup({ offset: start + 2, baseLower, addend, file: span.file });
     const bytes = Uint8Array.of(0xed, opcode2, 0x00, 0x00);
-    const text = asmText ?? formatAbs16FixupEdAsm(opcode2, baseLower, addend);
-    ctx.traceInstruction(start, bytes, text);
-    recordLoweredInstr(bytes, text, span);
+    recordLoweredInstr(bytes, span);
   };
 
   const emitAbs16FixupPrefixed = (
@@ -90,7 +75,6 @@ export function createFixupEmissionHelpers(ctx: Context) {
     baseLower: string,
     addend: number,
     span: SourceSpan,
-    asmText?: string,
   ): void => {
     const start = ctx.getCodeOffset();
     ctx.setCodeByte(start, prefix);
@@ -101,9 +85,7 @@ export function createFixupEmissionHelpers(ctx: Context) {
     ctx.recordCodeSourceRange(start, start + 4);
     ctx.pushFixup({ offset: start + 2, baseLower, addend, file: span.file });
     const bytes = Uint8Array.of(prefix, opcode2, 0x00, 0x00);
-    const text = asmText ?? formatAbs16FixupPrefixedAsm(prefix, opcode2, baseLower, addend);
-    ctx.traceInstruction(start, bytes, text);
-    recordLoweredInstr(bytes, text, span);
+    recordLoweredInstr(bytes, span);
   };
 
   const emitRel8Fixup = (
@@ -112,7 +94,6 @@ export function createFixupEmissionHelpers(ctx: Context) {
     addend: number,
     span: SourceSpan,
     mnemonic: string,
-    asmText?: string,
   ): void => {
     const start = ctx.getCodeOffset();
     ctx.setCodeByte(start, opcode);
@@ -128,9 +109,7 @@ export function createFixupEmissionHelpers(ctx: Context) {
       mnemonic,
     });
     const bytes = Uint8Array.of(opcode, 0x00);
-    const text = asmText ?? `${mnemonic} ${baseLower}`;
-    ctx.traceInstruction(start, bytes, text);
-    recordLoweredInstr(bytes, text, span);
+    recordLoweredInstr(bytes, span);
   };
 
   const conditionOpcodeFromName = (nameRaw: string): number | undefined => {

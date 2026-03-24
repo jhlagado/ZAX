@@ -1,0 +1,78 @@
+; ZAX lowered ASM80 output
+
+ORG $2000
+glob_words:
+DW $A001
+DW $A002
+DW $A003
+DW $A004
+DW $A005
+DW $A006
+DW $A007
+DW $A008
+glob_idx_word:
+DW $04
+
+ORG $0100
+; ZAX: func word_glob_glob begin
+word_glob_glob:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+push de
+DB $11, $00, $00
+DB $2A, $00, $00
+add hl, hl
+add hl, de
+ld e, (HL)
+inc hl
+ld d, (HL)
+ld l, e
+ld h, d
+pop de
+push de
+push hl
+DB $11, $00, $00
+DB $2A, $00, $00
+add hl, hl
+add hl, de
+pop de
+ld (HL), e
+inc hl
+ld (HL), d
+pop de
+__zax_epilogue_0:
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func word_glob_glob end
+; ZAX: func main begin
+main:
+push ix
+ld ix, $00
+add ix, sp
+push af
+push bc
+push de
+push hl
+DB $CD, $00, $00
+__zax_epilogue_1:
+pop hl
+pop de
+pop bc
+pop af
+ld sp, ix
+pop ix
+ret
+; ZAX: func main end
+
+ORG $2012
+__zax_startup:
+DB $21, $5A, $20, $4E, $23, $46, $23, $78, $B1, $28, $1B, $C5, $5E, $23, $56, $23, $4E, $23, $46, $23, $E5, $21, $6A, $20, $09, $E3, $4E, $23, $46, $23, $E3, $ED, $B0, $E1, $C1, $0B, $18, $E1, $4E, $23, $46, $23, $78, $B1, $28, $17, $C5, $5E, $23, $56, $23, $4E, $23, $46, $23, $78, $B1, $28, $06, $AF, $12, $13, $0B, $18, $F6, $C1, $0B, $18, $E5, $C3, $31, $01
+DB $02, $00, $00, $20, $00, $00, $10, $00, $10, $20, $10, $00, $02, $00, $00, $00, $01, $A0, $02, $A0, $03, $A0, $04, $A0, $05, $A0, $06, $A0, $07, $A0, $08, $A0, $04, $00

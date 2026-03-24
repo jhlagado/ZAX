@@ -44,7 +44,6 @@ import {
 } from '../addressing/steps.js';
 import type { Diagnostic } from '../diagnostics/types.js';
 import type {
-  EmittedAsmTraceEntry,
   EmittedByteMap,
   EmittedSourceSegment,
   SymbolEntry,
@@ -65,6 +64,7 @@ import type {
   FuncDeclNode,
   HexDeclNode,
   ImmExprNode,
+  OffsetofPathNode,
   OpDeclNode,
   OpMatcherNode,
   ParamNode,
@@ -149,17 +149,9 @@ import {
 import {
   alignTo,
   computeWrittenRange,
-  rebaseAsmTrace,
   rebaseCodeSourceSegments,
   writeSection,
 } from './sectionLayout.js';
-import {
-  formatAsmInstrForTrace,
-  formatImmExprForAsm,
-  formatIxDisp,
-  toHexByte,
-  toHexWord,
-} from './traceFormat.js';
 import { createTypeResolutionHelpers } from './typeResolution.js';
 import type {
   LoweredAsmItem,
@@ -175,6 +167,28 @@ type ProgramLoweringPhaseResult = {
   prescan: ProgramPrescanResult;
   lowered: ProgramLoweringResult;
 };
+
+const toHex = (value: number, width: number): string =>
+  value.toString(16).toUpperCase().padStart(width, '0');
+
+const toHexByte = (value: number): string => toHex(value & 0xff, 2);
+
+const toHexWord = (value: number): string => toHex(value & 0xffff, 4);
+
+const formatNumberForAsm = (value: number): string => {
+  if (value < 0) {
+    const abs = Math.abs(value);
+    return `-$${abs > 0xff ? toHexWord(abs) : toHexByte(abs)}`;
+  }
+  return `$${value > 0xff ? toHexWord(value) : toHexByte(value)}`;
+};
+
+function formatIxDisp(disp: number): string {
+  if (disp === 0) return '+$00';
+  const abs = Math.abs(disp);
+  const hex = abs > 0xff ? toHexWord(abs) : toHexByte(abs);
+  return disp >= 0 ? `+$${hex}` : `-$${hex}`;
+}
 
 function runProgramLoweringPhases(
   programLoweringContext: ProgramLoweringContext,
@@ -218,7 +232,6 @@ export function emitProgram(
   const dataBytes = new Map<number, number>();
   const hexBytes = new Map<number, number>();
   const codeSourceSegments: EmittedSourceSegment[] = [];
-  const codeAsmTrace: EmittedAsmTraceEntry[] = [];
   const loweredAsmStream: LoweredAsmStream = { blocks: [] };
   const loweredAsmBlocksByKey = new Map<string, LoweredAsmStreamBlock>();
   let recordLoweredAsmItem: ((item: LoweredAsmItem, span?: SourceSpan) => void) | undefined;
@@ -361,26 +374,11 @@ export function emitProgram(
     segments.push({ ...currentCodeSegmentTag, start, end });
   };
 
-  const traceInstruction = (offset: number, bytesOut: Uint8Array, text: string): void => {
-    if (bytesOut.length === 0) return;
-    const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
-    trace.push({
-      kind: 'instruction',
-      offset,
-      text,
-      bytes: [...bytesOut],
-    });
-  };
-
-  const traceLabel = (offset: number, name: string, span?: SourceSpan): void => {
-    const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
-    trace.push({ kind: 'label', offset, name });
+  const recordLabel = (_offset: number, name: string, span?: SourceSpan): void => {
     recordLoweredAsmItem?.({ kind: 'label', name }, span);
   };
 
-  const traceComment = (offset: number, text: string): void => {
-    const trace = currentNamedSectionSink?.asmTrace ?? codeAsmTrace;
-    trace.push({ kind: 'comment', offset, text });
+  const recordComment = (_offset: number, text: string): void => {
     recordLoweredAsmItem?.({ kind: 'comment', text, origin: 'zax' });
   };
 
@@ -419,7 +417,6 @@ export function emitProgram(
   let emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
 
   const emitInstr = (head: string, operands: AsmOperandNode[], span: SourceSpan) => {
-    const start = getCurrentCodeOffset();
     const syntheticInstruction: AsmInstructionNode = { kind: 'AsmInstruction', span, head, operands };
     const encoded = encodeInstruction(
       syntheticInstruction,
@@ -439,7 +436,6 @@ export function emitProgram(
       );
     }
     emitCodeBytes(encoded, span.file);
-    traceInstruction(start, encoded, formatAsmInstrForTrace(head, operands));
     applySpTracking?.(head, operands);
     return true;
   };
@@ -468,8 +464,7 @@ export function emitProgram(
     recordCodeSourceRange,
     pushFixup: pushCurrentFixup,
     pushRel8Fixup: pushCurrentRel8Fixup,
-    traceInstruction,
-    recordLoweredInstr: (bytes, _asmText, span) => {
+    recordLoweredInstr: (bytes, span) => {
       if (recordLoweredAsmItem) {
         recordLoweredAsmItem(
           {
@@ -494,7 +489,6 @@ export function emitProgram(
     setCodeOffset: setCurrentCodeOffset,
     setCodeByte: setCurrentCodeByte,
     recordCodeSourceRange,
-    traceInstruction,
     emitInstr: (head, operands, span) => emitInstr(head, operands, span),
     loadImm16ToDE: (value, span) => loadImm16ToDE(value, span),
     loadImm16ToHL: (value, span) => loadImm16ToHL(value, span),
@@ -503,7 +497,7 @@ export function emitProgram(
   }));
 
   const emitRawCodeBytesImpl = emitRawCodeBytes;
-  emitRawCodeBytes = (bs: Uint8Array, file: string, traceText: string): void => {
+  emitRawCodeBytes = (bs: Uint8Array, file: string, _traceText: string): void => {
     if (recordLoweredAsmItem) {
       recordLoweredAsmItem({
         kind: 'instr',
@@ -512,7 +506,7 @@ export function emitProgram(
         bytes: [...bs],
       });
     }
-    emitRawCodeBytesImpl(bs, file, traceText);
+    emitRawCodeBytesImpl(bs, file, _traceText);
   };
 
   const { normalizeFixedToken } = createAsmUtilityHelpers({
@@ -676,6 +670,35 @@ export function emitProgram(
     moduleAliasTargets,
     getLocalAliasTargets: () => localAliasTargets,
   });
+
+  const formatOffsetofPath = (path: OffsetofPathNode): string => {
+    let out = path.base;
+    for (const step of path.steps) {
+      if (step.kind === 'OffsetofField') {
+        out += `.${step.name}`;
+      } else {
+        out += `[${formatImmExprForAsm(step.expr)}]`;
+      }
+    }
+    return out;
+  };
+
+  const formatImmExprForAsm = (expr: ImmExprNode): string => {
+    switch (expr.kind) {
+      case 'ImmLiteral':
+        return formatNumberForAsm(expr.value);
+      case 'ImmName':
+        return expr.name;
+      case 'ImmSizeof':
+        return `sizeof(${typeDisplay(expr.typeExpr)})`;
+      case 'ImmOffsetof':
+        return `offsetof(${typeDisplay(expr.typeExpr)}, ${formatOffsetofPath(expr.path)})`;
+      case 'ImmUnary':
+        return `${expr.op}${formatImmExprForAsm(expr.expr)}`;
+      case 'ImmBinary':
+        return `${formatImmExprForAsm(expr.left)} ${expr.op} ${formatImmExprForAsm(expr.right)}`;
+    }
+  };
 
   const { resolveEa } = createEaResolutionHelpers({
     env,
@@ -1037,8 +1060,8 @@ export function emitProgram(
   const functionLoweringSymbolContext: FunctionLoweringSymbolContext = {
     taken,
     pending,
-    traceComment,
-    traceLabel,
+    traceComment: recordComment,
+    traceLabel: recordLabel,
     currentCodeSegmentTagRef,
     generatedLabelCounterRef,
   };
@@ -1232,12 +1255,10 @@ export function emitProgram(
     hexBytes: lowered.hexBytes,
     bytes,
     codeSourceSegments,
-    codeAsmTrace,
     alignTo,
     writeSection,
     computeWrittenRange,
     rebaseCodeSourceSegments,
-    rebaseAsmTrace,
     ...(options?.defaultCodeBase !== undefined ? { defaultCodeBase: options.defaultCodeBase } : {}),
   });
   return { ...finalized, loweredAsmStream };

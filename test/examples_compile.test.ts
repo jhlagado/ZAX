@@ -34,12 +34,10 @@ describe('examples', () => {
         const lst = a as ListingArtifact;
         return { kind: 'lst', data: lst.text };
       }
-    case 'asm80': {
-      const asm80 = a as Asm80Artifact;
-      return { kind: 'asm80', data: asm80.text };
-    }
-    case 'asm':
-      return undefined;
+      case 'asm80': {
+        const asm80 = a as Asm80Artifact;
+        return { kind: 'asm80', data: asm80.text };
+      }
     }
   }
 

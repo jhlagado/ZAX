@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
-import { compilePlacedProgram, flattenLoweredItems } from './helpers/lowered_program.js';
+import { compilePlacedProgram, flattenLoweredItems, flattenLoweredInstructions, isImmSymbol, isReg } from './helpers/lowered_program.js';
 
 const fixture = join(__dirname, 'fixtures', 'pr320_extern_and_internal_calls.zax');
 
@@ -29,21 +26,21 @@ describe('PR320 extern typed-call preservation', () => {
     expect(hasProloguePush('BC')).toBe(true);
     expect(hasProloguePush('DE')).toBe(true);
 
-    // extern call site should not push preserves around callee_extern (trace-only check)
-    const asmRes = await compile(
-      fixture,
-      { emitAsm: true, emitAsm80: false, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
+    // extern call site should not push preserves around callee_extern
+    const instrs = flattenLoweredInstructions(program);
+    const callIdx = instrs.findIndex(
+      (ins) => ins.head.toUpperCase() === 'CALL' && isImmSymbol(ins.operands[0], 'callee_extern'),
     );
-    expect(asmRes.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-    const asm = asmRes.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-    expect(asm).toBeDefined();
-    const lines = asm!.text.split('\n');
-    const callIdx = lines.findIndex((l) => /call callee_extern/i.test(l));
     expect(callIdx).toBeGreaterThanOrEqual(0);
-    const window = lines.slice(Math.max(0, callIdx - 3), callIdx + 1).join('\n');
-    expect(window).not.toMatch(/push AF/i);
-    expect(window).not.toMatch(/push BC/i);
-    expect(window).not.toMatch(/push DE/i);
+    const window = instrs.slice(Math.max(0, callIdx - 3), callIdx + 1);
+    const hasPush = (reg: string) =>
+      window.some(
+        (ins) =>
+          ins.head.toUpperCase() === 'PUSH' &&
+          isReg(ins.operands[0], reg),
+      );
+    expect(hasPush('AF')).toBe(false);
+    expect(hasPush('BC')).toBe(false);
+    expect(hasPush('DE')).toBe(false);
   });
 });

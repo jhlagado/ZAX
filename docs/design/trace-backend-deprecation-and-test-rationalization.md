@@ -1,4 +1,6 @@
-# Trace Backend Deprecation and Test Rationalization Plan
+# Trace Backend Deprecation and Test Rationalization Plan (Historical)
+
+Status: historical reference — legacy `.asm` trace output has been removed.
 
 ## Purpose
 
@@ -9,21 +11,13 @@ ZAX now has a real assembler-valid lowered backend:
 - ASM80-compatible lowered source (`.z80`)
 - differential validation against ASM80
 
-The legacy `.asm` artifact is no longer the canonical textual backend. It is now a debug trace/listing-style output. The main remaining reason it cannot be removed is that a large part of the current regression suite still depends on its exact text shape.
-
-This document defines how to shrink that dependency without losing coverage.
+The legacy `.asm` artifact is no longer the canonical textual backend. This document records the removal plan and the test-migration rationale.
 
 ## Current state
 
-### What `.asm` is
+### What `.asm` was
 
-The legacy writer in `/Users/johnhardy/.codex/worktrees/toolchain/ZAX/src/formats/writeAsm.ts` renders:
-
-- sorted lowering trace entries from `map.asmTrace`
-- inline offset/byte comments
-- a synthetic `; symbols:` footer
-
-It is deterministic and useful for debugging, but it is not backend-authoritative and it is not assembler-valid.
+The legacy writer produced a deterministic lowering trace for debugging, but it was not backend-authoritative or assembler-valid. It has been removed.
 
 ### What `.z80` is
 
@@ -38,18 +32,9 @@ The ASM80 writer in `/Users/johnhardy/.codex/worktrees/toolchain/ZAX/src/formats
 
 This is now the canonical textual backend artifact.
 
-### Why `.asm` still exists
+### Why `.asm` existed
 
-The current suite still uses `.asm` heavily for regression checking.
-
-Observed at the time of this plan:
-
-- `emitAsm: true` appears dozens of times in `test/*.test.ts`
-- many integration tests assert on `.asm` string content
-- curated corpus mirrors and goldens are still stored as `.asm`
-- CLI still emits `.asm` by default unless `--noasm` is used
-
-The blocker is not backend correctness. The blocker is test coupling.
+At the time of this plan, the suite depended on `.asm` for regression checking. That dependency has been removed.
 
 ## Decision
 

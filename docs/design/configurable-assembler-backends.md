@@ -7,7 +7,7 @@ Audience: compiler contributors, reviewers
 
 ZAX already lowers structured ZAX source into a concrete stream of Z80 instructions,
 labels, data layout, and synthetic scaffolding. It already emits direct binary artifacts
-(`.bin`, `.hex`) and a human-readable lowered `.asm` trace.
+(`.bin`, `.hex`) plus assembler-valid lowered `.z80` output.
 
 This note defines the next step:
 
@@ -55,7 +55,7 @@ Specifically:
 - ZAX does not delegate structured semantics to ASM80
 - ZAX does not stop producing direct binary output
 - the external assembler is not the authoritative definition of ZAX correctness
-- the current lowered trace file is not silently redefined into a dialect backend without a new contract
+- legacy trace output is not reintroduced as a dialect backend without a new contract
 
 ## Current state
 
@@ -63,18 +63,9 @@ Today ZAX has:
 
 - direct binary emission
 - direct Intel HEX emission
-- a deterministic lowered `.asm` trace
+- ASM80-compatible lowered `.z80` output
 
-The current `.asm` trace is useful for inspection, but it is not designed as a real assembler backend.
-It is currently described and implemented as a lowering trace artifact.
-
-That distinction matters:
-
-- **trace output** is for reading and debugging
-- **assembler backend output** must be valid source for a real assembler
-
-The current trace file should remain for now.
-It may later evolve into a listing-like format, but that is separate from this design.
+The lowered `.z80` output is designed to be a real assembler backend artifact.
 
 ## Pipeline boundary
 
@@ -102,20 +93,16 @@ So the first implementation step is architectural:
   emission
 - make both direct code emission and assembler-source emission consume that
   lower-level product, or derive from it in a controlled way
-- keep the existing trace writer as a separate consumer or derived artifact
+- keep any listing/debug output as a separate, non-backend artifact
 
 That boundary shift should be treated as a primary part of the work, not a
 detail hidden inside an emitter.
 
 ## Target model
 
-The compiler should support two independent lowered-output products:
+The compiler should support:
 
-1. **Trace output**
-   - deterministic, human-inspectable, optimized for review and testing
-   - may include byte comments and sorting behavior that are useful for inspection
-
-2. **Assembler backend output**
+1. **Assembler backend output**
    - preserves lowered instruction order and section structure
    - emits assembler-valid source in a chosen dialect
    - may be passed directly to ASM80 or another assembler
@@ -319,26 +306,12 @@ It only needs one real backend that proves the architecture.
 
 ## CLI and product shape
 
-The CLI should eventually distinguish:
+The CLI should distinguish:
 
-- trace `.asm` output
-- assembler backend output
+- direct binary outputs (`.bin`, `.hex`)
+- assembler backend output (`.z80`)
 
-Those should not share a single ambiguous switch.
-
-A likely shape is:
-
-- existing trace switch remains trace-specific
-- assembler backend output gets its own explicit target selection
-
-Examples of the eventual intent:
-
-- emit direct `.bin` / `.hex`
-- emit trace `.asm`
-- emit ASM80 lowered source
-- optionally invoke ASM80 after emission in a toolchain mode
-
-Exact CLI naming can wait until implementation design, but the product distinction should remain explicit.
+Exact CLI naming can evolve, but the product distinction should remain explicit.
 
 ## Risks
 

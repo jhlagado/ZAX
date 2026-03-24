@@ -5,10 +5,10 @@ import { join, resolve } from 'node:path';
 
 import { ensureCliBuilt, exists, normalizePathForCompare, runCli } from './helpers/cli.js';
 
-type ArtifactKind = 'bin' | 'hex' | 'd8m' | 'lst' | 'asm';
+type ArtifactKind = 'bin' | 'hex' | 'd8m' | 'lst';
 type ArtifactExpectation = Record<ArtifactKind, boolean>;
 
-const allArtifacts: ArtifactKind[] = ['bin', 'hex', 'd8m', 'lst', 'asm'];
+const allArtifacts: ArtifactKind[] = ['bin', 'hex', 'd8m', 'lst'];
 
 function artifactPath(base: string, kind: ArtifactKind): string {
   switch (kind) {
@@ -20,8 +20,6 @@ function artifactPath(base: string, kind: ArtifactKind): string {
       return `${base}.d8dbg.json`;
     case 'lst':
       return `${base}.lst`;
-    case 'asm':
-      return `${base}.asm`;
   }
 }
 
@@ -67,49 +65,49 @@ describe('cli acceptance matrix strictness', () => {
         name: 'full-hex-primary',
         outputType: 'hex',
         flags: [],
-        expected: { bin: true, hex: true, d8m: true, lst: true, asm: true },
+        expected: { bin: true, hex: true, d8m: true, lst: true },
       },
       {
         name: 'full-bin-primary',
         outputType: 'bin',
         flags: ['--type', 'bin'],
-        expected: { bin: true, hex: true, d8m: true, lst: true, asm: true },
+        expected: { bin: true, hex: true, d8m: true, lst: true },
       },
       {
         name: 'hex-only',
         outputType: 'hex',
-        flags: ['--nobin', '--nod8m', '--nolist', '--noasm'],
-        expected: { bin: false, hex: true, d8m: false, lst: false, asm: false },
+        flags: ['--nobin', '--nod8m', '--nolist'],
+        expected: { bin: false, hex: true, d8m: false, lst: false },
       },
       {
         name: 'bin-only',
         outputType: 'bin',
-        flags: ['--type', 'bin', '--nohex', '--nod8m', '--nolist', '--noasm'],
-        expected: { bin: true, hex: false, d8m: false, lst: false, asm: false },
+        flags: ['--type', 'bin', '--nohex', '--nod8m', '--nolist'],
+        expected: { bin: true, hex: false, d8m: false, lst: false },
       },
       {
         name: 'hex-plus-listing',
         outputType: 'hex',
         flags: ['--nobin', '--nod8m'],
-        expected: { bin: false, hex: true, d8m: false, lst: true, asm: true },
+        expected: { bin: false, hex: true, d8m: false, lst: true },
       },
       {
         name: 'bin-plus-d8m',
         outputType: 'bin',
-        flags: ['--type', 'bin', '--nohex', '--nolist', '--noasm'],
-        expected: { bin: true, hex: false, d8m: true, lst: false, asm: false },
+        flags: ['--type', 'bin', '--nohex', '--nolist'],
+        expected: { bin: true, hex: false, d8m: true, lst: false },
       },
       {
         name: 'hex-plus-d8m',
         outputType: 'hex',
-        flags: ['--nobin', '--nolist', '--noasm'],
-        expected: { bin: false, hex: true, d8m: true, lst: false, asm: false },
+        flags: ['--nobin', '--nolist'],
+        expected: { bin: false, hex: true, d8m: true, lst: false },
       },
       {
         name: 'bin-plus-listing',
         outputType: 'bin',
         flags: ['--type', 'bin', '--nohex', '--nod8m'],
-        expected: { bin: true, hex: false, d8m: false, lst: true, asm: true },
+        expected: { bin: true, hex: false, d8m: false, lst: true },
       },
     ];
 

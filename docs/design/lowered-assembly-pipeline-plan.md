@@ -5,7 +5,7 @@
 This note plans the implementation of a new assembler-valid backend product based on the agreed decisions:
 
 - Introduce a new lowered-assembly product as the primary internal backend product.
-- Keep the current trace `.asm` output as-is (separate, not assembler-valid).
+- Legacy `.asm` trace output has been removed; `.z80` is the textual lowered artifact.
 - First real assembler backend target: ASM80.
 - First ASM80-valid slice supports only:
   - labels
@@ -42,16 +42,12 @@ This note plans the implementation of a new assembler-valid backend product base
 
 ### Trace accumulation
 
-- Trace is accumulated in `emit.ts`:
-  - `traceInstruction(...)`, `traceLabel(...)`, `traceComment(...)` build `codeAsmTrace`.
-- This `asmTrace` is a lowering trace only, not valid assembly.
-- `writeAsm(...)` in `/Users/johnhardy/.codex/worktrees/7e4e/ZAX/src/formats/writeAsm.ts` formats `asmTrace` into the current `.asm` artifact.
+Legacy trace accumulation has been removed. The lowered-assembly pipeline emits `.z80` directly.
 
 ### Why current writer inputs are too lossy
 
-- `EmittedByteMap` is a byte-address map with optional `asmTrace` text; it has no preserved directive ordering.
-- `asmTrace` entries store only text, no original directive structure or re-emittable AST.
-- `writeAsm(...)` emits a human-readable trace, not an assembler-valid stream (no `ORG`, `DB`, `DW`, `DS`, or constant declarations in the proper order).
+- `EmittedByteMap` is a byte-address map; it has no preserved directive ordering.
+- The legacy trace writer has been removed; an assembler-valid output cannot be reconstructed from `EmittedByteMap` alone.
 - Fixups and symbol intent are resolved before formatting, so an assembler-valid output cannot be reconstructed from `EmittedByteMap` alone.
 
 ## New lowered-assembly product
@@ -128,14 +124,13 @@ Notes:
 
 ### Existing trace path
 
-- Keep `asmTrace` as a side-channel for now.
-- The current `.asm` trace writer in `writeAsm.ts` remains unchanged and separate.
+- There is no trace `.asm` writer in the current pipeline.
 - Trace stays intentionally non-assembler-valid.
 
 ### ASM80 emitter path (new)
 
 - Add `writeAsm80(...)` (new writer, or new path inside `formats/`) that consumes `LoweredAsmProgram`.
-- The output artifact should use a distinct name (currently `.z80`) until the trace `.asm` can be retired.
+- The output artifact name is `.z80`.
 - Tests/harnesses should run ASM80 parsing/validation on this artifact only (no CLI invocation in v1).
 
 ## Migration sequence (smallest safe first patch)
@@ -163,12 +158,12 @@ Notes:
 
 - Add an ASM80 emitter that consumes the placed lowered assembly product.
 - Add ASM80 validation in tests/harnesses (no CLI invocation).
-- Keep trace `.asm` unchanged and separate.
+- No trace `.asm` output remains.
 
 ### Phase 4: Optional cleanup
 
 - Once ASM80 is stable, decide on the permanent artifact name.
-- Only then consider changes to trace `.asm` or CLI options.
+- CLI options refer only to `.z80` and `.lst`.
 
 ## Deferred items
 
@@ -192,7 +187,7 @@ Notes:
 - `/Users/johnhardy/.codex/worktrees/7e4e/ZAX/src/lowering/sectionContributions.ts`
   - named section contribution sinks.
 - `/Users/johnhardy/.codex/worktrees/7e4e/ZAX/src/formats/writeAsm.ts`
-  - trace `.asm` generation remains separate.
+  - no trace `.asm` generation remains.
 - `/Users/johnhardy/.codex/worktrees/7e4e/ZAX/src/formats/types.ts`
   - `EmittedByteMap` and format writer interfaces.
 
@@ -214,4 +209,4 @@ Notes:
 2. Emit lowered-assembly alongside current byte emission.
 3. Add placement pass and switch byte emission to consume placed lowered-assembly.
 4. Add ASM80 emitter + validation in tests.
-5. Defer trace `.asm` changes and CLI until later.
+5. Trace `.asm` removal is complete; no follow-up needed.
