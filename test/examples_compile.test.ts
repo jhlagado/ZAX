@@ -38,8 +38,6 @@ describe('examples', () => {
       const asm80 = a as Asm80Artifact;
       return { kind: 'asm80', data: asm80.text };
     }
-    case 'asm':
-      return undefined;
     }
   }
 

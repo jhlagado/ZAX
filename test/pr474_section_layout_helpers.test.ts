@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { EmittedAsmTraceEntry, EmittedSourceSegment } from '../src/formats/types.js';
+import type { EmittedSourceSegment } from '../src/formats/types.js';
 import {
   alignTo,
   computeWrittenRange,
-  rebaseAsmTrace,
   rebaseCodeSourceSegments,
   writeSection,
 } from '../src/lowering/sectionLayout.js';
@@ -42,7 +41,7 @@ describe('PR474: section layout helpers', () => {
     expect(diagnostics).toEqual(['Byte overlap at address 32.']);
   });
 
-  it('rebases source segments and asm trace entries', () => {
+  it('rebases source segments with range filtering', () => {
     const segments: EmittedSourceSegment[] = [
       {
         start: 0,
@@ -63,10 +62,6 @@ describe('PR474: section layout helpers', () => {
         confidence: 'low',
       },
     ];
-    const trace: EmittedAsmTraceEntry[] = [
-      { kind: 'label', offset: 0, name: 'main' },
-      { kind: 'comment', offset: -0x101, text: 'bad' },
-    ];
 
     expect(rebaseCodeSourceSegments(0x100, segments)).toEqual([
       {
@@ -75,6 +70,5 @@ describe('PR474: section layout helpers', () => {
         end: 0x102,
       },
     ]);
-    expect(rebaseAsmTrace(0x100, trace)).toEqual([{ kind: 'label', offset: 0x100, name: 'main' }]);
   });
 });

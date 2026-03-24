@@ -9,8 +9,8 @@ live codebase.
 ## 1. What ZAX Is
 
 ZAX is a structured assembler for Z80-family targets. It compiles `.zax` source files directly
-to binary output (`.bin`, Intel HEX `.hex`, D8 debug map `.d8dbg.json`, listing `.lst`, ASM80
-lowered output `.z80`, and the legacy `.asm` trace). There is no external linker. The compiler
+to binary output (`.bin`, Intel HEX `.hex`, D8 debug map `.d8dbg.json`, listing `.lst`, and
+ASM80 lowered output `.z80`). There is no external linker. The compiler
 is a single-pass whole-program tool
 written in TypeScript and runs on Node.js ≥ 20.
 
@@ -37,7 +37,6 @@ src/
   formats/
     types.ts              Output artifact and format-writer contracts
     index.ts              Format writer factory
-    writeAsm.ts           ASM trace writer (.asm)
     writeAsm80.ts         ASM80 lowered source writer (.z80)
     writeBin.ts           Binary writer (.bin)
     writeD8m.ts           D8 debug map writer (.d8dbg.json)
@@ -150,8 +149,7 @@ compile(entryFile, options, deps)           [compile.ts]
        ├─ writeHex → .hex
        ├─ writeD8m → .d8dbg.json
        ├─ writeListing → .lst
-       ├─ writeAsm80 → .z80
-       └─ writeAsm → .asm (legacy trace)
+       └─ writeAsm80 → .z80
 ```
 
 ---

@@ -67,7 +67,6 @@ function makeSink(
     fixups: [],
     rel8Fixups: [],
     sourceSegments: [],
-    asmTrace: [],
     currentSourceTag: undefined,
     startupInitActions: [],
   };

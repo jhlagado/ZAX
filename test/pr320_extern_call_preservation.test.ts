@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
 import { compilePlacedProgram, flattenLoweredItems } from './helpers/lowered_program.js';
 
 const fixture = join(__dirname, 'fixtures', 'pr320_extern_and_internal_calls.zax');
@@ -13,8 +10,9 @@ describe('PR320 extern typed-call preservation', () => {
     const { program, diagnostics } = await compilePlacedProgram(fixture);
     expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
 
-    // callee_internal prologue preserves AF/BC/DE (return in HL, volatile) per table
     const items = flattenLoweredItems(program);
+
+    // callee_internal prologue preserves AF/BC/DE (return in HL, volatile) per table
     const labelIdx = items.findIndex((item) => item.kind === 'label' && item.name === 'callee_internal');
     expect(labelIdx).toBeGreaterThanOrEqual(0);
     const prologueItems = items.slice(labelIdx + 1, labelIdx + 12).filter((item) => item.kind === 'instr');
@@ -29,21 +27,36 @@ describe('PR320 extern typed-call preservation', () => {
     expect(hasProloguePush('BC')).toBe(true);
     expect(hasProloguePush('DE')).toBe(true);
 
-    // extern call site should not push preserves around callee_extern (trace-only check)
-    const asmRes = await compile(
-      fixture,
-      { emitAsm: true, emitAsm80: false, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
+    // In main's body, typed calls are emitted as @raw CALL bytes.
+    // Verify that no caller-side push AF/BC/DE appears anywhere in main's body
+    // between the start of its call sequence and the epilogue label.
+    // main's own prologue may push AF/BC/DE (it preserves for its own callers),
+    // but there should be no additional preservation injected around call sites.
+    const mainLabelIdx = items.findIndex((item) => item.kind === 'label' && item.name === 'main');
+    expect(mainLabelIdx).toBeGreaterThanOrEqual(0);
+    const mainEpilogueIdx = items.findIndex(
+      (item) => item.kind === 'label' && item.name === '__zax_epilogue_1',
     );
-    expect(asmRes.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-    const asm = asmRes.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-    expect(asm).toBeDefined();
-    const lines = asm!.text.split('\n');
-    const callIdx = lines.findIndex((l) => /call callee_extern/i.test(l));
-    expect(callIdx).toBeGreaterThanOrEqual(0);
-    const window = lines.slice(Math.max(0, callIdx - 3), callIdx + 1).join('\n');
-    expect(window).not.toMatch(/push AF/i);
-    expect(window).not.toMatch(/push BC/i);
-    expect(window).not.toMatch(/push DE/i);
+    expect(mainEpilogueIdx).toBeGreaterThanOrEqual(mainLabelIdx);
+
+    // Locate main's own prologue push AF/BC/DE (frame setup: push IX + ld IX + add IX,SP first)
+    // The first @raw in main is the call to callee_internal; count push AF/BC/DE total in main body.
+    const mainBodyItems = items.slice(mainLabelIdx + 1, mainEpilogueIdx);
+
+    // Count push AF, BC, DE occurrences in main body
+    const pushCount = (reg: string) =>
+      mainBodyItems.filter(
+        (item) =>
+          item.kind === 'instr' &&
+          item.head.toUpperCase() === 'PUSH' &&
+          item.operands[0]?.kind === 'reg' &&
+          item.operands[0].name.toUpperCase() === reg,
+      ).length;
+
+    // Each should appear exactly once (main's own prologue preservation only).
+    // If caller-side preservation were injected around call sites, the count would be higher.
+    expect(pushCount('AF')).toBe(1);
+    expect(pushCount('BC')).toBe(1);
+    expect(pushCount('DE')).toBe(1);
   });
 });
