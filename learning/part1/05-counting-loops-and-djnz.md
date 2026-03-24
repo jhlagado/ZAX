@@ -2,19 +2,13 @@
 
 # Chapter 5 — Counting Loops and DJNZ
 
-There are no loops in assembly. There are no subroutines, no if-statements, no
-structured blocks of any kind. The language is nothing but individual
-instructions, one after another. Every structure that exists in high-level
-languages — loops, conditionals, function calls — you build yourself out of
-jumps and labels. The CPU does exactly what you write, nothing more.
+The `dec b / jp nz` loop from Chapter 4 uses two instructions to do one
+conceptual thing: decrement-the-counter-and-loop-if-not-done. The Z80 has a
+single instruction that fuses them.
 
-This chapter introduces `djnz`, the Z80's single-instruction counted loop
-primitive. After reading it you will be able to write a DJNZ counted loop, a
-sentinel loop that exits on a value match, and a flag-exit loop that exits when
-a computed condition becomes true. You will also understand a hardware edge case
-that every Z80 programmer needs to know.
-
-Prerequisites: Chapter 4 (flags, `cp`, `jp`, `jr`, label-based control flow).
+This chapter introduces `djnz`, the hardware edge case that catches every Z80
+programmer at least once, and the three loop forms you will use repeatedly:
+counted, sentinel, and flag-exit.
 
 ---
 
@@ -116,9 +110,9 @@ pre-test is needed.
 
 ## What the registers hold after a loop
 
-It is worth pausing to think about what state the CPU is in after a loop
-finishes. Consider the counted loop from Section A of the example below, which
-sums the five bytes `{ 3, 7, 2, 8, 5 }`:
+After a loop exits, all three registers it touched have changed. Consider the
+counted loop from Section A of the example below, which sums the five bytes
+`{ 3, 7, 2, 8, 5 }`:
 
 ```zax
 ld hl, addends
@@ -147,8 +141,8 @@ responsibility — you must track where your pointers end up.
 
 ## Sentinel loops
 
-A sentinel loop does not count iterations. It tests each element against a
-known value (the sentinel) and stops when it finds a match.
+A sentinel loop tests each element against a known value. The data tells it
+when to stop; there is no count to set in advance.
 
 The structure uses `cp` and `jr z` instead of DJNZ as the exit mechanism:
 
@@ -333,11 +327,6 @@ determines when to stop.
   overrun guard.
 - A flag-exit loop uses a flag condition as the primary exit, with DJNZ again
   as the overrun guard.
-
-## What Comes Next
-
-Chapter 6 shows how to define byte and word tables in memory and read their
-entries using HL as a sequential pointer and IX as a displaced-access pointer.
 
 ---
 
