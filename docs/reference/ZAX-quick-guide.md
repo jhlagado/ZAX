@@ -20,7 +20,7 @@ ZAX combines:
 - compile-time expressions (`const`, `sizeof`, `offsetof`, `enum`)
 - inline macro-instructions (`op`) with AST-level operand matching and overload resolution
 
-The compiler adds structure and names to assembly decisions — it does not make those decisions for you. You choose registers, manage flags, and decide what lives in ROM vs RAM. Where compiler-generated code appears (function prologues, epilogues, call wrappers, index-scaling sequences), it is deterministic and inspectable via the `.asm` or `.lst` outputs.
+The compiler adds structure and names to assembly decisions — it does not make those decisions for you. You choose registers, manage flags, and decide what lives in ROM vs RAM. Where compiler-generated code appears (function prologues, epilogues, call wrappers, index-scaling sequences), it is deterministic and inspectable via the assembler-valid `.z80` output or the legacy `.asm`/`.lst` trace outputs.
 
 ### 1.2 Why Use It
 
@@ -111,15 +111,15 @@ Common outputs:
 | `.hex`        | Intel HEX output                                  |
 | `.lst`        | deterministic byte dump with symbol table         |
 | `.d8dbg.json` | D8 Debug Map for Debug80 and compatible tools     |
-| `.asm`        | lowered trace — exactly what the compiler emitted |
 | `.z80`        | ASM80-compatible lowered source (assembler-valid) |
+| `.asm`        | legacy lowered trace (not assembler-valid)        |
 
 By default, ZAX derives all artifact paths from the primary output path. Use `-o <file>` to set the primary output; `-t hex` or `-t bin` to choose the primary type (default: `hex`). Suppress individual outputs with `--nolist`, `--nobin`, `--nohex`, `--nod8m`, `--noasm`. Emit ASM80 output explicitly with `--asm80`.
 
-Trace vs ASM80 output:
+ASM80 vs trace output:
 
-- `.asm` is a compiler trace for inspection; it is not guaranteed assembler-valid.
 - `.z80` is assembler-valid lowered output intended for ASM80.
+- `.asm` is a legacy compiler trace for inspection; it is not guaranteed assembler-valid.
 
 Useful diagnostic options:
 
@@ -802,10 +802,10 @@ Rules:
 
 `break` exits the immediately enclosing loop; `continue` restarts from the loop's condition check. Both are valid only inside `while` / `end` and `repeat` / `until` bodies.
 
-| Construct  | Transfers control to                                                      |
-| ---------- | ------------------------------------------------------------------------- |
-| `break`    | immediately after the loop's closing `end` or `until`                    |
-| `continue` | the condition test (`while`: top of loop; `repeat`: `until` at bottom)   |
+| Construct  | Transfers control to                                                   |
+| ---------- | ---------------------------------------------------------------------- |
+| `break`    | immediately after the loop's closing `end` or `until`                  |
+| `continue` | the condition test (`while`: top of loop; `repeat`: `until` at bottom) |
 
 Both emit an unconditional jump to the compiler-generated loop label. Neither sets or clears flags.
 
@@ -891,10 +891,10 @@ Rules:
 
 Three declaration forms are valid inside a `var` block:
 
-| Form                     | Meaning                                                       |
-| ------------------------ | ------------------------------------------------------------- |
-| `name: Type`             | allocates a scalar frame slot, zero-initialized               |
-| `name: Type = valueExpr` | allocates a scalar frame slot, initialized to `valueExpr`     |
+| Form                       | Meaning                                                                  |
+| -------------------------- | ------------------------------------------------------------------------ |
+| `name: Type`               | allocates a scalar frame slot, zero-initialized                          |
+| `name: Type = valueExpr`   | allocates a scalar frame slot, initialized to `valueExpr`                |
 | `name = GlobalStorageName` | alias — no frame slot; binds a local name to direct module-scope storage |
 
 The **typed alias form** `name: Type = rhs` is always a compile error.
@@ -2561,5 +2561,5 @@ Working in ZAX means keeping the lowering predictable. A few habits help:
 - **Keep `op` bodies small and mechanical.** If an op body is doing significant work, consider whether a `func` with its typed boundary guarantees would be clearer.
 - **Use `sizeof` and `offsetof` everywhere.** Never hardcode a field offset. If the type changes, the built-ins update automatically.
 - **Use qualified enum names everywhere.** `Mode.Run` everywhere, never bare `Run`. Unqualified references are compile errors in the current language — this is enforced, not advisory.
-- **Check the `.asm` or `.lst` output when something looks wrong.** The lowered trace shows exactly what the compiler emitted. The IX byte-lane shuttle (`ex de, hl` / `ld e, (ix+d)` / ...) is particularly visible here.
+- **Check the `.z80`, `.asm`, or `.lst` output when something looks wrong.** The lowered outputs show exactly what the compiler emitted. The IX byte-lane shuttle (`ex de, hl` / `ld e, (ix+d)` / ...) is particularly visible here; `.asm` remains a legacy trace.
 - **Treat `docs/spec/zax-spec.md` as the final authority.** This guide is instructional; the spec is normative.
