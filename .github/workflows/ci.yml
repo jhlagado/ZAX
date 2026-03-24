@@ -89,7 +89,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       SKIP_LANGUAGE_TOUR: '1'
-    timeout-minutes: 15
+    # macos-latest coverage + slow-reliability can approach 15m under queue/load; keep headroom.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
