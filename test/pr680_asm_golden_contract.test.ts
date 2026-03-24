@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
+import type { Asm80Artifact } from '../src/formats/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,7 +19,7 @@ type CorpusEntry = {
 type CorpusManifest = {
   curatedCases: CorpusEntry[];
   negativeCases: CorpusEntry[];
-  goldenAsmDir: string;
+  goldenZ80Dir: string;
   opcodeHexDir: string;
   mirrorDir: string;
 };
@@ -59,21 +59,21 @@ function formatMismatch(caseName: string, mismatch: LineMismatch): string {
   const expectedLine = mismatch.expectedLine ?? '<missing>';
   const actualLine = mismatch.actualLine ?? '<missing>';
   return [
-    `ASM golden mismatch for "${caseName}" at line ${mismatch.lineNumber}.`,
+    `.z80 golden mismatch for "${caseName}" at line ${mismatch.lineNumber}.`,
     `expected: ${JSON.stringify(expectedLine)}`,
     `actual:   ${JSON.stringify(actualLine)}`,
     'Refresh fixtures with: npm run regen:codegen-corpus',
   ].join('\n');
 }
 
-describe('PR680: asm golden contract coverage for curated corpus', () => {
-  it('matches emitted asm to checked-in corpus goldens with clear mismatch output', async () => {
+describe('PR680: asm80 golden contract coverage for curated corpus', () => {
+  it('matches emitted asm80 to checked-in corpus goldens with clear mismatch output', async () => {
     const manifest = await readManifest();
 
     for (const entry of manifest.curatedCases) {
       const sourcePath = join(__dirname, '..', entry.source);
-      const expectedAsmPath = join(__dirname, '..', manifest.goldenAsmDir, `${entry.name}.asm`);
-      const expectedAsm = await readFile(expectedAsmPath, 'utf8');
+      const expectedZ80Path = join(__dirname, '..', manifest.goldenZ80Dir, `${entry.name}.z80`);
+      const expectedZ80 = await readFile(expectedZ80Path, 'utf8');
 
       const result = await compile(
         sourcePath,
@@ -82,16 +82,18 @@ describe('PR680: asm golden contract coverage for curated corpus', () => {
           emitHex: false,
           emitD8m: false,
           emitListing: false,
-          emitAsm: true,
+          emitAsm80: true,
         },
         { formats: defaultFormatWriters },
       );
       expect(result.diagnostics).toEqual([]);
 
-      const asm = result.artifacts.find((artifact): artifact is AsmArtifact => artifact.kind === 'asm');
-      expect(asm).toBeDefined();
+      const asm80 = result.artifacts.find(
+        (artifact): artifact is Asm80Artifact => artifact.kind === 'asm80',
+      );
+      expect(asm80).toBeDefined();
 
-      const mismatch = findFirstLineMismatch(expectedAsm, asm!.text);
+      const mismatch = findFirstLineMismatch(expectedZ80, asm80!.text);
       if (mismatch) {
         throw new Error(formatMismatch(entry.name, mismatch));
       }

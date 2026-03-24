@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 type CorpusManifest = {
   curatedCases: Array<{ name: string; source: string; kind: string }>;
   negativeCases: Array<{ name: string; source: string; kind: string }>;
-  goldenAsmDir: string;
+  goldenZ80Dir: string;
   opcodeHexDir: string;
   mirrorDir: string;
 };
@@ -41,16 +41,16 @@ describe('PR453: codegen corpus workflow', () => {
       expect(entry.source.endsWith('.zax')).toBe(true);
       expect(entry.kind.length).toBeGreaterThan(0);
       await access(join(__dirname, '..', entry.source));
-      await access(join(__dirname, '..', manifest.goldenAsmDir, `${entry.name}.asm`));
+      await access(join(__dirname, '..', manifest.goldenZ80Dir, `${entry.name}.z80`));
       await access(join(__dirname, '..', manifest.opcodeHexDir, `${entry.name}.hex`));
       await access(join(__dirname, '..', manifest.mirrorDir, `${entry.name}.zax`));
-      await access(join(__dirname, '..', manifest.mirrorDir, `${entry.name}.asm`));
       await access(join(__dirname, '..', manifest.mirrorDir, `${entry.name}.bin`));
       await access(join(__dirname, '..', manifest.mirrorDir, `${entry.name}.hex`));
+      await access(join(__dirname, '..', manifest.mirrorDir, `${entry.name}.z80`));
     }
 
-    const goldenAsmNames = (await readdir(join(__dirname, '..', manifest.goldenAsmDir)))
-      .filter((name) => name.endsWith('.asm'))
+    const goldenZ80Names = (await readdir(join(__dirname, '..', manifest.goldenZ80Dir)))
+      .filter((name) => name.endsWith('.z80'))
       .map((name) => name.slice(0, -4))
       .sort();
     const opcodeHexNames = (await readdir(join(__dirname, '..', manifest.opcodeHexDir)))
@@ -58,7 +58,7 @@ describe('PR453: codegen corpus workflow', () => {
       .map((name) => name.slice(0, -4))
       .sort();
 
-    expect(goldenAsmNames).toEqual(curatedNames);
+    expect(goldenZ80Names).toEqual(curatedNames);
     expect(opcodeHexNames).toEqual(curatedNames);
 
     for (const entry of manifest.negativeCases) {
