@@ -59,8 +59,6 @@ land somewhere executable. Variables have to live somewhere writable. That is
 what sections are for: they tell the assembler where a block of named storage
 belongs in memory.
 
-For this chapter, keep the rule simple. You only need one section form:
-
 ```zax
 section data state at $8000
   result: byte = 0
