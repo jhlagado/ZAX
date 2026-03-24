@@ -75,24 +75,24 @@ Status values used below:
 | `RET` | `ret`, `ret cc` | base | documented | return from subroutine |
 | `RETI` | `reti` | `ED` | documented prefix family | interrupt return |
 | `RETN` | `retn` | `ED` | documented prefix family | interrupt/non-maskable return |
-| `RL` | `rl r`, `rl (hl)`, `rl (ix+d)`, `rl (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | rotate through carry |
-| `RLA` | `rla` | base | documented | accumulator rotate through carry |
-| `RLC` | `rlc r`, `rlc (hl)`, `rlc (ix+d)`, `rlc (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | circular rotate left |
-| `RLCA` | `rlca` | base | documented | accumulator circular rotate left |
+| `RL` | `rl r`, `rl (hl)`, `rl (ix+d)`, `rl (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | 9-bit left rotation through carry: bit 7 → new C, old C → bit 0; updates S, Z, P/V, C |
+| `RLA` | `rla` | base | documented | same 9-bit left rotation as RL, accumulator only; only C updated — S, Z, P/V unchanged |
+| `RLC` | `rlc r`, `rlc (hl)`, `rlc (ix+d)`, `rlc (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | circular left: bit 7 wraps to bit 0 and copies to C; updates S, Z, P/V, C |
+| `RLCA` | `rlca` | base | documented | same circular left rotation as RLC, accumulator only; only C updated — S, Z, P/V unchanged |
 | `RLD` | `rld` | `ED` | documented prefix family | nibble rotate between `A` and `(HL)` |
-| `RR` | `rr r`, `rr (hl)`, `rr (ix+d)`, `rr (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | rotate through carry |
-| `RRA` | `rra` | base | documented | accumulator rotate through carry |
-| `RRC` | `rrc r`, `rrc (hl)`, `rrc (ix+d)`, `rrc (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | circular rotate right |
-| `RRCA` | `rrca` | base | documented | accumulator circular rotate right |
+| `RR` | `rr r`, `rr (hl)`, `rr (ix+d)`, `rr (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | 9-bit right rotation through carry: bit 0 → new C, old C → bit 7; updates S, Z, P/V, C |
+| `RRA` | `rra` | base | documented | same 9-bit right rotation as RR, accumulator only; only C updated — S, Z, P/V unchanged |
+| `RRC` | `rrc r`, `rrc (hl)`, `rrc (ix+d)`, `rrc (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | circular right: bit 0 wraps to bit 7 and copies to C; updates S, Z, P/V, C |
+| `RRCA` | `rrca` | base | documented | same circular right rotation as RRC, accumulator only; only C updated — S, Z, P/V unchanged |
 | `RRD` | `rrd` | `ED` | documented prefix family | nibble rotate between `A` and `(HL)` |
 | `RST` | `rst $00/$08/$10/$18/$20/$28/$30/$38` | base | documented | fixed low-memory call vectors |
 | `SBC` | `sbc a,r`, `sbc a,n`, `sbc a,(hl)`, `sbc a,(ix+d)`, `sbc a,(iy+d)`, `sbc hl,ss` | base, `DD`, `FD`, `ED` | documented | two separate families: 8-bit accumulator and 16-bit `HL` |
 | `SCF` | `scf` | base | documented | set carry |
 | `SET` | `set b,r`, `set b,(hl)`, `set b,(ix+d)`, `set b,(iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | sets bit and writes back |
-| `SLA` | `sla r`, `sla (hl)`, `sla (ix+d)`, `sla (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | arithmetic left shift |
-| `SLL` / `SLS` | `sll r`, `sll (hl)`, `sll (ix+d)`, `sll (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | undocumented but classic | same operation, two common mnemonic names |
-| `SRA` | `sra r`, `sra (hl)`, `sra (ix+d)`, `sra (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | arithmetic right shift |
-| `SRL` | `srl r`, `srl (hl)`, `srl (ix+d)`, `srl (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | logical right shift |
+| `SLA` | `sla r`, `sla (hl)`, `sla (ix+d)`, `sla (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | shift left: bit 7 → C, 0 fills bit 0; effectively multiply by 2; updates S, Z, P/V, C |
+| `SLL` / `SLS` | `sll r`, `sll (hl)`, `sll (ix+d)`, `sll (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | undocumented but classic | shift left with 1 filling bit 0 (result always odd); bit 7 → C; two common names for the same opcode |
+| `SRA` | `sra r`, `sra (hl)`, `sra (ix+d)`, `sra (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | arithmetic right shift: bit 0 → C, bit 7 preserved (sign extension); correct for signed divide by 2; updates S, Z, P/V, C |
+| `SRL` | `srl r`, `srl (hl)`, `srl (ix+d)`, `srl (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | logical right shift: bit 0 → C, 0 fills bit 7; correct for unsigned divide by 2; updates S, Z, P/V, C |
 | `SUB` | `sub r`, `sub n`, `sub (hl)`, `sub (ix+d)`, `sub (iy+d)` | base, `DD`, `FD` | documented | accumulator-only subtract |
 | `XOR` | `xor r`, `xor n`, `xor (hl)`, `xor (ix+d)`, `xor (iy+d)` | base, `DD`, `FD` | documented | accumulator-only logical op |
 
@@ -111,3 +111,132 @@ treated by real Z80 programmers as part of the practical machine:
 These are exactly the sorts of forms that make a searchable appendix useful.
 They are also exactly the forms that justify checking a table rather than
 trusting your memory.
+
+---
+
+## Rotate and Shift Instructions in Detail
+
+The Z80 has three families of rotate and shift instructions. The diagrams below
+show exactly what happens to each bit on every operation.
+
+---
+
+### Circular rotates: RLC / RLCA and RRC / RRCA
+
+The byte rotates as a closed ring. The bit that falls off one end wraps to the
+other end, and a copy of it lands in the carry flag.
+
+```
+RLC / RLCA  (circular rotate left)
+  before:  [b7 b6 b5 b4 b3 b2 b1 b0]   C = ?
+  after:   [b6 b5 b4 b3 b2 b1 b0 b7]   C = b7
+  (bit 7 wraps to bit 0; C receives a copy of b7)
+
+RRC / RRCA  (circular rotate right)
+  before:  [b7 b6 b5 b4 b3 b2 b1 b0]   C = ?
+  after:   [b0 b7 b6 b5 b4 b3 b2 b1]   C = b0
+  (bit 0 wraps to bit 7; C receives a copy of b0)
+```
+
+Nothing is lost in a circular rotate. All eight original bits are still present
+in the result; they have just moved. C ends up equal to the bit that wrapped.
+
+---
+
+### Through-carry rotates: RL / RLA and RR / RRA
+
+The carry flag acts as a ninth bit. The byte and the carry together form a
+9-bit ring. The displaced bit exits through carry; the old carry enters on the
+other side.
+
+```
+RL / RLA  (rotate left through carry)
+  before:  [b7 b6 b5 b4 b3 b2 b1 b0]   C = c
+  after:   [b6 b5 b4 b3 b2 b1 b0  c]   C = b7
+  (old C enters bit 0; bit 7 exits to new C)
+
+RR / RRA  (rotate right through carry)
+  before:  [b7 b6 b5 b4 b3 b2 b1 b0]   C = c
+  after:   [ c b7 b6 b5 b4 b3 b2 b1]   C = b0
+  (old C enters bit 7; bit 0 exits to new C)
+```
+
+Nothing is lost here either. The old carry is the bit that entered. If you
+rotate left through carry and then rotate right through carry, you recover the
+original byte and the original carry. This makes RL/RR the right tool for
+shifting multi-byte values: carry shuttles the overflow bit between adjacent
+bytes.
+
+---
+
+### Shifts: SLA, SRA, SRL, SLL/SLS
+
+Shifts do not wrap. The bit that falls off one end is lost after being copied
+to carry. A fixed value fills the vacated position.
+
+```
+SLA  (shift left arithmetic)
+  before:  [b7 b6 b5 b4 b3 b2 b1 b0]   C = ?
+  after:   [b6 b5 b4 b3 b2 b1 b0  0]   C = b7
+  (0 fills bit 0; bit 7 exits to C; equivalent to multiply by 2)
+
+SLL / SLS  (shift left logical, undocumented)
+  before:  [b7 b6 b5 b4 b3 b2 b1 b0]   C = ?
+  after:   [b6 b5 b4 b3 b2 b1 b0  1]   C = b7
+  (1 fills bit 0; bit 7 exits to C; result always has bit 0 set)
+
+SRA  (shift right arithmetic)
+  before:  [b7 b6 b5 b4 b3 b2 b1 b0]   C = ?
+  after:   [b7 b7 b6 b5 b4 b3 b2 b1]   C = b0
+  (bit 7 preserved, copied into itself; bit 0 exits to C; signed divide by 2)
+
+SRL  (shift right logical)
+  before:  [b7 b6 b5 b4 b3 b2 b1 b0]   C = ?
+  after:   [ 0 b7 b6 b5 b4 b3 b2 b1]   C = b0
+  (0 fills bit 7; bit 0 exits to C; unsigned divide by 2)
+```
+
+SRA and SRL differ in exactly one way: SRA copies bit 7 into itself, preserving
+the sign. SRL clears bit 7. For signed values, SRA divides by 2 correctly —
+−4 (= `$FC`) shifted right arithmetically gives −2 (= `$FE`). SRL would give
+126 (= `$7E`), which is wrong for a signed interpretation.
+
+---
+
+### Accumulator forms vs CB-prefix forms
+
+Every rotate instruction has two variants. The difference in which flags they
+update is easy to miss.
+
+| Form | Example | Flags updated |
+|------|---------|---------------|
+| Accumulator-only | `RLCA`, `RRCA`, `RLA`, `RRA` | C only |
+| CB-prefix (any register) | `RLC r`, `RRC r`, `RL r`, `RR r` | S, Z, P/V, C |
+
+`RLCA`, `RRCA`, `RLA`, and `RRA` are single-byte base instructions — fast and
+compact. But they only update carry. S, Z, and P/V are left in their previous
+state after them.
+
+`RLC r`, `RRC r`, `RL r`, and `RR r` are CB-prefix forms. They rotate by the
+same amount but update all four flags. If you need to test whether a register
+is zero after a rotate — for example, to detect when all bits have been shifted
+out — use the CB-prefix form, not the accumulator shorthand.
+
+This is one of the Z80's genuine inconsistencies: two mnemonics that look like
+the same operation but behave differently. The table entries above flag this
+explicitly.
+
+---
+
+### Quick reference: what enters and exits each operation
+
+| Instruction | Bit entering | From | Bit exiting | To |
+|-------------|-------------|------|-------------|-----|
+| RLC / RLCA | b7 | wraps from bit 7 | b7 copy | C |
+| RL / RLA | old C | enters bit 0 | b7 | new C |
+| RRC / RRCA | b0 | wraps from bit 0 | b0 copy | C |
+| RR / RRA | old C | enters bit 7 | b0 | new C |
+| SLA | 0 | fills bit 0 | b7 | C |
+| SLL / SLS | 1 | fills bit 0 | b7 | C |
+| SRA | b7 | preserved in place | b0 | C |
+| SRL | 0 | fills bit 7 | b0 | C |
