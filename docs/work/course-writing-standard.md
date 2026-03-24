@@ -280,6 +280,29 @@ Z well enough for the contrast to teach something.
 If the reader does not understand the negated thing, the paragraph teaches
 nothing.
 
+The tightest form of this failure is the "inversion pair": one sentence states
+the negative, the next states the positive. The positive sentence already
+contains everything the reader needs. Cut the negative one.
+
+But stripping the negative is only the first step. The better fix is to deepen
+the positive with a concrete verb or specific detail — not just restate it more
+cleanly.
+
+Bad:
+> A sentinel loop does not count iterations. It tests each element against a
+> known value and stops when it finds a match.
+
+Stripped (better, but still flat):
+> A sentinel loop tests each element against a known value and stops when it
+> finds a match.
+
+Deepened (best):
+> A sentinel loop tests each element against a known value. The data tells it
+> when to stop; there is no count to set in advance.
+
+The last version teaches something the stripped version does not: why you would
+choose this shape over a counted loop.
+
 ### 2. Empty rhetoric
 
 Avoid words and phrases like:
@@ -320,6 +343,89 @@ Watch for this failure mode:
 
 Cut this aggressively.
 
+### 7. Hollow landing sentences
+
+These sentences appear at the end of a paragraph or section and look like they
+are drawing a conclusion. They are not. They restate what was just shown, add
+"that is just how it works", and teach nothing.
+
+Patterns to cut:
+
+- "That is simply how the hardware works."
+- "The CPU does exactly what you write, nothing more."
+- "This is just the way Z80 assembly operates."
+- "There is no way around this."
+- "Nothing happens unless you ask for it."
+
+These are closing flourishes. If the explanation before them was clear, the
+sentence adds nothing. If it was not clear, the sentence does not fix it. Cut
+them and end on the last sentence that actually teaches.
+
+### 8. "This is the standard way to..."
+
+Avoid classifying an idiom before showing it. The classification adds no
+information — it tells the reader how to feel about what follows, not what
+follows. Show the pattern, explain what it does and why. If it is common, the
+reader will discover that through use.
+
+Bad:
+> This is the standard way to test whether A holds zero without a comparison.
+> `or a` / `jr z, target`
+
+Better:
+> `or a` sets Z if A is zero, without changing A and without needing a
+> comparison value. One byte instead of two.
+
+### 9. Performative section openers
+
+Avoid sentences that announce the importance of what follows rather than
+delivering it:
+
+- "This is the section that saves you from your first truly baffling bug."
+- "This is the key insight."
+- "What follows is the most important rule in this chapter."
+
+These are stage directions. They create an expectation and then make the reader
+wait for the real content. Start with the content.
+
+### 10. "It is worth..." and "Note that..."
+
+Cut on sight:
+
+- "It is worth noting that..."
+- "It is worth pausing to consider..."
+- "Note that..."
+- "Notice that..."
+- "It should be mentioned that..."
+
+These are hedges the writer uses instead of stating a thing directly. Every
+one of them can be replaced by just stating the thing.
+
+Bad:
+> It is worth pausing to think about what state the CPU is in after a loop.
+
+Better:
+> After a loop exits, all three registers the loop touched have changed.
+
+### 11. Redundant intensifiers at sentence end
+
+Watch for phrases appended to a sentence that already made its point:
+
+- "nothing more"
+- "no matter what"
+- "regardless"
+- "in any case"
+- "at all times"
+
+Bad:
+> The CPU does exactly what you write, nothing more.
+
+Better:
+> The CPU does exactly what you write.
+
+The word "exactly" already closes the claim. "Nothing more" is the writer
+making sure you heard it — which is not the writer's job.
+
 ### 5. Historical name-dropping without teaching value
 
 Avoid invoking classic books, famous authors, or historical lineages unless the
@@ -342,6 +448,113 @@ If you would not say it aloud to someone sitting next to you learning Z80 for
 the first time, do not write it in the course.
 
 Ask: what am I actually trying to say? Then say that, in plain words.
+
+### 12. Discourse connectors used as padding
+
+"However", "therefore", "moreover", "in addition", "as a result", "in other
+words", "on the other hand" — these are essay connectors. They belong in
+argumentative prose that builds a case step by step. Course teaching is not
+argumentative; it is sequential. When a connector appears, it usually means the
+writer is explaining a relationship they could have just shown directly.
+
+Bad:
+> The Z flag is set after `cp`. However, `ld` does not affect flags.
+
+Better:
+> `cp` sets the Z flag. `ld` does not touch flags at all.
+
+The second version shows the difference directly and costs no extra words. The
+connector "however" implied a contrast the reader had to interpret. Just state
+both facts.
+
+Other signals: "in other words" means the previous sentence was unclear. Fix
+the previous sentence instead of adding a restatement.
+
+### 13. Placeholder nouns
+
+Generic nouns standing in for a specific one:
+
+- "thing" / "things" / "stuff"
+- "aspect" / "aspects"
+- "element" / "elements"
+- "area" / "areas"
+- "part" / "parts"
+
+When these appear as the subject of a sentence, the writer has not decided what
+they are actually talking about. Replace with the specific noun.
+
+Bad:
+> One important aspect to note is that the carry flag is set.
+
+Better:
+> The carry flag is set.
+
+### 14. Weak main verbs
+
+When "make", "get", "have", "use", "do" is the main verb of a sentence, the
+sentence usually has no real precision. Find the specific verb.
+
+Bad:
+> `LD` does the job of copying a value from source to destination.
+
+Better:
+> `LD` copies a value from source to destination.
+
+"Does the job of copying" is three words doing the work of one. The specific
+verb is "copies". Use it.
+
+### 15. Sentence rhythm: S-V-O monotony
+
+A sequence of short sentences all following Subject-Verb-Object locks the prose
+into a flat, mechanical beat. Vary sentence length and opening: start one with
+a clause, end one with the key point, let one sentence carry two related things
+where they belong together. Monotony is its own signal — if you read a
+paragraph aloud and it sounds like a robot listing facts, the structure needs
+changing even if every fact is correct.
+
+This rule is about rhythm, not length. Some short sentences are good. Several in
+a row with the same structure are not.
+
+### 16. Forbidden words (hard blacklist)
+
+These should not appear in course prose under any circumstances:
+
+- `delve` / `dive into`
+- `testament`
+- `vibrant`
+- `comprehensive`
+- `robust` (unless comparing memory architectures)
+- `elegant` / `powerful` / `sophisticated` — let the code prove it
+- `leverage` (use "use")
+- `streamline`
+- `in conclusion`
+- `looking ahead`
+- `navigate` (as a metaphor)
+- `embark`
+
+These words are AI reflex choices. Their presence is a reliable sign that
+the sentence is filling space rather than teaching something.
+
+## Two-level reading
+
+Every section should work on two levels simultaneously.
+
+The **information level** carries facts: what the instruction does, what the
+register holds, what the flag means. This is the minimum. A section that only
+delivers facts is a reference manual, not a course.
+
+The **intent level** carries the reason it matters: why you reach for this
+instruction over that one, what goes wrong when you miss it, where this pattern
+saves time or prevents a bug. A reader should be able to say not just "what did
+I learn" but "why did that matter."
+
+Both levels must be present. A section that only delivers facts is too thin.
+A section that only explains why without grounding in concrete mechanics is
+too vague.
+
+When a section feels weak, ask: does it have both? If the facts are there but
+the intent is missing, add a sentence that connects the mechanics to the
+consequence. If the intent is there but the facts are thin, add an example.
 
 ## Positive writing model
 
@@ -568,6 +781,36 @@ manual? If yes, rewrite it as something a person would say.
 "It is", "This is", or "That is" and do no teaching work. Some are fine — but
 when a section has several in a row, each one is probably deferring real content.
 Ask: what is the sentence actually saying, and can it say it directly?
+
+**AI-specific tic check**: Search the text for these exact strings and challenge
+every occurrence:
+
+- `"is not"` / `"are not"` / `"does not"` — is the negative form followed by a
+  positive that would work alone? Cut the negative. Then deepen the positive with
+  a concrete verb or specific detail rather than just restating it.
+- `"simply"` / `"just"` / `"of course"` — these minimise what the reader may
+  find hard. Cut them.
+- `"It is worth"` / `"Note that"` / `"Notice that"` — replace with the direct
+  statement the writer was about to hedge.
+- `"This is the standard way"` / `"This is the primary"` / `"This is the most
+  common"` — cut the classification; the explanation that follows stands alone.
+- `"nothing more"` / `"no more than"` / `"no less than"` — redundant intensifiers
+  that follow a sentence that already closed its claim.
+- `"as we will see later"` / `"you will see why"` / `"this will become clear"` —
+  either earn the payoff now or cut the deferral.
+- `"That is how X works."` / `"That is simply the way."` — hollow landings that
+  restate what was just shown. Cut and end on the last sentence that taught
+  something.
+- `"however"` / `"therefore"` / `"moreover"` / `"in addition"` / `"as a result"` /
+  `"in other words"` — essay connectors. Replace with a direct statement of the
+  same relationship. "However, LD does not affect flags" → "LD does not touch
+  flags."
+- `"aspect"` / `"element"` / `"area"` / `"part"` / `"thing"` as a subject noun —
+  placeholder. Replace with the specific thing.
+- `"make"` / `"get"` / `"use"` / `"have"` as the main verb — find the specific verb.
+  "does the job of copying" → "copies".
+- `"delve"` / `"testament"` / `"vibrant"` / `"comprehensive"` / `"robust"` /
+  `"leverage"` / `"elegant"` — hard blacklist. Delete.
 
 **Internal vocabulary**: Search for "idiom", "discipline", "invariant",
 "ergonomic", "bookkeeping cost", "naming pressure", "Phase A", "Phase B",
