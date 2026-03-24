@@ -41,6 +41,13 @@ PART2=(
   part2/09-gaps-and-futures.md
 )
 
+APPENDICES=(
+  appendices/01-numbers-notation-and-ascii.md
+  appendices/02-registers-flags-and-conditions.md
+  appendices/03-addressing-prefixes-and-instruction-forms.md
+  appendices/04-classic-z80-instruction-support.md
+)
+
 # Strip nav header/footer lines and surrounding horizontal rules.
 # Nav lines contain "[Part 1](README.md)" or "[Part 2](README.md)".
 strip_nav() {
@@ -88,6 +95,14 @@ HEADER
   printf '\n---\n\n# Part 2 — Algorithms and Data Structures in ZAX\n\n'
 
   for f in "${PART2[@]}"; do
+    content=$(cat "$LEARNING/$f" | strip_nav | trim_chapter)
+    printf '%s\n\n' "$content"
+  done
+
+  # Appendices
+  printf '\n---\n\n# Appendices — Global Reference\n\n'
+
+  for f in "${APPENDICES[@]}"; do
     content=$(cat "$LEARNING/$f" | strip_nav | trim_chapter)
     printf '%s\n\n' "$content"
   done
