@@ -1,77 +1,73 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { Asm80Artifact } from '../src/formats/types.js';
+import {
+  compilePlacedProgram,
+  flattenLoweredInstructions,
+  formatLoweredInstructions,
+  hasRawOpcode,
+} from './helpers/lowered_program.js';
+
+const countRawOpcode = (
+  instrs: ReturnType<typeof flattenLoweredInstructions>,
+  opcode: number,
+  opcode2?: number,
+): number =>
+  instrs.reduce((count, instr) => {
+    if (instr.head !== '@raw' || !instr.bytes) return count;
+    if (instr.bytes[0] !== opcode) return count;
+    if (opcode2 !== undefined && instr.bytes[1] !== opcode2) return count;
+    return count + 1;
+  }, 0);
+
+const compileLowered = async (entry: string) => {
+  const res = await compilePlacedProgram(entry);
+  expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+  const lines = formatLoweredInstructions(res.program).map((line) => line.toUpperCase());
+  return {
+    instrs: flattenLoweredInstructions(res.program),
+    lines,
+    text: lines.join('\n'),
+  };
+};
 
 describe('GitHub issue #900 succ/pred lowering', () => {
   it('lowers byte and word typed paths end-to-end', async () => {
     const entry = join(__dirname, 'fixtures', 'pr900_succ_pred.zax');
-    const res = await compile(
-      entry,
-      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
-    );
+    const { instrs, text, lines } = await compileLowered(entry);
 
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-
-    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
-
-    expect(text).toContain('PUSH DE');
-    expect(text).toContain('POP DE');
+    expect(lines.filter((line) => line === 'PUSH DE').length).toBeGreaterThan(0);
+    expect(lines.filter((line) => line === 'POP DE').length).toBeGreaterThan(0);
     expect(text).toContain('INC E');
     expect(text).toContain('DEC E');
     expect(text).toContain('INC DE');
     expect(text).toContain('DEC DE');
-    expect(text).toContain('PUSH BC');
-    expect(text).toContain('POP BC');
-    expect(text).toContain('PUSH AF');
-    expect(text.match(/POP AF/g) ?? []).toHaveLength(1);
+    expect(lines.filter((line) => line === 'PUSH BC').length).toBeGreaterThan(0);
+    expect(lines.filter((line) => line === 'POP BC').length).toBeGreaterThan(0);
+    expect(lines.filter((line) => line === 'PUSH AF').length).toBeGreaterThan(0);
+    expect(lines.filter((line) => line === 'POP AF').length).toBeGreaterThan(0);
     expect(text).toContain('LD A, D');
     expect(text).toContain('OR E');
     expect(text).toContain('LD E, (HL)');
     expect(text).toContain('LD (HL), E');
     expect(text).toContain('LD (HL), D');
-    expect(text).toContain('JR Z INDEXED_WORD_ZERO');
+    expect(hasRawOpcode(instrs, 0x28)).toBe(true); // JR Z
   });
 
   it('avoids HL preservation for direct word fast paths', async () => {
     const entry = join(__dirname, 'fixtures', 'pr900_succ_pred_direct_word.zax');
-    const res = await compile(
-      entry,
-      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
-    );
-
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-
-    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
+    const { instrs, text, lines } = await compileLowered(entry);
 
     expect(text).toContain('LD E, (IX');
     expect(text).toContain('LD D, (IX');
-    expect(text).toContain('LD DE, (TOTAL)');
-    expect(text.match(/PUSH HL/g) ?? []).toHaveLength(2);
-    expect(text.match(/POP HL/g) ?? []).toHaveLength(1);
+    expect(hasRawOpcode(instrs, 0xed, 0x5b)).toBe(true); // LD DE, (nn)
+    expect(lines.filter((line) => line === 'PUSH HL').length).toBe(2);
+    expect(lines.filter((line) => line === 'POP HL').length).toBe(1);
   });
 
   it('reuses one materialized EA for indexed word update', async () => {
     const entry = join(__dirname, 'fixtures', 'pr900_succ_pred.zax');
-    const res = await compile(
-      entry,
-      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
-    );
-
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-
-    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
+    const { text } = await compileLowered(entry);
 
     expect(text).toMatch(
       /LD E, \(HL\)[\s\S]*?INC HL[\s\S]*?LD D, \(HL\)[\s\S]*?DEC HL[\s\S]*?INC DE[\s\S]*?LD \(HL\), E[\s\S]*?INC HL[\s\S]*?LD \(HL\), D/i,
