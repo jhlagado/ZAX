@@ -6533,3 +6533,539 @@ the same source file.
 - `docs/design/` — live design work on the open gaps identified above
 - `docs/spec/zax-spec.md` — the normative language surface
 
+
+---
+
+# Appendices — Global Reference
+
+# Appendix 1 — Numbers, Notation, and ASCII
+
+This appendix collects the number and character tables you reach for often in
+Z80 work.
+
+---
+
+## Number Prefixes Used In This Course
+
+| Form | Meaning | Example |
+|------|---------|---------|
+| `42` | decimal | `42` |
+| `$2A` | hexadecimal | `$2A` |
+| `%00101010` | binary | `%00101010` |
+| `0b00101010` | binary (alternate form accepted by ZAX) | `0b00101010` |
+
+---
+
+## Hex Digit Table
+
+| Hex | Binary | Decimal |
+|:---:|:------:|---:|
+| `0` | `0000` | 0 |
+| `1` | `0001` | 1 |
+| `2` | `0010` | 2 |
+| `3` | `0011` | 3 |
+| `4` | `0100` | 4 |
+| `5` | `0101` | 5 |
+| `6` | `0110` | 6 |
+| `7` | `0111` | 7 |
+| `8` | `1000` | 8 |
+| `9` | `1001` | 9 |
+| `A` | `1010` | 10 |
+| `B` | `1011` | 11 |
+| `C` | `1100` | 12 |
+| `D` | `1101` | 13 |
+| `E` | `1110` | 14 |
+| `F` | `1111` | 15 |
+
+---
+
+## Common Hex Landmarks
+
+| Value | Decimal | Why it matters |
+|------:|--------:|----------------|
+| `$00` | 0 | zero byte |
+| `$0F` | 15 | low nibble all set |
+| `$10` | 16 | one hex digit boundary |
+| `$1F` | 31 | 5-bit max unsigned |
+| `$20` | 32 | ASCII space |
+| `$7F` | 127 | 7-bit signed max / ASCII top |
+| `$80` | 128 | sign bit set |
+| `$FF` | 255 | byte all set / `-1` in two's complement |
+| `$0100` | 256 | common code base in this course |
+| `$7FFF` | 32767 | signed 16-bit positive max |
+| `$8000` | 32768 | high bit set in a word / common RAM base in examples |
+| `$FFFF` | 65535 | word all set / `-1` as 16-bit two's complement |
+
+---
+
+## 7-bit ASCII (0–127)
+
+| Dec | Hex | Character | Meaning |
+|---:|:---:|:---:|---|
+| 0 | $00 | NUL | control code |
+| 1 | $01 | SOH | control code |
+| 2 | $02 | STX | control code |
+| 3 | $03 | ETX | control code |
+| 4 | $04 | EOT | control code |
+| 5 | $05 | ENQ | control code |
+| 6 | $06 | ACK | control code |
+| 7 | $07 | BEL | control code |
+| 8 | $08 | BS | control code |
+| 9 | $09 | TAB | control code |
+| 10 | $0A | LF | control code |
+| 11 | $0B | VT | control code |
+| 12 | $0C | FF | control code |
+| 13 | $0D | CR | control code |
+| 14 | $0E | SO | control code |
+| 15 | $0F | SI | control code |
+| 16 | $10 | DLE | control code |
+| 17 | $11 | DC1 | control code |
+| 18 | $12 | DC2 | control code |
+| 19 | $13 | DC3 | control code |
+| 20 | $14 | DC4 | control code |
+| 21 | $15 | NAK | control code |
+| 22 | $16 | SYN | control code |
+| 23 | $17 | ETB | control code |
+| 24 | $18 | CAN | control code |
+| 25 | $19 | EM | control code |
+| 26 | $1A | SUB | control code |
+| 27 | $1B | ESC | control code |
+| 28 | $1C | FS | control code |
+| 29 | $1D | GS | control code |
+| 30 | $1E | RS | control code |
+| 31 | $1F | US | control code |
+| 32 | $20 | `space` | printable |
+| 33 | $21 | `!` | printable |
+| 34 | $22 | `"` | printable |
+| 35 | $23 | `#` | printable |
+| 36 | $24 | `$` | printable |
+| 37 | $25 | `%` | printable |
+| 38 | $26 | `&` | printable |
+| 39 | $27 | `'` | printable |
+| 40 | $28 | `(` | printable |
+| 41 | $29 | `)` | printable |
+| 42 | $2A | `*` | printable |
+| 43 | $2B | `+` | printable |
+| 44 | $2C | `,` | printable |
+| 45 | $2D | `-` | printable |
+| 46 | $2E | `.` | printable |
+| 47 | $2F | `/` | printable |
+| 48 | $30 | `0` | printable |
+| 49 | $31 | `1` | printable |
+| 50 | $32 | `2` | printable |
+| 51 | $33 | `3` | printable |
+| 52 | $34 | `4` | printable |
+| 53 | $35 | `5` | printable |
+| 54 | $36 | `6` | printable |
+| 55 | $37 | `7` | printable |
+| 56 | $38 | `8` | printable |
+| 57 | $39 | `9` | printable |
+| 58 | $3A | `:` | printable |
+| 59 | $3B | `;` | printable |
+| 60 | $3C | `<` | printable |
+| 61 | $3D | `=` | printable |
+| 62 | $3E | `>` | printable |
+| 63 | $3F | `?` | printable |
+| 64 | $40 | `@` | printable |
+| 65 | $41 | `A` | printable |
+| 66 | $42 | `B` | printable |
+| 67 | $43 | `C` | printable |
+| 68 | $44 | `D` | printable |
+| 69 | $45 | `E` | printable |
+| 70 | $46 | `F` | printable |
+| 71 | $47 | `G` | printable |
+| 72 | $48 | `H` | printable |
+| 73 | $49 | `I` | printable |
+| 74 | $4A | `J` | printable |
+| 75 | $4B | `K` | printable |
+| 76 | $4C | `L` | printable |
+| 77 | $4D | `M` | printable |
+| 78 | $4E | `N` | printable |
+| 79 | $4F | `O` | printable |
+| 80 | $50 | `P` | printable |
+| 81 | $51 | `Q` | printable |
+| 82 | $52 | `R` | printable |
+| 83 | $53 | `S` | printable |
+| 84 | $54 | `T` | printable |
+| 85 | $55 | `U` | printable |
+| 86 | $56 | `V` | printable |
+| 87 | $57 | `W` | printable |
+| 88 | $58 | `X` | printable |
+| 89 | $59 | `Y` | printable |
+| 90 | $5A | `Z` | printable |
+| 91 | $5B | `[` | printable |
+| 92 | $5C | `\\` | printable |
+| 93 | $5D | `]` | printable |
+| 94 | $5E | `^` | printable |
+| 95 | $5F | `_` | printable |
+| 96 | $60 | `` ` `` | printable |
+| 97 | $61 | `a` | printable |
+| 98 | $62 | `b` | printable |
+| 99 | $63 | `c` | printable |
+| 100 | $64 | `d` | printable |
+| 101 | $65 | `e` | printable |
+| 102 | $66 | `f` | printable |
+| 103 | $67 | `g` | printable |
+| 104 | $68 | `h` | printable |
+| 105 | $69 | `i` | printable |
+| 106 | $6A | `j` | printable |
+| 107 | $6B | `k` | printable |
+| 108 | $6C | `l` | printable |
+| 109 | $6D | `m` | printable |
+| 110 | $6E | `n` | printable |
+| 111 | $6F | `o` | printable |
+| 112 | $70 | `p` | printable |
+| 113 | $71 | `q` | printable |
+| 114 | $72 | `r` | printable |
+| 115 | $73 | `s` | printable |
+| 116 | $74 | `t` | printable |
+| 117 | $75 | `u` | printable |
+| 118 | $76 | `v` | printable |
+| 119 | $77 | `w` | printable |
+| 120 | $78 | `x` | printable |
+| 121 | $79 | `y` | printable |
+| 122 | $7A | `z` | printable |
+| 123 | $7B | `{` | printable |
+| 124 | $7C | `\|` | printable |
+| 125 | $7D | `}` | printable |
+| 126 | $7E | `~` | printable |
+| 127 | $7F | DEL | control code |
+
+# Appendix 2 — Registers, Flags, and Conditions
+
+This appendix collects the machine-state tables you look up often while reading
+or writing Z80 code.
+
+---
+
+## Main Registers
+
+| Register | Width | Usual role | Notes |
+|----------|------:|------------|-------|
+| `A` | 8 | accumulator | main byte arithmetic/logic destination |
+| `F` | 8 | flags | holds `S Z H P/V N C`; not a general data register |
+| `B` | 8 | general purpose | often used as a loop counter |
+| `C` | 8 | general purpose | also used with port I/O |
+| `D` | 8 | general purpose | often paired with `E` |
+| `E` | 8 | general purpose | often paired with `D` |
+| `H` | 8 | general purpose | high byte of `HL` |
+| `L` | 8 | general purpose | low byte of `HL` |
+| `BC` | 16 | register pair | counts, addresses, `A`-only indirect through `(BC)` |
+| `DE` | 16 | register pair | data/address pair, `A`-only indirect through `(DE)` |
+| `HL` | 16 | primary pointer pair | main indirect memory register |
+| `IX` | 16 | index register | indexed access with displacement |
+| `IY` | 16 | index register | second indexed access register |
+| `SP` | 16 | stack pointer | points into the hardware stack |
+| `PC` | 16 | program counter | address of next instruction |
+| `I` | 8 | interrupt vector high byte | used in interrupt mode 2 |
+| `R` | 8 | refresh register | normally not useful in everyday code |
+
+---
+
+## Shadow Registers
+
+| Register set | What it is |
+|--------------|------------|
+| `AF'` | shadow accumulator and flags |
+| `BC'`, `DE'`, `HL'` | shadow copies of the main 16-bit working pairs |
+
+You reach these through `EX AF,AF'` and `EXX`, not through ordinary `LD`
+forms.
+
+---
+
+## Flags Register
+
+| Bit | Name | Meaning when set | Common beginner use |
+|----:|------|------------------|---------------------|
+| 7 | `S` | result is negative in signed interpretation | signed comparisons |
+| 6 | `Z` | result is zero | `JP Z`, `JR NZ`, loop exits |
+| 5 | unused / undocumented | varies | usually ignore |
+| 4 | `H` | half-carry from bit 3 to bit 4 | BCD support |
+| 3 | unused / undocumented | varies | usually ignore |
+| 2 | `P/V` | parity or overflow, depends on instruction | signed overflow / parity / block ops |
+| 1 | `N` | last arithmetic op was subtraction | mostly internal / BCD support |
+| 0 | `C` | carry out or borrow | unsigned comparisons, rotates, shifts |
+
+Not every instruction updates every flag. Always check the instruction's own
+rules.
+
+---
+
+## Condition Codes
+
+| Condition | Meaning | Flag test |
+|-----------|---------|-----------|
+| `Z` | zero | `Z = 1` |
+| `NZ` | not zero | `Z = 0` |
+| `C` | carry | `C = 1` |
+| `NC` | no carry | `C = 0` |
+| `M` | minus | `S = 1` |
+| `P` | plus | `S = 0` |
+| `PE` | parity even / overflow | `P/V = 1` |
+| `PO` | parity odd / no overflow | `P/V = 0` |
+
+These appear in conditional `JP`, `JR`, `CALL`, and `RET` forms. `JR` only
+supports `NZ`, `Z`, `NC`, and `C`.
+
+---
+
+## Signed and Unsigned Landmarks
+
+| Width | Unsigned range | Signed range (two's complement) |
+|------:|----------------|---------------------------------|
+| 8-bit byte | `0` to `255` | `-128` to `127` |
+| 16-bit word | `0` to `65535` | `-32768` to `32767` |
+
+Useful byte landmarks:
+
+| Value | Unsigned | Signed |
+|------:|---------:|-------:|
+| `$00` | 0 | 0 |
+| `$7F` | 127 | 127 |
+| `$80` | 128 | -128 |
+| `$FF` | 255 | -1 |
+
+---
+
+## Relative Branch Range
+
+| Instruction family | Range |
+|--------------------|-------|
+| `JR cc,target` | `-128` to `+127` bytes from the next instruction |
+| `DJNZ target` | `-128` to `+127` bytes from the next instruction |
+
+If the target is farther away, use `JP` instead.
+
+# Appendix 3 — Addressing, Prefixes, and Instruction Forms
+
+This appendix gives the compact machine-side tables that help when you need to
+recognise a form quickly.
+
+---
+
+## Addressing Shapes
+
+| Shape | Example | Meaning | Typical use |
+|-------|---------|---------|-------------|
+| immediate byte | `ld a, $2A` | constant encoded in the instruction | constants, masks, small values |
+| immediate word | `ld hl, $8000` | 16-bit constant encoded in the instruction | addresses, counters, setup |
+| register | `ld d, a` | copy between registers | cheap data movement |
+| register pair | `add hl, de` | operate on a 16-bit pair | addresses, word arithmetic |
+| register indirect | `ld a, (hl)` | memory at address in `HL` | pointer-based table walk |
+| indexed indirect | `ld a, (ix+3)` | memory at `IX + displacement` | records, stack frames |
+| absolute memory | `ld a, ($8000)` | memory at a fixed 16-bit address | globals, I/O-mapped data |
+| relative branch | `jr nz, loop` | branch by signed offset | short local branches |
+| absolute branch | `jp nz, target` | branch to full 16-bit address | long-range control flow |
+
+---
+
+## Prefix Families
+
+| Prefix | Family | What it usually means |
+|--------|--------|-----------------------|
+| none | base | ordinary documented Z80 instruction set |
+| `CB` | rotate/shift/bit family | `RLC`, `BIT`, `RES`, `SET`, and friends |
+| `ED` | extended family | block ops, `NEG`, `RETI/RETN`, `IM`, `RLD/RRD`, 16-bit `ADC/SBC`, port forms |
+| `DD` | IX substitution | many `HL`-based forms become `IX`-based |
+| `FD` | IY substitution | many `HL`-based forms become `IY`-based |
+| `DD CB d` | indexed bit/shift family | operate on `(IX+d)` |
+| `FD CB d` | indexed bit/shift family | operate on `(IY+d)` |
+
+Important caution: `DD` and `FD` do **not** magically legalise every `HL`
+instruction. The Z80 has many exceptions.
+
+---
+
+## `LD` Quick Table
+
+| Family | Examples | Notes |
+|--------|----------|-------|
+| 8-bit register to register | `ld a, b`, `ld d, h` | common and fast |
+| immediate to register | `ld a, $2A`, `ld hl, $8000` | constants encoded in instruction |
+| register with `(HL)` | `ld a, (hl)`, `ld (hl), a`, `ld (hl), 0` | main indirect byte access |
+| register with `(IX+d)` / `(IY+d)` | `ld a, (ix+3)`, `ld (iy-1), a` | indexed access |
+| `A` with `(BC)` / `(DE)` | `ld a, (bc)`, `ld (de), a` | only `A` is allowed |
+| absolute memory | `ld a, ($8000)`, `ld ($8000), a`, `ld hl, ($8000)` | globals and fixed addresses |
+| stack pointer load | `ld sp, hl`, `ld sp, ix`, `ld sp, iy` | special-case form |
+
+Illegal pattern to remember:
+
+```z80
+ld ($8001), ($8000)   ; impossible
+```
+
+Memory-to-memory moves must go through a register.
+
+---
+
+## Arithmetic, Logic, and Compare Quick Table
+
+| Family | Main forms | Result goes to | Notes |
+|--------|------------|----------------|-------|
+| `ADD` | `add a,x`, `add hl,ss`, `add ix,pp`, `add iy,rr` | first operand | 8-bit add is accumulator-based |
+| `ADC` | `adc a,x`, `adc hl,ss` | first operand | includes carry |
+| `SUB` | `sub x` | `A` | accumulator only |
+| `SBC` | `sbc a,x`, `sbc hl,ss` | first operand | subtract with carry/borrow |
+| `AND` | `and x` | `A` | accumulator only |
+| `OR` | `or x` | `A` | accumulator only |
+| `XOR` | `xor x` | `A` | accumulator only |
+| `CP` | `cp x` | no stored result | flags only |
+| `INC` | `inc r`, `inc rr`, `inc (hl)`, `inc (ix+d)` | operand itself | does not mean “new temporary value” |
+| `DEC` | `dec r`, `dec rr`, `dec (hl)`, `dec (ix+d)` | operand itself | often used for loops |
+
+---
+
+## Rotate, Shift, and Bit Quick Table
+
+| Family | Examples | Notes |
+|--------|----------|-------|
+| accumulator rotates | `rlca`, `rrca`, `rla`, `rra` | short one-byte accumulator forms |
+| general rotates | `rlc r`, `rrc r`, `rl r`, `rr r` | base `CB` family |
+| shifts | `sla r`, `sra r`, `srl r` | base `CB` family |
+| bit test | `bit n,r`, `bit n,(hl)` | tests a bit, does not store a new value |
+| bit clear | `res n,r`, `res n,(hl)` | writes back changed value |
+| bit set | `set n,r`, `set n,(hl)` | writes back changed value |
+| indexed forms | `bit 3,(ix+2)`, `srl (iy-1)` | `DD CB d` / `FD CB d` families |
+| classic-undocumented shift | `sll r` / `sls r` | widely used but not part of the original documented set |
+
+---
+
+## Control Flow, Stack, and Exchange Quick Table
+
+| Family | Examples | Notes |
+|--------|----------|-------|
+| absolute jump | `jp target`, `jp nz,target`, `jp (hl)` | long-range branch |
+| relative jump | `jr target`, `jr z,target` | short branch only |
+| counted branch | `djnz loop` | `B := B - 1`, branch if result not zero |
+| call/return | `call fn`, `ret`, `ret z` | uses hardware stack |
+| restart | `rst $38` | call to fixed low-memory vector |
+| stack | `push bc`, `pop hl` | word-sized only |
+| exchange | `ex de,hl`, `ex af,af'`, `exx`, `ex (sp),hl` | swaps rather than copies |
+| interrupt state | `di`, `ei`, `im 0/1/2` | machine control, not everyday data movement |
+
+---
+
+## Block Instructions At A Glance
+
+| Family | Mnemonics | What they do |
+|--------|-----------|--------------|
+| block transfer | `LDI`, `LDIR`, `LDD`, `LDDR` | copy bytes between `(HL)` and `(DE)` while updating pointers/counter |
+| block compare | `CPI`, `CPIR`, `CPD`, `CPDR` | compare `A` against bytes in memory while updating pointers/counter |
+| block input | `INI`, `INIR`, `IND`, `INDR` | port input plus memory store |
+| block output | `OUTI`, `OTIR`, `OUTD`, `OTDR` | memory read plus port output |
+
+# Appendix 4 — Classic Z80 Instruction Support Table
+
+This appendix is a **searchable support table** for the classic Z80 instruction
+set.
+
+It includes:
+
+- the standard documented instruction families
+- the classic undocumented forms most programmers still treat as part of the
+  real Z80 machine model
+
+It does **not** include:
+
+- host-, firmware-, or emulator-specific `ED` aliases
+- non-Z80 extensions from later or different CPUs
+- cycle counts
+
+Status values used below:
+
+- `documented` — part of the standard documented Z80 set
+- `documented prefix family` — standard, but lives in `CB`, `ED`, `DD`, `FD`,
+  `DDCB`, or `FDCB`
+- `undocumented but classic` — not in the original documented set, but widely
+  supported and commonly treated as standard practice
+
+---
+
+| Mnemonic | Supported classic forms | Prefix families | Status | Notes |
+|----------|-------------------------|-----------------|--------|-------|
+| `ADC` | `adc a,r`, `adc a,n`, `adc a,(hl)`, `adc a,(ix+d)`, `adc a,(iy+d)`, `adc hl,ss` | base, `DD`, `FD`, `ED` | documented | two separate families: 8-bit accumulator and 16-bit `HL` |
+| `ADD` | `add a,r`, `add a,n`, `add a,(hl)`, `add a,(ix+d)`, `add a,(iy+d)`, `add hl,ss`, `add ix,pp`, `add iy,rr` | base, `DD`, `FD` | documented | 16-bit add always writes back to first pair |
+| `AND` | `and r`, `and n`, `and (hl)`, `and (ix+d)`, `and (iy+d)` | base, `DD`, `FD` | documented | accumulator-only logical op |
+| `BIT` | `bit b,r`, `bit b,(hl)`, `bit b,(ix+d)`, `bit b,(iy+d)` | `CB`, `DDCB`, `FDCB` | documented prefix family | bit test, no stored result |
+| `CALL` | `call nn`, `call cc,nn` | base | documented | absolute subroutine call |
+| `CCF` | `ccf` | base | documented | complement carry |
+| `CP` | `cp r`, `cp n`, `cp (hl)`, `cp (ix+d)`, `cp (iy+d)` | base, `DD`, `FD` | documented | compare against `A`, flags only |
+| `CPD` | `cpd` | `ED` | documented prefix family | block compare, decrement |
+| `CPDR` | `cpdr` | `ED` | documented prefix family | repeated `CPD` |
+| `CPI` | `cpi` | `ED` | documented prefix family | block compare, increment |
+| `CPIR` | `cpir` | `ED` | documented prefix family | repeated `CPI` |
+| `CPL` | `cpl` | base | documented | complement accumulator |
+| `DAA` | `daa` | base | documented | BCD adjust after add/subtract |
+| `DEC` | `dec r`, `dec rr`, `dec (hl)`, `dec (ix+d)`, `dec (iy+d)`, `dec ixh`, `dec ixl`, `dec iyh`, `dec iyl` | base, `DD`, `FD` | documented plus undocumented-but-classic half-register forms | half-index-register forms are the undocumented part |
+| `DI` | `di` | base | documented | disable interrupts |
+| `DJNZ` | `djnz disp` | base | documented | relative counted branch using `B` |
+| `EI` | `ei` | base | documented | enable interrupts |
+| `EX` | `ex de,hl`, `ex af,af'`, `ex (sp),hl`, `ex (sp),ix`, `ex (sp),iy` | base, `DD`, `FD` | documented | swap, not copy |
+| `EXX` | `exx` | base | documented | swaps `BC/DE/HL` with shadow set |
+| `HALT` | `halt` | base | documented | stop until interrupt |
+| `IM` | `im 0`, `im 1`, `im 2` | `ED` | documented prefix family | interrupt mode control |
+| `IN` | `in a,(n)`, `in r,(c)` | base, `ED` | documented | `in f,(c)` is not a meaningful portable form |
+| `INC` | `inc r`, `inc rr`, `inc (hl)`, `inc (ix+d)`, `inc (iy+d)`, `inc ixh`, `inc ixl`, `inc iyh`, `inc iyl` | base, `DD`, `FD` | documented plus undocumented-but-classic half-register forms | half-index-register forms are the undocumented part |
+| `IND` | `ind` | `ED` | documented prefix family | block input, decrement |
+| `INDR` | `indr` | `ED` | documented prefix family | repeated `IND` |
+| `INI` | `ini` | `ED` | documented prefix family | block input, increment |
+| `INIR` | `inir` | `ED` | documented prefix family | repeated `INI` |
+| `JP` | `jp nn`, `jp cc,nn`, `jp (hl)`, `jp (ix)`, `jp (iy)` | base, `DD`, `FD` | documented | absolute branch or indirect jump |
+| `JR` | `jr disp`, `jr nz,disp`, `jr z,disp`, `jr nc,disp`, `jr c,disp` | base | documented | short relative branch only |
+| `LD` | register/register, register/immediate, `(hl)` forms, `(ix+d)` / `(iy+d)` forms, `a` with `(bc)` / `(de)`, absolute memory forms, `sp <- hl/ix/iy`, `i/r` transfers, block forms below, classic half-register forms with `ixh/ixl/iyh/iyl` | base, `DD`, `FD`, `ED` | documented plus undocumented-but-classic half-register forms | the biggest family and the one with the most exceptions |
+| `LDD` | `ldd` | `ED` | documented prefix family | block transfer, decrement |
+| `LDDR` | `lddr` | `ED` | documented prefix family | repeated `LDD` |
+| `LDI` | `ldi` | `ED` | documented prefix family | block transfer, increment |
+| `LDIR` | `ldir` | `ED` | documented prefix family | repeated `LDI` |
+| `NEG` | `neg` | `ED` | documented prefix family | historically duplicated across several `ED` opcodes |
+| `NOP` | `nop` | base | documented | no operation |
+| `OR` | `or r`, `or n`, `or (hl)`, `or (ix+d)`, `or (iy+d)` | base, `DD`, `FD` | documented | accumulator-only logical op |
+| `OTDR` | `otdr` | `ED` | documented prefix family | repeated block output, decrement |
+| `OTIR` | `otir` | `ED` | documented prefix family | repeated block output, increment |
+| `OUT` | `out (n),a`, `out (c),r` | base, `ED` | documented | `out (c),0` is not treated here as standard classic course material |
+| `OUTD` | `outd` | `ED` | documented prefix family | block output, decrement |
+| `OUTI` | `outi` | `ED` | documented prefix family | block output, increment |
+| `POP` | `pop bc`, `pop de`, `pop hl`, `pop af`, `pop ix`, `pop iy` | base, `DD`, `FD` | documented | word-sized only |
+| `PUSH` | `push bc`, `push de`, `push hl`, `push af`, `push ix`, `push iy` | base, `DD`, `FD` | documented | word-sized only |
+| `RES` | `res b,r`, `res b,(hl)`, `res b,(ix+d)`, `res b,(iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | classic CPUs commonly copy indexed result into target register |
+| `RET` | `ret`, `ret cc` | base | documented | return from subroutine |
+| `RETI` | `reti` | `ED` | documented prefix family | interrupt return |
+| `RETN` | `retn` | `ED` | documented prefix family | interrupt/non-maskable return |
+| `RL` | `rl r`, `rl (hl)`, `rl (ix+d)`, `rl (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | rotate through carry |
+| `RLA` | `rla` | base | documented | accumulator rotate through carry |
+| `RLC` | `rlc r`, `rlc (hl)`, `rlc (ix+d)`, `rlc (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | circular rotate left |
+| `RLCA` | `rlca` | base | documented | accumulator circular rotate left |
+| `RLD` | `rld` | `ED` | documented prefix family | nibble rotate between `A` and `(HL)` |
+| `RR` | `rr r`, `rr (hl)`, `rr (ix+d)`, `rr (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | rotate through carry |
+| `RRA` | `rra` | base | documented | accumulator rotate through carry |
+| `RRC` | `rrc r`, `rrc (hl)`, `rrc (ix+d)`, `rrc (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | circular rotate right |
+| `RRCA` | `rrca` | base | documented | accumulator circular rotate right |
+| `RRD` | `rrd` | `ED` | documented prefix family | nibble rotate between `A` and `(HL)` |
+| `RST` | `rst $00/$08/$10/$18/$20/$28/$30/$38` | base | documented | fixed low-memory call vectors |
+| `SBC` | `sbc a,r`, `sbc a,n`, `sbc a,(hl)`, `sbc a,(ix+d)`, `sbc a,(iy+d)`, `sbc hl,ss` | base, `DD`, `FD`, `ED` | documented | two separate families: 8-bit accumulator and 16-bit `HL` |
+| `SCF` | `scf` | base | documented | set carry |
+| `SET` | `set b,r`, `set b,(hl)`, `set b,(ix+d)`, `set b,(iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | sets bit and writes back |
+| `SLA` | `sla r`, `sla (hl)`, `sla (ix+d)`, `sla (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | arithmetic left shift |
+| `SLL` / `SLS` | `sll r`, `sll (hl)`, `sll (ix+d)`, `sll (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | undocumented but classic | same operation, two common mnemonic names |
+| `SRA` | `sra r`, `sra (hl)`, `sra (ix+d)`, `sra (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | arithmetic right shift |
+| `SRL` | `srl r`, `srl (hl)`, `srl (ix+d)`, `srl (iy+d)`, indexed result-copy forms | `CB`, `DDCB`, `FDCB` | documented prefix family plus undocumented-but-classic indexed result-copy forms | logical right shift |
+| `SUB` | `sub r`, `sub n`, `sub (hl)`, `sub (ix+d)`, `sub (iy+d)` | base, `DD`, `FD` | documented | accumulator-only subtract |
+| `XOR` | `xor r`, `xor n`, `xor (hl)`, `xor (ix+d)`, `xor (iy+d)` | base, `DD`, `FD` | documented | accumulator-only logical op |
+
+---
+
+## Notes On The Undocumented Forms Included Here
+
+The undocumented forms included in this appendix are the ones most likely to be
+treated by real Z80 programmers as part of the practical machine:
+
+- `IXH`, `IXL`, `IYH`, `IYL` in many 8-bit `LD`, `INC`, `DEC`, and ALU forms
+- `SLL` / `SLS`
+- `DDCB` / `FDCB` indexed rotate/shift/bit-result-copy forms such as
+  `rlc (ix+3),b`
+
+These are exactly the sorts of forms that make a searchable appendix useful.
+They are also exactly the forms that justify checking a table rather than
+trusting your memory.
+

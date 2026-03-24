@@ -24,6 +24,16 @@ Covers sorting, searching, strings, bit patterns, records, recursion, module com
 
 ---
 
+## [Appendices — Global Reference](appendices/README.md)
+
+Course-wide lookup material for both parts: number notation, ASCII, registers,
+flags, condition codes, addressing forms, prefix families, and a searchable
+classic Z80 instruction support table.
+
+> [Use these as reference while reading either part](appendices/README.md)
+
+---
+
 ## How examples work
 
 Each part keeps its prose chapters and example source files together:
