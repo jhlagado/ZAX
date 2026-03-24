@@ -16,6 +16,7 @@ import type {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Examples under examples/ are public idioms; keep them aligned with current := / succ / pred usage (#903).
 describe('examples', () => {
   function artifactSnapshot(a: Artifact): { kind: string; data: string } | undefined {
     switch (a.kind) {
