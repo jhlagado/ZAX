@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Diagnostic } from '../src/diagnostics/types.js';
+import { parseAsmInstruction } from '../src/frontend/parseAsmInstruction.js';
 import { makeSourceFile, span } from '../src/frontend/source.js';
-import { parseAsmInstruction } from '../src/frontend/parseOperands.js';
 
 describe('PR874 := IX/IY parser support', () => {
   const file = makeSourceFile('pr874_assignment_ixiy_parser.zax', '');
