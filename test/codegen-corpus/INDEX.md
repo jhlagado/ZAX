@@ -18,15 +18,18 @@ folder for every curated case.
 Canonical ownership is split:
 
 - curated source inputs: the explicit `source` paths listed in the manifest
-- automated golden traces: `test/fixtures/corpus/golden/*.asm`
+- automated golden backend text: `test/fixtures/corpus/golden/*.z80`
 - automated expected opcodes: `test/fixtures/corpus/opcode_expected/*.hex`
 
 This folder is the side-by-side review mirror:
 
 - `test/codegen-corpus/*.zax`
-- `test/codegen-corpus/*.asm`
+- `test/codegen-corpus/*.z80`
 - `test/codegen-corpus/*.bin`
 - `test/codegen-corpus/*.hex`
+
+Legacy `.asm` trace output may still appear here for debugging, but it is not
+canonical.
 
 ## Supported regeneration
 

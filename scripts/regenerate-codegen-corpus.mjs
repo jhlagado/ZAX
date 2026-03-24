@@ -10,7 +10,7 @@ const repoRoot = resolve(__dirname, '..');
 const manifestPath = join(repoRoot, 'test', 'fixtures', 'corpus', 'manifest.json');
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 
-const goldenAsmDir = join(repoRoot, manifest.goldenAsmDir);
+const goldenZ80Dir = join(repoRoot, manifest.goldenZ80Dir);
 const opcodeHexDir = join(repoRoot, manifest.opcodeHexDir);
 const mirrorDir = join(repoRoot, manifest.mirrorDir);
 const tempDir = join(repoRoot, 'coverage', '.tmp', 'codegen-corpus');
@@ -40,7 +40,7 @@ async function run(cmd, args) {
 
 await mkdir(tempDir, { recursive: true });
 await mkdir(mirrorDir, { recursive: true });
-await mkdir(goldenAsmDir, { recursive: true });
+await mkdir(goldenZ80Dir, { recursive: true });
 await mkdir(opcodeHexDir, { recursive: true });
 
 await run(npmCmd, ['run', 'build']);
@@ -56,6 +56,7 @@ for (const name of manifest.curatedCases) {
   await rm(tempHexPath, { force: true });
   await rm(join(tempDir, `${name.name}.bin`), { force: true });
   await rm(join(tempDir, `${name.name}.asm`), { force: true });
+  await rm(join(tempDir, `${name.name}.z80`), { force: true });
 
   await run('node', [
     'dist/src/cli.js',
@@ -65,13 +66,16 @@ for (const name of manifest.curatedCases) {
     'hex',
     '--nod8m',
     '--nolist',
+    '--asm80',
     sourcePath,
   ]);
 
   await copyFile(join(tempDir, `${name.name}.asm`), join(mirrorDir, `${name.name}.asm`));
+  await rm(join(goldenZ80Dir, `${name.name}.asm`), { force: true });
   await copyFile(join(tempDir, `${name.name}.bin`), join(mirrorDir, `${name.name}.bin`));
   await copyFile(join(tempDir, `${name.name}.hex`), join(mirrorDir, `${name.name}.hex`));
-  await copyFile(join(tempDir, `${name.name}.asm`), join(goldenAsmDir, `${name.name}.asm`));
+  await copyFile(join(tempDir, `${name.name}.z80`), join(mirrorDir, `${name.name}.z80`));
+  await copyFile(join(tempDir, `${name.name}.z80`), join(goldenZ80Dir, `${name.name}.z80`));
   await copyFile(join(tempDir, `${name.name}.hex`), join(opcodeHexDir, `${name.name}.hex`));
 }
 

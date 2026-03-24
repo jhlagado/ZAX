@@ -439,10 +439,10 @@ Tests are in `test/` and run with Vitest. There are ~200 test files. Key categor
 - **Parser tests** (`pr4xx_parse_*`): unit tests for specific parser helpers
 - **Encoder tests** (`pr4xx_encode_*`): unit tests for Z80 encoding functions
 - **Lowering tests** (`pr*_lowering_*`): integration tests for specific lowering cases
-- **Corpus tests** (`pr303_*`, `pr312_*`): codegen corpus (expected `.asm` trace output)
+- **Corpus tests** (`pr303_*`, `pr312_*`): codegen corpus (expected `.z80` backend output)
 - **CLI tests** (`cli_*`): end-to-end tests via the CLI entry point
 - **Smoke tests** (`smoke_*`, `examples_compile.test.ts`): compile example `.zax` files
 
-The corpus tests use a snapshot-comparison approach: the `.asm` trace is compared against
+The corpus tests use a snapshot-comparison approach: the `.z80` backend output is compared against
 a stored expected file. Regeneration scripts exist (`regen:codegen-corpus`,
 `regen:language-tour`).
