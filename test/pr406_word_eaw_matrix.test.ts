@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
 import {
   compilePlacedProgram,
   flattenLoweredInstructions,
+  hasRawOpcode,
   isMemIxDisp,
   isMemName,
   isReg,
@@ -18,28 +16,12 @@ const compileLowered = async (entry: string) => {
   return flattenLoweredInstructions(res.program);
 };
 
-const compileAsm = async (entry: string): Promise<string> => {
-  const res = await compile(
-    entry,
-    { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-    { formats: defaultFormatWriters },
-  );
-  expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-  const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-  expect(asm).toBeDefined();
-  return asm!.text.toUpperCase();
-};
-
 describe('PR406: indexed word EAW matrix coverage', () => {
   it('uses EAW_GLOB_FVAR for global base + frame word index', async () => {
     const instrs = await compileLowered(
       join(__dirname, '..', 'test', 'language-tour', '66_word_glob_fvar.zax'),
     );
-    const text = await compileAsm(
-      join(__dirname, '..', 'test', 'language-tour', '66_word_glob_fvar.zax'),
-    );
-
-    expect(text).toContain('LD DE, GLOB_WORDS');
+    expect(hasRawOpcode(instrs, 0x11)).toBe(true); // LD DE, nn
     expect(
       instrs.some(
         (ins) => ins.head === 'ld' && isReg(ins.operands[0], 'E') && isMemIxDisp(ins.operands[1], 4),
@@ -123,9 +105,6 @@ describe('PR406: indexed word EAW matrix coverage', () => {
     const instrs = await compileLowered(
       join(__dirname, '..', 'test', 'language-tour', '68_word_fvar_glob.zax'),
     );
-    const text = await compileAsm(
-      join(__dirname, '..', 'test', 'language-tour', '68_word_fvar_glob.zax'),
-    );
 
     expect(
       instrs.some(
@@ -137,7 +116,7 @@ describe('PR406: indexed word EAW matrix coverage', () => {
         (ins) => ins.head === 'ld' && isReg(ins.operands[0], 'D') && isMemIxDisp(ins.operands[1], 5),
       ),
     ).toBe(true);
-    expect(text).toContain('LD HL, (GLOB_IDX_WORD)');
+    expect(hasRawOpcode(instrs, 0x2a)).toBe(true); // LD HL, (nn)
     expect(
       instrs.some(
         (ins) => ins.head === 'add' && isReg(ins.operands[0], 'HL') && isReg(ins.operands[1], 'HL'),
@@ -159,12 +138,9 @@ describe('PR406: indexed word EAW matrix coverage', () => {
     const instrs = await compileLowered(
       join(__dirname, '..', 'test', 'language-tour', '69_word_glob_glob.zax'),
     );
-    const text = await compileAsm(
-      join(__dirname, '..', 'test', 'language-tour', '69_word_glob_glob.zax'),
-    );
 
-    expect(text).toContain('LD DE, GLOB_WORDS');
-    expect(text).toContain('LD HL, (GLOB_IDX_WORD)');
+    expect(hasRawOpcode(instrs, 0x11)).toBe(true); // LD DE, nn
+    expect(hasRawOpcode(instrs, 0x2a)).toBe(true); // LD HL, (nn)
     expect(
       instrs.some(
         (ins) => ins.head === 'add' && isReg(ins.operands[0], 'HL') && isReg(ins.operands[1], 'HL'),

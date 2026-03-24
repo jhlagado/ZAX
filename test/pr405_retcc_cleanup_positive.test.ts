@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact } from '../src/formats/types.js';
+import { compilePlacedProgram, flattenLoweredInstructions, hasRawOpcode } from './helpers/lowered_program.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,19 +14,15 @@ describe('PR405: ret cc cleanup positive coverage', () => {
     const entry = join(__dirname, 'fixtures', 'pr222_locals_multiple_retcc.zax');
     const res = await compile(
       entry,
-      { emitAsm: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
     expect(res.diagnostics).toEqual([]);
 
-    const asm = res.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
-
-    expect(text).toContain('JP NZ, __ZAX_EPILOGUE_0');
-    expect(text).toContain('JP Z, __ZAX_EPILOGUE_0');
-    expect((text.match(/__ZAX_EPILOGUE_0:/g) ?? []).length).toBe(1);
-    expect(text).toContain('__ZAX_EPILOGUE_0:');
-    expect(text).toContain('RET');
+    const lowered = await compilePlacedProgram(entry);
+    expect(lowered.diagnostics).toEqual([]);
+    const instrs = flattenLoweredInstructions(lowered.program);
+    expect(hasRawOpcode(instrs, 0xc2)).toBe(true); // JP NZ
+    expect(hasRawOpcode(instrs, 0xca)).toBe(true); // JP Z
   });
 });

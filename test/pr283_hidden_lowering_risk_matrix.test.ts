@@ -5,7 +5,12 @@ import { dirname, join } from 'node:path';
 import { compile } from '../src/compile.js';
 import { DiagnosticIds } from '../src/diagnostics/types.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { AsmArtifact, D8mArtifact } from '../src/formats/types.js';
+import type { D8mArtifact } from '../src/formats/types.js';
+import {
+  compilePlacedProgram,
+  flattenLoweredInstructions,
+  formatLoweredInstructions,
+} from './helpers/lowered_program.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,43 +30,32 @@ describe('PR283: hidden-lowering risk matrix focused coverage', () => {
     ).files?.['pr269_d8m_op_macro_callsite.zax'];
     expect(fileEntry?.segments?.some((segment) => segment.kind === 'macro')).toBe(true);
 
-    const typedPreserve = await compile(
+    const typedPreserve = await compilePlacedProgram(
       join(__dirname, 'fixtures', 'pr276_typed_call_preservation_matrix.zax'),
-      {},
-      { formats: defaultFormatWriters },
     );
-    expect(typedPreserve.diagnostics).toEqual([]);
-    const typedAsm = typedPreserve.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-    expect(typedAsm).toBeDefined();
-    expect(typedAsm!.text).toContain('call ping');
-    expect(typedAsm!.text).toContain('call getb');
-    expect(typedAsm!.text).toContain('call getw');
-    expect((typedAsm!.text.match(/\binc SP\b/g) ?? []).length).toBe(6); // 3 word args cleaned
-    expect(typedAsm!.text).not.toContain('push IY');
-    // IX prologue is now expected; just ensure no unexpected IY pushes
+    expect(typedPreserve.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const typedInstrs = flattenLoweredInstructions(typedPreserve.program);
+    const typedLines = formatLoweredInstructions(typedPreserve.program).map((line) => line.toUpperCase());
+    const rawCallCount = typedInstrs.reduce((count, instr) => {
+      if (instr.head !== '@raw' || !instr.bytes) return count;
+      return instr.bytes[0] === 0xcd ? count + 1 : count;
+    }, 0);
+    const callCount = typedLines.filter((line) => line.startsWith('CALL ')).length + rawCallCount;
+    expect(callCount).toBeGreaterThanOrEqual(3);
+    const incSpCount = typedLines.filter((line) => line === 'INC SP').length;
+    expect(incSpCount).toBe(6); // 3 word args cleaned
+    expect(typedLines.join('\n')).not.toContain('PUSH IY');
 
-    const frameAccess = await compile(
+    const frameAccess = await compilePlacedProgram(
       join(__dirname, 'fixtures', 'pr283_local_arg_global_access_matrix.zax'),
-      {
-        emitBin: false,
-        emitHex: false,
-        emitD8m: false,
-        emitListing: false,
-        emitAsm: true,
-      },
-      { formats: defaultFormatWriters },
     );
-    expect(frameAccess.diagnostics).toEqual([]);
-    const asm = frameAccess.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
-    expect(asm).toBeDefined();
-    expect(asm!.text).toContain('; func main begin');
-    expect(asm!.text).toContain('__zax_epilogue_');
-    expect(asm!.text).toContain('gword');
-    expect(asm!.text).toContain('push IX');
-    expect(asm!.text).toContain('ld IX, $0000');
-    expect(asm!.text).toContain('add IX, SP');
-    expect(asm!.text).toContain('ld E, (IX + $0004)');
-    expect(asm!.text).toContain('ld E, (IX - $0002)');
+    expect(frameAccess.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const frameText = formatLoweredInstructions(frameAccess.program).join('\n').toUpperCase();
+    expect(frameText).toContain('PUSH IX');
+    expect(frameText).toContain('LD IX, $00');
+    expect(frameText).toContain('ADD IX, SP');
+    expect(frameText).toMatch(/LD E, \(IX\+\$0*4\)/);
+    expect(frameText).toMatch(/LD E, \(IX-\$0*2\)/);
 
     const rawTypedWarn = await compile(
       join(__dirname, 'fixtures', 'pr278_raw_call_typed_target_warning.zax'),

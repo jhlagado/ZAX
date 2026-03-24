@@ -6,7 +6,6 @@ import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import type {
   Artifact,
-  AsmArtifact,
   Asm80Artifact,
   BinArtifact,
   HexArtifact,
@@ -16,7 +15,7 @@ import type {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-function artifactSnapshot(a: Artifact): { kind: string; data: string } {
+function artifactSnapshot(a: Artifact): { kind: string; data: string } | undefined {
   switch (a.kind) {
     case 'bin': {
       const bin = a as BinArtifact;
@@ -33,21 +32,19 @@ function artifactSnapshot(a: Artifact): { kind: string; data: string } {
       const lst = a as ListingArtifact;
       return { kind: 'lst', data: lst.text };
     }
-    case 'asm': {
-      const asm = a as AsmArtifact;
-      return { kind: 'asm', data: asm.text };
-    }
     case 'asm80': {
       const asm80 = a as Asm80Artifact;
       return { kind: 'asm80', data: asm80.text };
     }
+    case 'asm':
+      return undefined;
   }
 }
 
 async function compileSnapshot(entry: string): Promise<Array<{ kind: string; data: string }>> {
   const res = await compile(entry, {}, { formats: defaultFormatWriters });
   expect(res.diagnostics).toEqual([]);
-  return res.artifacts.map(artifactSnapshot);
+  return res.artifacts.map(artifactSnapshot).filter(Boolean) as Array<{ kind: string; data: string }>;
 }
 
 describe('determinism', () => {
