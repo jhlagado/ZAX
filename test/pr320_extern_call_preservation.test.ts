@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 
-import {
-  compilePlacedProgram,
-  flattenLoweredItems,
-  flattenLoweredInstructions,
-} from './helpers/lowered_program.js';
+import { compile } from '../src/compile.js';
+import { defaultFormatWriters } from '../src/formats/index.js';
+import type { AsmArtifact } from '../src/formats/types.js';
+import { compilePlacedProgram, flattenLoweredItems } from './helpers/lowered_program.js';
 
 const fixture = join(__dirname, 'fixtures', 'pr320_extern_and_internal_calls.zax');
 
@@ -30,26 +29,21 @@ describe('PR320 extern typed-call preservation', () => {
     expect(hasProloguePush('BC')).toBe(true);
     expect(hasProloguePush('DE')).toBe(true);
 
-    // extern call site should not push preserves around callee_extern
-    const instrs = flattenLoweredInstructions(program);
-    const callIndices = instrs
-      .map((ins, idx) => ({ ins, idx }))
-      .filter(({ ins }) =>
-        ins.head.toUpperCase() === 'CALL' ||
-        (ins.head === '@raw' && ins.bytes?.length && ins.bytes[0] === 0xcd),
-      )
-      .map(({ idx }) => idx);
-    expect(callIndices.length).toBeGreaterThan(0);
-
-    const hasUnpreservedCall = callIndices.some((idx) => {
-      const window = instrs.slice(Math.max(0, idx - 4), idx);
-      return !window.some(
-        (ins) =>
-          ins.head.toUpperCase() === 'PUSH' &&
-          ins.operands[0]?.kind === 'reg' &&
-          ['AF', 'BC', 'DE'].includes(ins.operands[0].name.toUpperCase()),
-      );
-    });
-    expect(hasUnpreservedCall).toBe(true);
+    // extern call site should not push preserves around callee_extern (trace-only check)
+    const asmRes = await compile(
+      fixture,
+      { emitAsm: true, emitAsm80: false, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+      { formats: defaultFormatWriters },
+    );
+    expect(asmRes.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const asm = asmRes.artifacts.find((a): a is AsmArtifact => a.kind === 'asm');
+    expect(asm).toBeDefined();
+    const lines = asm!.text.split('\n');
+    const callIdx = lines.findIndex((l) => /call callee_extern/i.test(l));
+    expect(callIdx).toBeGreaterThanOrEqual(0);
+    const window = lines.slice(Math.max(0, callIdx - 3), callIdx + 1).join('\n');
+    expect(window).not.toMatch(/push AF/i);
+    expect(window).not.toMatch(/push BC/i);
+    expect(window).not.toMatch(/push DE/i);
   });
 });
