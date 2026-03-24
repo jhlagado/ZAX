@@ -28,7 +28,7 @@ op load_and_or(src: reg8)
   or a
 end
 
-export func main(): void
+export func main()
   ; Call find_max_f with typed arguments.
   ; No register-loading protocol to document — types name the contract.
   ; A function call is a standalone statement; the result is read from the

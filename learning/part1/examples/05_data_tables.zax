@@ -27,7 +27,7 @@ section data vars at $8020
   rec1_lo:  byte = 0             ; lo field of record 1
 end
 
-export func main(): void
+export func main()
 
   ; --- Part 1: read a byte table sequentially using HL ---
   ; Walk 'scores' from the first entry to the last, accumulating a sum.

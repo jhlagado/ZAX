@@ -230,7 +230,7 @@ section data vars at $8000
   found:   byte = 0
 end
 
-export func main(): void
+export func main()
   ld a, Limit
   cp 5
   jp nz, not_equal

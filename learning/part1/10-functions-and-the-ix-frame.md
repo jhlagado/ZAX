@@ -127,7 +127,7 @@ The return clause controls which registers carry the result and which ones the c
 
 | Declaration | Meaning | Compiler preserves |
 |-------------|---------|-------------------|
-| `func f(): void` | No return value | AF, BC, DE, HL all saved/restored |
+| `func f()` | No return value | AF, BC, DE, HL all saved/restored |
 | `func f(): AF` | A carries the result | BC, DE, HL saved; AF is not |
 | `func f(): HL` | Typed return in HL (byte in L, H = 0) | AF, BC, DE saved; HL is not |
 
@@ -135,7 +135,7 @@ The return clause controls which registers carry the result and which ones the c
 
 `: HL` is the typed return: byte values go in L (H zeroed), word values fill all of HL.
 
-Declaring `: void` when the function leaves a meaningful value in A is a bug. The compiler's `pop AF` in the epilogue will overwrite A before the caller sees it.
+Omitting the return clause when the function leaves a meaningful value in A is a bug. The compiler's `pop AF` in the epilogue will overwrite A before the caller sees it. Declare `: AF` to prevent this.
 
 ---
 
@@ -185,7 +185,7 @@ Notice that `cp (ix+threshold+0)` compares A directly against the frame slot. Yo
 
 Chapter 3 introduced the half-index registers IXH, IXL, IYH, and IYL. Inside a function that has parameters or locals, the compiler owns IX as the base pointer. That means IXH and IXL are off limits — using them would corrupt the frame pointer. IYH and IYL remain free unless IY is also in use.
 
-In frameless functions — those with no parameters and no locals, like `func main(): void` in all the earlier examples — IX is unclaimed, and all four halves are available as extra byte-sized scratch registers.
+In frameless functions — those with no parameters and no locals, like `func main()` in all the earlier examples — IX is unclaimed, and all four halves are available as extra byte-sized scratch registers.
 
 ---
 
@@ -205,7 +205,7 @@ The frame exists only to support named parameters and locals. If you do not need
 - You access both with standard Z80 instructions: `ld a, (ix+name+0)` for a byte, `(ix+name+0)` / `(ix+name+1)` for the low/high bytes of a word.
 - The `+0` / `+1` suffix selects the byte lane within a slot.
 - The caller names arguments in the call; the compiler emits the pushes and cleanup.
-- The return clause (`: void`, `: AF`, `: HL`) controls which registers survive and which the compiler preserves.
+- The return clause (`: AF`, `: HL`, or omitted) controls which registers survive and which the compiler preserves.
 - IXH/IXL are unavailable inside framed functions. IYH/IYL remain free.
 - Chapter 12 introduces `:=`, which automates the frame access you wrote by hand here. By then you will know what it generates.
 

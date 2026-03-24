@@ -5,7 +5,7 @@ section data vars at $8000
   result_max:  word = 0          ; word maximum returned from max_word
 end
 
-export func main(): void
+export func main()
   ; --- Call 1: add_bytes ---
   ; Pass two byte values in B and C; receive result in A.
   ld b, $14                      ; first operand: 20
