@@ -310,21 +310,6 @@ thing from Chapter 3, make it that.
 
 ---
 
-## IX, IY, and the Half-Register Restriction
-
-IX and IY are 16-bit index registers. Each splits into 8-bit halves — IXH/IXL and IYH/IYL — which are useful as extra byte storage when you have run out of general registers.
-
-There is a hardware constraint you need to know about. The Z80 encodes H, L, IXH, IXL, IYH, and IYL using the same bit positions in the instruction byte, resolving the ambiguity with a prefix: unprefixed means H/L, `$DD` means IXH/IXL, `$FD` means IYH/IYL. Since one instruction can carry only one prefix, you cannot mix halves from different groups:
-
-- `ld ixh, ixl` — valid, both share `$DD`
-- `ld l, h` — valid, both unprefixed
-- `ld h, ixl` — **impossible**, H is unprefixed, IXL needs `$DD`
-- `ld iyh, ixl` — **impossible**, IYH needs `$FD`, IXL needs `$DD`
-
-The rule: in any single instruction, the halves of HL, IX, and IY are mutually exclusive. You can freely combine A, B, C, D, E with any of them, but you cannot cross the HL/IX/IY boundary within one instruction. The assembler enforces this — you will get an error if you try.
-
----
-
 ## EX DE, HL
 
 `EX DE, HL` swaps DE and HL in a single instruction. Afterward, DE holds what HL had and HL holds what DE had.
@@ -448,8 +433,7 @@ single byte.
 - Two memory locations cannot appear in a single `LD`; you must go through a register
 - Unsigned bytes hold 0–255; signed bytes use two's complement (bit 7 = sign, range −128 to +127)
 - `const` names a fixed value substituted at assembly time; it produces no output bytes
-- IXH, IXL, IYH, IYL are usable as extra byte registers, but cannot be mixed with H/L or each other's pair in one instruction
-- `EX DE, HL` swaps the two pairs in one instruction
+- `EX DE, HL` swaps the two register pairs in one instruction
 - `ADD A, B` writes the result back into A, destroying its previous value; copy A to another register first if you need it later
 - `INC r` and `DEC r` add or subtract 1 in place and update the flags; `DEC` sets the Zero flag at zero, making it useful as a loop counter
 
