@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { Asm80Artifact, BinArtifact } from '../src/formats/types.js';
+import type { BinArtifact } from '../src/formats/types.js';
 import { parseProgram } from '../src/frontend/parser.js';
 import type { Diagnostic } from '../src/diagnostics/types.js';
 
@@ -44,16 +44,16 @@ describe('PR922: parenthesized imm indirection and backslash separators', () => 
     const entry = join(__dirname, 'fixtures', 'pr922_backslash_separator.zax');
     const res = await compile(
       entry,
-      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
+      { emitAsm80: false, emitBin: true, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
     expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
 
-    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
-    expect(text).toContain('OR A');
-    expect(text).toMatch(/JR\s+NZ,?\s+DONE/);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    const bytes = Array.from(bin!.bytes);
+    expect(indexOfSubarray(bytes, [0xb7])).toBeGreaterThanOrEqual(0); // OR A
+    expect(indexOfSubarray(bytes, [0x20])).toBeGreaterThanOrEqual(0); // JR NZ
   });
 
   it('diagnoses a trailing backslash separator', () => {

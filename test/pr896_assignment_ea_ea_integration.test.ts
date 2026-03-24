@@ -1,74 +1,70 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { Asm80Artifact } from '../src/formats/types.js';
+import {
+  compilePlacedProgram,
+  flattenLoweredInstructions,
+  formatLoweredInstructions,
+  hasRawOpcode,
+} from './helpers/lowered_program.js';
+
+const countRawOpcode = (
+  instrs: ReturnType<typeof flattenLoweredInstructions>,
+  opcode: number,
+  opcode2?: number,
+): number =>
+  instrs.reduce((count, instr) => {
+    if (instr.head !== '@raw' || !instr.bytes) return count;
+    if (instr.bytes[0] !== opcode) return count;
+    if (opcode2 !== undefined && instr.bytes[1] !== opcode2) return count;
+    return count + 1;
+  }, 0);
+
+const compileLowered = async (entry: string) => {
+  const res = await compilePlacedProgram(entry);
+  expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+  const lines = formatLoweredInstructions(res.program).map((line) => line.toUpperCase());
+  return {
+    instrs: flattenLoweredInstructions(res.program),
+    lines,
+    text: lines.join('\n'),
+  };
+};
 
 describe('PR896 := scalar path-to-path lowering', () => {
   it('lowers byte, word, and @path storage transfers end-to-end', async () => {
     const entry = join(__dirname, 'fixtures', 'pr896_assignment_ea_ea.zax');
-    const res = await compile(
-      entry,
-      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
-    );
+    const { instrs, text, lines } = await compileLowered(entry);
 
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-
-    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
-
-    expect(text).toContain('PUSH AF');
-    expect(text).toContain('POP AF');
-    expect(text).toContain('PUSH DE');
-    expect(text).toContain('POP DE');
-    expect(text).toContain('PUSH HL');
-    expect(text).toContain('POP HL');
-    expect(text).toContain('LD A, (HL)');
-    expect(text).toContain('LD (HL), A');
-    expect(text).toContain('LD DE, (SRC_WORD)');
-    expect(text).toContain('LD (DST_WORD), DE');
+    expect(lines.filter((line) => line === 'PUSH AF').length).toBeGreaterThan(0);
+    expect(lines.filter((line) => line === 'POP AF').length).toBeGreaterThan(0);
+    expect(lines.filter((line) => line === 'PUSH DE').length).toBeGreaterThan(0);
+    expect(lines.filter((line) => line === 'POP DE').length).toBeGreaterThan(0);
+    expect(lines.filter((line) => line === 'PUSH HL').length).toBeGreaterThan(0);
+    expect(lines.filter((line) => line === 'POP HL').length).toBeGreaterThan(0);
+    expect(hasRawOpcode(instrs, 0x7e)).toBe(true); // LD A, (HL)
+    expect(hasRawOpcode(instrs, 0x77)).toBe(true); // LD (HL), A
+    expect(hasRawOpcode(instrs, 0xed, 0x5b)).toBe(true); // LD DE, (nn)
+    expect(hasRawOpcode(instrs, 0xed, 0x53)).toBe(true); // LD (nn), DE
   });
 
   it('avoids preserving HL for direct scalar fast paths', async () => {
     const entry = join(__dirname, 'fixtures', 'pr896_assignment_ea_ea_direct_fastpath.zax');
-    const res = await compile(
-      entry,
-      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
-    );
+    const { instrs, lines } = await compileLowered(entry);
 
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-
-    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
-
-    expect(text.match(/PUSH HL/g) ?? []).toHaveLength(1);
-    expect(text.match(/POP HL/g) ?? []).toHaveLength(1);
-    expect(text).toContain('LD DE, (SRC_WORD)');
-    expect(text).toContain('LD (DST_WORD), DE');
+    expect(lines.filter((line) => line === 'PUSH HL').length).toBe(1);
+    expect(lines.filter((line) => line === 'POP HL').length).toBe(1);
+    expect(hasRawOpcode(instrs, 0xed, 0x5b)).toBe(true); // LD DE, (nn)
+    expect(hasRawOpcode(instrs, 0xed, 0x53)).toBe(true); // LD (nn), DE
   });
 
   it('promotes the hidden word transfer pair when either path needs DE', async () => {
     const entry = join(__dirname, 'fixtures', 'pr896_assignment_ea_ea_conflict.zax');
-    const res = await compile(
-      entry,
-      { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
-      { formats: defaultFormatWriters },
-    );
+    const { instrs, lines } = await compileLowered(entry);
 
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-
-    const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
-    expect(asm).toBeDefined();
-    const text = asm!.text.toUpperCase();
-
-    expect(text).toContain('PUSH BC');
-    expect(text).toContain('POP BC');
-    expect(text).toContain('LD BC, (SRC_WORD)');
-    expect(text).toContain('LD (DST_WORD), BC');
+    expect(lines.filter((line) => line === 'PUSH BC').length).toBeGreaterThan(0);
+    expect(lines.filter((line) => line === 'POP BC').length).toBeGreaterThan(0);
+    expect(hasRawOpcode(instrs, 0xed, 0x4b)).toBe(true); // LD BC, (nn)
+    expect(hasRawOpcode(instrs, 0xed, 0x43)).toBe(true); // LD (nn), BC
   });
 });

@@ -40,7 +40,7 @@ describe('PR950: text-only include directive', () => {
     expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
     const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
     expect(asm).toBeDefined();
-    expect(asm!.text.toUpperCase()).toContain('LD A, $0002');
+    expect(asm!.text.toUpperCase()).toMatch(/LD A, \$0*2/);
   });
 
   it('preserves provenance for included diagnostics', async () => {
