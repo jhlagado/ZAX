@@ -8,7 +8,8 @@ coverage/
 .vitest/
 .yarn-cache/
 .codex/
-.claude/
+.claude/*
+!.claude/skills/
 .tmp/
 
 out/
