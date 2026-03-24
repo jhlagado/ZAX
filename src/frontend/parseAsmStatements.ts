@@ -9,7 +9,7 @@ import {
 import { parseCaseValuesFromText } from './parseAsmCaseValues.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import { immLiteral } from './parseImm.js';
-import { parseAsmInstruction } from './parseOperands.js';
+import { parseAsmInstruction } from './parseAsmInstruction.js';
 import {
   ASM_CONTROL_KEYWORDS,
   CONDITION_CODES,

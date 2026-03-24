@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Diagnostic } from '../src/diagnostics/types.js';
+import { parseAsmInstruction } from '../src/frontend/parseAsmInstruction.js';
 import { makeSourceFile, span } from '../src/frontend/source.js';
-import { parseAsmInstruction } from '../src/frontend/parseOperands.js';
 
 describe('PR899 succ/pred parser support', () => {
   const file = makeSourceFile('pr899_succ_pred_parser.zax', '');

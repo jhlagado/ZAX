@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Diagnostic } from '../src/diagnostics/types.js';
+import { parseAsmInstruction } from '../src/frontend/parseAsmInstruction.js';
 import { makeSourceFile, span } from '../src/frontend/source.js';
-import { parseAsmInstruction } from '../src/frontend/parseOperands.js';
 
 describe('PR887 := half-index parser support', () => {
   const file = makeSourceFile('pr887_assignment_half_index_parser.zax', '');
