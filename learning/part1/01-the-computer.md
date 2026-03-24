@@ -4,7 +4,7 @@
 
 Every computer, at the lowest level, runs **machine code** — raw numeric instructions built into the CPU's hardware. High-level languages like C or Python hide the machine entirely; a compiler or interpreter handles the translation down to those numbers. Assembly does not hide the machine. Each line you write corresponds directly to one CPU instruction, and the assembler's job is mostly mechanical: turn your readable text into the exact bytes the CPU expects.
 
-Assembly requires you to think like the computer. You get full control — every register, every memory access, every branch is yours to specify. Nothing happens unless you ask for it. But you also carry the full burden: you must understand what the CPU can do, how it stores data, and how it steps through a program byte by byte. There is no safety net of type checking, garbage collection, or automatic memory management.
+Assembly requires you to think like the computer. You get full control — every register, every memory access, every branch is yours to specify. But you also carry the full burden: you must understand what the CPU can do, how it stores data, and how it steps through a program byte by byte. There is no safety net of type checking, garbage collection, or automatic memory management.
 
 ZAX is an assembler for the Z80 that adds some structure on top — named variables, typed storage, and control flow keywords like `if` and `while` — but the underlying model is the same. Every ZAX program compiles down to Z80 machine code, and understanding that machine code is what this book teaches.
 
@@ -64,11 +64,7 @@ You will see hex constantly in Z80 work. Every opcode, every address, every cons
 
 The Z80 has a 16-bit address bus, which means it can address 2<sup>16</sup> = 65,536 bytes of memory, at addresses `$0000` through `$FFFF`. Think of it as a flat array: 65,536 numbered slots, each holding one byte. The number that identifies a slot is its **address**. To read or write any byte, you name its address.
 
-The CPU itself does not know or care what kind of memory chip sits behind any given address. It simply puts an address on the bus and reads or writes a byte. The hardware designer decides which addresses connect to which chips. Two kinds of memory chip are common:
-
-**ROM** (read-only memory) contains pre-programmed data that cannot be changed during normal operation. ROM retains its contents when power is removed. It is used for code and data that must survive power cycles — bootloaders, fixed routines, lookup tables.
-
-**RAM** (random-access memory) can be freely read and written, but loses its contents when power is removed. RAM is where your running program stores variables, the stack, and any data it creates or modifies.
+The CPU itself does not know or care what kind of memory chip sits behind any given address. It simply puts an address on the bus and reads or writes a byte. The hardware designer decides which addresses connect to which chips. Two kinds are common. ROM (read-only memory) holds data that cannot change during normal operation and retains its contents when power is removed — bootloaders, fixed routines, and lookup tables live here. RAM (random-access memory) can be freely read and written, but loses its contents when power goes; variables, the stack, and any data your program creates or modifies go in RAM.
 
 A system's **memory map** describes which address ranges connect to which chips. There is no single standard layout — it varies from system to system. A typical small Z80 board might look like this:
 
@@ -94,7 +90,7 @@ $8000       $2B    ← low byte first
 $8001       $1A    ← high byte second
 ```
 
-Read it back: the byte at `$8000` is `$2B` (low), the byte at `$8001` is `$1A` (high), so the word is `$1A2B`. This is not something you can change — every Z80 instruction that handles 16-bit values follows this rule. You will encounter it whenever you store addresses or multi-byte values in memory, so remember it.
+Read it back: the byte at `$8000` is `$2B` (low), the byte at `$8001` is `$1A` (high), so the word is `$1A2B`. This is not something you can change — every Z80 instruction that handles 16-bit values follows this rule. You will encounter it whenever you store addresses or multi-byte values in memory.
 
 ---
 
@@ -124,7 +120,7 @@ Here is the complete Z80 register set:
 | SP | 16 bits | **Stack pointer.** Points to the most recently pushed value on the hardware stack. |
 | PC | 16 bits | **Program counter.** Always contains the address of the next instruction to execute. Cannot be read or written directly. |
 | I | 8 bits | Interrupt vector register. Used with interrupt mode 2. |
-| R | 8 bits | Refresh register. Incremented automatically as each instruction is fetched. Only the low seven bits cycle; the top bit stays zero. Rarely useful to the programmer. |
+| R | 8 bits | Refresh register. Incremented automatically as each instruction is fetched. Only the low seven bits cycle; the top bit stays zero. Rarely something you will use directly. |
 
 When B and C are used as the pair BC, B holds the high byte and C holds the low byte — the same pattern as DE (D high, E low) and HL (H high, L low). IX and IY follow the same rule with their halves. So for example if HL = `$1A2B`, then H = `$1A` and L = `$2B`.
 
@@ -147,7 +143,7 @@ The flags register F contains eight bits, each of which records something about 
 | 1 | N | Subtract | Set if the last operation was a subtraction. Used internally for BCD correction. |
 | 0 | C | Carry | Set if the last operation produced a carry out of bit 7, or a borrow in the case of subtraction. |
 
-Not every instruction updates every flag. Some instructions update all flags; some update only Z and C; some leave all flags unchanged. You will learn which flags each instruction affects as you encounter them in later chapters.
+Not every instruction updates every flag. Some instructions update all flags; some update only Z and C; some leave all flags unchanged.
 
 ---
 

@@ -65,7 +65,7 @@ From the CPU's point of view, a variable is just a byte (or several bytes) of me
 
 In the program above, the result was written to the fixed address `$8000`. But `$8000` is embedded as raw bytes in the instruction at `$0006`. If you later decide the result should live at `$8100` instead, you must find that instruction and change bytes `$07` and `$08` by hand. If you have fifty instructions referencing the same address, you change fifty places.
 
-This is the core problem with raw machine code: there is no concept of a name. Everything is a position number. The programmer must manually track what every address means and keep every reference consistent.
+This is the core problem with raw machine code: there is no concept of a name. Everything is a position number. You must manually track what every address means and keep every reference consistent.
 
 Assembly solves this with **labels**. A label is a name that the assembler associates with a particular address at assembly time. Everywhere you write the label, the assembler substitutes the correct address automatically. If the variable moves, you update the label's definition and every reference updates with it.
 
@@ -76,7 +76,7 @@ Result:          ; the assembler records "Result" as the current address
   DB 0           ; allocate one byte at this address, initial value 0
 ```
 
-(`DB` stands for "define byte." `DW` defines a 16-bit word.) From this point on, writing `LD (Result), A` in the code is equivalent to writing `LD ($8000), A` — but the programmer never has to know or write `$8000`. The assembler handles it.
+(`DB` stands for "define byte." `DW` defines a 16-bit word.) From this point on, writing `LD (Result), A` in the code is equivalent to writing `LD ($8000), A` — but you never have to know or write `$8000`. The assembler handles it.
 
 Labels also name positions within the code — the targets of jumps and branches. Instead of writing `JP $0034`, you write `JP loop_top`, and the assembler works out the address of `loop_top` itself.
 
@@ -86,15 +86,7 @@ Machine code is just bytes. Assembly adds names for addresses.
 
 ## Why Raw Machine Code Is Impractical
 
-The program above was ten bytes. Real programs are thousands. Writing them as raw hex creates compounding problems:
-
-**No names.** Every address is a number. `$8000` might be your result, or it might be a display buffer, or it might be the start of a lookup table. Nothing in the code tells you which.
-
-**Fragility.** Insert one instruction in the middle of the program and every address calculated from that point shifts. You update them all by hand, and one missed update produces a silent wrong result — not an error message.
-
-**Unreadability.** You cannot skim `3E 05 47 3E 03 80 32 00 80 76` and understand what the program does. You have to decode each byte from memory.
-
-**No structure.** Machine code has no subroutines, no loops, no conditionals — just bytes and addresses. Everything that programs need beyond raw arithmetic must be built by hand from jumps to raw addresses.
+The program above was ten bytes. Real programs are thousands, and raw hex does not scale. Every address is a bare number — `$8000` could be your result variable, a display buffer, or a lookup table, and nothing in the code says which. Insert one instruction anywhere and every downstream address shifts; miss a single update and you get a silent wrong result with no error to point to. Reading the code directly is no help: `3E 05 47 3E 03 80 32 00 80 76` means nothing until you decode each byte by hand. And there are no structural building blocks — no subroutines, no loops, no conditionals, just bytes and jump targets calculated by hand.
 
 The CPU still sees bytes — the assembler changes what you write and maintain.
 
