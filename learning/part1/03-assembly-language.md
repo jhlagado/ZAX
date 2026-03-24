@@ -140,8 +140,7 @@ ld ix, $4000    ; IX = $4000
 ### Memory access through HL
 
 HL is the primary indirect address register. `(HL)` means "the byte at the
-address currently in HL." This is what makes HL so important: once an address
-is in HL, you can read or write the byte there directly.
+address currently in HL." Once an address is in HL, you can read or write the byte there directly.
 
 ```zax
 ld a, (hl)     ; A = byte at address HL
@@ -153,8 +152,7 @@ ld (hl), 19    ; byte at address HL = 19
 Any of A, B, C, D, E, H, L can appear on either side when the other side is
 `(HL)`. BC and DE also have indirect forms, but only with A — `ld a, (bc)` and
 `ld (de), a` — and nothing else. The standard pattern is: load an address into
-HL, read or write with `(HL)`, increment HL, repeat. You will see this
-pattern constantly.
+HL, read or write with `(HL)`, increment HL, repeat.
 
 ### Indexed memory access through IX and IY
 
@@ -211,7 +209,7 @@ This catches everyone at first. The CPU can talk to memory or to its own registe
 
 | Form | Example | Notes |
 |------|---------|-------|
-| reg8 ← reg8 | `ld a, b` | Any 8-bit register to any other (IX/IY restriction below) |
+| reg8 ← reg8 | `ld a, b` | Any 8-bit register to any other |
 | reg8 ← n | `ld b, $FF` | Immediate 8-bit constant |
 | reg16 ← nn | `ld hl, $8000` | Immediate 16-bit constant |
 | reg8 ← (HL) | `ld c, (hl)` | Read byte at address HL |
@@ -314,7 +312,7 @@ thing from Chapter 3, make it that.
 
 `EX DE, HL` swaps DE and HL in a single instruction. Afterward, DE holds what HL had and HL holds what DE had.
 
-This is a true bidirectional swap, not a copy. Copying HL into DE without caring about DE's old value takes two instructions:
+Copying HL into DE without caring about DE's old value takes two instructions:
 
 ```zax
 ld d, h

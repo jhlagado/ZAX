@@ -13,9 +13,8 @@ and `or a` set them, and how `jp` uses them to direct execution.
 
 The Z80 flag register F holds eight bits, each of which records one piece of
 information about the last instruction that affected flags. Programs cannot read
-or write F directly with `ld`. Instead, arithmetic instructions set the flags
-as a side effect, and conditional jump instructions test the flags to decide
-whether to jump.
+or write F directly with `ld`. Arithmetic instructions set the flags as a side
+effect, and conditional jump instructions test them to decide whether to branch.
 
 The four flags you will use most often are:
 
@@ -52,8 +51,7 @@ cp 5      ; A - 5 = -2; Z flag is clear, C flag is set (borrow)
 After `cp 5` with A = 3: Z is clear (result is not zero), C is set (A was less
 than 5 — unsigned borrow is treated as carry).
 
-The rule: after `cp n`, Z is set if A equals n, and C is set if A is less than
-n (unsigned).
+After `cp n`, Z is set if A equals n, and C is set if A is less than n (unsigned).
 
 ---
 
@@ -139,9 +137,8 @@ but saves one byte of code.
 `jr nz, label` is the conditional relative jump form: jump to `label` if Z is
 clear.
 
-`jr` is commonly used for short backward jumps in loops. For any jump that could
-exceed the 128-byte backward range, use `jp` instead. The assembler will report
-an error if a `jr` target is out of range.
+For any jump that could exceed the 128-byte backward range, use `jp` instead.
+The assembler will report an error if a `jr` target is out of range.
 
 The practical differences:
 
@@ -278,9 +275,9 @@ branches back while B is non-zero.
 
 After the loop, `counter` holds 5. B holds 0. The loop ran exactly five times.
 
-Notice that `dec b` sets the Z flag: this is how `jp nz` knows when to stop.
-The flag is not set by `ld`; it is set by the instruction that changes the
-counter. Always identify which instruction sets the flag you are about to test.
+`dec b` sets the Z flag — not the preceding `ld (counter), a`, which never
+touches flags. `jp nz` reads whatever `dec b` left. Always identify which
+instruction sets the flag before the branch that reads it.
 
 ---
 
