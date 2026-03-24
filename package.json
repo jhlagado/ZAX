@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:ci:coverage-core": "vitest run --coverage --exclude 'test/cli_*.test.ts' --exclude 'test/pr312_expected_trace_corpus.test.ts'",
-    "test:ci:slow-reliability": "vitest run --no-file-parallelism --maxWorkers=1 --minWorkers=1 --testTimeout=20000 --hookTimeout=300000 test/cli_*.test.ts",
+    "test:ci:slow-reliability": "vitest run --no-file-parallelism --maxWorkers=1 --minWorkers=1 --testTimeout=20000 --hookTimeout=300000 test/cli_acceptance_matrix_strictness.test.ts test/cli_artifacts.test.ts test/cli_case_style_lint.test.ts test/cli_contract_matrix.test.ts test/cli_determinism_contract.test.ts test/cli_failure_contract_matrix.test.ts test/cli_path_parity_contract.test.ts test/cli_zax_smoke.test.ts",
     "test:watch": "vitest",
     "format": "prettier -w .",
     "format:check": "prettier -c .",
