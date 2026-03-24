@@ -40,16 +40,17 @@ This allows the curated set to include:
 Canonical ownership is split:
 
 - curated source inputs: the explicit `source` paths listed in the manifest
-- canonical expected traces: `test/fixtures/corpus/golden/*.asm`
+- canonical expected textual backend output: `test/fixtures/corpus/golden/*.z80`
 - canonical expected opcodes: `test/fixtures/corpus/opcode_expected/*.hex`
 
 Inspectable mirror output lives in:
 
 - `test/codegen-corpus/`
 
-The mirror is committed so the curated source files and generated `.asm` /
-`.bin` / `.hex` artifacts can be reviewed side by side. The automated golden
-references remain under `test/fixtures/corpus/`.
+The mirror is committed so the curated source files and generated `.z80` /
+`.bin` / `.hex` artifacts can be reviewed side by side. Legacy `.asm` trace
+output may still appear in the mirror for debugging, but it is not canonical.
+The automated golden references remain under `test/fixtures/corpus/`.
 
 ## Supported regeneration command
 
@@ -68,10 +69,10 @@ That command:
 5. updates:
    - `test/codegen-corpus/*.zax` when the manifest source lives outside the
      mirror
-   - `test/codegen-corpus/*.asm`
+   - `test/codegen-corpus/*.z80`
    - `test/codegen-corpus/*.bin`
    - `test/codegen-corpus/*.hex`
-   - `test/fixtures/corpus/golden/*.asm`
+   - `test/fixtures/corpus/golden/*.z80`
    - `test/fixtures/corpus/opcode_expected/*.hex`
 6. leaves negative source-only cases untouched; they remain source-only checks
 
