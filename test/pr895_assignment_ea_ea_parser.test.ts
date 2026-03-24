@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Diagnostic } from '../src/diagnostics/types.js';
-import { parseAsmInstruction } from '../src/frontend/parseOperands.js';
+import { parseAsmInstruction } from '../src/frontend/parseAsmInstruction.js';
 import { makeSourceFile, span } from '../src/frontend/source.js';
 
 describe('PR895 := scalar path-to-path parser support', () => {

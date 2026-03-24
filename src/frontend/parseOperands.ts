@@ -1,5 +1,4 @@
 import type {
-  AsmInstructionNode,
   AsmOperandNode,
   EaExprNode,
   EaIndexNode,
@@ -15,8 +14,6 @@ import {
 } from './parseImm.js';
 import { parseDiag as diag, parseDiagAtWithId } from './parseDiagnostics.js';
 import { ALL_REGISTER_NAMES, INDEX_REG16_NAMES, INDEX_REG8_NAMES } from './grammarData.js';
-import { parseAssignmentInstruction } from './parseAssignmentInstruction.js';
-import { parseSuccPredInstruction } from './parseSuccPredInstruction.js';
 
 function parseBalancedContent(
   text: string,
@@ -356,65 +353,3 @@ export function parseAsmOperand(
   }
   return undefined;
 }
-
-export function parseAsmInstruction(
-  filePath: string,
-  text: string,
-  instrSpan: SourceSpan,
-  diagnostics: Diagnostic[],
-): AsmInstructionNode | undefined {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return undefined;
-  if (trimmed.includes(':=')) {
-    return parseAssignmentInstruction(filePath, trimmed, instrSpan, diagnostics);
-  }
-  const firstSpace = trimmed.search(/\s/);
-  const head = firstSpace === -1 ? trimmed : trimmed.slice(0, firstSpace);
-  const headLower = head.toLowerCase();
-  const rest = firstSpace === -1 ? '' : trimmed.slice(firstSpace).trim();
-
-  if (headLower === 'succ' || headLower === 'pred') {
-    return parseSuccPredInstruction(filePath, headLower, rest, instrSpan, diagnostics);
-  }
-
-  if (headLower === 'move') {
-    diag(diagnostics, filePath, `"move" has been removed; use ":=".`, {
-      line: instrSpan.start.line,
-      column: instrSpan.start.column,
-    });
-    return undefined;
-  }
-
-  const operands: AsmOperandNode[] = [];
-  if (rest.length > 0) {
-    const parseInOutOperand = (operandText: string): AsmOperandNode | undefined => {
-      const t = operandText.trim();
-      if (t.startsWith('(') && t.endsWith(')')) {
-        const inner = t.slice(1, -1).trim();
-        if (/^c$/i.test(inner)) return { kind: 'PortC', span: instrSpan };
-        const expr = parseImmExprFromText(filePath, inner, instrSpan, diagnostics);
-        if (expr) return { kind: 'PortImm8', span: instrSpan, expr };
-      }
-      return parseAsmOperand(filePath, t, instrSpan, diagnostics);
-    };
-
-    const parts = rest.split(',').map((p) => p.trim());
-    for (const part of parts) {
-      const opNode =
-        headLower === 'in' || headLower === 'out'
-          ? parseInOutOperand(part)
-          : parseAsmOperand(filePath, part, instrSpan, diagnostics);
-      if (opNode) operands.push(opNode);
-    }
-  }
-
-  if (operands.some((op) => op.kind === 'Ea' && op.explicitAddressOf)) {
-    diag(diagnostics, filePath, `"@<path>" is only supported with ":=" in this phase.`, {
-      line: instrSpan.start.line,
-      column: instrSpan.start.column,
-    });
-  }
-
-  return { kind: 'AsmInstruction', span: instrSpan, head: headLower, operands };
-}
-
