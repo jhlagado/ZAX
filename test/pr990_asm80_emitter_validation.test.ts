@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -14,12 +15,41 @@ const __dirname = dirname(__filename);
 
 type HexMap = Map<number, number>;
 
+/**
+ * Some environments (notably certain CI images) expose an unrelated `asm80` on PATH that
+ * answers `-h` but does not implement the ZAX/ASM80 CLI or two-operand ALU syntax. Skip
+ * verification when the probe assemble fails so macOS CI does not flake on the wrong tool.
+ */
+function verifyAsm80Cli(executable: string): boolean {
+  const probeDir = mkdtempSync(join(tmpdir(), 'zax-asm80-probe-'));
+  try {
+    const probeAsm = join(probeDir, 'probe.asm');
+    const probeHex = join(probeDir, 'probe.hex');
+    writeFileSync(
+      probeAsm,
+      ['org 0', '; two-operand form used in ZAX lowered output', 'sub a, b', ''].join('\n'),
+      'utf8',
+    );
+    const r = spawnSync(executable, ['-m', 'Z80', '-t', 'hex', '-o', probeHex, probeAsm], {
+      encoding: 'utf8',
+    });
+    return r.status === 0;
+  } finally {
+    try {
+      rmSync(probeDir, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 function findAsm80(): string | undefined {
   const envPath = process.env.ASM80 ?? process.env.ASM80_PATH;
-  if (envPath && envPath.trim().length > 0) return envPath.trim();
-  const probe = spawnSync('asm80', ['-h'], { encoding: 'utf8' });
-  if (probe.error && (probe.error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
-  return 'asm80';
+  const candidate = envPath && envPath.trim().length > 0 ? envPath.trim() : 'asm80';
+  const help = spawnSync(candidate, ['-h'], { encoding: 'utf8' });
+  if (help.error && (help.error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+  if (!verifyAsm80Cli(candidate)) return undefined;
+  return candidate;
 }
 
 function parseIntelHex(text: string): HexMap {
