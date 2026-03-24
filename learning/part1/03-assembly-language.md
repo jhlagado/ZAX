@@ -100,7 +100,7 @@ ld destination, source
 ```
 
 `LD` does not affect the flags register. It is a pure copy — the source stays
-as it was, the destination receives the value, and nothing else happens.
+as it was and the destination receives the value.
 
 Every legal `LD` has a source and a destination. A source can be a register,
 an immediate constant encoded directly in the instruction, or a byte in memory.
