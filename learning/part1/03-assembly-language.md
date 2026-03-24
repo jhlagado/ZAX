@@ -59,8 +59,6 @@ land somewhere executable. Variables have to live somewhere writable. That is
 what sections are for: they tell the assembler where a block of named storage
 belongs in memory.
 
-For this chapter, keep the rule simple. You only need one section form:
-
 ```zax
 section data state at $8000
   result: byte = 0
@@ -102,7 +100,7 @@ ld destination, source
 ```
 
 `LD` does not affect the flags register. It is a pure copy — the source stays
-as it was, the destination receives the value, and nothing else happens.
+as it was and the destination receives the value.
 
 Every legal `LD` has a source and a destination. A source can be a register,
 an immediate constant encoded directly in the instruction, or a byte in memory.
@@ -139,8 +137,8 @@ ld ix, $4000    ; IX = $4000
 
 ### Memory access through HL
 
-HL is the primary indirect address register. `(HL)` means "the byte at the
-address currently in HL." Once an address is in HL, you can read or write the byte there directly.
+Load an address into HL and it points to that location in memory. `(HL)` means
+the byte at the address HL holds — you can read or write it directly.
 
 ```zax
 ld a, (hl)     ; A = byte at address HL
@@ -203,7 +201,16 @@ ld a, ($8000)
 ld ($8001), a
 ```
 
-This catches everyone at first. The CPU can talk to memory or to its own registers, but it cannot move data from one memory location to another without passing it through a register on the way.
+This catches everyone at first. The CPU can talk to memory or to its own
+registers, but it cannot move data from one memory location to another without
+passing it through a register on the way.
+
+Both this and the `(BC)`/`(DE)` restriction above are examples of the same
+reality: the Z80's instruction set was built from the combinations that fit the
+original opcode space, not from a consistent scheme. You cannot predict which
+forms exist from a general rule; you learn them through use.
+[Appendix 4](../appendices/04-classic-z80-instruction-support.md) has the
+complete searchable list.
 
 ### Summary of LD forms
 
@@ -261,8 +268,8 @@ const MaxCount  = 10
 const BaseAddr  = $8000
 ```
 
-The assembler substitutes the value everywhere the name appears. `ld a,
-MaxCount` becomes `ld a, 10`. `ld hl, BaseAddr` becomes `ld hl, $8000`.
+Wherever you write the name, the assembler writes the value. `ld a, MaxCount`
+becomes `ld a, 10`. `ld hl, BaseAddr` becomes `ld hl, $8000`.
 Constants produce no bytes in the output and occupy no memory at run time.
 
 The difference between a constant and a label: a constant is a value you write down — `10`, `$8000`. A label is an address the assembler computes from where things end up in the output.
@@ -307,8 +314,7 @@ The parentheses mean the same thing everywhere:
 | `ld a, (count)` | Read byte at the address of `count` |
 | `ld a, ($8000)` | Read byte at address `$8000` |
 
-**Parentheses always mean "go to this address in memory."** If you remember one
-thing from Chapter 3, make it that.
+**Parentheses always mean "go to this address in memory."**
 
 ---
 
@@ -356,9 +362,8 @@ value. If you need A's original value later, copy it to another register before
 the `ADD`.
 
 `INC r` adds 1 to register r; `DEC r` subtracts 1. Both modify the register in
-place and update the flags. `DEC` in particular sets the Zero flag when the
-result reaches zero — that flag is the exit condition for the counted-loop
-patterns in Chapters 4 and 5.
+place and update the flags. `DEC` sets the Zero flag when the result reaches
+zero, which Chapters 4 and 5 put to use.
 
 ---
 
@@ -391,7 +396,7 @@ end
 
 `ld hl, $1234` loads a 16-bit immediate into HL: H gets `$12`, L gets `$34`. The instruction encodes as three bytes — the opcode, then the value in little-endian order (`$34` then `$12`).
 
-Notice that `ld de, $5678` overwrites both D and E, replacing the `$FF` that was in D after the earlier copy. Every instruction overwrites its destination completely. If you were relying on D still being `$FF` after this point, too bad — it is gone.
+`ld de, $5678` overwrites both D and E — the `$FF` that was in D from the earlier copy is gone. Every instruction replaces its destination entirely.
 
 The final two instructions, `ld d, h` and `ld e, l`, copy HL into DE one byte at a time. After both, DE holds `$1234`. There is no single instruction that copies one register pair into another; you always do it as two 8-bit moves.
 
@@ -416,7 +421,7 @@ section data state at $8000
 end
 ```
 
-`ld a, MaxCount` — the constant `MaxCount` is substituted as `10`. This is an immediate load; no memory access happens.
+`ld a, MaxCount` — the assembler sees `MaxCount` and writes `10` into the instruction. This is an immediate load; no memory access happens.
 
 `ld (count), a` — stores A at the address of `count`. The parentheses mean "memory at this address."
 
