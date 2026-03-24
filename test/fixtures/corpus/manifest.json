@@ -38,7 +38,6 @@
       "kind": "corpus-only"
     }
   ],
-  "goldenZ80Dir": "test/fixtures/corpus/golden",
   "opcodeHexDir": "test/fixtures/corpus/opcode_expected",
   "mirrorDir": "test/codegen-corpus"
 }

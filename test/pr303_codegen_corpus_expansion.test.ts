@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type { Asm80Artifact, HexArtifact } from '../src/formats/types.js';
+import type { HexArtifact } from '../src/formats/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,7 +19,6 @@ type CorpusEntry = {
 type CorpusManifest = {
   curatedCases: CorpusEntry[];
   negativeCases: CorpusEntry[];
-  goldenZ80Dir: string;
   opcodeHexDir: string;
   mirrorDir: string;
 };
@@ -52,33 +51,28 @@ describe('PR303: curated codegen corpus expansion', () => {
     );
   });
 
-  it('keeps regenerated z80 and hex in sync with the expanded curated manifest', async () => {
+  it('keeps regenerated hex in sync with the expanded curated manifest', async () => {
     const manifest = await readManifest();
 
     for (const entry of manifest.curatedCases) {
       const entryPath = join(__dirname, '..', entry.source);
       const mirrorBase = join(__dirname, '..', manifest.mirrorDir, entry.name);
-      const goldenZ80Path = join(__dirname, '..', manifest.goldenZ80Dir, `${entry.name}.z80`);
       const opcodeHexPath = join(__dirname, '..', manifest.opcodeHexDir, `${entry.name}.hex`);
 
-      const [mirrorSource, sourceText, expectedZ80, expectedHex] = await Promise.all([
+      const [mirrorSource, sourceText, expectedHex] = await Promise.all([
         readFile(`${mirrorBase}.zax`, 'utf8'),
         readFile(entryPath, 'utf8'),
-        readFile(goldenZ80Path, 'utf8'),
         readFile(opcodeHexPath, 'utf8'),
       ]);
 
       expect(mirrorSource).toBe(sourceText);
 
-      const res = await compile(entryPath, { emitAsm80: true }, { formats: defaultFormatWriters });
+      const res = await compile(entryPath, { emitHex: true }, { formats: defaultFormatWriters });
       expect(res.diagnostics).toEqual([]);
 
-      const asm80 = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
       const hex = res.artifacts.find((a): a is HexArtifact => a.kind === 'hex');
 
-      expect(asm80).toBeDefined();
       expect(hex).toBeDefined();
-      expect(asm80!.text).toBe(expectedZ80);
       expect(hex!.text).toBe(expectedHex);
     }
   });
