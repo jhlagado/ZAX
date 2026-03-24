@@ -226,6 +226,95 @@ These must not appear in course prose:
 | `empower` | AI reflex |
 | `seamless` | AI reflex |
 | `bespoke` | AI reflex |
+| `underscore` (verb) | AI reflex — use "shows", "means", "confirms" |
+| `bolster` / `foster` / `harness` | AI management-prose |
+| `unpack` (figurative) | AI reflex — just explain it |
+| `pivotal` | Empty emphasis — say why it matters instead |
+| `intricate` | Tells the reader to feel impressed; show the complexity instead |
+| `nuanced` (as empty praise) | AI hedge-word — say what the nuance actually is |
+| `multifaceted` / `holistic` | AI abstraction padding |
+| `landscape` (figurative) | AI reflex — name the actual thing |
+| `realm` | AI reflex |
+
+---
+
+## 17. False uplift structures
+
+**Pattern:** "It's not just X — it's Y." / "Not only X, but Y." / "No X. No Y. Just Z."
+
+**Why it fails:** These structures mimic the shape of insight without containing any. They amplify a claim by staging it as a surprising upgrade, but the upgrade is always empty. The reader gets a rhetorical flourish instead of information.
+
+This is distinct from Rule 1's simple negation pair. Rule 1 is "X is not Y; it is Z" — a definitional negation. False uplift is "X is not *just* Y — it is something *more*." The "more" never materialises.
+
+Bad:
+> LD is not just a copy instruction — it is the foundation on which all Z80 data movement is built.
+
+Better:
+> LD copies a value from a source to a destination. It accounts for more instructions in a typical Z80 program than any other opcode.
+
+Other forms to catch:
+- "Not only does X do this, it also does Y" — split into two direct sentences
+- "No complexity. No ceremony. Just results." — dramatic minimalism that says nothing
+
+---
+
+## 18. "Bold term: explanation" list format
+
+**Pattern:** A list where every item follows the format `**Term**: One sentence explanation.`
+
+**Why it fails:** This is the single most recognisable AI formatting pattern. Applied uniformly, it turns a list into something that feels machine-extruded — every item the same rhythm, the same structure, the same weight. Real prose differentiates. Some things earn a sentence; some earn a clause; some earn nothing because they are already obvious from context.
+
+Bad:
+> - **Immediate load**: Loads a constant directly into a register.
+> - **Register copy**: Copies one register's value into another.
+> - **Indirect access**: Reads or writes the byte at the address held in HL.
+
+Better:
+> Three forms appear immediately. An immediate load encodes the constant directly in the instruction bytes — `ld a, 5` puts 5 in A without touching memory. A register copy (`ld b, a`) moves a value between two registers in one cycle. Indirect access (`ld a, (hl)`) goes to memory at the address HL holds.
+
+The prose version is longer, but it connects the forms to each other and gives the reader something to follow. The bold-term list is scannable reference material; use it only in reference tables, not in explanatory prose.
+
+---
+
+## 19. Em dash overuse
+
+**Pattern:** More than one em dash per paragraph, or em dashes used where a comma, colon, or full stop would serve.
+
+**Why it fails:** AI prose uses em dashes at roughly three times the rate of human writing, often in places where no emphasis or interruption is intended. The result is a page that looks artificially animated — every paragraph punching at something.
+
+Rule: one em dash per paragraph, maximum. If you find yourself writing a second em dash in the same paragraph, replace it with a comma, rewrite the sentence with a colon, or break it into two sentences.
+
+Bad:
+> `LD` copies a value — the source stays unchanged — and the flags are unaffected — making it a pure data transfer.
+
+Better:
+> `LD` copies a value from source to destination. The source is unchanged, and the flags are not touched.
+
+---
+
+## 20. Stock filler phrases
+
+**Pattern:** Phrases that exist to sound authoritative or transitional but carry no information.
+
+Cut these on sight:
+
+| Phrase | Replace with |
+|--------|-------------|
+| "At its core, X is..." | "X is..." |
+| "When it comes to X..." | Name X directly |
+| "Plays a crucial role in..." | Say what it does specifically |
+| "It cannot be overstated that..." | State the thing |
+| "At the end of the day..." | Cut |
+| "In today's world..." / "In the modern era..." | Cut — start with the actual topic |
+| "This is where X comes in." | Cut — just introduce X |
+| "Let's take a closer look at..." | Cut — just look |
+| "Marking a significant shift in..." | Say what changed and why it matters |
+
+Bad:
+> When it comes to memory addressing, the Z80 plays a crucial role in how data is accessed.
+
+Better:
+> The Z80 addresses memory through a 16-bit bus, giving it access to 65,536 bytes at addresses $0000–$FFFF.
 
 ---
 
@@ -265,6 +354,20 @@ After drafting, search for each of the following and challenge every occurrence:
 
 **Hard blacklist:**
 - `"delve"` / `"testament"` / `"vibrant"` / `"comprehensive"` / `"robust"` / `"leverage"` / `"elegant"` — delete.
+- `"underscore"` / `"bolster"` / `"foster"` / `"harness"` / `"unpack"` / `"pivotal"` / `"intricate"` / `"nuanced"` / `"multifaceted"` / `"holistic"` / `"landscape"` / `"realm"` — delete.
+
+**False uplift:**
+- `"not just X"` / `"not merely X"` / `"not only X"` — followed by a supposedly deeper Y. Cut; make two direct statements instead.
+- `"No X. No Y. Just Z."` — dramatic minimalism with no content. Cut.
+
+**"Bold term: explanation" lists:**
+- Uniform `**Term**: Sentence.` lists in explanatory prose — convert to flowing sentences that connect the ideas.
+
+**Em dash count:**
+- More than one `—` per paragraph — replace the extras with commas, colons, or full stops.
+
+**Stock filler phrases:**
+- `"At its core"` / `"When it comes to"` / `"plays a crucial role"` / `"cannot be overstated"` / `"at the end of the day"` / `"In today's world"` / `"This is where X comes in"` / `"Let's take a closer look"` — cut and state the thing directly.
 
 **Third-person distance:**
 - `"the programmer"` / `"the reader"` / `"one"` — replace with "you".
