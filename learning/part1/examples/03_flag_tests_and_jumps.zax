@@ -7,7 +7,7 @@ section data vars at $8000
   found:   byte = 0              ; set to 1 when A reaches Limit
 end
 
-export func main(): void
+export func main()
   ; --- Part 1: conditional branch on a single comparison ---
   ld a, Limit                    ; A = 5
   cp 5                           ; compare A with 5; sets Z if equal

@@ -119,8 +119,8 @@ A `func` declaration ends with a return clause that names the register or
 registers that carry the result back to the caller. ZAX uses this to decide
 which registers to save and restore around the function frame:
 
-- **`func name(): void`** — no result; ZAX saves and restores AF, BC, DE, and
-  HL. Any value placed in A inside the function is destroyed by the `pop AF`
+- **`func name()`** — no result; ZAX saves and restores AF, BC, DE, and HL.
+  Any value placed in A inside the function is destroyed by the `pop AF`
   before `ret`.
 - **`func name(): AF`** — A (and flags) hold the result; ZAX does NOT save or
   restore AF, so the value in A survives to the caller.
@@ -147,9 +147,10 @@ assembler inserts nothing, so they **do** require an explicit `ret`. Chapter 9
 shows several such subroutines. In Chapters 10–13 you write ZAX `func` blocks
 exclusively, and the compiler handles the return for you.
 
-Declaring `: void` when the function leaves a meaningful value in A is a bug:
-the compiler's `pop AF` in the epilogue will overwrite A before returning, and
-the caller sees stale flag values rather than the computed result.
+Omitting the return clause when the function leaves a meaningful value in A is
+a bug: the compiler's `pop AF` in the epilogue will overwrite A before
+returning, and the caller sees stale flag values rather than the computed
+result. If A carries the result, declare `: AF`.
 
 ---
 
@@ -178,7 +179,7 @@ A subroutine uses `push` / `pop` to preserve registers it needs to modify
 internally. The pattern:
 
 ```zax
-func example(): void
+func example()
   push bc          ; save caller's BC on entry
   ; ... use BC for internal work ...
   pop bc           ; restore caller's BC before returning
@@ -251,7 +252,7 @@ if Z is set; otherwise it falls through to the next instruction.
 This is useful for early-exit patterns:
 
 ```zax
-func check_nonzero(): void
+func check_nonzero()
   or a          ; test A for zero
   ret z         ; early exit: return immediately if A is zero
   ; ... rest of the function runs only when A != 0 ...

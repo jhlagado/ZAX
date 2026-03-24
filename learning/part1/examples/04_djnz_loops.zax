@@ -12,7 +12,7 @@ section data rom at $8010
   addends: byte[5] = { 3, 7, 2, 8, 5 }   ; five values to sum
 end
 
-export func main(): void
+export func main()
 
   ; --- Part 1: DJNZ counted loop ---
   ; Sum the five values in 'addends' by fetching each with HL and accumulating
