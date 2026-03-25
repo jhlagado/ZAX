@@ -1,15 +1,3 @@
-
-const reg8 = new Set(['A', 'B', 'C', 'D', 'E', 'H', 'L']);
-const reg16 = new Set(['BC', 'DE', 'HL', 'IX', 'IY']);
-const reg8Code = new Map([
-  ['B', 0],
-  ['C', 1],
-  ['D', 2],
-  ['E', 3],
-  ['H', 4],
-  ['L', 5],
-  ['A', 7],
-]);
 import { resolve } from 'node:path';
 import {
   EA_GLOB_CONST,
@@ -169,6 +157,18 @@ import type {
   LoweredOperand,
 } from './loweredAsmTypes.js';
 
+const REG8_NAMES = new Set(['A', 'B', 'C', 'D', 'E', 'H', 'L']);
+const REG16_NAMES = new Set(['BC', 'DE', 'HL', 'IX', 'IY']);
+const REG8_CODES = new Map([
+  ['B', 0],
+  ['C', 1],
+  ['D', 2],
+  ['E', 3],
+  ['H', 4],
+  ['L', 5],
+  ['A', 7],
+]);
+
 type ProgramLoweringPhaseResult = {
   prescan: ProgramPrescanResult;
   lowered: ProgramLoweringResult;
@@ -252,7 +252,6 @@ export function emitProgram(
   const declaredOpNames = new Set<string>();
   const declaredBinNames = new Set<string>();
 
-  const reg8 = new Set(['A', 'B', 'C', 'D', 'E', 'H', 'L']);
   const canAccessLoweredQualifiedName = (name: string, file: string): boolean => {
     const qualifier = moduleQualifierOf(name);
     if (!qualifier) return true;
@@ -622,7 +621,7 @@ export function emitProgram(
     selectOpOverload,
     formatAsmOperandForOpDiag,
   } = createOpMatchingHelpers({
-    reg8,
+    reg8: REG8_NAMES,
     isIxIyIndexedMem,
     flattenEaDottedName,
     isEnumName: (name) => env.enums.has(name),
@@ -707,7 +706,7 @@ export function emitProgram(
   const { buildEaBytePipeline, buildEaWordPipeline } = createAddressingPipelineBuilders({
     diagnostics,
     diagAt,
-    reg8,
+    reg8: REG8_NAMES,
     resolveEa,
     resolveEaTypeExpr,
     resolveScalarBinding,
@@ -736,7 +735,7 @@ export function emitProgram(
   } = createValueMaterializationHelpers({
     diagnostics,
     diagAt,
-    reg8,
+    reg8: REG8_NAMES,
     resolveEa,
     resolveEaTypeExpr,
     resolveAggregateType,
@@ -808,7 +807,7 @@ export function emitProgram(
     isWordCompatibleScalarKind,
     loadImm16ToHL,
     materializeEaAddressToHL,
-    reg8Code,
+    reg8Code: REG8_CODES,
     resolveEa,
     resolveScalarBinding,
     resolveScalarKind,
@@ -1087,8 +1086,8 @@ export function emitProgram(
       cloneOperand,
       flattenEaDottedName,
       normalizeFixedToken,
-      reg8,
-      reg16,
+      reg8: REG8_NAMES,
+      reg16: REG16_NAMES,
     },
     programLowering: {
       program,
