@@ -40,8 +40,13 @@ describe('PR472: source file size guard', () => {
     const parserCeiling = await currentHardCapCeiling('src/frontend/parser.ts');
     const encodeLines = await currentLineCount('src/z80/encode.ts');
     const normalizedStdout = normalizeGuardOutput(stdout);
+    const hasOversizedFiles = emitLines > 750 || parserLines > 750 || encodeLines > 750;
 
-    expect(normalizedStdout).toContain('source-file-size-guard: soft>750, hard>1000');
+    if (hasOversizedFiles) {
+      expect(normalizedStdout).toContain('source-file-size-guard: soft>750, hard>1000');
+    } else {
+      expect(normalizedStdout).toContain('source-file-size-guard: ok (soft 750, hard 1000)');
+    }
     if (emitLines > 1000) {
       if (emitCeiling !== null) {
         expect(normalizedStdout).toContain(
