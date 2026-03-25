@@ -1,6 +1,5 @@
 {
   "hardCap": {
-    "src/lowering/emit.ts": 1180,
     "src/lowering/functionLowering.ts": 1014
   }
 }
