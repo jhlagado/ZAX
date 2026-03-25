@@ -165,6 +165,14 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
       }
       return pushReg('HL') && popReg('BC');
     };
+    const canDirectTransferByteViaReg8 = (resolved: EaResolution | undefined): boolean => {
+      if (resolved?.kind === 'abs') return true;
+      return resolved?.kind === 'stack' && resolved.ixDisp >= -0x80 && resolved.ixDisp <= 0x7f;
+    };
+    const canDirectLoadWordToPair = (resolved: EaResolution | undefined): boolean =>
+      resolved?.kind === 'abs' || resolved?.kind === 'stack';
+    const canDirectStoreWordFromPair = (resolved: EaResolution | undefined): boolean =>
+      resolved?.kind === 'abs' || resolved?.kind === 'stack';
     const ixDispMem = (disp: number): AsmOperandNode => ({
       kind: 'Mem',
       span: inst.span,
