@@ -1,6 +1,5 @@
 {
   "hardCap": {
-    "src/frontend/parser.ts": 1181,
     "src/lowering/emit.ts": 1180,
     "src/lowering/functionLowering.ts": 1014
   }
