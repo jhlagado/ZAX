@@ -1,8 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { readdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 
 const execFileAsync = promisify(execFile);
@@ -19,20 +21,6 @@ function normalizeGuardOutput(text: string): string {
   return text.replaceAll('\\', '/');
 }
 
-async function collectTsFiles(root: string): Promise<string[]> {
-  const entries = await readdir(root, { withFileTypes: true });
-  const out: string[] = [];
-  for (const entry of entries) {
-    const full = join(root, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...(await collectTsFiles(full)));
-      continue;
-    }
-    if (entry.isFile() && entry.name.endsWith('.ts')) out.push(full);
-  }
-  return out;
-}
-
 describe('PR472: source file size guard', () => {
   it('reports current oversized files deterministically in warn-only mode', async () => {
     const { stdout } = await execFileAsync('node', ['scripts/check-source-file-sizes.mjs'], {
@@ -44,9 +32,15 @@ describe('PR472: source file size guard', () => {
     const normalizedStdout = normalizeGuardOutput(stdout);
 
     expect(normalizedStdout).toContain('source-file-size-guard: soft>750, hard>1000');
-    expect(normalizedStdout).toContain(`src/lowering/emit.ts: ${emitLines}`);
+    expect(normalizedStdout).toContain(`src/lowering/emit.ts: ${emitLines} (ceiling ${emitLines})`);
     if (parserLines > 750) {
-      expect(normalizedStdout).toContain(`src/frontend/parser.ts: ${parserLines}`);
+      if (parserLines > 1000) {
+        expect(normalizedStdout).toContain(
+          `src/frontend/parser.ts: ${parserLines} (ceiling ${parserLines})`,
+        );
+      } else {
+        expect(normalizedStdout).toContain(`src/frontend/parser.ts: ${parserLines}`);
+      }
     } else {
       expect(normalizedStdout).not.toContain(`src/frontend/parser.ts: ${parserLines}`);
     }
@@ -57,20 +51,47 @@ describe('PR472: source file size guard', () => {
     }
   });
 
-  it('enforce mode only fails when a hard-cap breach remains', async () => {
-    const sourceFiles = await collectTsFiles('src');
-    const hasHardCapBreach = (
-      await Promise.all(sourceFiles.map((file) => currentLineCount(file)))
-    ).some((count) => count > 1000);
+  it('enforce mode passes in the current tree because hard-cap breaches are allowlisted', async () => {
+    await expect(
+      execFileAsync('node', ['scripts/check-source-file-sizes.mjs', '--enforce-hard-cap'], {
+        cwd: process.cwd(),
+      }),
+    ).resolves.toMatchObject({ stderr: '' });
+  });
 
-    const run = execFileAsync('node', ['scripts/check-source-file-sizes.mjs', '--enforce-hard-cap'], {
-      cwd: process.cwd(),
-    });
+  it('enforce mode fails when an allowlisted hard-cap file grows past its ceiling', async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), 'zax-size-guard-'));
+    const fixtureRoot = join(tempRoot, 'workspace');
+    const fixtureSrc = join(fixtureRoot, 'src');
+    const oversizedFile = join(fixtureSrc, 'oversized.ts');
+    const allowlistFile = join(fixtureRoot, 'allowlist.json');
+    const scriptPath = resolve(process.cwd(), 'scripts/check-source-file-sizes.mjs');
+    const oversizedText = `${Array.from({ length: 1002 }, () => 'export const x = 1;').join('\n')}\n`;
 
-    if (hasHardCapBreach) {
-      await expect(run).rejects.toMatchObject({ code: 1 });
-    } else {
-      await expect(run).resolves.toMatchObject({ stderr: '' });
+    await mkdir(fixtureSrc, { recursive: true });
+    await writeFile(oversizedFile, oversizedText);
+    await writeFile(
+      allowlistFile,
+      JSON.stringify({ hardCap: { 'src/oversized.ts': 1001 } }, null, 2),
+    );
+
+    try {
+      await expect(
+        execFileAsync(
+          'node',
+          [
+            scriptPath,
+            '--root',
+            fixtureSrc,
+            '--allowlist-file',
+            allowlistFile,
+            '--enforce-hard-cap',
+          ],
+          { cwd: fixtureRoot },
+        ),
+      ).rejects.toMatchObject({ code: 1 });
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
     }
   });
 });

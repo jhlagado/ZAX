@@ -107,6 +107,10 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Source file size guard
+        if: runner.os == 'Linux'
+        run: npm run check:source-file-sizes:enforce
+
       - name: Windows npm CLI smoke
         if: runner.os == 'Windows'
         shell: bash
