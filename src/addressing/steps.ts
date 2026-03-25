@@ -121,7 +121,6 @@ export const SAVE_DE = (): StepPipeline => [step({ kind: 'push', reg: 'DE' })];
 export const RESTORE_HL = (): StepPipeline => [step({ kind: 'pop', reg: 'HL' })];
 export const RESTORE_DE = (): StepPipeline => [step({ kind: 'pop', reg: 'DE' })];
 export const SWAP_HL_DE = (): StepPipeline => [step({ kind: 'exDeHl' })];
-export const SWAP_HL_SAVED = (): StepPipeline => [step({ kind: 'exSpHl' })];
 
 // ---------------------------------------------------------------------------
 // Base loaders (DE = base)
@@ -239,14 +238,6 @@ export const STORE_REG_GLOB = (reg: string, glob: string): StepPipeline => [
         step({ kind: 'ldGlobReg', glob, reg: 'a' }),
         step({ kind: 'pop', reg: 'AF' }),
       ]),
-];
-
-export const LOAD_REG_FVAR = (reg: string, disp: number): StepPipeline => [
-  step({ kind: 'ldRegIxDisp', reg: reg as StepReg8, disp }),
-];
-
-export const STORE_REG_FVAR = (reg: string, disp: number): StepPipeline => [
-  step({ kind: 'ldIxDispReg', disp, reg: reg as StepReg8 }),
 ];
 
 export const LOAD_REG_REG = (dst: string, src: string): StepPipeline => [
