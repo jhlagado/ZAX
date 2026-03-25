@@ -1,20 +1,5 @@
 
-function reportImmArithmeticError(
-  diagnostics: Diagnostic[] | undefined,
-  expr: { span: { file: string; start: { line: number; column: number } } },
-  id: DiagnosticIds,
-  message: string,
-): void {
-  diagnostics?.push({
-    id,
-    severity: 'error',
-    message,
-    file: expr.span.file,
-    line: expr.span.start.line,
-    column: expr.span.start.column,
-  });
-}
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic, DiagnosticId } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
 import { dirname, resolve } from 'node:path';
 import type {
@@ -32,6 +17,22 @@ import { canonicalModuleId } from '../moduleIdentity.js';
 import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
 import { offsetOfPathInTypeExpr, sizeOfTypeExpr } from './layout.js';
 import { visitDeclTree } from './declVisitor.js';
+
+function reportImmArithmeticError(
+  diagnostics: Diagnostic[] | undefined,
+  expr: { span: { file: string; start: { line: number; column: number } } },
+  id: DiagnosticId,
+  message: string,
+): void {
+  diagnostics?.push({
+    id,
+    severity: 'error',
+    message,
+    file: expr.span.file,
+    line: expr.span.start.line,
+    column: expr.span.start.column,
+  });
+}
 
 /**
  * Immutable compilation environment for PR2: resolved constant and enum member values.

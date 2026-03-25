@@ -1,4 +1,5 @@
 import type {
+  AsmInstructionNode,
   AsmOperandNode,
   EaExprNode,
   EaIndexNode,
@@ -13,7 +14,12 @@ import {
   parseTypeExprFromText,
 } from './parseImm.js';
 import { parseDiag as diag, parseDiagAtWithId } from './parseDiagnostics.js';
-import { ALL_REGISTER_NAMES, INDEX_REG16_NAMES, INDEX_REG8_NAMES } from './grammarData.js';
+import {
+  ALL_REGISTER_NAMES,
+  ASSIGNMENT_REGISTER_NAMES,
+  INDEX_REG16_NAMES,
+  INDEX_REG8_NAMES,
+} from './grammarData.js';
 
 function parseBalancedContent(
   text: string,
