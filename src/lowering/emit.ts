@@ -111,6 +111,7 @@ import {
   createNamedSectionContributionSinks,
   type NamedSectionContributionSink,
 } from './sectionContributions.js';
+import { createLoweredAsmStreamRecordingHelpers } from './loweredAsmStreamRecording.js';
 import {
   lowerProgramDeclarations,
   preScanProgramDeclarations,
@@ -151,9 +152,7 @@ import type {
   LoweredAsmItem,
   LoweredAsmStream,
   LoweredAsmStreamBlock,
-  LoweredEaExpr,
   LoweredImmExpr,
-  LoweredIndexExpr,
   LoweredOperand,
 } from './loweredAsmTypes.js';
 
@@ -496,114 +495,6 @@ export function emitProgram(
     const scratch: Diagnostic[] = [];
     return evalImmExpr(expr, env, scratch);
   };
-
-  const lowerImmExprForLoweredAsmImpl = (expr: ImmExprNode): LoweredImmExpr => {
-    const value = evalImmNoDiag(expr);
-    if (value !== undefined) return { kind: 'literal', value };
-    if (expr.kind !== 'ImmName') {
-      const symbolic = symbolicTargetFromExpr(expr);
-      if (symbolic) {
-        return { kind: 'symbol', name: symbolic.baseLower, addend: symbolic.addend };
-      }
-    }
-    switch (expr.kind) {
-      case 'ImmLiteral':
-        return { kind: 'literal', value: expr.value };
-      case 'ImmName':
-        return { kind: 'symbol', name: expr.name, addend: 0 };
-      case 'ImmUnary':
-        return {
-          kind: 'unary',
-          op: expr.op,
-          expr: lowerImmExprForLoweredAsmImpl(expr.expr),
-        };
-      case 'ImmBinary':
-        return {
-          kind: 'binary',
-          op: expr.op,
-          left: lowerImmExprForLoweredAsmImpl(expr.left),
-          right: lowerImmExprForLoweredAsmImpl(expr.right),
-        };
-      default:
-        return { kind: 'opaque', text: formatImmExprForAsm(expr) };
-    }
-  };
-
-  const lowerEaExprForLoweredAsm = (expr: EaExprNode): LoweredEaExpr => {
-    switch (expr.kind) {
-      case 'EaName':
-        return { kind: 'name', name: expr.name };
-      case 'EaImm':
-        return { kind: 'imm', expr: lowerImmExprForLoweredAsmImpl(expr.expr) };
-      case 'EaReinterpret':
-        return {
-          kind: 'reinterpret',
-          typeName: typeDisplay(expr.typeExpr),
-          base: lowerEaExprForLoweredAsm(expr.base),
-        };
-      case 'EaField':
-        return { kind: 'field', base: lowerEaExprForLoweredAsm(expr.base), field: expr.field };
-      case 'EaAdd':
-        return {
-          kind: 'add',
-          base: lowerEaExprForLoweredAsm(expr.base),
-          offset: lowerImmExprForLoweredAsmImpl(expr.offset),
-        };
-      case 'EaSub':
-        return {
-          kind: 'sub',
-          base: lowerEaExprForLoweredAsm(expr.base),
-          offset: lowerImmExprForLoweredAsmImpl(expr.offset),
-        };
-      case 'EaIndex': {
-        const lowerIndexExpr = (index: EaIndexNode): LoweredIndexExpr => {
-          switch (index.kind) {
-            case 'IndexImm':
-              return { kind: 'imm', value: lowerImmExprForLoweredAsmImpl(index.value) };
-            case 'IndexReg8':
-              return { kind: 'reg8', reg: index.reg };
-            case 'IndexReg16':
-              return { kind: 'reg16', reg: index.reg };
-            case 'IndexMemHL':
-              return { kind: 'memHL' };
-            case 'IndexMemIxIy':
-              return {
-                kind: 'memIxIy',
-                base: index.base,
-                ...(index.disp ? { disp: lowerImmExprForLoweredAsmImpl(index.disp) } : {}),
-              };
-            case 'IndexEa':
-              return { kind: 'ea', expr: lowerEaExprForLoweredAsm(index.expr) };
-          }
-        };
-        return {
-          kind: 'index',
-          base: lowerEaExprForLoweredAsm(expr.base),
-          index: lowerIndexExpr(expr.index),
-        };
-      }
-    }
-  };
-
-  const lowerOperandForLoweredAsmImpl = (operand: AsmOperandNode): LoweredOperand => {
-    switch (operand.kind) {
-      case 'Reg':
-        return { kind: 'reg', name: operand.name };
-      case 'Imm':
-        return { kind: 'imm', expr: lowerImmExprForLoweredAsmImpl(operand.expr) };
-      case 'Ea':
-        return { kind: 'ea', expr: lowerEaExprForLoweredAsm(operand.expr) };
-      case 'Mem':
-        return { kind: 'mem', expr: lowerEaExprForLoweredAsm(operand.expr) };
-      case 'PortImm8':
-        return { kind: 'portImm8', expr: lowerImmExprForLoweredAsmImpl(operand.expr) };
-      case 'PortC':
-        return { kind: 'portC' };
-    }
-  };
-
-  lowerImmExprForLoweredAsm = lowerImmExprForLoweredAsmImpl;
-  lowerOperandForLoweredAsm = lowerOperandForLoweredAsmImpl;
   const isIxIyIndexedMem = (op: AsmOperandNode): boolean =>
     op.kind === 'Mem' &&
     ((op.expr.kind === 'EaName' && /^(IX|IY)$/i.test(op.expr.name)) ||
@@ -888,99 +779,6 @@ export function emitProgram(
       varOffset = value;
     },
   };
-
-  const getLoweredAsmBlock = (): LoweredAsmStreamBlock => {
-    const section = activeSectionRef.current;
-    const namedNode = currentNamedSectionSink?.contribution.node;
-    const namedOrder = currentNamedSectionSink?.contribution.order;
-    const key = namedNode
-      ? `named:${section}:${namedNode.name}:${namedOrder ?? 'unknown'}`
-      : `base:${section}`;
-    let block = loweredAsmBlocksByKey.get(key);
-    if (!block) {
-      const namedFields: { name?: string; contributionOrder?: number } = {};
-      if (namedNode) namedFields.name = namedNode.name;
-      if (namedOrder !== undefined) namedFields.contributionOrder = namedOrder;
-      block = {
-        kind: namedNode ? 'named' : 'base',
-        section,
-        ...namedFields,
-        items: [],
-      };
-      loweredAsmBlocksByKey.set(key, block);
-      loweredAsmStream.blocks.push(block);
-    }
-    return block;
-  };
-
-  const commentByFileLine = new Map<string, Map<number, string>>();
-  const pendingUserComments = new Map<
-    string,
-    { lines: number[]; texts: Map<number, string>; index: number }
-  >();
-  const emittedUserCommentLines = new Set<string>();
-  const lastBlockByFile = new Map<string, LoweredAsmStreamBlock>();
-  if (options?.sourceLineComments) {
-    for (const [file, lineMap] of options.sourceLineComments) {
-      if (lineMap.size === 0) continue;
-      commentByFileLine.set(file, lineMap);
-      pendingUserComments.set(file, {
-        lines: [...lineMap.keys()].sort((a, b) => a - b),
-        texts: lineMap,
-        index: 0,
-      });
-    }
-  } else if (options?.sourceTexts) {
-    for (const [file, text] of options.sourceTexts) {
-      const lines = text.split(/\r?\n/);
-      const lineMap = new Map<number, string>();
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i] ?? '';
-        const semi = line.indexOf(';');
-        if (semi < 0) continue;
-        const commentText = line.slice(semi + 1).trim();
-        if (!commentText) continue;
-        lineMap.set(i + 1, commentText);
-      }
-      if (lineMap.size > 0) {
-        commentByFileLine.set(file, lineMap);
-        pendingUserComments.set(file, {
-          lines: [...lineMap.keys()].sort((a, b) => a - b),
-          texts: lineMap,
-          index: 0,
-        });
-      }
-    }
-  }
-
-  const emitPendingUserComments = (span?: SourceSpan): void => {
-    if (!span) return;
-    const pending = pendingUserComments.get(span.file);
-    if (!pending) return;
-    while (pending.index < pending.lines.length) {
-      const line = pending.lines[pending.index]!;
-      if (line > span.start.line) break;
-      pending.index += 1;
-      const key = `${span.file}:${line}`;
-      if (emittedUserCommentLines.has(key)) continue;
-      const text = pending.texts.get(line);
-      if (!text) continue;
-      emittedUserCommentLines.add(key);
-      getLoweredAsmBlock().items.push({ kind: 'comment', text, origin: 'user' });
-    }
-  };
-
-  const recordLoweredAsmItemImpl = (item: LoweredAsmItem, span?: SourceSpan): void => {
-    if (item.kind !== 'comment' || item.origin !== 'user') {
-      emitPendingUserComments(span);
-    }
-    if (span) {
-      lastBlockByFile.set(span.file, getLoweredAsmBlock());
-    }
-    getLoweredAsmBlock().items.push(item);
-  };
-  recordLoweredAsmItem = recordLoweredAsmItemImpl;
-
   const currentCodeSegmentTagRef: FunctionLoweringSymbolContext['currentCodeSegmentTagRef'] = {
     get current() {
       return currentCodeSegmentTag;
@@ -1006,6 +804,27 @@ export function emitProgram(
       currentNamedSectionSink = value;
     },
   };
+
+  const {
+    flushTrailingUserComments,
+    lowerImmExprForLoweredAsm: lowerImmExprForLoweredAsmImpl,
+    lowerOperandForLoweredAsm: lowerOperandForLoweredAsmImpl,
+    recordLoweredAsmItem: recordLoweredAsmItemImpl,
+  } = createLoweredAsmStreamRecordingHelpers({
+    activeSectionRef,
+    currentNamedSectionSinkRef,
+    loweredAsmBlocksByKey,
+    loweredAsmStream,
+    ...(options?.sourceLineComments ? { sourceLineComments: options.sourceLineComments } : {}),
+    ...(options?.sourceTexts ? { sourceTexts: options.sourceTexts } : {}),
+    evalImmNoDiag,
+    symbolicTargetFromExpr,
+    formatImmExprForAsm,
+    typeDisplay,
+  });
+  lowerImmExprForLoweredAsm = lowerImmExprForLoweredAsmImpl;
+  lowerOperandForLoweredAsm = lowerOperandForLoweredAsmImpl;
+  recordLoweredAsmItem = recordLoweredAsmItemImpl;
 
   const { programLoweringContext } = createEmitLoweringContexts({
     functionLowering: {
@@ -1130,21 +949,7 @@ export function emitProgram(
 
   const { lowered } = runProgramLoweringPhases(programLoweringContext);
 
-  for (const [file, pending] of pendingUserComments) {
-    if (pending.index >= pending.lines.length) continue;
-    const block = lastBlockByFile.get(file);
-    if (!block) continue;
-    while (pending.index < pending.lines.length) {
-      const line = pending.lines[pending.index]!;
-      pending.index += 1;
-      const key = `${file}:${line}`;
-      if (emittedUserCommentLines.has(key)) continue;
-      const text = pending.texts.get(line);
-      if (!text) continue;
-      emittedUserCommentLines.add(key);
-      block.items.push({ kind: 'comment', text, origin: 'user' });
-    }
-  }
+  flushTrailingUserComments();
 
   const finalized = finalizeEmitProgram({
     namedSectionSinks,
