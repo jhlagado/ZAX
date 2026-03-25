@@ -150,7 +150,7 @@ The outer loop:
     ...
 ```
 
-(From `learning/part2/examples/unit2/prime_sieve.zax`, lines 21–37.)
+(Adapted from `learning/part2/examples/unit2/prime_sieve.zax`, lines 21–37, condensed.)
 
 The `break` fires when `factor_index >= StopFactor` (the `cp` instruction sets
 carry when A < StopFactor; `if NC` means carry is not set, so A >= StopFactor).
@@ -390,7 +390,7 @@ element matches (returning the index), or when the scan exhausts the array
     succ scan_index
 ```
 
-(From `learning/part2/examples/unit2/linear_search.zax`, lines 28–42.)
+(Adapted from `learning/part2/examples/unit2/linear_search.zax`, lines 28–42.)
 
 When the match is found, the index needs to be in HL (the return register). The
 function loads 0 into H and `scan_index` into L, forming a 16-bit index value.
@@ -418,7 +418,7 @@ that fit in 16 bits:
     mid_index := hl
 ```
 
-(From `learning/part2/examples/unit2/binary_search.zax`, lines 37–42.)
+(Adapted from `learning/part2/examples/unit2/binary_search.zax`, lines 37–42.)
 
 After computing the midpoint, the function reads `values[L]` (using L as the
 low byte of `mid_index`) and compares against `target_value`. If C is set

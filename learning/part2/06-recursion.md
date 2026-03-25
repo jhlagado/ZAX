@@ -70,7 +70,7 @@ and combines the results:
   add hl, de
 ```
 
-(From `learning/part2/examples/unit6/hanoi.zax`, lines 20–33.)
+(Adapted from `learning/part2/examples/unit6/hanoi.zax`, lines 20–33, condensed.)
 
 Both recursive calls return in HL. Each result is stored immediately into a local
 — `left_count := hl` and `right_count := hl` — before the next call overwrites

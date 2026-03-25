@@ -6,6 +6,8 @@ Chapter 7 showed that `call` is just a `push` of the return address followed by 
 
 This chapter introduces ZAX functions — the first feature in this book that is not raw Z80 assembly. A ZAX function declares its parameters and locals by name. The compiler builds a **stack frame** using IX as a base pointer, and you access every parameter and local through standard Z80 `ld` instructions with IX-relative offsets. No new syntax inside the function body. Just `ld a, (ix+name+0)` — the same displaced addressing you learned in Chapter 6.
 
+The companion example is `learning/part1/examples/09_typed_storage.zax`.
+
 ---
 
 ## Why register passing runs out

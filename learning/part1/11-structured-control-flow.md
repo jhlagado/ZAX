@@ -280,6 +280,12 @@ The example file `learning/part1/examples/10_structured_control.zax` rewrites
 `find_max` and `count_above` from Chapter 9 using `while` and `if`. Here are
 the two versions side by side.
 
+The inline listings below are adapted from that example file. The shipped file
+already uses `:=` and `succ` in a few places where the final code is clearer,
+but the chapter keeps the raw IX-relative forms in the listings so you can
+focus on the control-flow rewrite before Chapter 12 introduces the assignment
+surface explicitly.
+
 **`find_max` — raw (Chapter 9):**
 
 ```zax
@@ -419,7 +425,9 @@ count it." The skip label is gone.
 The example file contains `main`, `find_max_cf`, and `count_above_cf`. It uses
 the same table and produces the same results as Chapter 9:
 maximum = 91, above-64 count = 3. The only difference is in how the subroutine
-bodies are written.
+bodies are written. The file is the final cleaned-up version, so you will see
+`:=` and `succ` where the chapter listings above kept the raw IX-relative frame
+access to isolate the control-flow changes.
 
 Read both files simultaneously. For each subroutine, compare:
 
