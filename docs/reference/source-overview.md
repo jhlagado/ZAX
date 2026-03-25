@@ -67,7 +67,8 @@ src/
     case_style.ts         Case-style lint pass (optional; warns on mixed reg/keyword casing)
 
   lowering/
-    emit.ts               Program emission orchestrator (956 lines — hard cap met ✅)
+    emit.ts               Program emission orchestrator: callable/section scan, item emission, fixups
+    emitContextBuilder.ts Shared wiring for function/program lowering contexts used by emit.ts
     ldLowering.ts         LD instruction lowering helpers (~800 lines; ctx: any — see QR-2)
     programLowering.ts    Program item dispatch: pre-scan, DataBlock/VarBlock, finalization
     functionLowering.ts   FuncDecl coordinator: frame setup, prologue, epilogue, body
@@ -151,6 +152,29 @@ compile(entryFile, options, deps)           [compile.ts]
        ├─ writeListing → .lst
        └─ writeAsm80 → .z80
 ```
+
+### 3.1 Phase Contracts and Invariants
+
+The compiler is intentionally staged. Each phase should preserve a narrow contract so tests can
+pin the right seam and refactors do not blur responsibilities.
+
+- **Frontend parse**: builds AST plus recoverable diagnostics only. It should preserve source spans,
+  continue after malformed lines where practical, and avoid semantic or encoding decisions.
+- **Semantics**: builds the compile environment for names, const values, enum members, type sizes,
+  and field offsets. It should not emit bytes, place sections, or perform backend-specific opcode
+  legality checks.
+- **Lowering**: consumes AST plus `CompileEnv` and makes all section-placement, frame, call,
+  fixup, and encoding decisions needed to produce deterministic artifacts. This is where callable
+  discovery, named-section routing, stack-frame cleanup, and final byte emission become stable
+  contracts.
+- **Format writers**: serialize already-lowered artifacts. Writers may change representation
+  (`.bin`, `.hex`, `.lst`, `.d8dbg.json`, `.z80`) but should not change compilation semantics.
+- **CLI wiring**: selects inputs, options, and requested output artifacts. The CLI should not add
+  language behavior that differs from direct `compile(...)` use.
+
+When a change crosses one of these boundaries, prefer an integration test. When the contract is
+entirely inside one phase helper, prefer a focused helper test. When checked-in bytes or text are
+the user-facing guarantee, prefer a corpus or golden test.
 
 ---
 
@@ -435,15 +459,19 @@ names within the closure scope.
 
 ## 8. Testing Infrastructure
 
-Tests are in `test/` and run with Vitest. There are ~200 test files. Key categories:
+Tests are in `test/` and run with Vitest.
 
-- **Parser tests** (`pr4xx_parse_*`): unit tests for specific parser helpers
-- **Encoder tests** (`pr4xx_encode_*`): unit tests for Z80 encoding functions
-- **Lowering tests** (`pr*_lowering_*`): integration tests for specific lowering cases
-- **Corpus tests** (`pr303_*`, `pr312_*`): codegen corpus (expected `.z80` backend output)
-- **CLI tests** (`cli_*`): end-to-end tests via the CLI entry point
-- **Smoke tests** (`smoke_*`, `examples_compile.test.ts`): compile example `.zax` files
+- Use [../../test/README.md](../../test/README.md) to find representative tests by feature area and
+  to decide whether a change belongs in a helper, integration, CLI, or corpus/golden test.
+- Use [testing-verification-guide.md](testing-verification-guide.md) for local verification flow,
+  fixture regeneration commands, and CI expectations.
+- Reusable end-to-end helpers live in `test/helpers/` and shared artifact assertions live in
+  `test/test-helpers.ts`.
 
-The corpus tests use a snapshot-comparison approach: the `.z80` backend output is compared against
-a stored expected file. Regeneration scripts exist (`regen:codegen-corpus`,
-`regen:language-tour`).
+The broad test layers are:
+
+- **Helper and unit tests** for parser, encoder, and extracted lowering seams
+- **Integration tests** for parser dispatch, lowering/frame behavior, section routing, and emitted artifacts
+- **CLI tests** for argument parsing, output selection, and artifact contracts
+- **Corpus/golden tests** for stable checked-in bytes or textual outputs
+- **Smoke and example tests** for broad compile coverage across shipped examples and generated tours
