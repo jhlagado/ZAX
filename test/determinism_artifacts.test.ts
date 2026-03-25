@@ -4,45 +4,15 @@ import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type {
-  Artifact,
-  Asm80Artifact,
-  BinArtifact,
-  HexArtifact,
-  ListingArtifact,
-} from '../src/formats/types.js';
+import { artifactSnapshot } from './test-helpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-function artifactSnapshot(a: Artifact): { kind: string; data: string } | undefined {
-  switch (a.kind) {
-    case 'bin': {
-      const bin = a as BinArtifact;
-      return { kind: 'bin', data: Buffer.from(bin.bytes).toString('hex') };
-    }
-    case 'hex': {
-      const hex = a as HexArtifact;
-      return { kind: 'hex', data: hex.text };
-    }
-    case 'd8m': {
-      return { kind: 'd8m', data: JSON.stringify(a.json) };
-    }
-    case 'lst': {
-      const lst = a as ListingArtifact;
-      return { kind: 'lst', data: lst.text };
-    }
-    case 'asm80': {
-      const asm80 = a as Asm80Artifact;
-      return { kind: 'asm80', data: asm80.text };
-    }
-  }
-}
-
 async function compileSnapshot(entry: string): Promise<Array<{ kind: string; data: string }>> {
   const res = await compile(entry, {}, { formats: defaultFormatWriters });
   expect(res.diagnostics).toEqual([]);
-  return res.artifacts.map(artifactSnapshot).filter(Boolean) as Array<{ kind: string; data: string }>;
+  return res.artifacts.map(artifactSnapshot);
 }
 
 describe('determinism', () => {
