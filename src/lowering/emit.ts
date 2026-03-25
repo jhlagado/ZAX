@@ -1,3 +1,15 @@
+
+const reg8 = new Set(['A', 'B', 'C', 'D', 'E', 'H', 'L']);
+const reg16 = new Set(['BC', 'DE', 'HL', 'IX', 'IY']);
+const reg8Code = new Map([
+  ['B', 0],
+  ['C', 1],
+  ['D', 2],
+  ['E', 3],
+  ['H', 4],
+  ['L', 5],
+  ['A', 7],
+]);
 import { resolve } from 'node:path';
 import {
   EA_GLOB_CONST,
@@ -252,16 +264,6 @@ export function emitProgram(
   const declaredBinNames = new Set<string>();
 
   const reg8 = new Set(['A', 'B', 'C', 'D', 'E', 'H', 'L']);
-  const reg16 = new Set(['BC', 'DE', 'HL', 'IX', 'IY']);
-  const reg8Code = new Map([
-    ['B', 0],
-    ['C', 1],
-    ['D', 2],
-    ['E', 3],
-    ['H', 4],
-    ['L', 5],
-    ['A', 7],
-  ]);
   const canAccessLoweredQualifiedName = (name: string, file: string): boolean => {
     const qualifier = moduleQualifierOf(name);
     if (!qualifier) return true;

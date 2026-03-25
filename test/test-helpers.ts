@@ -1,4 +1,39 @@
-export function stripStdEnvelope(bytes: Uint8Array): Uint8Array {
+import type {
+  Artifact,
+  AsmArtifact,
+  Asm80Artifact,
+  BinArtifact,
+  HexArtifact,
+  ListingArtifact,
+} from '../src/formats/types.js';
+
+export function artifactSnapshot(a: Artifact): { kind: string; data: string } {
+  switch (a.kind) {
+    case 'bin': {
+      const bin = a as BinArtifact;
+      return { kind: 'bin', data: Buffer.from(bin.bytes).toString('hex') };
+    }
+    case 'hex': {
+      const hex = a as HexArtifact;
+      return { kind: 'hex', data: hex.text };
+    }
+    case 'd8m': {
+      return { kind: 'd8m', data: JSON.stringify(a.json) };
+    }
+    case 'lst': {
+      const lst = a as ListingArtifact;
+      return { kind: 'lst', data: lst.text };
+    }
+    case 'asm': {
+      const asm = a as AsmArtifact;
+      return { kind: 'asm', data: asm.text };
+    }
+    case 'asm80': {
+      const asm80 = a as Asm80Artifact;
+      return { kind: 'asm80', data: asm80.text };
+    }
+  }
+}export function stripStdEnvelope(bytes: Uint8Array): Uint8Array {
   // Standard typed-call preservation envelope (ordered pushes then reverse pops + RET).
   // New policy allows optional AF/BC/DE/HL preservation in order; subsets are allowed.
   const pushSeq = [0xf5, 0xc5, 0xd5, 0xe5]; // AF, BC, DE, HL

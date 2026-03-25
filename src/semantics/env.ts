@@ -1,3 +1,19 @@
+
+function reportImmArithmeticError(
+  diagnostics: Diagnostic[] | undefined,
+  expr: { span: { file: string; start: { line: number; column: number } } },
+  id: DiagnosticIds,
+  message: string,
+): void {
+  diagnostics?.push({
+    id,
+    severity: 'error',
+    message,
+    file: expr.span.file,
+    line: expr.span.start.line,
+    column: expr.span.start.column,
+  });
+}
 import type { Diagnostic } from '../diagnostics/types.js';
 import { DiagnosticIds } from '../diagnostics/types.js';
 import { dirname, resolve } from 'node:path';
@@ -135,27 +151,23 @@ export function evalImmExpr(
           return l * r;
         case '/':
           if (r === 0) {
-            diagnostics?.push({
-              id: DiagnosticIds.ImmDivideByZero,
-              severity: 'error',
-              message: 'Divide by zero in imm expression.',
-              file: expr.span.file,
-              line: expr.span.start.line,
-              column: expr.span.start.column,
-            });
+            reportImmArithmeticError(
+              diagnostics,
+              expr,
+              DiagnosticIds.ImmDivideByZero,
+              'Divide by zero in imm expression.',
+            );
             return undefined;
           }
           return (l / r) | 0;
         case '%':
           if (r === 0) {
-            diagnostics?.push({
-              id: DiagnosticIds.ImmModuloByZero,
-              severity: 'error',
-              message: 'Modulo by zero in imm expression.',
-              file: expr.span.file,
-              line: expr.span.start.line,
-              column: expr.span.start.column,
-            });
+            reportImmArithmeticError(
+              diagnostics,
+              expr,
+              DiagnosticIds.ImmModuloByZero,
+              'Modulo by zero in imm expression.',
+            );
             return undefined;
           }
           return l % r;
