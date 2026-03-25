@@ -3,8 +3,6 @@ import type {
   ModuleItemNode,
   NamedSectionNode,
   ProgramNode,
-  RawDataDeclNode,
-  ImmExprNode,
   SectionAnchorNode,
   SourceSpan,
   SectionItemNode,
@@ -30,7 +28,12 @@ import { parseTopLevelFuncDecl } from './parseFunc.js';
 import { parseGlobalsBlock } from './parseGlobals.js';
 import { parseImmExprFromText } from './parseImm.js';
 import { parseTopLevelOpDecl } from './parseOp.js';
+import { buildLogicalLines, getLogicalLine, type LogicalLine } from './parseLogicalLines.js';
 import { parseOpParamsFromText, parseParamsFromText } from './parseParams.js';
+import {
+  parseRawDataDirective,
+  type PendingRawLabel,
+} from './parseRawDataDirectives.js';
 import { parseTypeDecl, parseUnionDecl } from './parseTypes.js';
 import {
   parseAlignDirectiveDecl,
@@ -48,60 +51,6 @@ import {
 } from './parseParserShared.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 
-function splitTopLevelComma(text: string): string[] {
-  const parts: string[] = [];
-  let start = 0;
-  let parenDepth = 0;
-  let bracketDepth = 0;
-  let braceDepth = 0;
-  let inChar = false;
-  let escaped = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i]!;
-    if (inChar) {
-      if (escaped) escaped = false;
-      else if (ch === '\\') escaped = true;
-      else if (ch === "'") inChar = false;
-      continue;
-    }
-    if (ch === "'") {
-      inChar = true;
-      continue;
-    }
-    if (ch === '(') {
-      parenDepth++;
-      continue;
-    }
-    if (ch === ')') {
-      if (parenDepth > 0) parenDepth--;
-      continue;
-    }
-    if (ch === '[') {
-      bracketDepth++;
-      continue;
-    }
-    if (ch === ']') {
-      if (bracketDepth > 0) bracketDepth--;
-      continue;
-    }
-    if (ch === '{') {
-      braceDepth++;
-      continue;
-    }
-    if (ch === '}') {
-      if (braceDepth > 0) braceDepth--;
-      continue;
-    }
-    if (ch === ',' && parenDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
-      parts.push(text.slice(start, i));
-      start = i + 1;
-    }
-  }
-  parts.push(text.slice(start));
-  return parts;
-}
-
 /**
  * Parse a single `.zax` module file from an in-memory source string.
  *
@@ -116,103 +65,7 @@ export function parseModuleFile(
   sourceFileOverride?: SourceFile,
 ): ModuleFileNode {
   const file = sourceFileOverride ?? makeSourceFile(modulePath, sourceText);
-
-  type LogicalLine = {
-    raw: string;
-    startOffset: number;
-    endOffset: number;
-    lineNo: number;
-    filePath: string;
-  };
-
-  const logicalLines: LogicalLine[] = [];
-
-  for (let i = 0; i < file.lineStarts.length; i++) {
-    const startOffset = file.lineStarts[i] ?? 0;
-    const nextStart = file.lineStarts[i + 1] ?? file.text.length;
-    let rawWithEol = file.text.slice(startOffset, nextStart);
-    if (rawWithEol.endsWith('\n')) rawWithEol = rawWithEol.slice(0, -1);
-    if (rawWithEol.endsWith('\r')) rawWithEol = rawWithEol.slice(0, -1);
-
-    const raw = rawWithEol;
-    const lineNo = file.lineBaseLines?.[i] ?? i + 1;
-    const filePath = file.lineFiles?.[i] ?? modulePath;
-    let segmentStart = 0;
-    let inChar = false;
-    let inString = false;
-    let escaped = false;
-
-    for (let j = 0; j < raw.length; j++) {
-      const ch = raw[j]!;
-
-      if (inChar || inString) {
-        if (escaped) {
-          escaped = false;
-          continue;
-        }
-        if (ch === '\\') {
-          escaped = true;
-          continue;
-        }
-        if (inChar && ch === "'") {
-          inChar = false;
-          continue;
-        }
-        if (inString && ch === '"') {
-          inString = false;
-          continue;
-        }
-        continue;
-      }
-
-      if (ch === ';') {
-        break;
-      }
-
-      if (ch === "'") {
-        inChar = true;
-        continue;
-      }
-
-      if (ch === '"') {
-        inString = true;
-        continue;
-      }
-
-      if (ch === '\\') {
-        const rest = raw.slice(j + 1);
-        const hasWhitespace = rest.length > 0 && /[ \t]/.test(rest[0]!);
-        if (!hasWhitespace && rest.length > 0) continue;
-
-        const nonSpaceIndex = rest.search(/[^\s]/);
-        const nextToken = nonSpaceIndex >= 0 ? rest[nonSpaceIndex] : '';
-        if (nonSpaceIndex === -1 || nextToken === ';') {
-          diag(diagnostics, filePath, 'Trailing backslash must be followed by another statement.', {
-            line: lineNo,
-            column: j + 1,
-          });
-          continue;
-        }
-        const segment = raw.slice(segmentStart, j);
-        logicalLines.push({
-          raw: segment,
-          startOffset: startOffset + segmentStart,
-          endOffset: startOffset + j,
-          lineNo,
-          filePath,
-        });
-        segmentStart = j + 1;
-      }
-    }
-
-    logicalLines.push({
-      raw: raw.slice(segmentStart),
-      startOffset: startOffset + segmentStart,
-      endOffset: startOffset + raw.length,
-      lineNo,
-      filePath,
-    });
-  }
+  const logicalLines: LogicalLine[] = buildLogicalLines(file, modulePath, diagnostics);
 
   const lineCount = logicalLines.length;
 
@@ -223,13 +76,7 @@ export function parseModuleFile(
     lineNo: number;
     filePath: string;
   } {
-    const logical = logicalLines[lineIndex] ?? {
-      raw: '',
-      startOffset: 0,
-      endOffset: 0,
-      lineNo: 1,
-      filePath: modulePath,
-    };
+    const logical = getLogicalLine(logicalLines, lineIndex, modulePath);
     return {
       raw: logical.raw,
       startOffset: logical.startOffset,
@@ -373,13 +220,6 @@ export function parseModuleFile(
 
     return { section, name, ...(anchor ? { anchor } : {}) };
   }
-
-  type PendingRawLabel = {
-    name: string;
-    span: SourceSpan;
-    lineNo: number;
-    filePath: string;
-  };
 
   type ParseItemContext =
     | { scope: 'module' }
@@ -822,75 +662,6 @@ export function parseModuleFile(
     data: parseDataItem,
   };
 
-  function parseRawDataValues(
-    directive: 'db' | 'dw',
-    valuesText: string,
-    lineNo: number,
-    lineSpan: SourceSpan,
-    filePath: string,
-  ): RawDataDeclNode | undefined {
-    const parts = splitTopLevelComma(valuesText).map((part) => part.trim());
-    if (parts.length === 0 || parts.every((part) => part.length === 0)) {
-      diag(diagnostics, filePath, `"${directive}" expects one or more imm expressions`, {
-        line: lineNo,
-        column: 1,
-      });
-      return undefined;
-    }
-    const values: ImmExprNode[] = [];
-    for (const part of parts) {
-      if (part.length === 0) {
-        diag(diagnostics, filePath, `"${directive}" expects one or more imm expressions`, {
-          line: lineNo,
-          column: 1,
-        });
-        return undefined;
-      }
-      const expr = parseImmExprFromText(filePath, part, lineSpan, diagnostics);
-      if (!expr) return undefined;
-      values.push(expr);
-    }
-    return { kind: 'RawDataDecl', span: lineSpan, name: '', directive, values };
-  }
-
-  function parseRawDataSize(
-    sizeText: string,
-    lineNo: number,
-    lineSpan: SourceSpan,
-    filePath: string,
-  ): RawDataDeclNode | undefined {
-    const parts = splitTopLevelComma(sizeText).map((part) => part.trim());
-    if (parts.length !== 1 || parts[0]!.length === 0) {
-      diag(diagnostics, filePath, `"ds" expects a single imm expression size`, {
-        line: lineNo,
-        column: 1,
-      });
-      return undefined;
-    }
-    const expr = parseImmExprFromText(filePath, parts[0]!, lineSpan, diagnostics);
-    if (!expr) return undefined;
-    return { kind: 'RawDataDecl', span: lineSpan, name: '', directive: 'ds', size: expr };
-  }
-
-  function parseRawDataDirective(
-    label: PendingRawLabel,
-    directiveText: string,
-    lineNo: number,
-    lineSpan: SourceSpan,
-    filePath: string,
-  ): RawDataDeclNode | undefined {
-    const match = /^(db|dw|ds)\b(.*)$/i.exec(directiveText.trim());
-    if (!match) return undefined;
-    const directive = match[1]!.toLowerCase() as 'db' | 'dw' | 'ds';
-    const payload = match[2]!.trim();
-    const parsed =
-      directive === 'ds'
-        ? parseRawDataSize(payload, lineNo, lineSpan, filePath)
-        : parseRawDataValues(directive, payload, lineNo, lineSpan, filePath);
-    if (!parsed) return undefined;
-    return { ...parsed, name: label.name, span: lineSpan };
-  }
-
   function parseModuleItem(index: number, ctx: ParseItemContext): ParseItemResult {
     const { raw, startOffset: lineStartOffset, endOffset: lineEndOffset } = getRawLine(index);
     const text = stripComment(raw).trim();
@@ -923,7 +694,14 @@ export function parseModuleFile(
 
     if (ctx.scope === 'section' && ctx.sectionKind === 'data') {
       if (ctx.pendingRawLabel) {
-        const parsedRaw = parseRawDataDirective(ctx.pendingRawLabel, rest, lineNo, stmtSpan, filePath);
+        const parsedRaw = parseRawDataDirective(
+          ctx.pendingRawLabel,
+          rest,
+          lineNo,
+          stmtSpan,
+          filePath,
+          diagnostics,
+        );
         if (parsedRaw) {
           ctx.directDeclNamesLower.add(ctx.pendingRawLabel.name.toLowerCase());
           delete ctx.pendingRawLabel;
@@ -956,7 +734,14 @@ export function parseModuleFile(
           return { nextIndex: index + 1 };
         }
         const label: PendingRawLabel = { name: labelName, span: stmtSpan, lineNo, filePath };
-        const parsedRaw = parseRawDataDirective(label, inlineMatch[2]! + inlineMatch[3]!, lineNo, stmtSpan, filePath);
+        const parsedRaw = parseRawDataDirective(
+          label,
+          inlineMatch[2]! + inlineMatch[3]!,
+          lineNo,
+          stmtSpan,
+          filePath,
+          diagnostics,
+        );
         if (!parsedRaw) return { nextIndex: index + 1 };
         ctx.directDeclNamesLower.add(labelLower);
         if (ctx.sectionKind !== 'data') {
