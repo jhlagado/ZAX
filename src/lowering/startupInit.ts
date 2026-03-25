@@ -19,8 +19,6 @@ export type StartupInitZeroEntry = {
   length: number;
 };
 
-export type StartupInitEntry = StartupInitCopyEntry | StartupInitZeroEntry;
-
 export type StartupInitRegion = {
   copyEntries: StartupInitCopyEntry[];
   zeroEntries: StartupInitZeroEntry[];
@@ -302,30 +300,6 @@ export function buildStartupInitRegion(
   encoded.push(...blob);
 
   return { copyEntries, zeroEntries, blob, encoded };
-}
-
-export function appendStartupInitRegion(
-  bytes: Map<number, number>,
-  diagnostics: Diagnostic[],
-  file: string,
-  region: StartupInitRegion,
-): void {
-  if (region.encoded.length === 0) return;
-  const highest = [...bytes.keys()].reduce((max, value) => (value > max ? value : max), -1);
-  const start = highest + 1;
-  const end = start + region.encoded.length - 1;
-  if (end > 0xffff) {
-    diagnostics.push({
-      id: DiagnosticIds.EmitError,
-      severity: 'error',
-      file,
-      message: `Compiler-owned startup init region exceeds 16-bit address space.`,
-    });
-    return;
-  }
-  for (let i = 0; i < region.encoded.length; i++) {
-    bytes.set(start + i, region.encoded[i]!);
-  }
 }
 
 export function buildStartupInitRoutine(
