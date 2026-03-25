@@ -1,4 +1,4 @@
-[← I/O and Ports](08-io-and-ports.md) | [Part 1](README.md) | [Typed Storage and Assignment →](10-typed-storage-and-assignment.md)
+[← I/O and Ports](08-io-and-ports.md) | [Part 1](README.md) | [Functions and the IX Frame →](10-functions-and-the-ix-frame.md)
 
 # Chapter 9 — A Complete Program
 

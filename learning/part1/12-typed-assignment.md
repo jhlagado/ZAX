@@ -6,6 +6,8 @@ You have spent two chapters writing `ld a, (ix+running_max+0)` and `ld (ix+cnt+0
 
 Prerequisites: Chapters 3–11.
 
+The companion example is `learning/part1/examples/11_functions_and_op.zax`.
+
 ---
 
 ## `:=` as the assignment surface
