@@ -1,0 +1,76 @@
+# ZAX Test Discovery Guide
+
+Use this file to find the right existing tests before adding a new one. For local commands, fixture refresh steps, and CI expectations, use [docs/reference/testing-verification-guide.md](../docs/reference/testing-verification-guide.md).
+
+## How to navigate this tree
+
+- The `prNNN_*` names preserve issue history. Treat the prefix as provenance, not as the primary way to discover coverage.
+- Start from the feature-area index below, then narrow with `npm test -- --run test/<file>.test.ts`.
+- Small helper utilities live in `test/helpers/` and shared assertions live in `test/test-helpers.ts`.
+
+## Pick the right test shape
+
+### Prefer a unit or helper test when
+
+- the behavior is isolated to one parser, encoder, or lowering helper module
+- the contract is AST shape, operand normalization, opcode selection, or a small pure helper result
+- you can assert without running the full compile pipeline
+
+Representative files:
+
+- `pr476_parse_*.test.ts` for parser helpers
+- `pr477_encode_*.test.ts` for encoder families
+- `pr509_*.test.ts`, `pr510_*.test.ts`, `pr528_*.test.ts`, `pr529_*.test.ts`, `pr530_*.test.ts`, `pr531_*.test.ts` for lowering helper seams
+
+### Prefer an integration test when
+
+- the change crosses phase boundaries inside the compiler
+- the contract depends on `parseProgram(...)` or `compile(...)`
+- you need to validate emitted bytes, lowered instruction shape, fixups, frame behavior, or section routing
+
+Representative files:
+
+- `pr468_parser_dispatch_integration.test.ts` for top-level parser dispatch
+- `pr543_function_lowering_integration.test.ts` and `pr544_program_lowering_integration.test.ts` for lowering seams
+- `pr511_asm_range_lowering_integration.test.ts` for structured-control lowering
+- `pr582_named_section_*integration.test.ts` and `pr585_named_section_layout_integration.test.ts` for named-section routing/layout
+- `examples_compile.test.ts` for checked-in example programs
+
+### Prefer a corpus or golden-style test when
+
+- the checked-in artifact is the contract, not just an intermediate shape
+- you need deterministic output across runs or platforms
+- the user-visible guarantee is textual ASM80 output, HEX bytes, or generated tutorial/corpus assets
+
+Representative files:
+
+- `pr680_asm_golden_contract.test.ts` for checked-in codegen goldens
+- `determinism_artifacts.test.ts` for artifact stability
+- `smoke_language_tour_compile.test.ts` for generated language-tour coverage
+- `pr990_asm80_emitter_validation.test.ts` when external ASM80 compatibility is the contract
+
+## Feature-area index
+
+| Area                                       | Start with                                                                                                                                                                                                                       | Notes                                                                                     |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| CLI behavior and artifact selection        | `cli_contract_matrix.test.ts`, `cli_failure_contract_matrix.test.ts`, `cli_artifacts.test.ts`, `cli_zax_smoke.test.ts`                                                                                                           | Use `test/helpers/cli.ts` for end-to-end CLI execution.                                   |
+| Parser dispatch and recovery               | `pr468_parser_dispatch_integration.test.ts`, `pr227_parser_toplevel_malformed_spans.test.ts`, `pr238_parser_malformed_decl_header_spans_matrix.test.ts`                                                                          | Use helper-level `pr476_parse_*.test.ts` files for isolated parser seams.                 |
+| Grammar and token tables                   | `pr762_grammar_data_conformance.test.ts`, `pr808_grammar_drift.test.ts`, `pr250_parser_instruction_head_casing.test.ts`, `pr252_parser_register_token_canonicalization.test.ts`                                                  | Good home for reserved-word and canonicalization changes.                                 |
+| Semantics and layout                       | `semantics_layout.test.ts`, `semantics_layout_extra.test.ts`, `pr285_alias_init_parser_semantics_matrix.test.ts`, `pr980_local_alias_legality.test.ts`                                                                           | Use these when type size, offsets, alias legality, or compile-time rules change.          |
+| Lowering frame and control-flow invariants | `pr102_lowering_frame_invariants.test.ts`, `pr103_lowering_mixed_return_paths.test.ts`, `pr555_function_sp_state_integration.test.ts`, `pr848_break_continue_integration.test.ts`                                                | Covers epilogue cleanup, SP tracking, and structured control lowering.                    |
+| Lowering helper seams                      | `pr509_*.test.ts`, `pr510_*.test.ts`, `pr528_emission_core_helpers.test.ts`, `pr529_fixup_emission_helpers.test.ts`, `pr530_asm_utils_helpers.test.ts`, `pr531_value_materialization_helpers.test.ts`                            | Prefer these before adding another broad compile test.                                    |
+| Named sections and placement               | `pr572_named_sections_parser.test.ts`, `pr582_section_contribution_sinks.test.ts`, `pr583_section_placement_helpers.test.ts`, `pr584_named_section_fixups_integration.test.ts`, `pr585_named_section_layout_integration.test.ts` | Use when section routing, anchors, or fixups change.                                      |
+| Assignment and storage legality            | `pr862_assignment_parser.test.ts`, `pr863_assignment_lowering.test.ts`, `pr869_assignment_reg8_*`, `pr875_assignment_ixiy_integration.test.ts`, `pr895_assignment_acceptance.test.ts`                                            | Parser, lowering, and acceptance coverage are already split.                              |
+| Encoder behavior                           | `pr24_isa_core.test.ts`, `pr477_encode_*.test.ts`, `pr203_ld_diag_matrix.test.ts`, `pr240_isa_register_target_diag_matrix.test.ts`                                                                                               | Prefer direct encoder tests when lowering is not involved.                                |
+| Examples, smoke, and determinism           | `examples_compile.test.ts`, `smoke.test.ts`, `smoke_language_tour_compile.test.ts`, `determinism_artifacts.test.ts`                                                                                                              | Use for broad regressions and checked-in examples.                                        |
+| Corpus and external backend compatibility  | `pr680_asm_golden_contract.test.ts`, `pr990_asm80_emitter_validation.test.ts`, `pr991_asm80_comment_preservation.test.ts`                                                                                                        | Only use these when emitted artifact text or external-tool compatibility is the contract. |
+| Policy and infrastructure                  | `ci_change_classifier.test.ts`, `pr472_source_file_size_guard.test.ts`, `pr241_d8m_contract_hardening.test.ts`                                                                                                                   | For repo policy, CI classification, and artifact contract checks.                         |
+
+## Where to put new tests
+
+- Add the test next to the nearest existing feature cluster instead of creating a new naming family unless the behavior is genuinely new.
+- Keep `cli_*.test.ts` for command-line surface and artifact wiring. Do not bury CLI behavior in a lower-level integration file.
+- Prefer helper-level files when a single extracted module owns the behavior.
+- Prefer `compile(...)` integration coverage when the interaction between phases is the real risk.
+- Prefer corpus or golden assertions only when checked-in bytes/text are the intended stable output.
+- Put reusable compile/assertion helpers in `test/helpers/` or `test/test-helpers.ts`, not in ad hoc copies inside new tests.
