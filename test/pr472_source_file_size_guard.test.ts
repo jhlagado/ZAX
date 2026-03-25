@@ -17,6 +17,14 @@ async function currentLineCount(file: string): Promise<number> {
   return normalized.split('\n').length;
 }
 
+async function currentHardCapCeiling(file: string): Promise<number | null> {
+  const allowlistText = await readFile('scripts/source-file-size-allowlist.json', 'utf8');
+  const allowlist = JSON.parse(allowlistText) as {
+    hardCap?: Record<string, number>;
+  };
+  return allowlist.hardCap?.[file] ?? null;
+}
+
 function normalizeGuardOutput(text: string): string {
   return text.replaceAll('\\', '/');
 }
@@ -27,17 +35,37 @@ describe('PR472: source file size guard', () => {
       cwd: process.cwd(),
     });
     const emitLines = await currentLineCount('src/lowering/emit.ts');
+    const emitCeiling = await currentHardCapCeiling('src/lowering/emit.ts');
     const parserLines = await currentLineCount('src/frontend/parser.ts');
+    const parserCeiling = await currentHardCapCeiling('src/frontend/parser.ts');
     const encodeLines = await currentLineCount('src/z80/encode.ts');
     const normalizedStdout = normalizeGuardOutput(stdout);
 
     expect(normalizedStdout).toContain('source-file-size-guard: soft>750, hard>1000');
-    expect(normalizedStdout).toContain(`src/lowering/emit.ts: ${emitLines} (ceiling ${emitLines})`);
+    if (emitLines > 1000) {
+      if (emitCeiling !== null) {
+        expect(normalizedStdout).toContain(
+          `src/lowering/emit.ts: ${emitLines} (ceiling ${emitCeiling})`,
+        );
+      } else {
+        expect(normalizedStdout).toContain(`src/lowering/emit.ts: ${emitLines} (ceiling ${emitLines})`);
+      }
+    } else if (emitLines > 750) {
+      expect(normalizedStdout).toContain(`src/lowering/emit.ts: ${emitLines}`);
+    } else {
+      expect(normalizedStdout).not.toContain(`src/lowering/emit.ts: ${emitLines}`);
+    }
     if (parserLines > 750) {
       if (parserLines > 1000) {
-        expect(normalizedStdout).toContain(
-          `src/frontend/parser.ts: ${parserLines} (ceiling ${parserLines})`,
-        );
+        if (parserCeiling !== null) {
+          expect(normalizedStdout).toContain(
+            `src/frontend/parser.ts: ${parserLines} (ceiling ${parserCeiling})`,
+          );
+        } else {
+          expect(normalizedStdout).toContain(
+            `src/frontend/parser.ts: ${parserLines} (ceiling ${parserLines})`,
+          );
+        }
       } else {
         expect(normalizedStdout).toContain(`src/frontend/parser.ts: ${parserLines}`);
       }
