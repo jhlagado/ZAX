@@ -165,8 +165,6 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
       }
       return pushReg('HL') && popReg('BC');
     };
-<<<<<<< HEAD
-=======
     const canDirectTransferByteViaReg8 = (resolved: EaResolution | undefined): boolean => {
       if (resolved?.kind === 'abs') return true;
       return resolved?.kind === 'stack' && resolved.ixDisp >= -0x80 && resolved.ixDisp <= 0x7f;
@@ -175,8 +173,6 @@ export function createLdEncodingHelpers(ctx: LdEncodingContext) {
       resolved?.kind === 'abs' || resolved?.kind === 'stack';
     const canDirectStoreWordFromPair = (resolved: EaResolution | undefined): boolean =>
       resolved?.kind === 'abs' || resolved?.kind === 'stack';
-
->>>>>>> 2c90a48 (test: tighten assertions and parser helpers)
     const ixDispMem = (disp: number): AsmOperandNode => ({
       kind: 'Mem',
       span: inst.span,
