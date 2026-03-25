@@ -215,7 +215,7 @@ func times_ten(value_word: word): HL
 end
 ```
 
-(From `learning/part2/examples/unit3/atoi.zax`, lines 10–20.)
+(Adapted from `learning/part2/examples/unit3/atoi.zax`, lines 10–20.)
 
 The scan pointer advances through `succ scan_ptr` rather than `inc hl` because the
 pointer is kept in a typed local (`scan_ptr: word`) rather than held continuously

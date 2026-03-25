@@ -101,7 +101,7 @@ In practice, both `:=` and `ld` appear in the same function body:
     end
 ```
 
-(From `learning/part2/examples/unit1/exp_squaring.zax`, lines 60–66.)
+(Adapted from `learning/part2/examples/unit1/exp_squaring.zax`, lines 60–66.)
 
 The `ld a, l` and `and 1` are raw Z80 instructions — testing a specific bit
 of a specific register. The `:=` lines on either side are named transfers to
@@ -168,7 +168,7 @@ instruction immediately before the condition:
     end
 ```
 
-(From `learning/part2/examples/unit1/gcd_iterative.zax`, lines 20–26.)
+(Adapted from `learning/part2/examples/unit1/gcd_iterative.zax`, lines 20–26.)
 
 The `or l` instruction sets Z if HL is zero. The `if Z` block then handles the
 base case. This is the standard Z80 null-check pattern: OR H with L, or OR A
@@ -266,7 +266,7 @@ for the three cases (right is zero, values are equal, one is larger):
     end
 ```
 
-(From `learning/part2/examples/unit1/gcd_iterative.zax`, lines 28–45.)
+(Adapted from `learning/part2/examples/unit1/gcd_iterative.zax`, lines 28–45.)
 
 `xor a` clears the carry before `sbc hl, de`, so the subtraction result is
 exact (no borrow from a prior carry). After the subtraction, C is set if
@@ -348,7 +348,7 @@ halve the exponent:
     remaining := hl
 ```
 
-(From `learning/part2/examples/unit1/exp_squaring.zax`, lines 60–74.)
+(Adapted from `learning/part2/examples/unit1/exp_squaring.zax`, lines 60–74, condensed.)
 
 The 16-bit right shift uses `srl h` / `rr l`: shift H right with zero fill,
 rotate L right through carry (which carries the bit from H). This is the
