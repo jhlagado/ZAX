@@ -48,7 +48,8 @@ src/
   frontend/
     ast.ts                Pure AST type definitions (no parsing logic)
     source.ts             SourceFile: line-start index for span construction
-    parser.ts             Top-level dispatch: iterates lines, dispatches to sub-parsers
+    parser.ts             Top-level dispatch: line loop, defers module items to dispatch helpers
+    parseModuleItemDispatch.ts Module-scope item parser: func/op/enum/type/data/globals/extern/simple directives
     parseModuleCommon.ts  Shared parse helpers: keyword prefix matching, error messages
     parseAsmStatements.ts ASM block body parser (instruction + control nodes)
     parseData.ts          Data block parser
@@ -71,7 +72,10 @@ src/
     emit.ts               Program emission orchestrator: callable/section scan, item emission, fixups
     emitContextBuilder.ts Shared wiring for function/program lowering contexts used by emit.ts
     ldLowering.ts         Typed LD lowering facade: form selection + encoding composition
+    ldEncoding.ts         LD encoding core: context wiring, assignment plans, scalar/aggregate paths
+    ldEncodingRegMemHelpers.ts Register/memory LD templates and EA pipelines for ldEncoding
     programLowering.ts    Program item dispatch: pre-scan, DataBlock/VarBlock, finalization
+    programLoweringDeclarations.ts Bin/raw data and declaration lowering helpers for programLowering
     functionLowering.ts   FuncDecl coordinator: frame setup, prologue, epilogue, body
     functionCallLowering.ts  Typed-call argument dispatch (byte/word/ea/mem variants)
     loweringDiagnostics.ts  Shared diagnostic helpers: diag, diagAt, warnAt, etc.
@@ -81,6 +85,7 @@ src/
     typeResolution.ts     Scalar kind and aggregate type resolution from TypeExprNode
     asmRangeLowering.ts   Structured control flow lowering (if/while/repeat/select)
     asmBodyOrchestration.ts  lowerAndFinalizeFunctionBody: fallthrough/balance checks
+    asmInstructionLdHelpers.ts LD-shaped asm instruction helpers used by asmInstructionLowering
     asmInstructionLowering.ts lowerAsmInstructionDispatcher: ret/call/jp/jr/djnz dispatch
     functionBodySetup.ts  Flow state, labels, joinFlows, select helpers, sourceTagForSpan
     valueMaterialization.ts  pushEaAddress, pushMemValue, runtime linear expression analysis
@@ -387,7 +392,7 @@ export function createEaResolutionHelpers(ctx: EaResolutionContext) { ... }
 
 ```typescript
 // ldLowering.ts
-export function createLdLoweringHelpers(ctx: any) {
+export function createLdLoweringHelpers(ctx: LdLoweringContext) {
   const { emitInstr, resolveEa, buildEaBytePipeline, ... } = ctx;
   ...
 }
@@ -395,13 +400,12 @@ export function createLdLoweringHelpers(ctx: any) {
 
 As of the current codebase:
 
-- `ldLowering.ts` still uses `ctx: any` (QR-2) — the only untyped module.
-- `functionBodySetup.ts` uses `AsmOperandNode extends never ? never : any` as a
-  linting-bypass technique for `pushEaAddress`, `pushMemValue`, and `evalImmExpr` (QR-18).
-  The correct types are `EaExprNode`, `ImmExprNode`, and `CompileEnv`.
-- All other extracted helper modules have properly typed context interfaces.
+- All extracted helper modules have properly typed context interfaces.
+- `ldLowering.ts` now uses the explicit `LdLoweringContext` intersection type (QR-2 resolved).
+- `functionBodySetup.ts` no longer uses `AsmOperandNode extends never ? never : any`
+  linting workarounds — all context types are explicit (QR-18 resolved).
 
-These two typing gaps are the primary remaining items in the v0.4 type-safety track.
+The v0.4 type-safety track is complete.
 
 ---
 
