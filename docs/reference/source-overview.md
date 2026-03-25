@@ -25,7 +25,8 @@ in-memory artifacts through injected format writers.
 ```
 src/
   cli.ts                  CLI entry point (argument parsing, file I/O, format wiring)
-  compile.ts              Top-level compile orchestrator (import resolution + pipeline)
+  compile.ts              Top-level compile orchestrator (phase sequencing + artifact emission)
+  moduleLoader.ts         Import/include expansion, module graph walk, topo ordering, source capture
   pipeline.ts             Type contracts only: CompilerOptions, CompileResult, PipelineDeps
 
   addressing/
@@ -69,7 +70,7 @@ src/
   lowering/
     emit.ts               Program emission orchestrator: callable/section scan, item emission, fixups
     emitContextBuilder.ts Shared wiring for function/program lowering contexts used by emit.ts
-    ldLowering.ts         LD instruction lowering helpers (~800 lines; ctx: any — see QR-2)
+    ldLowering.ts         Typed LD lowering facade: form selection + encoding composition
     programLowering.ts    Program item dispatch: pre-scan, DataBlock/VarBlock, finalization
     functionLowering.ts   FuncDecl coordinator: frame setup, prologue, epilogue, body
     functionCallLowering.ts  Typed-call argument dispatch (byte/word/ea/mem variants)
@@ -121,8 +122,9 @@ CLI / test harness
   ▼
 compile(entryFile, options, deps)           [compile.ts]
   │
-  ├─ loadProgram()
+  ├─ loadProgram()                          [moduleLoader.ts]
   │    ├─ readFile + parseModuleFile()      [frontend/parser.ts]
+  │    ├─ expand includes + capture source comments
   │    ├─ resolve imports (BFS + topo sort)
   │    └─ cycle detection, ID collision check
   │
