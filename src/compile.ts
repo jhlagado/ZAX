@@ -1,5 +1,6 @@
-import { dirname, resolve } from 'node:path';
+import { dirname } from 'node:path';
 
+import { hasErrors, normalizePath } from './compileShared.js';
 import type { Diagnostic } from './diagnostics/types.js';
 import { DiagnosticIds } from './diagnostics/types.js';
 import type { CompileFn, CompilerOptions, CompileResult, PipelineDeps } from './pipeline.js';
@@ -14,10 +15,6 @@ import { loadProgram } from './moduleLoader.js';
 import { validateAssignmentAcceptance } from './semantics/assignmentAcceptance.js';
 import { buildEnv } from './semantics/env.js';
 import { validateSuccPredAcceptance } from './semantics/succPredAcceptance.js';
-
-function hasErrors(diagnostics: Diagnostic[]): boolean {
-  return diagnostics.some((d) => d.severity === 'error');
-}
 
 function withDefaults(
   options: CompilerOptions,
@@ -39,9 +36,6 @@ function withDefaults(
   return { emitBin, emitHex, emitD8m, emitListing, emitAsm80 };
 }
 
-function normalizePath(p: string): string {
-  return resolve(p);
-}
 
 function hasMainFunction(program: ProgramNode): boolean {
   const hasMainInItems = (items: Array<ModuleItemNode | SectionItemNode>): boolean => {
