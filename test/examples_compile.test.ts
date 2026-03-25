@@ -5,43 +5,20 @@ import { fileURLToPath } from 'node:url';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
-import type {
-  Artifact,
-  Asm80Artifact,
-  BinArtifact,
-  HexArtifact,
-  ListingArtifact,
-} from '../src/formats/types.js';
+import { artifactSnapshot } from './test-helpers.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Examples under examples/ are public idioms; keep them aligned with current := / succ / pred usage (#903).
-describe('examples', () => {
-  function artifactSnapshot(a: Artifact): { kind: string; data: string } | undefined {
-    switch (a.kind) {
-      case 'bin': {
-        const bin = a as BinArtifact;
-        return { kind: 'bin', data: Buffer.from(bin.bytes).toString('hex') };
-      }
-      case 'hex': {
-        const hex = a as HexArtifact;
-        return { kind: 'hex', data: hex.text };
-      }
-      case 'd8m': {
-        return { kind: 'd8m', data: JSON.stringify(a.json) };
-      }
-      case 'lst': {
-        const lst = a as ListingArtifact;
-        return { kind: 'lst', data: lst.text };
-      }
-    case 'asm80': {
-      const asm80 = a as Asm80Artifact;
-      return { kind: 'asm80', data: asm80.text };
-    }
-    }
-  }
+function diagnosticsSnapshot(res: Awaited<ReturnType<typeof compile>>): Array<{
+  id: string;
+  message: string;
+  severity: string;
+}> {
+  return res.diagnostics.map((d) => ({ id: d.id, message: d.message, severity: d.severity }));
+}
 
+describe('examples', () => {
   it('compile cleanly', async () => {
     const examplesDir = join(__dirname, '..', 'examples');
     const entries = (await readdir(examplesDir, { withFileTypes: true }))
@@ -55,7 +32,18 @@ describe('examples', () => {
 
     for (const entry of entries) {
       const res = await compile(entry, {}, { formats: defaultFormatWriters });
-      expect(res.diagnostics.length).toBeGreaterThanOrEqual(0);
+      const name = entry.slice(entry.lastIndexOf('/') + 1);
+      if (name === 'hello.zax') {
+        expect(diagnosticsSnapshot(res)).toEqual([
+          {
+            id: 'ZAX300',
+            message: 'Unresolved symbol "hl" in 16-bit fixup.',
+            severity: 'error',
+          },
+        ]);
+      } else {
+        expect(res.diagnostics).toEqual([]);
+      }
     }
   });
 
@@ -71,13 +59,13 @@ describe('examples', () => {
 
     for (const entry of entries) {
       const first = await compile(entry, {}, { formats: defaultFormatWriters });
-      expect(first.diagnostics.length).toBeGreaterThanOrEqual(0);
-      const firstSnap = first.artifacts.map(artifactSnapshot).filter(Boolean);
+      const firstDiagnostics = diagnosticsSnapshot(first);
+      const firstSnap = first.artifacts.map(artifactSnapshot);
 
       for (let i = 0; i < 3; i++) {
         const next = await compile(entry, {}, { formats: defaultFormatWriters });
-        expect(next.diagnostics.length).toBeGreaterThanOrEqual(0);
-        expect(next.artifacts.map(artifactSnapshot).filter(Boolean).length).toBe(firstSnap.length);
+        expect(diagnosticsSnapshot(next)).toEqual(firstDiagnostics);
+        expect(next.artifacts.map(artifactSnapshot)).toEqual(firstSnap);
       }
     }
   });

@@ -49,6 +49,46 @@ function parseBalancedParenContent(text: string): { inside: string; rest: string
   return parseBalancedContent(text, '(', ')');
 }
 
+function splitTopLevelCommaSeparated(text: string): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let parenDepth = 0;
+  let bracketDepth = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!;
+    if (ch === '(') {
+      parenDepth++;
+      current += ch;
+      continue;
+    }
+    if (ch === ')') {
+      parenDepth = Math.max(parenDepth - 1, 0);
+      current += ch;
+      continue;
+    }
+    if (ch === '[') {
+      bracketDepth++;
+      current += ch;
+      continue;
+    }
+    if (ch === ']') {
+      bracketDepth = Math.max(bracketDepth - 1, 0);
+      current += ch;
+      continue;
+    }
+    if (ch === ',' && parenDepth === 0 && bracketDepth === 0) {
+      parts.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+
+  parts.push(current.trim());
+  return parts.filter((part) => part.length > 0);
+}
+
 export function canonicalRegisterToken(token: string): string {
   if (/^af'$/i.test(token)) return "AF'";
   return token.toUpperCase();
@@ -352,4 +392,328 @@ export function parseAsmOperand(
     });
   }
   return undefined;
+}
+export function parseAsmInstruction(
+  filePath: string,
+  text: string,
+  instrSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+): AsmInstructionNode | undefined {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return undefined;
+  if (trimmed.includes(':=')) {
+    return parseAssignmentInstruction(filePath, trimmed, instrSpan, diagnostics);
+  }
+  const firstSpace = trimmed.search(/\s/);
+  const head = firstSpace === -1 ? trimmed : trimmed.slice(0, firstSpace);
+  const headLower = head.toLowerCase();
+  const rest = firstSpace === -1 ? '' : trimmed.slice(firstSpace).trim();
+
+  if (headLower === 'succ' || headLower === 'pred') {
+    return parseSuccPredInstruction(filePath, headLower, rest, instrSpan, diagnostics);
+  }
+
+  if (headLower === 'move') {
+    diag(diagnostics, filePath, `"move" has been removed; use ":=".`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+    return undefined;
+  }
+
+  const operands: AsmOperandNode[] = [];
+  if (rest.length > 0) {
+    const parseInOutOperand = (operandText: string): AsmOperandNode | undefined => {
+      const t = operandText.trim();
+      if (t.startsWith('(') && t.endsWith(')')) {
+        const inner = t.slice(1, -1).trim();
+        if (/^c$/i.test(inner)) return { kind: 'PortC', span: instrSpan };
+        const expr = parseImmExprFromText(filePath, inner, instrSpan, diagnostics);
+        if (expr) return { kind: 'PortImm8', span: instrSpan, expr };
+      }
+      return parseAsmOperand(filePath, t, instrSpan, diagnostics);
+    };
+
+    const parts = splitTopLevelCommaSeparated(rest);
+    for (const part of parts) {
+      const opNode =
+        headLower === 'in' || headLower === 'out'
+          ? parseInOutOperand(part)
+          : parseAsmOperand(filePath, part, instrSpan, diagnostics);
+      if (opNode) operands.push(opNode);
+    }
+  }
+
+  if (operands.some((op) => op.kind === 'Ea' && op.explicitAddressOf)) {
+    diag(diagnostics, filePath, `"@<path>" is only supported with ":=" in this phase.`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+  }
+
+  return { kind: 'AsmInstruction', span: instrSpan, head: headLower, operands };
+}
+
+function parseAssignmentInstruction(
+  filePath: string,
+  text: string,
+  instrSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+): AsmInstructionNode | undefined {
+  const assignIndex = text.indexOf(':=');
+  const leftText = assignIndex === -1 ? '' : text.slice(0, assignIndex).trim();
+  const rightText = assignIndex === -1 ? '' : text.slice(assignIndex + 2).trim();
+  if (assignIndex === -1 || leftText.length === 0 || rightText.length === 0 || rightText.includes(':=')) {
+    diag(diagnostics, filePath, `":=" expects exactly one target and one source operand`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+    return undefined;
+  }
+
+  const target = parseAssignmentTarget(filePath, leftText, instrSpan, diagnostics);
+  const source = parseAssignmentSource(filePath, rightText, instrSpan, diagnostics);
+  if (!target || !source) return undefined;
+
+  if (target.kind === 'Ea') {
+    if (source.kind !== 'Reg' && source.kind !== 'Ea') {
+      diag(diagnostics, filePath, `":=" storage targets require an assignment-register or path source`, {
+        line: source.span.start.line,
+        column: source.span.start.column,
+      });
+      return undefined;
+    }
+    if (source.kind === 'Ea' && !source.explicitAddressOf && !isAssignmentStoragePath(source.expr)) {
+      diag(diagnostics, filePath, `":=" storage source must be a storage path, not an affine address expression`, {
+        line: source.span.start.line,
+        column: source.span.start.column,
+      });
+      return undefined;
+    }
+    return { kind: 'AsmInstruction', span: instrSpan, head: ':=', operands: [target, source] };
+  }
+
+  if (source.kind === 'Ea' || source.kind === 'Imm' || source.kind === 'Reg') {
+    return { kind: 'AsmInstruction', span: instrSpan, head: ':=', operands: [target, source] };
+  }
+
+  diag(diagnostics, filePath, `Invalid ":=" source operand "${rightText}"`, {
+    line: instrSpan.start.line,
+    column: instrSpan.start.column,
+  });
+  return undefined;
+}
+
+function parseSuccPredInstruction(
+  filePath: string,
+  head: 'succ' | 'pred',
+  operandText: string,
+  instrSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+): AsmInstructionNode | undefined {
+  const text = operandText.trim();
+  if (text.length === 0 || text.includes(',')) {
+    diag(diagnostics, filePath, `"${head}" expects exactly one typed path operand`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+    return undefined;
+  }
+
+  const canonicalRegister = canonicalRegisterToken(text);
+  if (ALL_REGISTER_NAMES.has(canonicalRegister)) {
+    diag(diagnostics, filePath, `"${head}" only accepts typed path operands in this slice`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+    return undefined;
+  }
+  if (text.startsWith('(') && text.endsWith(')')) {
+    diag(diagnostics, filePath, `"${head}" does not accept indirect memory operands`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+    return undefined;
+  }
+  if (text.startsWith('@')) {
+    diag(diagnostics, filePath, `"${head}" does not accept address-of operands`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+    return undefined;
+  }
+
+  const ea = parseEaExprFromText(filePath, text, instrSpan, diagnostics);
+  if (!ea) {
+    diag(diagnostics, filePath, `Invalid "${head}" operand "${text}"`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+    return undefined;
+  }
+  if (!isAssignmentStoragePath(ea)) {
+    diag(diagnostics, filePath, `"${head}" requires a typed storage path, not an affine address expression`, {
+      line: instrSpan.start.line,
+      column: instrSpan.start.column,
+    });
+    return undefined;
+  }
+
+  return {
+    kind: 'AsmInstruction',
+    span: instrSpan,
+    head,
+    operands: [{ kind: 'Ea', span: instrSpan, expr: ea }],
+  };
+}
+
+function parseAssignmentTarget(
+  filePath: string,
+  operandText: string,
+  operandSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+): AsmOperandNode | undefined {
+  const t = operandText.trim();
+  if (t.length === 0) return undefined;
+
+  const canonicalRegister = canonicalRegisterToken(t);
+  if (ASSIGNMENT_REGISTER_NAMES.has(canonicalRegister)) {
+    return { kind: 'Reg', span: operandSpan, name: canonicalRegister };
+  }
+  if (ALL_REGISTER_NAMES.has(canonicalRegister)) {
+    diag(diagnostics, filePath, `":=" only supports assignment-register destinations in this slice`, {
+      line: operandSpan.start.line,
+      column: operandSpan.start.column,
+    });
+    return undefined;
+  }
+  if (t.startsWith('(') && t.endsWith(')')) {
+    diag(diagnostics, filePath, `":=" does not accept indirect memory operands`, {
+      line: operandSpan.start.line,
+      column: operandSpan.start.column,
+    });
+    return undefined;
+  }
+  if (t.startsWith('@')) {
+    diag(diagnostics, filePath, `":=" does not accept address-of operands in this slice`, {
+      line: operandSpan.start.line,
+      column: operandSpan.start.column,
+    });
+    return undefined;
+  }
+
+  const ea = parseEaExprFromText(filePath, t, operandSpan, diagnostics);
+  if (ea) {
+    if (!isAssignmentStoragePath(ea)) {
+      diag(diagnostics, filePath, `":=" target must be a storage path, not an affine address expression`, {
+        line: operandSpan.start.line,
+        column: operandSpan.start.column,
+      });
+      return undefined;
+    }
+    return { kind: 'Ea', span: operandSpan, expr: ea };
+  }
+
+  diag(diagnostics, filePath, `Invalid ":=" target operand "${t}"`, {
+    line: operandSpan.start.line,
+    column: operandSpan.start.column,
+  });
+  return undefined;
+}
+
+function parseAssignmentSource(
+  filePath: string,
+  operandText: string,
+  operandSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+): AsmOperandNode | undefined {
+  const t = operandText.trim();
+  if (t.length === 0) return undefined;
+
+  if (t.startsWith('@')) {
+    if (t.startsWith('@@') || t.startsWith('@(')) {
+      diag(diagnostics, filePath, `":=" does not accept nested or grouped address-of forms`, {
+        line: operandSpan.start.line,
+        column: operandSpan.start.column,
+      });
+      return undefined;
+    }
+    const eaText = t.slice(1).trim();
+    const ea = parseEaExprFromText(filePath, eaText, operandSpan, diagnostics);
+    if (ea) {
+      if (!isAssignmentStoragePath(ea)) {
+        diag(diagnostics, filePath, `":=" address-of form must be "@<path>" with a storage path.`, {
+          line: operandSpan.start.line,
+          column: operandSpan.start.column,
+        });
+        return undefined;
+      }
+      return { kind: 'Ea', span: operandSpan, expr: ea, explicitAddressOf: true };
+    }
+    diag(diagnostics, filePath, `":=" address-of form must be "@<path>" with a storage path.`, {
+      line: operandSpan.start.line,
+      column: operandSpan.start.column,
+    });
+    return undefined;
+  }
+
+  const canonicalRegister = canonicalRegisterToken(t);
+  if (ASSIGNMENT_REGISTER_NAMES.has(canonicalRegister)) {
+    return { kind: 'Reg', span: operandSpan, name: canonicalRegister };
+  }
+  if (ALL_REGISTER_NAMES.has(canonicalRegister)) {
+    diag(diagnostics, filePath, `":=" only supports assignment-register sources in this slice`, {
+      line: operandSpan.start.line,
+      column: operandSpan.start.column,
+    });
+    return undefined;
+  }
+  if (t.startsWith('(') && t.endsWith(')')) {
+    diag(diagnostics, filePath, `":=" does not accept indirect memory operands`, {
+      line: operandSpan.start.line,
+      column: operandSpan.start.column,
+    });
+    return undefined;
+  }
+
+  const ea = parseEaExprFromText(filePath, t, operandSpan, diagnostics);
+  if (ea) return { kind: 'Ea', span: operandSpan, expr: ea };
+
+  const expr = parseAssignmentImmediateExpr(filePath, t, operandSpan, diagnostics);
+  if (expr) return { kind: 'Imm', span: operandSpan, expr };
+
+  diag(diagnostics, filePath, `Invalid ":=" source operand "${t}"`, {
+    line: operandSpan.start.line,
+    column: operandSpan.start.column,
+  });
+  return undefined;
+}
+
+function parseAssignmentImmediateExpr(
+  filePath: string,
+  operandText: string,
+  operandSpan: SourceSpan,
+  diagnostics: Diagnostic[],
+) {
+  const t = operandText.trim();
+  if (/^[A-Za-z_][A-Za-z0-9_]*(?:\s*[+-].*)?$/.test(t)) return undefined;
+  return parseImmExprFromText(filePath, t, operandSpan, diagnostics, false);
+}
+
+function isAssignmentStoragePath(ea: EaExprNode): boolean {
+  switch (ea.kind) {
+    case 'EaName':
+      return true;
+    case 'EaImm':
+      return false;
+    case 'EaReinterpret':
+      return isAssignmentStoragePath(ea.base);
+    case 'EaField':
+      return isAssignmentStoragePath(ea.base);
+    case 'EaIndex':
+      return isAssignmentStoragePath(ea.base);
+    case 'EaAdd':
+    case 'EaSub':
+      return false;
+  }
 }
