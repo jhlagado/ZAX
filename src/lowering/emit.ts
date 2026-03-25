@@ -49,39 +49,23 @@ import type {
   SymbolEntry,
 } from '../formats/types.js';
 import type {
-  AlignDirectiveNode,
-  AsmItemNode,
   AsmInstructionNode,
   AsmOperandNode,
-  BinDeclNode,
-  DataBlockNode,
-  DataDeclNode,
   EaExprNode,
-  EaIndexNode,
-  EnumDeclNode,
-  ExternDeclNode,
-  ExternFuncNode,
-  FuncDeclNode,
-  HexDeclNode,
   ImmExprNode,
   OpDeclNode,
-  OpMatcherNode,
-  ParamNode,
   ProgramNode,
   SourceSpan,
   TypeExprNode,
-  VarBlockNode,
   VarDeclNode,
 } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import { evalImmExpr } from '../semantics/env.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { encodeInstruction } from '../z80/encode.js';
-import type { NonBankedSectionKeyCollection } from '../sectionKeys.js';
-import type { Callable, PendingSymbol, SectionKind, SourceSegmentTag } from './loweringTypes.js';
+import type { Callable, PendingSymbol, SectionKind } from './loweringTypes.js';
 import { createOpStackAnalysisHelpers } from './opStackAnalysis.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
-import { moduleQualifierOf } from '../moduleVisibility.js';
 import { loadBinInput, loadHexInput } from './inputAssets.js';
 import { createEaResolutionHelpers, type EaResolution } from './eaResolution.js';
 import { createEaMaterializationHelpers } from './eaMaterialization.js';
@@ -98,27 +82,10 @@ import { createEmissionCoreHelpers } from './emissionCore.js';
 import { createValueMaterializationHelpers } from './valueMaterialization.js';
 import { createAsmInstructionLoweringHelpers } from './asmInstructionLowering.js';
 import { createFixupEmissionHelpers } from './fixupEmission.js';
-import {
-  createFunctionBodySetupHelpers,
-  type FlowState,
-  type OpExpansionFrame,
-} from './functionBodySetup.js';
-import {
-  lowerFunctionDecl,
-  type FunctionLoweringSymbolContext,
-} from './functionLowering.js';
-import {
-  createNamedSectionContributionSinks,
-  type NamedSectionContributionSink,
-} from './sectionContributions.js';
-import { createLoweredAsmStreamRecordingHelpers } from './loweredAsmStreamRecording.js';
-import {
-  lowerProgramDeclarations,
-  preScanProgramDeclarations,
-  type Context as ProgramLoweringContext,
-  type LoweringResult as ProgramLoweringResult,
-  type PrescanResult as ProgramPrescanResult,
-} from './programLowering.js';
+import { createFunctionBodySetupHelpers, type FlowState, type OpExpansionFrame } from './functionBodySetup.js';
+import { lowerFunctionDecl } from './functionLowering.js';
+import { createEmitVisibilityHelpers } from './emitVisibility.js';
+import { lowerProgramDeclarations, preScanProgramDeclarations } from './programLowering.js';
 import { finalizeEmitProgram } from './emitFinalization.js';
 import {
   diag,
@@ -127,13 +94,7 @@ import {
   diagAtWithSeverityAndId,
   warnAt,
 } from './loweringDiagnostics.js';
-import {
-  cloneEaExpr,
-  cloneImmExpr,
-  cloneOperand,
-  createAsmUtilityHelpers,
-  flattenEaDottedName,
-} from './asmUtils.js';
+import { cloneEaExpr, cloneImmExpr, cloneOperand, createAsmUtilityHelpers, flattenEaDottedName } from './asmUtils.js';
 import {
   alignTo,
   computeWrittenRange,
@@ -147,7 +108,8 @@ import {
   toHexWord,
 } from './traceFormat.js';
 import { createTypeResolutionHelpers } from './typeResolution.js';
-import { createEmitLoweringContexts } from './emitContextBuilder.js';
+import { createEmitProgramContext } from './emitProgramContext.js';
+import { createEmitStateHelpers } from './emitState.js';
 import type {
   LoweredAsmItem,
   LoweredAsmStream,
@@ -168,19 +130,6 @@ const REG8_CODES = new Map([
   ['A', 7],
 ]);
 
-type ProgramLoweringPhaseResult = {
-  prescan: ProgramPrescanResult;
-  lowered: ProgramLoweringResult;
-};
-
-function runProgramLoweringPhases(
-  programLoweringContext: ProgramLoweringContext,
-): ProgramLoweringPhaseResult {
-  const prescan = preScanProgramDeclarations(programLoweringContext);
-  const lowered = lowerProgramDeclarations(programLoweringContext, prescan);
-  return { prescan, lowered };
-}
-
 /**
  * Emit machine-code bytes for a parsed program into an address->byte map.
  *
@@ -200,7 +149,7 @@ export function emitProgram(
     opStackPolicy?: OpStackPolicyMode;
     rawTypedCallWarnings?: boolean;
     defaultCodeBase?: number;
-    namedSectionKeys?: NonBankedSectionKeyCollection;
+    namedSectionKeys?: import('../sectionKeys.js').NonBankedSectionKeyCollection;
     sourceTexts?: Map<string, string>;
     sourceLineComments?: Map<string, Map<number, string>>;
   },
@@ -217,10 +166,6 @@ export function emitProgram(
   const codeSourceSegments: EmittedSourceSegment[] = [];
   const loweredAsmStream: LoweredAsmStream = { blocks: [] };
   const loweredAsmBlocksByKey = new Map<string, LoweredAsmStreamBlock>();
-  let recordLoweredAsmItem: ((item: LoweredAsmItem, span?: SourceSpan) => void) | undefined;
-  let lowerImmExprForLoweredAsm: ((expr: ImmExprNode) => LoweredImmExpr) | undefined;
-  let lowerOperandForLoweredAsm: ((op: AsmOperandNode) => LoweredOperand) | undefined;
-  let currentCodeSegmentTag: SourceSegmentTag | undefined;
   const absoluteSymbols: SymbolEntry[] = [];
   const symbols: SymbolEntry[] = [];
   const pending: PendingSymbol[] = [];
@@ -250,58 +195,13 @@ export function emitProgram(
   const rawTypedCallWarningsEnabled = options?.rawTypedCallWarnings === true;
   const declaredOpNames = new Set<string>();
   const declaredBinNames = new Set<string>();
-
-  const canAccessLoweredQualifiedName = (name: string, file: string): boolean => {
-    const qualifier = moduleQualifierOf(name);
-    if (!qualifier) return true;
-    const currentModuleId = env.moduleIds?.get(file)?.toLowerCase();
-    if (currentModuleId === qualifier) return true;
-    const imported = env.importedModuleIds?.get(file);
-    if (!imported) return true;
-    for (const importedId of imported) {
-      if (importedId.toLowerCase() === qualifier) return true;
-    }
-    return false;
-  };
-
-  const resolveVisibleCallable = (name: string, file: string): Callable | undefined => {
-    const lower = name.toLowerCase();
-    const qualifier = moduleQualifierOf(lower);
-    if (!qualifier) {
-      const local = localCallablesByFile.get(file)?.get(lower);
-      if (local) return local;
-      const imported = env.importedModuleIds?.get(file);
-      if (!imported) return undefined;
-      for (const importedId of imported) {
-        for (const [candidateFile, moduleId] of env.moduleIds ?? []) {
-          if (moduleId.toLowerCase() !== importedId.toLowerCase()) continue;
-          const importedCallable = localCallablesByFile.get(candidateFile)?.get(lower);
-          if (importedCallable?.kind === 'extern') return importedCallable;
-        }
-      }
-      return undefined;
-    }
-    const currentModuleId = env.moduleIds?.get(file)?.toLowerCase();
-    if (currentModuleId === qualifier) {
-      const localName = lower.slice(qualifier.length + 1);
-      return localCallablesByFile.get(file)?.get(localName);
-    }
-    if (!canAccessLoweredQualifiedName(lower, file)) return undefined;
-    return visibleCallables.get(lower);
-  };
-
-  const resolveVisibleOpCandidates = (name: string, file: string): OpDeclNode[] | undefined => {
-    const lower = name.toLowerCase();
-    const qualifier = moduleQualifierOf(lower);
-    if (!qualifier) return localOpsByFile.get(file)?.get(lower);
-    const currentModuleId = env.moduleIds?.get(file)?.toLowerCase();
-    if (currentModuleId === qualifier) {
-      const localName = lower.slice(qualifier.length + 1);
-      return localOpsByFile.get(file)?.get(localName);
-    }
-    if (!canAccessLoweredQualifiedName(lower, file)) return undefined;
-    return visibleOpsByName.get(lower);
-  };
+  const { resolveVisibleCallable, resolveVisibleOpCandidates } = createEmitVisibilityHelpers({
+    env,
+    localCallablesByFile,
+    visibleCallables,
+    localOpsByFile,
+    visibleOpsByName,
+  });
 
   const { summarizeOpStackEffect } = createOpStackAnalysisHelpers({
     resolveOpCandidates: resolveVisibleOpCandidates,
@@ -318,78 +218,90 @@ export function emitProgram(
     | ((headRaw: string, operands: AsmOperandNode[]) => void)
     | undefined;
   let invalidateSpTracking: (() => void) | undefined;
-  let generatedLabelCounter = 0;
-  let currentNamedSectionSink: NamedSectionContributionSink | undefined;
-
-  const namedSectionSinks = options?.namedSectionKeys
-    ? createNamedSectionContributionSinks(options.namedSectionKeys)
-    : [];
-  const namedSectionSinksByNode = new Map(
-    namedSectionSinks.map((sink) => [sink.contribution.node, sink] as const),
-  );
-
-  const sameSourceTag = (x: SourceSegmentTag, y: SourceSegmentTag): boolean =>
-    x.file === y.file &&
-    x.line === y.line &&
-    x.column === y.column &&
-    x.kind === y.kind &&
-    x.confidence === y.confidence;
-
-  const recordCodeSourceRange = (start: number, end: number): void => {
-    if (!currentCodeSegmentTag || end <= start) return;
-    const segments = currentNamedSectionSink?.sourceSegments ?? codeSourceSegments;
-    const last = segments[segments.length - 1];
-    if (last && last.end === start && sameSourceTag(last, currentCodeSegmentTag)) {
-      last.end = end;
-      return;
-    }
-    segments.push({ ...currentCodeSegmentTag, start, end });
-  };
-
-  // traceInstruction kept as a no-op callback for helpers that still accept it as a parameter.
   const traceInstruction = (_offset: number, _bytesOut: Uint8Array, _text: string): void => {};
-
-  const traceLabel = (_offset: number, name: string, span?: SourceSpan): void => {
-    recordLoweredAsmItem?.({ kind: 'label', name }, span);
-  };
-
-  const traceComment = (_offset: number, text: string): void => {
-    recordLoweredAsmItem?.({ kind: 'comment', text, origin: 'zax' });
-  };
-
-  const getCurrentCodeOffset = (): number => currentNamedSectionSink?.offset ?? codeOffset;
-  const setCurrentCodeOffset = (value: number): void => {
-    if (currentNamedSectionSink) currentNamedSectionSink.offset = value;
-    else codeOffset = value;
-  };
-  const setCurrentCodeByte = (offset: number, value: number): void => {
-    const bytesOut = currentNamedSectionSink?.bytes ?? codeBytes;
-    bytesOut.set(offset, value);
-  };
-  const pushCurrentFixup = (fixup: {
-    offset: number;
-    baseLower: string;
-    addend: number;
-    file: string;
-  }): void => {
-    if (currentNamedSectionSink) currentNamedSectionSink.fixups.push(fixup);
-    else fixups.push(fixup);
-  };
-  const pushCurrentRel8Fixup = (fixup: {
-    offset: number;
-    origin: number;
-    baseLower: string;
-    addend: number;
-    file: string;
-    mnemonic: string;
-  }): void => {
-    if (currentNamedSectionSink) currentNamedSectionSink.rel8Fixups.push(fixup);
-    else rel8Fixups.push(fixup);
-  };
-
   let emitCodeBytes: (bs: Uint8Array, file: string) => void;
   let emitRawCodeBytes: (bs: Uint8Array, file: string, traceText: string) => void;
   let emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
+
+  const {
+    resolveAggregateType,
+    resolveArrayType,
+    resolveEaTypeExpr,
+    resolveScalarBinding,
+    resolveScalarKind,
+    resolveScalarTypeForEa,
+    resolveScalarTypeForLd,
+    sameTypeShape,
+    typeDisplay,
+  } = createTypeResolutionHelpers({
+    env,
+    storageTypes,
+    stackSlotTypes,
+    rawAddressSymbols,
+    moduleAliasTargets,
+    getLocalAliasTargets: () => localAliasTargets,
+  });
+
+  const evalImmNoDiag = (expr: ImmExprNode): number | undefined => {
+    const scratch: Diagnostic[] = [];
+    return evalImmExpr(expr, env, scratch);
+  };
+
+  const firstModule = program.files[0];
+  if (!firstModule) {
+    diag(diagnostics, program.entryFile, 'No module files to compile.');
+    return {
+      map: { bytes },
+      symbols,
+      loweredAsmStream,
+      placedLoweredAsmProgram: { blocks: [] },
+    };
+  }
+
+  const primaryFile = firstModule.span.file ?? program.entryFile;
+  const includeDirs = (options?.includeDirs ?? []).map((p) => resolve(p));
+
+  const baseExprs: Partial<Record<SectionKind, ImmExprNode>> = {};
+
+  const {
+    namedSectionSinks,
+    namedSectionSinksByNode,
+    activeSectionRef,
+    codeOffsetRef,
+    dataOffsetRef,
+    varOffsetRef,
+    currentCodeSegmentTagRef,
+    generatedLabelCounterRef,
+    currentNamedSectionSinkRef,
+    getCurrentCodeOffset,
+    setCurrentCodeOffset,
+    setCurrentCodeByte,
+    pushCurrentFixup,
+    pushCurrentRel8Fixup,
+    recordCodeSourceRange,
+    traceLabel,
+    traceComment,
+    advanceAlign,
+    flushTrailingUserComments,
+    lowerImmExprForLoweredAsm,
+    lowerOperandForLoweredAsm,
+    recordLoweredAsmItem,
+  } = createEmitStateHelpers({
+    ...(options?.namedSectionKeys ? { namedSectionKeys: options.namedSectionKeys } : {}),
+    ...(options?.sourceTexts ? { sourceTexts: options.sourceTexts } : {}),
+    ...(options?.sourceLineComments ? { sourceLineComments: options.sourceLineComments } : {}),
+    codeBytes,
+    codeSourceSegments,
+    fixups,
+    rel8Fixups,
+    loweredAsmStream,
+    loweredAsmBlocksByKey,
+    alignTo,
+    evalImmNoDiag,
+    symbolicTargetFromExpr: (expr) => symbolicTargetFromExpr(expr),
+    formatImmExprForAsm,
+    typeDisplay: (typeExpr) => typeDisplay(typeExpr),
+  });
 
   const emitInstr = (head: string, operands: AsmOperandNode[], span: SourceSpan) => {
     const start = getCurrentCodeOffset();
@@ -400,17 +312,12 @@ export function emitProgram(
       diagnostics,
     );
     if (!encoded) return false;
-    if (recordLoweredAsmItem && lowerOperandForLoweredAsm) {
-      recordLoweredAsmItem(
-        {
-          kind: 'instr',
-          head,
-          operands: operands.map((op) => lowerOperandForLoweredAsm!(op)),
-          bytes: [...encoded],
-        },
-        span,
-      );
-    }
+    recordLoweredAsmItem({
+      kind: 'instr',
+      head,
+      operands: operands.map((op) => lowerOperandForLoweredAsm(op)),
+      bytes: [...encoded],
+    }, span);
     emitCodeBytes(encoded, span.file);
     applySpTracking?.(head, operands);
     return true;
@@ -442,17 +349,12 @@ export function emitProgram(
     pushRel8Fixup: pushCurrentRel8Fixup,
     traceInstruction,
     recordLoweredInstr: (bytes, _asmText, span) => {
-      if (recordLoweredAsmItem) {
-        recordLoweredAsmItem(
-          {
-            kind: 'instr',
-            head: '@raw',
-            operands: [],
-            bytes: [...bytes],
-          },
-          span,
-        );
-      }
+      recordLoweredAsmItem({
+        kind: 'instr',
+        head: '@raw',
+        operands: [],
+        bytes: [...bytes],
+      }, span);
     },
     evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
   });
@@ -476,14 +378,7 @@ export function emitProgram(
 
   const emitRawCodeBytesImpl = emitRawCodeBytes;
   emitRawCodeBytes = (bs: Uint8Array, file: string, traceText: string): void => {
-    if (recordLoweredAsmItem) {
-      recordLoweredAsmItem({
-        kind: 'instr',
-        head: '@raw',
-        operands: [],
-        bytes: [...bs],
-      });
-    }
+    recordLoweredAsmItem({ kind: 'instr', head: '@raw', operands: [], bytes: [...bs] });
     emitRawCodeBytesImpl(bs, file, traceText);
   };
 
@@ -491,10 +386,23 @@ export function emitProgram(
     isEnumName: (name) => env.enums.has(name),
   });
 
-  const evalImmNoDiag = (expr: ImmExprNode): number | undefined => {
-    const scratch: Diagnostic[] = [];
-    return evalImmExpr(expr, env, scratch);
-  };
+  const { resolveEa } = createEaResolutionHelpers({
+    env,
+    diagnostics,
+    diagAt,
+    stackSlotOffsets,
+    stackSlotTypes,
+    storageTypes,
+    moduleAliasTargets,
+    getLocalAliasTargets: () => localAliasTargets,
+    evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
+    evalImmNoDiag,
+    resolveScalarKind,
+    resolveAggregateType,
+    resolveEaTypeExpr,
+    sizeOfTypeExpr: (te) => sizeOfTypeExpr(te, env, diagnostics),
+  });
+
   const isIxIyIndexedMem = (op: AsmOperandNode): boolean =>
     op.kind === 'Mem' &&
     ((op.expr.kind === 'EaName' && /^(IX|IY)$/i.test(op.expr.name)) ||
@@ -520,42 +428,6 @@ export function emitProgram(
     conditionOpcodeFromName,
     evalImmNoDiag,
     inferMemWidth,
-  });
-
-  const {
-    resolveAggregateType,
-    resolveArrayType,
-    resolveEaTypeExpr,
-    resolveScalarBinding,
-    resolveScalarKind,
-    resolveScalarTypeForEa,
-    resolveScalarTypeForLd,
-    sameTypeShape,
-    typeDisplay,
-  } = createTypeResolutionHelpers({
-    env,
-    storageTypes,
-    stackSlotTypes,
-    rawAddressSymbols,
-    moduleAliasTargets,
-    getLocalAliasTargets: () => localAliasTargets,
-  });
-
-  const { resolveEa } = createEaResolutionHelpers({
-    env,
-    diagnostics,
-    diagAt,
-    stackSlotOffsets,
-    stackSlotTypes,
-    storageTypes,
-    moduleAliasTargets,
-    getLocalAliasTargets: () => localAliasTargets,
-    evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
-    evalImmNoDiag,
-    resolveScalarKind,
-    resolveAggregateType,
-    resolveEaTypeExpr,
-    sizeOfTypeExpr: (te) => sizeOfTypeExpr(te, env, diagnostics),
   });
 
   for (const [aliasLower, aliasTarget] of moduleAliasTargets) {
@@ -712,242 +584,122 @@ export function emitProgram(
     storageTypes,
   });
 
-  const firstModule = program.files[0];
-  if (!firstModule) {
-    diag(diagnostics, program.entryFile, 'No module files to compile.');
-    return {
-      map: { bytes },
-      symbols,
-      loweredAsmStream,
-      placedLoweredAsmProgram: { blocks: [] },
-    };
-  }
-
-  const primaryFile = firstModule.span.file ?? program.entryFile;
-  const includeDirs = (options?.includeDirs ?? []).map((p) => resolve(p));
-
-  let activeSection: SectionKind = 'code';
-  let codeOffset = 0;
-  let dataOffset = 0;
-  let varOffset = 0;
-
-  const baseExprs: Partial<Record<SectionKind, ImmExprNode>> = {};
-
-  const advanceAlign = (a: number) => {
-    switch (activeSection) {
-      case 'code':
-        codeOffset = alignTo(codeOffset, a);
-        return;
-      case 'data':
-        dataOffset = alignTo(dataOffset, a);
-        return;
-      case 'var':
-        varOffset = alignTo(varOffset, a);
-        return;
-    }
-  };
-
-  const activeSectionRef = {
-    get current() {
-      return activeSection;
+  const { programLoweringContext } = createEmitProgramContext({
+    diagnostics,
+    diag,
+    diagAt,
+    diagAtWithId,
+    diagAtWithSeverityAndId: diagAtWithSeverityAndId as never,
+    warnAt,
+    program,
+    includeDirs,
+    taken,
+    pending,
+    traceComment,
+    traceLabel,
+    currentCodeSegmentTagRef,
+    generatedLabelCounterRef,
+    bindSpTracking: (
+      callbacks?:
+        | {
+            applySpTracking: (headRaw: string, operands: AsmOperandNode[]) => void;
+            invalidateSpTracking: () => void;
+          }
+        | undefined,
+    ) => {
+      applySpTracking = callbacks?.applySpTracking;
+      invalidateSpTracking = callbacks?.invalidateSpTracking;
     },
-    set current(value: SectionKind) {
-      activeSection = value;
-    },
-  };
-  const codeOffsetRef = {
-    get current() {
-      return codeOffset;
-    },
-    set current(value: number) {
-      codeOffset = value;
-    },
-  };
-  const dataOffsetRef = {
-    get current() {
-      return dataOffset;
-    },
-    set current(value: number) {
-      dataOffset = value;
-    },
-  };
-  const varOffsetRef = {
-    get current() {
-      return varOffset;
-    },
-    set current(value: number) {
-      varOffset = value;
-    },
-  };
-  const currentCodeSegmentTagRef: FunctionLoweringSymbolContext['currentCodeSegmentTagRef'] = {
-    get current() {
-      return currentCodeSegmentTag;
-    },
-    set current(value: SourceSegmentTag | undefined) {
-      currentCodeSegmentTag = value;
-      if (currentNamedSectionSink) currentNamedSectionSink.currentSourceTag = value;
-    },
-  };
-  const generatedLabelCounterRef: FunctionLoweringSymbolContext['generatedLabelCounterRef'] = {
-    get current() {
-      return generatedLabelCounter;
-    },
-    set current(value: number) {
-      generatedLabelCounter = value;
-    },
-  };
-  const currentNamedSectionSinkRef = {
-    get current() {
-      return currentNamedSectionSink;
-    },
-    set current(value: NamedSectionContributionSink | undefined) {
-      currentNamedSectionSink = value;
-    },
-  };
-
-  const {
-    flushTrailingUserComments,
-    lowerImmExprForLoweredAsm: lowerImmExprForLoweredAsmImpl,
-    lowerOperandForLoweredAsm: lowerOperandForLoweredAsmImpl,
-    recordLoweredAsmItem: recordLoweredAsmItemImpl,
-  } = createLoweredAsmStreamRecordingHelpers({
-    activeSectionRef,
-    currentNamedSectionSinkRef,
-    loweredAsmBlocksByKey,
-    loweredAsmStream,
-    ...(options?.sourceLineComments ? { sourceLineComments: options.sourceLineComments } : {}),
-    ...(options?.sourceTexts ? { sourceTexts: options.sourceTexts } : {}),
-    evalImmNoDiag,
+    getCodeOffset: getCurrentCodeOffset,
+    emitInstr,
+    emitRawCodeBytes,
+    emitAbs16Fixup,
+    emitAbs16FixupPrefixed,
+    emitRel8Fixup,
+    conditionOpcodeFromName,
+    conditionNameFromOpcode,
+    callConditionOpcodeFromName,
+    jrConditionOpcodeFromName,
+    conditionOpcode,
+    inverseConditionName,
     symbolicTargetFromExpr,
-    formatImmExprForAsm,
+    evalImmExpr,
+    env,
+    resolveScalarBinding,
+    resolveScalarKind,
+    resolveEaTypeExpr,
+    resolveScalarTypeForEa,
+    resolveScalarTypeForLd,
+    resolveArrayType,
     typeDisplay,
-  });
-  lowerImmExprForLoweredAsm = lowerImmExprForLoweredAsmImpl;
-  lowerOperandForLoweredAsm = lowerOperandForLoweredAsmImpl;
-  recordLoweredAsmItem = recordLoweredAsmItemImpl;
-
-  const { programLoweringContext } = createEmitLoweringContexts({
-    functionLowering: {
-      diagnostics,
-      diag,
-      diagAt,
-      diagAtWithId,
-      diagAtWithSeverityAndId,
-      warnAt,
-      taken,
-      pending,
-      traceComment,
-      traceLabel,
-      currentCodeSegmentTagRef,
-      generatedLabelCounterRef,
-      bindSpTracking: (
-        callbacks?:
-          | {
-              applySpTracking: (headRaw: string, operands: AsmOperandNode[]) => void;
-              invalidateSpTracking: () => void;
-            }
-          | undefined,
-      ) => {
-        applySpTracking = callbacks?.applySpTracking;
-        invalidateSpTracking = callbacks?.invalidateSpTracking;
-      },
-      getCodeOffset: getCurrentCodeOffset,
-      emitInstr,
-      emitRawCodeBytes,
-      emitAbs16Fixup,
-      emitAbs16FixupPrefixed,
-      emitRel8Fixup,
-      conditionOpcodeFromName,
-      conditionNameFromOpcode,
-      callConditionOpcodeFromName,
-      jrConditionOpcodeFromName,
-      conditionOpcode,
-      inverseConditionName,
-      symbolicTargetFromExpr,
-      evalImmExpr,
-      env,
-      resolveScalarBinding,
-      resolveScalarKind,
-      resolveEaTypeExpr,
-      resolveScalarTypeForEa,
-      resolveScalarTypeForLd,
-      resolveArrayType,
-      typeDisplay,
-      sameTypeShape,
-      resolveEa,
-      buildEaWordPipeline,
-      enforceEaRuntimeAtomBudget,
-      enforceDirectCallSiteEaBudget,
-      pushEaAddress,
-      materializeEaAddressToHL,
-      pushMemValue,
-      pushImm16,
-      pushZeroExtendedReg8,
-      loadImm16ToHL,
-      emitStepPipeline,
-      emitScalarWordLoad,
-      emitScalarWordStore,
-      lowerLdWithEa,
-      stackSlotOffsets,
-      stackSlotTypes,
-      localAliasTargets,
-      storageTypes,
-      moduleAliasTargets,
-      rawTypedCallWarningsEnabled,
-      resolveCallable: resolveVisibleCallable,
-      resolveOpCandidates: resolveVisibleOpCandidates,
-      opStackPolicyMode,
-      formatAsmOperandForOpDiag,
-      selectOpOverload,
-      summarizeOpStackEffect,
-      cloneImmExpr,
-      cloneEaExpr,
-      cloneOperand,
-      flattenEaDottedName,
-      normalizeFixedToken,
-      reg8: REG8_NAMES,
-      reg16: REG16_NAMES,
-    },
-    programLowering: {
-      program,
-      includeDirs,
-      localCallablesByFile,
-      visibleCallables,
-      localOpsByFile,
-      visibleOpsByName,
-      declaredOpNames,
-      declaredBinNames,
-      deferredExterns,
-      storageTypes,
-      moduleAliasTargets,
-      moduleAliasDecls,
-      rawAddressSymbols,
-      absoluteSymbols,
-      symbols,
-      dataBytes,
-      codeBytes,
-      hexBytes,
-      activeSectionRef,
-      codeOffsetRef,
-      dataOffsetRef,
-      varOffsetRef,
-      baseExprs,
-      advanceAlign,
-      alignTo,
-      loadBinInput,
-      loadHexInput,
-      resolveAggregateType,
-      sizeOfTypeExpr,
-      lowerFunctionDecl,
-      recordLoweredAsmItem: recordLoweredAsmItemImpl,
-      lowerImmExprForLoweredAsm: lowerImmExprForLoweredAsmImpl,
-      namedSectionSinksByNode,
-      currentNamedSectionSinkRef,
-      currentCodeSegmentTagRef,
-    },
+    sameTypeShape,
+    resolveEa,
+    buildEaWordPipeline,
+    enforceEaRuntimeAtomBudget,
+    enforceDirectCallSiteEaBudget,
+    pushEaAddress,
+    materializeEaAddressToHL,
+    pushMemValue,
+    pushImm16,
+    pushZeroExtendedReg8,
+    loadImm16ToHL,
+    emitStepPipeline,
+    emitScalarWordLoad,
+    emitScalarWordStore,
+    lowerLdWithEa,
+    stackSlotOffsets,
+    stackSlotTypes,
+    localAliasTargets,
+    storageTypes,
+    moduleAliasTargets,
+    rawTypedCallWarningsEnabled,
+    resolveCallable: resolveVisibleCallable,
+    resolveOpCandidates: resolveVisibleOpCandidates,
+    opStackPolicyMode,
+    formatAsmOperandForOpDiag,
+    selectOpOverload,
+    summarizeOpStackEffect,
+    cloneImmExpr,
+    cloneEaExpr,
+    cloneOperand,
+    flattenEaDottedName,
+    normalizeFixedToken,
+    reg8: REG8_NAMES,
+    reg16: REG16_NAMES,
+    localCallablesByFile,
+    visibleCallables,
+    localOpsByFile,
+    visibleOpsByName,
+    declaredOpNames,
+    declaredBinNames,
+    deferredExterns,
+    moduleAliasDecls,
+    rawAddressSymbols,
+    absoluteSymbols,
+    symbols,
+    dataBytes,
+    codeBytes,
+    hexBytes,
+    activeSectionRef,
+    codeOffsetRef,
+    dataOffsetRef,
+    varOffsetRef,
+    baseExprs,
+    advanceAlign,
+    alignTo,
+    loadBinInput,
+    loadHexInput,
+    resolveAggregateType,
+    sizeOfTypeExpr,
+    lowerFunctionDecl,
+    recordLoweredAsmItem,
+    lowerImmExprForLoweredAsm,
+    namedSectionSinksByNode,
+    currentNamedSectionSinkRef,
   });
 
-  const { lowered } = runProgramLoweringPhases(programLoweringContext);
+  const prescan = preScanProgramDeclarations(programLoweringContext);
+  const lowered = lowerProgramDeclarations(programLoweringContext, prescan);
 
   flushTrailingUserComments();
 
