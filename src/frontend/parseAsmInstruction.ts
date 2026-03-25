@@ -6,6 +6,46 @@ import { parseAssignmentInstruction } from './parseAssignmentInstruction.js';
 import { parseAsmOperand } from './parseOperands.js';
 import { parseSuccPredInstruction } from './parseSuccPredInstruction.js';
 
+function splitTopLevelCommaSeparated(text: string): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let parenDepth = 0;
+  let bracketDepth = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]!;
+    if (ch === '(') {
+      parenDepth++;
+      current += ch;
+      continue;
+    }
+    if (ch === ')') {
+      parenDepth = Math.max(parenDepth - 1, 0);
+      current += ch;
+      continue;
+    }
+    if (ch === '[') {
+      bracketDepth++;
+      current += ch;
+      continue;
+    }
+    if (ch === ']') {
+      bracketDepth = Math.max(bracketDepth - 1, 0);
+      current += ch;
+      continue;
+    }
+    if (ch === ',' && parenDepth === 0 && bracketDepth === 0) {
+      parts.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += ch;
+  }
+
+  parts.push(current.trim());
+  return parts.filter((part) => part.length > 0);
+}
+
 export function parseAsmInstruction(
   filePath: string,
   text: string,
@@ -47,7 +87,7 @@ export function parseAsmInstruction(
       return parseAsmOperand(filePath, t, instrSpan, diagnostics);
     };
 
-    const parts = rest.split(',').map((p) => p.trim());
+    const parts = splitTopLevelCommaSeparated(rest);
     for (const part of parts) {
       const opNode =
         headLower === 'in' || headLower === 'out'

@@ -71,11 +71,6 @@ export function hasRawOpcode(
   });
 }
 
-export function findInstructions(program: LoweredAsmProgram, head: string): LoweredInstrView[] {
-  const want = head.toUpperCase();
-  return flattenLoweredInstructions(program).filter((ins) => ins.head.toUpperCase() === want);
-}
-
 export function flattenLoweredItems(program: LoweredAsmProgram): LoweredAsmItem[] {
   const out: LoweredAsmItem[] = [];
   for (const block of program.blocks) {
@@ -187,18 +182,6 @@ export function isImmSymbol(op: LoweredOperand | undefined, name: string, addend
     op.expr.kind === 'symbol' &&
     op.expr.name.toUpperCase() === name.toUpperCase() &&
     op.expr.addend === addend
-  );
-}
-
-export function isMemSymbol(op: LoweredOperand | undefined, name: string, addend = 0): boolean {
-  return (
-    !!op &&
-    op.kind === 'mem' &&
-    op.expr.kind === 'add' &&
-    op.expr.base.kind === 'name' &&
-    op.expr.base.name.toUpperCase() === name.toUpperCase() &&
-    op.expr.offset.kind === 'literal' &&
-    op.expr.offset.value === addend
   );
 }
 

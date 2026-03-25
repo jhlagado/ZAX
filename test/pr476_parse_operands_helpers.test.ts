@@ -71,4 +71,19 @@ describe('PR476 operand parsing extraction', () => {
       ],
     });
   });
+
+  it('keeps top-level operand splitting intact when immediates contain commas', () => {
+    const diagnostics: Diagnostic[] = [];
+    const instr = parseAsmInstruction(
+      file.path,
+      'out (offsetof(Packet, field)), a',
+      zeroSpan,
+      diagnostics,
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(instr?.operands).toHaveLength(2);
+    expect(instr?.operands[0]?.kind).toBe('PortImm8');
+    expect(instr?.operands[1]).toEqual({ kind: 'Reg', span: zeroSpan, name: 'A' });
+  });
 });
