@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
+import { hasErrors, normalizePath } from './compileShared.js';
 import type { Diagnostic } from './diagnostics/types.js';
 import { DiagnosticIds } from './diagnostics/types.js';
 import type { ImportNode, ModuleFileNode, ModuleItemNode, ProgramNode, SectionItemNode } from './frontend/ast.js';
@@ -9,14 +10,6 @@ import { stripLineComment } from './frontend/parseParserShared.js';
 import { makeSourceFile } from './frontend/source.js';
 import { canonicalModuleId } from './moduleIdentity.js';
 import type { CompilerOptions } from './pipeline.js';
-
-function hasErrors(diagnostics: Diagnostic[]): boolean {
-  return diagnostics.some((d) => d.severity === 'error');
-}
-
-function normalizePath(p: string): string {
-  return resolve(p);
-}
 
 function importTargets(moduleFile: ModuleFileNode): ImportNode[] {
   return moduleFile.items.filter((i): i is ImportNode => i.kind === 'Import');
