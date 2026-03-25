@@ -72,7 +72,7 @@ We need two closely related lowered products because placement happens after the
 
 - Built after placement/finalization, when bases and named-section placement are known.
 - This is the assembler-valid product used by the ASM80 emitter.
-- Compiler-owned startup init (from `finalizeEmitProgram(...)` via `buildStartupInitRegion(...)` / `buildStartupInitRoutine(...)` / `appendStartupInitRegion(...)`) must be injected here so ASM80 output matches the final emitted program.
+- Compiler-owned startup init (from `finalizeEmitProgram(...)` via `buildStartupInitRegion(...)` / `buildStartupInitRoutine(...)`) must be injected here so ASM80 output matches the final emitted program.
 
 Suggested flow:
 
