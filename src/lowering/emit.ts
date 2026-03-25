@@ -117,19 +117,7 @@ import {
 } from './functionBodySetup.js';
 import {
   lowerFunctionDecl,
-  type FunctionLoweringAstUtilityContext,
-  type FunctionLoweringCallableResolutionContext,
-  type FunctionLoweringConditionContext,
-  type FunctionLoweringDiagnosticsContext,
-  type FunctionLoweringEmissionContext,
-  type FunctionLoweringMaterializationContext,
-  type FunctionLoweringOpOverloadContext,
-  type FunctionLoweringRegisterContext,
-  type FunctionLoweringSharedContext,
-  type FunctionLoweringSpTrackingContext,
-  type FunctionLoweringStorageContext,
   type FunctionLoweringSymbolContext,
-  type FunctionLoweringTypeContext,
 } from './functionLowering.js';
 import {
   createNamedSectionContributionSinks,
@@ -170,6 +158,7 @@ import {
   toHexWord,
 } from './traceFormat.js';
 import { createTypeResolutionHelpers } from './typeResolution.js';
+import { createEmitLoweringContexts } from './emitContextBuilder.js';
 import type {
   LoweredAsmItem,
   LoweredAsmStream,
@@ -1010,170 +999,135 @@ export function emitProgram(
       generatedLabelCounter = value;
     },
   };
-
-  const functionLoweringDiagnosticsContext: FunctionLoweringDiagnosticsContext = {
-    diagnostics,
-    diag,
-    diagAt,
-    diagAtWithId,
-    diagAtWithSeverityAndId,
-    warnAt,
-  };
-  const functionLoweringSymbolContext: FunctionLoweringSymbolContext = {
-    taken,
-    pending,
-    traceComment,
-    traceLabel,
-    currentCodeSegmentTagRef,
-    generatedLabelCounterRef,
-  };
-  const functionLoweringSpTrackingContext: FunctionLoweringSpTrackingContext = {
-    bindSpTracking: (
-      callbacks?:
-        | {
-            applySpTracking: (headRaw: string, operands: AsmOperandNode[]) => void;
-            invalidateSpTracking: () => void;
-          }
-        | undefined,
-    ) => {
-      applySpTracking = callbacks?.applySpTracking;
-      invalidateSpTracking = callbacks?.invalidateSpTracking;
+  const currentNamedSectionSinkRef = {
+    get current() {
+      return currentNamedSectionSink;
+    },
+    set current(value: NamedSectionContributionSink | undefined) {
+      currentNamedSectionSink = value;
     },
   };
-  const functionLoweringEmissionContext: FunctionLoweringEmissionContext = {
-    getCodeOffset: getCurrentCodeOffset,
-    emitInstr,
-    emitRawCodeBytes,
-    emitAbs16Fixup,
-    emitAbs16FixupPrefixed,
-    emitRel8Fixup,
-  };
-  const functionLoweringConditionContext: FunctionLoweringConditionContext = {
-    conditionOpcodeFromName,
-    conditionNameFromOpcode,
-    callConditionOpcodeFromName,
-    jrConditionOpcodeFromName,
-    conditionOpcode,
-    inverseConditionName,
-    symbolicTargetFromExpr,
-  };
-  const functionLoweringTypeContext: FunctionLoweringTypeContext = {
-    evalImmExpr,
-    env,
-    resolveScalarBinding,
-    resolveScalarKind,
-    resolveEaTypeExpr,
-    resolveScalarTypeForEa,
-    resolveScalarTypeForLd,
-    resolveArrayType,
-    typeDisplay,
-    sameTypeShape,
-  };
-  const functionLoweringMaterializationContext: FunctionLoweringMaterializationContext = {
-    resolveEa,
-    buildEaWordPipeline,
-    enforceEaRuntimeAtomBudget,
-    enforceDirectCallSiteEaBudget,
-    pushEaAddress,
-    materializeEaAddressToHL,
-    pushMemValue,
-    pushImm16,
-    pushZeroExtendedReg8,
-    loadImm16ToHL,
-    emitStepPipeline,
-    emitScalarWordLoad,
-    emitScalarWordStore,
-    lowerLdWithEa,
-  };
-  const functionLoweringStorageContext: FunctionLoweringStorageContext = {
-    stackSlotOffsets,
-    stackSlotTypes,
-    localAliasTargets,
-    storageTypes,
-    moduleAliasTargets,
-    rawTypedCallWarningsEnabled,
-  };
-  const functionLoweringCallableResolutionContext: FunctionLoweringCallableResolutionContext = {
-    resolveCallable: resolveVisibleCallable,
-    resolveOpCandidates: resolveVisibleOpCandidates,
-    opStackPolicyMode,
-  };
-  const functionLoweringOpOverloadContext: FunctionLoweringOpOverloadContext = {
-    formatAsmOperandForOpDiag,
-    selectOpOverload,
-    summarizeOpStackEffect,
-  };
-  const functionLoweringAstUtilityContext: FunctionLoweringAstUtilityContext = {
-    cloneImmExpr,
-    cloneEaExpr,
-    cloneOperand,
-    flattenEaDottedName,
-    normalizeFixedToken,
-  };
-  const functionLoweringRegisterContext: FunctionLoweringRegisterContext = {
-    reg8,
-    reg16,
-  };
-  const functionLoweringSharedContext: FunctionLoweringSharedContext = {
-    ...functionLoweringDiagnosticsContext,
-    ...functionLoweringSymbolContext,
-    ...functionLoweringSpTrackingContext,
-    ...functionLoweringEmissionContext,
-    ...functionLoweringConditionContext,
-    ...functionLoweringTypeContext,
-    ...functionLoweringMaterializationContext,
-    ...functionLoweringStorageContext,
-    ...functionLoweringCallableResolutionContext,
-    ...functionLoweringOpOverloadContext,
-    ...functionLoweringAstUtilityContext,
-    ...functionLoweringRegisterContext,
-  };
 
-  const programLoweringContext: ProgramLoweringContext = {
-    ...functionLoweringSharedContext,
-    program,
-    includeDirs,
-    localCallablesByFile,
-    visibleCallables,
-    localOpsByFile,
-    visibleOpsByName,
-    declaredOpNames,
-    declaredBinNames,
-    deferredExterns,
-    moduleAliasTargets,
-    moduleAliasDecls,
-    rawAddressSymbols,
-    absoluteSymbols,
-    symbols,
-    dataBytes,
-    codeBytes,
-    hexBytes,
-    activeSectionRef,
-    codeOffsetRef,
-    dataOffsetRef,
-    varOffsetRef,
-    baseExprs,
-    advanceAlign,
-    alignTo,
-    loadBinInput,
-    loadHexInput,
-    resolveAggregateType,
-    sizeOfTypeExpr,
-    lowerFunctionDecl,
-    recordLoweredAsmItem: recordLoweredAsmItemImpl,
-    lowerImmExprForLoweredAsm: lowerImmExprForLoweredAsmImpl,
-    namedSectionSinksByNode,
-    withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T): T => {
-      const prevSink = currentNamedSectionSink;
-      currentNamedSectionSink = sink;
-      sink.currentSourceTag = currentCodeSegmentTag;
-      try {
-        return fn();
-      } finally {
-        currentNamedSectionSink = prevSink;
-      }
+  const { programLoweringContext } = createEmitLoweringContexts({
+    functionLowering: {
+      diagnostics,
+      diag,
+      diagAt,
+      diagAtWithId,
+      diagAtWithSeverityAndId,
+      warnAt,
+      taken,
+      pending,
+      traceComment,
+      traceLabel,
+      currentCodeSegmentTagRef,
+      generatedLabelCounterRef,
+      bindSpTracking: (
+        callbacks?:
+          | {
+              applySpTracking: (headRaw: string, operands: AsmOperandNode[]) => void;
+              invalidateSpTracking: () => void;
+            }
+          | undefined,
+      ) => {
+        applySpTracking = callbacks?.applySpTracking;
+        invalidateSpTracking = callbacks?.invalidateSpTracking;
+      },
+      getCodeOffset: getCurrentCodeOffset,
+      emitInstr,
+      emitRawCodeBytes,
+      emitAbs16Fixup,
+      emitAbs16FixupPrefixed,
+      emitRel8Fixup,
+      conditionOpcodeFromName,
+      conditionNameFromOpcode,
+      callConditionOpcodeFromName,
+      jrConditionOpcodeFromName,
+      conditionOpcode,
+      inverseConditionName,
+      symbolicTargetFromExpr,
+      evalImmExpr,
+      env,
+      resolveScalarBinding,
+      resolveScalarKind,
+      resolveEaTypeExpr,
+      resolveScalarTypeForEa,
+      resolveScalarTypeForLd,
+      resolveArrayType,
+      typeDisplay,
+      sameTypeShape,
+      resolveEa,
+      buildEaWordPipeline,
+      enforceEaRuntimeAtomBudget,
+      enforceDirectCallSiteEaBudget,
+      pushEaAddress,
+      materializeEaAddressToHL,
+      pushMemValue,
+      pushImm16,
+      pushZeroExtendedReg8,
+      loadImm16ToHL,
+      emitStepPipeline,
+      emitScalarWordLoad,
+      emitScalarWordStore,
+      lowerLdWithEa,
+      stackSlotOffsets,
+      stackSlotTypes,
+      localAliasTargets,
+      storageTypes,
+      moduleAliasTargets,
+      rawTypedCallWarningsEnabled,
+      resolveCallable: resolveVisibleCallable,
+      resolveOpCandidates: resolveVisibleOpCandidates,
+      opStackPolicyMode,
+      formatAsmOperandForOpDiag,
+      selectOpOverload,
+      summarizeOpStackEffect,
+      cloneImmExpr,
+      cloneEaExpr,
+      cloneOperand,
+      flattenEaDottedName,
+      normalizeFixedToken,
+      reg8,
+      reg16,
     },
-  };
+    programLowering: {
+      program,
+      includeDirs,
+      localCallablesByFile,
+      visibleCallables,
+      localOpsByFile,
+      visibleOpsByName,
+      declaredOpNames,
+      declaredBinNames,
+      deferredExterns,
+      storageTypes,
+      moduleAliasTargets,
+      moduleAliasDecls,
+      rawAddressSymbols,
+      absoluteSymbols,
+      symbols,
+      dataBytes,
+      codeBytes,
+      hexBytes,
+      activeSectionRef,
+      codeOffsetRef,
+      dataOffsetRef,
+      varOffsetRef,
+      baseExprs,
+      advanceAlign,
+      alignTo,
+      loadBinInput,
+      loadHexInput,
+      resolveAggregateType,
+      sizeOfTypeExpr,
+      lowerFunctionDecl,
+      recordLoweredAsmItem: recordLoweredAsmItemImpl,
+      lowerImmExprForLoweredAsm: lowerImmExprForLoweredAsmImpl,
+      namedSectionSinksByNode,
+      currentNamedSectionSinkRef,
+      currentCodeSegmentTagRef,
+    },
+  });
 
   const { lowered } = runProgramLoweringPhases(programLoweringContext);
 
