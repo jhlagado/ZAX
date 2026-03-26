@@ -11,7 +11,7 @@ export default defineConfig({
     include: ['src/**/*.ts'],
     exclude: [
       'src/frontend/ast.ts',
-      'src/diagnostics/types.ts',
+      'src/diagnosticTypes.ts',
       'src/formats/types.ts',
       'src/pipeline.ts',
     ],

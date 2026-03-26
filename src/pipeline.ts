@@ -1,4 +1,4 @@
-import type { Diagnostic } from './diagnostics/types.js';
+import type { Diagnostic } from './diagnosticTypes.js';
 import type { Artifact, FormatWriters } from './formats/types.js';
 
 export type CaseStyleMode = 'off' | 'upper' | 'lower' | 'consistent';

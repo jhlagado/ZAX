@@ -1,5 +1,5 @@
-import { DiagnosticIds } from '../diagnostics/types.js';
-import type { Diagnostic, DiagnosticId } from '../diagnostics/types.js';
+import { DiagnosticIds } from '../diagnosticTypes.js';
+import type { Diagnostic, DiagnosticId } from '../diagnosticTypes.js';
 import type { SourceSpan } from '../frontend/ast.js';
 
 export function diag(diagnostics: Diagnostic[], file: string, message: string): void {

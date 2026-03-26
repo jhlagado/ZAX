@@ -1,6 +1,6 @@
 
-import type { Diagnostic, DiagnosticId } from '../diagnostics/types.js';
-import { DiagnosticIds } from '../diagnostics/types.js';
+import type { Diagnostic, DiagnosticId } from '../diagnosticTypes.js';
+import { DiagnosticIds } from '../diagnosticTypes.js';
 import { dirname, resolve } from 'node:path';
 import type {
   EnumDeclNode,

@@ -1,7 +1,7 @@
 import type { VarBlockNode, VarDeclNode } from './ast.js';
 import type { SourceFile } from './source.js';
 import { span } from './source.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import {
   TOP_LEVEL_KEYWORDS,

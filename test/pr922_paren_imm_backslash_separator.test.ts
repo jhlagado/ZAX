@@ -5,7 +5,7 @@ import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import type { BinArtifact } from '../src/formats/types.js';
 import { parseProgram } from '../src/frontend/parser.js';
-import type { Diagnostic } from '../src/diagnostics/types.js';
+import type { Diagnostic } from '../src/diagnosticTypes.js';
 
 const indexOfSubarray = (haystack: number[], needle: number[]): number => {
   if (needle.length === 0) return 0;

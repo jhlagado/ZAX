@@ -1,4 +1,4 @@
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import type { AsmOperandNode, EaExprNode, ImmExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';
 import type { EaResolution } from './eaResolution.js';
 import type { StepPipeline } from '../addressing/steps.js';
