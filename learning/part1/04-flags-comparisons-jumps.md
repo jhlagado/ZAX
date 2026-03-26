@@ -11,14 +11,17 @@ operations set them, and how `jp` uses them.
 
 ## The flags register
 
-F holds eight bits. Each bit is called a flag and records one thing about the
-result of the last instruction that changed flags. You cannot set them
-explicitly with `ld` or any other direct assignment. Instructions like `sub`,
-`cp`, `and`, `or`, `xor`, `inc`, and `dec` update them as a side effect. The
-flags just change — you observe them afterward.
+After any calculation, you need to be able to ask: was the result zero? Did it
+overflow? Was A less than the value I compared it against? The answer sits in
+the flags register.
 
-One thing to get straight from the start: not every instruction affects every
-flag, and some instructions affect no flags at all. `ld` never touches the
+F holds eight bits. Each bit is called a flag and records one specific outcome
+of the last instruction that changed flags. Instructions like `sub`, `cp`,
+`and`, `or`, `xor`, `inc`, and `dec` update them as a side effect. The flags
+change; you observe them afterward.
+
+Not every instruction affects every flag, and some instructions affect no flags
+at all. `ld` never touches the
 flags. `inc` and `dec` update most flags but leave C unchanged. This matters
 constantly in practice — when a `jp` instruction tests a flag, you need to know
 which earlier instruction set it and whether anything in between might have
@@ -142,10 +145,9 @@ xor $0F            ; A = %11110000 — lower four bits flipped
 ```
 
 The most-used form is `xor a`. A XOR'd against itself is always zero — every
-bit cancels. In one instruction: A is zeroed, Z is set, C is cleared. This is
-the standard way to zero A and put the flags in a known state. `ld a, 0` also
-zeros A but leaves the flags unchanged; when you need a guaranteed clean state
-in both A and the carry, reach for `xor a`.
+bit cancels. In one instruction: A is zeroed, Z is set, C is cleared. `ld a, 0`
+also zeros A but leaves the flags unchanged; when you need a guaranteed clean
+state in both A and the carry, reach for `xor a`.
 
 ```zax
 xor a              ; A = 0; Z is set; C is clear
@@ -168,10 +170,6 @@ written after the `jp` in the source does not run.
 ```zax
 jp $8010      ; PC becomes $8010; next instruction comes from $8010
 ```
-
-This is not a subroutine call. Nothing is saved and no return address is
-recorded. After a `jp` the CPU has no memory of where it came from. Execution
-simply continues from the new address.
 
 You will almost always target a label rather than a raw address:
 
@@ -196,9 +194,9 @@ when it works together with the flags.
 
 A conditional `jp` works exactly like an unconditional one, with one addition:
 before changing PC, it checks a flag. If the flag condition is met, PC changes
-and execution continues from the target address. If it is not met, the
-instruction does nothing and execution continues with the instruction that
-immediately follows — it falls through.
+and execution continues from the target address. If it is not met, the jump
+doesn't happen and execution continues with the instruction that immediately
+follows — it falls through.
 
 `jp z, target` checks Z. If Z is set, the jump happens. If Z is clear,
 execution falls through to the next instruction.
@@ -238,8 +236,7 @@ is clear, `jp nz` jumps to `skip`, and the body is skipped.
 Getting the direction right is the part that trips everyone up at first. The
 condition on `jp` is the condition that causes the jump — not the condition
 that runs the body. `jp nz, skip` means "jump away if not-equal." The body
-that follows is the equal case. It helps to read it as: "if this is NOT what
-I want, get out."
+that follows is the equal case. Read it as: "if this is NOT what I want, get out."
 
 `and` with a single-bit mask lets you test one specific bit of A and act on the
 result:
@@ -285,10 +282,11 @@ the related `djnz` instruction (Chapter 5) are in
 
 ## Detecting a negative number: the `cp $80` technique
 
-A signed byte stores values from -128 to 127. Negative values have bit 7 set,
-which means their unsigned interpretation is 128 or greater. You can test
-whether A holds a negative number by comparing it against 128 as an unsigned
-value:
+Suppose A holds a signed value and you need its absolute value. The first step
+is finding out whether it is negative. A signed byte stores values from −128 to
+127. Negative values have bit 7 set, which means their unsigned interpretation
+is 128 or greater. You can test which half A falls in by comparing it against
+128 as an unsigned value:
 
 ```zax
   cp $80              ; compare A (unsigned) against 128
