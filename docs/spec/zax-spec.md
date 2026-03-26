@@ -375,32 +375,28 @@ Notes (v0.1):
 
 - Trailing commas are not permitted in enum member lists.
 
-### 4.3.1 `step`, `succ`, and `pred`
+### 4.3.1 `step`
 
-`step`, `succ`, and `pred` are ZAX statement forms that mutate a typed scalar storage location in place. They are not expression forms and do not return a value.
+`step` mutates a typed scalar storage location in place. It is not an expression form and does not return a value.
 
-`step` is the general form. `succ` and `pred` are unit-step aliases preserved for readability and source compatibility.
+`step` is the only in-place typed-scalar update form.
 
 Syntax:
 
 ```
 step path
 step path, amount
-succ path
-pred path
 ```
 
 where `path` is a typed scalar path: a named variable or a field/array element. Raw registers, explicit address-of forms, and raw indirect instruction operands are not valid targets. `amount` must be a compile-time integer expression and may be negative.
 
 - `step path` — increments the storage location named by `path` by one step, in place.
 - `step path, amount` — adds signed compile-time integer `amount` to `path`, in place.
-- `succ path` — alias for `step path, 1`.
-- `pred path` — alias for `step path, -1`.
 
 Semantics:
 
-- All three forms mutate `path` directly; they do not produce a value and may not appear inside expressions or on the RHS of `:=`.
-- `path` must denote typed scalar storage of type `byte` or `word`; using these forms on non-scalar storage is a compile error.
+- `step` mutates `path` directly; it does not produce a value and may not appear inside expressions or on the RHS of `:=`.
+- `path` must denote typed scalar storage of type `byte` or `word`; using `step` on non-scalar storage is a compile error.
 - `amount` is evaluated at compile time. Non-integer or non-constant amounts are compile errors.
 - The compiler lowers unit steps to the appropriate increment/decrement sequence and may lower larger signed deltas through arithmetic sequences; no raw `INC` or `DEC` mnemonic need appear in the source.
 - There is no wrap-around guarantee at the boundaries of a type's range; the programmer is responsible for range discipline.
@@ -410,14 +406,14 @@ Example:
 ```zax
 step cursor
 step remaining, -2
-succ tail_slot
-pred used_slots
+step tail_slot
+step used_slots, -1
 ```
 
 Notes (v0.2):
 
-- Using `step`/`succ`/`pred` on a path that is not a typed scalar is a compile error.
-- In the current implementation slice, typed-path `step`/`succ`/`pred` forms are not supported inside `op` bodies.
+- Using `step` on a path that is not a typed scalar is a compile error.
+- In the current implementation slice, typed-path `step` forms are not supported inside `op` bodies.
 
 ### 4.4 Consts
 
@@ -516,10 +512,10 @@ Example: arrays of records lower through storage-path access (informative):
 hl := sprites[C].x   ; load word at sprites[C].x
 sprites[C].x := hl   ; store word to sprites[C].x
 
-; In-place scalar updates prefer step or its unit aliases on the path:
+; In-place scalar updates prefer the canonical step form on the path:
 step sprites[C].x, 2
-succ sprites[C].x
-pred sprites[C].x
+step sprites[C].x
+step sprites[C].x, -1
 
 ```
 

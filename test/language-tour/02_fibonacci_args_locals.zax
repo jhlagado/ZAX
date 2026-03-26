@@ -24,7 +24,7 @@ func fib(target_count: word): HL
     prev_value := curr_value
     curr_value := next_value
 
-    succ index_value
+    step index_value
 
     ld a, 1
     or a

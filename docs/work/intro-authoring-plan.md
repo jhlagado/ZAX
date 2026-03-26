@@ -74,7 +74,7 @@ Do not introduce these in Phase A prose or examples as normal teaching surface:
 - typed storage and `:=`
 - structured `if`
 - structured `while`
-- `succ` / `pred`
+- `step`
 - `break` / `continue`
 - `op`
 - module `import`

@@ -5,7 +5,7 @@
 The active ergonomics stream has landed its core language work:
 - `:=` is the assignment surface on `main`
 - scalar path-to-path `:=` is implemented on `main`
-- `succ` / `pred` on typed scalar paths are implemented on `main`
+- `step` on typed scalar paths is implemented on `main`
 
 The old `move` surface is removed. The rolled-back `addr` / ops-first addressing
 stream is not the active language direction.
@@ -14,7 +14,7 @@ stream is not the active language direction.
 
 - Typed storage transfers use `:=` on `main`.
 - Scalar path-to-path `:=` is implemented on `main`.
-- `succ` / `pred` typed-path lowering is implemented on `main`.
+- `step` typed-path lowering is implemented on `main`.
 - Grouped and ranged `select case` values are implemented.
 - Parser/grammar convergence work remains active.
 - Typed reinterpretation syntax `<Type>base.tail` is implemented on `main`.
@@ -24,7 +24,7 @@ stream is not the active language direction.
 ### Immediate priority
 
 1. Sweep obvious load/store shuttle patterns to scalar path-to-path `:=` in live examples/docs/tests.
-2. Sweep obvious scalar update patterns to `succ` / `pred` in live examples/docs/tests.
+2. Sweep obvious scalar update patterns to `step` in live examples/docs/tests.
 3. Continue parser/grammar convergence work.
 
 ### Deferred until re-planned
