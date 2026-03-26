@@ -1,4 +1,4 @@
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import type { AsmInstructionNode, AsmOperandNode } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 

@@ -133,7 +133,7 @@ compile(entryFile, options, deps)           [compile.ts]
   │    ├─ resolve imports (BFS + topo sort)
   │    └─ cycle detection, ID collision check
   │
-  ├─ lintCaseStyle()                        [lint/case_style.ts]
+  ├─ lintCaseStyle()                        [lintCaseStyle.ts]
   │
   ├─ buildEnv()                             [semantics/env.ts]
   │    ├─ collect types, unions
@@ -446,7 +446,7 @@ eliminating the `trackedSpRef` proxy.
 ## 7. Diagnostic Architecture
 
 All diagnostics use a shared `Diagnostic` interface with a stable `id` (e.g., `ZAX300`).
-The IDs are defined as constants in `diagnostics/types.ts`. There are roughly 20 named IDs
+The IDs are defined as constants in `diagnosticTypes.ts`. There are roughly 20 named IDs
 plus the catch-all `ZAX000` (Unknown).
 
 Within `emit.ts`, there are five diagnostic helper functions at file scope:

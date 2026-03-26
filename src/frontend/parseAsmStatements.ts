@@ -1,5 +1,5 @@
 import type { AsmItemNode, SourceSpan } from './ast.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import {
   isBareAsmControlKeyword,
   parseAsmConditionKeyword,

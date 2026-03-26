@@ -1,5 +1,5 @@
-import type { Diagnostic } from '../diagnostics/types.js';
-import { DiagnosticIds } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
+import { DiagnosticIds } from '../diagnosticTypes.js';
 import type {
   AsmInstructionNode,
   AsmOperandNode,

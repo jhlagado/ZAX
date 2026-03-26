@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DiagnosticIds, type Diagnostic } from '../src/diagnostics/types.js';
+import { DiagnosticIds, type Diagnostic } from '../src/diagnosticTypes.js';
 import type { AsmOperandNode, EaExprNode, ImmExprNode, SourceSpan } from '../src/frontend/ast.js';
 import { createOpSubstitutionHelpers } from '../src/lowering/opSubstitution.js';
 

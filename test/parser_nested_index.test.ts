@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { parseProgram } from '../src/frontend/parser.js';
 import type { AsmInstructionNode, FuncDeclNode } from '../src/frontend/ast.js';
-import type { Diagnostic } from '../src/diagnostics/types.js';
+import type { Diagnostic } from '../src/diagnosticTypes.js';
 
 describe('parser nested EA index expressions', () => {
   it('parses arr[table[0]] without spurious imm diagnostics', () => {

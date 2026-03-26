@@ -1,5 +1,5 @@
 import type { ImmExprNode, SourceSpan } from './ast.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import { parseImmExprFromText } from './parseImm.js';
 
 export type ParsedCaseItem = { value: ImmExprNode; end?: ImmExprNode };

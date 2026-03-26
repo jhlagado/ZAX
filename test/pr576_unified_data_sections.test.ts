@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { Diagnostic } from '../src/diagnostics/types.js';
+import type { Diagnostic } from '../src/diagnosticTypes.js';
 import { parseProgram } from '../src/frontend/parser.js';
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';

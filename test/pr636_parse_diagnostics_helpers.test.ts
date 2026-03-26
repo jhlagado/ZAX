@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnostics/types.js';
-import { DiagnosticIds } from '../src/diagnostics/types.js';
+import type { Diagnostic } from '../src/diagnosticTypes.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { parseDiag, parseDiagAt, parseDiagAtWithId } from '../src/frontend/parseDiagnostics.js';
 
 describe('PR636 parser diagnostics helpers', () => {

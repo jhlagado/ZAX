@@ -1,4 +1,4 @@
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import type { PlacedNamedSectionContribution } from './sectionPlacement.js';
 import type { SectionKind } from './loweringTypes.js';
 import type {

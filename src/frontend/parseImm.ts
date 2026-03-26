@@ -1,5 +1,5 @@
 import type { ImmExprNode, OffsetofPathNode, SourceSpan, TypeExprNode } from './ast.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import {
   CHAR_ESCAPE_VALUES,

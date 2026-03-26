@@ -1,5 +1,5 @@
-import type { Diagnostic, DiagnosticId, DiagnosticSeverity } from '../diagnostics/types.js';
-import { DiagnosticIds } from '../diagnostics/types.js';
+import type { Diagnostic, DiagnosticId, DiagnosticSeverity } from '../diagnosticTypes.js';
+import { DiagnosticIds } from '../diagnosticTypes.js';
 
 export type ParseDiagLocation = {
   line: number;

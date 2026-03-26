@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { parseProgram } from '../src/frontend/parser.js';
 import type { AsmInstructionNode, FuncDeclNode, OpDeclNode } from '../src/frontend/ast.js';
-import type { Diagnostic } from '../src/diagnostics/types.js';
+import type { Diagnostic } from '../src/diagnosticTypes.js';
 
 describe('PR250 parser asm head canonicalization', () => {
   it('normalizes function-body instruction heads to lower-case', () => {

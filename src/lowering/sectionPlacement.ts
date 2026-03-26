@@ -1,4 +1,4 @@
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import type { SymbolEntry } from '../formats/types.js';
 import type { CompileEnv } from '../semantics/env.js';
 import type { ImmExprNode, SourceSpan } from '../frontend/ast.js';
