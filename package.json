@@ -24,7 +24,8 @@
     "zax": "npm run build && node dist/src/cli.js",
     "regen:language-tour": "bash scripts/regenerate-language-tour.sh",
     "regen:codegen-corpus": "node scripts/regenerate-codegen-corpus.mjs",
-    "book": "bash scripts/build-book.sh"
+    "book": "bash scripts/build-book.sh",
+    "regen:grammar-atoms": "node scripts/generate-grammar-atoms.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.13.1",

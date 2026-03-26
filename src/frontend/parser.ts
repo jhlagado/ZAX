@@ -54,6 +54,7 @@ import {
   isReservedTopLevelDeclName,
   stripLineComment as stripComment,
 } from './parseParserShared.js';
+import { NAMED_SECTION_KINDS } from './grammarData.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 
 /**
@@ -173,10 +174,10 @@ export function parseModuleFile(
     originalText: string,
     filePath: string,
   ): { section: 'code' | 'data'; name: string; anchor?: SectionAnchorNode } | undefined {
-    const m = /^(code|data)\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s+at\s+(.+?)(?:\s+(size|end)\s+(.+))?)?$/i.exec(
+    const m = /^(\S+)\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s+at\s+(.+?)(?:\s+(size|end)\s+(.+))?)?$/i.exec(
       sectionText.trim(),
     );
-    if (!m) {
+    if (!m || !NAMED_SECTION_KINDS.has(m[1]!.toLowerCase())) {
       diagInvalidHeaderLine(
         diagnostics,
         filePath,

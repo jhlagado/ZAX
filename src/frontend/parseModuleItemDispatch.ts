@@ -6,6 +6,7 @@ import type {
   SourceSpan,
 } from './ast.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
+import { NAMED_SECTION_KINDS } from './grammarData.js';
 import { consumeTopKeyword, diagInvalidHeaderLine } from './parseModuleCommon.js';
 import { parseTopLevelExternDecl } from './parseExternBlock.js';
 import { parseEnumDecl } from './parseEnum.js';
@@ -355,7 +356,7 @@ export function createModuleItemDispatchTable(ctx: CreateModuleItemDispatchTable
     const namedTokens = sectionDecl.trim().split(/\s+/).filter((token) => token.length > 0);
     const namedPrefix =
       namedTokens.length >= 2 &&
-      /^(code|data)$/i.test(namedTokens[0] ?? '') &&
+      NAMED_SECTION_KINDS.has((namedTokens[0] ?? '').toLowerCase()) &&
       /^[A-Za-z_][A-Za-z0-9_]*$/.test(namedTokens[1] ?? '') &&
       !/^(at|size|end)$/i.test(namedTokens[1] ?? '');
     if (namedPrefix) {
