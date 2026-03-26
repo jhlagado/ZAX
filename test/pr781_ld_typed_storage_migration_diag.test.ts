@@ -33,7 +33,6 @@ describe('PR781 ld typed-storage migration diagnostics', () => {
       emitAbs16FixupPrefixed: () => {},
       emitRel8Fixup: () => {},
       conditionOpcodeFromName: () => undefined,
-      conditionNameFromOpcode: () => undefined,
       callConditionOpcodeFromName: () => undefined,
       jrConditionOpcodeFromName: () => undefined,
       conditionOpcode: () => undefined,
@@ -43,7 +42,6 @@ describe('PR781 ld typed-storage migration diagnostics', () => {
       resolveRawAliasTargetName: () => undefined,
       isModuleStorageName: () => false,
       isFrameSlotName: () => false,
-      resolveScalarTypeForEa: () => undefined,
       resolveScalarTypeForLd: () => undefined,
       resolveEa: () => undefined,
       diagIfRetStackImbalanced: () => {},
@@ -66,7 +64,13 @@ describe('PR781 ld typed-storage migration diagnostics', () => {
       syncToFlow: () => {},
       flowRef: { current: { reachable: true } },
     });
-    return { helper, diagnostics, get ldCalled() { return ldCalled; } };
+    return {
+      helper,
+      diagnostics,
+      get ldCalled() {
+        return ldCalled;
+      },
+    };
   }
 
   it('diagnoses typed storage names in ld immediate form', () => {

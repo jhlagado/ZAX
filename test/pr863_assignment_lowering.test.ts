@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { DiagnosticIds, type Diagnostic } from '../src/diagnosticTypes.js';
-import type { AsmInstructionNode, AsmOperandNode, EaExprNode, SourceSpan } from '../src/frontend/ast.js';
+import type {
+  AsmInstructionNode,
+  AsmOperandNode,
+  EaExprNode,
+  SourceSpan,
+} from '../src/frontend/ast.js';
 import { createAsmInstructionLoweringHelpers } from '../src/lowering/asmInstructionLowering.js';
 
 const span: SourceSpan = {
@@ -10,7 +15,9 @@ const span: SourceSpan = {
   end: { line: 1, column: 1, offset: 0 },
 };
 
-function makeHelper(overrides: Partial<Parameters<typeof createAsmInstructionLoweringHelpers>[0]> = {}) {
+function makeHelper(
+  overrides: Partial<Parameters<typeof createAsmInstructionLoweringHelpers>[0]> = {},
+) {
   const diagnostics: Diagnostic[] = [];
   const loweredLd: AsmInstructionNode[] = [];
   const emittedInstrs: string[] = [];
@@ -44,7 +51,6 @@ function makeHelper(overrides: Partial<Parameters<typeof createAsmInstructionLow
     emitAbs16FixupPrefixed: () => {},
     emitRel8Fixup: () => {},
     conditionOpcodeFromName: () => undefined,
-    conditionNameFromOpcode: () => undefined,
     callConditionOpcodeFromName: () => undefined,
     jrConditionOpcodeFromName: () => undefined,
     conditionOpcode: () => undefined,
@@ -54,7 +60,6 @@ function makeHelper(overrides: Partial<Parameters<typeof createAsmInstructionLow
     resolveRawAliasTargetName: () => undefined,
     isModuleStorageName: () => false,
     isFrameSlotName: () => false,
-    resolveScalarTypeForEa: () => undefined,
     resolveScalarTypeForLd: () => undefined,
     resolveEa: () => undefined,
     diagIfRetStackImbalanced: () => {},
@@ -72,7 +77,9 @@ function makeHelper(overrides: Partial<Parameters<typeof createAsmInstructionLow
     emitScalarWordLoad: () => false,
     emitScalarWordStore: () => false,
     emitVirtualReg16Transfer: (inst) => {
-      emittedInstrs.push(`virtual ${inst.operands.map((operand) => (operand.kind === 'Reg' ? operand.name : operand.kind)).join(',')}`);
+      emittedInstrs.push(
+        `virtual ${inst.operands.map((operand) => (operand.kind === 'Reg' ? operand.name : operand.kind)).join(',')}`,
+      );
       return true;
     },
     reg16: new Set(['BC', 'DE', 'HL', 'IX', 'IY']),
@@ -85,7 +92,15 @@ function makeHelper(overrides: Partial<Parameters<typeof createAsmInstructionLow
     ...overrides,
   });
 
-  return { helper, diagnostics, loweredLd, emittedInstrs, get pushedEa() { return pushedEa; } };
+  return {
+    helper,
+    diagnostics,
+    loweredLd,
+    emittedInstrs,
+    get pushedEa() {
+      return pushedEa;
+    },
+  };
 }
 
 describe('PR863 := lowering', () => {
@@ -227,7 +242,10 @@ describe('PR863 := lowering', () => {
   });
 
   it('diagnoses unsupported parsed register combinations', () => {
-    const { helper, diagnostics } = makeHelper({ lowerLdWithEa: () => false, emitVirtualReg16Transfer: () => false });
+    const { helper, diagnostics } = makeHelper({
+      lowerLdWithEa: () => false,
+      emitVirtualReg16Transfer: () => false,
+    });
 
     helper.lowerAsmInstructionDispatcher({
       kind: 'AsmInstruction',
