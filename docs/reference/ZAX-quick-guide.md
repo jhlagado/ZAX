@@ -357,12 +357,12 @@ section data vars at $8000
 end
 
 func example(): void
-  succ count      ; in-place increment of the word in 'count'
-  succ mode       ; in-place increment of the byte in 'mode'
+  step count      ; in-place increment of the word in 'count'
+  step mode       ; in-place increment of the byte in 'mode'
 end
 ```
 
-Use `pred` for the symmetric decrement. When you need the loaded value in a register for further arithmetic or flag tests, `a := place` / `inc a` / `place := a` (or the word analogue through `HL`) is still the right shape.
+Use `step place, -1` for the symmetric decrement. When you need the loaded value in a register for further arithmetic or flag tests, `a := place` / `inc a` / `place := a` (or the word analogue through `HL`) is still the right shape.
 
 Explicit parentheses on scalar symbols are still accepted but are redundant. In operand position, parentheses always mean memory dereference and may enclose a full `imm` expression, e.g. `ld a, (3 + 2)`.
 
@@ -376,7 +376,7 @@ section data vars at $8000
 end
 
 func update(): void
-  succ player.x       ; in-place increment of the byte field
+  step player.x       ; in-place increment of the byte field
 
   hl := player.flags  ; read player.flags (word) into HL
   set 0, l            ; bit twiddle still uses a register
@@ -411,7 +411,7 @@ end
 
 func step_sprite(idx: byte): void
   l := idx            ; put index in L (8-bit register)
-  succ sprites[L].x   ; in-place increment of the x field
+  step sprites[L].x   ; in-place increment of the x field
 end
 ```
 
@@ -1628,23 +1628,23 @@ enum StateA   Idle, Running
 enum StateB   Idle, Stopped    ; 'Idle' and 'Idle' are fine — accessed as StateA.Idle, StateB.Idle
 ```
 
-### 8.8 `succ` and `pred`
+### 8.8 `step`
 
-`succ` and `pred` are ZAX statement forms that increment or decrement a typed scalar storage location in place. They are not expression forms; they do not return a value and may not appear inside expressions or on the RHS of `:=`. The compiler lowers each to the appropriate increment or decrement instruction(s).
+`step` is the in-place typed-scalar update form. It is not an expression form and may not appear inside expressions or on the RHS of `:=`.
 
-| Statement   | Meaning                                          |
-| ----------- | ------------------------------------------------ |
-| `succ path` | increment the typed scalar at `path` by one step |
-| `pred path` | decrement the typed scalar at `path` by one step |
+| Statement          | Meaning                                          |
+| ------------------ | ------------------------------------------------ |
+| `step path`        | increment the typed scalar at `path` by one step |
+| `step path, -1`    | decrement the typed scalar at `path` by one step |
 
 `path` must be a typed scalar path — a named variable or a field/array element. Raw registers (e.g. `hl`, `a`) are not valid targets.
 
 ```zax
-succ tail_slot    ; tail_slot := tail_slot + 1 (typed, in place)
-pred used_slots   ; used_slots := used_slots - 1 (typed, in place)
+step tail_slot        ; tail_slot := tail_slot + 1 (typed, in place)
+step used_slots, -1   ; used_slots := used_slots - 1 (typed, in place)
 ```
 
-The programmer is responsible for range discipline at type boundaries — `succ` past the maximum and `pred` past the minimum are not automatically clamped.
+The programmer is responsible for range discipline at type boundaries — `step` is not automatically clamped, whether it is written directly or reached through a deprecated alias.
 
 ---
 
@@ -1678,7 +1678,7 @@ section data vars at $8000
 end
 
 func update(): void
-  succ player.x       ; in-place increment of the byte field (value semantics)
+  step player.x       ; in-place increment of the byte field (value semantics)
 
   hl := player.flags  ; read player.flags word into HL (value semantics)
   set 0, l            ; set bit 0
@@ -1763,7 +1763,7 @@ func move_all(): void
   ld b, MaxSprites
   ld hl, 0              ; element index (0-based integer, not byte offset)
 loop:
-  succ sprites[HL].x ; in-place increment of x (value semantics)
+  step sprites[HL].x ; in-place increment of x (value semantics)
 
   inc hl                ; advance to next index
   djnz loop
@@ -2480,7 +2480,7 @@ func isr_handler(): void
   irq_pending := a
 
   ; Increment counter (typed in-place update)
-  succ irq_count
+  step irq_count
 
   restore_all
   reti                ; raw reti — NOT rewritten to epilogue jump

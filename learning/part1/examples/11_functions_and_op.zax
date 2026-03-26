@@ -116,7 +116,7 @@ func count_above_f(tbl: addr, len: byte, thresh: byte): HL
     if NC
       cp thresh
       if NZ
-        succ cnt
+        step cnt
       end
     end
 

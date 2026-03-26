@@ -18,7 +18,7 @@ import { collectNonBankedSectionKeys } from './sectionKeys.js';
 import { loadProgram } from './moduleLoader.js';
 import { validateAssignmentAcceptance } from './semantics/assignmentAcceptance.js';
 import { buildEnv } from './semantics/env.js';
-import { validateSuccPredAcceptance } from './semantics/succPredAcceptance.js';
+import { validateStepAcceptance } from './semantics/stepAcceptance.js';
 
 function withDefaults(
   options: CompilerOptions,
@@ -124,7 +124,7 @@ export const compile: CompileFn = async (
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };
   }
-  validateSuccPredAcceptance(program, env, diagnostics);
+  validateStepAcceptance(program, env, diagnostics);
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };
   }

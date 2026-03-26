@@ -39,7 +39,7 @@ func linear_search(target_value: byte): HL
       ret
     end
 
-    succ scan_index
+    step scan_index
 
     ld a, 1
     or a

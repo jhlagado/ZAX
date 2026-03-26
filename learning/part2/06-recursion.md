@@ -51,12 +51,12 @@ of `n` disks from one peg to another using a spare peg. The recurrence is:
 
 `hanoi_count` in `hanoi.zax` implements this directly. The base case returns zero
 when `disks_count` is zero. Otherwise, it decrements `disks_count` into a local
-`reduced_count` using `pred`, makes two recursive calls with the pegs permuted,
+`reduced_count` using `step ..., -1`, makes two recursive calls with the pegs permuted,
 and combines the results:
 
 ```zax
   reduced_count := disks_count
-  pred reduced_count
+  step reduced_count, -1
 
   hanoi_count reduced_count, source_peg, target_peg, spare_peg
   left_count := hl
@@ -103,7 +103,7 @@ func sum_from(index_value: byte): HL
   current_value := a
 
   next_index := index_value
-  succ next_index
+  step next_index
 
   sum_from next_index
 
@@ -143,7 +143,7 @@ two indices meet or cross, at which point there is nothing left to swap.
 
 `reverse_range` takes a `left_index` and `right_index`. If `left_index >= right_index`,
 it returns immediately. Otherwise, it swaps the two endpoints, advances the
-left index with `succ next_left`, retreats the right index with `pred next_right`,
+left index with `step next_left`, retreats the right index with `step next_right, -1`,
 and recurses:
 
 ```zax
@@ -159,10 +159,10 @@ func reverse_range(left_index: byte, right_index: byte)
   swap_values left_index, right_index
 
   next_left := left_index
-  succ next_left
+  step next_left
 
   next_right := right_index
-  pred next_right
+  step next_right, -1
 
   reverse_range next_left, next_right
 end
@@ -197,7 +197,7 @@ See `learning/part2/examples/unit6/array_reverse_recursive.zax`.
 - Return values in HL must be captured into a typed local before the next call
   can overwrite HL. `left_count := hl` followed by a second recursive call is the
   standard pattern.
-- `succ` and `pred` on frame locals correctly advance arguments for the recursive
+- `step` on frame locals correctly advances arguments for the recursive
   call. The incremented value is computed and stored before it is passed, not
   computed in place inside the argument list.
 - `ld e, a` / `ld d, 0` zero-extends a byte into DE for use with `add hl, de`.

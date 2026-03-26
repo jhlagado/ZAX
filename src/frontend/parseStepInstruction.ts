@@ -6,8 +6,6 @@ import { ALL_REGISTER_NAMES } from './grammarData.js';
 import { isAssignmentStoragePath } from './parseAssignmentInstruction.js';
 import { canonicalRegisterToken, parseEaExprFromText } from './parseOperands.js';
 
-type StepInstructionHead = 'step' | 'succ' | 'pred';
-
 function splitTopLevelCommaSeparated(text: string): string[] {
   const parts: string[] = [];
   let current = '';
@@ -50,7 +48,6 @@ function splitTopLevelCommaSeparated(text: string): string[] {
 
 function parseStepTargetOperand(
   filePath: string,
-  head: StepInstructionHead,
   operandText: string,
   instrSpan: SourceSpan,
   diagnostics: Diagnostic[],
@@ -58,21 +55,21 @@ function parseStepTargetOperand(
   const text = operandText.trim();
   const canonicalRegister = canonicalRegisterToken(text);
   if (ALL_REGISTER_NAMES.has(canonicalRegister)) {
-    diag(diagnostics, filePath, `"${head}" only accepts typed path operands in this slice`, {
+    diag(diagnostics, filePath, '"step" only accepts typed path operands in this slice', {
       line: instrSpan.start.line,
       column: instrSpan.start.column,
     });
     return undefined;
   }
   if (text.startsWith('(') && text.endsWith(')')) {
-    diag(diagnostics, filePath, `"${head}" does not accept indirect memory operands`, {
+    diag(diagnostics, filePath, '"step" does not accept indirect memory operands', {
       line: instrSpan.start.line,
       column: instrSpan.start.column,
     });
     return undefined;
   }
   if (text.startsWith('@')) {
-    diag(diagnostics, filePath, `"${head}" does not accept address-of operands`, {
+    diag(diagnostics, filePath, '"step" does not accept address-of operands', {
       line: instrSpan.start.line,
       column: instrSpan.start.column,
     });
@@ -81,7 +78,7 @@ function parseStepTargetOperand(
 
   const ea = parseEaExprFromText(filePath, text, instrSpan, diagnostics);
   if (!ea) {
-    diag(diagnostics, filePath, `Invalid "${head}" operand "${text}"`, {
+    diag(diagnostics, filePath, `Invalid "step" operand "${text}"`, {
       line: instrSpan.start.line,
       column: instrSpan.start.column,
     });
@@ -91,7 +88,7 @@ function parseStepTargetOperand(
     diag(
       diagnostics,
       filePath,
-      `"${head}" requires a typed storage path, not an affine address expression`,
+      '"step" requires a typed storage path, not an affine address expression',
       {
         line: instrSpan.start.line,
         column: instrSpan.start.column,
@@ -105,7 +102,7 @@ function parseStepTargetOperand(
 
 export function parseStepInstruction(
   filePath: string,
-  head: StepInstructionHead,
+  head: 'step',
   operandText: string,
   instrSpan: SourceSpan,
   diagnostics: Diagnostic[],
@@ -113,26 +110,18 @@ export function parseStepInstruction(
   const text = operandText.trim();
   const parts = splitTopLevelCommaSeparated(text);
 
-  if (head === 'step') {
-    if (parts.length < 1 || parts.length > 2) {
-      diag(diagnostics, filePath, '"step" expects a typed path operand and optional amount', {
-        line: instrSpan.start.line,
-        column: instrSpan.start.column,
-      });
-      return undefined;
-    }
-  } else if (parts.length !== 1) {
-    diag(diagnostics, filePath, `"${head}" expects exactly one typed path operand`, {
+  if (parts.length < 1 || parts.length > 2) {
+    diag(diagnostics, filePath, '"step" expects a typed path operand and optional amount', {
       line: instrSpan.start.line,
       column: instrSpan.start.column,
     });
     return undefined;
   }
 
-  const target = parseStepTargetOperand(filePath, head, parts[0] ?? '', instrSpan, diagnostics);
+  const target = parseStepTargetOperand(filePath, parts[0] ?? '', instrSpan, diagnostics);
   if (!target) return undefined;
 
-  if (head !== 'step' || parts.length === 1) {
+  if (parts.length === 1) {
     return {
       kind: 'AsmInstruction',
       span: instrSpan,

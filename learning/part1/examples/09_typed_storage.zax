@@ -1,4 +1,4 @@
-; Chapter 08 example: typed local variables, := assignment, succ/pred
+; Chapter 08 example: typed local variables, := assignment, and step
 ; Rewrites the Phase A capstone logic from Chapter 07 using typed locals.
 ; The program scans a byte table, finds the maximum value, and counts
 ; entries strictly greater than 64 — the same two tasks as Chapter 07.
@@ -75,7 +75,7 @@ count_above_loop:
   cp c                         ; A - C: carry set if A < C; Z set if A == C
   jr c, count_above_skip       ; A < C: skip
   jr z, count_above_skip       ; A == C: skip (want strictly greater)
-  succ cnt                     ; A > C: increment the typed local counter
+  step cnt                     ; A > C: increment the typed local counter
 count_above_skip:
   inc hl
   djnz count_above_loop
