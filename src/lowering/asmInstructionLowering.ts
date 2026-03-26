@@ -117,7 +117,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
             },
   });
 
-  const restoreWordFlagsAndA = (span: AsmInstructionNode['span'], restoreHl: boolean): boolean => {
+  const restoreFlagsAndA = (span: AsmInstructionNode['span'], restoreHl: boolean): boolean => {
     if (restoreHl && !ctx.emitInstr('pop', [regOperand('HL', span)], span)) return false;
     if (!ctx.emitInstr('pop', [regOperand('BC', span)], span)) return false;
     if (!ctx.emitInstr('ld', [regOperand('A', span), regOperand('B', span)], span)) return false;
@@ -134,9 +134,76 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     isRegisterLikeMemEa,
   } = createAsmInstructionLdHelpers(ctx);
 
-  const lowerSuccPredOnTypedPath = (
+  const immLiteralOperand = (value: number, span: AsmInstructionNode['span']): AsmOperandNode => ({
+    kind: 'Imm',
+    span,
+    expr: { kind: 'ImmLiteral', span, value },
+  });
+
+  type CanonicalTypedPathStep = {
+    headForDiagnostics: 'step' | 'succ' | 'pred';
+    target: Extract<AsmOperandNode, { kind: 'Ea' }>;
+    amount: number;
+  };
+
+  const getCanonicalTypedPathStep = (
     asmItem: AsmInstructionNode,
-    head: 'succ' | 'pred',
+  ): CanonicalTypedPathStep | undefined => {
+    const head = asmItem.head.toLowerCase();
+    if (head === 'succ' || head === 'pred') {
+      if (asmItem.operands.length !== 1) return undefined;
+      const target = asmItem.operands[0];
+      if (!target || target.kind !== 'Ea') return undefined;
+      return { headForDiagnostics: head, target, amount: head === 'succ' ? 1 : -1 };
+    }
+
+    if (head !== 'step') return undefined;
+    if (asmItem.operands.length < 1 || asmItem.operands.length > 2) return undefined;
+
+    const target = asmItem.operands[0];
+    if (!target || target.kind !== 'Ea') {
+      ctx.diagAt(ctx.diagnostics, asmItem.span, '"step" expects a typed-path first operand.');
+      return undefined;
+    }
+
+    if (asmItem.operands.length === 1) {
+      return { headForDiagnostics: 'step', target, amount: 1 };
+    }
+
+    const amountOperand = asmItem.operands[1];
+    if (!amountOperand || amountOperand.kind !== 'Imm') {
+      ctx.diagAt(ctx.diagnostics, asmItem.span, '"step" amount must be an immediate compile-time integer expression.');
+      return undefined;
+    }
+
+    const amount = ctx.evalImmExpr(amountOperand.expr);
+    if (amount === undefined) {
+      ctx.diagAt(ctx.diagnostics, asmItem.span, '"step" amount must be an immediate compile-time integer expression.');
+      return undefined;
+    }
+
+    return { headForDiagnostics: 'step', target, amount };
+  };
+
+  const emitByteAccumulatorDelta = (amount: number, span: AsmInstructionNode['span']): boolean => {
+    const magnitude = Math.abs(amount) % 0x100;
+    if (magnitude === 0) return true;
+    const op = amount < 0 ? 'sub' : 'add';
+    return ctx.emitInstr(op, [regOperand('A', span), immLiteralOperand(magnitude, span)], span);
+  };
+
+  const emitWordDeltaOnHl = (amount: number, span: AsmInstructionNode['span']): boolean => {
+    const magnitude = Math.abs(amount) % 0x10000;
+    if (magnitude === 0) return true;
+    if (!ctx.emitInstr('ld', [regOperand('BC', span), immLiteralOperand(magnitude, span)], span)) return false;
+    if (!ctx.emitInstr('or', [regOperand('A', span)], span)) return false;
+    const op = amount < 0 ? 'sbc' : 'adc';
+    return ctx.emitInstr(op, [regOperand('HL', span), regOperand('BC', span)], span);
+  };
+
+  const lowerUnitTypedPathStep = (
+    asmItem: AsmInstructionNode,
+    head: 'step' | 'succ' | 'pred',
     operand: Extract<AsmOperandNode, { kind: 'Ea' }>,
   ): boolean => {
     if (operand.explicitAddressOf) {
@@ -150,7 +217,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       return true;
     }
 
-    const mutateHead = head === 'succ' ? 'inc' : 'dec';
+    const mutateHead = head === 'pred' ? 'dec' : 'inc';
     const resolved = ctx.resolveEa(operand.expr, asmItem.span);
 
     if (scalar === 'byte') {
@@ -207,7 +274,89 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     if (!ctx.emitInstr('ld', [regOperand('A', asmItem.span), regOperand('D', asmItem.span)], asmItem.span))
       return false;
     if (!ctx.emitInstr('or', [regOperand('E', asmItem.span)], asmItem.span)) return false;
-    return restoreWordFlagsAndA(asmItem.span, !directWord);
+    return restoreFlagsAndA(asmItem.span, !directWord);
+  };
+
+  const lowerTypedPathStep = (asmItem: AsmInstructionNode, step: CanonicalTypedPathStep): boolean => {
+    const { headForDiagnostics, target, amount } = step;
+    if (target.explicitAddressOf) {
+      ctx.diagAt(ctx.diagnostics, asmItem.span, `"${headForDiagnostics}" does not support address-of operands.`);
+      return true;
+    }
+
+    const scalar = ctx.resolveScalarTypeForLd(target.expr);
+    if (scalar !== 'byte' && scalar !== 'word') {
+      ctx.diagAt(ctx.diagnostics, asmItem.span, `"${headForDiagnostics}" only supports byte and word scalar paths.`);
+      return true;
+    }
+
+    if (amount === 0) return true;
+
+    if (amount === 1 || amount === -1) {
+      const unitHead = amount < 0 ? 'pred' : headForDiagnostics === 'pred' ? 'pred' : 'succ';
+      return lowerUnitTypedPathStep(asmItem, unitHead, target);
+    }
+
+    const resolved = ctx.resolveEa(target.expr, asmItem.span);
+
+    if (scalar === 'byte') {
+      if (!ctx.emitInstr('push', [regOperand('DE', asmItem.span)], asmItem.span)) return false;
+      if (!ctx.emitInstr('push', [regOperand('BC', asmItem.span)], asmItem.span)) return false;
+      if (!ctx.emitInstr('push', [regOperand('AF', asmItem.span)], asmItem.span)) return false;
+
+      if (resolved?.kind === 'stack' && resolved.ixDisp >= -0x80 && resolved.ixDisp <= 0x7f) {
+        const mem = ixDispMemOperand(resolved.ixDisp, asmItem.span);
+        if (!ctx.emitInstr('ld', [regOperand('A', asmItem.span), mem], asmItem.span)) return false;
+        if (!emitByteAccumulatorDelta(amount, asmItem.span)) return false;
+        if (!ctx.emitInstr('ld', [mem, regOperand('A', asmItem.span)], asmItem.span)) return false;
+        return restoreFlagsAndA(asmItem.span, false);
+      }
+
+      if (!ctx.emitInstr('push', [regOperand('HL', asmItem.span)], asmItem.span)) return false;
+      if (!ctx.materializeEaAddressToHL(target.expr, asmItem.span)) return false;
+      if (!ctx.emitInstr('ld', [regOperand('A', asmItem.span), hlMemOperand(asmItem.span)], asmItem.span))
+        return false;
+      if (!emitByteAccumulatorDelta(amount, asmItem.span)) return false;
+      if (!ctx.emitInstr('ld', [hlMemOperand(asmItem.span), regOperand('A', asmItem.span)], asmItem.span))
+        return false;
+      return restoreFlagsAndA(asmItem.span, true);
+    }
+
+    const directWord = !!resolved && (resolved.kind === 'stack' || (resolved.kind === 'abs' && resolved.addend === 0));
+    if (!ctx.emitInstr('push', [regOperand('DE', asmItem.span)], asmItem.span)) return false;
+    if (!ctx.emitInstr('push', [regOperand('BC', asmItem.span)], asmItem.span)) return false;
+    if (!ctx.emitInstr('push', [regOperand('AF', asmItem.span)], asmItem.span)) return false;
+
+    if (directWord) {
+      if (!ctx.emitScalarWordLoad('HL', resolved, asmItem.span)) return false;
+    } else {
+      if (!ctx.emitInstr('push', [regOperand('HL', asmItem.span)], asmItem.span)) return false;
+      if (!ctx.materializeEaAddressToHL(target.expr, asmItem.span)) return false;
+      if (!ctx.emitInstr('ld', [regOperand('E', asmItem.span), hlMemOperand(asmItem.span)], asmItem.span))
+        return false;
+      if (!ctx.emitInstr('inc', [regOperand('HL', asmItem.span)], asmItem.span)) return false;
+      if (!ctx.emitInstr('ld', [regOperand('D', asmItem.span), hlMemOperand(asmItem.span)], asmItem.span))
+        return false;
+      if (!ctx.emitInstr('dec', [regOperand('HL', asmItem.span)], asmItem.span)) return false;
+      if (!ctx.emitInstr('ex', [regOperand('DE', asmItem.span), regOperand('HL', asmItem.span)], asmItem.span))
+        return false;
+    }
+
+    if (!emitWordDeltaOnHl(amount, asmItem.span)) return false;
+
+    if (directWord) {
+      if (!ctx.emitScalarWordStore('HL', resolved, asmItem.span)) return false;
+    } else {
+      if (!ctx.emitInstr('ex', [regOperand('DE', asmItem.span), regOperand('HL', asmItem.span)], asmItem.span))
+        return false;
+      if (!ctx.emitInstr('ld', [hlMemOperand(asmItem.span), regOperand('E', asmItem.span)], asmItem.span))
+        return false;
+      if (!ctx.emitInstr('inc', [regOperand('HL', asmItem.span)], asmItem.span)) return false;
+      if (!ctx.emitInstr('ld', [hlMemOperand(asmItem.span), regOperand('D', asmItem.span)], asmItem.span))
+        return false;
+    }
+
+    return restoreFlagsAndA(asmItem.span, !directWord);
   };
 
   const emitRel8FromOperand = (
@@ -340,13 +489,9 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     if (head === 'call') {
       ctx.diagIfCallStackUnverifiable({ span: asmItem.span });
     }
-    if ((head === 'succ' || head === 'pred') && asmItem.operands.length === 1) {
-      const operand = asmItem.operands[0];
-      if (!operand || operand.kind !== 'Ea') {
-        ctx.diagAt(ctx.diagnostics, asmItem.span, `"${head}" expects one typed-path operand.`);
-        return;
-      }
-      if (!lowerSuccPredOnTypedPath(asmItem, head, operand)) return;
+    const typedPathStep = getCanonicalTypedPathStep(asmItem);
+    if (typedPathStep) {
+      if (!lowerTypedPathStep(asmItem, typedPathStep)) return;
       ctx.syncToFlow();
       return;
     }

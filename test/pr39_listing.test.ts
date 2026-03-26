@@ -10,9 +10,9 @@ import type { ListingArtifact } from '../src/formats/types.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-describe.skip('PR39 listing (.lst) artifact', () => {
+describe('PR39 listing (.lst) artifact', () => {
   it('emits a deterministic byte-dump listing by default', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr2_const_data.zax');
+    const entry = join(__dirname, 'fixtures', 'pr991_comment_preservation.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.diagnostics).toEqual([]);
 
@@ -20,10 +20,11 @@ describe.skip('PR39 listing (.lst) artifact', () => {
     expect(lst).toBeDefined();
 
     expect(lst!.text).toContain('; ZAX listing');
-    expect(lst!.text).toContain('0000: 3E 05 C9 .. 48 45 4C 4C 4F');
-    expect(lst!.text).toContain('|>.. HELLO...|');
-    expect(lst!.text).toMatch(/;\s+data\s+msg\s+=\s+\$0004/);
-    expect(lst!.text).toMatch(/;\s+constant\s+MsgLen\s+=\s+\$0005\s+\(5\)/);
+    expect(lst!.text).toContain('; range: $0100..$026E (end exclusive)');
+    expect(lst!.text).toContain('; ... gap $0110..$01FF (15 lines)');
+    expect(lst!.text).toContain('0200: DD E5 DD 21 00 00 DD 39');
+    expect(lst!.text).toMatch(/;\s+data\s+count\s+=\s+\$0100/);
+    expect(lst!.text).toMatch(/;\s+label\s+main\s+=\s+\$0200/);
   });
 
   it('allows suppressing listing without changing other defaults', async () => {
