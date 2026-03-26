@@ -9,6 +9,7 @@ import type {
 import type { Diagnostic } from '../diagnosticTypes.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import { parseImmExprFromText } from './parseImm.js';
+import { LEGACY_SECTION_DIRECTIVE_KINDS, NAMED_SECTION_KINDS } from './grammarData.js';
 import { diagInvalidHeaderLine, formatIdentifierToken } from './parseModuleCommon.js';
 
 type SimpleTopLevelContext = {
@@ -60,8 +61,10 @@ export function parseSectionDirectiveDecl(
 ): void {
   const { diagnostics, modulePath, lineNo, text, span } = ctx;
   const decl = rest === 'section' ? '' : (sectionTail ?? '');
-  const m = /^(code|data|var)(?:\s+at\s+(.+))?$/.exec(decl);
-  if (!m) {
+  const legacyTail = /^(.*?)\s+at\s+(.+)$/.exec(decl);
+  const sectionToken = (legacyTail?.[1] ?? decl).trim().toLowerCase();
+  const atText = legacyTail?.[2]?.trim();
+  if (!LEGACY_SECTION_DIRECTIVE_KINDS.has(sectionToken) || (legacyTail && !atText)) {
     diagInvalidHeaderLine(
       diagnostics,
       modulePath,
@@ -73,8 +76,7 @@ export function parseSectionDirectiveDecl(
     return undefined;
   }
 
-  const section = m[1]! as 'code' | 'data' | 'var';
-  const atText = m[2]?.trim();
+  const section = sectionToken as 'code' | 'data' | 'var';
   diag(
     diagnostics,
     modulePath,
@@ -83,7 +85,6 @@ export function parseSectionDirectiveDecl(
   );
   return undefined;
 }
-
 export function parseAlignDirectiveDecl(
   rest: string,
   alignTail: string | undefined,
@@ -195,7 +196,7 @@ export function parseBinDecl(binTail: string, ctx: SimpleTopLevelContext): BinDe
     });
     return undefined;
   }
-  if (sectionText !== 'code' && sectionText !== 'data') {
+  if (!NAMED_SECTION_KINDS.has(sectionText)) {
     diag(diagnostics, modulePath, `Invalid bin section "${m[2]!}": expected "code" or "data".`, {
       line: lineNo,
       column: 1,
