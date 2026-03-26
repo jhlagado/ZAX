@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { __cliBuildLockInternals } from './helpers/cli.js';
+import { __cliBuildLockInternals } from './helpers/cliBuild.js';
 
 describe('PR249 CLI build-lock eviction matrix', () => {
   const { computeWaitDeadline, hasLockAcquireTimedOut, parseLockMeta, shouldEvictLock } =
