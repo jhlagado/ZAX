@@ -4,6 +4,10 @@ import type { Diagnostic } from '../src/diagnosticTypes.js';
 import {
   ASM_CONTROL_KEYWORD_LIST,
   ASM_CONTROL_KEYWORDS,
+  LEGACY_SECTION_DIRECTIVE_KIND_LIST,
+  LEGACY_SECTION_DIRECTIVE_KINDS,
+  NAMED_SECTION_KIND_LIST,
+  NAMED_SECTION_KINDS,
   CONDITION_CODE_LIST,
   CONDITION_CODES,
   IMM_BINARY_OPERATORS,
@@ -48,6 +52,10 @@ describe('PR762 grammar-data conformance', () => {
     expect(sortedStrings(CONDITION_CODES)).toEqual([...CONDITION_CODE_LIST].sort());
     expect(sortedStrings(SCALAR_TYPES)).toEqual([...SCALAR_TYPE_LIST].sort());
     expect(sortedStrings(MATCHER_TYPES)).toEqual([...MATCHER_TYPE_LIST].sort());
+    expect(sortedStrings(NAMED_SECTION_KINDS)).toEqual([...NAMED_SECTION_KIND_LIST].sort());
+    expect(sortedStrings(LEGACY_SECTION_DIRECTIVE_KINDS)).toEqual(
+      [...LEGACY_SECTION_DIRECTIVE_KIND_LIST].sort(),
+    );
     expect(sortedStrings(IMM_UNARY_OPERATOR_SET)).toEqual([...IMM_UNARY_OPERATORS].sort());
 
     const precedenceEntries = IMM_OPERATOR_PRECEDENCE.flatMap(({ level, ops }) =>
@@ -106,6 +114,31 @@ describe('PR762 grammar-data conformance', () => {
     }
   });
 
+  it('routes section-kind atoms through the current parser entry points', () => {
+    for (const sectionKind of NAMED_SECTION_KIND_LIST) {
+      const diagnostics: Diagnostic[] = [];
+      const bodyLines =
+        sectionKind === "code" ? ["func run()", "end"] : ["count: byte = 1"];
+
+      parseProgram(
+        `pr762_named_section_${sectionKind}.zax`,
+        [`section ${sectionKind} bucket`, ...bodyLines, "end"].join("\n"),
+        diagnostics,
+      );
+
+      expect(diagnostics).toEqual([]);
+    }
+
+    for (const sectionKind of LEGACY_SECTION_DIRECTIVE_KIND_LIST) {
+      const diagnostics: Diagnostic[] = [];
+
+      parseProgram(`pr762_legacy_section_${sectionKind}.zax`, `section ${sectionKind}`, diagnostics);
+      expect(diagnostics).toHaveLength(1);
+      expect(diagnostics[0]?.message).toContain(
+        `Legacy active-counter section directive "section ${sectionKind}" is removed`,
+      );
+    }
+  });
   it('routes every asm control keyword from the grammar baseline through the structured-control parser', () => {
     const samples: Record<
       (typeof ASM_CONTROL_KEYWORD_LIST)[number],

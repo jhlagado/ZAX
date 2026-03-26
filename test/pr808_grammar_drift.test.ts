@@ -1,52 +1,55 @@
 import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const grammarPath = resolve('docs/spec/zax-grammar.ebnf.md');
-const grammar = readFileSync(grammarPath, 'utf8');
+const GENERATED_START_MARKER = '<!-- BEGIN GENERATED: grammar-atoms -->';
+const GENERATED_END_MARKER = '<!-- END GENERATED: grammar-atoms -->';
 
-function expectLine(line: string): void {
-  expect(grammar).toContain(line);
-}
-
-function expectRegex(pattern: RegExp, label: string): void {
-  expect(pattern.test(grammar), label).toBe(true);
+function readGrammar(): string {
+  return readFileSync(grammarPath, 'utf8');
 }
 
 describe('PR808 grammar drift checks', () => {
-  it('documents assignment grammar with the active register set', () => {
-    expectLine('assign_stmt     = assign_target , ":=" , assign_source ;');
-    expectLine('assign_reg      = "A" | "B" | "C" | "D" | "E" | "H" | "L"');
-    expectLine('                | "IXH" | "IXL" | "IYH" | "IYL"');
-    expectLine('                | "BC" | "DE" | "HL" | "IX" | "IY" ;');
+  it('keeps the generated grammar atom block up to date', () => {
+    const stdout = execFileSync('node', ['scripts/generate-grammar-atoms.mjs'], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+    });
+    const grammar = readGrammar();
+
+    expect(stdout).toContain('Grammar atoms already up to date');
+    expect(grammar).toContain(GENERATED_START_MARKER);
+    expect(grammar).toContain(GENERATED_END_MARKER);
   });
 
-  it('documents move grammar with restricted register/source forms', () => {
-    expectLine('move_stmt       = "move" , move_reg , "," , move_src');
-    expectLine('                | "move" , move_path , "," , move_reg ;');
-    expectLine('move_src        = move_addr | move_path ;');
-    expectLine('move_addr       = "@" , ea_expr ;  (* move_addr is only valid as the source operand in v1 *)');
+  it('documents the expected parser atom productions from grammarData.ts', () => {
+    const grammar = readGrammar();
+
+    expect(grammar).toContain('top_level_keyword');
+    expect(grammar).toContain('asm_control_keyword');
+    expect(grammar).toContain('condition_code');
+    expect(grammar).toContain('return_reg');
+    expect(grammar).toContain('assignment_reg');
+    expect(grammar).toContain('move_reg_atom');
+    expect(grammar).toContain('typed_reinterpret_base_reg');
+    expect(grammar).toContain('matcher_type_symbolic');
+    expect(grammar).toContain('imm_unary_op');
+    expect(grammar).toContain('escape_simple');
   });
 
-  it('documents raw data directives and raw labels', () => {
-    expectLine('raw_label       = identifier , ":" ;');
-    expectLine('raw_data_decl   = raw_label , [ newline ] , raw_directive ;');
-    expectLine('raw_directive   = "db" , raw_db_list');
-    expectLine('                | "dw" , raw_dw_list');
-    expectLine('                | "ds" , imm_expr ;');
+  it('keeps spec authority and parser-authority notes explicit', () => {
+    const grammar = readGrammar();
+
+    expect(grammar).toContain('`docs/spec/zax-spec.md` wins');
+    expect(grammar).toContain('It documents parser-level atom syntax only; semantic restrictions still live');
+    expect(grammar).toContain('Parser recovery behavior remains implementation-defined by the hand-written parser.');
   });
 
-  it('documents char literals and qualified imm names in immediate expressions', () => {
-    expectLine('char_lit        = "\'" , char_body , "\'" ;');
-    expectLine('imm_primary     = int_dec | int_hex | char_lit | imm_name | "(" , imm_expr , ")"');
-    expectLine('imm_name        = identifier , { "." , identifier } ;');
-  });
+  it('keeps the semantic raw-data placement note in the hand-written section', () => {
+    const grammar = readGrammar();
 
-  it('states @path is move-only in v1', () => {
-    expectRegex(/@path\b[^\n]*move rr, @path/i, 'missing move-only @path note');
-  });
-
-  it('states raw data directives are section-data-only', () => {
-    expectRegex(/Raw data directives .* only valid inside `section data` blocks\./i, 'missing raw data placement note');
+    expect(grammar).toMatch(/Raw data directives .* only valid inside `section data` blocks\./i);
   });
 });
