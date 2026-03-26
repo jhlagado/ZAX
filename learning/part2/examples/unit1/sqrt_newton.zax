@@ -24,7 +24,7 @@ func div_u16(dividend: word, divisor: word): HL
     end
 
     remainder := hl
-    succ quotient
+    step quotient
 
     ld a, 1
     or a
@@ -82,7 +82,7 @@ func sqrt_newton(value: word): HL
 
     guess := next_guess
 
-    pred remaining_iters
+    step remaining_iters, -1
 
     ld a, 1
     or a

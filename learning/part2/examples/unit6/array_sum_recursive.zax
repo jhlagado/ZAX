@@ -27,7 +27,7 @@ func sum_from(index_value: byte): HL
   current_value := a
 
   next_index := index_value
-  succ next_index
+  step next_index
 
   sum_from next_index
 

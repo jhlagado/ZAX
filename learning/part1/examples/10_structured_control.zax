@@ -97,7 +97,7 @@ func count_above_cf(): AF
     if NC                          ; A >= C: need to distinguish == from >
       cp c                         ; re-test to get Z flag
       if NZ                        ; A > C (not equal and not less-than)
-        succ cnt
+        step cnt
       end
     end
     inc hl

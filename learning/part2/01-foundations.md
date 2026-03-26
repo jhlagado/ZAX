@@ -198,25 +198,30 @@ what is inside it.
 
 ---
 
-## `succ` and `pred`
+## `step`
 
-ZAX provides two built-in operations for incrementing and decrementing typed
-scalar paths: `succ` and `pred`. They operate on locals, module-scope
-variables, record fields, and array elements — any typed scalar storage path.
+`step path` increments a typed scalar location by one. `step path, amount`
+adds a signed compile-time integer to it. Both forms work on locals,
+module-scope variables, record fields, and array elements — any typed scalar
+storage path.
 
 ```zax
-    succ index_value    ; increment the word local 'index_value' by 1
-    pred remaining      ; decrement the word local 'remaining' by 1
+    step index_value         ; increment the word local 'index_value' by 1
+    step remaining, -1       ; decrement the word local 'remaining' by 1
+    step offset, 4           ; add 4 to 'offset'
 ```
 
-These are not function calls; they lower to an efficient read-increment-write
-(or read-decrement-write) sequence at the storage path in question. Using
-`succ` and `pred` instead of a manual HL-roundtrip sequence keeps the code
-concise and the intent visible.
+`step` lowers to a read-modify-write sequence at the storage path. Writing
+`step remaining, -1` instead of loading `remaining` into HL, subtracting, and
+storing it back keeps the operation at the name level rather than the register
+level.
 
-In the Chapter 01 examples, `succ` and `pred` are the standard way to advance or
-retreat a counter local. You will see them throughout the loops that drive
-counting and iteration.
+The amount, when present, must be a compile-time constant: a literal or a
+`const` declaration. You cannot pass a runtime variable as the step amount.
+
+In the Chapter 01 examples, `step` is the standard way to advance or retreat a
+counter local. You will see it throughout the loops that drive counting and
+iteration.
 
 ---
 
@@ -229,9 +234,9 @@ a helper function `mul_u16` to multiply two `word` values by repeated addition.
 Both functions share the same loop structure: a `while NZ` loop that counts
 down a countdown local, returning early when the count reaches zero.
 
-The `pred` built-in decrements `remaining` at the bottom of each iteration.
+`step remaining, -1` decrements `remaining` at the bottom of each iteration.
 This is the first example of a common Chapter 01 pattern: a counting loop with an
-explicit zero check at the top and a `pred` decrement at the bottom.
+explicit zero check at the top and a decrement at the bottom.
 
 See `learning/part2/examples/unit1/power.zax`.
 
@@ -298,13 +303,13 @@ from the sum of the current pair, then the pair advances one position:
     prev_value := curr_value
     curr_value := next_value
 
-    succ index_value
+    step index_value
 ```
 
 (From `learning/part2/examples/unit1/fibonacci.zax`, lines 26–34.)
 
 The `add hl, de` computes the next Fibonacci number. The two `:=` assignments
-advance the rolling state. `succ index_value` steps the counter. The loop
+advance the rolling state. `step index_value` steps the counter. The loop
 exits via an early `ret` when `index_value` reaches `target_count`.
 
 See `learning/part2/examples/unit1/fibonacci.zax`.
@@ -365,7 +370,7 @@ than 10.
 
 A notable detail: the initial value of the count local is `1`, not `0`. A
 positive integer always has at least one decimal digit, so the count starts at
-one before the loop begins. The loop increments the count (`succ count`) each
+one before the loop begins. The loop increments the count (`step count`) each
 time division is needed. Starting at 1 reflects that assumption directly — the
 `var` declaration records the guarantee, not just an arbitrary starting point.
 
@@ -383,8 +388,9 @@ See `learning/part2/examples/unit1/digits.zax`.
 - `while NZ` is the basic loop form. Entry flags always matter: a stale Z=1
   on entry skips the loop body entirely. Establish NZ with `ld a, 1` / `or a`
   before the first `while NZ`, and re-establish it at the back edge.
-- `succ` and `pred` increment and decrement typed scalar paths.
-  They appear wherever a loop counter or accumulator needs stepping.
+- `step path` increments a typed scalar by one; `step path, amount` adds any
+  signed compile-time integer. Both appear wherever a counter or accumulator
+  needs advancing.
 - Recursive functions look and work like non-recursive ones. The compiler
   handles the per-call IX frame.
 

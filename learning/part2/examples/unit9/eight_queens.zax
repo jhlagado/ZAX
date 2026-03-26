@@ -64,7 +64,7 @@ func place_row(row_index: byte)
     a := col_used[L]
     or a
     if NZ
-      succ col_index
+      step col_index
       ld a, 1
       or a
       continue
@@ -74,7 +74,7 @@ func place_row(row_index: byte)
     a := diag_sum_used[L]
     or a
     if NZ
-      succ col_index
+      step col_index
       ld a, 1
       or a
       continue
@@ -84,7 +84,7 @@ func place_row(row_index: byte)
     a := diag_diff_used[L]
     or a
     if NZ
-      succ col_index
+      step col_index
       ld a, 1
       or a
       continue
@@ -120,7 +120,7 @@ func place_row(row_index: byte)
     l := diff_index
     diag_diff_used[L] := a
 
-    succ col_index
+    step col_index
 
     ld a, 1
     or a

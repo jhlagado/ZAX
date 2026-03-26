@@ -24,7 +24,7 @@ func div_u16(dividend: word, divisor: word): HL
     end
 
     remainder := hl
-    succ quotient
+    step quotient
 
     ld a, 1
     or a
@@ -56,7 +56,7 @@ func decimal_digits(value: word): HL
     div_u16 remaining, 10
     remaining := hl
 
-    succ count
+    step count
 
     ld a, 1
     or a
