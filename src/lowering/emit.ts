@@ -43,7 +43,7 @@ import {
   type StepPipeline,
 } from '../addressing/steps.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
-import type { EmittedByteMap, EmittedSourceSegment, SymbolEntry } from '../formats/types.js';
+import type { EmittedSourceSegment, SymbolEntry } from '../formats/types.js';
 import type {
   AsmInstructionNode,
   AsmOperandNode,
@@ -61,7 +61,6 @@ import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { encodeInstruction } from '../z80/encode.js';
 import type { Callable, PendingSymbol, SectionKind } from './loweringTypes.js';
 import { createOpStackAnalysisHelpers } from './opStackAnalysis.js';
-import type { OpStackPolicyMode } from '../pipeline.js';
 import { loadBinInput, loadHexInput } from './inputAssets.js';
 import { createEaResolutionHelpers, type EaResolution } from './eaResolution.js';
 import { createEaMaterializationHelpers } from './eaMaterialization.js';
@@ -84,8 +83,15 @@ import {
 } from './functionBodySetup.js';
 import { lowerFunctionDecl } from './functionLowering.js';
 import { createEmitVisibilityHelpers } from './emitVisibility.js';
-import { lowerProgramDeclarations, preScanProgramDeclarations } from './programLowering.js';
-import { finalizeEmitProgram } from './emitFinalization.js';
+import {
+  emitProgramEmptyResult,
+  mergeEmitFinalizationContext,
+  runEmitLoweringPhase,
+  runEmitPlacementAndArtifactPhase,
+  runEmitPrescanPhase,
+  type EmitProgramOptions,
+  type EmitProgramResult,
+} from './emitPipeline.js';
 import {
   diag,
   diagAt,
@@ -133,6 +139,10 @@ const REG8_CODES = new Map([
 /**
  * Emit machine-code bytes for a parsed program into an address->byte map.
  *
+ * Orchestration follows the phased pipeline in `emitPipeline.ts`. Phase 1 (workspace wiring)
+ * is implemented in this file; phases 2–4 use `runEmitPrescanPhase`, `runEmitLoweringPhase`,
+ * and `runEmitPlacementAndArtifactPhase`.
+ *
  * Implementation notes:
  * - Uses 3 independent section counters: `code`, `data`, `var`.
  * - `section` / `align` directives affect only the selected section counter.
@@ -144,21 +154,8 @@ export function emitProgram(
   program: ProgramNode,
   env: CompileEnv,
   diagnostics: Diagnostic[],
-  options?: {
-    includeDirs?: string[];
-    opStackPolicy?: OpStackPolicyMode;
-    rawTypedCallWarnings?: boolean;
-    defaultCodeBase?: number;
-    namedSectionKeys?: import('../sectionKeys.js').NonBankedSectionKeyCollection;
-    sourceTexts?: Map<string, string>;
-    sourceLineComments?: Map<string, Map<number, string>>;
-  },
-): {
-  map: EmittedByteMap;
-  symbols: SymbolEntry[];
-  loweredAsmStream: LoweredAsmStream;
-  placedLoweredAsmProgram: import('./loweredAsmTypes.js').LoweredAsmProgram;
-} {
+  options?: EmitProgramOptions,
+): EmitProgramResult {
   const bytes = new Map<number, number>();
   const codeBytes = new Map<number, number>();
   const dataBytes = new Map<number, number>();
@@ -248,12 +245,7 @@ export function emitProgram(
   const firstModule = program.files[0];
   if (!firstModule) {
     diag(diagnostics, program.entryFile, 'No module files to compile.');
-    return {
-      map: { bytes },
-      symbols,
-      loweredAsmStream,
-      placedLoweredAsmProgram: { blocks: [] },
-    };
+    return emitProgramEmptyResult();
   }
 
   const primaryFile = firstModule.span.file ?? program.entryFile;
@@ -694,40 +686,39 @@ export function emitProgram(
     currentNamedSectionSinkRef,
   });
 
-  const prescan = preScanProgramDeclarations(programLoweringContext);
-  const lowered = lowerProgramDeclarations(programLoweringContext, prescan);
+  // --- Phase 2: prescan (visibility / alias metadata) ---
+  const prescan = runEmitPrescanPhase(programLoweringContext);
+  // --- Phase 3: lowering (bytes + fixup queues) ---
+  const lowered = runEmitLoweringPhase(programLoweringContext, prescan);
 
   flushTrailingUserComments();
 
-  const finalized = finalizeEmitProgram({
-    namedSectionSinks,
-    diagnostics,
-    diag,
-    diagAt,
-    primaryFile,
-    baseExprs,
-    evalImmExpr,
-    env,
-    loweredAsmStream,
-    codeOffset: lowered.codeOffset,
-    dataOffset: lowered.dataOffset,
-    varOffset: lowered.varOffset,
-    pending: lowered.pending,
-    symbols: lowered.symbols,
-    absoluteSymbols: lowered.absoluteSymbols,
-    deferredExterns: lowered.deferredExterns,
-    fixups,
-    rel8Fixups,
-    codeBytes: lowered.codeBytes,
-    dataBytes: lowered.dataBytes,
-    hexBytes: lowered.hexBytes,
-    bytes,
-    codeSourceSegments,
-    alignTo,
-    writeSection,
-    computeWrittenRange,
-    rebaseCodeSourceSegments,
-    ...(options?.defaultCodeBase !== undefined ? { defaultCodeBase: options.defaultCodeBase } : {}),
-  });
+  // --- Phase 4: placement, fixup resolution, merged `EmittedByteMap` ---
+  const finalized = runEmitPlacementAndArtifactPhase(
+    mergeEmitFinalizationContext(lowered, {
+      namedSectionSinks,
+      diagnostics,
+      diag,
+      diagAt,
+      primaryFile,
+      baseExprs,
+      evalImmExpr,
+      env,
+      loweredAsmStream,
+      fixups,
+      rel8Fixups,
+      bytes,
+      codeSourceSegments,
+      alignTo,
+      writeSection,
+      computeWrittenRange,
+      rebaseCodeSourceSegments,
+      ...(options?.defaultCodeBase !== undefined
+        ? { defaultCodeBase: options.defaultCodeBase }
+        : {}),
+    }),
+  );
   return { ...finalized, loweredAsmStream };
 }
+
+export type { EmitProgramOptions, EmitProgramResult } from './emitPipeline.js';
