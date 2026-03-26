@@ -2,13 +2,9 @@
 
 # Chapter 7 — Stack and Subroutines
 
-This chapter explains how `call` and `ret` work, how the hardware stack operates,
-and how to write reusable subroutines that receive values through registers and
-return results to the caller. After reading it you will be able to write a
-subroutine, call it with values in registers, preserve the caller's registers
-using `push` and `pop`, and return a result.
-
-Prerequisites: Chapters 3–6 (registers, flags, `ld`, labels, DJNZ, tables).
+This chapter explains how `call` and `ret` work, how the hardware stack
+operates, and how to write reusable subroutines that receive values through
+registers and return results to the caller.
 
 ---
 
@@ -28,17 +24,15 @@ single `call`.
 
 ## How `call` works
 
-`call label` does two things:
+`call label` is a push of the return address followed by a jump — two operations
+in one opcode. Concretely:
 
 1. Pushes the address of the instruction following the `call` onto the hardware
    stack (this is the **return address**).
 2. Jumps to `label`.
 
-In other words, `call` is equivalent to a `push` of the return address followed
-by a `jp`. The instruction is always 3 bytes long, so the return address pushed
-is always the address of the byte immediately after the `call` instruction.
-There is nothing magical about it — it is a push and a jump combined into one
-opcode.
+The instruction is always 3 bytes long, so the return address pushed is always
+the address of the byte immediately after the `call` instruction.
 
 The hardware stack is a region of RAM used as a last-in-first-out buffer. The
 stack pointer SP always holds the address of the most recently pushed value.
@@ -52,13 +46,9 @@ subroutine does not know which call site reached it.
 
 ## How `ret` works
 
-`ret` is even simpler: it pops two bytes from the stack into the program
-counter. That is the return address that `call` pushed. Execution resumes at
-the instruction after the original `call`.
-
-In other words, `ret` is equivalent to `pop pc` — if such an instruction
-existed. The CPU reads the top of the stack, increments SP by two, and jumps
-to the address it just read. Nothing more.
+`ret` is equivalent to `pop pc` — if such an instruction existed. The CPU reads
+the top two bytes of the stack into the program counter, increments SP by two,
+and execution resumes at the instruction after the original `call`.
 
 If `ret` runs when the stack does not contain a valid return address — because
 of a push/pop mismatch, for example — the CPU jumps to whatever bytes are at
@@ -156,24 +146,22 @@ result. If A carries the result, declare `: AF`.
 
 ## `push` and `pop`: saving and restoring registers
 
-`push` and `pop` are simple operations, described most clearly in terms of
-virtual `ld` instructions:
+`push` and `pop` are most clearly described in terms of virtual `ld`
+instructions.
 
-`push hl` does two things: first SP is decremented by two, then the equivalent
-of `ld (sp), hl` happens — the contents of HL are written to the two bytes at
-the new SP address. (I say "equivalent" because `ld (sp), hl` is not an actual
-Z80 instruction — you cannot use it directly. But it describes exactly what
-`push` does internally.)
+`push hl`: SP is decremented by two, then virtually `ld (sp), hl` happens —
+the contents of HL are written to the two bytes at the new SP address. I say
+virtually because `ld (sp), hl` is not an actual Z80 instruction, but it
+describes exactly what happens.
 
-`pop hl` is the inverse: the equivalent of `ld hl, (sp)` happens first — two
-bytes are read from the address in SP into HL — then SP is incremented by two.
+`pop hl` is the inverse: virtually `ld hl, (sp)` happens first — two bytes are
+read from SP into HL — then SP is incremented by two.
 
-The operand can be any of AF, BC, DE, HL, IX, or IY. The important thing to
-remember is that the stack does not know whose value it is holding. All register
-pairs are saved to and restored from the same area of memory — the bytes at and
-below SP. The stack is the very same RAM where your program and variables
-reside. There is nothing magical about it; it is ordinary memory that SP
-happens to point at.
+The operand can be any of AF, BC, DE, HL, IX, or IY. Many people misunderstand
+how the stack works, so let me be clear about this: the stack does not know
+whose value it is holding. All register pairs are saved to the same area of
+memory — the bytes at and below SP. The stack is the same RAM where your
+program and variables reside. There is nothing "magical" about it.
 
 A subroutine uses `push` / `pop` to preserve registers it needs to modify
 internally. The pattern:
@@ -277,9 +265,9 @@ return, the stack remains balanced and execution returns correctly through each
 level.
 
 The only limit is the size of the RAM region allocated to the stack. A program
-that calls too many levels deep (or forgets to pop before returning) will
-overwrite RAM that the program uses for other purposes. On the Z80, there is no
-hardware guard against stack overflow.
+that calls too many levels deep — or forgets to pop before returning — will
+overwrite RAM used for other purposes. The Z80 has no hardware guard against
+stack overflow.
 
 ---
 
@@ -355,10 +343,9 @@ After `sbc hl, de`, the carry flag indicates the comparison result:
 - **Carry set** — HL was less than DE (unsigned borrow occurred). DE is the
   larger value. `ex de, hl` puts DE into HL and returns.
 
-The `or a / sbc hl, de / add hl, de` restore pattern is the standard way to do
-an unsigned 16-bit comparison in Z80 when you need the original HL after the
-test. `sbc hl, de` is destructive; `add hl, de` undoes the subtraction when the
-result was that HL was the larger value.
+The `or a / sbc hl, de / add hl, de` sequence is how you do an unsigned 16-bit
+comparison when you need the original HL back after the test. `sbc hl, de` is
+destructive; `add hl, de` undoes the subtraction when HL was the larger value.
 
 The caller passes 80 (`$0050`) in HL and 200 (`$00C8`) in DE:
 
@@ -399,10 +386,9 @@ This trick demonstrates the freedom assembly gives you: `call` and `ret` are
 not ceremonial pairs that must always appear together. They are stack
 operations, and you can use them however the stack discipline permits.
 
-You are unlikely to need this technique early on, but it illustrates an
-important principle: every instruction in the Z80 does exactly one mechanical
-thing. There is no hidden contract between `call` and `ret` — only the stack
-connects them.
+`call` and `ret` are stack operations that happen to pair up in normal use.
+Nothing binds them mechanically — only the stack does. `call` pushed one word;
+`pop hl` consumed it. That is the whole contract.
 
 ---
 
@@ -428,12 +414,6 @@ connects them.
   trailing `ret` is not needed. Use `ret` inside a `func` only for early exits.
   Raw labeled subroutines — code reached by `call label` outside a ZAX `func`
   — are plain Z80 and do require an explicit `ret`.
-
-## What Comes Next
-
-Chapter 9 builds a complete program using everything from Chapters 3–7
-together, then shows the points where raw Z80 starts to get unwieldy — the
-same points that Chapters 10–13 address.
 
 ---
 
