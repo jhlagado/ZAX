@@ -3,9 +3,11 @@ import { join } from 'node:path';
 
 import {
   compilePlacedProgram,
-  flattenLoweredInstructions,
-  formatLoweredInstruction,
-  hasRawOpcode,
+  findRawAbs16Target,
+  hasOperands,
+  instructionsInLabelRange,
+  isImmLiteral,
+  isReg,
 } from './helpers/lowered_program.js';
 
 describe('PR405: byte call scalar arg', () => {
@@ -13,14 +15,26 @@ describe('PR405: byte call scalar arg', () => {
     const entry = join(__dirname, 'fixtures', 'pr405_byte_call_scalar_arg.zax');
     const lowered = await compilePlacedProgram(entry);
     expect(lowered.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-    const instrs = flattenLoweredInstructions(lowered.program);
-    const lines = instrs.map((ins) => formatLoweredInstruction(ins).toUpperCase());
 
-    expect(hasRawOpcode(instrs, 0x3a)).toBe(true);
-    expect(lines).toContain('LD H, $00');
-    expect(lines).toContain('LD L, A');
-    expect(lines).toContain('PUSH HL');
-    expect(hasRawOpcode(instrs, 0xcd)).toBe(true);
-    expect(lines.join('\n')).not.toContain('ADD HL, DE');
+    const mainInstrs = instructionsInLabelRange(lowered, 'main');
+
+    expect(
+      findRawAbs16Target(lowered, {
+        opcode: 0x3a,
+        target: 'glob_b',
+        range: { startLabel: 'main' },
+      }),
+    ).toBeDefined();
+    expect(mainInstrs.some((ins) => ins.head === 'ld' && hasOperands(ins, (op) => isReg(op, 'H'), (op) => isImmLiteral(op, 0)))).toBe(true);
+    expect(mainInstrs.some((ins) => ins.head === 'ld' && hasOperands(ins, (op) => isReg(op, 'L'), (op) => isReg(op, 'A')))).toBe(true);
+    expect(mainInstrs.some((ins) => ins.head === 'push' && hasOperands(ins, (op) => isReg(op, 'HL')))).toBe(true);
+    expect(
+      findRawAbs16Target(lowered, {
+        opcode: 0xcd,
+        target: 'sink',
+        range: { startLabel: 'main' },
+      }),
+    ).toBeDefined();
+    expect(mainInstrs.some((ins) => ins.head === 'add' && hasOperands(ins, (op) => isReg(op, 'HL'), (op) => isReg(op, 'DE')))).toBe(false);
   });
 });
