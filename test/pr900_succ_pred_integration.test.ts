@@ -31,7 +31,7 @@ const compileLowered = async (entry: string) => {
   };
 };
 
-describe('GitHub issue #900 succ/pred lowering', () => {
+describe('GitHub issue #900 step/succ/pred lowering', () => {
   it('lowers byte and word typed paths end-to-end', async () => {
     const entry = join(__dirname, 'fixtures', 'pr900_succ_pred.zax');
     const { instrs, text, lines } = await compileLowered(entry);
@@ -72,5 +72,15 @@ describe('GitHub issue #900 succ/pred lowering', () => {
     expect(text).toMatch(
       /LD E, \(HL\)[\s\S]*?INC HL[\s\S]*?LD D, \(HL\)[\s\S]*?DEC HL[\s\S]*?INC DE[\s\S]*?LD \(HL\), E[\s\S]*?INC HL[\s\S]*?LD \(HL\), D/i,
     );
+  });
+
+  it('lowers explicit step amounts through arithmetic templates', async () => {
+    const entry = join(__dirname, 'fixtures', 'pr1050_step_amounts.zax');
+    const { text } = await compileLowered(entry);
+
+    expect(text).toContain('ADD A, $03');
+    expect(text).toContain('SUB A, $02');
+    expect(text).toContain('ADC HL, BC');
+    expect(text).toContain('SBC HL, BC');
   });
 });
