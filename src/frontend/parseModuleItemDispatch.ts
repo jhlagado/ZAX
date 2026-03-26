@@ -5,7 +5,7 @@ import type {
   SectionItemNode,
   SourceSpan,
 } from './ast.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import { consumeTopKeyword, diagInvalidHeaderLine } from './parseModuleCommon.js';
 import { parseTopLevelExternDecl } from './parseExternBlock.js';
 import { parseEnumDecl } from './parseEnum.js';
