@@ -137,16 +137,16 @@ func enqueue(entry_value: byte, entry_stamp: word)
   ld a, l
   tail_slot := a
 
-  succ used_slots
+  step used_slots
 end
 ```
 
 (From `learning/part2/examples/unit5/ring_buffer.zax`, lines 33–50.)
 
-`succ used_slots` increments the module-level `used_slots` byte directly. `succ`
-and `pred` work on any typed scalar storage path — not only on frame-local `var`
+`step used_slots` increments the module-level `used_slots` byte directly. `step`
+works on any typed scalar storage path — not only on frame-local `var`
 slots, but also on module-level variables declared in named `data` sections. Here,
-`used_slots` lives in the module's `vars` section and `succ` increments it in
+`used_slots` lives in the module's `vars` section and `step` increments it in
 place.
 
 `dequeue` removes and returns the entry at the head. It checks for empty (`used_slots`
@@ -164,7 +164,7 @@ func dequeue(): HL
   ld a, l
   head_slot := a
 
-  pred used_slots
+  step used_slots, -1
   ...
 end
 ```
@@ -210,7 +210,7 @@ the mechanics.
   and load or store.
 - Non-power-of-two element sizes are fully supported. The compiler emits a shift-
   and-add stride sequence rather than a pure shift chain.
-- `succ` and `pred` work on module-level variables, not only on frame locals. Any
+- `step` works on module-level variables, not only on frame locals. Any
   typed scalar storage path is a valid operand.
 - The `next_slot` modular-index helper is the clean way to wrap an index
   without an explicit division: increment, compare against the capacity bound,

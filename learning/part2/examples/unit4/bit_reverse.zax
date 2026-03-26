@@ -39,7 +39,7 @@ export func bit_reverse_demo(): HL
     srl a
     source_value := a
 
-    pred bit_count
+    step bit_count, -1
 
     ld a, 1
     or a

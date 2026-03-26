@@ -46,7 +46,7 @@ func enqueue(entry_value: byte, entry_stamp: word)
   ld a, l
   tail_slot := a
 
-  succ used_slots
+  step used_slots
 end
 
 func dequeue(): HL
@@ -69,7 +69,7 @@ func dequeue(): HL
   ld a, l
   head_slot := a
 
-  pred used_slots
+  step used_slots, -1
 
   ld h, 0
   a := removed_value

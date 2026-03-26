@@ -39,7 +39,7 @@ func mul_u16(left_word: word, right_word: word): HL
     add hl, de
     accum_value := hl
 
-    pred repeat_count
+    step repeat_count, -1
 
     ld a, 1
     or a
@@ -104,7 +104,7 @@ export func rpn_demo(): HL
         stack_depth := a
     end
 
-    succ token_index
+    step token_index
 
     ld a, 1
     or a

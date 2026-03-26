@@ -45,7 +45,7 @@ The biggest source noise is not a lack of arithmetic syntax. It is forced regist
 ## Priority order
 
 1. Scalar path-to-path `:=`
-2. `succ` / `pred` on typed paths
+2. `step` on typed paths
 3. Pascal-style counted `for`
 
 ---
@@ -197,28 +197,28 @@ These require hidden temporary selection, sequencing rules, and possible spill b
 
 ---
 
-## Proposal 2: `succ` and `pred` on typed paths
+## Proposal 2: `step` on typed paths
 
 ### Rule
 
-`succ path` and `pred path` are valid wherever `path` resolves to a scalar byte or word storage location.
+`step path` and `step path, -1` are valid wherever `path` resolves to a scalar byte or word storage location.
 
 These are **ZAX built-ins**, not overloads of the raw Z80 `inc` / `dec` mnemonics.
 
 They lower as a read-modify-write sequence over typed storage:
 - load value into a hidden register
-- apply increment / decrement
+- apply the signed delta
 - store back to the same place
 - leave a meaningful final `Z` flag based on the resulting value
 
-The built-ins preserve programmer-visible registers. They do **not** promise full flag parity with Z80 `inc` / `dec`; they promise a meaningful final `Z` only.
+The built-in preserves programmer-visible registers. It does **not** promise full flag parity with Z80 `inc` / `dec`; it promises a meaningful final `Z` only.
 
 ### Examples
 
 ```zax
-succ count
-pred used_slots
-succ entries[B].version
+step count
+step used_slots, -1
+step entries[B].version
 ```
 
 ### Lowering
@@ -255,14 +255,12 @@ This avoids `push af` / `pop af`, which would incorrectly restore old flags.
 
 ### Flag behaviour
 
-The final `Z` flag is meaningful:
-- `succ path` leaves `Z` set iff the resulting value is zero
-- `pred path` leaves `Z` set iff the resulting value is zero
+The final `Z` flag is meaningful: `step` leaves `Z` set iff the resulting value is zero.
 
 This makes the built-ins composable with existing flag-driven control flow without pretending to reproduce the full Z80 flag model for all scalar sizes.
 
 ```zax
-succ count
+step count
 if Z
   ; count wrapped to zero
 end
@@ -275,7 +273,7 @@ For EA-shaped paths, the effective address should be calculated once and kept li
 So for something like:
 
 ```zax
-succ arr[L]
+step arr[L]
 ```
 
 the lowering model is:
@@ -328,7 +326,7 @@ limit := end
 jp @compare
 @L:
   <body>
-  succ/pred idx
+  step idx
 @compare:
   if idx <= limit: goto @L     ; `to`
   if idx >= limit: goto @L     ; `downto`
@@ -365,7 +363,7 @@ Allowing arithmetic on the RHS requires hidden temporary selection, sequencing r
 | Proposal                         | Verdict              |
 |----------------------------------|----------------------|
 | Scalar path-to-path `:=`         | Yes — implement next |
-| `succ` / `pred` on typed paths   | Yes — implement      |
+| `step` on typed paths            | Yes — implement      |
 | Pascal-style counted `for`       | Deferred — design settled, not active work |
 | General RHS arithmetic           | No, for now          |
 | C-style `for`                    | No                   |

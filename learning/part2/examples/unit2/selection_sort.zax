@@ -75,7 +75,7 @@ func find_min_index(start_index: byte, last_index: byte): HL
       best_value := a
     end
 
-    succ current_index
+    step current_index
 
     ld a, 1
     or a
@@ -112,7 +112,7 @@ export func selection_sort()
       swap_values outer_index, min_index
     end
 
-    succ outer_index
+    step outer_index
 
     ld a, 1
     or a

@@ -97,7 +97,7 @@ without needing to count integer values.
 ## The Evaluation Loop and Operator Dispatch
 
 The main evaluation function is `rpn_demo`. Its shape is a `while` loop over
-`token_index`, advancing with `succ token_index` at the bottom of each
+`token_index`, advancing with `step token_index` at the bottom of each
 iteration. When `token_index` reaches `TokenCount`, the loop pops the final
 result and returns it in HL.
 
@@ -228,7 +228,7 @@ stack here, but using the same typed-path and null-sentinel approach.
 ## Exercises
 
 1. The `TokenKind.Multiply` case calls the helper `mul_u16`. `mul_u16` uses a
-   `while` loop with a `pred` on the repeat count. What is the time complexity
+  `while` loop with a `step ..., -1` on the repeat count. What is the time complexity
    of this multiplication, and what would happen for large operands? How would
    you extend `rpn_calculator.zax` to add a `TokenKind.Subtract` case?
 

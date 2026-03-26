@@ -141,7 +141,6 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
   });
 
   type CanonicalTypedPathStep = {
-    headForDiagnostics: 'step' | 'succ' | 'pred';
     target: Extract<AsmOperandNode, { kind: 'Ea' }>;
     amount: number;
   };
@@ -150,13 +149,6 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     asmItem: AsmInstructionNode,
   ): CanonicalTypedPathStep | undefined => {
     const head = asmItem.head.toLowerCase();
-    if (head === 'succ' || head === 'pred') {
-      if (asmItem.operands.length !== 1) return undefined;
-      const target = asmItem.operands[0];
-      if (!target || target.kind !== 'Ea') return undefined;
-      return { headForDiagnostics: head, target, amount: head === 'succ' ? 1 : -1 };
-    }
-
     if (head !== 'step') return undefined;
     if (asmItem.operands.length < 1 || asmItem.operands.length > 2) return undefined;
 
@@ -167,7 +159,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
     }
 
     if (asmItem.operands.length === 1) {
-      return { headForDiagnostics: 'step', target, amount: 1 };
+      return { target, amount: 1 };
     }
 
     const amountOperand = asmItem.operands[1];
@@ -182,7 +174,7 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
       return undefined;
     }
 
-    return { headForDiagnostics: 'step', target, amount };
+    return { target, amount };
   };
 
   const emitByteAccumulatorDelta = (amount: number, span: AsmInstructionNode['span']): boolean => {
@@ -203,21 +195,21 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
 
   const lowerUnitTypedPathStep = (
     asmItem: AsmInstructionNode,
-    head: 'step' | 'succ' | 'pred',
+    amount: number,
     operand: Extract<AsmOperandNode, { kind: 'Ea' }>,
   ): boolean => {
     if (operand.explicitAddressOf) {
-      ctx.diagAt(ctx.diagnostics, asmItem.span, `"${head}" does not support address-of operands.`);
+      ctx.diagAt(ctx.diagnostics, asmItem.span, '"step" does not support address-of operands.');
       return true;
     }
 
     const scalar = ctx.resolveScalarTypeForLd(operand.expr);
     if (scalar !== 'byte' && scalar !== 'word') {
-      ctx.diagAt(ctx.diagnostics, asmItem.span, `"${head}" only supports byte and word scalar paths.`);
+      ctx.diagAt(ctx.diagnostics, asmItem.span, '"step" only supports byte and word scalar paths.');
       return true;
     }
 
-    const mutateHead = head === 'pred' ? 'dec' : 'inc';
+    const mutateHead = amount < 0 ? 'dec' : 'inc';
     const resolved = ctx.resolveEa(operand.expr, asmItem.span);
 
     if (scalar === 'byte') {
@@ -278,23 +270,22 @@ export function createAsmInstructionLoweringHelpers(ctx: Context) {
   };
 
   const lowerTypedPathStep = (asmItem: AsmInstructionNode, step: CanonicalTypedPathStep): boolean => {
-    const { headForDiagnostics, target, amount } = step;
+    const { target, amount } = step;
     if (target.explicitAddressOf) {
-      ctx.diagAt(ctx.diagnostics, asmItem.span, `"${headForDiagnostics}" does not support address-of operands.`);
+      ctx.diagAt(ctx.diagnostics, asmItem.span, '"step" does not support address-of operands.');
       return true;
     }
 
     const scalar = ctx.resolveScalarTypeForLd(target.expr);
     if (scalar !== 'byte' && scalar !== 'word') {
-      ctx.diagAt(ctx.diagnostics, asmItem.span, `"${headForDiagnostics}" only supports byte and word scalar paths.`);
+      ctx.diagAt(ctx.diagnostics, asmItem.span, '"step" only supports byte and word scalar paths.');
       return true;
     }
 
     if (amount === 0) return true;
 
     if (amount === 1 || amount === -1) {
-      const unitHead = amount < 0 ? 'pred' : headForDiagnostics === 'pred' ? 'pred' : 'succ';
-      return lowerUnitTypedPathStep(asmItem, unitHead, target);
+      return lowerUnitTypedPathStep(asmItem, amount, target);
     }
 
     const resolved = ctx.resolveEa(target.expr, asmItem.span);

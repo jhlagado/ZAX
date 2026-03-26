@@ -5,7 +5,7 @@
  * `runInstructionAcceptance` walks every function and op in the program once,
  * builds the storage view once per function, and dispatches each
  * `AsmInstructionNode` to every registered `InstructionValidator`.  Individual
- * feature validators (`:=`, succ/pred, …) implement `InstructionValidator` and
+ * feature validators (`:=`, step, …) implement `InstructionValidator` and
  * contain only their own policy logic.
  */
 

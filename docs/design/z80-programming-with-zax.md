@@ -112,7 +112,7 @@ introduce:
 - `if` as relief from label-heavy conditional blocks
 - `while` as relief from manual loop heads and back-edges
 - typed storage and `:=` as relief from handwritten offset bookkeeping
-- `succ` / `pred` as relief from scalar update shuttling
+- `step` as relief from scalar update shuttling
 - locals, parameters, and `op` after the raw calling and repetition model are
   already understood
 
