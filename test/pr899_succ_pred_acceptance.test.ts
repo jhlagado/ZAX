@@ -18,11 +18,13 @@ function parseProgram(modulePath: string, source: string): { program: ProgramNod
   return { program, diagnostics };
 }
 
-describe('PR899 succ/pred acceptance', () => {
-  it('accepts scalar byte and word path operands', () => {
+describe('PR899 step/succ/pred acceptance', () => {
+  it('accepts scalar byte and word path operands with default and explicit amounts', () => {
     const { program, diagnostics } = parseProgram(
       'pr899_succ_pred_positive.zax',
       `
+const INC = 3
+
 type Rec
   field: byte
 end
@@ -36,10 +38,12 @@ end
 
 section code text at $0000
 func main()
+  step count
+  step used_slots, 3
+  step arr[1], INC
+  step rec.field, -2
   succ count
   pred used_slots
-  succ arr[1]
-  pred rec.field
   ret
 end
 end
@@ -69,8 +73,8 @@ end
 
 section code text at $0000
 func main()
-  succ rec
-  pred ptr
+  step rec
+  step ptr
   succ raw_buf
   ret
 end
@@ -82,9 +86,34 @@ end
     validateSuccPredAcceptance(program, env, diagnostics);
 
     const messages = diagnostics.map((d) => d.message);
-    expect(messages).toContain('"succ" requires scalar storage; got Rec.');
-    expect(messages).toContain('"pred" only supports byte and word scalar paths in this slice.');
+    expect(messages).toContain('"step" requires scalar storage; got Rec.');
+    expect(messages).toContain('"step" only supports byte and word scalar paths in this slice.');
     expect(messages).toContain('"succ" requires scalar storage; got unknown.');
+  });
+
+  it('rejects step amounts that are not compile-time integer expressions', () => {
+    const { program, diagnostics } = parseProgram(
+      'pr899_succ_pred_amount_negative.zax',
+      `
+section data globals at $8000
+  count: byte
+  delta: byte
+end
+
+section code text at $0000
+func main()
+  step count, delta
+  ret
+end
+end
+      `,
+    );
+
+    const env = buildEnv(program, diagnostics);
+    validateSuccPredAcceptance(program, env, diagnostics);
+
+    const messages = diagnostics.map((d) => d.message);
+    expect(messages).toContain('"step" amount must be a compile-time integer expression.');
   });
 
   it('rejects typed-path forms inside ops in this slice', () => {
@@ -92,6 +121,7 @@ end
       'pr899_succ_pred_op_negative.zax',
       `
 op bump(slot: ea)
+  step slot
   succ slot
 end
 
@@ -105,6 +135,7 @@ end
     validateSuccPredAcceptance(program, env, diagnostics);
 
     const messages = diagnostics.map((d) => d.message);
+    expect(messages).toContain('"step" typed-path forms are not supported inside ops in this slice.');
     expect(messages).toContain('"succ" typed-path forms are not supported inside ops in this slice.');
     expect(messages).toContain('"pred" typed-path forms are not supported inside ops in this slice.');
   });
