@@ -9,22 +9,10 @@ import type { InstructionValidator } from './instructionAcceptance.js';
 type CanonicalStepInstruction = {
   amount: number;
   amountExpr?: Extract<AsmInstructionNode['operands'][number], { kind: 'Imm' }>['expr'];
-  headForDiagnostics: 'step' | 'succ' | 'pred';
   target: Extract<AsmInstructionNode['operands'][number], { kind: 'Ea' }>;
 };
 
 function getCanonicalStepInstruction(item: AsmInstructionNode): CanonicalStepInstruction | undefined {
-  if (item.head === 'succ' || item.head === 'pred') {
-    if (item.operands.length !== 1) return undefined;
-    const target = item.operands[0];
-    if (target?.kind !== 'Ea' || target.explicitAddressOf) return undefined;
-    return {
-      amount: item.head === 'succ' ? 1 : -1,
-      headForDiagnostics: item.head,
-      target,
-    };
-  }
-
   if (item.head !== 'step' || item.operands.length < 1 || item.operands.length > 2) return undefined;
   const target = item.operands[0];
   if (target?.kind !== 'Ea' || target.explicitAddressOf) return undefined;
@@ -32,7 +20,6 @@ function getCanonicalStepInstruction(item: AsmInstructionNode): CanonicalStepIns
   if (item.operands.length === 1) {
     return {
       amount: 1,
-      headForDiagnostics: 'step',
       target,
     };
   }
@@ -43,7 +30,6 @@ function getCanonicalStepInstruction(item: AsmInstructionNode): CanonicalStepIns
   return {
     amount: 1,
     amountExpr: amountOperand.expr,
-    headForDiagnostics: 'step',
     target,
   };
 }
@@ -70,32 +56,24 @@ function createStepValidator(env: CompileEnv): InstructionValidator {
       const scalar = helpers.resolveScalarTypeForLd(step.target.expr);
       if (!scalar) {
         const detail = typeExpr ? helpers.typeDisplay(typeExpr) : 'unknown';
-        diagAt(diagnostics, item.span, `"${step.headForDiagnostics}" requires scalar storage; got ${detail}.`);
+        diagAt(diagnostics, item.span, `"step" requires scalar storage; got ${detail}.`);
         return;
       }
       if (scalar !== 'byte' && scalar !== 'word') {
-        diagAt(
-          diagnostics,
-          item.span,
-          `"${step.headForDiagnostics}" only supports byte and word scalar paths in this slice.`,
-        );
+        diagAt(diagnostics, item.span, '"step" only supports byte and word scalar paths in this slice.');
       }
     },
 
     validateOpInstruction(item, _op, diagnostics) {
       const step = getCanonicalStepInstruction(item);
       if (step) {
-        diagAt(
-          diagnostics,
-          item.span,
-          `"${step.headForDiagnostics}" typed-path forms are not supported inside ops in this slice.`,
-        );
+        diagAt(diagnostics, item.span, '"step" typed-path forms are not supported inside ops in this slice.');
       }
     },
   };
 }
 
-export function validateSuccPredAcceptance(
+export function validateStepAcceptance(
   program: ProgramNode,
   env: CompileEnv,
   diagnostics: Diagnostic[],

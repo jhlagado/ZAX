@@ -85,7 +85,7 @@ By the end of Volume 1, the reader should be able to:
   - `if` / `else`
   - `while`
   - `break` / `continue`
-  - `succ` / `pred`
+  - `step`
   - functions with arguments and locals
   - `op`
 - understand what module `import` is and why it is a Book 2 topic
@@ -134,7 +134,7 @@ Phase B introduces:
 - typed locals and local variable declarations
 - function arguments in the ZAX style
 - typed storage and `:=` as the assignment surface
-- `succ` / `pred` for typed scalar update
+- `step` for typed scalar update
 - `if` / `else` replacing manual flag-test-and-jump sequences
 - `while` replacing manual loop-label structures
 - `break` / `continue` for loop escape and continuation
@@ -158,7 +158,7 @@ author a clear line.
 | function arguments (ZAX style) | Phase B | |
 | typed storage and `:=` | Phase B | |
 | structured control flow (`if`, `while`) | Phase B | |
-| `succ` / `pred` | Phase B | |
+| `step` | Phase B | |
 | `break` / `continue` | Phase B | introduce after `while` |
 | `op` | Phase B or Book 2 | depending on depth needed |
 | module `import` system | Book 2 | |
@@ -282,7 +282,7 @@ Covers the Z80 I/O address space, `in` and `out` instructions, immediate and reg
 **Chapter 09 — Typed Storage and Assignment**
 - what typed storage is and why Phase A programs avoided it
 - local variable declarations and `:=` as the assignment surface
-- `succ` / `pred` as language-level scalar update
+- `step` as the language-level scalar update form
 - why `:=` is not just `ld`: what the type system checks
 - rewriting a Phase A example with typed storage: what improves, what
   costs more, what stays the same
@@ -311,7 +311,7 @@ Volume 2 (`learning/part2/README.md`, grounded by
 `docs/design/zax-algorithms-course.md`) assumes the reader can write ZAX
 programs at the Phase B level. It does not re-teach ZAX syntax or Z80
 mechanics. It uses the full structured surface immediately — typed storage,
-`:=`, `if`, `while`, `break`, `continue`, `succ`/`pred` — as a given.
+`:=`, `if`, `while`, `break`, `continue`, `step` — as a given.
 
 Book 1 is the prerequisite for Volume 2. A reader who has completed Book 1
 through Chapter 11 should be able to open any Volume 2 example and follow it

@@ -8,18 +8,6 @@ import {
   hasRawOpcode,
 } from './helpers/lowered_program.js';
 
-const countRawOpcode = (
-  instrs: ReturnType<typeof flattenLoweredInstructions>,
-  opcode: number,
-  opcode2?: number,
-): number =>
-  instrs.reduce((count, instr) => {
-    if (instr.head !== '@raw' || !instr.bytes) return count;
-    if (instr.bytes[0] !== opcode) return count;
-    if (opcode2 !== undefined && instr.bytes[1] !== opcode2) return count;
-    return count + 1;
-  }, 0);
-
 const compileLowered = async (entry: string) => {
   const res = await compilePlacedProgram(entry);
   expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
@@ -31,9 +19,9 @@ const compileLowered = async (entry: string) => {
   };
 };
 
-describe('GitHub issue #900 step/succ/pred lowering', () => {
+describe('GitHub issue #900 step lowering', () => {
   it('lowers byte and word typed paths end-to-end', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr900_succ_pred.zax');
+    const entry = join(__dirname, 'fixtures', 'pr900_step.zax');
     const { instrs, text, lines } = await compileLowered(entry);
 
     expect(lines.filter((line) => line === 'PUSH DE').length).toBeGreaterThan(0);
@@ -51,22 +39,21 @@ describe('GitHub issue #900 step/succ/pred lowering', () => {
     expect(text).toContain('LD E, (HL)');
     expect(text).toContain('LD (HL), E');
     expect(text).toContain('LD (HL), D');
-    expect(hasRawOpcode(instrs, 0x28)).toBe(true); // JR Z
   });
 
   it('avoids HL preservation for direct word fast paths', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr900_succ_pred_direct_word.zax');
+    const entry = join(__dirname, 'fixtures', 'pr900_step_direct_word.zax');
     const { instrs, text, lines } = await compileLowered(entry);
 
     expect(text).toContain('LD E, (IX');
     expect(text).toContain('LD D, (IX');
-    expect(hasRawOpcode(instrs, 0xed, 0x5b)).toBe(true); // LD DE, (nn)
+    expect(hasRawOpcode(instrs, 0xed, 0x5b)).toBe(true);
     expect(lines.filter((line) => line === 'PUSH HL').length).toBe(2);
     expect(lines.filter((line) => line === 'POP HL').length).toBe(1);
   });
 
   it('reuses one materialized EA for indexed word update', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr900_succ_pred.zax');
+    const entry = join(__dirname, 'fixtures', 'pr900_step.zax');
     const { text } = await compileLowered(entry);
 
     expect(text).toMatch(

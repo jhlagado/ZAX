@@ -46,7 +46,7 @@ This algorithms volume should assume the current active surface on `main`:
 
 - `:=` is the assignment surface
 - scalar path-to-path `:=` is available
-- `succ` / `pred` are available for typed scalar paths and should be explained as language-level built-ins for scalar update
+- `step` is available for typed scalar paths and should be explained as the language-level scalar update form
 - `break` / `continue` are available
 - `for` is deferred and must not be presented as part of the active course surface
 
@@ -145,7 +145,7 @@ Examples:
 Purpose:
 
 - show indexed storage, loop structure, and small algorithmic invariants over arrays
-- introduce the strongest early examples of `succ`, `pred`, and `break` / `continue` in ordinary search and sort code
+- introduce the strongest early examples of `step` and `break` / `continue` in ordinary search and sort code
 - explicitly explain `break` and `continue` in this chapter, because this is where the reader first sees them as part of ordinary loop structure
 
 Examples:
