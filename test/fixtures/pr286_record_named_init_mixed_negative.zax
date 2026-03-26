@@ -3,8 +3,9 @@ type Pair
   hi: byte
 end
 
-data
+section data vars at $1000
   bad_mixed: Pair = { lo: 1, 2 }
+end
 
 export func main()
 end

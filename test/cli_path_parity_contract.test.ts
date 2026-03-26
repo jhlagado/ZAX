@@ -9,11 +9,10 @@ const __dirname = dirname(__filename);
 
 import { ensureCliBuilt, normalizePathForCompare, readArtifactSet, runCli } from './helpers/cli.js';
 
-// Temporarily skipped: runs slow after envelope-preserve codegen; revisit with lighter fixture.
-describe.skip('cli path parity contract', () => {
+describe('cli path parity contract', () => {
   beforeAll(async () => {
     await ensureCliBuilt();
-  }, 90_000);
+  }, 180_000);
 
   it('emits byte-identical artifacts for relative and absolute entry/output path forms', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-path-parity-'));
