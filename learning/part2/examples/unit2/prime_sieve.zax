@@ -29,7 +29,7 @@ export func prime_sieve()
     a := is_prime[L]
     or a
     if Z
-      succ factor_index
+      step factor_index
       ld a, 1
       or a
       continue
@@ -62,7 +62,7 @@ export func prime_sieve()
       or a
     end
 
-    succ factor_index
+    step factor_index
 
     ld a, 1
     or a

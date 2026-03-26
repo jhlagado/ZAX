@@ -44,16 +44,17 @@ ZAX distinguishes two forms: the bare name means "the typed value at this locati
 
 ---
 
-## `succ` and `pred`
+## `step`
 
-`succ path` increments a typed scalar in place. `pred path` decrements it:
+`step path` increments a typed scalar in place by one. `step path, amount` adds a signed compile-time integer to it:
 
 ```zax
-succ count      ; count := count + 1
-pred count      ; count := count - 1
+step count           ; count := count + 1
+step count, -1       ; count := count - 1
+step count, 5        ; count := count + 5
 ```
 
-The compiler lowers each to the appropriate increment or decrement sequence. Neither returns a value or sets flags in a guaranteed way — they are pure mutations of the named location.
+The amount, when given, must be a constant the compiler can evaluate — a literal or a named `const`. `step` returns no value and does not set flags reliably; it is a pure mutation of the named location.
 
 In Chapter 11, you incremented a counter by hand:
 
@@ -63,13 +64,18 @@ inc a
 ld (ix+cnt+0), a
 ```
 
-`succ cnt` does the same thing. It is shorter to write and communicates the intent directly: this location is being counted up.
+`step cnt` does the same thing in one line. Named constants work as the amount, which is useful when the step size has a name worth giving:
+
+```zax
+const STRIDE = 4
+step cursor, STRIDE     ; cursor := cursor + 4
+```
 
 ---
 
 ## Before and after: the same two loops
 
-Here are the `find_max` and `count_above` functions rewritten with `:=` and `succ`, so you can compare them with the raw IX versions from Chapters 10 and 11.
+Here are the `find_max` and `count_above` functions rewritten with `:=` and `step`, so you can compare them with the raw IX versions from Chapters 10 and 11.
 
 **`find_max` — raw IX (Chapter 10):**
 
@@ -107,10 +113,10 @@ The generated code is identical. `running_max := a` emits `ld (ix-N), a`. `a := 
   ld (ix+cnt+0), a
 ```
 
-**`count_above` — with `succ`:**
+**`count_above` — with `step`:**
 
 ```zax
-  succ cnt
+  step cnt
 ```
 
 One line instead of three. Same effect.
@@ -140,7 +146,7 @@ Both are always available. Neither is required. The choice is about clarity for 
 - `:=` assigns from right to left. The compiler checks types and emits the correct instruction sequence.
 - For byte locals, `:=` emits a single `ld (ix±d), reg` or `ld reg, (ix±d)` — the same instruction you would write by hand.
 - For word locals, `:=` emits a multi-instruction sequence using DE as an intermediate and `ex de, hl` to preserve registers.
-- `succ` and `pred` increment or decrement a typed scalar in place. They replace the three-instruction load-modify-store pattern.
+- `step path` increments a typed scalar by one. `step path, amount` adds any signed compile-time integer. Both replace the three-instruction load-modify-store pattern.
 - Use bare names with `:=` for typed locals. Do not use `(name)` — that means something different.
 - Raw Z80 instructions can still use typed names as operands. The compiler resolves them to IX-relative offsets.
 - `:=` and raw access are complementary. Use whichever is clearest.
