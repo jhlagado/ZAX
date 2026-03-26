@@ -1,7 +1,11 @@
 import type { AsmInstructionNode, AsmOperandNode, EaExprNode } from '../frontend/ast.js';
 
-type LdHelperContext = {
-  emitInstr: (head: string, operands: AsmOperandNode[], span: AsmInstructionNode['span']) => boolean;
+export type LdHelperContext = {
+  emitInstr: (
+    head: string,
+    operands: AsmOperandNode[],
+    span: AsmInstructionNode['span'],
+  ) => boolean;
   emitAbs16Fixup: (
     opcode: number,
     baseLower: string,
@@ -71,10 +75,20 @@ export function createAsmInstructionLdHelpers(ctx: LdHelperContext) {
     return (
       ctx.emitInstr(
         'ld',
-        [{ kind: 'Reg', span, name: hi }, { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } }],
+        [
+          { kind: 'Reg', span, name: hi },
+          { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value: 0 } },
+        ],
         span,
       ) &&
-      ctx.emitInstr('ld', [{ kind: 'Reg', span, name: lo }, { kind: 'Reg', span, name: srcName }], span)
+      ctx.emitInstr(
+        'ld',
+        [
+          { kind: 'Reg', span, name: lo },
+          { kind: 'Reg', span, name: srcName },
+        ],
+        span,
+      )
     );
   };
 

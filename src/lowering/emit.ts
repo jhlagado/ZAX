@@ -43,11 +43,7 @@ import {
   type StepPipeline,
 } from '../addressing/steps.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
-import type {
-  EmittedByteMap,
-  EmittedSourceSegment,
-  SymbolEntry,
-} from '../formats/types.js';
+import type { EmittedByteMap, EmittedSourceSegment, SymbolEntry } from '../formats/types.js';
 import type {
   AsmInstructionNode,
   AsmOperandNode,
@@ -80,9 +76,12 @@ import { createAsmBodyOrchestrationHelpers } from './asmBodyOrchestration.js';
 import { createOpMatchingHelpers } from './opMatching.js';
 import { createEmissionCoreHelpers } from './emissionCore.js';
 import { createValueMaterializationHelpers } from './valueMaterialization.js';
-import { createAsmInstructionLoweringHelpers } from './asmInstructionLowering.js';
 import { createFixupEmissionHelpers } from './fixupEmission.js';
-import { createFunctionBodySetupHelpers, type FlowState, type OpExpansionFrame } from './functionBodySetup.js';
+import {
+  createFunctionBodySetupHelpers,
+  type FlowState,
+  type OpExpansionFrame,
+} from './functionBodySetup.js';
 import { lowerFunctionDecl } from './functionLowering.js';
 import { createEmitVisibilityHelpers } from './emitVisibility.js';
 import { lowerProgramDeclarations, preScanProgramDeclarations } from './programLowering.js';
@@ -94,19 +93,20 @@ import {
   diagAtWithSeverityAndId,
   warnAt,
 } from './loweringDiagnostics.js';
-import { cloneEaExpr, cloneImmExpr, cloneOperand, createAsmUtilityHelpers, flattenEaDottedName } from './asmUtils.js';
+import {
+  cloneEaExpr,
+  cloneImmExpr,
+  cloneOperand,
+  createAsmUtilityHelpers,
+  flattenEaDottedName,
+} from './asmUtils.js';
 import {
   alignTo,
   computeWrittenRange,
   rebaseCodeSourceSegments,
   writeSection,
 } from './sectionLayout.js';
-import {
-  formatImmExprForAsm,
-  formatIxDisp,
-  toHexByte,
-  toHexWord,
-} from './traceFormat.js';
+import { formatImmExprForAsm, formatIxDisp, toHexByte, toHexWord } from './traceFormat.js';
 import { createTypeResolutionHelpers } from './typeResolution.js';
 import { createEmitProgramContext } from './emitProgramContext.js';
 import { createEmitStateHelpers } from './emitState.js';
@@ -214,9 +214,7 @@ export function emitProgram(
   const stackSlotTypes = new Map<string, TypeExprNode>();
   const stackSlotOffsets = new Map<string, number>();
   const localAliasTargets = new Map<string, EaExprNode>();
-  let applySpTracking:
-    | ((headRaw: string, operands: AsmOperandNode[]) => void)
-    | undefined;
+  let applySpTracking: ((headRaw: string, operands: AsmOperandNode[]) => void) | undefined;
   let invalidateSpTracking: (() => void) | undefined;
   const traceInstruction = (_offset: number, _bytesOut: Uint8Array, _text: string): void => {};
   let emitCodeBytes: (bs: Uint8Array, file: string) => void;
@@ -305,19 +303,23 @@ export function emitProgram(
 
   const emitInstr = (head: string, operands: AsmOperandNode[], span: SourceSpan) => {
     const start = getCurrentCodeOffset();
-    const syntheticInstruction: AsmInstructionNode = { kind: 'AsmInstruction', span, head, operands };
-    const encoded = encodeInstruction(
-      syntheticInstruction,
-      env,
-      diagnostics,
-    );
-    if (!encoded) return false;
-    recordLoweredAsmItem({
-      kind: 'instr',
+    const syntheticInstruction: AsmInstructionNode = {
+      kind: 'AsmInstruction',
+      span,
       head,
-      operands: operands.map((op) => lowerOperandForLoweredAsm(op)),
-      bytes: [...encoded],
-    }, span);
+      operands,
+    };
+    const encoded = encodeInstruction(syntheticInstruction, env, diagnostics);
+    if (!encoded) return false;
+    recordLoweredAsmItem(
+      {
+        kind: 'instr',
+        head,
+        operands: operands.map((op) => lowerOperandForLoweredAsm(op)),
+        bytes: [...encoded],
+      },
+      span,
+    );
     emitCodeBytes(encoded, span.file);
     applySpTracking?.(head, operands);
     return true;
@@ -349,21 +351,20 @@ export function emitProgram(
     pushRel8Fixup: pushCurrentRel8Fixup,
     traceInstruction,
     recordLoweredInstr: (bytes, _asmText, span) => {
-      recordLoweredAsmItem({
-        kind: 'instr',
-        head: '@raw',
-        operands: [],
-        bytes: [...bytes],
-      }, span);
+      recordLoweredAsmItem(
+        {
+          kind: 'instr',
+          head: '@raw',
+          operands: [],
+          bytes: [...bytes],
+        },
+        span,
+      );
     },
     evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
   });
 
-  ({
-    emitCodeBytes,
-    emitRawCodeBytes,
-    emitStepPipeline,
-  } = createEmissionCoreHelpers({
+  ({ emitCodeBytes, emitRawCodeBytes, emitStepPipeline } = createEmissionCoreHelpers({
     getCodeOffset: getCurrentCodeOffset,
     setCodeOffset: setCurrentCodeOffset,
     setCodeByte: setCurrentCodeByte,
@@ -416,10 +417,7 @@ export function emitProgram(
     return sizeOfTypeExpr(resolved.typeExpr, env, diagnostics);
   };
 
-  const {
-    selectOpOverload,
-    formatAsmOperandForOpDiag,
-  } = createOpMatchingHelpers({
+  const { selectOpOverload, formatAsmOperandForOpDiag } = createOpMatchingHelpers({
     reg8: REG8_NAMES,
     isIxIyIndexedMem,
     flattenEaDottedName,
@@ -454,17 +452,15 @@ export function emitProgram(
     storageTypes.set(aliasLower, inferred);
   }
 
-  const {
-    enforceDirectCallSiteEaBudget,
-    enforceEaRuntimeAtomBudget,
-  } = createRuntimeAtomBudgetHelpers({
-    diagnostics,
-    diagAt,
-    resolveScalarBinding,
-    stackSlotOffsets,
-    stackSlotTypes,
-    storageTypes,
-  });
+  const { enforceDirectCallSiteEaBudget, enforceEaRuntimeAtomBudget } =
+    createRuntimeAtomBudgetHelpers({
+      diagnostics,
+      diagAt,
+      resolveScalarBinding,
+      stackSlotOffsets,
+      stackSlotTypes,
+      storageTypes,
+    });
 
   const { buildEaBytePipeline, buildEaWordPipeline } = createAddressingPipelineBuilders({
     diagnostics,

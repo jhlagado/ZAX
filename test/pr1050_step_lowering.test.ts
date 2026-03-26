@@ -35,9 +35,11 @@ describe('PR1050 step lowering', () => {
           `${head} ${operands
             .map((operand) => {
               if (operand.kind === 'Reg') return operand.name;
-              if (operand.kind === 'Imm' && operand.expr.kind === 'ImmLiteral') return `$${operand.expr.value}`;
+              if (operand.kind === 'Imm' && operand.expr.kind === 'ImmLiteral')
+                return `$${operand.expr.value}`;
               if (operand.kind === 'Mem' && operand.expr.kind === 'EaAdd') return '(IX+disp)';
-              if (operand.kind === 'Mem' && operand.expr.kind === 'EaName') return `(${operand.expr.name})`;
+              if (operand.kind === 'Mem' && operand.expr.kind === 'EaName')
+                return `(${operand.expr.name})`;
               return operand.kind;
             })
             .join(', ')}`,
@@ -49,7 +51,6 @@ describe('PR1050 step lowering', () => {
       emitAbs16FixupPrefixed: () => {},
       emitRel8Fixup: () => {},
       conditionOpcodeFromName: () => undefined,
-      conditionNameFromOpcode: () => undefined,
       callConditionOpcodeFromName: () => undefined,
       jrConditionOpcodeFromName: () => undefined,
       conditionOpcode: () => undefined,
@@ -59,7 +60,6 @@ describe('PR1050 step lowering', () => {
       resolveRawAliasTargetName: () => undefined,
       isModuleStorageName: () => false,
       isFrameSlotName: () => false,
-      resolveScalarTypeForEa: () => undefined,
       resolveScalarTypeForLd: () => 'byte',
       resolveEa: () => ({ kind: 'stack', ixDisp: 4, scalar: 'byte' }),
       diagIfRetStackImbalanced: () => {},
@@ -111,8 +111,10 @@ describe('PR1050 step lowering', () => {
           `${head} ${operands
             .map((operand) => {
               if (operand.kind === 'Reg') return operand.name;
-              if (operand.kind === 'Imm' && operand.expr.kind === 'ImmLiteral') return `$${operand.expr.value}`;
-              if (operand.kind === 'Mem' && operand.expr.kind === 'EaName') return `(${operand.expr.name})`;
+              if (operand.kind === 'Imm' && operand.expr.kind === 'ImmLiteral')
+                return `$${operand.expr.value}`;
+              if (operand.kind === 'Mem' && operand.expr.kind === 'EaName')
+                return `(${operand.expr.name})`;
               return operand.kind;
             })
             .join(', ')}`,
@@ -124,7 +126,6 @@ describe('PR1050 step lowering', () => {
       emitAbs16FixupPrefixed: () => {},
       emitRel8Fixup: () => {},
       conditionOpcodeFromName: () => undefined,
-      conditionNameFromOpcode: () => undefined,
       callConditionOpcodeFromName: () => undefined,
       jrConditionOpcodeFromName: () => undefined,
       conditionOpcode: () => undefined,
@@ -134,9 +135,8 @@ describe('PR1050 step lowering', () => {
       resolveRawAliasTargetName: () => undefined,
       isModuleStorageName: () => false,
       isFrameSlotName: () => false,
-      resolveScalarTypeForEa: () => undefined,
       resolveScalarTypeForLd: () => 'word',
-      resolveEa: () => ({ kind: 'indexed', base: 'IX', disp: 0, scalar: 'word' } as never),
+      resolveEa: () => ({ kind: 'indexed', base: 'IX', disp: 0, scalar: 'word' }) as never,
       diagIfRetStackImbalanced: () => {},
       diagIfCallStackUnverifiable: () => {},
       warnIfRawCallTargetsTypedCallable: () => {},
