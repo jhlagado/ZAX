@@ -51,14 +51,14 @@ Chapter 02, `prime_sieve.zax`):
     a := col_used[L]
     or a
     if NZ
-      succ col_index
+      step col_index
       ld a, 1
       or a
       continue
     end
 ```
 
-When a constraint check fails, the column index is advanced with `succ col_index`
+When a constraint check fails, the column index is advanced with `step col_index`
 and `continue` jumps to the loop test, skipping the remaining checks and the
 placement code. There are three such constraint checks, each ending with
 `continue`. At the bottom of the loop, if all constraints passed and the recursive
@@ -180,9 +180,9 @@ the same source file.
 ## Exercises
 
 1. `place_row` uses three separate `continue` statements to skip failed
-   constraint checks. Each one advances `col_index` with `succ` and
+   constraint checks. Each one advances `col_index` with `step` and
    re-establishes NZ before jumping to the loop test. What would happen if the
-   `succ col_index` were omitted from one of the three `continue` paths? Trace
+   `step col_index` were omitted from one of the three `continue` paths? Trace
    the column loop behaviour for a column that fails the first constraint check.
 
 2. The `found_solution` flag is module-level state. `main` resets it to zero

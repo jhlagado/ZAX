@@ -27,7 +27,7 @@ In these chapters you will keep seeing the same pattern. Raw instructions are
 used when the machine detail matters directly. ZAX features are used when your
 intent is clearer than the mechanical load/store sequence.
 A byte can still be loaded with `ld a, (hl)`. A typed local can be updated with
-`count := hl` or `succ index_value`. The language does not remove machine-level
+`count := hl` or `step index_value`. The language does not remove machine-level
 thinking. It removes repeated clerical work so the program structure is easier
 to follow.
 

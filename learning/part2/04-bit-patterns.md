@@ -25,14 +25,14 @@ shift the value right, repeat until nothing remains.
 
 `popcount_demo` in `popcount.zax` holds the working value in a byte local
 `working_value` and the count in `count_value`. Each iteration uses `and 1` to
-test whether the low bit is set, increments the count via `succ count_value` if
+test whether the low bit is set, increments the count via `step count_value` if
 it is, and then shifts right using `srl a`:
 
 ```zax
     a := working_value
     and 1
     if NZ
-      succ count_value
+      step count_value
     end
 
     a := working_value
@@ -112,8 +112,8 @@ the low bit of the result.
 
 The outer loop loads `reversed_value` into A and `source_value` into B, calls
 the op, writes back, then shifts `source_value` right by one with `srl a`. This
-repeats for eight iterations counted by `bit_count`, decremented with `pred
-bit_count` at each step.
+repeats for eight iterations counted by `bit_count`, decremented with
+`step bit_count, -1` at each step.
 
 The `op` form here is natural: `append_low_bit` takes two specific registers as
 operands, and the compiler checks that the call sites provide the right register
@@ -134,7 +134,7 @@ value right by `offset` positions to align the target field to the low end, then
 extract `width` bits from that aligned value.
 
 `getbits_demo` in `getbits.zax` performs the right-shift phase in the first
-`while NZ` loop, decrementing `offset_value` via `pred offset_value` and shifting
+`while NZ` loop, decrementing `offset_value` via `step offset_value, -1` and shifting
 `working_value` right with `srl a` on each iteration:
 
 ```zax
@@ -149,7 +149,7 @@ extract `width` bits from that aligned value.
       a := working_value
       srl a
       working_value := a
-      pred offset_value
+      step offset_value, -1
       ld a, 1
       or a
     end
@@ -180,7 +180,7 @@ each iteration, `bit_mask` doubles via `add a, a` (the same left-shift technique
     add a, a
     bit_mask := a
 
-    pred width_value
+    step width_value, -1
 ```
 
 (From `learning/part2/examples/unit4/getbits.zax`, lines 46–65.)
@@ -203,7 +203,7 @@ low bit. The loop body is a few instructions around `srl a`, `and 1`, and a
 conditional action.
 
 **The `while NZ` form with a counter.** Counting loops in Chapter 04 use `while NZ`
-with a byte counter decremented by `pred`. The loop exits when the counter reaches
+with a byte counter decremented by `step ..., -1`. The loop exits when the counter reaches
 zero — the `or a` on the counter value sets Z, which terminates the loop. This
 is the same counter-driven `while NZ` pattern introduced in Chapter 01.
 
@@ -228,9 +228,9 @@ actual bit work — is what ZAX code looks like at its most concentrated.
 - Bit algorithms are expressed using Z80 bit-manipulation instructions directly:
   `srl`, `rr`, `and`, `or`, `xor`, `bit`. ZAX provides no higher-level bitwise
   abstractions. The instructions appear as mnemonics.
-- `while NZ` with `pred` decrement works for counting loops just as well as for
-  sentinel loops. When the counter hits zero, `or a` sets Z and the
-  loop exits.
+- `while NZ` with `step ..., -1` decrement works for counting loops just as
+  well as for sentinel loops. When the counter hits zero, `or a` sets Z and
+  the loop exits.
 - A local `op` captures a recurring register-level pattern without function call
   overhead. The compiler verifies that the operand register bindings at call sites
   match the op's parameter declarations.
@@ -263,7 +263,7 @@ struct array rather than a scalar.
 1. `popcount.zax` exits the loop when `working_value` reaches zero. This is
    efficient for sparse values (few set bits) but not for values with many set
    bits. Could you write a version that always runs exactly eight iterations using
-   `pred bit_count` as the loop counter? Compare code size.
+   `step bit_count, -1` as the loop counter? Compare code size.
 
 2. In `parity.zax`, `xor 1` is used to toggle `parity_value`. The Z80 has a `CPL`
    instruction that inverts all bits of A. Could `CPL` be used instead of `xor 1`?

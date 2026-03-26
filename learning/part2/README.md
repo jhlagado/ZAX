@@ -10,7 +10,7 @@ This part is for readers who already understand the Z80 basics — either from P
 
 | Ch | File | What it covers |
 |----|------|----------------|
-| 1  | [Foundations](01-foundations.md) | Variables, `:=` assignment, functions, `while`/`if`, `succ`/`pred`. Arithmetic algorithms. |
+| 1  | [Foundations](01-foundations.md) | Variables, `:=` assignment, functions, `while`/`if`, `step`. Arithmetic algorithms. |
 | 2  | [Arrays and Loops](02-arrays-and-loops.md) | Array indexing, `break` and `continue`. Sorting and searching. |
 | 3  | [Strings](03-strings.md) | Null-terminated strings, byte-by-byte traversal, sentinel loops. String algorithms. |
 | 4  | [Bit Patterns](04-bit-patterns.md) | Shift and logic instructions, `op` for reusable register patterns. Bit manipulation. |
