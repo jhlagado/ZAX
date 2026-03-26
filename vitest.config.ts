@@ -16,11 +16,11 @@ export default defineConfig({
       'src/pipeline.ts',
     ],
     thresholds: {
-      // Start moderate; raise over time as coverage improves.
-      statements: 62,
-      branches: 47,
-      functions: 57,
-      lines: 62,
+      // Raised baseline to reflect current suite health.
+      statements: 70,
+      branches: 60,
+      functions: 75,
+      lines: 70,
     },
   },
 });
