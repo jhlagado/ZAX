@@ -770,16 +770,16 @@ expresses them awkwardly, the gap is precisely located.
 
 ## 9. Course Structure
 
-| Unit | Title              | Algorithms                                                         | ZAX Constructs Introduced                                                                  |
-| ---- | ------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| 1    | Foundations        | Arithmetic, power, Fibonacci, GCD                                  | `func`, `const`, `while`, return register, `:=`                                            |
-| 2    | Arrays and Loops   | Sorting (insertion, bubble, selection), binary search, prime sieve | `byte[]`, indexed access, scalar path updates, `break` / `continue`                        |
-| 3    | String Model       | strlen, strcpy, strcmp, atoi/itoa                                  | null-sentinel loops, `repeat`, `op fetch_advance`, `@path`                                 |
-| 4    | Bit Patterns       | Population count, bit reversal, parity, field extract              | Shift idioms, `op` with `imm8` matchers                                                    |
-| 5    | Records            | Ring buffer                                                        | `type`, `record`, `section data`, `sizeof`/`offsetof`, exact-size awareness                |
-| 6    | Recursion          | Towers of Hanoi, recursive sum, recursive reverse                  | Recursive `func`, IX frame discipline, `<Type>base.tail`                                   |
-| 7    | Composition        | RPN calculator                                                     | All of the above: `op`, `record`, `select` ranges, `func`, software stack                  |
-| 8    | Pointer Structures | Linked list, BST                                                   | `ptr` fields, `<Type>base.tail` traversal, null-sentinel convention, fixed-pool allocation |
+| Unit | Title              | Algorithms                                                         | ZAX Constructs Introduced                                                                      |
+| ---- | ------------------ | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| 1    | Foundations        | Arithmetic, power, Fibonacci, GCD                                  | `func`, `const`, `while`, return register, `:=`                                                |
+| 2    | Arrays and Loops   | Sorting (insertion, bubble, selection), binary search, prime sieve | `byte[]`, indexed access, scalar path updates, `break` / `continue`                            |
+| 3    | String Model       | strlen, strcpy, strcmp, atoi/itoa                                  | null-sentinel loops, `repeat`, `op fetch_advance`, `@path`                                     |
+| 4    | Bit Patterns       | Population count, bit reversal, parity, field extract              | Shift idioms, `op` with `imm8` matchers                                                        |
+| 5    | Records            | Ring buffer                                                        | `type`, `record`, `section data`, `sizeof`/`offsetof`, exact-size awareness                    |
+| 6    | Recursion          | Towers of Hanoi, recursive sum, recursive reverse                  | Recursive `func`, IX frame discipline, `<Type>base.tail`                                       |
+| 7    | Composition        | RPN calculator                                                     | All of the above: `op`, `record`, `select` ranges, `func`, software stack                      |
+| 8    | Pointer Structures | Linked list, BST                                                   | `ptr` fields, `<Type>base.tail` traversal, null-sentinel convention, fixed-pool allocation     |
 | 9    | Gaps and Futures   | Eight queens                                                       | Control-flow pressure case; `break` / `continue` now available, future design pressure remains |
 
 Unit 9 is intentionally incomplete. It is a design dialogue between the course
@@ -790,7 +790,7 @@ author and the language — a record of what comes next.
 ## 10. Execution Plan
 
 The course is written in tranches. Each tranche produces working, compiled
-example files, a style check against the `.asm` output, and a friction log
+example files, a style check against the `.z80` output, and a friction log
 recorded in `docs/design/`.
 
 ### Tranche 1 — Unit 2: Foundations

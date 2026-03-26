@@ -28,7 +28,7 @@ This folder is the side-by-side review mirror:
 - `test/codegen-corpus/*.bin`
 - `test/codegen-corpus/*.hex`
 
-Legacy `.asm` trace output may still appear here for debugging, but it is not
+Legacy `.asm` trace output has been removed; it is not
 canonical.
 
 ## Supported regeneration
