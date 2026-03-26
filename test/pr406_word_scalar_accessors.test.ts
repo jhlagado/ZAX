@@ -3,6 +3,8 @@ import { join } from 'node:path';
 
 import {
   compilePlacedProgram,
+  findLoweredBlock,
+  findRawAbs16Target,
   flattenLoweredInstructions,
   formatLoweredInstructions,
   hasRawOpcode,
@@ -14,7 +16,8 @@ const compileLowered = async (entry: string) => {
   const res = await compilePlacedProgram(entry);
   expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
   return {
-    instrs: flattenLoweredInstructions(res.program),
+    ...res,
+    instrs: flattenLoweredInstructions(res.program, res.map),
     text: formatLoweredInstructions(res.program).join('\n').toUpperCase(),
   };
 };
@@ -22,12 +25,20 @@ const compileLowered = async (entry: string) => {
 describe('PR406: word scalar accessors', () => {
   it('uses direct global word accessors for BC/DE', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_global_scalar_accessors.zax');
-    const { instrs } = await compileLowered(entry);
+    const lowered = await compileLowered(entry);
 
-    expect(hasRawOpcode(instrs, 0xed, 0x4b)).toBe(true); // LD BC, (nn)
-    expect(hasRawOpcode(instrs, 0xed, 0x5b)).toBe(true); // LD DE, (nn)
-    expect(hasRawOpcode(instrs, 0xed, 0x43)).toBe(true); // LD (nn), BC
-    expect(hasRawOpcode(instrs, 0xed, 0x53)).toBe(true); // LD (nn), DE
+    expect(
+      findLoweredBlock(lowered.program, {
+        kind: 'section',
+        section: 'code',
+        name: 'main',
+        origin: 0x0100,
+      }),
+    ).toBeDefined();
+    expect(findRawAbs16Target(lowered, { opcode: 0xed, opcode2: 0x4b, target: 'glob_w' })).toBeDefined();
+    expect(findRawAbs16Target(lowered, { opcode: 0xed, opcode2: 0x5b, target: 'glob_w' })).toBeDefined();
+    expect(findRawAbs16Target(lowered, { opcode: 0xed, opcode2: 0x43, target: 'glob_w' })).toBeDefined();
+    expect(findRawAbs16Target(lowered, { opcode: 0xed, opcode2: 0x53, target: 'glob_w' })).toBeDefined();
   });
 
   it('uses direct frame word accessors for BC/DE', async () => {
