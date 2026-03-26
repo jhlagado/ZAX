@@ -7,8 +7,8 @@
  * is the single source of truth for both.
  */
 
-import { DiagnosticIds } from '../diagnostics/types.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import { DiagnosticIds } from '../diagnosticTypes.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import type {
   EaExprNode,
   ProgramNode,

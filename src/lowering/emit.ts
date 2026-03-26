@@ -42,7 +42,7 @@ import {
   TEMPLATE_S_HL,
   type StepPipeline,
 } from '../addressing/steps.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import type {
   EmittedByteMap,
   EmittedSourceSegment,

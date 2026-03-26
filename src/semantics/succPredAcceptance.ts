@@ -1,4 +1,4 @@
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import type { ProgramNode } from '../frontend/ast.js';
 import type { CompileEnv } from './env.js';
 import { diagAt } from './storageView.js';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnostics/types.js';
+import type { Diagnostic } from '../src/diagnosticTypes.js';
 import { parseModuleFile } from '../src/frontend/parser.js';
 
 describe('PR578 legacy syntax removal', () => {

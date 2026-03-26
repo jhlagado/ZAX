@@ -9,7 +9,7 @@
  * contain only their own policy logic.
  */
 
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import type {
   AsmInstructionNode,
   FuncDeclNode,

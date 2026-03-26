@@ -1,4 +1,4 @@
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import type { AsmOperandNode, EaExprNode, ImmExprNode, SourceSpan } from '../frontend/ast.js';
 
 type RuntimeAtomBudgetContext = {

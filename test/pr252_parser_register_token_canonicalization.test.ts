@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { parseProgram } from '../src/frontend/parser.js';
 import type { AsmInstructionNode, FuncDeclNode, OpDeclNode } from '../src/frontend/ast.js';
-import type { Diagnostic } from '../src/diagnostics/types.js';
+import type { Diagnostic } from '../src/diagnosticTypes.js';
 
 function asmInstructions(items: { kind: string }[]): AsmInstructionNode[] {
   return items.filter((item): item is AsmInstructionNode => item.kind === 'AsmInstruction');

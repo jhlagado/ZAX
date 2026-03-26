@@ -1,4 +1,4 @@
-import type { Diagnostic } from '../../src/diagnostics/types.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { compile } from '../../src/compile.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
 import type { Asm80Artifact } from '../../src/formats/types.js';

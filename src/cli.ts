@@ -6,7 +6,7 @@ import { dirname, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { compile } from './compile.js';
-import type { Diagnostic } from './diagnostics/types.js';
+import type { Diagnostic } from './diagnosticTypes.js';
 import { defaultFormatWriters } from './formats/index.js';
 import type { Artifact } from './formats/types.js';
 import type { CaseStyleMode, OpStackPolicyMode } from './pipeline.js';

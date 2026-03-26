@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseProgram } from '../src/frontend/parser.js';
-import type { Diagnostic } from '../src/diagnostics/types.js';
+import type { Diagnostic } from '../src/diagnosticTypes.js';
 
 describe('PR193 parser: explicit asm marker diagnostics', () => {
   it('diagnoses explicit asm marker in function bodies', () => {

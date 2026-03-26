@@ -8,7 +8,7 @@ import type {
   SectionItemNode,
 } from './ast.js';
 import { makeSourceFile, span, type SourceFile } from './source.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import {
   TOP_LEVEL_KEYWORDS,
   consumeKeywordPrefix,

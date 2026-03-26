@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { DiagnosticIds } from '../src/diagnostics/types.js';
-import type { Diagnostic } from '../src/diagnostics/types.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
+import type { Diagnostic } from '../src/diagnosticTypes.js';
 import { createAsmInstructionLoweringHelpers } from '../src/lowering/asmInstructionLowering.js';
 import type { AsmInstructionNode, AsmOperandNode, SourceSpan } from '../src/frontend/ast.js';
 
