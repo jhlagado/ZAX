@@ -149,7 +149,8 @@ matcher_type    = "reg8" | "reg16"
 ```ebnf
 instr_stream    = { instr_line } ;
 
-instr_line      = z80_instruction
+instr_line      = step_stmt
+                | z80_instruction
                 | assign_stmt
                 | move_stmt
                 | op_invoke
@@ -167,6 +168,10 @@ assign_source   = assign_reg | ea_expr | move_addr | imm_expr ;
 assign_reg      = "A" | "B" | "C" | "D" | "E" | "H" | "L"
                 | "IXH" | "IXL" | "IYH" | "IYL"
                 | "BC" | "DE" | "HL" | "IX" | "IY" ;
+
+step_stmt       = "step" , ea_expr , [ "," , imm_expr ]
+                | "succ" , ea_expr
+                | "pred" , ea_expr ;
 
 move_stmt       = "move" , move_reg , "," , move_src
                 | "move" , move_path , "," , move_reg ;
@@ -253,6 +258,9 @@ These are semantic constraints enforced beyond pure grammar:
 - `@path` is not a general expression operator. In v1 it is accepted only on the source side of `rr := @path` (with transitional `move rr, @path` still supported).
 - Raw data directives (`db`/`dw`/`ds`) and `raw_label` are only valid inside `section data` blocks.
 - A `raw_label` must be followed by a raw directive; it cannot stand alone.
+- In `step_stmt`, the first operand must semantically denote typed scalar storage (`byte` or `word`), not a raw register or non-scalar path.
+- In `step_stmt`, the optional amount must be a compile-time integer expression.
+- Typed-path `step`/`succ`/`pred` forms are not currently supported inside `op` bodies.
 - Typed reinterpretation requires at least one tail segment after the cast head.
 - `reinterpret_name` is limited semantically to scalar names of type `word` or `addr`.
 - Bare aggregate storage names are not valid reinterpret bases.
