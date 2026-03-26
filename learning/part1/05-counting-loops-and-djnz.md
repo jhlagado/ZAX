@@ -6,9 +6,8 @@ The `dec b / jp nz` loop from Chapter 4 uses two instructions to do one
 conceptual thing: decrement-the-counter-and-loop-if-not-done. The Z80 has a
 single instruction that fuses them.
 
-This chapter introduces `djnz`, the hardware edge case that catches every Z80
-programmer at least once, and the three loop forms you will use repeatedly:
-counted, sentinel, and flag-exit.
+This chapter introduces `djnz` and the three loop forms that cover most of what
+you will write: counted, sentinel, and flag-exit.
 
 ---
 
@@ -66,10 +65,9 @@ loop_top:
 ```
 
 The label `loop_top` sits at the first instruction of the body, not before the
-`ld b` initializer. DJNZ does not initialize B; that is your
-responsibility. If you forget the `ld b` init, B holds whatever was there from
-the previous instruction, and the loop runs for an unpredictable number of
-iterations.
+`ld b` initializer. B's starting value is yours to set — `djnz` reads whatever B holds when it
+first runs. Forget the `ld b` init and the loop runs for an unpredictable
+number of iterations.
 
 ---
 
@@ -83,10 +81,9 @@ wraps to 255 (`$FF`), the result is non-zero, and the jump is taken. The loop
 continues from B = 255 and runs a further 255 times before B reaches zero again.
 Total: 256 iterations.
 
-This is not a programming error that the hardware catches. It is a documented
-hardware behaviour. `ld b, 0 / djnz label` is a valid way to write a 256-
-iteration loop on the Z80, and some programs use it intentionally for that
-reason.
+`ld b, 0` before `djnz` is valid Z80 — it gives 256 iterations, and some
+programs use it deliberately for exactly that reason. The danger is
+unintentional: expecting zero iterations and getting 256.
 
 The consequence for you as a programmer: **never call a DJNZ loop with B = 0
 when you intend zero iterations.** If the iteration count can be zero, test for
@@ -132,9 +129,8 @@ five positions beyond the base.
 
 That last point matters. If another variable is stored immediately after the
 table, HL now points at it. A stray `ld (hl), a` at this point would silently
-overwrite that variable. There is nothing to stop you: the Z80 has no array
-bounds, no memory protection, no runtime error. If you write past the end of
-a table, you corrupt whatever is there. The price of assembly's freedom is
+overwrite that variable. The Z80 has no array bounds, no memory protection, no
+runtime error. Write past the end of a table and you corrupt whatever is there. The price of assembly's freedom is
 responsibility — you must track where your pointers end up.
 
 ---
