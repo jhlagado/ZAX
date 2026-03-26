@@ -1,5 +1,5 @@
 import type { AsmOperandNode, SourceSpan } from './ast.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import { parseAsmOperand } from './parseOperands.js';
 
 type ParsedControlKeywordText =

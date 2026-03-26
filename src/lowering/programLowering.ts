@@ -22,7 +22,7 @@ import type {
   VarBlockNode,
   VarDeclNode,
 } from '../frontend/ast.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import type {
   AddressRange,
   EmittedSourceSegment,

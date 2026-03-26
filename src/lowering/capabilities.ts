@@ -1,4 +1,4 @@
-import type { Diagnostic, DiagnosticId } from '../diagnostics/types.js';
+import type { Diagnostic, DiagnosticId } from '../diagnosticTypes.js';
 import type {
   AsmItemNode,
   AsmOperandNode,

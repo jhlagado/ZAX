@@ -1,5 +1,5 @@
 import type { AsmInstructionNode, AsmOperandNode, EaExprNode, SourceSpan } from './ast.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import { parseImmExprFromText } from './parseImm.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import { ALL_REGISTER_NAMES, ASSIGNMENT_REGISTER_NAMES } from './grammarData.js';

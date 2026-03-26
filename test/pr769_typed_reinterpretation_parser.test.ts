@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnostics/types.js';
+import type { Diagnostic } from '../src/diagnosticTypes.js';
 import { parseImmExprFromText } from '../src/frontend/parseImm.js';
 import { parseAsmOperand, parseEaExprFromText } from '../src/frontend/parseOperands.js';
 import { makeSourceFile, span } from '../src/frontend/source.js';

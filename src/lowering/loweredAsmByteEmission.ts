@@ -1,4 +1,4 @@
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import type { CompileEnv } from '../semantics/env.js';
 import type { LoweredAsmBlock, LoweredAsmProgram, LoweredAsmItem, LoweredImmExpr } from './loweredAsmTypes.js';
 import type { SectionKind } from './loweringTypes.js';

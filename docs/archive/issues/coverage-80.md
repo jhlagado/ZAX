@@ -3,7 +3,7 @@
 Context
 
 - Current coverage (v8): Stmts 72.84 / Branch 77.48 / Funcs 92.02 / Lines 72.84.
-- Large gaps: `src/semantics/layout.ts`, `src/lowering/emit.ts` tail, `src/z80/encode.ts`, `src/lint/case_style.ts`, `scripts/ci/change-classifier.js`.
+- Large gaps: `src/semantics/layout.ts`, `src/lowering/emit.ts` tail, `src/z80/encode.ts`, `src/lintCaseStyle.ts`, `scripts/ci/change-classifier.js`.
 
 Goal
 

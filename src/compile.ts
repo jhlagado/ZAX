@@ -1,12 +1,16 @@
 import { dirname } from 'node:path';
 
 import { hasErrors, normalizePath } from './compileShared.js';
-import type { Diagnostic } from './diagnostics/types.js';
-import { DiagnosticIds } from './diagnostics/types.js';
+import type { Diagnostic } from './diagnosticTypes.js';
+import { DiagnosticIds } from './diagnosticTypes.js';
 import type { CompileFn, CompilerOptions, CompileResult, PipelineDeps } from './pipeline.js';
 
 import type { ModuleItemNode, ProgramNode, SectionItemNode } from './frontend/ast.js';
-import { lintCaseStyle } from './lint/case_style.js';
+import type { ImportNode, ModuleFileNode } from './frontend/ast.js';
+import { parseModuleFile } from './frontend/parser.js';
+import { makeSourceFile } from './frontend/source.js';
+import { stripLineComment } from './frontend/parseParserShared.js';
+import { lintCaseStyle } from './lintCaseStyle.js';
 import { emitProgram } from './lowering/emit.js';
 import { STARTUP_ENTRY_LABEL } from './lowering/startupInit.js';
 import type { Artifact } from './formats/types.js';

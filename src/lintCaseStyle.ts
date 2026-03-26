@@ -1,4 +1,4 @@
-import { DiagnosticIds, type Diagnostic } from '../diagnostics/types.js';
+import { DiagnosticIds, type Diagnostic } from './diagnosticTypes.js';
 import type {
   AsmControlNode,
   AsmItemNode,
@@ -6,8 +6,8 @@ import type {
   OpDeclNode,
   ProgramNode,
   SourceSpan,
-} from '../frontend/ast.js';
-import type { CaseStyleMode } from '../pipeline.js';
+} from './frontend/ast.js';
+import type { CaseStyleMode } from './pipeline.js';
 
 type TokenStyle = 'upper' | 'lower' | 'mixed';
 type NormalizedStyle = Exclude<TokenStyle, 'mixed'>;

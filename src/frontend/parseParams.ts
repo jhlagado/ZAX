@@ -1,5 +1,5 @@
 import type { OpMatcherNode, OpParamNode, ParamNode, SourceSpan, TypeExprNode } from './ast.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import { parseTypeExprFromText } from './parseImm.js';
 import { MATCHER_KIND_BY_TYPE, MATCHER_TYPES } from './grammarData.js';

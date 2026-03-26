@@ -1,7 +1,7 @@
 import { TEMPLATE_SW_DEBC } from '../addressing/steps.js';
 import type { StepPipeline } from '../addressing/steps.js';
-import { DiagnosticIds } from '../diagnostics/types.js';
-import type { Diagnostic, DiagnosticId } from '../diagnostics/types.js';
+import { DiagnosticIds } from '../diagnosticTypes.js';
+import type { Diagnostic, DiagnosticId } from '../diagnosticTypes.js';
 import type {
   AsmInstructionNode,
   AsmOperandNode,

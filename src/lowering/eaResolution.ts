@@ -1,4 +1,4 @@
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import type { EaExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';

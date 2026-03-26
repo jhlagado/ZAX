@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DiagnosticIds, type Diagnostic } from '../src/diagnostics/types.js';
+import { DiagnosticIds, type Diagnostic } from '../src/diagnosticTypes.js';
 import type { AsmOperandNode, EaExprNode, SourceSpan, TypeExprNode } from '../src/frontend/ast.js';
 import { createAddressingPipelineBuilders } from '../src/lowering/addressingPipelines.js';
 import { createValueMaterializationHelpers } from '../src/lowering/valueMaterialization.js';

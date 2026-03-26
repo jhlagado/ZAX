@@ -1,5 +1,5 @@
 import type { EnumDeclNode, SourceSpan } from './ast.js';
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import { diagInvalidHeaderLine, formatIdentifierToken } from './parseModuleCommon.js';
 
