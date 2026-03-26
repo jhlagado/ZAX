@@ -23,7 +23,7 @@ type HexMap = Map<number, number>;
 function verifyAsm80Cli(executable: string): boolean {
   const probeDir = mkdtempSync(join(tmpdir(), 'zax-asm80-probe-'));
   try {
-    const probeAsm = join(probeDir, 'probe.asm');
+    const probeAsm = join(probeDir, 'probe.z80');
     const probeHex = join(probeDir, 'probe.hex');
     writeFileSync(
       probeAsm,
@@ -147,7 +147,7 @@ describe('ASM80 emitter', () => {
       expect(asm80Artifact).toBeDefined();
 
       const tempDir = await mkdtemp(join(tmpdir(), 'zax-asm80-'));
-      const asmPath = join(tempDir, 'program.asm');
+      const asmPath = join(tempDir, 'program.z80');
       const outHex = join(tempDir, 'program.hex');
       await writeFile(asmPath, asm80Artifact!.text, 'utf8');
 

@@ -139,7 +139,7 @@ course. It is now implemented. The course examples use it.
 
 You still choose registers, write mnemonics, manage flags, and decide what
 lives in ROM versus RAM. The compiler adds names, typed offsets, function frames,
-and structured control flow. The `.asm` output is deterministic:
+and structured control flow. The `.z80` output is deterministic:
 every source line maps to a predictable instruction sequence that you can read
 and verify. The gaps above are the places where the current surface still
 requires manual workarounds. They are recorded as such, and design work on them
@@ -163,7 +163,7 @@ the same source file.
 - The `<Type>local.field` repetition from Chapter 08 and the `pop_word`/`stack_depth`
   bouncing from Chapter 07 are both known design issues. See `docs/design/` for
   current work.
-- The `.asm` output is deterministic and inspectable throughout. The compiler
+- The `.z80` output is deterministic and inspectable throughout. The compiler
   adds no hidden passes or runtime system. That design position is deliberate
   and unchanged.
 
