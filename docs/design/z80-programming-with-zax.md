@@ -3,7 +3,7 @@
 Status: active design brief
 Audience: course author, contributors, reviewers
 
-Related strategy note: `docs/work/platform-course-strategy.md`
+Related operational brief: `docs/work/course-program-plan.md`
 
 ## Purpose
 

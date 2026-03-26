@@ -1,13 +1,16 @@
 # Work Area
 
-This directory is for current work-in-progress support documents only.
+This directory is the small active operational working set.
 
-Use it for:
-- current implementation stream notes
-- deferred and backburner items
-- short operational documents that are not part of the language spec and are not active design proposals
+Keep only:
 
-Do not use it for:
-- normative language rules
-- long-term archival material
-- superseded plans
+- current implementation direction
+- explicit deferred/backburner tracking
+- active editorial or course-planning briefs
+
+Move the following to `docs/archive/work/` when they stop being immediately active:
+
+- tranche plans
+- audits
+- detailed course plans
+- superseded strategy notes

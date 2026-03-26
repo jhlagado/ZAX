@@ -1,12 +1,12 @@
 # Docs Index
 
-This directory holds reference, specification, design, and internal work documents.
+This directory holds the small active working set for ZAX plus archived history.
 
 Learning content (course chapters and examples) lives under [`learning/`](../learning/README.md).
 
 ---
 
-## Layout
+## Active working set
 
 ### `docs/spec/`
 
@@ -19,50 +19,50 @@ Normative language documents.
 
 Current user- and contributor-facing references.
 
-- [`docs/reference/ZAX-quick-guide.md`](reference/ZAX-quick-guide.md) — full language surface in practical terms
-- [`docs/reference/zax-dev-playbook.md`](reference/zax-dev-playbook.md) — contributor workflow and review hygiene
+- [`docs/reference/ZAX-quick-guide.md`](reference/ZAX-quick-guide.md) — practical language guide
 - [`docs/reference/testing-verification-guide.md`](reference/testing-verification-guide.md) — testing and verification flow
 - [`docs/reference/source-overview.md`](reference/source-overview.md) — compiler source structure
+- [`docs/reference/zax-dev-playbook.md`](reference/zax-dev-playbook.md) — contributor workflow and review hygiene
+- [`docs/reference/codegen-corpus-workflow.md`](reference/codegen-corpus-workflow.md) — curated corpus workflow
 
 These do not override the spec.
 
 ### `docs/design/`
 
-Active design work and decisions.
-
-Current active docs:
+Only active design work stays here.
 
 - `docs/design/exact-size-layout-and-indexing.md`
 - `docs/design/grammar-parser-convergence-plan.md`
-- `docs/design/named-constants-in-local-initializers.md`
-- `docs/design/pointer-typing-ergonomics.md`
-- `docs/design/software-stack-helper-library.md`
 - `docs/design/z80-programming-with-zax.md`
 - `docs/design/zax-algorithms-course.md`
 
-These describe current direction and decisions. Landed or superseded design notes belong under `docs/archive/design/`.
+Landed, superseded, or low-priority design notes belong under `docs/archive/design/`.
 
 ### `docs/work/`
 
-Internal operational material: authoring plans, writing standards, current-stream notes.
+Small operational working set only.
 
-- [`docs/work/course-writing-standard.md`](work/course-writing-standard.md) — editorial gate for all course prose
-- [`docs/work/course-authoring-plan.md`](work/course-authoring-plan.md) — writer brief for Part 2
-- [`docs/work/intro-authoring-plan.md`](work/intro-authoring-plan.md) — writer brief for Part 1
-- [`docs/work/z80-intro-course-plan.md`](work/z80-intro-course-plan.md) — Part 1 chapter scope and structure
+- [`docs/work/current-stream.md`](work/current-stream.md) — active implementation direction
+- [`docs/work/deferred-work.md`](work/deferred-work.md) — explicit backburner items
+- [`docs/work/course-writing-standard.md`](work/course-writing-standard.md) — editorial gate for course prose
+- [`docs/work/course-program-plan.md`](work/course-program-plan.md) — consolidated active course-planning brief
+
+Tranche plans, audits, and superseded planning notes belong under `docs/archive/work/`.
 
 ### `docs/archive/`
 
-Cold storage for superseded, historical, or version-specific documents. Not current guidance.
+Cold storage for historical, superseded, versioned, or deep-reference material.
+Not current guidance. See [`docs/archive/README.md`](archive/README.md) for the thematic archive index.
 
 ---
 
 ## Rules
 
 - Do not add new top-level files under `docs/` except `docs/README.md`.
-- Every new document belongs under exactly one of: `spec`, `design`, `reference`, `work`, `archive`.
+- Every new document belongs under exactly one of: `spec`, `reference`, `design`, `work`, `archive`.
+- Keep the active working set small.
 - `spec/` is authoritative.
-- `design/` is for active proposals and decisions.
 - `reference/` is for current supporting material.
-- `work/` is for operational WIP, deferred items, and authoring briefs.
+- `design/` is for active design only.
+- `work/` is for current operational briefs only.
 - `archive/` is retained for context only.
