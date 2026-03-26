@@ -21,7 +21,7 @@ hex_digit       = digit | "A".."F" | "a".."f" ;
 string_lit      = '"' , { any_char_except_quote } , '"' ;
 char_lit        = "'" , char_body , "'" ;
 char_body       = any_char_except_quote | escape_seq ;
-escape_seq      = "\\" , ( "n" | "r" | "t" | "'" | "\\" | "x" , hex_digit , hex_digit ) ;
+escape_seq      = "\\" , ( escape_simple | "x" , hex_digit , hex_digit ) ;
 newline         = "\n" ;
 ```
 
@@ -30,6 +30,58 @@ Lexical normalization notes:
 - In instruction streams, a visible backslash separator (`\` followed by whitespace) is normalized to a newline-equivalent statement separator before parsing.
 - This companion grammar writes those boundaries as `newline` for readability.
 - `include "path"` is a pre-parse text-insertion directive. It is not modeled as an ordinary production in this grammar because it is expanded before parsing.
+
+Generated parser-atom note:
+
+- The block below is generated from `src/frontend/grammarData.ts`.
+- It documents parser-level atom syntax only; semantic restrictions still live in `docs/spec/zax-spec.md`.
+- Parser recovery behavior remains implementation-defined by the hand-written parser.
+
+<!-- BEGIN GENERATED: grammar-atoms -->
+```ebnf
+(* Generated from src/frontend/grammarData.ts. Re-run node scripts/generate-grammar-atoms.mjs. *)
+top_level_keyword       = "func" | "const" | "enum" | "data" | "import" | "type" | "union"
+                        | "globals" | "var" | "extern" | "bin" | "hex" | "op" | "section"
+                        | "align" ;
+
+asm_control_keyword     = "if" | "else" | "end" | "while" | "repeat" | "until" | "break"
+                        | "continue" | "select" | "case" ;
+condition_code          = "z" | "nz" | "c" | "nc" | "pe" | "po" | "m" | "p" ;
+
+named_section_kind      = "code" | "data" ;
+legacy_section_kind     = named_section_kind | "var" ;
+
+scalar_type             = "byte" | "word" | "addr" | "ptr" ;
+return_reg              = "HL" | "DE" | "BC" | "AF" ;
+
+reg8                    = "A" | "B" | "C" | "D" | "E" | "H" | "L" ;
+reg8_extended           = "IXH" | "IXL" | "IYH" | "IYL" | "I" | "R" ;
+reg16                   = "HL" | "DE" | "BC" | "SP" | "IX" | "IY" ;
+reg16_special           = "AF" ;
+reg16_shadow            = "AF'" ;
+register_name           = reg8 | reg8_extended | reg16 | reg16_special | reg16_shadow ;
+assignment_reg          = "A" | "B" | "C" | "D" | "E" | "H" | "L" | "IXH" | "IXL" | "IYH"
+                        | "IYL" | "BC" | "DE" | "HL" | "IX" | "IY" ;
+move_reg_atom           = "A" | "B" | "C" | "D" | "E" | "H" | "L" | "HL" | "DE" | "BC" | "SP"
+                        | "IX" | "IY" | "AF" | "IXH" | "IXL" | "IYH" | "IYL" ;
+index_reg16             = "HL" | "DE" | "BC" ;
+typed_reinterpret_base_reg= "HL" | "DE" | "BC" | "IX" | "IY" ;
+index_mem_base_reg      = "IX" | "IY" ;
+
+matcher_type_symbolic   = "reg8" | "reg16" | "idx16" | "cc" | "imm8" | "imm16" | "ea" | "mem8"
+                        | "mem16" ;
+
+imm_unary_op            = "+" | "-" | "~" ;
+imm_mul_op              = "*" | "/" | "%" ;
+imm_add_op              = "+" | "-" ;
+imm_shift_op            = "<<" | ">>" ;
+imm_and_op              = "&" ;
+imm_xor_op              = "^" ;
+imm_or_op               = "|" ;
+
+escape_simple           = "n" | "r" | "t" | "0" | "\\" | "'" | "\"" ;
+```
+<!-- END GENERATED: grammar-atoms -->
 
 ## 2. Module Structure
 
@@ -65,7 +117,7 @@ section_item    = const_decl
                 | extern_block
                 | func_decl
                 | op_decl ;
-section_kind    = "code" | "data" ;
+section_kind    = named_section_kind ;
 align_decl      = "align" , imm_expr ;
 ```
 
@@ -92,7 +144,6 @@ type_expr       = scalar_type
 
 type_name       = identifier , { "." , identifier } ;
 
-scalar_type     = "byte" | "word" | "addr" | "ptr" ;
 ```
 
 ## 4. Storage Declarations
@@ -120,8 +171,7 @@ hex_decl        = "hex" , identifier , "from" , string_lit ;
 func_decl       = [ "export" ] , "func" , identifier , "(" , [ param_list ] , ")" ,
                   [ ":" , ret_regs ] , newline , [ local_var_block ] , instr_stream , "end" ;
 
-ret_regs        = reg_ret_item , { "," , reg_ret_item } ;
-reg_ret_item    = "HL" | "DE" | "BC" | "AF" ;
+ret_regs        = return_reg , { "," , return_reg } ;
 param_list      = param , { "," , param } ;
 param           = identifier , ":" , type_expr ;
 
@@ -137,11 +187,8 @@ op_decl         = "op" , identifier , [ "(" , [ op_param_list ] , ")" ] ,
 op_param_list   = op_param , { "," , op_param } ;
 op_param        = identifier , ":" , matcher_type ;
 
-matcher_type    = "reg8" | "reg16"
-                | "A" | "HL" | "DE" | "BC" | "SP"
-                | "imm8" | "imm16"
-                | "ea" | "mem8" | "mem16"
-                | "idx16" | "cc" ;
+matcher_type    = matcher_type_symbolic
+                | "A" | "HL" | "DE" | "BC" | "SP" ;
 ```
 
 ## 6. Instruction Stream and Structured Control
@@ -163,27 +210,23 @@ instr_line      = step_stmt
                 | local_jump ;
 
 assign_stmt     = assign_target , ":=" , assign_source ;
-assign_target   = assign_reg | ea_expr ;
-assign_source   = assign_reg | ea_expr | move_addr | imm_expr ;
-assign_reg      = "A" | "B" | "C" | "D" | "E" | "H" | "L"
-                | "IXH" | "IXL" | "IYH" | "IYL"
-                | "BC" | "DE" | "HL" | "IX" | "IY" ;
+assign_target   = assignment_reg | ea_expr ;
+assign_source   = assignment_reg | ea_expr | move_addr | imm_expr ;
 
 step_stmt       = "step" , ea_expr , [ "," , imm_expr ] ;
 
-move_stmt       = "move" , move_reg , "," , move_src
-                | "move" , move_path , "," , move_reg ;
+move_stmt       = "move" , move_reg_atom , "," , move_src
+                | "move" , move_path , "," , move_reg_atom ;
 move_src        = move_addr | move_path ;
 move_path       = ea_expr ;
-move_reg        = reg8 | reg16 | "AF" | "SP" | "IXH" | "IXL" | "IYH" | "IYL" ;
 move_addr       = "@" , ea_expr ;  (* move_addr is only valid as the source operand in v1 *)
 
-if_stmt         = "if" , cc_expr , newline , instr_stream ,
+if_stmt         = "if" , condition_code , newline , instr_stream ,
                   [ "else" , newline , instr_stream ] , "end" ;
 
-while_stmt      = "while" , cc_expr , newline , instr_stream , "end" ;
+while_stmt      = "while" , condition_code , newline , instr_stream , "end" ;
 
-repeat_stmt     = "repeat" , newline , instr_stream , "until" , cc_expr ;
+repeat_stmt     = "repeat" , newline , instr_stream , "until" , condition_code ;
 
 select_stmt     = "select" , select_expr , newline ,
                   case_clause , { case_clause } , [ else_clause ] , "end" ;
@@ -200,13 +243,13 @@ local_jump      = ( "jp" | "jr" | "djnz" ) , "." , identifier ;
 
 ```ebnf
 imm_expr        = imm_or ;
-imm_or          = imm_xor , { "|" , imm_xor } ;
-imm_xor         = imm_and , { "^" , imm_and } ;
-imm_and         = imm_shift , { "&" , imm_shift } ;
-imm_shift       = imm_add , { ( "<<" | ">>" ) , imm_add } ;
-imm_add         = imm_mul , { ( "+" | "-" ) , imm_mul } ;
-imm_mul         = imm_unary , { ( "*" | "/" | "%" ) , imm_unary } ;
-imm_unary       = [ "-" | "+" | "~" ] , imm_primary ;
+imm_or          = imm_xor , { imm_or_op , imm_xor } ;
+imm_xor         = imm_and , { imm_xor_op , imm_and } ;
+imm_and         = imm_shift , { imm_and_op , imm_shift } ;
+imm_shift       = imm_add , { imm_shift_op , imm_add } ;
+imm_add         = imm_mul , { imm_add_op , imm_mul } ;
+imm_mul         = imm_unary , { imm_mul_op , imm_unary } ;
+imm_unary       = [ imm_unary_op ] , imm_primary ;
 imm_primary     = int_dec | int_hex | char_lit | imm_name | "(" , imm_expr , ")"
                 | "sizeof" , "(" , type_expr , ")"
                 | "offsetof" , "(" , type_expr , "," , field_path , ")" ;
@@ -226,9 +269,9 @@ reinterpret_base = reinterpret_reg
                  | "(" , reinterpret_addr_expr , ")" ;
 reinterpret_addr_expr = reinterpret_atom , ( "+" | "-" ) , imm_expr ;
 reinterpret_atom = reinterpret_reg | reinterpret_name ;
-reinterpret_reg  = "HL" | "DE" | "BC" | "IX" | "IY" ;
+reinterpret_reg  = typed_reinterpret_base_reg ;
 reinterpret_name = identifier ;
-ea_index        = imm_expr | reg8 | reg16 | "(" , reg16 , ")" ;
+ea_index        = imm_expr | reg8 | index_reg16 | "(" , "HL" , ")" | "(" , index_mem_base_reg , [ ( "+" | "-" ) , imm_expr ] , ")" | ea_expr ;
 
 value_init_expr = imm_expr | "0" ;
 rhs_alias_expr  = ea_expr ;
@@ -236,9 +279,6 @@ data_init_expr  = string_lit | aggregate_init | imm_expr ;
 aggregate_init  = "{" , [ init_item , { "," , init_item } ] , "}" ;
 init_item       = imm_expr | aggregate_init ;
 
-reg8            = "A" | "B" | "C" | "D" | "E" | "H" | "L"
-                | "IXH" | "IXL" | "IYH" | "IYL" ;
-reg16           = "HL" | "DE" | "BC" | "SP" | "IX" | "IY" ;
 ```
 
 ## 8. Known Current Constraints (Semantic)

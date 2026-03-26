@@ -14,7 +14,13 @@ import {
   parseTypeExprFromText,
 } from './parseImm.js';
 import { parseDiag as diag, parseDiagAtWithId } from './parseDiagnostics.js';
-import { ALL_REGISTER_NAMES, INDEX_REG16_NAMES, INDEX_REG8_NAMES } from './grammarData.js';
+import {
+  ALL_REGISTER_NAMES,
+  INDEX_MEM_BASE_REGISTERS,
+  INDEX_REG16_NAMES,
+  INDEX_REG8_NAMES,
+  TYPED_REINTERPRET_BASE_REGISTERS,
+} from './grammarData.js';
 
 function parseBalancedContent(
   text: string,
@@ -100,20 +106,22 @@ function parseTypedReinterpretBaseAtom(
   text: string,
   exprSpan: SourceSpan,
 ): { base: EaExprNode; rest: string } | undefined {
-  const regMatch = /^(HL|DE|BC|IX|IY)(?=$|[^A-Za-z0-9_'])/i.exec(text);
-  if (regMatch) {
+  const tokenMatch = /^([A-Za-z_][A-Za-z0-9_']*)/.exec(text);
+  if (!tokenMatch) return undefined;
+
+  const token = tokenMatch[1]!;
+  const canonical = canonicalRegisterToken(token);
+  if (TYPED_REINTERPRET_BASE_REGISTERS.has(canonical)) {
     return {
-      base: { kind: 'EaName', span: exprSpan, name: canonicalRegisterToken(regMatch[1]!) },
-      rest: text.slice(regMatch[0].length).trimStart(),
+      base: { kind: 'EaName', span: exprSpan, name: canonical },
+      rest: text.slice(token.length).trimStart(),
     };
   }
 
-  const nameMatch = /^([A-Za-z_][A-Za-z0-9_]*)/.exec(text);
-  if (!nameMatch) return undefined;
-  if (ALL_REGISTER_NAMES.has(canonicalRegisterToken(nameMatch[1]!))) return undefined;
+  if (ALL_REGISTER_NAMES.has(canonical)) return undefined;
   return {
-    base: { kind: 'EaName', span: exprSpan, name: nameMatch[1]! },
-    rest: text.slice(nameMatch[0].length).trimStart(),
+    base: { kind: 'EaName', span: exprSpan, name: token },
+    rest: text.slice(token.length).trimStart(),
   };
 }
 
@@ -191,24 +199,30 @@ export function parseEaIndexFromText(
   const t = indexText.trim();
   if (t.startsWith('(') && t.endsWith(')')) {
     const inner = t.slice(1, -1).trim();
-    if (/^HL$/i.test(inner)) return { kind: 'IndexMemHL', span: indexSpan };
-    const ixiy = /^(IX|IY)(?:\s*([+-])\s*(.+))?$/i.exec(inner);
+    const innerCanonical = canonicalRegisterToken(inner);
+    if (innerCanonical === 'HL') return { kind: 'IndexMemHL', span: indexSpan };
+
+    const ixiy = /^([A-Za-z_][A-Za-z0-9_']*)(?:\s*([+-])\s*(.+))?$/i.exec(inner);
     if (ixiy) {
-      const base = ixiy[1]!.toUpperCase() as 'IX' | 'IY';
-      const dispText = ixiy[2] ? `${ixiy[2]}${ixiy[3]?.trim() ?? ''}` : '';
-      const disp =
-        dispText.length > 0
-          ? parseImmExprFromText(filePath, dispText, indexSpan, diagnostics, false)
-          : undefined;
-      if (dispText.length > 0 && !disp) {
-        diag(diagnostics, filePath, `Invalid index expression: ${t}`, {
-          line: indexSpan.start.line,
-          column: indexSpan.start.column,
-        });
-        return undefined;
+      const baseToken = canonicalRegisterToken(ixiy[1]!);
+      if (INDEX_MEM_BASE_REGISTERS.has(baseToken)) {
+        const base = baseToken as 'IX' | 'IY';
+        const dispText = ixiy[2] ? `${ixiy[2]}${ixiy[3]?.trim() ?? ''}` : '';
+        const disp =
+          dispText.length > 0
+            ? parseImmExprFromText(filePath, dispText, indexSpan, diagnostics, false)
+            : undefined;
+        if (dispText.length > 0 && !disp) {
+          diag(diagnostics, filePath, `Invalid index expression: ${t}`, {
+            line: indexSpan.start.line,
+            column: indexSpan.start.column,
+          });
+          return undefined;
+        }
+        return { kind: 'IndexMemIxIy', span: indexSpan, base, ...(disp ? { disp } : {}) };
       }
-      return { kind: 'IndexMemIxIy', span: indexSpan, base, ...(disp ? { disp } : {}) };
     }
+
     if (!/[A-Za-z_]/.test(inner)) {
       const grouped = parseImmExprFromText(filePath, inner, indexSpan, diagnostics, false);
       if (grouped) {
@@ -223,14 +237,10 @@ export function parseEaIndexFromText(
       }
     }
   }
-  if (/^(HL|DE|BC)$/i.test(t)) {
-    const reg = canonicalRegisterToken(t);
-    if (INDEX_REG16_NAMES.has(reg)) return { kind: 'IndexReg16', span: indexSpan, reg };
-  }
-  {
-    const reg = canonicalRegisterToken(t);
-    if (INDEX_REG8_NAMES.has(reg)) return { kind: 'IndexReg8', span: indexSpan, reg };
-  }
+
+  const reg = canonicalRegisterToken(t);
+  if (INDEX_REG16_NAMES.has(reg)) return { kind: 'IndexReg16', span: indexSpan, reg };
+  if (INDEX_REG8_NAMES.has(reg)) return { kind: 'IndexReg8', span: indexSpan, reg };
 
   const imm = parseImmExprFromText(filePath, t, indexSpan, diagnostics, false);
   if (imm) return { kind: 'IndexImm', span: indexSpan, value: imm };
