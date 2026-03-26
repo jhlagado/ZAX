@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 
-import type { Diagnostic } from './diagnostics/types.js';
+import type { Diagnostic } from './diagnosticTypes.js';
 
 export function hasErrors(diagnostics: Diagnostic[]): boolean {
   return diagnostics.some((d) => d.severity === 'error');

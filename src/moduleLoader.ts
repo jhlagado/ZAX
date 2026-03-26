@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 import { hasErrors, normalizePath } from './compileShared.js';
-import type { Diagnostic } from './diagnostics/types.js';
-import { DiagnosticIds } from './diagnostics/types.js';
+import type { Diagnostic } from './diagnosticTypes.js';
+import { DiagnosticIds } from './diagnosticTypes.js';
 import type { ImportNode, ModuleFileNode, ModuleItemNode, ProgramNode, SectionItemNode } from './frontend/ast.js';
 import { parseModuleFile } from './frontend/parser.js';
 import { stripLineComment } from './frontend/parseParserShared.js';
