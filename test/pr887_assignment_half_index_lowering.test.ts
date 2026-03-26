@@ -34,7 +34,6 @@ describe('PR887 := half-index lowering', () => {
       emitAbs16FixupPrefixed: () => {},
       emitRel8Fixup: () => {},
       conditionOpcodeFromName: () => undefined,
-      conditionNameFromOpcode: () => undefined,
       callConditionOpcodeFromName: () => undefined,
       jrConditionOpcodeFromName: () => undefined,
       conditionOpcode: () => undefined,
@@ -44,7 +43,6 @@ describe('PR887 := half-index lowering', () => {
       resolveRawAliasTargetName: () => undefined,
       isModuleStorageName: () => false,
       isFrameSlotName: () => false,
-      resolveScalarTypeForEa: () => undefined,
       resolveScalarTypeForLd: () => undefined,
       resolveEa: () => undefined,
       diagIfRetStackImbalanced: () => {},
@@ -131,7 +129,9 @@ describe('PR887 := half-index lowering', () => {
         });
       },
       emitInstr: (head, operands) => {
-        emitted.push(`${head} ${operands.map((operand) => (operand.kind === 'Reg' ? operand.name : operand.kind)).join(',')}`);
+        emitted.push(
+          `${head} ${operands.map((operand) => (operand.kind === 'Reg' ? operand.name : operand.kind)).join(',')}`,
+        );
         return true;
       },
       emitRawCodeBytes: () => {},
@@ -139,7 +139,6 @@ describe('PR887 := half-index lowering', () => {
       emitAbs16FixupPrefixed: () => {},
       emitRel8Fixup: () => {},
       conditionOpcodeFromName: () => undefined,
-      conditionNameFromOpcode: () => undefined,
       callConditionOpcodeFromName: () => undefined,
       jrConditionOpcodeFromName: () => undefined,
       conditionOpcode: () => undefined,
@@ -149,7 +148,6 @@ describe('PR887 := half-index lowering', () => {
       resolveRawAliasTargetName: () => undefined,
       isModuleStorageName: () => false,
       isFrameSlotName: () => false,
-      resolveScalarTypeForEa: () => undefined,
       resolveScalarTypeForLd: () => undefined,
       resolveEa: () => undefined,
       diagIfRetStackImbalanced: () => {},

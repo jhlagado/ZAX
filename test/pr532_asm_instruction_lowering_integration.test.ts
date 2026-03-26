@@ -35,7 +35,6 @@ describe('PR532 asm instruction lowering integration', () => {
         events.push(`rel:${opcode.toString(16)}:${baseLower}:${addend}:${mnemonic}`);
       },
       conditionOpcodeFromName: (name) => (name.toUpperCase() === 'NZ' ? 0xc2 : undefined),
-      conditionNameFromOpcode: (opcode) => (opcode === 0xc2 ? 'NZ' : undefined),
       callConditionOpcodeFromName: (name) => (name.toUpperCase() === 'NZ' ? 0xc4 : undefined),
       jrConditionOpcodeFromName: (name) => (name.toUpperCase() === 'NZ' ? 0x20 : undefined),
       conditionOpcode: (op) =>
@@ -53,7 +52,6 @@ describe('PR532 asm instruction lowering integration', () => {
       resolveRawAliasTargetName: () => undefined,
       isModuleStorageName: () => false,
       isFrameSlotName: () => false,
-      resolveScalarTypeForEa: () => undefined,
       resolveScalarTypeForLd: () => undefined,
       resolveEa: () => undefined,
       diagIfRetStackImbalanced: () => {},
