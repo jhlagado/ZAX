@@ -4,7 +4,7 @@ import { parseImmExprFromText } from './parseImm.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import { parseAssignmentInstruction } from './parseAssignmentInstruction.js';
 import { parseAsmOperand } from './parseOperands.js';
-import { parseSuccPredInstruction } from './parseSuccPredInstruction.js';
+import { parseStepInstruction } from './parseSuccPredInstruction.js';
 
 function splitTopLevelCommaSeparated(text: string): string[] {
   const parts: string[] = [];
@@ -62,8 +62,8 @@ export function parseAsmInstruction(
   const headLower = head.toLowerCase();
   const rest = firstSpace === -1 ? '' : trimmed.slice(firstSpace).trim();
 
-  if (headLower === 'succ' || headLower === 'pred') {
-    return parseSuccPredInstruction(filePath, headLower, rest, instrSpan, diagnostics);
+  if (headLower === 'step' || headLower === 'succ' || headLower === 'pred') {
+    return parseStepInstruction(filePath, headLower, rest, instrSpan, diagnostics);
   }
 
   if (headLower === 'move') {
