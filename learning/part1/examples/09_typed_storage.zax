@@ -1,4 +1,4 @@
-; Chapter 08 example: typed local variables, := assignment, and step
+; Chapter 08 example: typed local variables, := assignment, step
 ; Rewrites the Phase A capstone logic from Chapter 07 using typed locals.
 ; The program scans a byte table, finds the maximum value, and counts
 ; entries strictly greater than 64 — the same two tasks as Chapter 07.

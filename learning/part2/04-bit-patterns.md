@@ -112,8 +112,8 @@ the low bit of the result.
 
 The outer loop loads `reversed_value` into A and `source_value` into B, calls
 the op, writes back, then shifts `source_value` right by one with `srl a`. This
-repeats for eight iterations counted by `bit_count`, decremented with `step
-bit_count, -1` at each step.
+repeats for eight iterations counted by `bit_count`, decremented with
+`step bit_count, -1` at each step.
 
 The `op` form here is natural: `append_low_bit` takes two specific registers as
 operands, and the compiler checks that the call sites provide the right register
@@ -228,9 +228,9 @@ actual bit work — is what ZAX code looks like at its most concentrated.
 - Bit algorithms are expressed using Z80 bit-manipulation instructions directly:
   `srl`, `rr`, `and`, `or`, `xor`, `bit`. ZAX provides no higher-level bitwise
   abstractions. The instructions appear as mnemonics.
-- `while NZ` with `step ..., -1` decrement works for counting loops just as well as for
-  sentinel loops. When the counter hits zero, `or a` sets Z and the
-  loop exits.
+- `while NZ` with `step ..., -1` decrement works for counting loops just as
+  well as for sentinel loops. When the counter hits zero, `or a` sets Z and
+  the loop exits.
 - A local `op` captures a recurring register-level pattern without function call
   overhead. The compiler verifies that the operand register bindings at call sites
   match the op's parameter declarations.
@@ -263,7 +263,7 @@ struct array rather than a scalar.
 1. `popcount.zax` exits the loop when `working_value` reaches zero. This is
    efficient for sparse values (few set bits) but not for values with many set
    bits. Could you write a version that always runs exactly eight iterations using
-  `step bit_count, -1` as the loop counter? Compare code size.
+   `step bit_count, -1` as the loop counter? Compare code size.
 
 2. In `parity.zax`, `xor 1` is used to toggle `parity_value`. The Z80 has a `CPL`
    instruction that inverts all bits of A. Could `CPL` be used instead of `xor 1`?

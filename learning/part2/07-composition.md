@@ -228,7 +228,7 @@ stack here, but using the same typed-path and null-sentinel approach.
 ## Exercises
 
 1. The `TokenKind.Multiply` case calls the helper `mul_u16`. `mul_u16` uses a
-  `while` loop with a `step ..., -1` on the repeat count. What is the time complexity
+   `while` loop with a `step ..., -1` on the repeat count. What is the time complexity
    of this multiplication, and what would happen for large operands? How would
    you extend `rpn_calculator.zax` to add a `TokenKind.Subtract` case?
 

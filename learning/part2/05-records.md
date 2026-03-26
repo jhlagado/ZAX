@@ -144,8 +144,8 @@ end
 (From `learning/part2/examples/unit5/ring_buffer.zax`, lines 33–50.)
 
 `step used_slots` increments the module-level `used_slots` byte directly. `step`
-works on any typed scalar storage path — not only on frame-local `var`
-slots, but also on module-level variables declared in named `data` sections. Here,
+works on any typed scalar storage path — not only on frame-local `var` slots,
+but also on module-level variables declared in named `data` sections. Here,
 `used_slots` lives in the module's `vars` section and `step` increments it in
 place.
 
@@ -210,8 +210,8 @@ the mechanics.
   and load or store.
 - Non-power-of-two element sizes are fully supported. The compiler emits a shift-
   and-add stride sequence rather than a pure shift chain.
-- `step` works on module-level variables, not only on frame locals. Any
-  typed scalar storage path is a valid operand.
+- `step` works on module-level variables, not only on frame locals. Any typed
+  scalar storage path is a valid operand.
 - The `next_slot` modular-index helper is the clean way to wrap an index
   without an explicit division: increment, compare against the capacity bound,
   return zero on overflow.

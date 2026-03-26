@@ -3510,14 +3510,15 @@ ZAX distinguishes two forms: the bare name means "the typed value at this locati
 
 ## `step`
 
-`step path` increments a typed scalar in place. `step path, -1` decrements it:
+`step path` increments a typed scalar in place by one. `step path, amount` adds a signed compile-time integer to it:
 
 ```zax
-step count      ; count := count + 1
-step count, -1  ; count := count - 1
+step count           ; count := count + 1
+step count, -1       ; count := count - 1
+step count, 5        ; count := count + 5
 ```
 
-The compiler lowers each to the appropriate increment or decrement sequence. Neither returns a value or sets flags in a guaranteed way — they are pure mutations of the named location.
+The amount, when given, must be a constant the compiler can evaluate — a literal or a named `const`. `step` returns no value and does not set flags reliably; it is a pure mutation of the named location.
 
 In Chapter 11, you incremented a counter by hand:
 
@@ -3527,7 +3528,12 @@ inc a
 ld (ix+cnt+0), a
 ```
 
-`step cnt` does the same thing. It is shorter to write and communicates the intent directly: this location is being counted up.
+`step cnt` does the same thing in one line. Named constants work as the amount, which is useful when the step size has a name worth giving:
+
+```zax
+const STRIDE = 4
+step cursor, STRIDE     ; cursor := cursor + 4
+```
 
 ---
 
@@ -3604,7 +3610,7 @@ Both are always available. Neither is required. The choice is about clarity for 
 - `:=` assigns from right to left. The compiler checks types and emits the correct instruction sequence.
 - For byte locals, `:=` emits a single `ld (ix±d), reg` or `ld reg, (ix±d)` — the same instruction you would write by hand.
 - For word locals, `:=` emits a multi-instruction sequence using DE as an intermediate and `ex de, hl` to preserve registers.
-- `step` increments or decrements a typed scalar in place. It replaces the three-instruction load-modify-store pattern.
+- `step path` increments a typed scalar by one. `step path, amount` adds any signed compile-time integer. Both replace the three-instruction load-modify-store pattern.
 - Use bare names with `:=` for typed locals. Do not use `(name)` — that means something different.
 - Raw Z80 instructions can still use typed names as operands. The compiler resolves them to IX-relative offsets.
 - `:=` and raw access are complementary. Use whichever is clearest.
@@ -3730,7 +3736,7 @@ By this point you can:
 - use `section data` to declare named module storage
 - write a ZAX `func` with typed parameters and locals, accessed through raw IX-relative offsets
 - use `if`/`else` and `while` loops with `break` and `continue`
-- use `:=` for typed assignment and `step` for typed scalar update
+- use `:=` for typed assignment and `step` for typed scalar mutation
 - write an `op` for inline named instruction sequences
 - use IXH/IXL/IYH/IYL and the ZAX pseudo-opcodes for 16-bit register moves
 
@@ -4020,23 +4026,28 @@ what is inside it.
 
 ## `step`
 
-ZAX provides a built-in operation for incrementing and decrementing typed
-scalar paths: `step`. It operates on locals, module-scope
-variables, record fields, and array elements — any typed scalar storage path.
+`step path` increments a typed scalar location by one. `step path, amount`
+adds a signed compile-time integer to it. Both forms work on locals,
+module-scope variables, record fields, and array elements — any typed scalar
+storage path.
 
 ```zax
-  step index_value      ; increment the word local 'index_value' by 1
-  step remaining, -1    ; decrement the word local 'remaining' by 1
+    step index_value         ; increment the word local 'index_value' by 1
+    step remaining, -1       ; decrement the word local 'remaining' by 1
+    step offset, 4           ; add 4 to 'offset'
 ```
 
-These are not function calls; they lower to an efficient read-increment-write
-(or read-decrement-write) sequence at the storage path in question. Using
-`step` instead of a manual HL-roundtrip sequence keeps the code
-concise and the intent visible.
+`step` lowers to a read-modify-write sequence at the storage path. Writing
+`step remaining, -1` instead of loading `remaining` into HL, subtracting, and
+storing it back keeps the operation at the name level rather than the register
+level.
 
-In the Chapter 01 examples, `step` is the standard way to advance or
-retreat a counter local. You will see it throughout the loops that drive
-counting and iteration.
+The amount, when present, must be a compile-time constant: a literal or a
+`const` declaration. You cannot pass a runtime variable as the step amount.
+
+In the Chapter 01 examples, `step` is the standard way to advance or retreat a
+counter local. You will see it throughout the loops that drive counting and
+iteration.
 
 ---
 
@@ -4203,8 +4214,9 @@ See `learning/part2/examples/unit1/digits.zax`.
 - `while NZ` is the basic loop form. Entry flags always matter: a stale Z=1
   on entry skips the loop body entirely. Establish NZ with `ld a, 1` / `or a`
   before the first `while NZ`, and re-establish it at the back edge.
-- `step` increments and decrements typed scalar paths.
-  It appears wherever a loop counter or accumulator needs stepping.
+- `step path` increments a typed scalar by one; `step path, amount` adds any
+  signed compile-time integer. Both appear wherever a counter or accumulator
+  needs advancing.
 - Recursive functions look and work like non-recursive ones. The compiler
   handles the per-call IX frame.
 
@@ -4672,13 +4684,13 @@ that fit in 16 bits:
 After computing the midpoint, the function reads `values[L]` (using L as the
 low byte of `mid_index`) and compares against `target_value`. If C is set
 (target is less than probe), the search continues in the left half by setting
-`high_index := mid_index - 1` via `step high_index, -1`. If NC and NZ (target is greater than
-probe), it continues in the right half with `step` on `low_index`. The loop
-exits when the search interval closes (`low_index > high_index`), returning
-`$FFFF` as not-found.
+`high_index := mid_index - 1` via `step high_index, -1`. If NC and NZ (target
+is greater than probe), it advances `low_index` with `step low_index`. The
+loop exits when the search interval closes (`low_index > high_index`),
+returning `$FFFF` as not-found.
 
-`step high_index, -1` and `step low_index` are the concise way to
-narrow the search bounds by one step in either direction.
+`step` on `high_index` and `low_index` narrows the search bounds by one in
+either direction.
 
 See `learning/part2/examples/unit2/binary_search.zax`.
 
@@ -4720,9 +4732,8 @@ See `learning/part2/examples/unit2/prime_sieve.zax`.
   condition test. It requires that flags be correct for the loop condition at
   the point of the jump. Establishing those flags immediately before `continue`
   is the pattern used in `prime_sieve.zax`.
-- `step` works on index locals just as it works on counter locals.
-  It appears wherever `low_index`, `high_index`, or `scan_index` needs
-  stepping by one.
+- `step` works on index locals just as it works on counter locals. It appears
+  wherever `low_index`, `high_index`, or `scan_index` needs stepping by one.
 
 ---
 
@@ -4732,7 +4743,7 @@ See `learning/part2/examples/unit2/prime_sieve.zax`.
 - `learning/part2/examples/unit2/insertion_sort.zax` — sorted insertion into a growing prefix
 - `learning/part2/examples/unit2/selection_sort.zax` — minimum-selection with `break`-terminated scan
 - `learning/part2/examples/unit2/linear_search.zax` — sequential scan with early return
-- `learning/part2/examples/unit2/binary_search.zax` — divide-and-conquer with `step`-based bound narrowing
+- `learning/part2/examples/unit2/binary_search.zax` — divide-and-conquer with `step` bound narrowing
 - `learning/part2/examples/unit2/prime_sieve.zax` — nested loops with `break` and `continue`
 
 ---
@@ -4990,9 +5001,9 @@ end
 
 The scan pointer advances through `step scan_ptr` rather than `inc hl` because the
 pointer is kept in a typed local (`scan_ptr: word`) rather than held continuously
-in HL. The loop reloads `scan_ptr` into HL at the start of each iteration. This
-is a natural tradeoff: keeping the pointer in a typed local lets the function call
-`times_ten` and `step` without worrying about HL being clobbered by the call.
+in HL. The loop reloads `scan_ptr` into HL at the start of each iteration. Keeping
+the pointer in a typed local lets the function call `times_ten` and `step` without
+worrying about HL being clobbered by the call.
 
 See `learning/part2/examples/unit3/atoi.zax`.
 
@@ -5009,8 +5020,8 @@ recover the digit: the remainder from `remaining - quotient * 10` gives the raw
 digit value. Adding `'0'` converts it to an ASCII character.
 
 The reversal pass uses `step write_index, -1` to walk backward through the scratch
-buffer and `step read_index` to fill the output buffer forward. These `step`
-calls work on typed byte locals in the `var` block.
+buffer and `step read_index` to fill the output buffer forward. Both `step` calls
+work on typed byte locals in the `var` block.
 
 See `learning/part2/examples/unit3/itoa.zax`.
 
@@ -5185,8 +5196,8 @@ the low bit of the result.
 
 The outer loop loads `reversed_value` into A and `source_value` into B, calls
 the op, writes back, then shifts `source_value` right by one with `srl a`. This
-repeats for eight iterations counted by `bit_count`, decremented with `step
-bit_count, -1` at each step.
+repeats for eight iterations counted by `bit_count`, decremented with
+`step bit_count, -1` at each step.
 
 The `op` form here is natural: `append_low_bit` takes two specific registers as
 operands, and the compiler checks that the call sites provide the right register
@@ -5301,9 +5312,9 @@ actual bit work — is what ZAX code looks like at its most concentrated.
 - Bit algorithms are expressed using Z80 bit-manipulation instructions directly:
   `srl`, `rr`, `and`, `or`, `xor`, `bit`. ZAX provides no higher-level bitwise
   abstractions. The instructions appear as mnemonics.
-- `while NZ` with `step ..., -1` decrement works for counting loops just as well as for
-  sentinel loops. When the counter hits zero, `or a` sets Z and the
-  loop exits.
+- `while NZ` with `step ..., -1` decrement works for counting loops just as
+  well as for sentinel loops. When the counter hits zero, `or a` sets Z and
+  the loop exits.
 - A local `op` captures a recurring register-level pattern without function call
   overhead. The compiler verifies that the operand register bindings at call sites
   match the op's parameter declarations.
@@ -5336,7 +5347,7 @@ struct array rather than a scalar.
 1. `popcount.zax` exits the loop when `working_value` reaches zero. This is
    efficient for sparse values (few set bits) but not for values with many set
    bits. Could you write a version that always runs exactly eight iterations using
-  `step bit_count, -1` as the loop counter? Compare code size.
+   `step bit_count, -1` as the loop counter? Compare code size.
 
 2. In `parity.zax`, `xor 1` is used to toggle `parity_value`. The Z80 has a `CPL`
    instruction that inverts all bits of A. Could `CPL` be used instead of `xor 1`?
@@ -5494,8 +5505,8 @@ end
 (From `learning/part2/examples/unit5/ring_buffer.zax`, lines 33–50.)
 
 `step used_slots` increments the module-level `used_slots` byte directly. `step`
-works on any typed scalar storage path — not only on frame-local `var`
-slots, but also on module-level variables declared in named `data` sections. Here,
+works on any typed scalar storage path — not only on frame-local `var` slots,
+but also on module-level variables declared in named `data` sections. Here,
 `used_slots` lives in the module's `vars` section and `step` increments it in
 place.
 
@@ -5560,8 +5571,8 @@ the mechanics.
   and load or store.
 - Non-power-of-two element sizes are fully supported. The compiler emits a shift-
   and-add stride sequence rather than a pure shift chain.
-- `step` works on module-level variables, not only on frame locals. Any
-  typed scalar storage path is a valid operand.
+- `step` works on module-level variables, not only on frame locals. Any typed
+  scalar storage path is a valid operand.
 - The `next_slot` modular-index helper is the clean way to wrap an index
   without an explicit division: increment, compare against the capacity bound,
   return zero on overflow.
@@ -5658,8 +5669,8 @@ of `n` disks from one peg to another using a spare peg. The recurrence is:
 
 `hanoi_count` in `hanoi.zax` implements this directly. The base case returns zero
 when `disks_count` is zero. Otherwise, it decrements `disks_count` into a local
-`reduced_count` using `step ..., -1`, makes two recursive calls with the pegs permuted,
-and combines the results:
+`reduced_count` using `step ..., -1`, makes two recursive calls with the pegs
+permuted, and combines the results:
 
 ```zax
   reduced_count := disks_count
@@ -5750,8 +5761,8 @@ two indices meet or cross, at which point there is nothing left to swap.
 
 `reverse_range` takes a `left_index` and `right_index`. If `left_index >= right_index`,
 it returns immediately. Otherwise, it swaps the two endpoints, advances the
-left index with `step next_left`, retreats the right index with `step next_right, -1`,
-and recurses:
+left index with `step next_left`, retreats the right index with
+`step next_right, -1`, and recurses:
 
 ```zax
 func reverse_range(left_index: byte, right_index: byte)
@@ -6084,7 +6095,7 @@ stack here, but using the same typed-path and null-sentinel approach.
 ## Exercises
 
 1. The `TokenKind.Multiply` case calls the helper `mul_u16`. `mul_u16` uses a
-  `while` loop with a `step ..., -1` on the repeat count. What is the time complexity
+   `while` loop with a `step ..., -1` on the repeat count. What is the time complexity
    of this multiplication, and what would happen for large operands? How would
    you extend `rpn_calculator.zax` to add a `TokenKind.Subtract` case?
 
@@ -6642,9 +6653,9 @@ the same source file.
 ## Exercises
 
 1. `place_row` uses three separate `continue` statements to skip failed
-  constraint checks. Each one advances `col_index` with `step` and
+   constraint checks. Each one advances `col_index` with `step` and
    re-establishes NZ before jumping to the loop test. What would happen if the
-  `step col_index` were omitted from one of the three `continue` paths? Trace
+   `step col_index` were omitted from one of the three `continue` paths? Trace
    the column loop behaviour for a column that fails the first constraint check.
 
 2. The `found_solution` flag is module-level state. `main` resets it to zero

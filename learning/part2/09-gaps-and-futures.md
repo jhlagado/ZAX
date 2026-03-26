@@ -180,9 +180,9 @@ the same source file.
 ## Exercises
 
 1. `place_row` uses three separate `continue` statements to skip failed
-  constraint checks. Each one advances `col_index` with `step` and
+   constraint checks. Each one advances `col_index` with `step` and
    re-establishes NZ before jumping to the loop test. What would happen if the
-  `step col_index` were omitted from one of the three `continue` paths? Trace
+   `step col_index` were omitted from one of the three `continue` paths? Trace
    the column loop behaviour for a column that fails the first constraint check.
 
 2. The `found_solution` flag is module-level state. `main` resets it to zero
