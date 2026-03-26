@@ -3,7 +3,8 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-import { ensureCliBuilt, exists, normalizePathForCompare, runCli } from './helpers/cli.js';
+import { ensureCliBuilt } from './helpers/cliBuild.js';
+import { exists, normalizePathForCompare, runCli } from './helpers/cli.js';
 
 async function expectNoArtifacts(base: string): Promise<void> {
   expect(await exists(`${base}.hex`)).toBe(false);

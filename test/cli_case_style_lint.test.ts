@@ -3,7 +3,8 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { ensureCliBuilt, exists, runCli } from './helpers/cli.js';
+import { ensureCliBuilt } from './helpers/cliBuild.js';
+import { exists, runCli } from './helpers/cli.js';
 
 describe('cli case-style linting', () => {
   beforeAll(async () => {
