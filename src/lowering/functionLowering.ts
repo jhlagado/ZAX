@@ -16,11 +16,7 @@ import type {
 import type { CompileEnv } from '../semantics/env.js';
 import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
-import type {
-  Callable,
-  PendingSymbol,
-  SourceSegmentTag,
-} from './loweringTypes.js';
+import type { Callable, PendingSymbol, SourceSegmentTag } from './loweringTypes.js';
 import type { OpOverloadSelection } from './opMatching.js';
 import type { OpStackSummary } from './opStackAnalysis.js';
 import type { EaResolution } from './eaResolution.js';
@@ -119,9 +115,7 @@ export type FunctionLoweringConditionContext = {
   jrConditionOpcodeFromName: (name: string) => number | undefined;
   conditionOpcode: (operand: AsmOperandNode) => number | undefined;
   inverseConditionName: (name: string) => string | undefined;
-  symbolicTargetFromExpr: (
-    expr: ImmExprNode,
-  ) => { baseLower: string; addend: number } | undefined;
+  symbolicTargetFromExpr: (expr: ImmExprNode) => { baseLower: string; addend: number } | undefined;
 };
 
 export type FunctionLoweringTypeContext = {
@@ -234,9 +228,15 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     emitRel8Fixup,
   } = ctx;
   const { conditionOpcodeFromName, conditionNameFromOpcode, callConditionOpcodeFromName } = ctx;
-  const { jrConditionOpcodeFromName, conditionOpcode, inverseConditionName, symbolicTargetFromExpr } = ctx;
+  const {
+    jrConditionOpcodeFromName,
+    conditionOpcode,
+    inverseConditionName,
+    symbolicTargetFromExpr,
+  } = ctx;
   const { evalImmExpr, env, resolveScalarBinding, resolveScalarKind, resolveEaTypeExpr } = ctx;
-  const { resolveScalarTypeForEa, resolveScalarTypeForLd, resolveArrayType, buildEaWordPipeline } = ctx;
+  const { resolveScalarTypeForEa, resolveScalarTypeForLd, resolveArrayType, buildEaWordPipeline } =
+    ctx;
   const { enforceEaRuntimeAtomBudget, enforceDirectCallSiteEaBudget } = ctx;
   const {
     resolveEa,
@@ -247,12 +247,21 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     pushZeroExtendedReg8,
     loadImm16ToHL,
   } = ctx;
-  const { stackSlotOffsets, stackSlotTypes, localAliasTargets, storageTypes, moduleAliasTargets } = ctx;
-  const { rawTypedCallWarningsEnabled, resolveCallable, resolveOpCandidates, opStackPolicyMode } = ctx;
+  const { stackSlotOffsets, stackSlotTypes, localAliasTargets, storageTypes, moduleAliasTargets } =
+    ctx;
+  const { rawTypedCallWarningsEnabled, resolveCallable, resolveOpCandidates, opStackPolicyMode } =
+    ctx;
   const { formatAsmOperandForOpDiag, selectOpOverload, summarizeOpStackEffect } = ctx;
   const { cloneImmExpr, cloneEaExpr, cloneOperand } = ctx;
   const { flattenEaDottedName, normalizeFixedToken, reg8, reg16, generatedLabelCounterRef } = ctx;
-  const { typeDisplay, sameTypeShape, emitStepPipeline, emitScalarWordLoad, emitScalarWordStore, lowerLdWithEa } = ctx;
+  const {
+    typeDisplay,
+    sameTypeShape,
+    emitStepPipeline,
+    emitScalarWordLoad,
+    emitScalarWordStore,
+    lowerLdWithEa,
+  } = ctx;
   let currentCodeSegmentTag = currentCodeSegmentTagRef.current;
   const setCurrentCodeSegmentTag = (tag: SourceSegmentTag | undefined): void => {
     currentCodeSegmentTag = tag;
@@ -391,7 +400,6 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     emitAbs16FixupPrefixed,
     emitRel8Fixup,
     conditionOpcodeFromName,
-    conditionNameFromOpcode,
     callConditionOpcodeFromName,
     jrConditionOpcodeFromName,
     conditionOpcode,
@@ -401,7 +409,6 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     resolveRawAliasTargetName: (name) => resolveLocalAliasTargetName(name.toLowerCase()),
     isModuleStorageName: (name) => storageTypes.has(name.toLowerCase()),
     isFrameSlotName: (name) => stackSlotOffsets.has(name.toLowerCase()),
-    resolveScalarTypeForEa,
     resolveScalarTypeForLd,
     resolveEa,
     diagIfRetStackImbalanced: (span, mnemonic) => {
