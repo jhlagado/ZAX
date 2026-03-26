@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
-import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { access, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -11,12 +12,14 @@ const repoRoot = resolve(__dirname, '..', '..');
 const cliPath = resolve(repoRoot, 'dist', 'src', 'cli.js');
 const buildTmpDir = resolve(repoRoot, '.tmp');
 const buildLockPath = resolve(buildTmpDir, 'cli-build.lock');
+const buildStampPath = resolve(buildTmpDir, 'cli-build.stamp');
 const lockWaitSliceMs = 250;
 const lockWaitMaxMs = 90_000;
 const lockStaleMs = 5 * 60_000;
 const lockAcquireTimeoutMs = 10 * 60_000;
 
 let buildPromise: Promise<void> | undefined;
+let buildPromiseKey: string | undefined;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
@@ -126,7 +129,53 @@ async function clearStaleLockIfNeeded(): Promise<void> {
   await rm(buildLockPath, { force: true });
 }
 
-async function buildCliWithLock(): Promise<void> {
+async function listBuildInputFiles(rootPath: string): Promise<string[]> {
+  const info = await stat(rootPath);
+  if (!info.isDirectory()) return [rootPath];
+
+  const entries = await readdir(rootPath, { withFileTypes: true });
+  const paths = await Promise.all(
+    entries
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(async (entry) => {
+        const entryPath = resolve(rootPath, entry.name);
+        if (entry.isDirectory()) return listBuildInputFiles(entryPath);
+        return [entryPath];
+      }),
+  );
+  return paths.flat();
+}
+
+async function computeCliBuildKey(): Promise<string> {
+  const hash = createHash('sha1');
+  const roots = [
+    resolve(repoRoot, 'package.json'),
+    resolve(repoRoot, 'package-lock.json'),
+    resolve(repoRoot, 'tsconfig.json'),
+    resolve(repoRoot, 'src'),
+  ];
+  for (const root of roots) {
+    for (const file of await listBuildInputFiles(root)) {
+      const fileInfo = await stat(file);
+      hash.update(file);
+      hash.update(':');
+      hash.update(String(fileInfo.size));
+      hash.update(':');
+      hash.update(String(fileInfo.mtimeMs));
+      hash.update('\n');
+    }
+  }
+  return hash.digest('hex');
+}
+
+async function isCliBuildFresh(buildKey: string): Promise<boolean> {
+  if (!(await pathExists(cliPath))) return false;
+  const stamp = await readFile(buildStampPath, 'utf8').catch(() => '');
+  return stamp.trim() === buildKey;
+}
+
+async function buildCliWithLock(buildKey: string): Promise<void> {
+  if (await isCliBuildFresh(buildKey)) return;
   await mkdir(buildTmpDir, { recursive: true });
   const acquireDeadlineMs = Date.now() + lockAcquireTimeoutMs;
 
@@ -145,10 +194,12 @@ async function buildCliWithLock(): Promise<void> {
         flag: 'wx',
       });
       try {
+        if (await isCliBuildFresh(buildKey)) return;
         await execFileAsync('npm', ['run', 'build'], {
           encoding: 'utf8',
           shell: process.platform === 'win32',
         });
+        await writeFile(buildStampPath, `${buildKey}\n`, 'utf8');
       } finally {
         await rm(buildLockPath, { force: true });
       }
@@ -172,8 +223,16 @@ async function buildCliWithLock(): Promise<void> {
 }
 
 export async function ensureCliBuilt(): Promise<void> {
-  if (!buildPromise) {
-    buildPromise = buildCliWithLock();
+  const buildKey = await computeCliBuildKey();
+  if (await isCliBuildFresh(buildKey)) return;
+
+  if (!buildPromise || buildPromiseKey !== buildKey) {
+    buildPromiseKey = buildKey;
+    buildPromise = buildCliWithLock(buildKey).catch((err) => {
+      buildPromise = undefined;
+      buildPromiseKey = undefined;
+      throw err;
+    });
   }
   return buildPromise;
 }
@@ -237,8 +296,10 @@ export function normalizePathForCompare(path: string): string {
 }
 
 export const __cliBuildLockInternals = {
+  computeCliBuildKey,
   computeWaitDeadline,
   hasLockAcquireTimedOut,
+  isCliBuildFresh,
   parseLockMeta,
   shouldEvictLock,
 };

@@ -191,5 +191,5 @@ describe('cli contract matrix', () => {
     expect(await exists(onOut)).toBe(true);
 
     await rm(work, { recursive: true, force: true });
-  });
+  }, 20_000);
 });
