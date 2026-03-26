@@ -3,9 +3,10 @@ type Pair
   hi: byte
 end
 
-data
+section data vars at $1000
   named: Pair = { hi: $12, lo: $34 }
   positional: Pair = { $56, $78 }
+end
 
 export func main()
 end
