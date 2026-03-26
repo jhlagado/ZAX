@@ -2,13 +2,9 @@
 
 # Chapter 6 — Data Tables and Indexed Access
 
-This chapter shows how to lay out a byte or word table in memory, and how to
-read entries from it using HL as a sequential pointer and IX as a displaced-
-access pointer. After reading it you will be able to define a small table,
-load its base address into HL or IX, and read elements either sequentially in
-a loop or by fixed offset.
-
-Prerequisites: Chapters 3–5 (registers, `ld` modes, labels, DJNZ loops).
+This chapter shows how to lay out a byte or word table in memory and read
+entries from it — using HL as a sequential pointer and IX as a displaced-access
+pointer.
 
 ---
 
@@ -50,7 +46,7 @@ HL holds an address. `ld a, (hl)` reads the byte at that address. `inc hl`
 advances HL to the next byte. Repeating those two operations steps through a
 byte table one entry at a time.
 
-The standard pattern for reading a table with a DJNZ loop:
+A DJNZ loop over a byte table looks like this:
 
 ```zax
 ld hl, scores      ; HL = address of first entry
@@ -66,8 +62,7 @@ After the loop, HL points one byte past the last entry. The order matters: read
 the entry first (`ld a, (hl)`), process it, then advance (`inc hl`). If you
 advance before reading, you skip the first entry.
 
-For word tables, `inc hl` is not enough between entries — each word is two bytes
-wide. Use `inc hl / inc hl` to advance by two:
+Word entries are two bytes wide, so advance HL by two between them:
 
 ```zax
 ld hl, widths
@@ -93,17 +88,15 @@ element's value).
 produces the value stored in the table.
 
 This distinction matters most when a function receives a table to process. The
-function receives the address (loaded into HL or another pair by the caller) and
-uses `(hl)` to reach the values. The address is the handle; the values are what
-the memory at that address contains.
+function receives the address — loaded into HL or another pair by the caller —
+and uses `(hl)` to reach the values.
 
 ---
 
 ## Labels, variables, and code share the same memory
 
-An important fact to internalise: assembly does **not** distinguish between
-a label that names a variable and a label that marks a point in code. Both are
-memory addresses — plain 16-bit numbers. `scores` is the address where the
+Assembly makes no distinction between a label that names a variable and one
+that marks a point in code. Both are memory addresses — plain 16-bit numbers. `scores` is the address where the
 table starts. `loop_top` is the address where the loop body starts. To the CPU,
 both are just numbers. You could load data from a code address, and you could
 jump to a data address. The CPU would blindly obey, attempting to execute your
@@ -120,16 +113,12 @@ space, and it is your job to keep them organised.
 
 ## IX-based displaced access
 
-IX is a 16-bit index register. Unlike HL, IX is not used for arithmetic or as a
-general register pair in most instructions. Its specific capability is the
-`(ix+d)` addressing mode, where `d` is a signed 8-bit displacement — any value
-from -128 to +127.
+IX is a 16-bit index register. Its specific capability is the `(ix+d)`
+addressing mode: `d` is a signed byte offset, any value from -128 to +127, and
+`ld a, (ix+d)` reads the byte at address IX + d without touching IX itself.
 
-`ld a, (ix+0)` reads the byte at the address in IX. `ld a, (ix+1)` reads the
-byte one position after IX. `ld a, (ix+2)` reads two bytes after IX.
-
-This mode is useful when you want to access several fields at fixed offsets from
-a base address, without changing the base pointer between accesses:
+Load IX to the base of a record once, and you can name every field by its
+offset — no incrementing between reads:
 
 ```zax
 ; A three-byte record: offset 0 = id, offset 1 = high byte, offset 2 = low byte
@@ -140,8 +129,8 @@ ld c, (ix+2)         ; C = low byte field
 ; IX is unchanged throughout — all three fields read from one base address
 ```
 
-With HL you would need to load the address and then increment between fields.
-With IX+d you load the base once and name each field by its offset.
+With HL you would increment between each read. With IX you load the base once
+and name each field by its offset.
 
 The displacement `d` is a byte-sized signed offset. Offsets larger than 127 or
 smaller than -128 are not encodable and will cause an assembler error.
@@ -306,9 +295,7 @@ set if a match was found, and HL points one past the matching byte. `cpdr` is
 the same scan in the decrementing direction.
 
 `ldir`, `lddr`, `cpir`, and `cpdr` are raw Z80 mnemonics used directly in ZAX,
-exactly like `djnz`. There is no ZAX-typed construct wrapping them. When you
-see `ldir` in code, it is the hardware instruction itself, not a ZAX function
-call.
+exactly like `djnz` — the assembler emits them as-is.
 
 ---
 
@@ -327,12 +314,6 @@ call.
   name each field by its offset without moving IX.
 - To reach entry `n` at runtime, either load `table_base + n` into IX using
   compile-time arithmetic, or add the index to HL with `add hl, de`.
-
-## What Comes Next
-
-Chapter 7 introduces `call` and `ret`, explains how the hardware stack works,
-and shows how to write reusable subroutines that receive values in registers and
-return results to the caller.
 
 ---
 

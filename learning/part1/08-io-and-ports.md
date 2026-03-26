@@ -9,10 +9,9 @@ without touching memory at all.
 
 On real hardware, ports connect to peripherals: keyboard controllers, display
 chips, timers, serial interfaces. The port number selects which device the CPU
-is talking to. Chapter 8 treats port numbers as abstract placeholders — the
-Z80 mechanism is what matters here; the mapping of numbers to devices varies by
-platform and is for the hardware documentation of whichever machine you are
-targeting.
+is talking to. This chapter treats port numbers as abstract placeholders — the Z80 mechanism
+is what matters here; the mapping of numbers to devices varies by platform and
+is for your hardware documentation to define.
 
 ---
 
@@ -55,9 +54,7 @@ out (C), a       ; write A to the same port
 ```
 
 The register-addressed form uses C as the port selector regardless of what other
-register supplies the data. On some Z80 platforms B is visible on the high byte
-of the address bus during `out (C), r`, which some hardware uses as a secondary
-selector; this is a hardware detail, not something you need to worry about here.
+register supplies the data.
 
 ---
 
@@ -88,10 +85,9 @@ Unlike `out`, the `in` instruction **sets flags**. After `in r, (C)`:
 - H and N are reset.
 - C (carry) is unaffected.
 
-`in a, (n)` (the immediate form) does **not** set flags. Only the
-register-addressed form `in r, (C)` does. If you need to branch on whether the
-input is zero, use `in a, (C)` and then `or a` to establish flags, or use
-`in r, (C)` directly and branch on the flags it sets.
+`in r, (C)` sets flags; the immediate form `in a, (n)` leaves them unchanged.
+If you need to branch on whether the input is zero and you used the immediate
+form, follow it with `or a` to test A.
 
 ---
 
@@ -129,9 +125,7 @@ difference is where the port number comes from.
 ## Sending a block of bytes
 
 A counted loop can send a sequence of bytes to a port one at a time. HL points
-to the data; BC holds the count; C holds the port number. There is no
-block-copy instruction for I/O on the Z80 (unlike the `ldir` memory copy from
-Chapter 6), so you write the loop yourself.
+to the data; B holds the count; C holds the port number.
 
 ```zax
 func send_block()
@@ -263,12 +257,6 @@ three before the call.
   then reads the data port.
 - Port numbers are platform-defined. The examples here use abstract constants
   and demonstrate the instructions themselves, not any specific hardware.
-
-## What Comes Next
-
-Chapter 9 brings everything together: a complete program that uses every
-instruction form from Chapters 3–8. It also names the specific places where
-raw Z80 starts to get tedious — which sets up what Chapters 10–13 address.
 
 ---
 
