@@ -194,7 +194,7 @@ In ZAX, `entries[B].value` on the right side of `:=` emits exactly that sequence
 changes (say, `stamp` becomes a `byte` instead of a `word`), the stride and the
 field offset both update automatically throughout the program.
 
-The field path notation does not hide the machine. The `.asm` output will show
+The field path notation does not hide the machine. The `.z80` output will show
 the multiply-add sequence for the stride and the resulting memory load. But the
 source code expresses intent — "the value field of the B-th entry" — rather than
 the mechanics.
@@ -240,7 +240,7 @@ is the natural next step after the structured record layout in this chapter.
 1. `ring_buffer.zax` stores both a `value` and a `stamp` in each `Entry`. If you
    removed the `stamp` field, `sizeof(Entry)` would become 1 — a power of two.
    Would the indexing code in `enqueue` and `dequeue` look different? Check the
-   `.asm` output for both versions and compare the stride calculation.
+   `.z80` output for both versions and compare the stride calculation.
 
 2. The `next_slot` function returns 0 when the incremented index reaches
    `Capacity`. What happens if `Capacity` is 0? Is this a case worth guarding
