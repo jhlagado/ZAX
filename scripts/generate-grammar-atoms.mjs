@@ -1,13 +1,17 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 export const GENERATED_START_MARKER = '<!-- BEGIN GENERATED: grammar-atoms -->';
 export const GENERATED_END_MARKER = '<!-- END GENERATED: grammar-atoms -->';
 
-const DEFAULT_GRAMMAR_DATA_PATH = resolve('src/frontend/grammarData.ts');
-const DEFAULT_GRAMMAR_DOC_PATH = resolve('docs/spec/zax-grammar.ebnf.md');
+const SCRIPT_PATH = fileURLToPath(import.meta.url);
+const SCRIPT_DIR = dirname(SCRIPT_PATH);
+const REPO_ROOT = resolve(SCRIPT_DIR, '..');
+
+const DEFAULT_GRAMMAR_DATA_PATH = resolve(REPO_ROOT, 'src/frontend/grammarData.ts');
+const DEFAULT_GRAMMAR_DOC_PATH = resolve(REPO_ROOT, 'docs/spec/zax-grammar.ebnf.md');
 
 async function loadGrammarDataModule(grammarDataPath = DEFAULT_GRAMMAR_DATA_PATH) {
   const source = readFileSync(grammarDataPath, 'utf8');
@@ -100,8 +104,8 @@ function renderGeneratedGrammarAtoms(module) {
   return lines.join('\n');
 }
 
-export async function renderGeneratedGrammarAtomSection() {
-  const grammarData = await loadGrammarDataModule();
+export async function renderGeneratedGrammarAtomSection(grammarDataPath = DEFAULT_GRAMMAR_DATA_PATH) {
+  const grammarData = await loadGrammarDataModule(grammarDataPath);
   return [
     GENERATED_START_MARKER,
     '```ebnf',
@@ -111,8 +115,8 @@ export async function renderGeneratedGrammarAtomSection() {
   ].join('\n');
 }
 
-export async function syncGrammarAtomsDoc(docText) {
-  const generatedSection = await renderGeneratedGrammarAtomSection();
+export async function syncGrammarAtomsDoc(docText, grammarDataPath = DEFAULT_GRAMMAR_DATA_PATH) {
+  const generatedSection = await renderGeneratedGrammarAtomSection(grammarDataPath);
   const pattern = new RegExp(`${GENERATED_START_MARKER}[\\s\\S]*?${GENERATED_END_MARKER}`, 'm');
   if (!pattern.test(docText)) {
     throw new Error('Missing grammar atom generation markers in docs/spec/zax-grammar.ebnf.md');
@@ -120,18 +124,16 @@ export async function syncGrammarAtomsDoc(docText) {
   return docText.replace(pattern, generatedSection);
 }
 
-export async function regenerateGrammarAtomsDoc(grammarDocPath = DEFAULT_GRAMMAR_DOC_PATH) {
+export async function regenerateGrammarAtomsDoc(grammarDocPath = DEFAULT_GRAMMAR_DOC_PATH, grammarDataPath = DEFAULT_GRAMMAR_DATA_PATH) {
   const current = readFileSync(grammarDocPath, 'utf8');
-  const updated = await syncGrammarAtomsDoc(current);
+  const updated = await syncGrammarAtomsDoc(current, grammarDataPath);
   if (updated !== current) {
     writeFileSync(grammarDocPath, updated);
   }
   return { updated, changed: updated !== current };
 }
 
-const invokedPath = process.argv[1] ? resolve(process.argv[1]) : undefined;
-const currentPath = fileURLToPath(import.meta.url);
-if (invokedPath === currentPath) {
+if (process.argv[1] && resolve(process.argv[1]) === SCRIPT_PATH) {
   const { changed } = await regenerateGrammarAtomsDoc();
   process.stdout.write(changed ? 'Updated docs/spec/zax-grammar.ebnf.md\n' : 'Grammar atoms already up to date\n');
 }
