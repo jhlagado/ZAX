@@ -1632,10 +1632,10 @@ enum StateB   Idle, Stopped    ; 'Idle' and 'Idle' are fine — accessed as Stat
 
 `step` is the in-place typed-scalar update form. It is not an expression form and may not appear inside expressions or on the RHS of `:=`.
 
-| Statement          | Meaning                                          |
-| ------------------ | ------------------------------------------------ |
-| `step path`        | increment the typed scalar at `path` by one step |
-| `step path, -1`    | decrement the typed scalar at `path` by one step |
+| Statement       | Meaning                                          |
+| --------------- | ------------------------------------------------ |
+| `step path`     | increment the typed scalar at `path` by one step |
+| `step path, -1` | decrement the typed scalar at `path` by one step |
 
 `path` must be a typed scalar path — a named variable or a field/array element. Raw registers (e.g. `hl`, `a`) are not valid targets.
 
@@ -1956,7 +1956,7 @@ Circular imports are a compile error.
 You can also insert raw text before parsing:
 
 ```zax
-include "legacy/uart.asm"
+include "legacy/uart.inc"
 ```
 
 `include` is a literal text insertion and has no module semantics. It can appear anywhere, and path resolution uses the same rules as `import "<path>"`.

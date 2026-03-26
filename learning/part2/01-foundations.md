@@ -44,7 +44,7 @@ body run. The `var` block is terminated by its own `end`; a second `end` closes
 the function itself.
 
 The compiler allocates and initialises locals before the register-save push
-sequence. Reading the `.asm` output for a framed function, you will see
+sequence. Reading the `.z80` output for a framed function, you will see
 `LD HL, imm16` / `PUSH HL` pairs for each initialised local at the top of the
 prologue.
 
