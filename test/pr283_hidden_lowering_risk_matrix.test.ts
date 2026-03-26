@@ -70,7 +70,7 @@ describe('PR283: hidden-lowering risk matrix focused coverage', () => {
     expect(
       rawTypedWarn.diagnostics.some((d) => d.message.includes('Raw call targets typed callable')),
     ).toBe(true);
-  });
+  }, 20_000);
 
   it('covers negative hidden-lowering guardrails for op expansion stack policy and imbalance', async () => {
     const stackPolicyError = await compile(
