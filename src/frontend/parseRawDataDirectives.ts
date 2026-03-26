@@ -1,4 +1,4 @@
-import type { Diagnostic } from '../diagnostics/types.js';
+import type { Diagnostic } from '../diagnosticTypes.js';
 
 import type { ImmExprNode, RawDataDeclNode, SourceSpan } from './ast.js';
 import { parseImmExprFromText } from './parseImm.js';
