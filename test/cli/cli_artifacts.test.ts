@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-import { ensureCliBuilt } from './helpers/cliBuild.js';
-import { exists, runCli } from './helpers/cli.js';
+import { ensureCliBuilt } from '../helpers/cliBuild.js';
+import { exists, runCli } from '../helpers/cli.js';
 
 describe('cli artifacts', () => {
   beforeAll(async () => {
@@ -163,15 +163,15 @@ describe('cli artifacts', () => {
   }, 20_000);
 
   it('resolves imports from repeated -I include paths', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr11_include_main.zax');
-    const includes = join(__dirname, 'fixtures', 'includes');
-    const outHex = join(__dirname, 'tmp', 'cli-include', 'out.hex');
+    const entry = join(__dirname, '..', 'fixtures', 'pr11_include_main.zax');
+    const includes = join(__dirname, '..', 'fixtures', 'includes');
+    const outHex = join(__dirname, '..', 'tmp', 'cli-include', 'out.hex');
 
-    await rm(join(__dirname, 'tmp'), { recursive: true, force: true });
+    await rm(join(__dirname, '..', 'tmp'), { recursive: true, force: true });
 
     const res = await runCli([
       '-I',
-      join(__dirname, 'fixtures'),
+      join(__dirname, '..', 'fixtures'),
       '-I',
       includes,
       '-o',
@@ -182,18 +182,18 @@ describe('cli artifacts', () => {
     expect(res.stdout.trim()).toBe(outHex);
     expect(await exists(outHex)).toBe(true);
 
-    await rm(join(__dirname, 'tmp'), { recursive: true, force: true });
+    await rm(join(__dirname, '..', 'tmp'), { recursive: true, force: true });
   }, 20_000);
 
   it('accepts equals-form long options for output/type/include', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr11_include_main.zax');
-    const includes = join(__dirname, 'fixtures', 'includes');
-    const outBin = join(__dirname, 'tmp', 'cli-equals', 'out.bin');
+    const entry = join(__dirname, '..', 'fixtures', 'pr11_include_main.zax');
+    const includes = join(__dirname, '..', 'fixtures', 'includes');
+    const outBin = join(__dirname, '..', 'tmp', 'cli-equals', 'out.bin');
 
-    await rm(join(__dirname, 'tmp'), { recursive: true, force: true });
+    await rm(join(__dirname, '..', 'tmp'), { recursive: true, force: true });
 
     const res = await runCli([
-      `--include=${join(__dirname, 'fixtures')}`,
+      `--include=${join(__dirname, '..', 'fixtures')}`,
       `--include=${includes}`,
       '--type=bin',
       `--output=${outBin}`,
@@ -202,9 +202,9 @@ describe('cli artifacts', () => {
     expect(res.code).toBe(0);
     expect(res.stdout.trim()).toBe(outBin);
     expect(await exists(outBin)).toBe(true);
-    expect(await exists(join(__dirname, 'tmp', 'cli-equals', 'out.hex'))).toBe(true);
+    expect(await exists(join(__dirname, '..', 'tmp', 'cli-equals', 'out.hex'))).toBe(true);
 
-    await rm(join(__dirname, 'tmp'), { recursive: true, force: true });
+    await rm(join(__dirname, '..', 'tmp'), { recursive: true, force: true });
   }, 20_000);
 
   it('rejects entry when it is not the last argument', async () => {
