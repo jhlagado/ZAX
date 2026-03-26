@@ -423,13 +423,13 @@ that fit in 16 bits:
 After computing the midpoint, the function reads `values[L]` (using L as the
 low byte of `mid_index`) and compares against `target_value`. If C is set
 (target is less than probe), the search continues in the left half by setting
-`high_index := mid_index - 1` via `step high_index, -1`. If NC and NZ (target is greater than
-probe), it continues in the right half with `step` on `low_index`. The loop
-exits when the search interval closes (`low_index > high_index`), returning
-`$FFFF` as not-found.
+`high_index := mid_index - 1` via `step high_index, -1`. If NC and NZ (target
+is greater than probe), it advances `low_index` with `step low_index`. The
+loop exits when the search interval closes (`low_index > high_index`),
+returning `$FFFF` as not-found.
 
-`step high_index, -1` and `step low_index` are the concise way to
-narrow the search bounds by one step in either direction.
+`step` on `high_index` and `low_index` narrows the search bounds by one in
+either direction.
 
 See `learning/part2/examples/unit2/binary_search.zax`.
 
@@ -471,9 +471,8 @@ See `learning/part2/examples/unit2/prime_sieve.zax`.
   condition test. It requires that flags be correct for the loop condition at
   the point of the jump. Establishing those flags immediately before `continue`
   is the pattern used in `prime_sieve.zax`.
-- `step` works on index locals just as it works on counter locals.
-  It appears wherever `low_index`, `high_index`, or `scan_index` needs
-  stepping by one.
+- `step` works on index locals just as it works on counter locals. It appears
+  wherever `low_index`, `high_index`, or `scan_index` needs stepping by one.
 
 ---
 
@@ -483,7 +482,7 @@ See `learning/part2/examples/unit2/prime_sieve.zax`.
 - `learning/part2/examples/unit2/insertion_sort.zax` — sorted insertion into a growing prefix
 - `learning/part2/examples/unit2/selection_sort.zax` — minimum-selection with `break`-terminated scan
 - `learning/part2/examples/unit2/linear_search.zax` — sequential scan with early return
-- `learning/part2/examples/unit2/binary_search.zax` — divide-and-conquer with `step`-based bound narrowing
+- `learning/part2/examples/unit2/binary_search.zax` — divide-and-conquer with `step` bound narrowing
 - `learning/part2/examples/unit2/prime_sieve.zax` — nested loops with `break` and `continue`
 
 ---

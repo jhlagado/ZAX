@@ -117,7 +117,7 @@ By this point you can:
 - use `section data` to declare named module storage
 - write a ZAX `func` with typed parameters and locals, accessed through raw IX-relative offsets
 - use `if`/`else` and `while` loops with `break` and `continue`
-- use `:=` for typed assignment and `step` for typed scalar update
+- use `:=` for typed assignment and `step` for typed scalar mutation
 - write an `op` for inline named instruction sequences
 - use IXH/IXL/IYH/IYL and the ZAX pseudo-opcodes for 16-bit register moves
 

@@ -200,23 +200,28 @@ what is inside it.
 
 ## `step`
 
-ZAX provides a built-in operation for incrementing and decrementing typed
-scalar paths: `step`. It operates on locals, module-scope
-variables, record fields, and array elements — any typed scalar storage path.
+`step path` increments a typed scalar location by one. `step path, amount`
+adds a signed compile-time integer to it. Both forms work on locals,
+module-scope variables, record fields, and array elements — any typed scalar
+storage path.
 
 ```zax
-  step index_value      ; increment the word local 'index_value' by 1
-  step remaining, -1    ; decrement the word local 'remaining' by 1
+    step index_value         ; increment the word local 'index_value' by 1
+    step remaining, -1       ; decrement the word local 'remaining' by 1
+    step offset, 4           ; add 4 to 'offset'
 ```
 
-These are not function calls; they lower to an efficient read-increment-write
-(or read-decrement-write) sequence at the storage path in question. Using
-`step` instead of a manual HL-roundtrip sequence keeps the code
-concise and the intent visible.
+`step` lowers to a read-modify-write sequence at the storage path. Writing
+`step remaining, -1` instead of loading `remaining` into HL, subtracting, and
+storing it back keeps the operation at the name level rather than the register
+level.
 
-In the Chapter 01 examples, `step` is the standard way to advance or
-retreat a counter local. You will see it throughout the loops that drive
-counting and iteration.
+The amount, when present, must be a compile-time constant: a literal or a
+`const` declaration. You cannot pass a runtime variable as the step amount.
+
+In the Chapter 01 examples, `step` is the standard way to advance or retreat a
+counter local. You will see it throughout the loops that drive counting and
+iteration.
 
 ---
 
@@ -383,8 +388,9 @@ See `learning/part2/examples/unit1/digits.zax`.
 - `while NZ` is the basic loop form. Entry flags always matter: a stale Z=1
   on entry skips the loop body entirely. Establish NZ with `ld a, 1` / `or a`
   before the first `while NZ`, and re-establish it at the back edge.
-- `step` increments and decrements typed scalar paths.
-  It appears wherever a loop counter or accumulator needs stepping.
+- `step path` increments a typed scalar by one; `step path, amount` adds any
+  signed compile-time integer. Both appear wherever a counter or accumulator
+  needs advancing.
 - Recursive functions look and work like non-recursive ones. The compiler
   handles the per-call IX frame.
 

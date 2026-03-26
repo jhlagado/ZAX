@@ -51,8 +51,8 @@ of `n` disks from one peg to another using a spare peg. The recurrence is:
 
 `hanoi_count` in `hanoi.zax` implements this directly. The base case returns zero
 when `disks_count` is zero. Otherwise, it decrements `disks_count` into a local
-`reduced_count` using `step ..., -1`, makes two recursive calls with the pegs permuted,
-and combines the results:
+`reduced_count` using `step ..., -1`, makes two recursive calls with the pegs
+permuted, and combines the results:
 
 ```zax
   reduced_count := disks_count
@@ -143,8 +143,8 @@ two indices meet or cross, at which point there is nothing left to swap.
 
 `reverse_range` takes a `left_index` and `right_index`. If `left_index >= right_index`,
 it returns immediately. Otherwise, it swaps the two endpoints, advances the
-left index with `step next_left`, retreats the right index with `step next_right, -1`,
-and recurses:
+left index with `step next_left`, retreats the right index with
+`step next_right, -1`, and recurses:
 
 ```zax
 func reverse_range(left_index: byte, right_index: byte)
