@@ -23,7 +23,7 @@ Continue with [Part 2 — Algorithms and Data Structures in ZAX](../part2/README
 | 9 | [A Complete Program](09-a-phase-a-program.md) | Putting it all together: a real program from start to finish |
 | 10 | [Functions and the IX Frame](10-functions-and-the-ix-frame.md) | ZAX `func`, typed parameters, locals, raw IX-relative access |
 | 11 | [Structured Control Flow](11-structured-control-flow.md) | `if`/`while`/`break`/`continue`, `select`/`case` |
-| 12 | [Typed Assignment](12-typed-assignment.md) | `:=` operator, `succ`/`pred`, the convenience layer over raw IX access |
+| 12 | [Typed Assignment](12-typed-assignment.md) | `:=` operator, `step`, the convenience layer over raw IX access |
 | 13 | [Op Macros and Pseudo-opcodes](13-op-macros-and-pseudo-opcodes.md) | `op` for inline expansion, synthetic 16-bit register moves |
 
 Example files are under `examples/` in this directory. Examples `00` through `02`

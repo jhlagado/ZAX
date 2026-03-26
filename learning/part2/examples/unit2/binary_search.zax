@@ -55,12 +55,12 @@ func binary_search(target_value: byte): HL
     end
     if C
       high_index := mid_index
-      pred high_index
+      step high_index, -1
     end
     if NC
       if NZ
         low_index := mid_index
-        succ low_index
+        step low_index
       end
     end
 

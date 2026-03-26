@@ -49,10 +49,10 @@ func reverse_range(left_index: byte, right_index: byte)
   swap_values left_index, right_index
 
   next_left := left_index
-  succ next_left
+  step next_left
 
   next_right := right_index
-  pred next_right
+  step next_right, -1
 
   reverse_range next_left, next_right
 end

@@ -217,11 +217,11 @@ end
 
 (Adapted from `learning/part2/examples/unit3/atoi.zax`, lines 10–20.)
 
-The scan pointer advances through `succ scan_ptr` rather than `inc hl` because the
+The scan pointer advances through `step scan_ptr` rather than `inc hl` because the
 pointer is kept in a typed local (`scan_ptr: word`) rather than held continuously
-in HL. The loop reloads `scan_ptr` into HL at the start of each iteration. This
-is a natural tradeoff: keeping the pointer in a typed local lets the function call
-`times_ten` and `succ` without worrying about HL being clobbered by the call.
+in HL. The loop reloads `scan_ptr` into HL at the start of each iteration. Keeping
+the pointer in a typed local lets the function call `times_ten` and `step` without
+worrying about HL being clobbered by the call.
 
 See `learning/part2/examples/unit3/atoi.zax`.
 
@@ -237,9 +237,9 @@ that appears in the Chapter 01 arithmetic examples — and `times_ten` is used a
 recover the digit: the remainder from `remaining - quotient * 10` gives the raw
 digit value. Adding `'0'` converts it to an ASCII character.
 
-The reversal pass uses `pred write_index` to walk backward through the scratch
-buffer and `succ read_index` to fill the output buffer forward. These `pred` and
-`succ` calls work on typed byte locals in the `var` block.
+The reversal pass uses `step write_index, -1` to walk backward through the scratch
+buffer and `step read_index` to fill the output buffer forward. Both `step` calls
+work on typed byte locals in the `var` block.
 
 See `learning/part2/examples/unit3/itoa.zax`.
 

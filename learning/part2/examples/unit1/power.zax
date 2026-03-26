@@ -27,7 +27,7 @@ func mul_u16(lhs: word, rhs: word): HL
     add hl, de
     acc := hl
 
-    pred count
+    step count, -1
 
     ld a, 1
     or a
@@ -58,7 +58,7 @@ func power(base: word, exponent: word): HL
     mul_u16 result, base
     result := hl
 
-    pred remaining
+    step remaining, -1
 
     ld a, 1
     or a

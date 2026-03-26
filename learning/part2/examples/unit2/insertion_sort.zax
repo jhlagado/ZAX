@@ -25,7 +25,7 @@ func insert_hole(scan_index: byte, hold_value: byte)
   end
 
   prior_index := scan_index
-  pred prior_index
+  step prior_index, -1
 
   l := prior_index
   a := values[L]
@@ -75,7 +75,7 @@ export func insertion_sort()
 
     insert_hole outer_index, hold_value
 
-    succ outer_index
+    step outer_index
 
     ld a, 1
     or a

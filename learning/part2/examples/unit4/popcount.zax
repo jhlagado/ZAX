@@ -24,7 +24,7 @@ export func popcount_demo(): HL
     a := working_value
     and 1
     if NZ
-      succ count_value
+      step count_value
     end
 
     a := working_value
