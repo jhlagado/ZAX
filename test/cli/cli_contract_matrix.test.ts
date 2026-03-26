@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-import { ensureCliBuilt } from './helpers/cliBuild.js';
-import { exists, runCli } from './helpers/cli.js';
+import { ensureCliBuilt } from '../helpers/cliBuild.js';
+import { exists, runCli } from '../helpers/cli.js';
 
 describe('cli contract matrix', () => {
   beforeAll(async () => {
@@ -91,7 +91,7 @@ describe('cli contract matrix', () => {
   });
 
   it('rejects unsupported --op-stack-policy mode tokens', async () => {
-    const fixture = join(__dirname, 'fixtures', 'pr271_op_stack_policy_delta_warn.zax');
+    const fixture = join(__dirname, '..', 'fixtures', 'pr271_op_stack_policy_delta_warn.zax');
     const res = await runCli(['--op-stack-policy=strict', fixture]);
 
     expect(res.code).toBe(2);
@@ -99,7 +99,7 @@ describe('cli contract matrix', () => {
   });
 
   it('forwards --op-stack-policy to compile (warn keeps exit 0, error upgrades to exit 1)', async () => {
-    const fixture = join(__dirname, 'fixtures', 'pr271_op_stack_policy_delta_warn.zax');
+    const fixture = join(__dirname, '..', 'fixtures', 'pr271_op_stack_policy_delta_warn.zax');
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-op-stack-policy-'));
     const warnOut = join(work, 'warn.hex');
     const errorOut = join(work, 'error.hex');
@@ -175,7 +175,7 @@ describe('cli contract matrix', () => {
   });
 
   it('forwards --raw-typed-call-warn to compile', async () => {
-    const fixture = join(__dirname, 'fixtures', 'pr278_raw_call_typed_target_warning.zax');
+    const fixture = join(__dirname, '..', 'fixtures', 'pr278_raw_call_typed_target_warning.zax');
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-raw-typed-call-warn-'));
     const offOut = join(work, 'off.hex');
     const onOut = join(work, 'on.hex');
