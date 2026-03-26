@@ -1,6 +1,7 @@
 import type { Diagnostic } from '../diagnosticTypes.js';
 import type { AsmInstructionNode, AsmOperandNode, EaExprNode, SourceSpan } from '../frontend/ast.js';
 import type { ScalarKind } from './typeResolution.js';
+import type { EaResolution } from './eaResolution.js';
 import { createAsmInstructionLdHelpers } from './asmInstructionLdHelpers.js';
 import { tryLowerBranchCallInstruction } from './asmLoweringBranchCall.js';
 import { tryLowerStepInstruction } from './asmLoweringStep.js';
@@ -38,6 +39,7 @@ type Context = {
     asmText?: string,
   ) => void;
   conditionOpcodeFromName: (nameRaw: string) => number | undefined;
+  conditionNameFromOpcode?: (opcode: number) => string | undefined;
   callConditionOpcodeFromName: (nameRaw: string) => number | undefined;
   jrConditionOpcodeFromName: (nameRaw: string) => number | undefined;
   conditionOpcode: (op: AsmOperandNode) => number | undefined;
