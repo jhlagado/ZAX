@@ -3,8 +3,23 @@
  *
  * These helpers are pure: they return typed step pipelines.
  * Rendering to pseudo-assembly text is only for tests/document checks.
+ *
+ * **Navigation:** Section comments below group exports. Family-level map:
+ * [`docs/reference/addressing-steps-overview.md`](../../../docs/reference/addressing-steps-overview.md).
+ *
+ * | Area | Exports (representative) |
+ * |------|-------------------------|
+ * | Types / render | `StepInstr`, `StepPipeline`, `renderStepInstr`, `renderStepPipeline` |
+ * | Save/restore | `SAVE_*`, `RESTORE_*`, `SWAP_HL_DE` |
+ * | Base & index | `LOAD_BASE_*`, `LOAD_IDX_*` |
+ * | EA combine | `CALC_EA`, `CALC_EA_2`, `CALC_EA_WIDE` |
+ * | Byte accessors | `LOAD_REG_EA`, `STORE_REG_EA`, `LOAD_REG_GLOB`, … |
+ * | Word accessors | `LOAD_RP_EA`, `STORE_RP_EA`, `LOAD_RP_GLOB`, `LOAD_RP_FVAR`, … |
+ * | EA builders (byte / word) | `EA_*`, `EAW_*` |
+ * | Templates | `TEMPLATE_L_*`, `TEMPLATE_S_*`, `TEMPLATE_LW_*`, `TEMPLATE_SW_*` |
  */
 
+// --- Section: Types, StepInstr, and rendering helpers ---
 export type StepReg8 =
   | 'A'
   | 'B'
@@ -113,18 +128,14 @@ export function renderStepInstr(instr: StepInstr): string {
 export const renderStepPipeline = (pipeline: StepPipeline): string[] =>
   pipeline.map(renderStepInstr);
 
-// ---------------------------------------------------------------------------
-// Save / restore
-// ---------------------------------------------------------------------------
+// --- Section: Save / restore ---
 export const SAVE_HL = (): StepPipeline => [step({ kind: 'push', reg: 'HL' })];
 export const SAVE_DE = (): StepPipeline => [step({ kind: 'push', reg: 'DE' })];
 export const RESTORE_HL = (): StepPipeline => [step({ kind: 'pop', reg: 'HL' })];
 export const RESTORE_DE = (): StepPipeline => [step({ kind: 'pop', reg: 'DE' })];
 export const SWAP_HL_DE = (): StepPipeline => [step({ kind: 'exDeHl' })];
 
-// ---------------------------------------------------------------------------
-// Base loaders (DE = base)
-// ---------------------------------------------------------------------------
+// --- Section: Base loaders (DE = base) ---
 export const LOAD_BASE_GLOB = (glob: string): StepPipeline => [
   step({ kind: 'ldRpGlob', rp: 'DE', glob }),
 ];
@@ -134,9 +145,7 @@ export const LOAD_BASE_FVAR = (disp: number): StepPipeline => [
   step({ kind: 'ldRegIxDisp', reg: 'd', disp: disp + 1 }),
 ];
 
-// ---------------------------------------------------------------------------
-// Index loaders (HL = index)
-// ---------------------------------------------------------------------------
+// --- Section: Index loaders (HL = index) ---
 export const LOAD_IDX_CONST = (value: number): StepPipeline => [
   step({ kind: 'ldRpImm', rp: 'HL', value }),
 ];
@@ -158,9 +167,7 @@ export const LOAD_IDX_FVAR = (disp: number): StepPipeline => [
   ...SWAP_HL_DE(),
 ];
 
-// ---------------------------------------------------------------------------
-// Combine
-// ---------------------------------------------------------------------------
+// --- Section: Combine (HL + DE → EA) ---
 export const CALC_EA = (): StepPipeline => [step({ kind: 'addHlDe' })];
 
 export const CALC_EA_2 = (): StepPipeline => [step({ kind: 'addHlHl' }), step({ kind: 'addHlDe' })];
@@ -207,9 +214,7 @@ export const CALC_EA_WIDE = (elemSize: number): StepPipeline => {
   return shiftCount !== undefined ? calcEaShift(shiftCount) : calcEaExact(elemSize);
 };
 
-// ---------------------------------------------------------------------------
-// Accessors (byte)
-// ---------------------------------------------------------------------------
+// --- Section: Accessors (byte) ---
 export const LOAD_REG_EA = (reg: string): StepPipeline => [
   step({ kind: 'ldRegMemHl', reg: reg as StepReg8 }),
 ];
@@ -248,9 +253,7 @@ export const LOAD_REG_REG = (dst: string, src: string): StepPipeline => [
   }),
 ];
 
-// ---------------------------------------------------------------------------
-// Accessors (word)
-// ---------------------------------------------------------------------------
+// --- Section: Accessors (word) ---
 export const LOAD_RP_EA = (rp: string): StepPipeline => [
   step({ kind: 'ldRegMemHl', reg: 'e' }),
   step({ kind: 'incHl' }),
@@ -336,9 +339,7 @@ export const STORE_RP_FVAR = (rp: string, disp: number): StepPipeline => [
       ]),
 ];
 
-// ---------------------------------------------------------------------------
-// EA builders (byte size, HL=EA)
-// ---------------------------------------------------------------------------
+// --- Section: EA builders (byte size, HL = EA) ---
 export const EA_GLOB_CONST = (glob: string, idxConst: number): StepPipeline => [
   ...LOAD_BASE_GLOB(glob),
   ...LOAD_IDX_CONST(idxConst),
@@ -398,9 +399,7 @@ export const EA_GLOB_GLOB = (globBase: string, globIdx: string): StepPipeline =>
   ...CALC_EA(),
 ];
 
-// ---------------------------------------------------------------------------
-// EA builders (word size, HL=EA, scaled by 2)
-// ---------------------------------------------------------------------------
+// --- Section: EA builders (word size, HL = EA, scaled) ---
 export const EAW_GLOB_CONST = (glob: string, idxConst: number, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_GLOB(glob),
   ...LOAD_IDX_CONST(idxConst),
@@ -460,9 +459,7 @@ export const EAW_GLOB_GLOB = (globBase: string, globIdx: string, elemSize = 2): 
   ...CALC_EA_WIDE(elemSize),
 ];
 
-// ---------------------------------------------------------------------------
-// Templates: byte loads
-// ---------------------------------------------------------------------------
+// --- Section: Templates — byte loads ---
 export const TEMPLATE_L_ABC = (dest: string, ea: StepPipeline): StepPipeline => [
   ...SAVE_DE(),
   ...SAVE_HL(),
@@ -492,9 +489,7 @@ export const TEMPLATE_L_DE = (dest: 'D' | 'E', ea: StepPipeline): StepPipeline =
   ...RESTORE_HL(),
 ];
 
-// ---------------------------------------------------------------------------
-// Templates: byte stores
-// ---------------------------------------------------------------------------
+// --- Section: Templates — byte stores ---
 export const TEMPLATE_S_ANY = (vreg: string, ea: StepPipeline): StepPipeline => [
   ...SAVE_DE(),
   ...SAVE_HL(),
@@ -513,9 +508,7 @@ export const TEMPLATE_S_HL = (vreg: 'H' | 'L', ea: StepPipeline): StepPipeline =
   ...RESTORE_DE(),
 ];
 
-// ---------------------------------------------------------------------------
-// Templates: word loads
-// ---------------------------------------------------------------------------
+// --- Section: Templates — word loads ---
 export const TEMPLATE_LW_HL = (ea: StepPipeline): StepPipeline => [
   ...SAVE_DE(),
   ...ea,
@@ -542,9 +535,7 @@ export const TEMPLATE_LW_BC = (ea: StepPipeline): StepPipeline => [
   ...RESTORE_DE(),
 ];
 
-// ---------------------------------------------------------------------------
-// Templates: word stores
-// ---------------------------------------------------------------------------
+// --- Section: Templates — word stores ---
 export const TEMPLATE_SW_DEBC = (vpair: 'DE' | 'BC', ea: StepPipeline): StepPipeline =>
   vpair === 'DE'
     ? [...SAVE_HL(), ...SAVE_DE(), ...ea, ...RESTORE_DE(), ...STORE_RP_EA('DE'), ...RESTORE_HL()]
@@ -558,6 +549,7 @@ export const TEMPLATE_SW_HL = (ea: StepPipeline): StepPipeline => [
   ...RESTORE_DE(),
 ];
 
+// --- Section: Private helpers ---
 function formatDisp(disp: number): string {
   const hex = Math.abs(disp).toString(16).padStart(2, '0');
   const sign = disp >= 0 ? '+' : '-';
