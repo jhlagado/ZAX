@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createFixupEmissionHelpers } from '../src/lowering/fixupEmission.js';
+import { createFixupEmissionHelpers } from '../../src/lowering/fixupEmission.js';
 
 describe('PR529 fixup emission helpers', () => {
   it('emits abs16 and rel8 fixups with the current trace shape', () => {
