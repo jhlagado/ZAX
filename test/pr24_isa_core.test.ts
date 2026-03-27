@@ -3,7 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -19,9 +21,11 @@ describe('PR24 ISA core tranche', () => {
     const entry = join(__dirname, 'fixtures', 'pr24_jr_label_out_of_range.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
-    expect(res.diagnostics.some((d) => d.message.includes('out of range for rel8 branch'))).toBe(
-      true,
-    );
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
+      messageIncludes: 'out of range for rel8 branch',
+    });
   });
 
   it('encodes backwards rel8 branch displacements', async () => {
