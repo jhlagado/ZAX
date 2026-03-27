@@ -1,4 +1,3 @@
-import type { Diagnostic } from '../diagnosticTypes.js';
 import type { AsmOperandNode, ImmExprNode, SourceSpan } from '../frontend/ast.js';
 import {
   formatAbs16FixupAsm,

@@ -138,32 +138,6 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
         if (!ctx.enforceEaRuntimeAtomBudget(operand, 'Source ea expression')) return;
       }
 
-      const diagIfRetStackImbalanced = (mnemonic = 'ret'): void => {
-        if (ctx.emitSyntheticEpilogue) return;
-        if (ctx.getTrackedSpValid() && ctx.getTrackedSpDelta() !== 0) {
-          ctx.diagAt(
-            ctx.diagnostics,
-            asmItem.span,
-            `${mnemonic} with non-zero tracked stack delta (${ctx.getTrackedSpDelta()}); function stack is imbalanced.`,
-          );
-          return;
-        }
-        if (!ctx.getTrackedSpValid() && ctx.getTrackedSpInvalid() && ctx.hasStackSlots) {
-          ctx.diagAt(
-            ctx.diagnostics,
-            asmItem.span,
-            `${mnemonic} reached after untracked SP mutation; cannot verify function stack balance.`,
-          );
-          return;
-        }
-        if (!ctx.getTrackedSpValid() && ctx.hasStackSlots) {
-          ctx.diagAt(
-            ctx.diagnostics,
-            asmItem.span,
-            `${mnemonic} reached with unknown stack depth; cannot verify function stack balance.`,
-          );
-        }
-      };
       const diagIfCallStackUnverifiable = (options?: {
         mnemonic?: string;
         contractKind?: 'callee' | 'typed-call';
@@ -195,20 +169,6 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
             `${mnemonic} reached with unknown stack depth; cannot verify ${contractNoun}.`,
           );
         }
-      };
-      const warnIfRawCallTargetsTypedCallable = (
-        symbolicTarget: { baseLower: string; addend: number } | undefined,
-      ): void => {
-        if (!ctx.rawTypedCallWarningsEnabled || !symbolicTarget || symbolicTarget.addend !== 0) return;
-        const callable = ctx.resolveCallable(symbolicTarget.baseLower, asmItem.span.file);
-        if (!callable) return;
-        ctx.diagAtWithSeverityAndId(
-          ctx.diagnostics,
-          asmItem.span,
-          DiagnosticIds.RawCallTypedTargetWarning,
-          'warning',
-          `Raw call targets typed callable "${callable.node.name}" and bypasses typed-call argument/preservation semantics; use typed call syntax unless raw ABI is intentional.`,
-        );
       };
 
       const callable = ctx.resolveCallable(asmItem.head, asmItem.span.file);

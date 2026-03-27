@@ -7,7 +7,7 @@ import type {
 } from './ast.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
 import { NAMED_SECTION_KINDS } from './grammarData.js';
-import { consumeTopKeyword, diagInvalidHeaderLine } from './parseModuleCommon.js';
+import { consumeTopKeyword } from './parseModuleCommon.js';
 import { parseTopLevelExternDecl } from './parseExternBlock.js';
 import { parseEnumDecl } from './parseEnum.js';
 import { parseTopLevelFuncDecl } from './parseFunc.js';
@@ -103,8 +103,8 @@ export function createModuleItemDispatchTable(ctx: CreateModuleItemDispatchTable
     getRawLine,
     isReservedTopLevelName,
     lineCount,
-    logicalLines,
-    modulePath,
+    logicalLines: _logicalLines,
+    modulePath: _modulePath,
     parseNamedSectionHeader,
     parseOpParamsFromText,
     parseParamsFromText,

@@ -59,7 +59,7 @@ export function parseSectionDirectiveDecl(
   sectionTail: string | undefined,
   ctx: SimpleTopLevelContext,
 ): void {
-  const { diagnostics, modulePath, lineNo, text, span } = ctx;
+  const { diagnostics, modulePath, lineNo, text, span: _span } = ctx;
   const decl = rest === 'section' ? '' : (sectionTail ?? '');
   const legacyTail = /^(.*?)\s+at\s+(.+)$/.exec(decl);
   const sectionToken = (legacyTail?.[1] ?? decl).trim().toLowerCase();
