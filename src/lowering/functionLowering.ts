@@ -363,34 +363,46 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     symbolicTargetFromExpr,
     emitInstr,
   });
-  const { hasStackSlots, emitSyntheticEpilogue, epilogueLabel, preserveSet, trackedSp } =
-    initializeFunctionFrame({
-      item,
-      diagnostics,
-      diag,
-      diagAt,
+  const frameSetupContext = {
+    item,
+    diagnostics,
+    diag,
+    diagAt,
+    typing: {
       env,
       resolveScalarBinding,
       resolveScalarKind,
       resolveEaTypeExpr,
       evalImmExpr,
+    },
+    storage: {
       stackSlotOffsets,
       stackSlotTypes,
       localAliasTargets,
       storageTypes,
       moduleAliasTargets,
+    },
+    symbols: {
       taken,
       pending,
       traceComment,
       traceLabel,
       generatedLabelCounterRef,
+    },
+    emission: {
       getCodeOffset,
       getCurrentCodeSegmentTag: () => currentCodeSegmentTag,
       setCurrentCodeSegmentTag,
       emitInstr,
       loadImm16ToHL,
+    },
+    spTracking: {
       bindSpTracking,
-    });
+    },
+  } as const;
+
+  const { hasStackSlots, emitSyntheticEpilogue, epilogueLabel, preserveSet, trackedSp } =
+    initializeFunctionFrame(frameSetupContext);
 
   let flow: FlowState = {
     reachable: true,
