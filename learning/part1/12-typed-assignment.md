@@ -2,9 +2,7 @@
 
 # Chapter 12 — Typed Assignment
 
-You have spent two chapters writing `ld a, (ix+running_max+0)` and `ld (ix+cnt+0), a` by hand. You know what each frame access costs, you know where the offsets come from, and you know the low-byte / high-byte drill for word-sized slots. This chapter introduces `:=`, the typed assignment operator, which automates all of that. It is not a new concept — it is shorthand for what you already do.
-
-Prerequisites: Chapters 3–11.
+You have spent two chapters writing `ld a, (ix+running_max+0)` and `ld (ix+cnt+0), a` by hand. You know what each frame access costs, you know where the offsets come from, and you know the low-byte / high-byte drill for word-sized slots. This chapter introduces `:=`, the typed assignment operator, which automates all of that — shorthand for what you already do.
 
 The companion example is `learning/part1/examples/11_functions_and_op.zax`.
 
@@ -21,7 +19,7 @@ hl := total     ; load the 16-bit value of 'total' into HL
 total := hl     ; store HL into 'total'
 ```
 
-`:=` is not another spelling of `ld`. `ld` is a raw Z80 instruction — you choose the operand form and the assembler encodes it exactly as written. `:=` is a typed assignment: the compiler checks that the left side is writable storage, checks that the right side is a compatible value, and emits whatever instruction sequence is needed.
+`ld` is a raw Z80 instruction — you choose the operand form and the assembler encodes it exactly as written. `:=` is a typed assignment: the compiler checks that the left side is writable storage, checks that the right side is a compatible value, and emits whatever instruction sequence is needed.
 
 For a byte-sized local, `count := a` emits a single `ld (ix-N), a` — exactly what you wrote by hand in Chapters 10 and 11.
 
@@ -103,7 +101,7 @@ find_max_skip:
   a := running_max
 ```
 
-The generated code is identical. `running_max := a` emits `ld (ix-N), a`. `a := running_max` emits `ld a, (ix-N)`. The names resolve to the same offsets. The `:=` form is just easier to read.
+The generated code is identical. `running_max := a` emits `ld (ix-N), a`. `a := running_max` emits `ld a, (ix-N)`. The names resolve to the same offsets. The `:=` form is easier to read.
 
 **`count_above` — raw IX (Chapter 10):**
 
@@ -150,10 +148,6 @@ Both are always available. Neither is required. The choice is about clarity for 
 - Use bare names with `:=` for typed locals. Do not use `(name)` — that means something different.
 - Raw Z80 instructions can still use typed names as operands. The compiler resolves them to IX-relative offsets.
 - `:=` and raw access are complementary. Use whichever is clearest.
-
-## What Comes Next
-
-Chapter 13 introduces `op` — inline named operations that expand at every call site with no frame overhead — and the ZAX pseudo-opcodes for 16-bit register moves.
 
 ---
 

@@ -90,7 +90,7 @@ find_max_skip:
 end
 ```
 
-Look at what happened. The comment block is gone — the parameter names `tbl` and `len` say what the function expects. The local `running_max` says what it holds. And every access is a standard Z80 `ld` instruction with an IX-relative offset. The compiler resolves `(ix+tbl+0)` to the correct numeric displacement. You never count stack slots by hand.
+The comment block is gone — the parameter names `tbl` and `len` say what the function expects. The local `running_max` says what it holds. And every access is a standard Z80 `ld` instruction with an IX-relative offset. The compiler resolves `(ix+tbl+0)` to the correct numeric displacement. You never count stack slots by hand.
 
 `tbl: addr` is a 16-bit address parameter — it occupies a two-byte frame slot. To load it into HL you need two byte-wide loads: `(ix+tbl+0)` for the low byte into L, `(ix+tbl+1)` for the high byte into H.
 
@@ -133,7 +133,7 @@ The return clause controls which registers carry the result and which ones the c
 | `func f(): AF` | A carries the result | BC, DE, HL saved; AF is not |
 | `func f(): HL` | Typed return in HL (byte in L, H = 0) | AF, BC, DE saved; HL is not |
 
-`: AF` does **not** deliver A through a typed mechanism. It simply removes AF from the save/restore set, so whatever value A holds at function exit survives into the caller. This is the same convention from Chapter 7 — caller and callee agree that A carries the result. The declaration tells the compiler not to clobber it with a `pop AF` in the epilogue.
+`: AF` removes AF from the save/restore set, so whatever value A holds at function exit survives into the caller. This is the same convention from Chapter 7 — caller and callee agree that A carries the result. The declaration tells the compiler not to clobber it with a `pop AF` in the epilogue.
 
 `: HL` is the typed return: byte values go in L (H zeroed), word values fill all of HL.
 
@@ -145,7 +145,7 @@ Omitting the return clause when the function leaves a meaningful value in A is a
 
 Everything in this chapter uses raw Z80 instructions to access frame slots. You write `ld a, (ix+running_max+0)` and the compiler resolves the name to an offset. This is deliberate: you already know IX-relative addressing from Chapter 6. The frame is just a structured use of what you already learned.
 
-ZAX also provides a typed assignment operator — `:=` — that handles frame access at a higher level. It picks the right registers, handles word-sized slots that need multi-instruction sequences, and checks types. Chapter 12 covers `:=` in full. By the time you get there, you will understand exactly what it generates, because you will have written the raw version by hand.
+ZAX also provides a typed assignment operator — `:=` — that handles frame access at a higher level. It picks the right registers, handles word-sized slots that need multi-instruction sequences, and checks types. Chapter 12 covers `:=` in full. You will have written the raw version by hand by then, so you will know exactly what it generates.
 
 ---
 
