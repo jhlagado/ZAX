@@ -135,7 +135,7 @@ Use `:=` when you want the compiler to handle the register selection and multi-i
 
 Use raw `ld a, (ix+name+0)` when you need precise control: choosing which register gets the value, accessing a specific byte lane of a word slot, or when the context makes the raw form clearer.
 
-Both are always available. Neither is required. The choice is about clarity for the reader, not correctness for the compiler.
+Both are always available. Neither is required. The choice is about what reads most clearly — the compiler accepts either.
 
 ---
 
