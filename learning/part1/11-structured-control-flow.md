@@ -2,12 +2,9 @@
 
 # Chapter 11 — Structured Control Flow
 
-This chapter introduces `if`/`else`, `while`, `break`, and `continue`. After
-reading it you will be able to replace raw flag-test-and-jump sequences with
-`if`/`else`, replace manual loop-label structures with `while`, and use `break`
-and `continue` to exit or restart a loop without writing explicit jump targets.
-
-Prerequisites: Chapters 3–10.
+This chapter introduces `if`/`else`, `while`, `break`, and `continue` — the
+structured replacements for manual flag-test-and-jump sequences and invented
+loop labels.
 
 ---
 
@@ -48,8 +45,7 @@ end
 
 The compiler emits a conditional jump over the first body and an unconditional
 jump over the second, along with the hidden labels needed to make them target the
-right locations. The programmer writes the intent; the compiler manages the
-targets.
+right locations. You write the intent; the compiler manages the targets.
 
 `else` is optional. `if NC ... end` with no `else` branch is the direct
 replacement for the raw pattern:
@@ -114,8 +110,7 @@ loop_exit:
 
 Both forms check the condition before executing the body even once. `while NZ`
 replaces the pair `loop_top:` + `jr nz, loop_top` and the exit label
-`loop_exit:`, while keeping the entry check. The programmer writes one `while NZ`
-line instead of managing two labels and two jump instructions.
+`loop_exit:`, while keeping the entry check. You write one `while NZ` line instead of managing two labels and two jump instructions.
 
 ---
 
@@ -124,7 +119,7 @@ line instead of managing two labels and two jump instructions.
 `while NZ` does not set flags. It reads them. The flags at the `while` keyword
 are exactly whatever instruction last set them.
 
-`ld` instructions on the Z80 do not affect flags. This is the most common mistake:
+`ld` instructions on the Z80 do not affect flags. The trap is using `while` immediately after `ld`:
 
 ```zax
 ; WRONG — ld b, 10 does not set flags
@@ -136,8 +131,8 @@ while NZ          ; tests stale flags from whatever ran before
 end
 ```
 
-The fix is to establish flags explicitly before the loop. The standard pattern
-for a loop over B counts is to copy B into A and `or a`:
+The fix is to establish flags explicitly before the loop. To drive a `while NZ`
+loop from B, copy B into A and `or a`:
 
 ```zax
 ld b, 10
@@ -201,9 +196,8 @@ end
 the flags must correctly represent the intended condition at the moment
 `continue` executes.
 
-`break` and `continue` only affect the immediately enclosing loop. If you have
-nested `while` loops, `break` exits the inner one. There is no labeled-loop form
-in the current language.
+`break` and `continue` only affect the immediately enclosing loop. Nested `while`
+loops have no labeled form — `break` always exits the innermost one.
 
 ---
 
@@ -345,15 +339,12 @@ the branch-back. `djnz` fused decrement-and-branch into one instruction; with
 **Flag behavior: `djnz` vs `dec b`.** `djnz` does not affect the Z flag — it
 uses its own internal decrement-and-branch without touching the flag register.
 `dec b`, by contrast, does set the Z flag (as well as S, H, and P/V). When
-using `dec b` to drive a `while NZ` loop, the `dec b / ld a, b / or a`
-back-edge sequence is needed because `or a` re-establishes the Z flag from the
-current value of A (which was just loaded from B). This extra step is required
-because `dec b` alone sets Z correctly, but the back-edge test in the `while`
-loop reads the flags at the `end` line, and any instruction between `dec b` and
-`end` may have changed them. The `ld a, b / or a` sequence ensures the final
-flag state before the back-edge test reflects B's value, not whatever a previous
-instruction left in the flags. Note: `djnz` cannot be directly replaced by `dec b / jr nz` in a `while` loop
-without this extra flag-establishment step.
+using `dec b` to drive a `while NZ` loop, the back-edge needs the
+`ld a, b / or a` sequence: `dec b` alone sets Z correctly, but any instruction
+between `dec b` and `end` can change the flags before the back-edge test reads
+them. The `ld a, b / or a` re-establishes the flag state from B's current
+value. `djnz` cannot be directly replaced by `dec b / jr nz` in a `while` loop
+without this flag-establishment step.
 
 **`count_above` — raw (Chapter 9):**
 
@@ -462,14 +453,6 @@ jump. In the structured version, each is expressed by the keyword that carries i
 - Structured control flow does not hide the machine. Each `if`/`else`/`end` and
   `while`/`end` generates the same conditional jumps and labels. The compiler manages the labels;
   you manage the flags.
-
-## What Comes Next
-
-Chapter 12 introduces `:=`, the typed assignment operator. You have been writing
-`ld a, (ix+running_max+0)` and `ld (ix+cnt+0), a` by hand. `:=` automates
-these frame accesses — the compiler picks the right registers, handles
-word-sized slots, and checks types. By the time you read Chapter 12, you will
-understand exactly what `:=` generates.
 
 ---
 
