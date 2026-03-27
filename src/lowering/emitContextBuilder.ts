@@ -132,9 +132,268 @@ export type EmitProgramLoweringContextInputs = {
 };
 
 export type EmitLoweringContextBuilderInput = {
-  functionLowering: EmitFunctionLoweringContextInputs;
-  programLowering: EmitProgramLoweringContextInputs;
+  readonly functionLowering: Readonly<EmitFunctionLoweringContextInputs>;
+  readonly programLowering: Readonly<EmitProgramLoweringContextInputs>;
 };
+
+type FunctionLoweringComponentContexts = {
+  readonly diagnostics: FunctionLoweringDiagnosticsContext;
+  readonly symbols: FunctionLoweringSymbolContext;
+  readonly spTracking: FunctionLoweringSpTrackingContext;
+  readonly emission: FunctionLoweringEmissionContext;
+  readonly conditions: FunctionLoweringConditionContext;
+  readonly types: FunctionLoweringTypeContext;
+  readonly materialization: FunctionLoweringMaterializationContext;
+  readonly storage: FunctionLoweringStorageContext;
+  readonly callableResolution: FunctionLoweringCallableResolutionContext;
+  readonly opOverload: FunctionLoweringOpOverloadContext;
+  readonly astUtilities: FunctionLoweringAstUtilityContext;
+  readonly registers: FunctionLoweringRegisterContext;
+};
+
+function createFunctionLoweringDiagnosticsContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringDiagnosticsContext {
+  return {
+    diagnostics: input.diagnostics,
+    diag: input.diag,
+    diagAt: input.diagAt,
+    diagAtWithId: input.diagAtWithId,
+    diagAtWithSeverityAndId: input.diagAtWithSeverityAndId,
+    warnAt: input.warnAt,
+  };
+}
+
+function createFunctionLoweringSymbolContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringSymbolContext {
+  return {
+    taken: input.taken,
+    pending: input.pending,
+    traceComment: input.traceComment,
+    traceLabel: input.traceLabel,
+    currentCodeSegmentTagRef: input.currentCodeSegmentTagRef,
+    generatedLabelCounterRef: input.generatedLabelCounterRef,
+  };
+}
+
+function createFunctionLoweringSpTrackingContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringSpTrackingContext {
+  return {
+    bindSpTracking: input.bindSpTracking,
+  };
+}
+
+function createFunctionLoweringEmissionContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringEmissionContext {
+  return {
+    getCodeOffset: input.getCodeOffset,
+    emitInstr: input.emitInstr,
+    emitRawCodeBytes: input.emitRawCodeBytes,
+    emitAbs16Fixup: input.emitAbs16Fixup,
+    emitAbs16FixupPrefixed: input.emitAbs16FixupPrefixed,
+    emitRel8Fixup: input.emitRel8Fixup,
+  };
+}
+
+function createFunctionLoweringConditionContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringConditionContext {
+  return {
+    conditionOpcodeFromName: input.conditionOpcodeFromName,
+    conditionNameFromOpcode: input.conditionNameFromOpcode,
+    callConditionOpcodeFromName: input.callConditionOpcodeFromName,
+    jrConditionOpcodeFromName: input.jrConditionOpcodeFromName,
+    conditionOpcode: input.conditionOpcode,
+    inverseConditionName: input.inverseConditionName,
+    symbolicTargetFromExpr: input.symbolicTargetFromExpr,
+  };
+}
+
+function createFunctionLoweringTypeContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringTypeContext {
+  return {
+    evalImmExpr: input.evalImmExpr,
+    env: input.env,
+    resolveScalarBinding: input.resolveScalarBinding,
+    resolveScalarKind: input.resolveScalarKind,
+    resolveEaTypeExpr: input.resolveEaTypeExpr,
+    resolveScalarTypeForEa: input.resolveScalarTypeForEa,
+    resolveScalarTypeForLd: input.resolveScalarTypeForLd,
+    resolveArrayType: input.resolveArrayType,
+    typeDisplay: input.typeDisplay,
+    sameTypeShape: input.sameTypeShape,
+  };
+}
+
+function createFunctionLoweringMaterializationContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringMaterializationContext {
+  return {
+    resolveEa: input.resolveEa,
+    buildEaWordPipeline: input.buildEaWordPipeline,
+    enforceEaRuntimeAtomBudget: input.enforceEaRuntimeAtomBudget,
+    enforceDirectCallSiteEaBudget: input.enforceDirectCallSiteEaBudget,
+    pushEaAddress: input.pushEaAddress,
+    materializeEaAddressToHL: input.materializeEaAddressToHL,
+    pushMemValue: input.pushMemValue,
+    pushImm16: input.pushImm16,
+    pushZeroExtendedReg8: input.pushZeroExtendedReg8,
+    loadImm16ToHL: input.loadImm16ToHL,
+    emitStepPipeline: input.emitStepPipeline,
+    emitScalarWordLoad: input.emitScalarWordLoad,
+    emitScalarWordStore: input.emitScalarWordStore,
+    lowerLdWithEa: input.lowerLdWithEa,
+  };
+}
+
+function createFunctionLoweringStorageContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringStorageContext {
+  return {
+    stackSlotOffsets: input.stackSlotOffsets,
+    stackSlotTypes: input.stackSlotTypes,
+    localAliasTargets: input.localAliasTargets,
+    storageTypes: input.storageTypes,
+    moduleAliasTargets: input.moduleAliasTargets,
+    rawTypedCallWarningsEnabled: input.rawTypedCallWarningsEnabled,
+  };
+}
+
+function createFunctionLoweringCallableResolutionContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringCallableResolutionContext {
+  return {
+    resolveCallable: input.resolveCallable,
+    resolveOpCandidates: input.resolveOpCandidates,
+    opStackPolicyMode: input.opStackPolicyMode,
+  };
+}
+
+function createFunctionLoweringOpOverloadContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringOpOverloadContext {
+  return {
+    formatAsmOperandForOpDiag: input.formatAsmOperandForOpDiag,
+    selectOpOverload: input.selectOpOverload,
+    summarizeOpStackEffect: input.summarizeOpStackEffect,
+  };
+}
+
+function createFunctionLoweringAstUtilityContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringAstUtilityContext {
+  return {
+    cloneImmExpr: input.cloneImmExpr,
+    cloneEaExpr: input.cloneEaExpr,
+    cloneOperand: input.cloneOperand,
+    flattenEaDottedName: input.flattenEaDottedName,
+    normalizeFixedToken: input.normalizeFixedToken,
+  };
+}
+
+function createFunctionLoweringRegisterContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringRegisterContext {
+  return {
+    reg8: input.reg8,
+    reg16: input.reg16,
+  };
+}
+
+function createFunctionLoweringComponentContexts(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringComponentContexts {
+  return {
+    diagnostics: createFunctionLoweringDiagnosticsContext(input),
+    symbols: createFunctionLoweringSymbolContext(input),
+    spTracking: createFunctionLoweringSpTrackingContext(input),
+    emission: createFunctionLoweringEmissionContext(input),
+    conditions: createFunctionLoweringConditionContext(input),
+    types: createFunctionLoweringTypeContext(input),
+    materialization: createFunctionLoweringMaterializationContext(input),
+    storage: createFunctionLoweringStorageContext(input),
+    callableResolution: createFunctionLoweringCallableResolutionContext(input),
+    opOverload: createFunctionLoweringOpOverloadContext(input),
+    astUtilities: createFunctionLoweringAstUtilityContext(input),
+    registers: createFunctionLoweringRegisterContext(input),
+  };
+}
+
+export function createFunctionLoweringSharedContext(
+  input: Readonly<EmitFunctionLoweringContextInputs>,
+): FunctionLoweringSharedContext {
+  const parts = createFunctionLoweringComponentContexts(input);
+  return {
+    ...parts.diagnostics,
+    ...parts.symbols,
+    ...parts.spTracking,
+    ...parts.emission,
+    ...parts.conditions,
+    ...parts.types,
+    ...parts.materialization,
+    ...parts.storage,
+    ...parts.callableResolution,
+    ...parts.opOverload,
+    ...parts.astUtilities,
+    ...parts.registers,
+  };
+}
+
+export function createProgramLoweringContext(
+  shared: Readonly<FunctionLoweringSharedContext>,
+  input: Readonly<EmitProgramLoweringContextInputs>,
+): ProgramLoweringContext {
+  return {
+    ...shared,
+    program: input.program,
+    includeDirs: input.includeDirs,
+    localCallablesByFile: input.localCallablesByFile,
+    visibleCallables: input.visibleCallables,
+    localOpsByFile: input.localOpsByFile,
+    visibleOpsByName: input.visibleOpsByName,
+    declaredOpNames: input.declaredOpNames,
+    declaredBinNames: input.declaredBinNames,
+    deferredExterns: input.deferredExterns,
+    storageTypes: input.storageTypes,
+    moduleAliasTargets: input.moduleAliasTargets,
+    moduleAliasDecls: input.moduleAliasDecls,
+    rawAddressSymbols: input.rawAddressSymbols,
+    absoluteSymbols: input.absoluteSymbols,
+    symbols: input.symbols,
+    dataBytes: input.dataBytes,
+    codeBytes: input.codeBytes,
+    hexBytes: input.hexBytes,
+    activeSectionRef: input.activeSectionRef,
+    codeOffsetRef: input.codeOffsetRef,
+    dataOffsetRef: input.dataOffsetRef,
+    varOffsetRef: input.varOffsetRef,
+    baseExprs: input.baseExprs,
+    advanceAlign: input.advanceAlign,
+    alignTo: input.alignTo,
+    loadBinInput: input.loadBinInput,
+    loadHexInput: input.loadHexInput,
+    resolveAggregateType: input.resolveAggregateType,
+    sizeOfTypeExpr: input.sizeOfTypeExpr,
+    lowerFunctionDecl: input.lowerFunctionDecl,
+    recordLoweredAsmItem: input.recordLoweredAsmItem,
+    lowerImmExprForLoweredAsm: input.lowerImmExprForLoweredAsm,
+    namedSectionSinksByNode: input.namedSectionSinksByNode,
+    withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T): T => {
+      const prevSink = input.currentNamedSectionSinkRef.current;
+      input.currentNamedSectionSinkRef.current = sink;
+      sink.currentSourceTag = input.currentCodeSegmentTagRef.current;
+      try {
+        return fn();
+      } finally {
+        input.currentNamedSectionSinkRef.current = prevSink;
+      }
+    },
+  };
+}
 
 export function createEmitLoweringContexts(
   input: EmitLoweringContextBuilderInput,
@@ -142,161 +401,11 @@ export function createEmitLoweringContexts(
   functionLoweringSharedContext: FunctionLoweringSharedContext;
   programLoweringContext: ProgramLoweringContext;
 } {
-  const functionLoweringDiagnosticsContext: FunctionLoweringDiagnosticsContext = {
-    diagnostics: input.functionLowering.diagnostics,
-    diag: input.functionLowering.diag,
-    diagAt: input.functionLowering.diagAt,
-    diagAtWithId: input.functionLowering.diagAtWithId,
-    diagAtWithSeverityAndId: input.functionLowering.diagAtWithSeverityAndId,
-    warnAt: input.functionLowering.warnAt,
-  };
-  const functionLoweringSymbolContext: FunctionLoweringSymbolContext = {
-    taken: input.functionLowering.taken,
-    pending: input.functionLowering.pending,
-    traceComment: input.functionLowering.traceComment,
-    traceLabel: input.functionLowering.traceLabel,
-    currentCodeSegmentTagRef: input.functionLowering.currentCodeSegmentTagRef,
-    generatedLabelCounterRef: input.functionLowering.generatedLabelCounterRef,
-  };
-  const functionLoweringSpTrackingContext: FunctionLoweringSpTrackingContext = {
-    bindSpTracking: input.functionLowering.bindSpTracking,
-  };
-  const functionLoweringEmissionContext: FunctionLoweringEmissionContext = {
-    getCodeOffset: input.functionLowering.getCodeOffset,
-    emitInstr: input.functionLowering.emitInstr,
-    emitRawCodeBytes: input.functionLowering.emitRawCodeBytes,
-    emitAbs16Fixup: input.functionLowering.emitAbs16Fixup,
-    emitAbs16FixupPrefixed: input.functionLowering.emitAbs16FixupPrefixed,
-    emitRel8Fixup: input.functionLowering.emitRel8Fixup,
-  };
-  const functionLoweringConditionContext: FunctionLoweringConditionContext = {
-    conditionOpcodeFromName: input.functionLowering.conditionOpcodeFromName,
-    conditionNameFromOpcode: input.functionLowering.conditionNameFromOpcode,
-    callConditionOpcodeFromName: input.functionLowering.callConditionOpcodeFromName,
-    jrConditionOpcodeFromName: input.functionLowering.jrConditionOpcodeFromName,
-    conditionOpcode: input.functionLowering.conditionOpcode,
-    inverseConditionName: input.functionLowering.inverseConditionName,
-    symbolicTargetFromExpr: input.functionLowering.symbolicTargetFromExpr,
-  };
-  const functionLoweringTypeContext: FunctionLoweringTypeContext = {
-    evalImmExpr: input.functionLowering.evalImmExpr,
-    env: input.functionLowering.env,
-    resolveScalarBinding: input.functionLowering.resolveScalarBinding,
-    resolveScalarKind: input.functionLowering.resolveScalarKind,
-    resolveEaTypeExpr: input.functionLowering.resolveEaTypeExpr,
-    resolveScalarTypeForEa: input.functionLowering.resolveScalarTypeForEa,
-    resolveScalarTypeForLd: input.functionLowering.resolveScalarTypeForLd,
-    resolveArrayType: input.functionLowering.resolveArrayType,
-    typeDisplay: input.functionLowering.typeDisplay,
-    sameTypeShape: input.functionLowering.sameTypeShape,
-  };
-  const functionLoweringMaterializationContext: FunctionLoweringMaterializationContext = {
-    resolveEa: input.functionLowering.resolveEa,
-    buildEaWordPipeline: input.functionLowering.buildEaWordPipeline,
-    enforceEaRuntimeAtomBudget: input.functionLowering.enforceEaRuntimeAtomBudget,
-    enforceDirectCallSiteEaBudget: input.functionLowering.enforceDirectCallSiteEaBudget,
-    pushEaAddress: input.functionLowering.pushEaAddress,
-    materializeEaAddressToHL: input.functionLowering.materializeEaAddressToHL,
-    pushMemValue: input.functionLowering.pushMemValue,
-    pushImm16: input.functionLowering.pushImm16,
-    pushZeroExtendedReg8: input.functionLowering.pushZeroExtendedReg8,
-    loadImm16ToHL: input.functionLowering.loadImm16ToHL,
-    emitStepPipeline: input.functionLowering.emitStepPipeline,
-    emitScalarWordLoad: input.functionLowering.emitScalarWordLoad,
-    emitScalarWordStore: input.functionLowering.emitScalarWordStore,
-    lowerLdWithEa: input.functionLowering.lowerLdWithEa,
-  };
-  const functionLoweringStorageContext: FunctionLoweringStorageContext = {
-    stackSlotOffsets: input.functionLowering.stackSlotOffsets,
-    stackSlotTypes: input.functionLowering.stackSlotTypes,
-    localAliasTargets: input.functionLowering.localAliasTargets,
-    storageTypes: input.functionLowering.storageTypes,
-    moduleAliasTargets: input.functionLowering.moduleAliasTargets,
-    rawTypedCallWarningsEnabled: input.functionLowering.rawTypedCallWarningsEnabled,
-  };
-  const functionLoweringCallableResolutionContext: FunctionLoweringCallableResolutionContext = {
-    resolveCallable: input.functionLowering.resolveCallable,
-    resolveOpCandidates: input.functionLowering.resolveOpCandidates,
-    opStackPolicyMode: input.functionLowering.opStackPolicyMode,
-  };
-  const functionLoweringOpOverloadContext: FunctionLoweringOpOverloadContext = {
-    formatAsmOperandForOpDiag: input.functionLowering.formatAsmOperandForOpDiag,
-    selectOpOverload: input.functionLowering.selectOpOverload,
-    summarizeOpStackEffect: input.functionLowering.summarizeOpStackEffect,
-  };
-  const functionLoweringAstUtilityContext: FunctionLoweringAstUtilityContext = {
-    cloneImmExpr: input.functionLowering.cloneImmExpr,
-    cloneEaExpr: input.functionLowering.cloneEaExpr,
-    cloneOperand: input.functionLowering.cloneOperand,
-    flattenEaDottedName: input.functionLowering.flattenEaDottedName,
-    normalizeFixedToken: input.functionLowering.normalizeFixedToken,
-  };
-  const functionLoweringRegisterContext: FunctionLoweringRegisterContext = {
-    reg8: input.functionLowering.reg8,
-    reg16: input.functionLowering.reg16,
-  };
-
-  const functionLoweringSharedContext: FunctionLoweringSharedContext = {
-    ...functionLoweringDiagnosticsContext,
-    ...functionLoweringSymbolContext,
-    ...functionLoweringSpTrackingContext,
-    ...functionLoweringEmissionContext,
-    ...functionLoweringConditionContext,
-    ...functionLoweringTypeContext,
-    ...functionLoweringMaterializationContext,
-    ...functionLoweringStorageContext,
-    ...functionLoweringCallableResolutionContext,
-    ...functionLoweringOpOverloadContext,
-    ...functionLoweringAstUtilityContext,
-    ...functionLoweringRegisterContext,
-  };
-
-  const programLoweringContext: ProgramLoweringContext = {
-    ...functionLoweringSharedContext,
-    program: input.programLowering.program,
-    includeDirs: input.programLowering.includeDirs,
-    localCallablesByFile: input.programLowering.localCallablesByFile,
-    visibleCallables: input.programLowering.visibleCallables,
-    localOpsByFile: input.programLowering.localOpsByFile,
-    visibleOpsByName: input.programLowering.visibleOpsByName,
-    declaredOpNames: input.programLowering.declaredOpNames,
-    declaredBinNames: input.programLowering.declaredBinNames,
-    deferredExterns: input.programLowering.deferredExterns,
-    storageTypes: input.programLowering.storageTypes,
-    moduleAliasTargets: input.programLowering.moduleAliasTargets,
-    moduleAliasDecls: input.programLowering.moduleAliasDecls,
-    rawAddressSymbols: input.programLowering.rawAddressSymbols,
-    absoluteSymbols: input.programLowering.absoluteSymbols,
-    symbols: input.programLowering.symbols,
-    dataBytes: input.programLowering.dataBytes,
-    codeBytes: input.programLowering.codeBytes,
-    hexBytes: input.programLowering.hexBytes,
-    activeSectionRef: input.programLowering.activeSectionRef,
-    codeOffsetRef: input.programLowering.codeOffsetRef,
-    dataOffsetRef: input.programLowering.dataOffsetRef,
-    varOffsetRef: input.programLowering.varOffsetRef,
-    baseExprs: input.programLowering.baseExprs,
-    advanceAlign: input.programLowering.advanceAlign,
-    alignTo: input.programLowering.alignTo,
-    loadBinInput: input.programLowering.loadBinInput,
-    loadHexInput: input.programLowering.loadHexInput,
-    resolveAggregateType: input.programLowering.resolveAggregateType,
-    sizeOfTypeExpr: input.programLowering.sizeOfTypeExpr,
-    lowerFunctionDecl: input.programLowering.lowerFunctionDecl,
-    recordLoweredAsmItem: input.programLowering.recordLoweredAsmItem,
-    lowerImmExprForLoweredAsm: input.programLowering.lowerImmExprForLoweredAsm,
-    namedSectionSinksByNode: input.programLowering.namedSectionSinksByNode,
-    withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T): T => {
-      const prevSink = input.programLowering.currentNamedSectionSinkRef.current;
-      input.programLowering.currentNamedSectionSinkRef.current = sink;
-      sink.currentSourceTag = input.programLowering.currentCodeSegmentTagRef.current;
-      try {
-        return fn();
-      } finally {
-        input.programLowering.currentNamedSectionSinkRef.current = prevSink;
-      }
-    },
-  };
+  const functionLoweringSharedContext = createFunctionLoweringSharedContext(input.functionLowering);
+  const programLoweringContext = createProgramLoweringContext(
+    functionLoweringSharedContext,
+    input.programLowering,
+  );
 
   return {
     functionLoweringSharedContext,
