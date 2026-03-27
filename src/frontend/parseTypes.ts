@@ -12,6 +12,7 @@ import {
   topLevelStartKeyword,
 } from './parseModuleCommon.js';
 import { stripLineComment as stripComment } from './parseParserShared.js';
+import { parseRecordFieldDecl } from './parseRecordFieldDecl.js';
 
 type RawLine = {
   raw: string;
@@ -65,14 +66,9 @@ function parseRecordFields(
   let index = startIndex;
 
   while (index < lineCount) {
-    const {
-      raw: rawField,
-      startOffset: so,
-      endOffset: eo,
-      lineNo: fieldLineNo,
-      filePath: fieldFilePath,
-    } = getRawLine(index);
-    const t = stripComment(rawField).trim();
+    const fieldLine = getRawLine(index);
+    const { endOffset: eo, lineNo: fieldLineNo, filePath: fieldFilePath } = fieldLine;
+    const t = stripComment(fieldLine.raw).trim();
     const tLower = t.toLowerCase();
     if (t.length === 0) {
       index++;
@@ -108,84 +104,13 @@ function parseRecordFields(
       }
     }
 
-    const m = /^([^:]+)\s*:\s*(.+)$/.exec(t);
-    if (!m) {
-      diagInvalidBlockLine(
-        diagnostics,
-        fieldFilePath,
-        `${name} field declaration`,
-        t,
-        '<name>: <type>',
-        fieldLineNo,
-      );
-      index++;
-      continue;
-    }
-
-    const fieldName = m[1]!.trim();
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(fieldName)) {
-      diag(
-        diagnostics,
-        fieldFilePath,
-        `Invalid ${name} field name ${formatIdentifierToken(fieldName)}: expected <identifier>.`,
-        { line: fieldLineNo, column: 1 },
-      );
-      index++;
-      continue;
-    }
-    if (isReservedTopLevelName(fieldName)) {
-      diag(
-        diagnostics,
-        modulePath,
-        `Invalid ${name} field name "${fieldName}": collides with a top-level keyword.`,
-        { line: index + 1, column: 1 },
-      );
-      index++;
-      continue;
-    }
-    const fieldNameLower = fieldName.toLowerCase();
-    if (fieldNamesLower.has(fieldNameLower)) {
-      diag(diagnostics, fieldFilePath, `Duplicate ${name} field name "${fieldName}".`, {
-        line: fieldLineNo,
-        column: 1,
-      });
-      index++;
-      continue;
-    }
-    fieldNamesLower.add(fieldNameLower);
-    const typeText = m[2]!.trim();
-    const fieldSpan = span(file, so, eo);
-    const typeExpr = parseTypeExprFromText(typeText, fieldSpan, {
-      allowInferredArrayLength: false,
+    const field = parseRecordFieldDecl(name, t, fieldLine, fieldNamesLower, {
+      file,
+      diagnostics,
+      modulePath,
+      isReservedTopLevelName,
     });
-    if (!typeExpr) {
-      if (
-        diagIfInferredArrayLengthNotAllowed(diagnostics, fieldFilePath, typeText, {
-          line: fieldLineNo,
-          column: 1,
-        })
-      ) {
-        index++;
-        continue;
-      }
-      diagInvalidBlockLine(
-        diagnostics,
-        fieldFilePath,
-        `${name} field declaration`,
-        t,
-        '<name>: <type>',
-        fieldLineNo,
-      );
-      index++;
-      continue;
-    }
-
-    fields.push({
-      kind: 'RecordField',
-      span: fieldSpan,
-      name: fieldName,
-      typeExpr,
-    });
+    if (field) fields.push(field);
     index++;
   }
 
