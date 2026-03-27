@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { writeD8m } from '../src/formats/writeD8m.js';
-import type { EmittedByteMap, SymbolEntry } from '../src/formats/types.js';
+import { writeD8m } from '../../src/formats/writeD8m.js';
+import type { EmittedByteMap, SymbolEntry } from '../../src/formats/types.js';
 
 type D8mView = {
   segments: Array<{ start: number; end: number }>;
