@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { DiagnosticIds, type Diagnostic } from '../src/diagnosticTypes.js';
-import type { AsmItemNode, OpDeclNode, SourceSpan } from '../src/frontend/ast.js';
-import { createOpExpansionExecutionHelpers } from '../src/lowering/opExpansionExecution.js';
+import { DiagnosticIds, type Diagnostic } from '../../src/diagnosticTypes.js';
+import type { AsmItemNode, OpDeclNode, SourceSpan } from '../../src/frontend/ast.js';
+import { createOpExpansionExecutionHelpers } from '../../src/lowering/opExpansionExecution.js';
 
 const span: SourceSpan = {
   file: 'test.zax',
