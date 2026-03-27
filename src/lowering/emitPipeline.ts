@@ -58,6 +58,7 @@ export type EmitProgramResult = {
 /** Environment for finalization that is *not* part of {@link LoweringResult}. */
 export type EmitFinalizationPhaseEnv = Omit<EmitFinalizationContext, keyof LoweringResult>;
 
+// --- Phase handoff: merge lowering output with finalization inputs ---
 /**
  * Combine lowering output with placement/fixup inputs. `lowered` is the typed handoff from
  * the lowering phase; `env` holds shared refs (maps, diagnostics, helpers) held across phases.
@@ -79,11 +80,13 @@ export function emitProgramEmptyResult(): EmitProgramResult {
   };
 }
 
+// --- Phase 2: prescan (callables, ops, storage aliases) ---
 /** Phase 2 — prescan: build visibility maps and alias metadata before emission. */
 export function runEmitPrescanPhase(ctx: ProgramLoweringContext): PrescanResult {
   return preScanProgramDeclarations(ctx);
 }
 
+// --- Phase 3: lowering (emit bytes, fixups, lowered ASM stream) ---
 /** Phase 3 — lowering: emit declarations and functions into section bytes and fixup queues. */
 export function runEmitLoweringPhase(
   ctx: ProgramLoweringContext,
@@ -92,6 +95,7 @@ export function runEmitLoweringPhase(
   return lowerProgramDeclarations(ctx, prescan);
 }
 
+// --- Phase 4: finalization (placement, fixups, artifact assembly) ---
 /** Phase 4 — placement, fixups, merged map and placed lowered ASM. */
 export function runEmitPlacementAndArtifactPhase(
   context: EmitFinalizationContext,
