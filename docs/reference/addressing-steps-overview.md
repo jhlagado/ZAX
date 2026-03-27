@@ -8,6 +8,7 @@ This page explains how the step library is structured and how it is used by the 
 can treat pipelines as pure.
 
 Related docs:
+
 - `docs/reference/ea-pipeline-flow.md`
 - `docs/reference/LOWERING-FLOW.md`
 
@@ -20,11 +21,13 @@ addressing sequence. Pipelines are composed in `addressingPipelines.ts` based on
 element size, then embedded into templates that load/store bytes or words.
 
 `steps.ts` owns:
+
 - the `StepInstr` DSL (push/pop, loads, IX+disp, etc)
 - pure helpers that return `StepPipeline`
 - small render helpers for tests and doc validation
 
 Pipelines are chosen when the EA can be expressed as:
+
 - a base in `DE` (`LOAD_BASE_*`)
 - an index in `HL` (`LOAD_IDX_*`)
 - a combination step (`CALC_EA*`)
@@ -66,6 +69,7 @@ When a pipeline cannot be built, lowering falls back to materializing an address
 ### EA builders (`EA_*` / `EAW_*`)
 
 Named for **base × index** shape:
+
 - base: `GLOB` or `FVAR`
 - index: `CONST`, `REG`, `RP`, `GLOB`, `FVAR`
 - `EA_*` uses byte stride
@@ -74,6 +78,7 @@ Named for **base × index** shape:
 ### Templates
 
 Wrap an inner `ea: StepPipeline` with saves/restores and the right load/store:
+
 - Byte load: `TEMPLATE_L_ABC`, `TEMPLATE_L_HL`, `TEMPLATE_L_DE`
 - Byte store: `TEMPLATE_S_ANY`, `TEMPLATE_S_HL`
 - Word load: `TEMPLATE_LW_HL`, `TEMPLATE_LW_DE`, `TEMPLATE_LW_BC`
@@ -84,6 +89,7 @@ Wrap an inner `ea: StepPipeline` with saves/restores and the right load/store:
 ## 3. When pipelines are chosen
 
 `addressingPipelines.ts` is the entrypoint for selecting pipelines. It chooses a pipeline when:
+
 - the EA resolves to `abs` or `stack` (not `indirect`)
 - index types are supported (`IndexImm`, `IndexReg8`, `IndexReg16`, `IndexEa`)
 - element sizes are known and valid for `CALC_EA_WIDE`
