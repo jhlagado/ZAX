@@ -4,9 +4,9 @@ import {
   parseImmExprFromText,
   parseNumberLiteral,
   parseTypeExprFromText,
-} from '../src/frontend/parseImm.js';
-import { makeSourceFile, span } from '../src/frontend/source.js';
-import type { Diagnostic } from '../src/diagnosticTypes.js';
+} from '../../src/frontend/parseImm.js';
+import { makeSourceFile, span } from '../../src/frontend/source.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
 
 describe('PR476 immediate-expression parsing extraction', () => {
   const file = makeSourceFile('pr476_parse_imm_helpers.zax', '');

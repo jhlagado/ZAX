@@ -1,21 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnosticTypes.js';
-import { parseDataBlock } from '../src/frontend/parseData.js';
-import { parseProgram } from '../src/frontend/parser.js';
-import { makeSourceFile } from '../src/frontend/source.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { parseGlobalsBlock } from '../../src/frontend/parseGlobals.js';
+import { parseProgram } from '../../src/frontend/parser.js';
+import { makeSourceFile } from '../../src/frontend/source.js';
 
-describe('PR476 data parser extraction', () => {
-  it('keeps data block parsing intact', () => {
-    const sourceText = [
-      'data',
-      'greeting: byte[] = "hi"',
-      'coords: word[2] = [1, 2]',
-      'func main()',
-      'end',
-      '',
-    ].join('\n');
-    const file = makeSourceFile('pr476_parse_data_helpers.zax', sourceText);
+describe('PR476 globals parser extraction', () => {
+  it('keeps globals block parsing intact', () => {
+    const sourceText = ['globals', 'foo: byte', 'bar: word = $1234', 'func main()', 'end'].join(
+      '\n',
+    );
+    const file = makeSourceFile('pr476_parse_globals_helpers.zax', sourceText);
     const diagnostics: Diagnostic[] = [];
 
     function getRawLine(lineIndex: number): {
@@ -39,52 +34,42 @@ describe('PR476 data parser extraction', () => {
       };
     }
 
-    const parsed = parseDataBlock(0, {
+    const parsed = parseGlobalsBlock('globals', 0, 1, {
       file,
       lineCount: file.lineStarts.length,
       diagnostics,
       modulePath: file.path,
       getRawLine,
+      isReservedTopLevelName: () => false,
     });
 
     expect(diagnostics).toEqual([
       expect.objectContaining({
         severity: 'error',
         message:
-          'Legacy top-level "data ... end" blocks are removed; use direct declarations inside named data sections.',
+          'Legacy "globals ... end" storage blocks are removed; use direct declarations inside named data sections.',
       }),
     ]);
     expect(parsed.nextIndex).toBe(3);
-    expect(parsed.node).toMatchObject({
-      kind: 'DataBlock',
+    expect(parsed.varBlock).toMatchObject({
+      kind: 'VarBlock',
+      scope: 'module',
       decls: [
-        { name: 'greeting', initializer: { kind: 'InitString', value: 'hi' } },
+        { name: 'foo', typeExpr: { kind: 'TypeName', name: 'byte' } },
         {
-          name: 'coords',
-          initializer: {
-            kind: 'InitArray',
-            elements: [
-              { kind: 'ImmLiteral', value: 1 },
-              { kind: 'ImmLiteral', value: 2 },
-            ],
-          },
+          name: 'bar',
+          typeExpr: { kind: 'TypeName', name: 'word' },
+          initializer: { kind: 'VarInitValue', expr: { kind: 'ImmLiteral', value: 0x1234 } },
         },
       ],
     });
   });
 
-  it('preserves data parsing through parser.ts', () => {
+  it('preserves globals parsing through parser.ts', () => {
     const diagnostics: Diagnostic[] = [];
     const program = parseProgram(
-      'pr476_parse_data_helpers.zax',
-      [
-        'data',
-        'greeting: byte[] = "hi"',
-        'coords: word[2] = [1, 2]',
-        'func main()',
-        'end',
-        '',
-      ].join('\n'),
+      'pr476_parse_globals_helpers.zax',
+      ['globals', 'foo: byte', 'bar: word = $1234', 'func main()', 'end', ''].join('\n'),
       diagnostics,
     );
 
@@ -92,7 +77,7 @@ describe('PR476 data parser extraction', () => {
       expect.objectContaining({
         severity: 'error',
         message:
-          'Legacy top-level "data ... end" blocks are removed; use direct declarations inside named data sections.',
+          'Legacy "globals ... end" storage blocks are removed; use direct declarations inside named data sections.',
       }),
     ]);
     expect(program.files[0]?.items).toHaveLength(1);
