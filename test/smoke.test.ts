@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import '../src/pipeline.js';
+import { compile } from '../src/compile.js';
 
 /*
-PR0 is contracts-only (types/interfaces). This smoke test ensures the
-TypeScript/ESM/Vitest plumbing can import the modules successfully.
-*/
+ * Ensures Vitest can load the real compiler entry (`compile`) and its module graph,
+ * not only type-only pipeline contracts.
+ */
 describe('smoke', () => {
-  it('loads', () => {
-    expect(true).toBe(true);
+  it('loads the compiler entry', () => {
+    expect(compile).toBeTypeOf('function');
   });
 });
