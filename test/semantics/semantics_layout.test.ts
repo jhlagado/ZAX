@@ -11,6 +11,7 @@ import type {
   TypeExprNode,
   UnionDeclNode,
 } from '../../src/frontend/ast.js';
+import { expectDiagnostic, expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 const s = (file = 'test.zax'): SourceSpan => ({
   file,
@@ -53,8 +54,11 @@ describe('sizeOfTypeExpr', () => {
     const env = emptyEnv();
     const res = sizeOfTypeExpr({ kind: 'TypeName', span: s(), name: 'Nope' }, env, diagnostics);
     expect(res).toBeUndefined();
-    expect(diagnostics[0]?.id).toBe(DiagnosticIds.TypeError);
-    expect(diagnostics.map((d) => d.message)).toContain('Unknown type "Nope".');
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.TypeError,
+      severity: 'error',
+      message: 'Unknown type "Nope".',
+    });
   });
 
   it('diagnoses recursive type definitions', () => {
@@ -80,10 +84,11 @@ describe('sizeOfTypeExpr', () => {
 
     const res = sizeOfTypeExpr({ kind: 'TypeName', span: s(), name: 'A' }, env, diagnostics);
     expect(res).toBeUndefined();
-    expect(diagnostics[0]?.id).toBe(DiagnosticIds.TypeError);
-    expect(diagnostics.map((d) => d.message)).toContain(
-      'Recursive type definition detected for "A".',
-    );
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.TypeError,
+      severity: 'error',
+      message: 'Recursive type definition detected for "A".',
+    });
   });
 
   it('requires array length outside data declarations', () => {
@@ -99,10 +104,12 @@ describe('sizeOfTypeExpr', () => {
       diagnostics,
     );
     expect(res).toBeUndefined();
-    expect(diagnostics[0]?.id).toBe(DiagnosticIds.TypeError);
-    expect(diagnostics.map((d) => d.message)).toContain(
-      'Array length is required here (inferred-length arrays like "T[]" are only permitted in data declarations with an initializer).',
-    );
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.TypeError,
+      severity: 'error',
+      message:
+        'Array length is required here (inferred-length arrays like "T[]" are only permitted in data declarations with an initializer).',
+    });
   });
 
   it('computes union sizes as max field size', () => {
@@ -117,7 +124,7 @@ describe('sizeOfTypeExpr', () => {
     );
     const res = sizeOfTypeExpr({ kind: 'TypeName', span: s(), name: 'Value' }, env, diagnostics);
     expect(res).toBe(2);
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
   });
 
   it('treats ptr as 16-bit scalar', () => {
@@ -125,6 +132,6 @@ describe('sizeOfTypeExpr', () => {
     const env = emptyEnv();
     const res = sizeOfTypeExpr({ kind: 'TypeName', span: s(), name: 'ptr' }, env, diagnostics);
     expect(res).toBe(2);
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
   });
 });
