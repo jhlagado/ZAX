@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnosticTypes.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import {
   ASM_CONTROL_KEYWORD_LIST,
   ASM_CONTROL_KEYWORDS,
@@ -23,19 +23,19 @@ import {
   SCALAR_TYPES,
   TOP_LEVEL_KEYWORD_LIST,
   TOP_LEVEL_KEYWORDS,
-} from '../src/frontend/grammarData.js';
+} from '../../src/frontend/grammarData.js';
 import {
   appendParsedAsmStatement,
   parseAsmStatement,
   type AsmControlFrame,
-} from '../src/frontend/parseAsmStatements.js';
+} from '../../src/frontend/parseAsmStatements.js';
 import {
   malformedTopLevelHeaderExpectations,
   parseReturnRegsFromText,
-} from '../src/frontend/parseModuleCommon.js';
-import { parseOpParamsFromText } from '../src/frontend/parseParams.js';
-import { parseProgram } from '../src/frontend/parser.js';
-import { makeSourceFile, span } from '../src/frontend/source.js';
+} from '../../src/frontend/parseModuleCommon.js';
+import { parseOpParamsFromText } from '../../src/frontend/parseParams.js';
+import { parseProgram } from '../../src/frontend/parser.js';
+import { makeSourceFile, span } from '../../src/frontend/source.js';
 
 function sortedStrings(values: Iterable<string>): string[] {
   return [...values].sort();
@@ -44,7 +44,8 @@ function sortedStrings(values: Iterable<string>): string[] {
 describe('PR762 grammar-data conformance', () => {
   const file = makeSourceFile('pr762_grammar_data_conformance.zax', '');
   const zeroSpan = span(file, 0, 0);
-  const isReservedTopLevelName = (name: string): boolean => TOP_LEVEL_KEYWORDS.has(name.toLowerCase());
+  const isReservedTopLevelName = (name: string): boolean =>
+    TOP_LEVEL_KEYWORDS.has(name.toLowerCase());
 
   it('keeps the current shared grammar-data exports internally consistent', () => {
     expect(sortedStrings(TOP_LEVEL_KEYWORDS)).toEqual([...TOP_LEVEL_KEYWORD_LIST].sort());
@@ -63,9 +64,7 @@ describe('PR762 grammar-data conformance', () => {
     );
 
     expect([...IMM_BINARY_OPERATOR_PRECEDENCE.entries()].sort()).toEqual(precedenceEntries.sort());
-    expect(sortedStrings(IMM_BINARY_OPERATORS)).toEqual(
-      precedenceEntries.map(([op]) => op).sort(),
-    );
+    expect(sortedStrings(IMM_BINARY_OPERATORS)).toEqual(precedenceEntries.map(([op]) => op).sort());
     expect(sortedStrings(IMM_MULTI_CHAR_OPERATORS)).toEqual(
       precedenceEntries
         .map(([op]) => op)
@@ -117,12 +116,11 @@ describe('PR762 grammar-data conformance', () => {
   it('routes section-kind atoms through the current parser entry points', () => {
     for (const sectionKind of NAMED_SECTION_KIND_LIST) {
       const diagnostics: Diagnostic[] = [];
-      const bodyLines =
-        sectionKind === "code" ? ["func run()", "end"] : ["count: byte = 1"];
+      const bodyLines = sectionKind === 'code' ? ['func run()', 'end'] : ['count: byte = 1'];
 
       parseProgram(
         `pr762_named_section_${sectionKind}.zax`,
-        [`section ${sectionKind} bucket`, ...bodyLines, "end"].join("\n"),
+        [`section ${sectionKind} bucket`, ...bodyLines, 'end'].join('\n'),
         diagnostics,
       );
 
@@ -132,7 +130,11 @@ describe('PR762 grammar-data conformance', () => {
     for (const sectionKind of LEGACY_SECTION_DIRECTIVE_KIND_LIST) {
       const diagnostics: Diagnostic[] = [];
 
-      parseProgram(`pr762_legacy_section_${sectionKind}.zax`, `section ${sectionKind}`, diagnostics);
+      parseProgram(
+        `pr762_legacy_section_${sectionKind}.zax`,
+        `section ${sectionKind}`,
+        diagnostics,
+      );
       expect(diagnostics).toHaveLength(1);
       expect(diagnostics[0]?.message).toContain(
         `Legacy active-counter section directive "section ${sectionKind}" is removed`,
@@ -244,7 +246,9 @@ describe('PR762 grammar-data conformance', () => {
     const registers = [...RETURN_REGISTERS];
     const diagnostics: Diagnostic[] = [];
 
-    expect(parseReturnRegsFromText(registers.join(', '), zeroSpan, 1, diagnostics, file.path)).toEqual({
+    expect(
+      parseReturnRegsFromText(registers.join(', '), zeroSpan, 1, diagnostics, file.path),
+    ).toEqual({
       regs: registers,
     });
     expect(diagnostics).toEqual([]);
