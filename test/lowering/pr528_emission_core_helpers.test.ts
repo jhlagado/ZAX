@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AsmOperandNode, SourceSpan } from '../src/frontend/ast.js';
-import { createEmissionCoreHelpers } from '../src/lowering/emissionCore.js';
-import type { StepPipeline } from '../src/addressing/steps.js';
+import type { AsmOperandNode, SourceSpan } from '../../src/frontend/ast.js';
+import { createEmissionCoreHelpers } from '../../src/lowering/emissionCore.js';
+import type { StepPipeline } from '../../src/addressing/steps.js';
 
 const span: SourceSpan = {
   file: 'test.zax',

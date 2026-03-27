@@ -10,7 +10,7 @@ Tests are migrating from a flat `test/prNNN_*.test.ts` layout into subsystem fol
 - `test/backend/` — Z80 encoder and opcode-family unit tests
 - `test/frontend/` — parser, grammar, and frontend-adjacent tests (migration ongoing)
 - `test/semantics/` — semantics, env, and layout tests (migration ongoing)
-- `test/lowering/` — lowering and asm-emission integration tests (migration ongoing; not every lowering test has moved yet)
+- `test/lowering/` — lowering helper seams and asm-emission integration tests (most lowering seams now live here; a few broad integration files may still be top-level)
 
 New tests should prefer the subsystem directory that matches the code under test. Older tests may still live at `test/prNNN_*.test.ts` until moved.
 
@@ -32,7 +32,7 @@ Representative files:
 
 - `pr476_parse_*.test.ts` for parser helpers
 - `backend/pr477_encode_*.test.ts` for encoder families
-- `pr509_*.test.ts`, `pr510_*.test.ts`, `pr528_*.test.ts`, `pr529_*.test.ts`, `pr530_*.test.ts`, `pr531_*.test.ts`, and `lowering/pr532_asm_instruction_lowering_integration.test.ts` for lowering helper seams (more will move under `test/lowering/` over time)
+- `lowering/pr509_*.test.ts`, `lowering/pr510_*.test.ts`, `lowering/pr528_*.test.ts`, `lowering/pr529_*.test.ts`, `lowering/pr530_*.test.ts`, `lowering/pr531_*.test.ts`, and `lowering/pr532_asm_instruction_lowering_integration.test.ts` for lowering helper seams
 
 ### Prefer an integration test when
 
@@ -44,7 +44,7 @@ Representative files:
 
 - `pr468_parser_dispatch_integration.test.ts` for top-level parser dispatch
 - `lowering/pr543_function_lowering_integration.test.ts` and `lowering/pr544_program_lowering_integration.test.ts` for lowering seams
-- `pr511_asm_range_lowering_integration.test.ts` for structured-control lowering
+- `lowering/pr511_asm_range_lowering_integration.test.ts` for structured-control lowering
 - `pr582_named_section_*integration.test.ts` and `pr585_named_section_layout_integration.test.ts` for named-section routing/layout
 - `examples_compile.test.ts` for checked-in example programs
 
@@ -70,7 +70,7 @@ Representative files:
 | Grammar and token tables                   | `frontend/pr762_grammar_data_conformance.test.ts`, `frontend/pr808_grammar_drift.test.ts`, `pr250_parser_instruction_head_casing.test.ts`, `pr252_parser_register_token_canonicalization.test.ts`                                                                    | Good home for reserved-word and canonicalization changes.                                                                              |
 | Semantics and layout                       | `semantics/semantics_layout.test.ts`, `semantics/semantics_layout_extra.test.ts`, `pr285_alias_init_parser_semantics_matrix.test.ts`, `pr980_local_alias_legality.test.ts`                                                                                           | Use these when type size, offsets, alias legality, or compile-time rules change.                                                       |
 | Lowering frame and control-flow invariants | `pr102_lowering_frame_invariants.test.ts`, `pr103_lowering_mixed_return_paths.test.ts`, `pr555_function_sp_state_integration.test.ts`, `pr848_break_continue_integration.test.ts`                                                                                    | Covers epilogue cleanup, SP tracking, and structured control lowering.                                                                 |
-| Lowering helper seams                      | `lowering/pr532_asm_instruction_lowering_integration.test.ts`, `pr509_*.test.ts`, `pr510_*.test.ts`, `pr528_emission_core_helpers.test.ts`, `pr529_fixup_emission_helpers.test.ts`, `pr530_asm_utils_helpers.test.ts`, `pr531_value_materialization_helpers.test.ts` | Migrated files use the `lowering/` prefix; others remain top-level until moved. Prefer these before adding another broad compile test. |
+| Lowering helper seams                      | `lowering/pr509_*.test.ts`, `lowering/pr510_*.test.ts`, `lowering/pr511_*.test.ts`, `lowering/pr528_emission_core_helpers.test.ts`, `lowering/pr529_fixup_emission_helpers.test.ts`, `lowering/pr530_asm_utils_helpers.test.ts`, `lowering/pr531_value_materialization_helpers.test.ts`, `lowering/pr532_asm_instruction_lowering_integration.test.ts` | Prefer these before adding another broad compile test. |
 | Named sections and placement               | `pr572_named_sections_parser.test.ts`, `pr582_section_contribution_sinks.test.ts`, `pr583_section_placement_helpers.test.ts`, `pr584_named_section_fixups_integration.test.ts`, `pr585_named_section_layout_integration.test.ts`                                     | Use when section routing, anchors, or fixups change.                                                                                   |
 | Assignment and storage legality            | `pr862_assignment_parser.test.ts`, `pr863_assignment_lowering.test.ts`, `pr869_assignment_reg8_*`, `pr875_assignment_ixiy_integration.test.ts`, `pr895_assignment_acceptance.test.ts`                                                                                | Parser, lowering, and acceptance coverage are already split.                                                                           |
 | Encoder behavior                           | `pr24_isa_core.test.ts`, `backend/pr477_encode_*.test.ts`, `pr203_ld_diag_matrix.test.ts`, `pr240_isa_register_target_diag_matrix.test.ts`                                                                                                                           | Prefer direct encoder tests when lowering is not involved.                                                                             |

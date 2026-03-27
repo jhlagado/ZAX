@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AsmOperandNode, EaExprNode, SourceSpan } from '../src/frontend/ast.js';
-import { createEaMaterializationHelpers } from '../src/lowering/eaMaterialization.js';
-import type { EaResolution } from '../src/lowering/eaResolution.js';
+import type { AsmOperandNode, EaExprNode, SourceSpan } from '../../src/frontend/ast.js';
+import { createEaMaterializationHelpers } from '../../src/lowering/eaMaterialization.js';
+import type { EaResolution } from '../../src/lowering/eaResolution.js';
 
 const span: SourceSpan = {
   file: 'test.zax',

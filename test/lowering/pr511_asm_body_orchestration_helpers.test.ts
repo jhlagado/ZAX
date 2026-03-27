@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AsmItemNode, SourceSpan } from '../src/frontend/ast.js';
-import { createAsmBodyOrchestrationHelpers } from '../src/lowering/asmBodyOrchestration.js';
+import type { AsmItemNode, SourceSpan } from '../../src/frontend/ast.js';
+import { createAsmBodyOrchestrationHelpers } from '../../src/lowering/asmBodyOrchestration.js';
 
 const span: SourceSpan = {
   file: 'test.zax',

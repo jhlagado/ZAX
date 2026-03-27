@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { BinArtifact } from '../src/formats/types.js';
+import { compile } from '../../src/compile.js';
+import { defaultFormatWriters } from '../../src/formats/index.js';
+import type { BinArtifact } from '../../src/formats/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,7 +12,7 @@ const __dirname = dirname(__filename);
 describe('#511 asm range lowering integration', () => {
   it('keeps structured if/else lowering stable through the extracted asm-range helper', async () => {
     const res = await compile(
-      join(__dirname, 'fixtures', 'pr15_if_else.zax'),
+      join(__dirname, '..', 'fixtures', 'pr15_if_else.zax'),
       {},
       { formats: defaultFormatWriters },
     );
@@ -29,7 +29,7 @@ describe('#511 asm range lowering integration', () => {
 
   it('keeps structured select lowering stable through the extracted asm-range helper', async () => {
     const res = await compile(
-      join(__dirname, 'fixtures', 'pr15_select_cases.zax'),
+      join(__dirname, '..', 'fixtures', 'pr15_select_cases.zax'),
       {},
       { formats: defaultFormatWriters },
     );

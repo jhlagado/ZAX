@@ -6,8 +6,8 @@ import {
   cloneOperand,
   createAsmUtilityHelpers,
   flattenEaDottedName,
-} from '../src/lowering/asmUtils.js';
-import type { AsmOperandNode, EaExprNode, ImmExprNode, SourceSpan } from '../src/frontend/ast.js';
+} from '../../src/lowering/asmUtils.js';
+import type { AsmOperandNode, EaExprNode, ImmExprNode, SourceSpan } from '../../src/frontend/ast.js';
 
 const span: SourceSpan = {
   file: 'fixture.zax',
