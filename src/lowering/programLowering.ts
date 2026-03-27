@@ -43,6 +43,7 @@ import { createProgramLoweringDeclarationHelpers } from './programLoweringDeclar
 
 // Program lowering owns module-wide declaration traversal and the final
 // emission/fixup passes after all symbols and section bases are known.
+// --- Phase 0: shared context and products ---
 export type Context = FunctionLoweringSharedContext & {
   program: ProgramNode;
   includeDirs: string[];
@@ -100,6 +101,7 @@ export type Context = FunctionLoweringSharedContext & {
   withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T) => T;
 };
 
+// --- Phase 1 product: prescan metadata for lowering ---
 export type PrescanResult = {
   localCallablesByFile: Context['localCallablesByFile'];
   visibleCallables: Context['visibleCallables'];
@@ -113,6 +115,7 @@ export type PrescanResult = {
   rawAddressSymbols: Context['rawAddressSymbols'];
 };
 
+// --- Phase 2 product: lowered bytes, symbols, and deferred externs ---
 export type LoweringResult = {
   codeOffset: number;
   dataOffset: number;
@@ -126,6 +129,7 @@ export type LoweringResult = {
   hexBytes: Context['hexBytes'];
 };
 
+// --- Phase 3 context: finalization inputs (placement, fixups, artifacts) ---
 export type FinalizationContext = {
   diagnostics: Diagnostic[];
   diag: (diagnostics: Diagnostic[], file: string, message: string) => void;
@@ -173,6 +177,7 @@ export type FinalizationContext = {
   ) => EmittedSourceSegment[];
 };
 
+// --- Phase 1: prescan declarations (callables, ops, storage aliases) ---
 export function preScanProgramDeclarations(ctx: Context): PrescanResult {
   const preScanItem = (
     item: ModuleItemNode | SectionItemNode,
@@ -297,6 +302,7 @@ export function preScanProgramDeclarations(ctx: Context): PrescanResult {
   };
 }
 
+// --- Phase 2: lower declarations and functions into section bytes ---
 export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult): LoweringResult {
   const sinkOffsetRef = (sink: NamedSectionContributionSink) => ({
     get current() {
@@ -666,4 +672,5 @@ export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult):
   };
 }
 
+// --- Phase 3: finalization (placement, fixups, emission) ---
 export { finalizeProgramEmission } from './programLoweringFinalize.js';
