@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 
+import { DiagnosticIds, type Diagnostic } from '../src/diagnosticTypes.js';
 import { parseProgram } from '../src/frontend/parser.js';
-import type { Diagnostic } from '../src/diagnosticTypes.js';
+import { expectDiagnostic } from './helpers/diagnostics.js';
 
 describe('PR193 parser: explicit asm marker diagnostics', () => {
   it('diagnoses explicit asm marker in function bodies', () => {
@@ -14,11 +15,11 @@ end
     const diagnostics: Diagnostic[] = [];
     parseProgram('func_asm.zax', source, diagnostics);
 
-    expect(
-      diagnostics.some((d) =>
-        d.message.includes('Unexpected "asm" in function body (function bodies are implicit)'),
-      ),
-    ).toBe(true);
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      messageIncludes: 'Unexpected "asm" in function body (function bodies are implicit)',
+    });
   });
 
   it('diagnoses explicit asm marker in op bodies', () => {
@@ -31,11 +32,11 @@ end
     const diagnostics: Diagnostic[] = [];
     parseProgram('op_asm.zax', source, diagnostics);
 
-    expect(
-      diagnostics.some((d) =>
-        d.message.includes('Unexpected "asm" in op body (op bodies are implicit)'),
-      ),
-    ).toBe(true);
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      messageIncludes: 'Unexpected "asm" in op body (op bodies are implicit)',
+    });
   });
 
   it('diagnoses top-level asm marker usage', () => {
@@ -45,13 +46,12 @@ asm
     const diagnostics: Diagnostic[] = [];
     parseProgram('top_level_asm.zax', source, diagnostics);
 
-    expect(
-      diagnostics.some((d) =>
-        d.message.includes(
-          '"asm" is not a top-level construct (function and op bodies are implicit instruction streams)',
-        ),
-      ),
-    ).toBe(true);
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      messageIncludes:
+        '"asm" is not a top-level construct (function and op bodies are implicit instruction streams)',
+    });
   });
 
   it('diagnoses top-level export asm marker usage', () => {
@@ -61,13 +61,12 @@ export asm
     const diagnostics: Diagnostic[] = [];
     parseProgram('top_level_export_asm.zax', source, diagnostics);
 
-    expect(
-      diagnostics.some((d) =>
-        d.message.includes(
-          '"asm" is not a top-level construct (function and op bodies are implicit instruction streams)',
-        ),
-      ),
-    ).toBe(true);
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      messageIncludes:
+        '"asm" is not a top-level construct (function and op bodies are implicit instruction streams)',
+    });
   });
 
   it('diagnoses asm marker used to terminate function-local var block', () => {
@@ -82,10 +81,10 @@ end
     const diagnostics: Diagnostic[] = [];
     parseProgram('func_var_asm_terminator.zax', source, diagnostics);
 
-    expect(
-      diagnostics.some((d) =>
-        d.message.includes('Function-local var block must end with "end" before function body'),
-      ),
-    ).toBe(true);
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      messageIncludes: 'Function-local var block must end with "end" before function body',
+    });
   });
 });

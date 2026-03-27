@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -29,9 +31,15 @@ describe('PR113 ISA: indexed set/res with destination register', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     await rm(entry, { force: true });
 
-    expect(
-      res.diagnostics.some((d) => d.message.includes('requires an indexed memory source')),
-    ).toBe(true);
-    expect(res.diagnostics.some((d) => d.message.includes('expects reg8 destination'))).toBe(true);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EncodeError,
+      severity: 'error',
+      messageIncludes: 'requires an indexed memory source',
+    });
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EncodeError,
+      severity: 'error',
+      messageIncludes: 'expects reg8 destination',
+    });
   });
 });
