@@ -22,7 +22,7 @@ const compileLowered = async (entry: string) => {
 describe('GitHub issue #900 step lowering', () => {
   it('lowers byte and word typed paths end-to-end', async () => {
     const entry = join(__dirname, 'fixtures', 'pr900_step.zax');
-    const { instrs, text, lines } = await compileLowered(entry);
+    const { text, lines } = await compileLowered(entry);
 
     expect(lines.filter((line) => line === 'PUSH DE').length).toBeGreaterThan(0);
     expect(lines.filter((line) => line === 'POP DE').length).toBeGreaterThan(0);

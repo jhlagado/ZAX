@@ -1,4 +1,4 @@
-import type { AsmOperandNode, EaExprNode, SourceSpan } from '../frontend/ast.js';
+import type { EaExprNode, SourceSpan } from '../frontend/ast.js';
 import type { EaResolution } from './eaResolution.js';
 import type { ValueMaterializationContext } from './valueMaterializationContext.js';
 import {

@@ -1,35 +1,11 @@
 import { resolve } from 'node:path';
 import {
-  EA_GLOB_CONST,
-  EA_GLOB_REG,
-  EA_GLOB_RP,
-  EA_FVAR_CONST,
-  EA_FVAR_REG,
-  EA_FVAR_RP,
-  EA_GLOB_GLOB,
-  EA_FVAR_GLOB,
-  EA_GLOB_FVAR,
-  EA_FVAR_FVAR,
-  EAW_GLOB_CONST,
-  EAW_GLOB_REG,
-  EAW_GLOB_RP,
-  EAW_FVAR_CONST,
-  EAW_FVAR_REG,
-  EAW_FVAR_RP,
-  EAW_GLOB_GLOB,
-  EAW_FVAR_GLOB,
-  EAW_GLOB_FVAR,
-  EAW_FVAR_FVAR,
-  LOAD_BASE_GLOB,
-  LOAD_BASE_FVAR,
   LOAD_RP_EA,
   LOAD_RP_FVAR,
   LOAD_RP_GLOB,
   STORE_RP_EA,
   STORE_RP_FVAR,
   STORE_RP_GLOB,
-  CALC_EA,
-  CALC_EA_2,
   TEMPLATE_L_ABC,
   TEMPLATE_LW_HL,
   TEMPLATE_L_HL,
@@ -62,25 +38,17 @@ import { encodeInstruction } from '../z80/encode.js';
 import type { Callable, PendingSymbol, SectionKind } from './loweringTypes.js';
 import { createOpStackAnalysisHelpers } from './opStackAnalysis.js';
 import { loadBinInput, loadHexInput } from './inputAssets.js';
-import { createEaResolutionHelpers, type EaResolution } from './eaResolution.js';
+import { createEaResolutionHelpers } from './eaResolution.js';
 import { createEaMaterializationHelpers } from './eaMaterialization.js';
 import { createAddressingPipelineBuilders } from './addressingPipelines.js';
 import { createRuntimeImmediateHelpers } from './runtimeImmediates.js';
 import { createRuntimeAtomBudgetHelpers } from './runtimeAtomBudget.js';
 import { createScalarWordAccessorHelpers } from './scalarWordAccessors.js';
 import { createLdLoweringHelpers } from './ldLowering.js';
-import { createOpExpansionOrchestrationHelpers } from './opExpansionOrchestration.js';
-import { createAsmRangeLoweringHelpers } from './asmRangeLowering.js';
-import { createAsmBodyOrchestrationHelpers } from './asmBodyOrchestration.js';
 import { createOpMatchingHelpers } from './opMatching.js';
 import { createEmissionCoreHelpers } from './emissionCore.js';
 import { createValueMaterializationHelpers } from './valueMaterialization.js';
 import { createFixupEmissionHelpers } from './fixupEmission.js';
-import {
-  createFunctionBodySetupHelpers,
-  type FlowState,
-  type OpExpansionFrame,
-} from './functionBodySetup.js';
 import { lowerFunctionDecl } from './functionLowering.js';
 import { createEmitVisibilityHelpers } from './emitVisibility.js';
 import {
@@ -112,17 +80,11 @@ import {
   rebaseCodeSourceSegments,
   writeSection,
 } from './sectionLayout.js';
-import { formatImmExprForAsm, formatIxDisp, toHexByte, toHexWord } from './traceFormat.js';
+import { formatImmExprForAsm, formatIxDisp } from './traceFormat.js';
 import { createTypeResolutionHelpers } from './typeResolution.js';
 import { createEmitProgramContext } from './emitProgramContext.js';
 import { createEmitStateHelpers } from './emitState.js';
-import type {
-  LoweredAsmItem,
-  LoweredAsmStream,
-  LoweredAsmStreamBlock,
-  LoweredImmExpr,
-  LoweredOperand,
-} from './loweredAsmTypes.js';
+import type { LoweredAsmStream, LoweredAsmStreamBlock } from './loweredAsmTypes.js';
 
 const REG8_NAMES = new Set(['A', 'B', 'C', 'D', 'E', 'H', 'L']);
 const REG16_NAMES = new Set(['BC', 'DE', 'HL', 'IX', 'IY']);
@@ -294,7 +256,6 @@ export function emitProgram(
   });
 
   const emitInstr = (head: string, operands: AsmOperandNode[], span: SourceSpan) => {
-    const start = getCurrentCodeOffset();
     const syntheticInstruction: AsmInstructionNode = {
       kind: 'AsmInstruction',
       span,

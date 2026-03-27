@@ -64,6 +64,8 @@ npm install
 npm run zax -- examples/hello.zax
 ```
 
+**Linting:** `npm run lint` (ESLint 9 flat config in `eslint.config.js`). The project uses `typescript-eslint` with the TypeScript project service and `@typescript-eslint/no-unused-vars` (with `^_` ignore patterns). TypeScript’s `noUnusedLocals` is **not** enabled in `tsconfig.json` so unused bindings are enforced once via ESLint (see issue #1083).
+
 Output files for each compiled source:
 
 | Extension      | Contents               |

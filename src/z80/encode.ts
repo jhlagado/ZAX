@@ -142,12 +142,6 @@ function indexedReg8(
   }
 }
 
-function reg16Name(op: AsmOperandNode): string | undefined {
-  if (op.kind !== 'Reg') return undefined;
-  const n = op.name.toUpperCase();
-  return n === 'BC' || n === 'DE' || n === 'HL' || n === 'SP' || n === 'AF' ? n : undefined;
-}
-
 function isMemHL(op: AsmOperandNode): boolean {
   return op.kind === 'Mem' && op.expr.kind === 'EaName' && op.expr.name.toUpperCase() === 'HL';
 }
@@ -171,7 +165,7 @@ function isReg16TransferName(name: string | undefined): boolean {
 function memIndexed(
   op: AsmOperandNode,
   env: CompileEnv,
-  diagnostics?: Diagnostic[],
+  _diagnostics?: Diagnostic[],
 ): { prefix: number; disp: number } | undefined {
   if (op.kind !== 'Mem') return undefined;
   const ea = op.expr;

@@ -11,6 +11,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
     "pretest": "mkdir -p coverage/.tmp",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -28,10 +30,14 @@
     "regen:grammar-atoms": "node scripts/generate-grammar-atoms.mjs"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.13.1",
     "@vitest/coverage-v8": "^2.1.9",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
     "prettier": "^3.5.0",
     "typescript": "^5.7.3",
+    "typescript-eslint": "^8.57.2",
     "vitest": "^2.1.9"
   }
 }

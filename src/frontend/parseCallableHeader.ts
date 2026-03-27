@@ -29,7 +29,7 @@ export function parseCallableHeader<TParam>(
     kind,
     header,
     stmtText,
-    stmtSpan,
+    stmtSpan: _stmtSpan,
     lineNo,
     diagnostics,
     modulePath,

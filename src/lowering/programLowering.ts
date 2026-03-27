@@ -10,7 +10,6 @@ import type {
   FuncDeclNode,
   HexDeclNode,
   ImmExprNode,
-  ModuleFileNode,
   ModuleItemNode,
   NamedSectionNode,
   RawDataDeclNode,
@@ -37,7 +36,7 @@ import type {
   SectionKind,
 } from './loweringTypes.js';
 import type { LoweredAsmItem, LoweredImmExpr } from './loweredAsmTypes.js';
-import type { AggregateType, ScalarKind } from './typeResolution.js';
+import type { AggregateType } from './typeResolution.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { lowerDataBlock } from './programLoweringData.js';
 import { createProgramLoweringDeclarationHelpers } from './programLoweringDeclarations.js';
