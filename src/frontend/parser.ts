@@ -1,22 +1,18 @@
 import type {
   ModuleFileNode,
   ModuleItemNode,
-  NamedSectionNode,
   ProgramNode,
-  SectionAnchorNode,
   SectionItemNode,
 } from './ast.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
 import { canonicalModuleId } from '../moduleIdentity.js';
-import { NAMED_SECTION_KINDS } from './grammarData.js';
-import { parseImmExprFromText } from './parseImm.js';
 import { buildLogicalLines, getLogicalLine, type LogicalLine } from './parseLogicalLines.js';
 import {
   createModuleItemDispatchTable,
   type ParseItemContext,
   type ParseItemResult,
 } from './parseModuleItemDispatch.js';
-import { diagInvalidHeaderLine, topLevelStartKeyword } from './parseModuleCommon.js';
+import { topLevelStartKeyword } from './parseModuleCommon.js';
 import {
   parseExportModifier,
   recoverUnsupportedParserLine,
@@ -27,13 +23,13 @@ import {
   parseSectionBodyItem,
   parseSectionItems as parseSectionItemsFromHelper,
 } from './parseSectionBodies.js';
+import { parseSectionHeader } from './parseSectionHeader.js';
 import { parseOpParamsFromText, parseParamsFromText } from './parseParams.js';
 import {
   isReservedTopLevelDeclName,
   stripLineComment as stripComment,
 } from './parseParserShared.js';
 import { makeSourceFile, span, type SourceFile } from './source.js';
-import { parseAlignDirectiveDecl } from './parseTopLevelSimple.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 
 /**
@@ -72,69 +68,6 @@ export function parseModuleFile(
 
   const items: ModuleItemNode[] = [];
 
-  function parseNamedSectionHeader(
-    sectionText: string,
-    sectionSpan: NamedSectionNode['span'],
-    lineNo: number,
-    originalText: string,
-    filePath: string,
-  ): { section: 'code' | 'data'; name: string; anchor?: SectionAnchorNode } | undefined {
-    const m = /^(\S+)\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s+at\s+(.+?)(?:\s+(size|end)\s+(.+))?)?$/i.exec(
-      sectionText.trim(),
-    );
-    if (!m || !NAMED_SECTION_KINDS.has(m[1]!.toLowerCase())) {
-      diagInvalidHeaderLine(
-        diagnostics,
-        filePath,
-        'named section declaration',
-        originalText,
-        '<code|data> <name> [at <imm16> [size <n> | end <addr>]]',
-        lineNo,
-      );
-      return undefined;
-    }
-
-    const section = m[1]!.toLowerCase() as 'code' | 'data';
-    const name = m[2]!;
-    const atText = m[3]?.trim();
-    const rangeKeyword = m[4]?.toLowerCase();
-    const rangeExprText = m[5]?.trim();
-    let anchor: SectionAnchorNode | undefined;
-    if (atText) {
-      const at = parseImmExprFromText(filePath, atText, sectionSpan, diagnostics);
-      if (!at) return undefined;
-      let bound: SectionAnchorNode['bound'] = { kind: 'none' };
-      anchor = {
-        kind: 'SectionAnchor',
-        span: sectionSpan,
-        at,
-        bound,
-      };
-      if (rangeKeyword && rangeExprText) {
-        const rangeExpr = parseAlignDirectiveDecl(
-          `align ${rangeExprText}`,
-          rangeExprText,
-          {
-            diagnostics,
-            modulePath: filePath,
-            lineNo,
-            text: originalText,
-            span: sectionSpan,
-            isReservedTopLevelName,
-          },
-        )?.value;
-        if (!rangeExpr) return undefined;
-        bound =
-          rangeKeyword === 'size'
-            ? { kind: 'size', size: rangeExpr }
-            : { kind: 'end', end: rangeExpr };
-        anchor.bound = bound;
-      }
-    }
-
-    return { section, name, ...(anchor ? { anchor } : {}) };
-  }
-
   function parseSectionItems(startIndex: number, sectionKind: 'code' | 'data'): {
     items: SectionItemNode[];
     nextIndex: number;
@@ -161,7 +94,16 @@ export function parseModuleFile(
     lineCount,
     logicalLines,
     modulePath,
-    parseNamedSectionHeader,
+    parseSectionHeader: (sectionText, sectionSpan, lineNo, originalText, filePath) =>
+      parseSectionHeader({
+        sectionText,
+        sectionSpan,
+        lineNo,
+        originalText,
+        filePath,
+        diagnostics,
+        isReservedTopLevelName,
+      }),
     parseOpParamsFromText,
     parseParamsFromText,
     parseSectionItems,

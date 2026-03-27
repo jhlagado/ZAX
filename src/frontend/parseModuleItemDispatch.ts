@@ -79,7 +79,7 @@ type CreateModuleItemDispatchTableContext = {
   lineCount: number;
   logicalLines: LogicalLine[];
   modulePath: string;
-  parseNamedSectionHeader: (
+  parseSectionHeader: (
     sectionText: string,
     sectionSpan: NamedSectionNode['span'],
     lineNo: number,
@@ -105,7 +105,7 @@ export function createModuleItemDispatchTable(ctx: CreateModuleItemDispatchTable
     lineCount,
     logicalLines: _logicalLines,
     modulePath: _modulePath,
-    parseNamedSectionHeader,
+    parseSectionHeader,
     parseOpParamsFromText,
     parseParamsFromText,
     parseSectionItems,
@@ -360,7 +360,7 @@ export function createModuleItemDispatchTable(ctx: CreateModuleItemDispatchTable
       /^[A-Za-z_][A-Za-z0-9_]*$/.test(namedTokens[1] ?? '') &&
       !/^(at|size|end)$/i.test(namedTokens[1] ?? '');
     if (namedPrefix) {
-      const header = parseNamedSectionHeader(sectionDecl, stmtSpan, lineNo, text, filePath);
+      const header = parseSectionHeader(sectionDecl, stmtSpan, lineNo, text, filePath);
       if (!header) return { nextIndex: index + 1 };
       const parsedSection = parseSectionItems(index + 1, header.section);
       const sectionEndIndex = Math.max(parsedSection.nextIndex - 1, index);
