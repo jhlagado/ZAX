@@ -155,7 +155,6 @@ describe('cli acceptance matrix strictness', () => {
     await writeFile(join(incDir, 'shared.zax'), 'const Shared = 9\n', 'utf8');
 
     const absOut = join(work, 'abs', 'bundle.hex');
-    const relOut = join(work, 'rel', 'bundle.hex');
     const eqOut = join(work, 'eq', 'bundle.hex');
 
     const absRes = await runCli(['-I', incDir, '-o', absOut, entry]);

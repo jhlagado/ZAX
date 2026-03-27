@@ -192,7 +192,7 @@ export function parseVarDeclLine(
   scope: 'globals' | 'var',
   ctx: ParseVarDeclLineContext,
 ): VarDeclNode | undefined {
-  const { diagnostics, modulePath, isReservedTopLevelName } = ctx;
+  const { diagnostics, modulePath, isReservedTopLevelName: _isReservedTopLevelName } = ctx;
   const declKind = scope === 'globals' ? 'globals declaration' : 'var declaration';
   const raw = lineText.trim();
   const valueOrAliasExpected = '<name>: <type>';

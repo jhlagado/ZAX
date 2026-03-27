@@ -1,5 +1,4 @@
 import type {
-  AsmInstructionNode,
   AsmOperandNode,
   EaExprNode,
   EaIndexNode,

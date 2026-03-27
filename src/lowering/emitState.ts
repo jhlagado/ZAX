@@ -3,7 +3,7 @@ import type { NonBankedSectionKeyCollection } from '../sectionKeys.js';
 import { createNamedSectionContributionSinks, type NamedSectionContributionSink } from './sectionContributions.js';
 import { createLoweredAsmStreamRecordingHelpers } from './loweredAsmStreamRecording.js';
 import type { SourceSpan, ImmExprNode } from '../frontend/ast.js';
-import type { PendingSymbol, SectionKind, SourceSegmentTag } from './loweringTypes.js';
+import type { SectionKind, SourceSegmentTag } from './loweringTypes.js';
 import type {
   LoweredAsmStream,
   LoweredAsmStreamBlock,

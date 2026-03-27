@@ -82,7 +82,6 @@ function parseArgs(argv: string[]): CliOptions | CliExit {
       const require = createRequire(import.meta.url);
       const here = dirname(fileURLToPath(import.meta.url));
       const packageJsonPath = resolve(here, '..', '..', 'package.json');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const pkg = require(packageJsonPath) as { version?: unknown };
       process.stdout.write(`${String(pkg.version ?? '0.0.0')}\n`);
       return { code: 0 };
@@ -394,6 +393,5 @@ function isDirectCliInvocation(invokedAs: string | undefined): boolean {
 }
 
 if (isDirectCliInvocation(process.argv[1])) {
-  // eslint-disable-next-line no-void
   void runCli(process.argv.slice(2)).then((code) => process.exit(code));
 }
