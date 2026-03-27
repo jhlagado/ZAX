@@ -30,7 +30,7 @@ src/
   pipeline.ts             Type contracts only: CompilerOptions, CompileResult, PipelineDeps
 
   addressing/
-    steps.ts              Step-pipeline primitives (EA builders, load/store templates)
+    steps.ts              Step-pipeline primitives (EA builders, load/store templates); section comments + see docs/reference/addressing-steps-overview.md
 
   diagnostics/
     types.ts              Diagnostic type + stable ID registry (ZAX000–ZAX501)
@@ -326,8 +326,12 @@ uses a DE shuttle (`ex de,hl` / `ld d/e,(ix+d)` / `ex de,hl`) for these cases.
 ### 4.7 Lowering: Step Pipelines
 
 `addressing/steps.ts` defines a step-pipeline abstraction. A `StepPipeline` is an ordered list
-of `AddressingStep` values. Steps are combined by templates (e.g., `TEMPLATE_L_ABC`,
+of `StepInstr` values. Steps are combined by templates (e.g., `TEMPLATE_L_ABC`,
 `TEMPLATE_LW_HL`) and then executed by `emitStepPipeline` in `emissionCore.ts`.
+
+For a **family-level map** of EA builders, load/store templates, and EA-combine helpers (without
+reading the whole source linearly), see [`addressing-steps-overview.md`](addressing-steps-overview.md).
+The module itself uses `// --- Section: … ---` comments grouping exports the same way.
 
 Steps encode operations like:
 
