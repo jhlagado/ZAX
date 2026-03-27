@@ -15,7 +15,7 @@ Chapter 9 ended with two specific annoyances in the raw code.
 The first: invented labels everywhere. Every branch needs at least one label.
 `find_max` needed `find_max_loop:` and `find_max_no_update:`. `count_above`
 needed `count_above_loop:`, `count_above_skip:`. These labels say nothing about
-what the code does — they just give jumps somewhere to point.
+what the code does — they only give jumps somewhere to point.
 
 The second: the double `cp c` in `count_above`. A single `cp` sets carry for
 less-than and Z for equal. Strictly-greater-than needs both. So the raw version
@@ -119,7 +119,7 @@ replaces the pair `loop_top:` + `jr nz, loop_top` and the exit label
 `while NZ` does not set flags. It reads them. The flags at the `while` keyword
 are exactly whatever instruction last set them.
 
-`ld` instructions on the Z80 do not affect flags. The trap is using `while` immediately after `ld`:
+`ld` instructions on the Z80 do not affect flags — this catches almost everyone at some point. The trap is using `while` immediately after `ld`:
 
 ```zax
 ; WRONG — ld b, 10 does not set flags
@@ -298,7 +298,7 @@ end
 
 Labels: `find_max_loop:` (loop top) and `find_max_no_update:` (skip target).
 The jump `jr nc, find_max_no_update` is the only thing connecting the test
-to the effect — a reader must trace the label to understand the structure.
+to the effect — you must trace the label to understand the structure.
 
 **`find_max_cf` — with `while` and `if`:**
 
@@ -368,7 +368,7 @@ end
 ```
 
 The push/pop and the double `cp c` are both present. The skip label serves both
-jump instructions; a reader must check both to understand when the counter is
+jump instructions; you must check both to understand when the counter is
 incremented.
 
 **`count_above_cf` — with typed local and `if`:**

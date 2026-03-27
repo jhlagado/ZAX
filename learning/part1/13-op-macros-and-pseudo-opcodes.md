@@ -44,6 +44,8 @@ load_and_or B
 
 ## When to use `op` vs `func`
 
+Here is how I decide between the two.
+
 Use `op` when:
 
 - a short sequence of instructions repeats mechanically
