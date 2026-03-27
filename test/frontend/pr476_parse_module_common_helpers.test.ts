@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnosticTypes.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import {
   consumeKeywordPrefix,
   parseReturnRegsFromText,
   parseVarDeclLine,
   topLevelStartKeyword,
-} from '../src/frontend/parseModuleCommon.js';
-import { makeSourceFile, span } from '../src/frontend/source.js';
+} from '../../src/frontend/parseModuleCommon.js';
+import { makeSourceFile, span } from '../../src/frontend/source.js';
 
 describe('PR476 module helper extraction', () => {
   const file = makeSourceFile('pr476_parse_module_common_helpers.zax', '');

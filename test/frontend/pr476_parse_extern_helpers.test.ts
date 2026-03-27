@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnosticTypes.js';
-import { parseExternFuncFromTail } from '../src/frontend/parseExtern.js';
-import { makeSourceFile, span } from '../src/frontend/source.js';
-import { parseProgram } from '../src/frontend/parser.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { parseExternFuncFromTail } from '../../src/frontend/parseExtern.js';
+import { makeSourceFile, span } from '../../src/frontend/source.js';
+import { parseProgram } from '../../src/frontend/parser.js';
 
 describe('PR476 extern parser extraction', () => {
   const file = makeSourceFile('pr476_parse_extern_helpers.zax', '');
