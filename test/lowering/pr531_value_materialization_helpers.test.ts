@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { createValueMaterializationHelpers } from '../src/lowering/valueMaterialization.js';
-import type { AsmOperandNode, EaExprNode, SourceSpan, TypeExprNode } from '../src/frontend/ast.js';
+import { createValueMaterializationHelpers } from '../../src/lowering/valueMaterialization.js';
+import type { AsmOperandNode, EaExprNode, SourceSpan, TypeExprNode } from '../../src/frontend/ast.js';
 
 const span: SourceSpan = {
   file: 'fixture.zax',

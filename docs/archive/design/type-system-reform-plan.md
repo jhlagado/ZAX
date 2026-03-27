@@ -73,7 +73,7 @@ A codebase sweep confirmed that the `push IX; pop HL` idiom appears in exactly f
 | 1 | `src/lowering/valueMaterialization.ts` | 181–182 | IndexReg8/Reg16, fvar base, elemSize > 2 | ❌ wrong address (`IX+ixDisp+idx` not `*(IX+ixDisp)+idx`) | Phase B (indirect EA) / Phase C (wide pipeline) |
 | 2 | `src/lowering/valueMaterialization.ts` | 473–474 | General runtime index, fvar base, elemSize > 2 | ❌ wrong address (same) | Phase B / Phase C |
 | 3 | `src/lowering/valueMaterialization.ts` | 497–498 | Plain scalar `stack` EA in `pushEaAddress` | ✅ scalar locals only after Phase B; also ❌ reachable for param array slots via byte-pipeline IndexImm gap | Phase A fixes param-array case; scalar case possibly unavoidable (no `LD HL,IX` on Z80) |
-| 4 | `src/lowering/eaMaterialization.ts` | 27–28 | `materializeEaAddressToHL`, `resolved.kind === 'stack'` | ⚠️ stack imbalance: `push DE` at line 26 never restored; locked in by `test/pr509_ea_materialization_helpers.test.ts` lines 51–63 | Phase B eliminates non-scalar case; scalar case needs audit |
+| 4 | `src/lowering/eaMaterialization.ts` | 27–28 | `materializeEaAddressToHL`, `resolved.kind === 'stack'` | ⚠️ stack imbalance: `push DE` at line 26 never restored; locked in by `test/lowering/pr509_ea_materialization_helpers.test.ts` lines 51–63 | Phase B eliminates non-scalar case; scalar case needs audit |
 | — | `src/lowering/functionLowering.ts` | 341 | Function prologue | ✅ correct (saves IX for frame setup) | N/A |
 
 ### Historical wrong golden files
@@ -264,7 +264,7 @@ After Phase B, non-scalar stack slots become `kind: 'indirect'` and will hit the
 
 This has two problems:
 
-**Stack imbalance:** `push DE` at line 26 saves DE onto the stack. The function then does `push HL; pop DE` at lines 44–45, which copies the address into DE but never pops the original saved DE. The net effect is one extra word on the stack. Test `test/pr509_ea_materialization_helpers.test.ts` lines 51–63 locks in this exact sequence as expected output — the test must be updated.
+**Stack imbalance:** `push DE` at line 26 saves DE onto the stack. The function then does `push HL; pop DE` at lines 44–45, which copies the address into DE but never pops the original saved DE. The net effect is one extra word on the stack. Test `test/lowering/pr509_ea_materialization_helpers.test.ts` lines 51–63 locks in this exact sequence as expected output — the test must be updated.
 
 **Semantics for non-scalar slots:** After Phase B, `kind: 'stack'` will no longer be returned for non-scalar parameter slots. If this code path was ever reached for a parameter array before Phase B, it suffered the same wrong-address error. After Phase B that path becomes `indirect` instead.
 
@@ -330,7 +330,7 @@ ld a, (hl)
 7. Handle `indirect` in `ldEncoding.ts` load path
 8. Handle `indirect` in `valueMaterialization.ts` `pushEaAddress` path
 9. Return `null` from both `buildEaBytePipeline` and `buildEaWordPipeline` for `indirect` bases
-10. Update `test/pr509_ea_materialization_helpers.test.ts` (currently locks in buggy sequence)
+10. Update `test/lowering/pr509_ea_materialization_helpers.test.ts` (currently locks in buggy sequence)
 11. Add golden test: `func render(s: Sprite[8]): void` with `ld a, (s[2].flags)`
 
 ### Risk

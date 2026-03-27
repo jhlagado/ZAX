@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { renderStepPipeline } from '../src/addressing/steps.js';
-import { DiagnosticIds, type Diagnostic } from '../src/diagnosticTypes.js';
-import type { EaExprNode, SourceSpan, TypeExprNode } from '../src/frontend/ast.js';
-import { createAddressingPipelineBuilders } from '../src/lowering/addressingPipelines.js';
-import type { EaResolution } from '../src/lowering/eaResolution.js';
+import { renderStepPipeline } from '../../src/addressing/steps.js';
+import { DiagnosticIds, type Diagnostic } from '../../src/diagnosticTypes.js';
+import type { EaExprNode, SourceSpan, TypeExprNode } from '../../src/frontend/ast.js';
+import { createAddressingPipelineBuilders } from '../../src/lowering/addressingPipelines.js';
+import type { EaResolution } from '../../src/lowering/eaResolution.js';
 
 const span: SourceSpan = {
   file: 'test.zax',
