@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseProgram } from '../src/frontend/parser.js';
+import { parseProgram } from '../../src/frontend/parser.js';
 
 const parse = (text: string) => {
   const diagnostics: Array<{ message: string }> = [];

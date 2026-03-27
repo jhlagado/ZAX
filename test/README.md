@@ -31,7 +31,7 @@ CI now rejects newly added top-level `test/prNNN_*.test.ts` files unless you exp
 
 Representative files:
 
-- `pr476_parse_*.test.ts` for parser helpers
+- `frontend/pr476_parse_*.test.ts` for parser helpers
 - `backend/pr477_encode_*.test.ts` for encoder families
 - `lowering/pr509_*.test.ts`, `lowering/pr510_*.test.ts`, `lowering/pr528_*.test.ts`, `lowering/pr529_*.test.ts`, `lowering/pr530_*.test.ts`, `lowering/pr531_*.test.ts`, and `lowering/pr532_asm_instruction_lowering_integration.test.ts` for lowering helper seams
 
@@ -43,7 +43,7 @@ Representative files:
 
 Representative files:
 
-- `pr468_parser_dispatch_integration.test.ts` for top-level parser dispatch
+- `frontend/pr468_parser_dispatch_integration.test.ts` for top-level parser dispatch
 - `lowering/pr543_function_lowering_integration.test.ts` and `lowering/pr544_program_lowering_integration.test.ts` for lowering seams
 - `lowering/pr511_asm_range_lowering_integration.test.ts` for structured-control lowering
 - `pr582_named_section_*integration.test.ts` and `pr585_named_section_layout_integration.test.ts` for named-section routing/layout
@@ -67,7 +67,7 @@ Representative files:
 | Area                                       | Start with                                                                                                                                                                                                                                                           | Notes                                                                                                                                  |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | CLI behavior and artifact selection        | `cli/cli_contract_matrix.test.ts`, `cli/cli_failure_contract_matrix.test.ts`, `cli/cli_artifacts.test.ts`, `cli/cli_zax_smoke.test.ts`                                                                                                                               | Use `test/helpers/cli.ts` for end-to-end CLI execution.                                                                                |
-| Parser dispatch and recovery               | `pr468_parser_dispatch_integration.test.ts`, `pr227_parser_toplevel_malformed_spans.test.ts`, `pr238_parser_malformed_decl_header_spans_matrix.test.ts`                                                                                                              | Use helper-level `pr476_parse_*.test.ts` files for isolated parser seams.                                                              |
+| Parser dispatch and recovery               | `frontend/pr468_parser_dispatch_integration.test.ts`, `frontend/pr798_addr_expr_parser.test.ts`, `pr227_parser_toplevel_malformed_spans.test.ts`, `pr238_parser_malformed_decl_header_spans_matrix.test.ts`                                                                                                              | Use helper-level `frontend/pr476_parse_*.test.ts` files for isolated parser seams.                                                              |
 | Grammar and token tables                   | `frontend/pr762_grammar_data_conformance.test.ts`, `frontend/pr808_grammar_drift.test.ts`, `frontend/pr250_parser_instruction_head_casing.test.ts`, `frontend/pr252_parser_register_token_canonicalization.test.ts`, `frontend/pr253_parser_control_cc_canonicalization.test.ts`, `frontend/pr578_legacy_syntax_warnings.test.ts`                                                                    | Good home for reserved-word and canonicalization changes.                                                                              |
 | Semantics and layout                       | `semantics/semantics_layout.test.ts`, `semantics/semantics_layout_extra.test.ts`, `pr285_alias_init_parser_semantics_matrix.test.ts`, `pr980_local_alias_legality.test.ts`                                                                                           | Use these when type size, offsets, alias legality, or compile-time rules change.                                                       |
 | Lowering frame and control-flow invariants | `pr102_lowering_frame_invariants.test.ts`, `pr103_lowering_mixed_return_paths.test.ts`, `pr555_function_sp_state_integration.test.ts`, `pr848_break_continue_integration.test.ts`                                                                                    | Covers epilogue cleanup, SP tracking, and structured control lowering.                                                                 |
@@ -83,6 +83,7 @@ Representative files:
 
 - Add the test next to the nearest existing feature cluster instead of creating a new naming family unless the behavior is genuinely new.
 - New tests for lowering seams: prefer `test/lowering/` with the same `prNNN_*.test.ts` naming pattern when adding alongside migrated files.
+- New parser helper or frontend-parser integration tests: prefer `test/frontend/` with the same `prNNN_*.test.ts` naming pattern when adding alongside migrated files.
 - Keep CLI tests under `test/cli/` (`cli_*.test.ts` filenames). Do not bury CLI behavior in a lower-level integration file.
 - Prefer helper-level files when a single extracted module owns the behavior.
 - Prefer `compile(...)` integration coverage when the interaction between phases is the real risk.

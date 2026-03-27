@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnosticTypes.js';
-import { parseAsmInstruction } from '../src/frontend/parseAsmInstruction.js';
-import { makeSourceFile, span } from '../src/frontend/source.js';
-import { parseAsmOperand, parseEaExprFromText } from '../src/frontend/parseOperands.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { parseAsmInstruction } from '../../src/frontend/parseAsmInstruction.js';
+import { makeSourceFile, span } from '../../src/frontend/source.js';
+import { parseAsmOperand, parseEaExprFromText } from '../../src/frontend/parseOperands.js';
 
 describe('PR476 operand parsing extraction', () => {
   const file = makeSourceFile('pr476_parse_operands_helpers.zax', '');

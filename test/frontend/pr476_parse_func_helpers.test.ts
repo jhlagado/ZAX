@@ -1,22 +1,25 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnosticTypes.js';
-import { parseTopLevelOpDecl } from '../src/frontend/parseOp.js';
-import { parseOpParamsFromText } from '../src/frontend/parseParams.js';
-import { parseProgram } from '../src/frontend/parser.js';
-import { makeSourceFile, span } from '../src/frontend/source.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { parseTopLevelFuncDecl } from '../../src/frontend/parseFunc.js';
+import { parseParamsFromText } from '../../src/frontend/parseParams.js';
+import { parseProgram } from '../../src/frontend/parser.js';
+import { makeSourceFile, span } from '../../src/frontend/source.js';
 
-describe('PR476 op parser extraction', () => {
-  it('keeps top-level op parsing intact', () => {
+describe('PR476 func parser extraction', () => {
+  it('keeps top-level func parsing intact', () => {
     const sourceText = [
-      'op add(lhs: word, rhs: word)',
+      'func add(lhs: word, rhs: word): HL',
+      'var',
+      'temp: word = $1234',
+      'end',
       'ld hl, lhs',
       'add hl, rhs',
       'end',
       'const DONE = 1',
       '',
     ].join('\n');
-    const file = makeSourceFile('pr476_parse_op_helpers.zax', sourceText);
+    const file = makeSourceFile('pr476_parse_func_helpers.zax', sourceText);
     const diagnostics: Diagnostic[] = [];
 
     function getRawLine(lineIndex: number): {
@@ -40,10 +43,10 @@ describe('PR476 op parser extraction', () => {
       };
     }
 
-    const parsed = parseTopLevelOpDecl(
-      'add(lhs: word, rhs: word)',
-      'op add(lhs: word, rhs: word)',
-      span(file, 0, 27),
+    const parsed = parseTopLevelFuncDecl(
+      'add(lhs: word, rhs: word): HL',
+      'func add(lhs: word, rhs: word): HL',
+      span(file, 0, 31),
       1,
       0,
       false,
@@ -54,33 +57,49 @@ describe('PR476 op parser extraction', () => {
         modulePath: file.path,
         getRawLine,
         isReservedTopLevelName: () => false,
-        parseOpParamsFromText,
+        parseParamsFromText,
       },
     );
 
     expect(diagnostics).toEqual([]);
-    expect(parsed?.nextIndex).toBe(4);
-    expect(parsed?.node).toMatchObject({
-      kind: 'OpDecl',
+    expect(parsed.nextIndex).toBe(7);
+    expect(parsed.node).toMatchObject({
+      kind: 'FuncDecl',
       name: 'add',
+      returnRegs: ['HL'],
       params: [{ name: 'lhs' }, { name: 'rhs' }],
-      body: { kind: 'AsmBlock' },
+      locals: {
+        kind: 'VarBlock',
+        decls: [{ name: 'temp' }],
+      },
+      asm: { kind: 'AsmBlock' },
     });
   });
 
-  it('preserves op parsing through parser.ts', () => {
+  it('preserves func parsing through parser.ts', () => {
     const diagnostics: Diagnostic[] = [];
     const program = parseProgram(
-      'pr476_parse_op_helpers.zax',
-      ['op add(lhs: word, rhs: word)', 'ld hl, lhs', 'add hl, rhs', 'end', ''].join('\n'),
+      'pr476_parse_func_helpers.zax',
+      [
+        'func add(lhs: word, rhs: word): HL',
+        'var',
+        'temp: word = $1234',
+        'end',
+        'ld hl, lhs',
+        'add hl, rhs',
+        'end',
+        '',
+      ].join('\n'),
       diagnostics,
     );
 
     expect(diagnostics).toEqual([]);
     expect(program.files[0]?.items[0]).toMatchObject({
-      kind: 'OpDecl',
+      kind: 'FuncDecl',
       name: 'add',
+      returnRegs: ['HL'],
       params: [{ name: 'lhs' }, { name: 'rhs' }],
+      locals: { kind: 'VarBlock', decls: [{ name: 'temp' }] },
     });
   });
 });
