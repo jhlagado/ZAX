@@ -1,4 +1,3 @@
-import { TEMPLATE_SW_DEBC } from '../addressing/steps.js';
 import type { StepPipeline } from '../addressing/steps.js';
 import { DiagnosticIds } from '../diagnosticTypes.js';
 import type { Diagnostic, DiagnosticId } from '../diagnosticTypes.js';
@@ -9,12 +8,10 @@ import type {
   FuncDeclNode,
   ImmExprNode,
   OpDeclNode,
-  ParamNode,
   SourceSpan,
   TypeExprNode,
 } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
-import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import type { Callable, PendingSymbol, SourceSegmentTag } from './loweringTypes.js';
 import type { OpOverloadSelection } from './opMatching.js';
@@ -495,7 +492,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     flowRef,
   });
 
-  const { emitAsmInstruction, lowerAsmRange } = createFunctionCallLoweringHelpers({
+  const { lowerAsmRange } = createFunctionCallLoweringHelpers({
     diagnostics,
     asmItemSpanSourceTag: (span) => sourceTagForSpan(span, opExpansionStack),
     getCurrentCodeSegmentTag: () => currentCodeSegmentTag,

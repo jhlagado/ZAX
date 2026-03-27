@@ -8,7 +8,6 @@ import {
   flattenLoweredInstructions,
   hasRawOpcode,
   isImmSymbol,
-  isMemIxDisp,
   isMemName,
   isReg,
 } from './helpers/lowered_program.js';

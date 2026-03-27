@@ -283,7 +283,6 @@ export function parseTopLevelFuncDecl(
 
   const asmItems: AsmItemNode[] = [];
   const asmControlStack: AsmControlFrame[] = [];
-  let terminated = false;
   let interruptedByKeyword: string | undefined;
   let interruptedByLine: number | undefined;
   let interruptedByFilePath: string | undefined;
@@ -314,7 +313,6 @@ export function parseTopLevelFuncDecl(
     }
 
     if (contentLower === 'end' && asmControlStack.length === 0) {
-      terminated = true;
       const funcEndOffset = endOffset;
       const funcSpan = span(file, funcStartOffset, funcEndOffset);
       const asmSpan = span(file, asmStartOffset, funcEndOffset);

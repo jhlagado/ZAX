@@ -29,12 +29,6 @@ export type LdHelperContext = {
   reg16: Set<string>;
 };
 
-const regOperand = (name: string, span: AsmInstructionNode['span']): AsmOperandNode => ({
-  kind: 'Reg',
-  span,
-  name,
-});
-
 export function createAsmInstructionLdHelpers(ctx: LdHelperContext) {
   const emitAssignmentImmediateToRegister = (
     dst: Extract<AsmOperandNode, { kind: 'Reg' }>,

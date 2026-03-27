@@ -39,7 +39,7 @@ export function createLdFormSelectionHelpers(ctx: LdFormSelectionContext) {
     env,
     resolveEa,
     resolveScalarBinding,
-    resolveScalarTypeForEa,
+    resolveScalarTypeForEa: _resolveScalarTypeForEa,
     resolveScalarTypeForLd,
     scalarKindOfResolution,
     stackSlotOffsets,

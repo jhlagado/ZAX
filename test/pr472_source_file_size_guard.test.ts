@@ -1,5 +1,4 @@
 import { readFile } from 'node:fs/promises';
-import { readdir } from 'node:fs/promises';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';

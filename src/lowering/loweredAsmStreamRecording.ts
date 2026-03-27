@@ -1,6 +1,6 @@
 import type { SourceSpan, ImmExprNode, EaExprNode, EaIndexNode, AsmOperandNode, TypeExprNode } from '../frontend/ast.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
-import type { SectionKind, SourceSegmentTag } from './loweringTypes.js';
+import type { SectionKind } from './loweringTypes.js';
 import type {
   LoweredAsmItem,
   LoweredAsmStream,

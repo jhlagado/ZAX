@@ -1,5 +1,4 @@
 import type { Diagnostic } from '../diagnosticTypes.js';
-import { DiagnosticIds } from '../diagnosticTypes.js';
 import type { AsmInstructionNode, AsmOperandNode, ImmExprNode, SourceSpan } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import { encodeInstruction } from '../z80/encode.js';

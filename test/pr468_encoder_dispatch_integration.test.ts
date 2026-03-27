@@ -28,10 +28,6 @@ function imm(value: number): AsmOperandNode {
   return { kind: 'Imm', span, expr: { kind: 'ImmLiteral', span, value } };
 }
 
-function memName(name: string): AsmOperandNode {
-  return { kind: 'Mem', span, expr: { kind: 'EaName', span, name } };
-}
-
 function portImm(value: number): AsmOperandNode {
   return { kind: 'PortImm8', span, expr: { kind: 'ImmLiteral', span, value } };
 }

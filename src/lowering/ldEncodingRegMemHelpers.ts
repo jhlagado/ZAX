@@ -1,7 +1,5 @@
 import type { StepPipeline } from '../addressing/steps.js';
-import type { Diagnostic } from '../diagnosticTypes.js';
 import type { AsmOperandNode, SourceSpan } from '../frontend/ast.js';
-import type { EaResolution } from './eaResolution.js';
 import type { LdForm } from './ldFormSelection.js';
 import type { LdEncodingContext } from './ldEncoding.js';
 
@@ -35,7 +33,7 @@ export function createLdEncodingRegMemHelpers(ctx: LdEncodingContext) {
     emitStoreSavedHlToEa,
     emitStoreWordToHlAddress,
     formatIxDisp,
-    loadImm16ToHL,
+    loadImm16ToHL: _loadImm16ToHL,
     materializeEaAddressToHL,
     reg8Code,
     setSpTrackingInvalid,
