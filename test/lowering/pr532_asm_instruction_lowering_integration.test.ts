@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { createAsmInstructionLoweringHelpers } from '../src/lowering/asmInstructionLowering.js';
-import type { AsmInstructionNode, AsmOperandNode, SourceSpan } from '../src/frontend/ast.js';
+import { createAsmInstructionLoweringHelpers } from '../../src/lowering/asmInstructionLowering.js';
+import type { AsmInstructionNode, AsmOperandNode, SourceSpan } from '../../src/frontend/ast.js';
 
 const span: SourceSpan = {
   file: 'fixture.zax',
