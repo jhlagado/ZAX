@@ -4,12 +4,9 @@
 
 This chapter builds a complete program using everything from Chapters 3–7:
 a data table, a DJNZ loop, subroutines called from the loop, conditional
-branches, and push/pop register preservation. By the end you will be able to
-follow and write a complete raw Z80 program in ZAX. You will also be able to
-see the specific places where writing raw Z80 gets unwieldy — which is exactly
-what Chapters 10–13 address.
-
-Prerequisites: Chapters 3–7.
+branches, and push/pop register preservation. The two subroutines that result
+expose every friction point in raw Z80 programming — the exact problems
+Chapters 10–13 address.
 
 ---
 
@@ -166,17 +163,16 @@ is performed twice for each element.
 
 The program has real strengths at the raw level:
 
-The data layout is explicit. The programmer placed `values` at `$8000` and
-`max_val` and `above_64` at `$8020`. The two regions do not overlap, and the
-programmer knows exactly what lives at each address. There is no hidden
-allocation.
+The data layout is explicit. You placed `values` at `$8000` and
+`max_val` and `above_64` at `$8020`. The two regions do not overlap, and you
+know exactly what lives at each address — nothing is allocated behind your back.
 
-The register usage is explicit. A reader who traces through `main` can follow
-exactly which registers carry which values at each line. There is no compiler-
-invisible magic.
+The register usage is explicit. Tracing through `main`, you can follow
+exactly which registers carry which values at each line. The compiler adds
+nothing you did not write.
 
-The subroutine call cost is explicit. Every `call` costs a stack push, and the
-programmer can count those pushes. There is no invisible calling machinery.
+The subroutine call cost is explicit. Every `call` costs a stack push, and you
+can count those pushes. No calling machinery is hidden.
 
 For a short, performance-sensitive routine — a counted loop over a small table
 — the raw approach produces code that maps directly to Z80 instructions with
@@ -186,14 +182,13 @@ no overhead between what you wrote and what the CPU executes.
 
 ## What gets harder as programs grow
 
-These are not complaints about the Z80. They are the specific things that get
-tedious once programs grow past a handful of subroutines.
+These are the specific things that get tedious once programs grow past a handful of subroutines.
 
 **Label names are structural noise.** Every loop needs at least two labels: the
 top-of-loop label and the skip label for the conditional update. Every
 if-like branch needs at least one label for the not-taken path. None of these
-carry meaning about what the code is doing — they are just targets for jumps.
-The programmer has to invent names for them, place them correctly, and make sure
+carry meaning about what the code is doing — they are only targets for jumps.
+You have to invent names for them, place them correctly, and make sure
 every branch reaches the right one. In a ten-line subroutine this is fine. In a
 program with twenty subroutines it becomes work that has nothing to do with the
 actual problem.
@@ -232,8 +227,6 @@ Chapters 10–13 each fix one of the problems above.
 
 None of this hides the machine. Everything translates to the same Z80 instructions as before. What changes is that the source shows the intent, and the compiler writes the scaffolding.
 
-Chapter 10 starts there.
-
 ---
 
 ## Summary
@@ -245,18 +238,12 @@ Chapter 10 starts there.
 - The caller must reload any register that the callee modified before the next
   call. Nothing enforces this.
 - Loop labels, skip labels, and conditional branch labels are structural noise:
-  they give jumps a target, but carry no meaning about what the code does. The
-  programmer has to manage them correctly.
+  they give jumps a target, but carry no meaning about what the code does. You
+  have to manage them correctly.
 - Push/pop pairs appear when a function needs to initialize a register that
   already holds an input. The real problem is not having named variables.
 - Chapters 10–13 — ZAX functions, `if`/`while`, `:=`, and `op` — each address
   one of these problems, while generating the same Z80 output.
-
-## What Comes Next
-
-Chapter 10 introduces the first ZAX-specific feature beyond the program shell:
-functions with named parameters and local variables, accessed through raw
-IX-relative addressing.
 
 ---
 
