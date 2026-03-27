@@ -1,7 +1,7 @@
 # Addressing step library (`src/lowering/steps.ts`)
 
-Status: non-normative map of the step-pipeline DSL. The source of truth is the TypeScript module;
-this page explains how the step library is structured and how it is used by the EA pipeline.
+Status: non-normative map of the step-pipeline DSL. The source of truth is the TypeScript module.
+This page explains how the step library is structured and how it is used by the EA pipeline.
 
 **Typical register roles:** `DE` holds a base address, `HL` holds an index or computed EA after
 `CALC_EA` / `CALC_EA_WIDE`. Templates save/restore registers around nested EA work so that callers
@@ -15,9 +15,9 @@ Related docs:
 
 ## 1. What a step pipeline is
 
-A **step pipeline** is a pure list of micro-ops (`StepInstr[]`) that represents a reusable addressing
-sequence. Pipelines are composed in `addressingPipelines.ts` based on an EA shape and element size,
-then embedded into templates that load/store bytes or words.
+A **step pipeline** is a pure list of micro-ops (`StepInstr[]`) that represents a reusable
+addressing sequence. Pipelines are composed in `addressingPipelines.ts` based on an EA shape and
+element size, then embedded into templates that load/store bytes or words.
 
 `steps.ts` owns:
 - the `StepInstr` DSL (push/pop, loads, IX+disp, etc)
@@ -161,5 +161,5 @@ Start here when something is off:
 
 ## 6. In-file section markers
 
-`steps.ts` uses `// --- Section: … ---` comments aligned with the groups above. For the exact export
-list, search by prefix (`EA_`, `EAW_`, `TEMPLATE_`, …) or follow those section headers.
+`steps.ts` uses `// --- Section: … ---` comments aligned with the groups above. For the exact
+export list, search by prefix (`EA_`, `EAW_`, `TEMPLATE_`, …) or follow those section headers.
