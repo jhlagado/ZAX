@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { compile } from '../src/compile.js';
 import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
 import {
   compilePlacedProgram,
   flattenLoweredInstructions,
@@ -18,7 +19,7 @@ describe('PR289: place-expression semantics for field/element operands', () => {
   it('applies value/store contexts for scalar place expressions and address contexts for ea params', async () => {
     const entry = join(__dirname, 'fixtures', 'pr289_place_expression_contexts_positive.zax');
     const { program, diagnostics } = await compilePlacedProgram(entry);
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     const instrs = flattenLoweredInstructions(program);
 
     // Field place-expression in value/store contexts.
@@ -35,8 +36,15 @@ describe('PR289: place-expression semantics for field/element operands', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
     expect(res.artifacts).toEqual([]);
-    expect(res.diagnostics.some((d) => d.id === DiagnosticIds.OpNoMatchingOverload)).toBe(true);
-    expect(res.diagnostics.some((d) => d.message.includes('No matching op overload'))).toBe(true);
-    expect(res.diagnostics.some((d) => d.message.includes('expects ea, got (p.lo)'))).toBe(true);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.OpNoMatchingOverload,
+      severity: 'error',
+      messageIncludes: 'No matching op overload',
+    });
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.OpNoMatchingOverload,
+      severity: 'error',
+      messageIncludes: 'expects ea, got (p.lo)',
+    });
   });
 });
