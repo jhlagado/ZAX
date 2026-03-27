@@ -3,7 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic, expectNoErrors } from './helpers/diagnostics.js';
 import {
   compilePlacedProgram,
   formatLoweredInstructions,
@@ -18,8 +20,7 @@ describe('PR292 local var initializer completeness', () => {
   it('lowers local scalar value-init at function entry and keeps alias locals slot-free', async () => {
     const entry = join(__dirname, 'fixtures', 'pr292_local_scalar_init_and_alias_positive.zax');
     const { program, diagnostics } = await compilePlacedProgram(entry);
-    const errors = diagnostics.filter((d) => d.severity === 'error');
-    expect(errors).toEqual([]);
+    expectNoErrors(diagnostics);
 
     const lines = formatLoweredInstructions(program);
     expect(lines).toContain('PUSH IX');
@@ -43,10 +44,11 @@ describe('PR292 local var initializer completeness', () => {
   it('rejects non-scalar local value-init declarations with stable diagnostics', async () => {
     const entry = join(__dirname, 'fixtures', 'pr292_local_nonscalar_value_init_negative.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    const messages = res.diagnostics.map((d) => d.message);
-
-    expect(messages).toContain(
-      'Non-scalar local storage declaration "arr" requires alias form ("arr = rhs").',
-    );
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
+      message:
+        'Non-scalar local storage declaration "arr" requires alias form ("arr = rhs").',
+    });
   });
 });
