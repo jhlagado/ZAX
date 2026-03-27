@@ -7,12 +7,12 @@ import {
   flattenLoweredItems,
   flattenLoweredInstructions,
   hasRawOpcode,
-} from './helpers/lowered_program.js';
+} from '../helpers/lowered_program.js';
 
 describe('PR543 function lowering integration', () => {
   it('keeps implicit-ret function setup stable', async () => {
     const { program, diagnostics } = await compilePlacedProgram(
-      join(__dirname, 'fixtures', 'pr14_epilogue_locals.zax'),
+      join(__dirname, '..', 'fixtures', 'pr14_epilogue_locals.zax'),
     );
     expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
     const lines = formatLoweredInstructions(program).map((line) => line.toUpperCase());
@@ -27,7 +27,7 @@ describe('PR543 function lowering integration', () => {
 
   it('keeps explicit ret routed through the synthetic epilogue', async () => {
     const { program, diagnostics } = await compilePlacedProgram(
-      join(__dirname, 'fixtures', 'pr543_function_ret_epilogue.zax'),
+      join(__dirname, '..', 'fixtures', 'pr543_function_ret_epilogue.zax'),
     );
     expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
     const lines = formatLoweredInstructions(program).map((line) => line.toUpperCase());
