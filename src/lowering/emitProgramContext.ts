@@ -131,24 +131,24 @@ export type EmitRegistersBundle = Pick<EmitFunctionLoweringContextInputs, 'reg8'
 
 /** Named bundles passed from `emitProgram` into lowering context construction. */
 export type EmitProgramContextBundles = {
-  diagnostics: EmitDiagnosticsBundle;
-  symbolsAndTrace: EmitSymbolsAndTraceBundle;
-  spTracking: EmitSpTrackingBundle;
-  emission: EmitEmissionBundle;
-  conditions: EmitConditionsBundle;
-  types: EmitTypesBundle;
-  materialization: EmitMaterializationBundle;
-  storage: EmitStorageBundle;
-  callableResolution: EmitCallableResolutionBundle;
-  opOverload: EmitOpOverloadBundle;
-  astUtilities: EmitAstUtilitiesBundle;
-  registers: EmitRegistersBundle;
+  readonly diagnostics: Readonly<EmitDiagnosticsBundle>;
+  readonly symbolsAndTrace: Readonly<EmitSymbolsAndTraceBundle>;
+  readonly spTracking: Readonly<EmitSpTrackingBundle>;
+  readonly emission: Readonly<EmitEmissionBundle>;
+  readonly conditions: Readonly<EmitConditionsBundle>;
+  readonly types: Readonly<EmitTypesBundle>;
+  readonly materialization: Readonly<EmitMaterializationBundle>;
+  readonly storage: Readonly<EmitStorageBundle>;
+  readonly callableResolution: Readonly<EmitCallableResolutionBundle>;
+  readonly opOverload: Readonly<EmitOpOverloadBundle>;
+  readonly astUtilities: Readonly<EmitAstUtilitiesBundle>;
+  readonly registers: Readonly<EmitRegistersBundle>;
   /** Program-level fields (visibility, sections, placement hooks, …). */
-  program: EmitProgramLoweringContextInputs;
+  readonly program: Readonly<EmitProgramLoweringContextInputs>;
 };
 
 export function emitProgramBundlesToLoweringBuilderInput(
-  b: EmitProgramContextBundles,
+  b: Readonly<EmitProgramContextBundles>,
 ): EmitLoweringContextBuilderInput {
   return {
     functionLowering: {
@@ -169,6 +169,6 @@ export function emitProgramBundlesToLoweringBuilderInput(
   };
 }
 
-export function createEmitProgramContext(bundles: EmitProgramContextBundles) {
+export function createEmitProgramContext(bundles: Readonly<EmitProgramContextBundles>) {
   return createEmitLoweringContexts(emitProgramBundlesToLoweringBuilderInput(bundles));
 }
