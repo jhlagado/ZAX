@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import { DiagnosticIds } from '../src/diagnosticTypes.js';
+import { expectDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,11 +18,15 @@ describe('PR2 divide by zero', () => {
     expect(res.diagnostics.map((d) => d.id)).toEqual(
       expect.arrayContaining([DiagnosticIds.ImmDivideByZero, DiagnosticIds.SemanticsError]),
     );
-    expect(res.diagnostics.map((d) => d.message)).toEqual(
-      expect.arrayContaining([
-        'Divide by zero in imm expression.',
-        'Failed to evaluate const "Bad".',
-      ]),
-    );
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ImmDivideByZero,
+      severity: 'error',
+      message: 'Divide by zero in imm expression.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.SemanticsError,
+      severity: 'error',
+      message: 'Failed to evaluate const "Bad".',
+    });
   });
 });
