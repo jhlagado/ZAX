@@ -139,7 +139,7 @@ We do **not** need to generate the full parser from EBNF immediately. A handwrit
 
 Current seed:
 
-- `src/addressing/steps.ts`
+- `src/lowering/steps.ts`
 
 This should deliberately mirror the grammar strategy: a privileged addressing reference, a structured data layer behind it, and code that validates against that layer instead of drifting beside it.
 
@@ -205,7 +205,7 @@ But they should consume spec-data instead of restating the same rules.
 
 1. Reframe `docs/reference/addressing-model.md` as an implementation reference, not a normative language spec.
 2. Extract structured addressing definitions into `src/specdata/addressing/`.
-3. Build `src/addressing/steps.ts` exports from those definitions.
+3. Build `src/lowering/steps.ts` exports from those definitions.
 4. Keep `src/lowering/emissionCore.ts` as the interpreter that turns `StepInstr` into emitted instructions.
 5. Refactor `src/lowering/addressingPipelines.ts` so routing comes from a table/matrix rather than open-coded branching.
 6. Generate or verify the addressing-model doc and matrix tests from the same definitions.

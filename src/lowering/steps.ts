@@ -5,7 +5,7 @@
  * Rendering to pseudo-assembly text is only for tests/document checks.
  *
  * **Navigation:** Section comments below group exports. Family-level map:
- * [`docs/reference/addressing-steps-overview.md`](../../../docs/reference/addressing-steps-overview.md).
+ * [`docs/reference/addressing-steps-overview.md`](../../docs/reference/addressing-steps-overview.md).
  *
  * | Area | Exports (representative) |
  * |------|-------------------------|

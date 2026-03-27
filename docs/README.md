@@ -22,7 +22,7 @@ Current user- and contributor-facing references.
 - [`docs/reference/ZAX-quick-guide.md`](reference/ZAX-quick-guide.md) — practical language guide
 - [`docs/reference/testing-verification-guide.md`](reference/testing-verification-guide.md) — testing and verification flow
 - [`docs/reference/source-overview.md`](reference/source-overview.md) — compiler source structure
-- [`docs/reference/addressing-steps-overview.md`](reference/addressing-steps-overview.md) — map of `addressing/steps.ts` template and EA-builder families
+- [`docs/reference/addressing-steps-overview.md`](reference/addressing-steps-overview.md) — map of `lowering/steps.ts` template and EA-builder families
 - [`docs/reference/zax-dev-playbook.md`](reference/zax-dev-playbook.md) — contributor workflow and review hygiene
 - [`docs/reference/codegen-corpus-workflow.md`](reference/codegen-corpus-workflow.md) — curated corpus workflow
 
