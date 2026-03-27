@@ -11,6 +11,11 @@ import {
   flattenLoweredInstructions,
   formatLoweredInstructions,
 } from './helpers/lowered_program.js';
+import {
+  expectDiagnostic,
+  expectNoDiagnostics,
+  expectNoErrors,
+} from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,7 +27,7 @@ describe('PR283: hidden-lowering risk matrix focused coverage', () => {
       {},
       { formats: defaultFormatWriters },
     );
-    expect(opCallsite.diagnostics).toEqual([]);
+    expectNoDiagnostics(opCallsite.diagnostics);
     const d8m = opCallsite.artifacts.find((a): a is D8mArtifact => a.kind === 'd8m');
     expect(d8m).toBeDefined();
     const fileEntry = (
@@ -33,7 +38,7 @@ describe('PR283: hidden-lowering risk matrix focused coverage', () => {
     const typedPreserve = await compilePlacedProgram(
       join(__dirname, 'fixtures', 'pr276_typed_call_preservation_matrix.zax'),
     );
-    expect(typedPreserve.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expectNoErrors(typedPreserve.diagnostics);
     const typedInstrs = flattenLoweredInstructions(typedPreserve.program);
     const typedLines = formatLoweredInstructions(typedPreserve.program).map((line) => line.toUpperCase());
     const rawCallCount = typedInstrs.reduce((count, instr) => {
@@ -49,7 +54,7 @@ describe('PR283: hidden-lowering risk matrix focused coverage', () => {
     const frameAccess = await compilePlacedProgram(
       join(__dirname, 'fixtures', 'pr283_local_arg_global_access_matrix.zax'),
     );
-    expect(frameAccess.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expectNoErrors(frameAccess.diagnostics);
     const frameText = formatLoweredInstructions(frameAccess.program).join('\n').toUpperCase();
     expect(frameText).toContain('PUSH IX');
     expect(frameText).toContain('LD IX, $00');
@@ -62,14 +67,11 @@ describe('PR283: hidden-lowering risk matrix focused coverage', () => {
       { rawTypedCallWarnings: true },
       { formats: defaultFormatWriters },
     );
-    expect(
-      rawTypedWarn.diagnostics.some(
-        (d) => d.id === DiagnosticIds.RawCallTypedTargetWarning && d.severity === 'warning',
-      ),
-    ).toBe(true);
-    expect(
-      rawTypedWarn.diagnostics.some((d) => d.message.includes('Raw call targets typed callable')),
-    ).toBe(true);
+    expectDiagnostic(rawTypedWarn.diagnostics, {
+      id: DiagnosticIds.RawCallTypedTargetWarning,
+      severity: 'warning',
+      messageIncludes: 'Raw call targets typed callable',
+    });
   }, 20_000);
 
   it('covers negative hidden-lowering guardrails for op expansion stack policy and imbalance', async () => {
@@ -78,15 +80,11 @@ describe('PR283: hidden-lowering risk matrix focused coverage', () => {
       { opStackPolicy: 'error' },
       { formats: defaultFormatWriters },
     );
-    expect(stackPolicyError.diagnostics.some((d) => d.severity === 'error')).toBe(true);
-    expect(
-      stackPolicyError.diagnostics.some(
-        (d) =>
-          d.id === DiagnosticIds.OpStackPolicyRisk &&
-          d.severity === 'error' &&
-          d.message.includes('non-zero static stack delta'),
-      ),
-    ).toBe(true);
+    expectDiagnostic(stackPolicyError.diagnostics, {
+      id: DiagnosticIds.OpStackPolicyRisk,
+      severity: 'error',
+      messageIncludes: 'non-zero static stack delta',
+    });
 
     const unbalanced = await compile(
       join(__dirname, 'fixtures', 'pr23_op_unbalanced_stack.zax'),
@@ -102,19 +100,18 @@ describe('PR283: hidden-lowering risk matrix focused coverage', () => {
       {},
       { formats: defaultFormatWriters },
     );
-    const messages = typedVsRaw.diagnostics.map((d) => d.message);
-    expect(
-      messages.some((m) =>
-        m.includes(
-          'typed call "callee_typed" reached with unknown stack depth; cannot verify typed-call boundary contract.',
-        ),
-      ),
-    ).toBe(true);
-    expect(
-      messages.some((m) =>
-        m.includes('call reached with unknown stack depth; cannot verify callee stack contract.'),
-      ),
-    ).toBe(true);
+    expectDiagnostic(typedVsRaw.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
+      messageIncludes:
+        'typed call "callee_typed" reached with unknown stack depth; cannot verify typed-call boundary contract.',
+    });
+    expectDiagnostic(typedVsRaw.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
+      messageIncludes:
+        'call reached with unknown stack depth; cannot verify callee stack contract.',
+    });
     expect(typedVsRaw.diagnostics.every((d) => d.id === DiagnosticIds.EmitError)).toBe(true);
   });
 });
