@@ -43,7 +43,7 @@ Representative files:
 Representative files:
 
 - `pr468_parser_dispatch_integration.test.ts` for top-level parser dispatch
-- `pr543_function_lowering_integration.test.ts` and `pr544_program_lowering_integration.test.ts` for lowering seams
+- `lowering/pr543_function_lowering_integration.test.ts` and `lowering/pr544_program_lowering_integration.test.ts` for lowering seams
 - `pr511_asm_range_lowering_integration.test.ts` for structured-control lowering
 - `pr582_named_section_*integration.test.ts` and `pr585_named_section_layout_integration.test.ts` for named-section routing/layout
 - `examples_compile.test.ts` for checked-in example programs

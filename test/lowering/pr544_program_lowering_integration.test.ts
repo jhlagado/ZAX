@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 
-import { compilePlacedProgram, flattenLoweredItems } from './helpers/lowered_program.js';
+import { compilePlacedProgram, flattenLoweredItems } from '../helpers/lowered_program.js';
 
 describe('PR544 program lowering integration', () => {
   it('keeps top-level declaration traversal stable', async () => {
-    const res = await compilePlacedProgram(join(__dirname, 'fixtures', 'pr544_program_lowering.zax'));
+    const res = await compilePlacedProgram(join(__dirname, '..', 'fixtures', 'pr544_program_lowering.zax'));
     expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
 
     const items = flattenLoweredItems(res.program);
