@@ -2,16 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { D8mArtifact } from '../src/formats/types.js';
+import { compile } from '../../src/compile.js';
+import { defaultFormatWriters } from '../../src/formats/index.js';
+import type { D8mArtifact } from '../../src/formats/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 describe('PR119 D8M path normalization', () => {
   it('normalizes symbol file paths to project-relative with forward slashes', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr10_import_main.zax');
+    const entry = join(__dirname, '..', 'fixtures', 'pr10_import_main.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.diagnostics).toEqual([]);
 

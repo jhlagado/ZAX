@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnosticTypes.js';
-import type { AsmInstructionNode, AsmOperandNode, SourceSpan } from '../src/frontend/ast.js';
-import { getEncoderRegistryEntry } from '../src/z80/encoderRegistry.js';
-import { encodeInstruction } from '../src/z80/encode.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import type { AsmInstructionNode, AsmOperandNode, SourceSpan } from '../../src/frontend/ast.js';
+import { getEncoderRegistryEntry } from '../../src/z80/encoderRegistry.js';
+import { encodeInstruction } from '../../src/z80/encode.js';
 
 const span: SourceSpan = {
   file: 'pr694_encoder_registry_dispatch.zax',
