@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import type { CompileEnv } from '../src/semantics/env.js';
+import type { CompileEnv } from '../../src/semantics/env.js';
 import {
   offsetOfPathInTypeExpr,
   sizeOfTypeExpr,
   storageInfoForTypeExpr,
-} from '../src/semantics/layout.js';
+} from '../../src/semantics/layout.js';
 import type {
   ImmExprNode,
   OffsetofPathNode,
@@ -13,7 +13,7 @@ import type {
   TypeDeclNode,
   TypeExprNode,
   UnionDeclNode,
-} from '../src/frontend/ast.js';
+} from '../../src/frontend/ast.js';
 
 const span = {
   file: 'test.zax',
@@ -161,8 +161,7 @@ describe('semantics/layout', () => {
         ['Table', table],
       ]),
     };
-    const evalImm = (expr: ImmExprNode) =>
-      expr.kind === 'ImmLiteral' ? expr.value : undefined;
+    const evalImm = (expr: ImmExprNode) => (expr.kind === 'ImmLiteral' ? expr.value : undefined);
     const diagnostics: any[] = [];
 
     const tailPath: OffsetofPathNode = { kind: 'OffsetofPath', span, base: 'tail', steps: [] };
