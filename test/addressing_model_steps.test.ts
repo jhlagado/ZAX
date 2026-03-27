@@ -20,7 +20,7 @@ import {
   LOAD_RP_FVAR,
   STORE_RP_FVAR,
   renderStepPipeline,
-} from '../src/addressing/steps';
+} from '../src/lowering/steps';
 
 const asm = renderStepPipeline;
 

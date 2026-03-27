@@ -35,7 +35,7 @@ import {
   CALC_EA,
   renderStepPipeline,
   type StepPipeline,
-} from '../src/addressing/steps';
+} from '../src/lowering/steps';
 
 const asm = renderStepPipeline;
 

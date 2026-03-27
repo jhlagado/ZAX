@@ -1,4 +1,4 @@
-import { TEMPLATE_SW_DEBC } from '../addressing/steps.js';
+import { TEMPLATE_SW_DEBC } from './steps.js';
 import { DiagnosticIds } from '../diagnosticTypes.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
 import type {
@@ -12,7 +12,7 @@ import type {
   TypeExprNode,
 } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
-import type { StepPipeline } from '../addressing/steps.js';
+import type { StepPipeline } from './steps.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import type { Callable, SourceSegmentTag } from './loweringTypes.js';
 import type { OpOverloadSelection } from './opMatching.js';

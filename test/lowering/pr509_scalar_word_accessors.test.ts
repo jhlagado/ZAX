@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { renderStepPipeline } from '../../src/addressing/steps.js';
+import { renderStepPipeline } from '../../src/lowering/steps.js';
 import type { SourceSpan, TypeExprNode } from '../../src/frontend/ast.js';
 import { createScalarWordAccessorHelpers } from '../../src/lowering/scalarWordAccessors.js';
 import type { EaResolution } from '../../src/lowering/eaResolution.js';

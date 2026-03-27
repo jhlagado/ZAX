@@ -1,4 +1,4 @@
-import type { StepPipeline } from '../addressing/steps.js';
+import type { StepPipeline } from './steps.js';
 import { DiagnosticIds } from '../diagnosticTypes.js';
 import type { Diagnostic, DiagnosticId } from '../diagnosticTypes.js';
 import type {
