@@ -34,40 +34,54 @@ import { initializeFunctionFrame } from './functionFrameSetup.js';
 // rewriting, frame-setup, body-setup, and call-lowering submodules.
 type ResolvedArrayType = { element: TypeExprNode; length?: number };
 export type FunctionLoweringItemContext = {
-  item: FuncDeclNode;
+  /** Set by: program lowering construction. Used by: frame setup, body orchestration. */
+  readonly item: FuncDeclNode;
 };
 
 export type FunctionLoweringDiagnosticsContext = {
-  diagnostics: Diagnostic[];
-  diag: (diagnostics: Diagnostic[], file: string, message: string) => void;
-  diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
-  diagAtWithId: (
+  /** Set by: emit/context construction. Mutated by: frame setup, body setup, call lowering, asm instruction lowering, body orchestration. */
+  readonly diagnostics: Diagnostic[];
+  /** Set by: emit/context construction. Used by: frame setup. */
+  readonly diag: (diagnostics: Diagnostic[], file: string, message: string) => void;
+  /** Set by: emit/context construction. Used by: frame setup, body setup, call lowering, asm instruction lowering, body orchestration. */
+  readonly diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
+  /** Set by: emit/context construction. Used by: body setup, call lowering. */
+  readonly diagAtWithId: (
     diagnostics: Diagnostic[],
     span: SourceSpan,
     id: DiagnosticId,
     message: string,
   ) => void;
-  diagAtWithSeverityAndId: (
+  /** Set by: emit/context construction. Used by: call lowering, asm instruction lowering. */
+  readonly diagAtWithSeverityAndId: (
     diagnostics: Diagnostic[],
     span: SourceSpan,
     id: DiagnosticId,
     severity: 'error' | 'warning',
     message: string,
   ) => void;
-  warnAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly warnAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
 };
 
 export type FunctionLoweringSymbolContext = {
-  taken: Set<string>;
-  pending: PendingSymbol[];
-  traceComment: (offset: number, text: string) => void;
-  traceLabel: (offset: number, name: string, span?: SourceSpan) => void;
-  currentCodeSegmentTagRef: { current: SourceSegmentTag | undefined };
-  generatedLabelCounterRef: { current: number };
+  /** Set by: emit/context construction. Mutated by: frame setup and body setup. Used by: frame setup and body setup. */
+  readonly taken: Set<string>;
+  /** Set by: emit/context construction. Mutated by: frame setup, body setup, body orchestration. Used by: frame setup, body setup, body orchestration. */
+  readonly pending: PendingSymbol[];
+  /** Set by: emit/context construction. Used by: frame setup. */
+  readonly traceComment: (offset: number, text: string) => void;
+  /** Set by: emit/context construction. Used by: frame setup, body setup, body orchestration. */
+  readonly traceLabel: (offset: number, name: string, span?: SourceSpan) => void;
+  /** Set by: emit/context construction. Mutated by: lowerFunctionDecl coordination, frame setup, body setup, call lowering, body orchestration. Used by: frame setup, body setup, call lowering. */
+  readonly currentCodeSegmentTagRef: { current: SourceSegmentTag | undefined };
+  /** Set by: emit/context construction. Mutated by: frame setup and body setup. Used by: frame setup and body setup. */
+  readonly generatedLabelCounterRef: { current: number };
 };
 
 export type FunctionLoweringSpTrackingContext = {
-  bindSpTracking: (
+  /** Set by: emit/context construction. Used by: frame setup. */
+  readonly bindSpTracking: (
     callbacks?:
       | {
           applySpTracking: (headRaw: string, operands: AsmOperandNode[]) => void;
@@ -78,17 +92,22 @@ export type FunctionLoweringSpTrackingContext = {
 };
 
 export type FunctionLoweringEmissionContext = {
-  getCodeOffset: () => number;
-  emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
-  emitRawCodeBytes: (bs: Uint8Array, file: string, traceText: string) => void;
-  emitAbs16Fixup: (
+  /** Set by: emit/context construction. Used by: frame setup and body setup. */
+  readonly getCodeOffset: () => number;
+  /** Set by: emit/context construction. Used by: asm rewriting, frame setup, body setup, call lowering, asm instruction lowering, body orchestration. */
+  readonly emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
+  /** Set by: emit/context construction. Used by: body setup, call lowering, asm instruction lowering. */
+  readonly emitRawCodeBytes: (bs: Uint8Array, file: string, traceText: string) => void;
+  /** Set by: emit/context construction. Used by: body setup and call lowering. */
+  readonly emitAbs16Fixup: (
     opcode: number,
     baseLower: string,
     addend: number,
     span: SourceSpan,
     asmText?: string,
   ) => void;
-  emitAbs16FixupPrefixed: (
+  /** Set by: emit/context construction. Used by: asm instruction lowering. */
+  readonly emitAbs16FixupPrefixed: (
     prefix: number,
     opcode2: number,
     baseLower: string,
@@ -96,7 +115,8 @@ export type FunctionLoweringEmissionContext = {
     span: SourceSpan,
     asmText?: string,
   ) => void;
-  emitRel8Fixup: (
+  /** Set by: emit/context construction. Used by: asm instruction lowering. */
+  readonly emitRel8Fixup: (
     opcode: number,
     baseLower: string,
     addend: number,
@@ -106,89 +126,150 @@ export type FunctionLoweringEmissionContext = {
 };
 
 export type FunctionLoweringConditionContext = {
-  conditionOpcodeFromName: (name: string) => number | undefined;
-  conditionNameFromOpcode: (opcode: number) => string | undefined;
-  callConditionOpcodeFromName: (name: string) => number | undefined;
-  jrConditionOpcodeFromName: (name: string) => number | undefined;
-  conditionOpcode: (operand: AsmOperandNode) => number | undefined;
-  inverseConditionName: (name: string) => string | undefined;
-  symbolicTargetFromExpr: (expr: ImmExprNode) => { baseLower: string; addend: number } | undefined;
+  /** Set by: emit/context construction. Used by: body setup and asm instruction lowering. */
+  readonly conditionOpcodeFromName: (name: string) => number | undefined;
+  /** Set by: emit/context construction. Used by: body setup. */
+  readonly conditionNameFromOpcode: (opcode: number) => string | undefined;
+  /** Set by: emit/context construction. Used by: asm instruction lowering. */
+  readonly callConditionOpcodeFromName: (name: string) => number | undefined;
+  /** Set by: emit/context construction. Used by: asm instruction lowering. */
+  readonly jrConditionOpcodeFromName: (name: string) => number | undefined;
+  /** Set by: emit/context construction. Used by: asm instruction lowering. */
+  readonly conditionOpcode: (operand: AsmOperandNode) => number | undefined;
+  /** Set by: emit/context construction. Used by: body setup and call lowering. */
+  readonly inverseConditionName: (name: string) => string | undefined;
+  /** Set by: emit/context construction. Used by: asm rewriting and asm instruction lowering. */
+  readonly symbolicTargetFromExpr: (
+    expr: ImmExprNode,
+  ) => { baseLower: string; addend: number } | undefined;
 };
 
 export type FunctionLoweringTypeContext = {
-  evalImmExpr: (
+  /** Set by: emit/context construction. Used by: asm rewriting, frame setup, call lowering. */
+  readonly evalImmExpr: (
     expr: ImmExprNode,
     env: CompileEnv,
     diagnostics: Diagnostic[],
   ) => number | undefined;
-  env: CompileEnv;
-  resolveScalarBinding: (name: string) => ScalarKind | undefined;
-  resolveScalarKind: (typeExpr: TypeExprNode) => ScalarKind | undefined;
-  resolveEaTypeExpr: (ea: EaExprNode) => TypeExprNode | undefined;
-  resolveScalarTypeForEa: (ea: EaExprNode) => ScalarKind | undefined;
-  resolveScalarTypeForLd: (ea: EaExprNode) => ScalarKind | undefined;
-  resolveArrayType: (typeExpr: TypeExprNode, env?: CompileEnv) => ResolvedArrayType | undefined;
-  typeDisplay: (typeExpr: TypeExprNode) => string;
-  sameTypeShape: (left: TypeExprNode, right: TypeExprNode) => boolean;
+  /** Set by: emit/context construction. Used by: asm rewriting, frame setup, call lowering. */
+  readonly env: CompileEnv;
+  /** Set by: emit/context construction. Used by: frame setup, call lowering, asm instruction lowering. */
+  readonly resolveScalarBinding: (name: string) => ScalarKind | undefined;
+  /** Set by: emit/context construction. Used by: asm rewriting, frame setup, call lowering. */
+  readonly resolveScalarKind: (typeExpr: TypeExprNode) => ScalarKind | undefined;
+  /** Set by: emit/context construction. Used by: frame setup and call lowering. */
+  readonly resolveEaTypeExpr: (ea: EaExprNode) => TypeExprNode | undefined;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly resolveScalarTypeForEa: (ea: EaExprNode) => ScalarKind | undefined;
+  /** Set by: emit/context construction. Used by: asm instruction lowering. */
+  readonly resolveScalarTypeForLd: (ea: EaExprNode) => ScalarKind | undefined;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly resolveArrayType: (
+    typeExpr: TypeExprNode,
+    env?: CompileEnv,
+  ) => ResolvedArrayType | undefined;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly typeDisplay: (typeExpr: TypeExprNode) => string;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly sameTypeShape: (left: TypeExprNode, right: TypeExprNode) => boolean;
 };
 
 export type FunctionLoweringMaterializationContext = {
-  resolveEa: (ea: EaExprNode, span: SourceSpan) => EaResolution | undefined;
-  buildEaWordPipeline: (ea: EaExprNode, span: SourceSpan) => StepPipeline | null;
-  enforceEaRuntimeAtomBudget: (operand: AsmOperandNode, context: string) => boolean;
-  enforceDirectCallSiteEaBudget: (operand: AsmOperandNode, calleeName: string) => boolean;
-  pushEaAddress: (ea: EaExprNode, span: SourceSpan) => boolean;
-  materializeEaAddressToHL: (ea: EaExprNode, span: SourceSpan) => boolean;
-  pushMemValue: (ea: EaExprNode, want: 'byte' | 'word', span: SourceSpan) => boolean;
-  pushImm16: (value: number, span: SourceSpan) => boolean;
-  pushZeroExtendedReg8: (regName: string, span: SourceSpan) => boolean;
-  loadImm16ToHL: (value: number, span: SourceSpan) => boolean;
-  emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
-  emitScalarWordLoad: (
+  /** Set by: emit/context construction. Used by: asm instruction lowering. */
+  readonly resolveEa: (ea: EaExprNode, span: SourceSpan) => EaResolution | undefined;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly buildEaWordPipeline: (ea: EaExprNode, span: SourceSpan) => StepPipeline | null;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly enforceEaRuntimeAtomBudget: (operand: AsmOperandNode, context: string) => boolean;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly enforceDirectCallSiteEaBudget: (
+    operand: AsmOperandNode,
+    calleeName: string,
+  ) => boolean;
+  /** Set by: emit/context construction. Used by: body setup, call lowering, asm instruction lowering. */
+  readonly pushEaAddress: (ea: EaExprNode, span: SourceSpan) => boolean;
+  /** Set by: emit/context construction. Used by: asm instruction lowering. */
+  readonly materializeEaAddressToHL: (ea: EaExprNode, span: SourceSpan) => boolean;
+  /** Set by: emit/context construction. Used by: body setup and call lowering. */
+  readonly pushMemValue: (ea: EaExprNode, want: 'byte' | 'word', span: SourceSpan) => boolean;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly pushImm16: (value: number, span: SourceSpan) => boolean;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly pushZeroExtendedReg8: (regName: string, span: SourceSpan) => boolean;
+  /** Set by: emit/context construction. Used by: frame setup and body setup. */
+  readonly loadImm16ToHL: (value: number, span: SourceSpan) => boolean;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
+  /** Set by: emit/context construction. Used by: asm instruction lowering. */
+  readonly emitScalarWordLoad: (
     target: 'HL' | 'DE' | 'BC',
     resolved: EaResolution | undefined,
     span: SourceSpan,
   ) => boolean;
-  emitScalarWordStore: (
+  /** Set by: emit/context construction. Used by: asm instruction lowering. */
+  readonly emitScalarWordStore: (
     source: 'HL' | 'DE' | 'BC',
     resolved: EaResolution | undefined,
     span: SourceSpan,
   ) => boolean;
-  lowerLdWithEa: (asmItem: AsmInstructionNode) => boolean;
+  /** Set by: emit/context construction. Used by: asm instruction lowering. */
+  readonly lowerLdWithEa: (asmItem: AsmInstructionNode) => boolean;
 };
 
 export type FunctionLoweringStorageContext = {
-  stackSlotOffsets: Map<string, number>;
-  stackSlotTypes: Map<string, TypeExprNode>;
-  localAliasTargets: Map<string, EaExprNode>;
-  storageTypes: Map<string, TypeExprNode>;
-  moduleAliasTargets: Map<string, EaExprNode>;
-  rawTypedCallWarningsEnabled: boolean;
+  /** Set by: emit/context construction. Mutated by: frame setup (contents). Used by: asm rewriting, frame setup, asm instruction lowering. */
+  readonly stackSlotOffsets: Map<string, number>;
+  /** Set by: emit/context construction. Mutated by: frame setup (contents). Used by: asm rewriting, frame setup, call lowering. */
+  readonly stackSlotTypes: Map<string, TypeExprNode>;
+  /** Set by: emit/context construction. Mutated by: frame setup (contents). Used by: asm rewriting, frame setup, asm instruction lowering. */
+  readonly localAliasTargets: Map<string, EaExprNode>;
+  /** Set by: prescan/context construction. Used by: frame setup, call lowering, asm instruction lowering. */
+  readonly storageTypes: Map<string, TypeExprNode>;
+  /** Set by: prescan/context construction. Used by: frame setup and asm instruction lowering. */
+  readonly moduleAliasTargets: Map<string, EaExprNode>;
+  /** Set by: emit/context construction. Used by: call lowering and asm instruction lowering. */
+  readonly rawTypedCallWarningsEnabled: boolean;
 };
 
 export type FunctionLoweringCallableResolutionContext = {
-  resolveCallable: (name: string, file: string) => Callable | undefined;
-  resolveOpCandidates: (name: string, file: string) => OpDeclNode[] | undefined;
-  opStackPolicyMode: OpStackPolicyMode;
+  /** Set by: emit/context construction. Used by: call lowering and asm instruction lowering. */
+  readonly resolveCallable: (name: string, file: string) => Callable | undefined;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly resolveOpCandidates: (name: string, file: string) => OpDeclNode[] | undefined;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly opStackPolicyMode: OpStackPolicyMode;
 };
 
 export type FunctionLoweringOpOverloadContext = {
-  formatAsmOperandForOpDiag: (operand: AsmOperandNode) => string;
-  selectOpOverload: (overloads: OpDeclNode[], operands: AsmOperandNode[]) => OpOverloadSelection;
-  summarizeOpStackEffect: (op: OpDeclNode) => OpStackSummary;
+  /** Set by: emit/context construction. Used by: body setup and call lowering. */
+  readonly formatAsmOperandForOpDiag: (operand: AsmOperandNode) => string;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly selectOpOverload: (
+    overloads: OpDeclNode[],
+    operands: AsmOperandNode[],
+  ) => OpOverloadSelection;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly summarizeOpStackEffect: (op: OpDeclNode) => OpStackSummary;
 };
 
 export type FunctionLoweringAstUtilityContext = {
-  cloneImmExpr: (expr: ImmExprNode) => ImmExprNode;
-  cloneEaExpr: (expr: EaExprNode) => EaExprNode;
-  cloneOperand: (operand: AsmOperandNode) => AsmOperandNode;
-  flattenEaDottedName: (ea: EaExprNode) => string | undefined;
-  normalizeFixedToken: (operand: AsmOperandNode) => string | undefined;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly cloneImmExpr: (expr: ImmExprNode) => ImmExprNode;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly cloneEaExpr: (expr: EaExprNode) => EaExprNode;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly cloneOperand: (operand: AsmOperandNode) => AsmOperandNode;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly flattenEaDottedName: (ea: EaExprNode) => string | undefined;
+  /** Set by: emit/context construction. Used by: call lowering. */
+  readonly normalizeFixedToken: (operand: AsmOperandNode) => string | undefined;
 };
 
 export type FunctionLoweringRegisterContext = {
-  reg8: Set<string>;
-  reg16: Set<string>;
+  /** Set by: emit/context construction. Used by: body setup and call lowering. */
+  readonly reg8: Set<string>;
+  /** Set by: emit/context construction. Used by: call lowering and asm instruction lowering. */
+  readonly reg16: Set<string>;
 };
 
 export type FunctionLoweringSharedContext = FunctionLoweringDiagnosticsContext &
