@@ -18,7 +18,8 @@ import type {
 } from './programLowering.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
 
-type EmitFunctionLoweringContextInputs = {
+/** Flat field bag passed into {@link createEmitLoweringContexts} for function-body lowering. */
+export type EmitFunctionLoweringContextInputs = {
   diagnostics: FunctionLoweringDiagnosticsContext['diagnostics'];
   diag: FunctionLoweringDiagnosticsContext['diag'];
   diagAt: FunctionLoweringDiagnosticsContext['diagAt'];
@@ -91,7 +92,8 @@ type EmitFunctionLoweringContextInputs = {
   reg16: FunctionLoweringRegisterContext['reg16'];
 };
 
-type EmitProgramLoweringContextInputs = {
+/** Flat field bag for program-level lowering (merged with shared function-lowering fields in the builder). */
+export type EmitProgramLoweringContextInputs = {
   program: ProgramLoweringContext['program'];
   includeDirs: ProgramLoweringContext['includeDirs'];
   localCallablesByFile: ProgramLoweringContext['localCallablesByFile'];
