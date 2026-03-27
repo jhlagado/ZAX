@@ -69,7 +69,8 @@ src/
     case_style.ts         Case-style lint pass (optional; warns on mixed reg/keyword casing)
 
   lowering/
-    emit.ts               Program emission orchestrator: callable/section scan, item emission, fixups
+    emit.ts               emitProgram orchestrator: wires workspace state (section byte maps, fixup queues, visibility, resolution helpers, createEmitProgramContext); invokes emitPipeline phases
+    emitPipeline.ts       Emit phase seams: prescan → lowering → placement & artifacts; typed EmitProgramOptions / EmitProgramResult; delegates to programLowering + emitFinalization
     emitContextBuilder.ts Shared wiring for function/program lowering contexts used by emit.ts
     ldLowering.ts         Typed LD lowering facade: form selection + encoding composition
     ldEncoding.ts         LD encoding core: context wiring, assignment plans, scalar/aggregate paths
@@ -141,18 +142,19 @@ compile(entryFile, options, deps)           [compile.ts]
   │    ├─ resolve enum members (qualified names)
   │    └─ evaluate const expressions
   │
-  ├─ emitProgram()                          [lowering/emit.ts]
-  │    ├─ first pass: collect callables, ops, section directives
-  │    │    extern declarations, bin/hex ingestion
-  │    ├─ second pass: emit each module item
-  │    │    ├─ FuncDecl → frame setup + ASM body
-  │    │    ├─ DataBlock → data section bytes
-  │    │    ├─ VarBlock → var section bytes (zero-initialized)
-  │    │    ├─ SectionDirective → update section counter
-  │    │    └─ AlignDirective → pad section
-  │    └─ fixup resolution (ABS16, REL8, extern patches)
+  ├─ emitProgram()                          [lowering/emit.ts; invoked from compile.ts]
+  │    ├─ workspace wiring (mutable section maps, fixup queues, helpers, createEmitProgramContext) [emit.ts]
+  │    ├─ prescan: runEmitPrescanPhase → PrescanResult
+  │    │    (callables, ops, storage aliases, raw-address names)            [emitPipeline.ts → programLowering]
+  │    ├─ lowering: runEmitLoweringPhase → LoweringResult
+  │    │    (emit module items: FuncDecl, DataBlock, VarBlock, sections, bin/hex, fixup enqueue)
+  │    │                                                                  [emitPipeline.ts → programLowering]
+  │    └─ placement & artifacts: mergeEmitFinalizationContext
+  │         + runEmitPlacementAndArtifactPhase → map, symbols, placed lowered ASM
+  │         (named-section placement, ABS16/REL8/extern fixups, merged EmittedByteMap)
+  │                                                                  [emitPipeline.ts → emitFinalization]
   │
-  └─ format writers                         [formats/*.ts]
+  └─ format writers                         [formats/*.ts via compile PipelineDeps]
        ├─ writeBin → .bin
        ├─ writeHex → .hex
        ├─ writeD8m → .d8dbg.json
@@ -173,7 +175,8 @@ pin the right seam and refactors do not blur responsibilities.
 - **Lowering**: consumes AST plus `CompileEnv` and makes all section-placement, frame, call,
   fixup, and encoding decisions needed to produce deterministic artifacts. This is where callable
   discovery, named-section routing, stack-frame cleanup, and final byte emission become stable
-  contracts.
+  contracts. Emit-time work is further staged via `emitPipeline.ts` (prescan → lowering →
+  placement and artifacts) so tests and refactors can target the right seam within lowering.
 - **Format writers**: serialize already-lowered artifacts. Writers may change representation
   (`.bin`, `.hex`, `.lst`, `.d8dbg.json`, `.z80`) but should not change compilation semantics.
 - **CLI wiring**: selects inputs, options, and requested output artifacts. The CLI should not add
