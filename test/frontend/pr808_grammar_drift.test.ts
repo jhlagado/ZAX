@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const TEST_DIR = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(TEST_DIR, '..');
+const REPO_ROOT = resolve(TEST_DIR, '..', '..');
 const grammarPath = resolve(REPO_ROOT, 'docs/spec/zax-grammar.ebnf.md');
 const generatorPath = resolve(REPO_ROOT, 'scripts/generate-grammar-atoms.mjs');
 const GENERATED_START_MARKER = '<!-- BEGIN GENERATED: grammar-atoms -->';
@@ -47,8 +47,12 @@ describe('PR808 grammar drift checks', () => {
     const grammar = readGrammar();
 
     expect(grammar).toContain('assign_stmt     = assign_target , ":=" , assign_source ;');
-    expect(grammar).toContain('assign_source   = assignment_reg | ea_expr | move_addr | imm_expr ;');
-    expect(grammar).toContain('move_addr       = "@" , ea_expr ;  (* move_addr is only valid as the source operand in v1 *)');
+    expect(grammar).toContain(
+      'assign_source   = assignment_reg | ea_expr | move_addr | imm_expr ;',
+    );
+    expect(grammar).toContain(
+      'move_addr       = "@" , ea_expr ;  (* move_addr is only valid as the source operand in v1 *)',
+    );
     expect(grammar).toContain('imm_name        = identifier , { "." , identifier } ;');
     expect(grammar).toContain('rhs_alias_expr  = ea_expr ;');
     expect(grammar).toContain('data_init_expr  = string_lit | aggregate_init | imm_expr ;');
@@ -58,8 +62,12 @@ describe('PR808 grammar drift checks', () => {
     const grammar = readGrammar();
 
     expect(grammar).toContain('`docs/spec/zax-spec.md` wins');
-    expect(grammar).toContain('It documents parser-level atom syntax only; semantic restrictions still live');
-    expect(grammar).toContain('Parser recovery behavior remains implementation-defined by the hand-written parser.');
+    expect(grammar).toContain(
+      'It documents parser-level atom syntax only; semantic restrictions still live',
+    );
+    expect(grammar).toContain(
+      'Parser recovery behavior remains implementation-defined by the hand-written parser.',
+    );
   });
 
   it('keeps the semantic raw-data placement note in the hand-written section', () => {
