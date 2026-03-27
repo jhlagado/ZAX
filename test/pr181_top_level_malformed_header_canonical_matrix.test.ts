@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic, expectNoDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,35 +18,50 @@ describe('PR181 parser: canonical top-level malformed-header matrix', () => {
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
-    const messages = res.diagnostics.map((d) => d.message);
-
-    expect(messages).toContain(
-      'Invalid import statement line "import": expected "<path>.zax" or <moduleId>',
-    );
-    expect(messages).toContain(
-      'Invalid type declaration line "type": expected <name> [<typeExpr>]',
-    );
-    expect(messages).toContain('Invalid union declaration line "union": expected <name>');
-    expect(messages).toContain(
-      'Invalid globals declaration line "globals extra": expected globals',
-    );
-    expect(messages).toContain('Invalid func header line "func": expected <name>(...): <retType>');
-    expect(messages).toContain('Invalid op header line "op": expected <name>(...)');
-    expect(messages).toContain('Invalid extern base name "(": expected <identifier>.');
-    expect(messages).toContain(
-      'Invalid enum declaration line "enum": expected <name> <member>[, ...]',
-    );
-    expect(messages).toContain(
-      'Invalid section directive line "section": expected <code|data|var> [at <imm16>]',
-    );
-    expect(messages).toContain('Invalid align directive line "align": expected <imm16>');
-    expect(messages).toContain('Invalid const declaration line "const": expected <name> = <imm>');
-    expect(messages).toContain(
-      'Invalid bin declaration line "bin": expected <name> in <code|data> from "<path>"',
-    );
-    expect(messages).toContain('Invalid hex declaration line "hex": expected <name> from "<path>"');
-    expect(messages).toContain('Invalid data declaration line "data extra": expected data');
-
-    expect(messages.some((m) => m.startsWith('Unsupported top-level construct:'))).toBe(false);
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid import statement line "import": expected "<path>.zax" or <moduleId>',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid type declaration line "type": expected <name> [<typeExpr>]',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid union declaration line "union": expected <name>',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid globals declaration line "globals extra": expected globals',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid func header line "func": expected <name>(...): <retType>',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid op header line "op": expected <name>(...)',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid extern base name "(": expected <identifier>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid enum declaration line "enum": expected <name> <member>[, ...]',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid section directive line "section": expected <code|data|var> [at <imm16>]',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid align directive line "align": expected <imm16>',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid const declaration line "const": expected <name> = <imm>',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid bin declaration line "bin": expected <name> in <code|data> from "<path>"',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid hex declaration line "hex": expected <name> from "<path>"',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid data declaration line "data extra": expected data',
+    });
+    expectNoDiagnostic(res.diagnostics, {
+      messageIncludes: 'Unsupported top-level construct:',
+    });
   });
 });
