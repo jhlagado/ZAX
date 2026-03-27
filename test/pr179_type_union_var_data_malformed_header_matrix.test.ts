@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic, expectNoDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,27 +18,44 @@ describe('PR179 parser: malformed type/union/var/data headers', () => {
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
-    const messages = res.diagnostics.map((d) => d.message);
-
-    expect(messages).toContain(
-      'Invalid type declaration line "type": expected <name> [<typeExpr>]',
-    );
-    expect(messages).toContain('Invalid type name "9Bad": expected <identifier>.');
-    expect(messages).toContain(
-      'Invalid type declaration line "type Word =": expected <name> [<typeExpr>]',
-    );
-    expect(messages).toContain(
-      'Invalid type declaration line "type Word [byte]": expected <name> [<typeExpr>]',
-    );
-
-    expect(messages).toContain('Invalid union declaration line "union": expected <name>');
-    expect(messages).toContain('Invalid union name "9Pair": expected <identifier>.');
-    expect(messages).toContain('Invalid union name "Pair extra": expected <identifier>.');
-
-    expect(messages).toContain(
-      'Invalid globals declaration line "globals extra": expected globals',
-    );
-    expect(messages).toContain('Invalid data declaration line "data extra": expected data');
-    expect(messages.some((m) => m.startsWith('Unsupported top-level construct:'))).toBe(false);
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Invalid type declaration line "type": expected <name> [<typeExpr>]',
+    });
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Invalid type name "9Bad": expected <identifier>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Invalid type declaration line "type Word =": expected <name> [<typeExpr>]',
+    });
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Invalid type declaration line "type Word [byte]": expected <name> [<typeExpr>]',
+    });
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Invalid union declaration line "union": expected <name>',
+    });
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Invalid union name "9Pair": expected <identifier>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Invalid union name "Pair extra": expected <identifier>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Invalid globals declaration line "globals extra": expected globals',
+    });
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Invalid data declaration line "data extra": expected data',
+    });
+    expectNoDiagnostic(res.diagnostics, {
+      messageIncludes: 'Unsupported top-level construct:',
+    });
   });
 });
