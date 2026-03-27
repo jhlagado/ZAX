@@ -41,7 +41,7 @@ import {
   TEMPLATE_S_ANY,
   TEMPLATE_S_HL,
   type StepPipeline,
-} from '../addressing/steps.js';
+} from './emitStepImports.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
 import type { EmittedSourceSegment, SymbolEntry } from '../formats/types.js';
 import type {
