@@ -28,35 +28,55 @@ type LocalScalarInitializer = {
 };
 
 export type FunctionFrameSetupContext = {
-  item: FuncDeclNode;
-  diagnostics: Diagnostic[];
-  diag: (diagnostics: Diagnostic[], file: string, message: string) => void;
-  diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
-  env: CompileEnv;
-  resolveScalarBinding: (name: string) => ScalarKind | undefined;
-  resolveScalarKind: (typeExpr: TypeExprNode) => ScalarKind | undefined;
-  resolveEaTypeExpr: (ea: EaExprNode) => TypeExprNode | undefined;
-  evalImmExpr: (
+  readonly item: FuncDeclNode;
+  readonly diagnostics: Diagnostic[];
+  readonly diag: (diagnostics: Diagnostic[], file: string, message: string) => void;
+  readonly diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
+  readonly typing: Readonly<FunctionFrameSetupTypingContext>;
+  readonly storage: Readonly<FunctionFrameSetupStorageContext>;
+  readonly symbols: Readonly<FunctionFrameSetupSymbolContext>;
+  readonly emission: Readonly<FunctionFrameSetupEmissionContext>;
+  readonly spTracking: Readonly<FunctionFrameSetupSpTrackingContext>;
+};
+
+export type FunctionFrameSetupTypingContext = {
+  readonly env: CompileEnv;
+  readonly resolveScalarBinding: (name: string) => ScalarKind | undefined;
+  readonly resolveScalarKind: (typeExpr: TypeExprNode) => ScalarKind | undefined;
+  readonly resolveEaTypeExpr: (ea: EaExprNode) => TypeExprNode | undefined;
+  readonly evalImmExpr: (
     expr: ImmExprNode,
     env: CompileEnv,
     diagnostics: Diagnostic[],
   ) => number | undefined;
-  stackSlotOffsets: Map<string, number>;
-  stackSlotTypes: Map<string, TypeExprNode>;
-  localAliasTargets: Map<string, EaExprNode>;
-  storageTypes: Map<string, TypeExprNode>;
-  moduleAliasTargets: Map<string, EaExprNode>;
-  taken: Set<string>;
-  pending: PendingSymbol[];
-  traceComment: (offset: number, text: string) => void;
-  traceLabel: (offset: number, name: string, span?: SourceSpan) => void;
-  generatedLabelCounterRef: { current: number };
-  getCodeOffset: () => number;
-  getCurrentCodeSegmentTag: () => SourceSegmentTag | undefined;
-  setCurrentCodeSegmentTag: (tag: SourceSegmentTag | undefined) => void;
-  emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
-  loadImm16ToHL: (value: number, span: SourceSpan) => boolean;
-  bindSpTracking: (
+};
+
+export type FunctionFrameSetupStorageContext = {
+  readonly stackSlotOffsets: Map<string, number>;
+  readonly stackSlotTypes: Map<string, TypeExprNode>;
+  readonly localAliasTargets: Map<string, EaExprNode>;
+  readonly storageTypes: Map<string, TypeExprNode>;
+  readonly moduleAliasTargets: Map<string, EaExprNode>;
+};
+
+export type FunctionFrameSetupSymbolContext = {
+  readonly taken: Set<string>;
+  readonly pending: PendingSymbol[];
+  readonly traceComment: (offset: number, text: string) => void;
+  readonly traceLabel: (offset: number, name: string, span?: SourceSpan) => void;
+  readonly generatedLabelCounterRef: { current: number };
+};
+
+export type FunctionFrameSetupEmissionContext = {
+  readonly getCodeOffset: () => number;
+  readonly getCurrentCodeSegmentTag: () => SourceSegmentTag | undefined;
+  readonly setCurrentCodeSegmentTag: (tag: SourceSegmentTag | undefined) => void;
+  readonly emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
+  readonly loadImm16ToHL: (value: number, span: SourceSpan) => boolean;
+};
+
+export type FunctionFrameSetupSpTrackingContext = {
+  readonly bindSpTracking: (
     callbacks?: {
       applySpTracking: (headRaw: string, operands: AsmOperandNode[]) => void;
       invalidateSpTracking: () => void;
@@ -141,28 +161,20 @@ export function initializeFunctionFrame(ctx: FunctionFrameSetupContext): Functio
     diagnostics,
     diag,
     diagAt,
-    env,
-    resolveScalarBinding,
-    resolveScalarKind,
-    resolveEaTypeExpr,
-    evalImmExpr,
-    stackSlotOffsets,
-    stackSlotTypes,
-    localAliasTargets,
-    storageTypes,
-    moduleAliasTargets,
-    taken,
-    pending,
-    traceComment,
-    traceLabel,
-    generatedLabelCounterRef,
+  } = ctx;
+  const { env, resolveScalarBinding, resolveScalarKind, resolveEaTypeExpr, evalImmExpr } =
+    ctx.typing;
+  const { stackSlotOffsets, stackSlotTypes, localAliasTargets, storageTypes, moduleAliasTargets } =
+    ctx.storage;
+  const { taken, pending, traceComment, traceLabel, generatedLabelCounterRef } = ctx.symbols;
+  const {
     getCodeOffset,
     getCurrentCodeSegmentTag,
     setCurrentCodeSegmentTag,
     emitInstr,
     loadImm16ToHL,
-    bindSpTracking,
-  } = ctx;
+  } = ctx.emission;
+  const { bindSpTracking } = ctx.spTracking;
 
   stackSlotOffsets.clear();
   stackSlotTypes.clear();
