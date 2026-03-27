@@ -1,56 +1,20 @@
 import { readFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname } from 'node:path';
 
 import { hasErrors, normalizePath } from './compileShared.js';
 import type { Diagnostic } from './diagnosticTypes.js';
 import { DiagnosticIds } from './diagnosticTypes.js';
-import type { ImportNode, ModuleFileNode, ProgramNode } from './frontend/ast.js';
+import type { ModuleFileNode, ProgramNode } from './frontend/ast.js';
 import { parseModuleFile } from './frontend/parser.js';
 import { stripLineComment } from './frontend/parseParserShared.js';
 import { makeSourceFile } from './frontend/source.js';
 import { canonicalModuleId } from './moduleIdentity.js';
+import {
+  importTargets,
+  resolveImportCandidates,
+  resolveIncludeCandidates,
+} from './moduleLoaderIncludePaths.js';
 import type { CompilerOptions } from './pipeline.js';
-
-function importTargets(moduleFile: ModuleFileNode): ImportNode[] {
-  return moduleFile.items.filter((i): i is ImportNode => i.kind === 'Import');
-}
-
-function importCandidatePath(imp: ImportNode): string {
-  if (imp.form === 'path') return imp.specifier;
-  return `${imp.specifier}.zax`;
-}
-
-function resolveImportCandidates(
-  fromModulePath: string,
-  imp: ImportNode,
-  includeDirs: string[],
-): string[] {
-  const fromDir = dirname(fromModulePath);
-  const candidateRel = importCandidatePath(imp);
-
-  const out: string[] = [];
-  out.push(normalizePath(resolve(fromDir, candidateRel)));
-  for (const inc of includeDirs) {
-    out.push(normalizePath(resolve(inc, candidateRel)));
-  }
-  const seen = new Set<string>();
-  return out.filter((p) => (seen.has(p) ? false : (seen.add(p), true)));
-}
-
-function resolveIncludeCandidates(
-  fromModulePath: string,
-  specifier: string,
-  includeDirs: string[],
-): string[] {
-  const fromDir = dirname(fromModulePath);
-  const out: string[] = [];
-  out.push(normalizePath(resolve(fromDir, specifier)));
-  for (const inc of includeDirs) {
-    out.push(normalizePath(resolve(inc, specifier)));
-  }
-  const seen = new Set<string>();
-  return out.filter((p) => (seen.has(p) ? false : (seen.add(p), true)));
-}
 
 function isIgnorableImportProbeError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false;
