@@ -66,7 +66,7 @@ record.
 
 ### `push IX; pop HL` — full inventory
 
-A codebase sweep confirmed that the `push IX; pop HL` idiom appears in exactly four lowering locations (plus one correct prologue use). The rest of the codebase (`src/addressing/steps.ts`, `scalarWordAccessors.ts`, `ldEncoding.ts`, `addressingPipelines.ts`) is clean and spec-compliant.
+A codebase sweep confirmed that the `push IX; pop HL` idiom appears in exactly four lowering locations (plus one correct prologue use). The rest of the codebase (`src/lowering/steps.ts`, `scalarWordAccessors.ts`, `ldEncoding.ts`, `addressingPipelines.ts`) is clean and spec-compliant.
 
 | # | File | Lines | Triggered by | Semantics | Fixed by |
 |---|---|---|---|---|---|
@@ -366,7 +366,7 @@ For frame-slot bases (function parameters), the fallback also contains Instances
 
 The pipeline should support **any power-of-two element size from 2 up to $8000** (32768). That is shiftCount 1 through 15. The Z80 scaling is just repeated `add hl, hl` — there is nothing special about 4 shifts versus 15 shifts except code size and runtime cost. The type system should not impose an arbitrary implementation ceiling on element sizes.
 
-#### `src/addressing/steps.ts` — `CALC_EA_WIDE(shiftCount)` factory
+#### `src/lowering/steps.ts` — `CALC_EA_WIDE(shiftCount)` factory
 
 Replace the hardcoded constant:
 
@@ -386,7 +386,7 @@ const CALC_EA_2 = () => CALC_EA_WIDE(1);
 
 `CALC_EA_WIDE(0)` = byte (one `add hl, de`, no shifts). This makes byte and wide pipelines a single parameterised family.
 
-#### `src/addressing/steps.ts` — `makeEawPipelines(shiftCount)` generator
+#### `src/lowering/steps.ts` — `makeEawPipelines(shiftCount)` generator
 
 Replace the ten hand-written `EAW_*` closures with a factory:
 
@@ -490,7 +490,7 @@ push hl            ; 11
 
 ### Implementation steps
 
-1. Add `CALC_EA_WIDE(shiftCount)` in `src/addressing/steps.ts`; keep `CALC_EA_2` as alias
+1. Add `CALC_EA_WIDE(shiftCount)` in `src/lowering/steps.ts`; keep `CALC_EA_2` as alias
 2. Add `makeEawPipelines(shiftCount)`; keep backward-compatible named exports
 3. Rename `buildEaWordPipeline` → `buildEaWidePipeline`; replace elemSize-2 guards with `shiftCountForSize`
 4. Export `buildEaWidePipeline` from `addressingPipelines.ts`; update all call sites (`ldEncoding.ts`)
@@ -569,7 +569,7 @@ Phases are ordered by severity — correctness bugs first, then generalisation a
 |---|---|---|---|
 | A | Byte pipeline `IndexImm` gap | Done on `main` | `src/lowering/addressingPipelines.ts` |
 | B | Indirect EA resolution | Done on `main` | `src/lowering/eaResolution.ts`, lowering consumers |
-| C | Wide EAW pipeline (2–$8000) | Done on `main` | `src/addressing/steps.ts`, `src/lowering/addressingPipelines.ts` |
+| C | Wide EAW pipeline (2–$8000) | Done on `main` | `src/lowering/steps.ts`, `src/lowering/addressingPipelines.ts` |
 | D | Packed layout for record fields | Still pending | `src/semantics/layout.ts`, `src/lowering/eaResolution.ts` |
 
 Only Phase D should be treated as live unfinished work from this document.

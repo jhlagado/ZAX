@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { renderStepPipeline } from '../../src/addressing/steps.js';
+import { renderStepPipeline } from '../../src/lowering/steps.js';
 import { DiagnosticIds, type Diagnostic } from '../../src/diagnosticTypes.js';
 import type { EaExprNode, SourceSpan, TypeExprNode } from '../../src/frontend/ast.js';
 import { createAddressingPipelineBuilders } from '../../src/lowering/addressingPipelines.js';

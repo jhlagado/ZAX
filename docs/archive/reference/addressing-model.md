@@ -4,7 +4,7 @@ Goal: express every allowed load/store addressing shape as a short pipeline of r
 
 > **Implementation reference only** — This document describes the current handwritten step-pipeline lowering model. It is not the normative language specification.
 >
-> If anything here conflicts with `docs/spec/zax-spec.md` or `docs/spec/zax-grammar.ebnf.md`, the spec documents win. The live implementation remains in `src/addressing/steps.ts` plus its lowering consumers and tests. The intended direction is to codify the step inventory and routing rules in a machine-readable spec-data layer and make this reference mechanically checked against that layer.
+> If anything here conflicts with `docs/spec/zax-spec.md` or `docs/spec/zax-grammar.ebnf.md`, the spec documents win. The live implementation remains in `src/lowering/steps.ts` plus its lowering consumers and tests. The intended direction is to codify the step inventory and routing rules in a machine-readable spec-data layer and make this reference mechanically checked against that layer.
 
 ## Source Semantics
 
