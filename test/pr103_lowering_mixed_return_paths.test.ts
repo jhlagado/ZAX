@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,7 +13,7 @@ describe('PR103 lowering mixed return-path stack diagnostics', () => {
   it('accepts mixed branch returns when plain ret preserves stack balance', async () => {
     const entry = join(__dirname, 'fixtures', 'pr103_mixed_returns_ret_imbalance.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics).toEqual([]);
+    expectNoDiagnostics(res.diagnostics);
     expect(res.artifacts.length).toBeGreaterThan(0);
   });
 
@@ -20,8 +21,9 @@ describe('PR103 lowering mixed return-path stack diagnostics', () => {
     const entry = join(__dirname, 'fixtures', 'pr103_mixed_returns_retcc_imbalance.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
-    expect(
-      res.diagnostics.some((d) => d.message.includes('Stack depth mismatch at if/else join')),
-    ).toBe(true);
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      messageIncludes: 'Stack depth mismatch at if/else join',
+    });
   });
 });
