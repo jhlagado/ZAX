@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic, expectNoDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,33 +14,49 @@ describe('PR175 parser: malformed func/op/extern header matrix', () => {
     const entry = join(__dirname, 'fixtures', 'pr175_func_op_extern_malformed_header_matrix.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
-    const messages = res.diagnostics.map((d) => d.message);
-    expect(messages).toContain('Invalid func header line "func": expected <name>(...): <retType>');
-    expect(messages).toContain(
-      'Invalid func header line "func main(": expected <name>(...): <retType>',
-    );
-    expect(messages).toContain('Invalid func name "9bad": expected <identifier>.');
-    expect(messages).toContain('Unterminated func "ok": expected function body before "op"');
-
-    expect(messages).toContain('Invalid op header line "op": expected <name>(...)');
-    expect(messages).toContain('Invalid op header line "op macro(": expected <name>(...)');
-    expect(messages).toContain('Invalid op name "9bad": expected <identifier>.');
-    expect(messages).toContain('Invalid op header: unexpected trailing tokens');
-
-    expect(messages).toContain('Invalid extern base name "@bad": expected <identifier>.');
-    expect(messages).toContain(
-      'Invalid extern base name "const": collides with a top-level keyword.',
-    );
-    expect(messages).toContain(
-      'Invalid extern func declaration line "func": expected <name>(...)[ : <retRegs> ] at <imm16>',
-    );
-    expect(messages).toContain(
-      'Invalid extern func declaration line "func x(a: byte) at $1234": expected <name>(...)[ : <retRegs> ] at <imm16>',
-    );
-    expect(messages).toContain(
-      'Invalid extern func name "const": collides with a top-level keyword.',
-    );
-
-    expect(messages.some((m) => m.startsWith('Unsupported top-level construct:'))).toBe(false);
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid func header line "func": expected <name>(...): <retType>',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid func header line "func main(": expected <name>(...): <retType>',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid func name "9bad": expected <identifier>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Unterminated func "ok": expected function body before "op"',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid op header line "op": expected <name>(...)',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid op header line "op macro(": expected <name>(...)',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid op name "9bad": expected <identifier>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid op header: unexpected trailing tokens',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid extern base name "@bad": expected <identifier>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid extern base name "const": collides with a top-level keyword.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message:
+        'Invalid extern func declaration line "func": expected <name>(...)[ : <retRegs> ] at <imm16>',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message:
+        'Invalid extern func declaration line "func x(a: byte) at $1234": expected <name>(...)[ : <retRegs> ] at <imm16>',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid extern func name "const": collides with a top-level keyword.',
+    });
+    expectNoDiagnostic(res.diagnostics, {
+      messageIncludes: 'Unsupported top-level construct:',
+    });
   });
 });

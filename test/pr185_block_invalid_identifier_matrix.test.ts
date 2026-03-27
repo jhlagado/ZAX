@@ -1,9 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic, expectNoDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,17 +14,26 @@ describe('PR185 parser: block invalid identifier diagnostics matrix', () => {
     const entry = join(__dirname, 'fixtures', 'pr185_block_invalid_identifier_matrix.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
-    const messages = res.diagnostics.map((d) => d.message);
-
-    expect(messages).toContain('Invalid record field name "9field": expected <identifier>.');
-    expect(messages).toContain('Invalid union field name "9part": expected <identifier>.');
-    expect(messages).toContain(
-      'Invalid globals declaration name "9global": expected <identifier>.',
-    );
-    expect(messages).toContain('Invalid data declaration name "9blob": expected <identifier>.');
-    expect(messages).toContain('Invalid enum member name "9bad": expected <identifier>.');
-    expect(messages).toContain('Invalid var declaration name "9local": expected <identifier>.');
-
-    expect(messages.some((m) => m.startsWith('Unsupported top-level construct:'))).toBe(false);
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid record field name "9field": expected <identifier>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid union field name "9part": expected <identifier>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid globals declaration name "9global": expected <identifier>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid data declaration name "9blob": expected <identifier>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid enum member name "9bad": expected <identifier>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Invalid var declaration name "9local": expected <identifier>.',
+    });
+    expectNoDiagnostic(res.diagnostics, {
+      messageIncludes: 'Unsupported top-level construct:',
+    });
   });
 });
