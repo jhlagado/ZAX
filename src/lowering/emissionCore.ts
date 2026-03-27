@@ -1,5 +1,5 @@
 import type { AsmOperandNode, ImmExprNode, SourceSpan } from '../frontend/ast.js';
-import { renderStepInstr, type StepInstr, type StepPipeline } from '../addressing/steps.js';
+import { renderStepInstr, type StepInstr, type StepPipeline } from './steps.js';
 
 type Context = {
   getCodeOffset: () => number;

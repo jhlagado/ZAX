@@ -1,4 +1,4 @@
-# Addressing step library (`src/addressing/steps.ts`)
+# Addressing step library (`src/lowering/steps.ts`)
 
 Status: non-normative map of the step-pipeline DSL. The source of truth is the TypeScript module;
 this page helps you jump to the right **family** without reading the file top-to-bottom.
