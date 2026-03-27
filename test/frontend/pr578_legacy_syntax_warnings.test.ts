@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnosticTypes.js';
-import { parseModuleFile } from '../src/frontend/parser.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { parseModuleFile } from '../../src/frontend/parser.js';
 
 describe('PR578 legacy syntax removal', () => {
   it('rejects legacy globals/data blocks and active-counter section directives', () => {
