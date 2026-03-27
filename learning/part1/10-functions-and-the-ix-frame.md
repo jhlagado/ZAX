@@ -32,7 +32,7 @@ Three parameters, three registers. And inside `count_above`, the running count h
 
 The problem compounds when functions call other functions. If `main` calls `find_max` and then `count_above`, it has to reload HL before the second call because `find_max` walked HL to the end of the table. The only way to know this is to read `find_max`'s body — the function signature says nothing about side effects.
 
-Raw register passing does not scale. It works for small programs where the programmer holds the entire register map in their head. Beyond that, you need a systematic way to pass values.
+Raw register passing does not scale. It works for small programs where you can hold the entire register map in your head. Beyond that, you need a systematic way to pass values.
 
 ---
 
@@ -58,7 +58,7 @@ pop ix           ; restore caller's IX
 ret
 ```
 
-Six instructions of overhead — three in, three out — plus any register saves. A raw `call` and `ret` are two instructions with no frame at all. The frame is not free. For a tight inner loop calling a tiny helper, the overhead may matter. For a function called a handful of times from a larger program, the cost is small relative to what the function actually does, and the gain in clarity is real.
+Six instructions of overhead — three in, three out — plus any register saves. A raw `call` and `ret` are two instructions with no frame at all. I want to be clear about this: the frame is not free. For a tight inner loop calling a tiny helper, the overhead may matter. For a function called a handful of times from a larger program, the cost is small relative to what the function actually does, and the gain in clarity is real.
 
 ---
 
@@ -179,7 +179,7 @@ end
 
 Three parameters and one local — four named values, each at its own IX-relative offset. In raw Z80, this function needed four registers (HL, B, C, D) and a `push bc / ld d, 0 / pop bc` dance just to initialize the counter without disturbing the inputs. Here, `cnt` has its own frame slot. No juggling.
 
-Notice that `cp (ix+threshold+0)` compares A directly against the frame slot. You do not have to load the threshold into a register first — `cp` accepts `(IX+d)` as its operand. This frees C, which the raw version had tied up holding the threshold.
+`cp (ix+threshold+0)` compares A directly against the frame slot. You do not have to load the threshold into a register first — `cp` accepts `(IX+d)` as its operand. This frees C, which the raw version had tied up holding the threshold.
 
 ---
 
