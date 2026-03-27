@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,20 +18,29 @@ describe('PR287 explicit address-of operator (@place)', () => {
       { formats: defaultFormatWriters },
     );
 
-    const errors = res.diagnostics.filter((d) => d.severity === 'error');
-    expect(errors.map((d) => d.message)).toContain(
-      '"@<path>" is only supported with ":=" in this phase.',
-    );
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: '"@<path>" is only supported with ":=" in this phase.',
+    });
   });
 
   it('rejects invalid @ targets with stable diagnostics', async () => {
     const entry = join(__dirname, 'fixtures', 'pr287_address_of_invalid_targets_negative.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    const messages = res.diagnostics.map((d) => d.message);
-
-    expect(messages.filter((m) => m.includes('Invalid address-of target')).length).toBe(3);
-    expect(messages).toContain('Invalid address-of target "@": expected @<place>.');
-    expect(messages).toContain('Invalid address-of target "@(3 + 2)": expected @<place>.');
-    expect(messages).toContain('Invalid address-of target "@3": expected @<place>.');
+    expect(
+      res.diagnostics.filter((d) => d.message.startsWith('Invalid address-of target ')).length,
+    ).toBe(3);
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Invalid address-of target "@": expected @<place>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Invalid address-of target "@(3 + 2)": expected @<place>.',
+    });
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Invalid address-of target "@3": expected @<place>.',
+    });
   });
 });
