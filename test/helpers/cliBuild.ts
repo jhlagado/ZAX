@@ -1,6 +1,5 @@
 import { execFile } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import { access, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { access, readdir, stat } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
@@ -10,20 +9,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const repoRoot = resolve(__dirname, '..', '..');
 const cliPath = resolve(repoRoot, 'dist', 'src', 'cli.js');
-const buildTmpDir = resolve(repoRoot, '.tmp');
-const buildLockPath = resolve(buildTmpDir, 'cli-build.lock');
-const buildStampPath = resolve(buildTmpDir, 'cli-build.stamp');
-const lockWaitSliceMs = 250;
-const lockWaitMaxMs = 90_000;
-const lockStaleMs = 5 * 60_000;
-const lockAcquireTimeoutMs = 10 * 60_000;
 
 let buildPromise: Promise<void> | undefined;
-let buildPromiseKey: string | undefined;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
-}
 
 async function pathExists(path: string): Promise<boolean> {
   try {
@@ -32,101 +19,6 @@ async function pathExists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-type LockMeta = { pid?: number; createdAt?: number };
-
-function parsePid(value: unknown): number | undefined {
-  if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isInteger(value)) {
-    return undefined;
-  }
-  return value > 0 ? value : undefined;
-}
-
-function parseCreatedAt(value: unknown): number | undefined {
-  if (typeof value !== 'number' || !Number.isFinite(value) || !Number.isInteger(value)) {
-    return undefined;
-  }
-  return value >= 0 ? value : undefined;
-}
-
-function parseLockMeta(raw: string): LockMeta | undefined {
-  const trimmed = raw.trim();
-  if (!trimmed) return undefined;
-  try {
-    const parsedUnknown = JSON.parse(trimmed) as unknown;
-    const parsedNumber = parseCreatedAt(parsedUnknown);
-    if (parsedNumber !== undefined) {
-      return { createdAt: parsedNumber };
-    }
-    if (parsedUnknown === null || typeof parsedUnknown !== 'object') {
-      return undefined;
-    }
-    const parsed = parsedUnknown as { pid?: unknown; createdAt?: unknown };
-    const pid = parsePid(parsed.pid);
-    const createdAt = parseCreatedAt(parsed.createdAt);
-    if (pid === undefined && createdAt === undefined) return undefined;
-    const lockMeta: LockMeta = {};
-    if (pid !== undefined) lockMeta.pid = pid;
-    if (createdAt !== undefined) lockMeta.createdAt = createdAt;
-    return lockMeta;
-  } catch {
-    const numeric = parseCreatedAt(Number(trimmed));
-    return numeric === undefined ? undefined : { createdAt: numeric };
-  }
-}
-
-function isProcessAlive(pid: number): boolean {
-  if (!Number.isInteger(pid) || pid <= 0) return false;
-  if (pid === process.pid) return true;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    const e = err as NodeJS.ErrnoException;
-    return e.code === 'EPERM';
-  }
-}
-
-function computeWaitDeadline(
-  nowMs: number,
-  acquireDeadlineMs: number,
-  waitWindowMs: number,
-): number {
-  return Math.min(nowMs + waitWindowMs, acquireDeadlineMs);
-}
-
-function hasLockAcquireTimedOut(nowMs: number, acquireDeadlineMs: number): boolean {
-  return nowMs >= acquireDeadlineMs;
-}
-
-function shouldEvictLock(
-  lockMeta: LockMeta | undefined,
-  options: { nowMs: number; staleMs: number; isOwnerAlive: (pid: number) => boolean },
-): boolean {
-  if (lockMeta === undefined) return false;
-
-  const ownerAlive = lockMeta.pid !== undefined ? options.isOwnerAlive(lockMeta.pid) : undefined;
-  if (ownerAlive === false) return true;
-
-  if (lockMeta.createdAt === undefined) return false;
-  if (options.nowMs - lockMeta.createdAt < options.staleMs) return false;
-  if (ownerAlive === true) return false;
-
-  return true;
-}
-
-async function clearStaleLockIfNeeded(): Promise<void> {
-  const lockText = await readFile(buildLockPath, 'utf8').catch(() => '');
-  const lockMeta = parseLockMeta(lockText);
-  const evict = shouldEvictLock(lockMeta, {
-    nowMs: Date.now(),
-    staleMs: lockStaleMs,
-    isOwnerAlive: isProcessAlive,
-  });
-  if (!evict) return;
-
-  await rm(buildLockPath, { force: true });
 }
 
 async function listBuildInputFiles(rootPath: string): Promise<string[]> {
@@ -146,102 +38,48 @@ async function listBuildInputFiles(rootPath: string): Promise<string[]> {
   return paths.flat();
 }
 
-async function computeCliBuildKey(): Promise<string> {
-  const hash = createHash('sha1');
-  const roots = [
+async function latestInputMtimeMsForRoots(roots: string[]): Promise<number> {
+  let latest = 0;
+  for (const root of roots) {
+    for (const file of await listBuildInputFiles(root)) {
+      const fileInfo = await stat(file);
+      if (fileInfo.mtimeMs > latest) latest = fileInfo.mtimeMs;
+    }
+  }
+  return latest;
+}
+
+async function latestInputMtimeMs(): Promise<number> {
+  return latestInputMtimeMsForRoots([
     resolve(repoRoot, 'package.json'),
     resolve(repoRoot, 'package-lock.json'),
     resolve(repoRoot, 'tsconfig.json'),
     resolve(repoRoot, 'src'),
-  ];
-  for (const root of roots) {
-    for (const file of await listBuildInputFiles(root)) {
-      const fileInfo = await stat(file);
-      hash.update(file);
-      hash.update(':');
-      hash.update(String(fileInfo.size));
-      hash.update(':');
-      hash.update(String(fileInfo.mtimeMs));
-      hash.update('\n');
-    }
-  }
-  return hash.digest('hex');
+  ]);
 }
 
-async function isCliBuildFresh(buildKey: string): Promise<boolean> {
+async function isCliBuildFresh(): Promise<boolean> {
   if (!(await pathExists(cliPath))) return false;
-  const stamp = await readFile(buildStampPath, 'utf8').catch(() => '');
-  return stamp.trim() === buildKey;
-}
-
-async function buildCliWithLock(buildKey: string): Promise<void> {
-  if (await isCliBuildFresh(buildKey)) return;
-  await mkdir(buildTmpDir, { recursive: true });
-  const acquireDeadlineMs = Date.now() + lockAcquireTimeoutMs;
-
-  const timeoutError = (): Error =>
-    new Error(
-      `Timed out waiting ${Math.floor(lockAcquireTimeoutMs / 1000)}s for CLI build lock at ${buildLockPath}`,
-    );
-
-  while (true) {
-    if (hasLockAcquireTimedOut(Date.now(), acquireDeadlineMs)) {
-      throw timeoutError();
-    }
-
-    try {
-      await writeFile(buildLockPath, JSON.stringify({ pid: process.pid, createdAt: Date.now() }), {
-        flag: 'wx',
-      });
-      try {
-        if (await isCliBuildFresh(buildKey)) return;
-        await execFileAsync('npm', ['run', 'build'], {
-          encoding: 'utf8',
-          shell: process.platform === 'win32',
-        });
-        await writeFile(buildStampPath, `${buildKey}\n`, 'utf8');
-      } finally {
-        await rm(buildLockPath, { force: true });
-      }
-      return;
-    } catch (err) {
-      const e = err as NodeJS.ErrnoException;
-      if (e.code && e.code !== 'EEXIST') throw err;
-      if (hasLockAcquireTimedOut(Date.now(), acquireDeadlineMs)) {
-        throw timeoutError();
-      }
-      const waitDeadlineMs = computeWaitDeadline(Date.now(), acquireDeadlineMs, lockWaitMaxMs);
-      while (Date.now() < waitDeadlineMs) {
-        if (!(await pathExists(buildLockPath))) break;
-        await clearStaleLockIfNeeded();
-        if (!(await pathExists(buildLockPath))) break;
-        await sleep(lockWaitSliceMs);
-      }
-      await clearStaleLockIfNeeded();
-    }
-  }
+  const cliStat = await stat(cliPath);
+  const latestInput = await latestInputMtimeMs();
+  return cliStat.mtimeMs >= latestInput;
 }
 
 export async function ensureCliBuilt(): Promise<void> {
-  const buildKey = await computeCliBuildKey();
-  if (await isCliBuildFresh(buildKey)) return;
-
-  if (!buildPromise || buildPromiseKey !== buildKey) {
-    buildPromiseKey = buildKey;
-    buildPromise = buildCliWithLock(buildKey).catch((err) => {
+  if (!buildPromise) {
+    buildPromise = (async () => {
+      if (await isCliBuildFresh()) return;
+      await execFileAsync('npm', ['run', 'build'], {
+        encoding: 'utf8',
+        shell: process.platform === 'win32',
+      });
+    })().finally(() => {
       buildPromise = undefined;
-      buildPromiseKey = undefined;
-      throw err;
     });
   }
   return buildPromise;
 }
 
-export const __cliBuildLockInternals = {
-  computeCliBuildKey,
-  computeWaitDeadline,
-  hasLockAcquireTimedOut,
-  isCliBuildFresh,
-  parseLockMeta,
-  shouldEvictLock,
+export const __cliBuildInternals = {
+  latestInputMtimeMsForRoots,
 };
