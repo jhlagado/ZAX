@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnosticTypes.js';
-import { DiagnosticIds } from '../src/diagnosticTypes.js';
-import type { CompileEnv } from '../src/semantics/env.js';
-import { sizeOfTypeExpr } from '../src/semantics/layout.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
+import type { CompileEnv } from '../../src/semantics/env.js';
+import { sizeOfTypeExpr } from '../../src/semantics/layout.js';
 import type {
   RecordFieldNode,
   SourceSpan,
   TypeDeclNode,
   TypeExprNode,
   UnionDeclNode,
-} from '../src/frontend/ast.js';
+} from '../../src/frontend/ast.js';
 
 const s = (file = 'test.zax'): SourceSpan => ({
   file,
