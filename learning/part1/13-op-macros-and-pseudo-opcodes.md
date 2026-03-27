@@ -4,13 +4,11 @@
 
 This chapter covers two features that extend the Z80's native instruction set without adding run-time cost: `op`, which lets you name a short instruction sequence and expand it inline at every call site, and the ZAX pseudo-opcodes, which let you write `ld hl, de` as if the Z80 had a 16-bit register copy instruction.
 
-Prerequisites: Chapters 3–12.
-
 ---
 
 ## `op`: inline named operations
 
-`op` defines a named operation whose body is copied into the instruction stream at every call site. There is no `call`, no frame, and no `ret`. The body is pasted directly where the op is invoked, as if you had written the instructions there yourself.
+`op` defines a named operation whose body is pasted into the instruction stream at every call site — no `call`, no frame, no `ret` — as if you had written the instructions there yourself.
 
 ```zax
 op load_and_or(src: reg8)
@@ -26,7 +24,7 @@ ld a, b
 or a
 ```
 
-The "copy B into A and set flags" pattern appears before every `while NZ` loop and at every back edge. Without the op, you write those two instructions by hand in every place. With the op, you write them once in the declaration and once at each invocation. The reader sees `load_and_or B` and knows immediately what instruction pair will appear.
+The "copy B into A and set flags" pattern appears before every `while NZ` loop and at every back edge. Without the op, you write those two instructions by hand in every place. With the op, you write them once in the declaration and once at each invocation. You see `load_and_or B` and know immediately what instruction pair will appear.
 
 **`reg8` parameters accept only physical register names.** At the call site, a `reg8` parameter must be one of the seven physical registers: A, B, C, D, E, H, or L. A frame-slot name like `len` is not valid — the compiler substitutes the register token directly into the body instruction, and that substitution only makes sense if the operand is a register. If the value lives in a frame slot, load it into a register first:
 
@@ -66,7 +64,7 @@ Use `func` when:
 
 ## ZAX pseudo-opcodes: synthetic 16-bit register moves
 
-The Z80 has no instruction to copy one register pair into another. To copy HL into DE in raw Z80, you write two 8-bit moves:
+Copying HL into DE in raw Z80 takes two 8-bit moves:
 
 ```zax
 ld d, h
@@ -106,7 +104,7 @@ Each expands to exactly two bytes of machine code. The cost is the same as writi
 
 ---
 
-## What Comes Next
+## Part 1 complete
 
 You have completed Volume 1.
 
