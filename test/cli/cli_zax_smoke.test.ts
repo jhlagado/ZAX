@@ -6,7 +6,7 @@ import { runCli } from '../helpers/cli.js';
 describe('npm zax smoke', () => {
   beforeAll(async () => {
     await ensureCliBuilt();
-  });
+  }, 180_000);
 
   it('builds and prints version via npm script wrapper', async () => {
     const res = await runCli(['--version']);
