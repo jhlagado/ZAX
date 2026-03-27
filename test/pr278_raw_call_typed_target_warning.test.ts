@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { compile } from '../src/compile.js';
 import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic, expectNoDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,9 +15,10 @@ describe('PR278: optional raw-call typed-target warnings', () => {
     const entry = join(__dirname, 'fixtures', 'pr278_raw_call_typed_target_warning.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
-    expect(res.diagnostics.some((d) => d.id === DiagnosticIds.RawCallTypedTargetWarning)).toBe(
-      false,
-    );
+    expectNoDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.RawCallTypedTargetWarning,
+      severity: 'warning',
+    });
   });
 
   it('warns when raw call/call cc targets typed callable symbols', async () => {
@@ -31,8 +33,15 @@ describe('PR278: optional raw-call typed-target warnings', () => {
       (d) => d.id === DiagnosticIds.RawCallTypedTargetWarning,
     );
     expect(warnings).toHaveLength(2);
-    expect(warnings.every((d) => d.severity === 'warning')).toBe(true);
-    expect(warnings.some((d) => d.message.includes('"callee_typed"'))).toBe(true);
-    expect(warnings.some((d) => d.message.includes('"ext_ping"'))).toBe(true);
+    expectDiagnostic(warnings, {
+      id: DiagnosticIds.RawCallTypedTargetWarning,
+      severity: 'warning',
+      messageIncludes: '"callee_typed"',
+    });
+    expectDiagnostic(warnings, {
+      id: DiagnosticIds.RawCallTypedTargetWarning,
+      severity: 'warning',
+      messageIncludes: '"ext_ping"',
+    });
   });
 });
