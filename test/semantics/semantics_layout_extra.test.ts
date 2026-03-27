@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import type { CompileEnv } from '../../src/semantics/env.js';
 import {
   offsetOfPathInTypeExpr,
   sizeOfTypeExpr,
   storageInfoForTypeExpr,
 } from '../../src/semantics/layout.js';
+import { expectDiagnostic, expectNoDiagnostics } from '../helpers/diagnostics.js';
 import type {
   ImmExprNode,
   OffsetofPathNode,
@@ -67,7 +69,11 @@ describe('semantics/layout', () => {
     const diagnostics: any[] = [];
     const info = storageInfoForTypeExpr(arr, emptyEnv, diagnostics);
     expect(info).toBeUndefined();
-    expect(diagnostics.some((d) => d.message.includes('Array length is required'))).toBe(true);
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.TypeError,
+      severity: 'error',
+      messageIncludes: 'Array length is required',
+    });
   });
 
   it('diagnoses recursive type reference', () => {
@@ -82,7 +88,11 @@ describe('semantics/layout', () => {
     const diagnostics: any[] = [];
     const info = storageInfoForTypeExpr({ kind: 'TypeName', span, name: 'Self' }, env, diagnostics);
     expect(info).toBeUndefined();
-    expect(diagnostics.some((d) => d.message.includes('Recursive type definition'))).toBe(true);
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.TypeError,
+      severity: 'error',
+      messageIncludes: 'Recursive type definition',
+    });
   });
 
   it('computes offsetof paths through records', () => {
@@ -191,6 +201,6 @@ describe('semantics/layout', () => {
       diagnostics,
     );
     expect(rowsOffset).toBe(4); // stride 3 + field b offset 1
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
   });
 });
