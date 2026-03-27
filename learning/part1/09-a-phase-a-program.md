@@ -80,9 +80,10 @@ explicit: every register used to pass arguments is loaded immediately before eac
 
 The table base address `values` must be loaded into HL again before each call
 because `find_max` advances HL past the end of the table. HL holds different
-values after each call. Nothing in the language tells the caller that HL was modified —
-you find out by reading the function, or by running the program and getting
-wrong results. The caller has to handle it manually.
+values after each call. Nothing in the language tells you that HL was modified —
+I say this directly, because it only surfaces as a bug once a program grows large
+enough. You find out by reading the function, or by running the program and
+getting wrong results.
 
 ---
 
@@ -145,8 +146,8 @@ zero D without disturbing B and C — which carry the function's inputs — is t
 do it before the loop touches B. The `push bc / ld d, 0 / pop bc` block saves
 B and C, performs the initialization, and restores them.
 
-In this specific case, `ld d, 0` does not actually disturb B or C, so the
-push/pop buys nothing mechanically. But the push/pop is here because you cannot
+Actually, `ld d, 0` does not disturb B or C in this specific case, so the
+push/pop achieves nothing mechanically. But the push/pop is here because you cannot
 name your variables in raw Z80 — you have to pick a register, and you cannot
 easily see at a glance which registers are already in use for what. When you
 cannot name things, you save everything and hope.
@@ -208,7 +209,7 @@ function body carefully, or by running the program and seeing wrong output.
 **The double `cp c` exists because there is no greater-than test.** `cp` gives
 you less-than (carry flag) and equal (zero flag). To test strictly greater-than,
 you need both. So the comparison runs twice. A structured `if value > threshold`
-would generate the same two instructions automatically, and the reader would see
+would generate the same two instructions automatically, and you would see
 the intent instead of the mechanism.
 
 ---
