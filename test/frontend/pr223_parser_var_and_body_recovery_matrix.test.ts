@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { compile } from '../../src/compile.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
+import { expectNoDiagnostic } from '../helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,8 +15,7 @@ describe('PR223 parser: var/body interruption and recovery ordering matrix', () 
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
 
-    const messages = res.diagnostics.map((d) => d.message);
-    expect(messages).toEqual([
+    const expectedOrder = [
       'Unterminated func "missing_var_end_before_top": expected function body before "const"',
       'Invalid var declaration line "notADecl": expected <name>: <type>',
       'Function-local var block must end with "end" before function body',
@@ -23,8 +23,14 @@ describe('PR223 parser: var/body interruption and recovery ordering matrix', () 
       'Unterminated func "missing_end_in_body_if": expected "end" before "enum"',
       '"select" without matching "end"',
       'Unterminated op "missing_end_in_body_select": expected "end" before "type"',
-    ]);
-    expect(messages.some((m) => m.startsWith('Unsupported top-level construct:'))).toBe(false);
-    expect(messages.some((m) => m.startsWith('Unsupported instruction:'))).toBe(false);
+    ];
+    expect(res.diagnostics).toHaveLength(expectedOrder.length);
+    expect(res.diagnostics).toMatchObject(expectedOrder.map((message) => ({ message })));
+    expectNoDiagnostic(res.diagnostics, {
+      messageIncludes: 'Unsupported top-level construct:',
+    });
+    expectNoDiagnostic(res.diagnostics, {
+      messageIncludes: 'Unsupported instruction:',
+    });
   });
 });
