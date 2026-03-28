@@ -40,7 +40,6 @@ describe('layout edge cases (#1138)', () => {
   it('treats an empty record as zero bytes', () => {
     const emptyRec: TypeExprNode = { kind: 'RecordType', span, fields: [] };
     const diagnostics: Diagnostic[] = [];
-    expect(storageInfoForTypeExpr(emptyRec, emptyEnv, diagnostics)).toEqual({ size: 0 });
     expect(sizeOfTypeExpr(emptyRec, emptyEnv, diagnostics)).toBe(0);
     expectNoDiagnostics(diagnostics);
   });
@@ -73,8 +72,10 @@ describe('layout edge cases (#1138)', () => {
         ['Top', top],
       ]),
     };
+    const topExpr: TypeExprNode = { kind: 'TypeName', span, name: 'Top' };
     const diagnostics: Diagnostic[] = [];
-    expect(sizeOfTypeExpr({ kind: 'TypeName', span, name: 'Top' }, env, diagnostics)).toBe(1);
+    expect(storageInfoForTypeExpr(topExpr, env, diagnostics)).toEqual({ size: 1 });
+    expect(sizeOfTypeExpr(topExpr, env, diagnostics)).toBe(1);
     expectNoDiagnostics(diagnostics);
   });
 
@@ -181,7 +182,7 @@ describe('layout edge cases (#1138)', () => {
     expectNoDiagnostics(diagnostics);
   });
 
-  it('uses zero byte offset for union member selection in offsetof (layout.ts does not add offsetBefore for unions)', () => {
+  it('union offsetof keeps total at 0 for any member (no cumulative offset between union variants)', () => {
     const u = unionDecl('Tag', [mkField('a', byteType), mkField('w', wordType)]);
     const env: CompileEnv = { ...emptyEnv, types: new Map([['Tag', u]]) };
     const path: OffsetofPathNode = { kind: 'OffsetofPath', span, base: 'w', steps: [] };
