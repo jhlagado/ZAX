@@ -2,12 +2,9 @@
 
 # Chapter 5 — Counting Loops and DJNZ
 
-The `dec b / jp nz` loop from Chapter 4 uses two instructions to do one
-conceptual thing: decrement-the-counter-and-loop-if-not-done. The Z80 has a
-single instruction that fuses them.
-
-This chapter introduces `djnz` and the three loop forms that cover most of what
-you will write: counted, sentinel, and flag-exit.
+The `dec b / jp nz` loop from Chapter 4 uses two instructions where one would do.
+This chapter shows the single-instruction replacement, and the three loop forms
+you will reach for most often: counted, sentinel, and flag-exit.
 
 ---
 
@@ -24,8 +21,7 @@ loop_top:
 ```
 
 `dec b` decrements B and sets the Z flag when B reaches zero. `jp nz` branches
-back while B is non-zero. The pattern works, but it takes two instructions to
-perform one conceptual operation: decrement-the-counter-and-loop-if-not-done.
+back while B is non-zero. Two instructions for one conceptual operation.
 
 The Z80 has a single instruction that fuses those two operations.
 
