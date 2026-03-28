@@ -52,6 +52,8 @@ jobs:
             fi
             base_sha="$before_sha"
           fi
+          export TEST_GUARDRAIL_BASE_SHA="$base_sha"
+          export TEST_GUARDRAIL_HEAD_SHA="$head_sha"
           git diff --name-status "$base_sha" "$head_sha" | node ./scripts/ci/test-layout-guardrail.js
 
       - name: Classify change set
