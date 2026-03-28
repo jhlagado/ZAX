@@ -1,6 +1,6 @@
 import type { Diagnostic } from '../diagnosticTypes.js';
 import type { EaExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';
-import type { CompileEnv } from '../semantics/env.js';
+import { evalImmExpr, type CompileEnv } from '../semantics/env.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 
 export type EaResolution =
@@ -8,7 +8,8 @@ export type EaResolution =
   | { kind: 'stack'; ixDisp: number; typeExpr?: TypeExprNode }
   | { kind: 'indirect'; ixDisp: number; addend: number; typeExpr?: TypeExprNode };
 
-type EaResolutionContext = {
+/** Maps, env, and type hooks used by {@link createEaResolutionHelpers} — not the full function-lowering context. */
+export type EAResolutionContext = {
   env: CompileEnv;
   diagnostics: Diagnostic[];
   diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
@@ -27,7 +28,46 @@ type EaResolutionContext = {
   sizeOfTypeExpr: (te: TypeExprNode) => number | undefined;
 };
 
-export function createEaResolutionHelpers(ctx: EaResolutionContext) {
+/** Workspace fields that feed EA resolution (emit phase 1 `EmitPhase1Workspace` slice). */
+export type EaResolutionWorkspaceSlice = {
+  stackSlotOffsets: Map<string, number>;
+  stackSlotTypes: Map<string, TypeExprNode>;
+  storageTypes: Map<string, TypeExprNode>;
+  moduleAliasTargets: Map<string, EaExprNode>;
+  localAliasTargets: Map<string, EaExprNode>;
+};
+
+/** Builds {@link EAResolutionContext} from emit-phase env/workspace plus type-resolution hooks. */
+export function buildEaResolutionContext(params: {
+  env: CompileEnv;
+  diagnostics: Diagnostic[];
+  diagAt: EAResolutionContext['diagAt'];
+  workspace: EaResolutionWorkspaceSlice;
+  resolveScalarKind: EAResolutionContext['resolveScalarKind'];
+  resolveAggregateType: EAResolutionContext['resolveAggregateType'];
+  resolveEaTypeExpr: EAResolutionContext['resolveEaTypeExpr'];
+  evalImmNoDiag: EAResolutionContext['evalImmNoDiag'];
+}): EAResolutionContext {
+  const { env, diagnostics, diagAt, workspace } = params;
+  return {
+    env,
+    diagnostics,
+    diagAt,
+    stackSlotOffsets: workspace.stackSlotOffsets,
+    stackSlotTypes: workspace.stackSlotTypes,
+    storageTypes: workspace.storageTypes,
+    moduleAliasTargets: workspace.moduleAliasTargets,
+    getLocalAliasTargets: () => workspace.localAliasTargets,
+    evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
+    evalImmNoDiag: params.evalImmNoDiag,
+    resolveScalarKind: params.resolveScalarKind,
+    resolveAggregateType: params.resolveAggregateType,
+    resolveEaTypeExpr: params.resolveEaTypeExpr,
+    sizeOfTypeExpr: (te) => sizeOfTypeExpr(te, env, diagnostics),
+  };
+}
+
+export function createEaResolutionHelpers(ctx: EAResolutionContext) {
   const resolveAliasTarget = (nameLower: string): EaExprNode | undefined =>
     ctx.getLocalAliasTargets().get(nameLower) ?? ctx.moduleAliasTargets.get(nameLower);
 
