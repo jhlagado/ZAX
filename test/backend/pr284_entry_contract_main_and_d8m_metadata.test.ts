@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { compile } from '../../src/compile.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
 import type { D8mArtifact } from '../../src/formats/types.js';
+import { expectDiagnostic, expectNoErrors } from '../helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,19 +15,17 @@ describe('PR284: entry contract requires main and emits D8 metadata', () => {
     const entry = join(__dirname, '..', 'fixtures', 'pr284_require_main_missing.zax');
     const res = await compile(entry, { requireMain: true }, { formats: defaultFormatWriters });
 
-    expect(res.diagnostics.some((d) => d.severity === 'error')).toBe(true);
-    expect(
-      res.diagnostics.some(
-        (d) => d.message === 'Program must define a callable "main" entry function.',
-      ),
-    ).toBe(true);
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      message: 'Program must define a callable "main" entry function.',
+    });
     expect(res.artifacts).toEqual([]);
   });
 
   it('emits generator entry metadata in d8dbg when main exists', async () => {
     const entry = join(__dirname, '..', 'fixtures', 'pr1_minimal.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics).toEqual([]);
+    expectNoErrors(res.diagnostics);
 
     const d8m = res.artifacts.find((a): a is D8mArtifact => a.kind === 'd8m');
     expect(d8m).toBeDefined();
