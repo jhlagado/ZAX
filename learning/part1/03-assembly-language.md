@@ -315,42 +315,6 @@ The parentheses mean the same thing everywhere:
 
 ---
 
-## EX DE, HL
-
-`EX DE, HL` swaps DE and HL in a single instruction. Afterward, DE holds what HL had and HL holds what DE had.
-
-Copying HL into DE without caring about DE's old value takes two instructions:
-
-```zax
-ld d, h
-ld e, l        ; DE = old HL; HL unchanged
-```
-
-But if you need a genuine exchange — each pair receiving the other's value — you would need six instructions and a scratch register:
-
-```zax
-ld a, h
-ld h, d
-ld d, a        ; D = old H
-ld a, l
-ld l, e
-ld e, a        ; E = old L — swap complete, A clobbered
-```
-
-`EX DE, HL` replaces all six with one instruction and leaves A untouched:
-
-```zax
-ld hl, $1234
-ld de, $5678
-ex de, hl      ; HL = $5678, DE = $1234
-```
-
-You will reach for it whenever you need to hand an address between these two pairs — after building a result in HL and needing it in DE for the next step, for instance.
-
-Two other exchange instructions exist: `EX AF, AF'` swaps AF with its shadow counterpart, and `EXX` swaps BC, DE, and HL all at once with their shadow counterparts. Both rely on the shadow registers, which are covered in Chapter 7. For now, `EX DE, HL` is the one you will use.
-
----
-
 ## ADD, INC, and DEC
 
 `ADD A, B` adds B to A and **writes the result back into A**. The original
@@ -437,7 +401,7 @@ declaring it as `word` instead of `byte` does.
 - Two memory locations cannot appear in a single `LD`; you must go through a register
 - Unsigned bytes hold 0–255; signed bytes use two's complement (bit 7 = sign, range −128 to +127)
 - `const` names a fixed value substituted at assembly time; it produces no output bytes
-- `EX DE, HL` swaps the two register pairs in one instruction
+- `EX DE, HL` swaps the two register pairs in one instruction — introduced in Chapter 6 when both HL and DE are in use as pointers
 - `ADD A, B` writes the result back into A, destroying its previous value; copy A to another register first if you need it later
 - `INC r` and `DEC r` add or subtract 1 in place and update the flags; `DEC` sets the Zero flag at zero, making it useful as a loop counter
 
