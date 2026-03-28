@@ -14,7 +14,8 @@ import type {
   VarBlockNode,
 } from '../frontend/ast.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
-import type { Context, LoweringResult, PrescanResult } from './programLowering.js';
+import type { PrescanResult } from './prescanTypes.js';
+import type { Context, LoweringResult } from './programLowering.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { lowerDataBlock } from './programLoweringData.js';
 import { createProgramLoweringDeclarationHelpers } from './programLoweringDeclarations.js';

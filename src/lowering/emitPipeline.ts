@@ -26,12 +26,12 @@ import type { NonBankedSectionKeyCollection } from '../sectionKeys.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import { finalizeEmitProgram, type EmitFinalizationContext } from './emitFinalization.js';
 import type { LoweredAsmProgram, LoweredAsmStream } from './loweredAsmTypes.js';
+import type { PrescanResult } from './prescanTypes.js';
 import {
   lowerProgramDeclarations,
   preScanProgramDeclarations,
   type Context as ProgramLoweringContext,
   type LoweringResult,
-  type PrescanResult,
 } from './programLowering.js';
 
 export type { LoweringResult, PrescanResult };
