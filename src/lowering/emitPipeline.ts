@@ -32,10 +32,10 @@ import {
   preScanProgramDeclarations,
   type Context as ProgramLoweringContext,
   type LoweringResult,
-  type ProgramPrescanContext,
+  type PrescanContext,
 } from './programLowering.js';
 
-export type EmitPrescanPhaseContext = ProgramPrescanContext;
+export type EmitPrescanPhaseContext = PrescanContext;
 export type EmitPrescanPhaseResult = PrescanResult;
 export type EmitLoweringPhaseContext = ProgramLoweringContext;
 
@@ -130,7 +130,7 @@ export function runEmitLoweringPhase(
   ctx: EmitLoweringPhaseContext,
   prescan: EmitPrescanPhaseResult,
 ): EmitLoweringPhaseResult {
-  return lowerProgramDeclarations(ctx, prescan);
+  return lowerProgramDeclarations({ ...ctx, prescan });
 }
 
 // --- Phase 4: finalization (placement, fixups, artifact assembly) ---

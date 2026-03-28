@@ -88,10 +88,12 @@ export type Context = FunctionLoweringSharedContext & {
   withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T) => T;
 };
 
-export type ProgramPrescanContext = Pick<
+/** Phase 1 — inputs mutated while discovering callables, ops, and module-scope metadata. */
+export type PrescanContext = Pick<
   Context,
   | 'program'
   | 'env'
+  | 'diagnostics'
   | 'localCallablesByFile'
   | 'visibleCallables'
   | 'localOpsByFile'
@@ -104,6 +106,17 @@ export type ProgramPrescanContext = Pick<
   | 'rawAddressSymbols'
   | 'resolveScalarKind'
 >;
+
+/** @deprecated Use {@link PrescanContext} */
+export type ProgramPrescanContext = PrescanContext;
+
+/**
+ * Phase 2 — full program-lowering context after prescan. Prescan outputs are frozen in
+ * {@link PrescanResult}; the same map instances remain on `ctx` for lowering (shared refs).
+ */
+export type LoweringContext = Context & {
+  readonly prescan: PrescanResult;
+};
 
 // --- Phase 2 product: lowered bytes, symbols, and deferred externs ---
 export type LoweringResult = {
@@ -119,8 +132,11 @@ export type LoweringResult = {
   hexBytes: Context['hexBytes'];
 };
 
-// --- Phase 3 context: finalization inputs (placement, fixups, artifacts) ---
-export type FinalizationContext = {
+/**
+ * Phase 3 — inputs for section placement, fixup resolution, and merged byte emission
+ * (`finalizeProgramEmission`).
+ */
+export type ProgramEmissionFinalizeContext = {
   diagnostics: Diagnostic[];
   diag: (diagnostics: Diagnostic[], file: string, message: string) => void;
   primaryFile: string;
@@ -167,14 +183,22 @@ export type FinalizationContext = {
   ) => EmittedSourceSegment[];
 };
 
+/**
+ * Phase 3 — conceptual bundle: lowering context plus the lowering-phase product (#1124).
+ * (Runtime placement still uses {@link ProgramEmissionFinalizeContext} + merged env.)
+ */
+export interface FinalizationContext extends LoweringContext {
+  readonly lowered: LoweringResult;
+}
+
 // --- Phase 1: prescan declarations (callables, ops, storage aliases) ---
-export function preScanProgramDeclarations(ctx: ProgramPrescanContext): PrescanResult {
+export function preScanProgramDeclarations(ctx: PrescanContext): PrescanResult {
   return runProgramPrescan(ctx);
 }
 
 // --- Phase 2: lower declarations and functions into section bytes ---
-export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult): LoweringResult {
-  return runProgramLoweringTraversal(ctx, _prescan);
+export function lowerProgramDeclarations(ctx: LoweringContext): LoweringResult {
+  return runProgramLoweringTraversal(ctx);
 }
 
 // --- Phase 3: finalization (placement, fixups, emission) ---
