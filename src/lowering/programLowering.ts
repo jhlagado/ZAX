@@ -23,6 +23,7 @@ import type {
   SectionKind,
 } from './loweringTypes.js';
 import type { LoweredAsmItem, LoweredImmExpr } from './loweredAsmTypes.js';
+import type { PrescanResult } from './prescanTypes.js';
 import type { AggregateType } from './typeResolution.js';
 import { preScanProgramDeclarations as runProgramPrescan } from './programPrescan.js';
 import { lowerProgramDeclarations as runProgramLoweringTraversal } from './programLoweringTraversal.js';
@@ -85,20 +86,6 @@ export type Context = FunctionLoweringSharedContext & {
   lowerImmExprForLoweredAsm: (expr: ImmExprNode) => LoweredImmExpr;
   namedSectionSinksByNode: Map<NamedSectionNode, NamedSectionContributionSink>;
   withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T) => T;
-};
-
-// --- Phase 1 product: prescan metadata for lowering ---
-export type PrescanResult = {
-  localCallablesByFile: Context['localCallablesByFile'];
-  visibleCallables: Context['visibleCallables'];
-  localOpsByFile: Context['localOpsByFile'];
-  visibleOpsByName: Context['visibleOpsByName'];
-  declaredOpNames: Context['declaredOpNames'];
-  declaredBinNames: Context['declaredBinNames'];
-  storageTypes: Context['storageTypes'];
-  moduleAliasTargets: Context['moduleAliasTargets'];
-  moduleAliasDecls: Context['moduleAliasDecls'];
-  rawAddressSymbols: Context['rawAddressSymbols'];
 };
 
 // --- Phase 2 product: lowered bytes, symbols, and deferred externs ---
