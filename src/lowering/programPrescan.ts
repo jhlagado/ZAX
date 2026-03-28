@@ -12,7 +12,8 @@ import type {
   VarBlockNode,
 } from '../frontend/ast.js';
 import type { Callable } from './loweringTypes.js';
-import type { Context, PrescanResult } from './programLowering.js';
+import type { PrescanResult } from './prescanTypes.js';
+import type { Context } from './programLowering.js';
 
 function getOrCreateFileCallables(
   ctx: Context,
