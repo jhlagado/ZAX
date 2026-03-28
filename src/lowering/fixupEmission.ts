@@ -6,18 +6,28 @@ import {
 } from './traceFormat.js';
 
 type FixupRecord = {
+  /** Patch offset in code. */
   offset: number;
+  /** Target symbol (lowercased). */
   baseLower: string;
+  /** Byte addend. */
   addend: number;
+  /** Owning file. */
   file: string;
 };
 
 type Rel8FixupRecord = {
+  /** Patch offset. */
   offset: number;
+  /** Branch origin. */
   origin: number;
+  /** Target symbol. */
   baseLower: string;
+  /** Addend. */
   addend: number;
+  /** Owning file. */
   file: string;
+  /** Mnemonic for diagnostics. */
   mnemonic: string;
 };
 
@@ -26,14 +36,23 @@ type EvalImmExpr = (expr: ImmExprNode) => number | undefined;
 type TraceInstruction = (start: number, bytes: Uint8Array, asmText: string) => void;
 
 type Context = {
+  /** Current code offset. */
   getCodeOffset: () => number;
+  /** Sets code offset. */
   setCodeOffset: (value: number) => void;
+  /** Writes a code byte. */
   setCodeByte: (offset: number, value: number) => void;
+  /** Records source range for listing. */
   recordCodeSourceRange: (start: number, end: number) => void;
+  /** Enqueues abs16 fixup. */
   pushFixup: (fixup: FixupRecord) => void;
+  /** Enqueues rel8 fixup. */
   pushRel8Fixup: (fixup: Rel8FixupRecord) => void;
+  /** Trace hook for raw emission. */
   traceInstruction: TraceInstruction;
+  /** Optional lowered-instr recorder for asm trace. */
   recordLoweredInstr?: (bytes: Uint8Array, asmText: string, span: SourceSpan) => void;
+  /** Const imm evaluation. */
   evalImmExpr: EvalImmExpr;
 };
 
