@@ -29,7 +29,7 @@ import type { CompileEnv } from '../semantics/env.js';
 import { evalImmExpr } from '../semantics/env.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { encodeInstruction } from '../z80/encode.js';
-import { createEaResolutionHelpers } from './eaResolution.js';
+import { buildEaResolutionContext, createEaResolutionHelpers } from './eaResolution.js';
 import { createEaMaterializationHelpers } from './eaMaterialization.js';
 import { createAddressingPipelineBuilders } from './addressingPipelines.js';
 import { createRuntimeImmediateHelpers } from './runtimeImmediates.js';
@@ -246,22 +246,24 @@ export function createEmitPhase1Helpers(ctx: Context): EmitPhase1Helpers {
     isEnumName: (name) => ctx.env.enums.has(name),
   });
 
-  const { resolveEa } = createEaResolutionHelpers({
-    env: ctx.env,
-    diagnostics: ctx.diagnostics,
-    diagAt,
-    stackSlotOffsets: ctx.workspace.stackSlotOffsets,
-    stackSlotTypes: ctx.workspace.stackSlotTypes,
-    storageTypes: ctx.workspace.storageTypes,
-    moduleAliasTargets: ctx.workspace.moduleAliasTargets,
-    getLocalAliasTargets: () => ctx.workspace.localAliasTargets,
-    evalImmExpr: (expr) => evalImmExpr(expr, ctx.env, ctx.diagnostics),
-    evalImmNoDiag,
-    resolveScalarKind,
-    resolveAggregateType,
-    resolveEaTypeExpr,
-    sizeOfTypeExpr: (te) => sizeOfTypeExpr(te, ctx.env, ctx.diagnostics),
-  });
+  const { resolveEa } = createEaResolutionHelpers(
+    buildEaResolutionContext({
+      env: ctx.env,
+      diagnostics: ctx.diagnostics,
+      diagAt,
+      workspace: {
+        stackSlotOffsets: ctx.workspace.stackSlotOffsets,
+        stackSlotTypes: ctx.workspace.stackSlotTypes,
+        storageTypes: ctx.workspace.storageTypes,
+        moduleAliasTargets: ctx.workspace.moduleAliasTargets,
+        localAliasTargets: ctx.workspace.localAliasTargets,
+      },
+      resolveScalarKind,
+      resolveAggregateType,
+      resolveEaTypeExpr,
+      evalImmNoDiag,
+    }),
+  );
 
   const isIxIyIndexedMem = (op: AsmOperandNode): boolean =>
     op.kind === 'Mem' &&
