@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { parseAsmInstruction } from '../../src/frontend/parseAsmInstruction.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
+import { expectDiagnostic, expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 describe('PR862 := assignment parser/AST support', () => {
   const file = makeSourceFile('pr862_assignment_parser.zax', '');
@@ -18,7 +19,7 @@ describe('PR862 := assignment parser/AST support', () => {
 
   it('parses storage and register assignment forms', () => {
     let parsed = parse('x := a');
-    expect(parsed.diagnostics).toEqual([]);
+    expectNoDiagnostics(parsed.diagnostics);
     expect(parsed.instr).toMatchObject({
       kind: 'AsmInstruction',
       head: ':=',
@@ -29,7 +30,7 @@ describe('PR862 := assignment parser/AST support', () => {
     });
 
     parsed = parse('a := x');
-    expect(parsed.diagnostics).toEqual([]);
+    expectNoDiagnostics(parsed.diagnostics);
     expect(parsed.instr).toMatchObject({
       kind: 'AsmInstruction',
       head: ':=',
@@ -40,7 +41,7 @@ describe('PR862 := assignment parser/AST support', () => {
     });
 
     parsed = parse('words[idx] := hl');
-    expect(parsed.diagnostics).toEqual([]);
+    expectNoDiagnostics(parsed.diagnostics);
     expect(parsed.instr).toMatchObject({
       kind: 'AsmInstruction',
       head: ':=',
@@ -59,7 +60,7 @@ describe('PR862 := assignment parser/AST support', () => {
 
   it('parses whole-register immediate and copy forms', () => {
     let parsed = parse('hl := 0');
-    expect(parsed.diagnostics).toEqual([]);
+    expectNoDiagnostics(parsed.diagnostics);
     expect(parsed.instr).toMatchObject({
       kind: 'AsmInstruction',
       head: ':=',
@@ -67,7 +68,7 @@ describe('PR862 := assignment parser/AST support', () => {
     });
 
     parsed = parse('a := 1');
-    expect(parsed.diagnostics).toEqual([]);
+    expectNoDiagnostics(parsed.diagnostics);
     expect(parsed.instr).toMatchObject({
       kind: 'AsmInstruction',
       head: ':=',
@@ -114,14 +115,15 @@ describe('PR862 := assignment parser/AST support', () => {
     for (const text of ['(hl) := a', 'a := (hl)']) {
       const parsed = parse(text);
       expect(parsed.instr).toBeUndefined();
-      expect(parsed.diagnostics.length).toBeGreaterThan(0);
-      expect(parsed.diagnostics[0]?.message).toContain(':=');
+      expectDiagnostic(parsed.diagnostics, { messageIncludes: ':=' });
     }
   });
 
   it('rejects removed move syntax', () => {
     const parsed = parse('move x, a');
     expect(parsed.instr).toBeUndefined();
-    expect(parsed.diagnostics.map((d) => d.message)).toContain('"move" has been removed; use ":=".');
+    expectDiagnostic(parsed.diagnostics, {
+      message: '"move" has been removed; use ":=".',
+    });
   });
 });
