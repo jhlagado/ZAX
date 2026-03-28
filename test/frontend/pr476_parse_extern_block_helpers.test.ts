@@ -5,6 +5,7 @@ import { parseTopLevelExternDecl } from '../../src/frontend/parseExternBlock.js'
 import { parseParamsFromText } from '../../src/frontend/parseParams.js';
 import { parseProgram } from '../../src/frontend/parser.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
+import { expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 describe('PR476 extern block parser extraction', () => {
   it('keeps extern block parsing intact', () => {
@@ -50,7 +51,7 @@ describe('PR476 extern block parser extraction', () => {
       parseParamsFromText,
     });
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(parsed.nextIndex).toBe(3);
     expect(parsed.node).toMatchObject({
       kind: 'ExternDecl',
@@ -73,7 +74,7 @@ describe('PR476 extern block parser extraction', () => {
       diagnostics,
     );
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(program.files[0]?.items[0]).toMatchObject({
       kind: 'ExternDecl',
       base: 'Math',
