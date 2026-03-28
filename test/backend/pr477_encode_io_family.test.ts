@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
+import { expectDiagnostic } from '../helpers/diagnostics/index.js';
 import type { AsmInstructionNode, AsmOperandNode, SourceSpan } from '../../src/frontend/ast.js';
 import { encodeInstruction } from '../../src/z80/encode.js';
 
@@ -71,6 +73,10 @@ describe('PR477 io encoder family extraction', () => {
 
     expect(encoded).toBeUndefined();
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]?.message).toContain('requires source A');
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.EncodeError,
+      severity: 'error',
+      messageIncludes: 'requires source A',
+    });
   });
 });
