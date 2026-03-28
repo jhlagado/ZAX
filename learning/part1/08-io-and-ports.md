@@ -106,14 +106,14 @@ func read_when_ready(): AF
 wait:
   in a, (C)         ; read status into A, flags set
   and $01           ; test bit 0 (ready flag)
-  jr Z, wait        ; Z set means bit 0 was 0 — not ready yet; loop
+  jr z, wait        ; Z set means bit 0 was 0 — not ready yet; loop
   in a, (DATA_PORT) ; bit 0 is 1 — device is ready; read data into A
   ; A holds the received byte; return it
 end
 ```
 
 `and $01` masks all bits except bit 0 and sets Z if the result is zero.
-`jr Z, wait` loops back while Z is set (bit 0 still clear). When bit 0
+`jr z, wait` loops back while Z is set (bit 0 still clear). When bit 0
 becomes 1, the loop exits and the data read follows.
 
 `in a, (DATA_PORT)` uses the immediate form because the port number is a
@@ -181,7 +181,7 @@ func poll_and_recv(): AF
 poll_loop:
   in a, (C)            ; read status; flags set by in r,(C)
   and $01              ; test bit 0
-  jr Z, poll_loop      ; Z set: not ready; keep polling
+  jr z, poll_loop      ; Z set: not ready; keep polling
   in a, (IN_PORT)      ; ready: read data into A
 end
 

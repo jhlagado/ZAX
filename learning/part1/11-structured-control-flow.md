@@ -212,14 +212,14 @@ of `case` constants, and runs the matching body. If no case matches and an
 `else` arm is present, the `else` body runs. After any arm finishes, control
 transfers to after the enclosing `end`. There is no fallthrough between cases.
 
-The same logic written in raw Z80, using `cp` + `jp Z`:
+The same logic written in raw Z80, using `cp` + `jp z`:
 
 ```zax
 ; raw: test A against three operator characters
 ld a, (op_byte)
-cp 0x2B              ; '+'
+cp $2B              ; '+'
 jp z, handle_plus
-cp 0x2D              ; '-'
+cp $2D              ; '-'
 jp z, handle_minus
 jp unknown_op
 handle_plus:
@@ -239,9 +239,9 @@ The same logic as a `select`:
 ; structured: select on A
 ld a, (op_byte)
 select A
-  case 0x2B          ; '+'
+  case $2B          ; '+'
     ; handle +
-  case 0x2D          ; '-'
+  case $2D          ; '-'
     ; handle -
   else
     ; unknown operator
