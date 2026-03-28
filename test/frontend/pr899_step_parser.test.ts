@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { parseAsmInstruction } from '../../src/frontend/parseAsmInstruction.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
+import { expectDiagnostic, expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 describe('PR899 step parser support', () => {
   const file = makeSourceFile('pr899_step_parser.zax', '');
@@ -18,7 +19,7 @@ describe('PR899 step parser support', () => {
 
   it('parses step typed-path forms with optional amounts', () => {
     let parsed = parse('step count');
-    expect(parsed.diagnostics).toEqual([]);
+    expectNoDiagnostics(parsed.diagnostics);
     expect(parsed.instr).toMatchObject({
       kind: 'AsmInstruction',
       head: 'step',
@@ -26,7 +27,7 @@ describe('PR899 step parser support', () => {
     });
 
     parsed = parse('step rec.field, 3');
-    expect(parsed.diagnostics).toEqual([]);
+    expectNoDiagnostics(parsed.diagnostics);
     expect(parsed.instr).toMatchObject({
       kind: 'AsmInstruction',
       head: 'step',
@@ -44,7 +45,7 @@ describe('PR899 step parser support', () => {
     });
 
     parsed = parse('step arr[idx], INC');
-    expect(parsed.diagnostics).toEqual([]);
+    expectNoDiagnostics(parsed.diagnostics);
     expect(parsed.instr).toMatchObject({
       kind: 'AsmInstruction',
       head: 'step',
@@ -61,7 +62,7 @@ describe('PR899 step parser support', () => {
     });
 
     parsed = parse('step total, -2');
-    expect(parsed.diagnostics).toEqual([]);
+    expectNoDiagnostics(parsed.diagnostics);
     expect(parsed.instr).toMatchObject({
       kind: 'AsmInstruction',
       head: 'step',
@@ -76,8 +77,7 @@ describe('PR899 step parser support', () => {
     for (const text of ['step hl', 'step (hl)', 'step @path', 'step left, right, extra']) {
       const parsed = parse(text);
       expect(parsed.instr).toBeUndefined();
-      expect(parsed.diagnostics.length).toBeGreaterThan(0);
-      expect(parsed.diagnostics[0]?.message.toLowerCase()).toContain('step');
+      expectDiagnostic(parsed.diagnostics, { messageIncludes: 'step' });
     }
   });
 });
