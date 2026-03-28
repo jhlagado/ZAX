@@ -250,8 +250,7 @@ identical whether you treat the inputs as signed or unsigned. Where the differen
 $01` gives `$81`. Read as unsigned that is 128 + 1 = 129. Read as signed that
 is −128 + 1 = −127. Same instruction, same output, two different numbers. The
 bug appears when one part of your program writes a value intending it as signed
-and another reads it as unsigned. Chapter 4 shows how the flags let you select
-which interpretation the CPU acts on. The common landmark values (`$00`, `$7F`,
+and another reads it as unsigned. The common landmark values (`$00`, `$7F`,
 `$80`, `$FF`) and their signed and unsigned meanings are in
 [Appendix 2](../appendices/02-registers-flags-and-conditions.md).
 
