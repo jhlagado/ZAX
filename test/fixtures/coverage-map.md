@@ -13,8 +13,8 @@
 
 Total fixture files (excludes sentinels): 517
 Sentinel files: 1
-Reachable from tests (direct refs ∪ fixture closure): 315
-Potentially unreferenced fixtures: 202
+Reachable from tests (direct refs ∪ fixture closure): 308
+Potentially unreferenced fixtures: 209
 
 ## Direct test reference counts
 
@@ -178,7 +178,7 @@ Potentially unreferenced fixtures: 202
 | pr159_extern_base_block_unsupported.zax | 1 |
 | pr16_op_ambiguous.zax | 0 |
 | pr16_op_basic.zax | 0 |
-| pr16_op_cycle.zax | 1 |
+| pr16_op_cycle.zax | 0 |
 | pr16_op_mem_width.zax | 0 |
 | pr16_op_nested_call.zax | 0 |
 | pr16_op_no_match.zax | 0 |
@@ -329,18 +329,18 @@ Potentially unreferenced fixtures: 202
 | pr266_negative_immediate_lowering.zax | 0 |
 | pr266_negative_immediate_range_errors.zax | 0 |
 | pr266_negative_immediate_truncation.zax | 0 |
-| pr267_op_ambiguous_incomparable.zax | 1 |
+| pr267_op_ambiguous_incomparable.zax | 0 |
 | pr267_op_specific_imm_width.zax | 0 |
 | pr267_op_specific_mem_vs_ea.zax | 0 |
-| pr268_op_arity_mismatch_diagnostics.zax | 1 |
-| pr268_op_no_match_diagnostics.zax | 1 |
+| pr268_op_arity_mismatch_diagnostics.zax | 0 |
+| pr268_op_no_match_diagnostics.zax | 0 |
 | pr269_d8m_op_macro_callsite.zax | 1 |
 | pr27_cb_rotate_invalid.zax | 0 |
 | pr27_cb_rotates_shifts.zax | 0 |
 | pr270_nonop_invalid_instruction_baseline.zax | 1 |
-| pr270_op_invalid_expansion_diagnostics.zax | 1 |
-| pr270_op_invalid_expansion_multi_failure.zax | 1 |
-| pr270_op_invalid_expansion_nested_chain.zax | 1 |
+| pr270_op_invalid_expansion_diagnostics.zax | 0 |
+| pr270_op_invalid_expansion_multi_failure.zax | 0 |
+| pr270_op_invalid_expansion_nested_chain.zax | 0 |
 | pr271_op_stack_policy_delta_warn.zax | 3 |
 | pr271_op_stack_policy_untracked_warn.zax | 1 |
 | pr272_runtime_affine_invalid.zax | 2 |
@@ -652,6 +652,7 @@ Not reachable from any test’s literal `fixtures/...` reference via the include
 - pr162_extern_base_block_relative_call.zax
 - pr16_op_ambiguous.zax
 - pr16_op_basic.zax
+- pr16_op_cycle.zax
 - pr16_op_mem_width.zax
 - pr16_op_nested_call.zax
 - pr16_op_no_match.zax
@@ -703,9 +704,15 @@ Not reachable from any test’s literal `fixtures/...` reference via the include
 - pr266_negative_immediate_lowering.zax
 - pr266_negative_immediate_range_errors.zax
 - pr266_negative_immediate_truncation.zax
+- pr267_op_ambiguous_incomparable.zax
 - pr267_op_specific_imm_width.zax
 - pr267_op_specific_mem_vs_ea.zax
+- pr268_op_arity_mismatch_diagnostics.zax
+- pr268_op_no_match_diagnostics.zax
 - pr26_retcc_conditions.zax
+- pr270_op_invalid_expansion_diagnostics.zax
+- pr270_op_invalid_expansion_multi_failure.zax
+- pr270_op_invalid_expansion_nested_chain.zax
 - pr27_cb_rotate_invalid.zax
 - pr27_cb_rotates_shifts.zax
 - pr28_select_stacked_case_many_labels.zax
@@ -919,7 +926,7 @@ Excluded from the main fixture inventory (`.keep`, `.gitkeep`).
 | pr159_extern_base_block_unsupported.zax | test/pr159_extern_base_block_unsupported.test.ts |
 | pr16_op_ambiguous.zax |  |
 | pr16_op_basic.zax |  |
-| pr16_op_cycle.zax | test/pr268_op_diagnostics_matrix.test.ts |
+| pr16_op_cycle.zax |  |
 | pr16_op_mem_width.zax |  |
 | pr16_op_nested_call.zax |  |
 | pr16_op_no_match.zax |  |
@@ -1070,18 +1077,18 @@ Excluded from the main fixture inventory (`.keep`, `.gitkeep`).
 | pr266_negative_immediate_lowering.zax |  |
 | pr266_negative_immediate_range_errors.zax |  |
 | pr266_negative_immediate_truncation.zax |  |
-| pr267_op_ambiguous_incomparable.zax | test/pr268_op_diagnostics_matrix.test.ts |
+| pr267_op_ambiguous_incomparable.zax |  |
 | pr267_op_specific_imm_width.zax |  |
 | pr267_op_specific_mem_vs_ea.zax |  |
-| pr268_op_arity_mismatch_diagnostics.zax | test/pr268_op_diagnostics_matrix.test.ts |
-| pr268_op_no_match_diagnostics.zax | test/pr268_op_diagnostics_matrix.test.ts |
+| pr268_op_arity_mismatch_diagnostics.zax |  |
+| pr268_op_no_match_diagnostics.zax |  |
 | pr269_d8m_op_macro_callsite.zax | test/pr283_hidden_lowering_risk_matrix.test.ts |
 | pr27_cb_rotate_invalid.zax |  |
 | pr27_cb_rotates_shifts.zax |  |
 | pr270_nonop_invalid_instruction_baseline.zax | test/pr268_op_diagnostics_matrix.test.ts |
-| pr270_op_invalid_expansion_diagnostics.zax | test/pr268_op_diagnostics_matrix.test.ts |
-| pr270_op_invalid_expansion_multi_failure.zax | test/pr268_op_diagnostics_matrix.test.ts |
-| pr270_op_invalid_expansion_nested_chain.zax | test/pr268_op_diagnostics_matrix.test.ts |
+| pr270_op_invalid_expansion_diagnostics.zax |  |
+| pr270_op_invalid_expansion_multi_failure.zax |  |
+| pr270_op_invalid_expansion_nested_chain.zax |  |
 | pr271_op_stack_policy_delta_warn.zax | test/cli/cli_contract_matrix.test.ts, test/pr271_op_stack_policy_alignment.test.ts, test/pr283_hidden_lowering_risk_matrix.test.ts |
 | pr271_op_stack_policy_untracked_warn.zax | test/pr271_op_stack_policy_alignment.test.ts |
 | pr272_runtime_affine_invalid.zax | test/lowering/pr507_ea_resolution_helpers.test.ts, test/pr272_runtime_affine_index_offset.test.ts |
