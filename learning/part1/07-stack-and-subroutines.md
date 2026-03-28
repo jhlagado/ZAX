@@ -157,8 +157,9 @@ describes exactly what happens.
 `pop hl` is the inverse: virtually `ld hl, (sp)` happens first — two bytes are
 read from SP into HL — then SP is incremented by two.
 
-The operand can be any of AF, BC, DE, HL, IX, or IY. The stack does not know
-whose value it is holding. All register pairs are saved to the same area of
+The operand can be any of AF, BC, DE, HL, IX, or IY. Every push writes two
+bytes to RAM at SP; every pop reads them back. The stack tracks only position —
+not what the bytes mean or where they came from. All register pairs are saved to the same area of
 memory — the bytes at and below SP. The stack is the same RAM where your
 program and variables reside.
 
