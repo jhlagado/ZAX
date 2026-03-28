@@ -212,7 +212,7 @@ of `case` constants, and runs the matching body. If no case matches and an
 `else` arm is present, the `else` body runs. After any arm finishes, control
 transfers to after the enclosing `end`. There is no fallthrough between cases.
 
-The same logic written in raw Z80, using `cp` + `jp Z`:
+The same logic written in raw Z80, using `cp` + `jp z`:
 
 ```zax
 ; raw: test A against three operator characters
