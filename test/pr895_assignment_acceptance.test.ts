@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 
 import type { Diagnostic } from '../src/diagnosticTypes.js';
 import type { ProgramNode } from '../src/frontend/ast.js';
 import { parseModuleFile } from '../src/frontend/parser.js';
 import { validateAssignmentAcceptance } from '../src/semantics/assignmentAcceptance.js';
 import { buildEnv } from '../src/semantics/env.js';
+import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
 
 function parseProgram(modulePath: string, source: string): { program: ProgramNode; diagnostics: Diagnostic[] } {
   const diagnostics: Diagnostic[] = [];
@@ -50,7 +51,7 @@ end
     const env = buildEnv(program, diagnostics);
     validateAssignmentAcceptance(program, env, diagnostics);
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
   });
 
   it('rejects composite decay and composite-to-composite assignment', () => {
@@ -84,9 +85,12 @@ end
     const env = buildEnv(program, diagnostics);
     validateAssignmentAcceptance(program, env, diagnostics);
 
-    const messages = diagnostics.map((d) => d.message);
-    expect(messages).toContain('":=" path source must resolve to scalar storage; got byte[4]. Use "@path" for addresses.');
-    expect(messages).toContain('":=" path target must resolve to scalar storage; got Rec.');
+    expectDiagnostic(diagnostics, {
+      message: '":=" path source must resolve to scalar storage; got byte[4]. Use "@path" for addresses.',
+    });
+    expectDiagnostic(diagnostics, {
+      message: '":=" path target must resolve to scalar storage; got Rec.',
+    });
   });
 
   it('rejects storage-target path forms inside ops in this slice', () => {
@@ -106,8 +110,11 @@ end
     const env = buildEnv(program, diagnostics);
     validateAssignmentAcceptance(program, env, diagnostics);
 
-    const messages = diagnostics.map((d) => d.message);
-    expect(messages).toContain('":=" path-to-path storage-target forms are not supported inside ops in this slice.');
-    expect(messages).toContain('":=" address-of storage-target forms are not supported inside ops in this slice.');
+    expectDiagnostic(diagnostics, {
+      message: '":=" path-to-path storage-target forms are not supported inside ops in this slice.',
+    });
+    expectDiagnostic(diagnostics, {
+      message: '":=" address-of storage-target forms are not supported inside ops in this slice.',
+    });
   });
 });
