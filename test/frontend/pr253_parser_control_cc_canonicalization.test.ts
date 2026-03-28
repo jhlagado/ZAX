@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseProgram } from '../../src/frontend/parser.js';
-import type { AsmControlNode, FuncDeclNode, OpDeclNode } from '../../src/frontend/ast.js';
-import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { parseProgram } from '../../../src/frontend/parser.js';
+import type { AsmControlNode, FuncDeclNode, OpDeclNode } from '../../../src/frontend/ast.js';
+import type { Diagnostic } from '../../../src/diagnosticTypes.js';
 
 function controlItems(items: { kind: string }[]): AsmControlNode[] {
   return items.filter((item): item is AsmControlNode =>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import type { Diagnostic } from '../../../src/diagnosticTypes.js';
 import {
   parseAlignDirectiveDecl,
   parseBinDecl,
@@ -8,9 +8,9 @@ import {
   parseHexDecl,
   parseImportDecl,
   parseSectionDirectiveDecl,
-} from '../../src/frontend/parseTopLevelSimple.js';
-import { makeSourceFile, span } from '../../src/frontend/source.js';
-import { parseProgram } from '../../src/frontend/parser.js';
+} from '../../../src/frontend/parseTopLevelSimple.js';
+import { makeSourceFile, span } from '../../../src/frontend/source.js';
+import { parseProgram } from '../../../src/frontend/parser.js';
 
 describe('PR476 simple top-level parser extraction', () => {
   const file = makeSourceFile('pr476_parse_top_level_simple_helpers.zax', '');
