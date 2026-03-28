@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
+import { expectDiagnostic } from '../helpers/diagnostics/index.js';
 import type { AsmInstructionNode, AsmOperandNode, SourceSpan } from '../../src/frontend/ast.js';
 import { encodeInstruction } from '../../src/z80/encode.js';
 
@@ -60,6 +62,10 @@ describe('PR477 core-ops encoder family extraction', () => {
 
     expect(encoded).toBeUndefined();
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]?.message).toContain('push expects reg16');
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.EncodeError,
+      severity: 'error',
+      messageIncludes: 'push expects reg16',
+    });
   });
 });

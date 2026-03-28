@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { parseProgram } from '../src/frontend/parser.js';
 import type { AsmInstructionNode, FuncDeclNode } from '../src/frontend/ast.js';
-import type { Diagnostic } from '../src/diagnosticTypes.js';
+import { DiagnosticIds, type Diagnostic } from '../src/diagnosticTypes.js';
+import { expectDiagnostic } from './helpers/diagnostics/index.js';
 
 describe('parser nested EA index expressions', () => {
   it('parses arr[table[0]] without spurious imm diagnostics', () => {
@@ -37,7 +38,11 @@ end
     const diagnostics: Diagnostic[] = [];
     parseProgram('broken.zax', source, diagnostics);
     expect(diagnostics.length).toBeGreaterThan(0);
-    expect(diagnostics[0]!.message).toContain('Invalid imm expression');
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      messageIncludes: 'Invalid imm expression',
+    });
   });
 
   it('distinguishes arr[HL] (reg16 index) from arr[(HL)] (indirect byte index)', () => {
