@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { parseAsmInstruction } from '../../src/frontend/parseAsmInstruction.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
+import { expectDiagnostic, expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 describe('PR868 := reg8 parser support', () => {
   const file = makeSourceFile('pr868_assignment_reg8_parser.zax', '');
@@ -19,7 +20,7 @@ describe('PR868 := reg8 parser support', () => {
   it('accepts reg8 typed storage loads and stores', () => {
     for (const text of ['b := count', 'l := idx', 'b := arr[idx]', 'flags := b']) {
       const parsed = parse(text);
-      expect(parsed.diagnostics).toEqual([]);
+      expectNoDiagnostics(parsed.diagnostics);
       expect(parsed.instr?.head).toBe(':=');
     }
   });
@@ -27,7 +28,7 @@ describe('PR868 := reg8 parser support', () => {
   it('accepts reg8 immediate assignments', () => {
     for (const text of ['l := 0', 'b := 1', 'h := 2', 'e := 3']) {
       const parsed = parse(text);
-      expect(parsed.diagnostics).toEqual([]);
+      expectNoDiagnostics(parsed.diagnostics);
       expect(parsed.instr).toMatchObject({
         kind: 'AsmInstruction',
         head: ':=',
@@ -40,15 +41,14 @@ describe('PR868 := reg8 parser support', () => {
     for (const text of ['a := (hl)', '(hl) := a', '(ix+4) := a']) {
       const parsed = parse(text);
       expect(parsed.instr).toBeUndefined();
-      expect(parsed.diagnostics.length).toBeGreaterThan(0);
-      expect(parsed.diagnostics[0]?.message).toContain(':=');
+      expectDiagnostic(parsed.diagnostics, { messageIncludes: ':=' });
     }
   });
 
   it('keeps existing stage 1 pair forms accepted', () => {
     for (const text of ['hl := de', 'hl := 0', 'de := a', 'hl := @x']) {
       const parsed = parse(text);
-      expect(parsed.diagnostics).toEqual([]);
+      expectNoDiagnostics(parsed.diagnostics);
       expect(parsed.instr?.head).toBe(':=');
     }
   });
