@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import { expectDiagnostic, expectNoDiagnostic } from './helpers/diagnostics.js';
 
@@ -14,22 +15,27 @@ describe('PR211: jr/djnz malformed-form diagnostics parity', () => {
     const entry = join(__dirname, 'fixtures', 'pr211_jr_djnz_diag_matrix_invalid.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
       severity: 'error',
       message: 'jr cc expects valid condition code NZ/Z/NC/C',
     });
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
       severity: 'error',
       message: 'jr cc, disp does not support register targets; expects disp8',
     });
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
       severity: 'error',
       message: 'jr cc, disp does not support indirect targets',
     });
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
       severity: 'error',
       message: 'jr does not support indirect targets; expects disp8',
     });
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
       severity: 'error',
       message: 'djnz does not support indirect targets; expects disp8',
     });
