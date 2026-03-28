@@ -42,6 +42,11 @@ describe('test/helpers/diagnostics', () => {
       severity: 'warning',
       message: 'Raw call targets typed callable "callee_typed".',
     });
+    expect(sampleDiagnostics).toHaveDiagnostic({
+      id: DiagnosticIds.RawCallTypedTargetWarning,
+      severity: 'warning',
+      message: 'Raw call targets typed callable "callee_typed".',
+    });
     expectNoDiagnostic(sampleDiagnostics, {
       id: DiagnosticIds.RawCallTypedTargetWarning,
       severity: 'error',
