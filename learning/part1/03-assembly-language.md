@@ -151,18 +151,7 @@ Any of A, B, C, D, E, H, L can appear on either side when the other side is
 `ld (de), a`. The standard pattern is: load an address into
 HL, read or write with `(HL)`, increment HL, repeat.
 
-### Indexed memory access through IX and IY
-
-IX and IY support **displaced** addressing. Point IX at the start of a data record and `(IX+0)`, `(IX+1)`, `(IX+2)` address each field directly — no reloading the base address between accesses. That makes IX the natural choice for working with fixed-size records.
-
-`(IX+n)` means "the byte at address IX + n", where n is a signed offset from −128 to +127.
-
-```zax
-ld a, (ix+0)    ; A = byte at address IX
-ld b, (ix+7)    ; B = byte at address IX+7
-ld (iy-2), a    ; byte at address IY-2 = A
-ld (ix+1), $3F  ; byte at address IX+1 = $3F
-```
+IX and IY support displaced addressing — covered in Chapter 6 when the use case makes it concrete.
 
 ### Memory access through BC or DE
 
@@ -221,8 +210,6 @@ complete searchable list.
 | reg8 ← (HL) | `ld c, (hl)` | Read byte at address HL |
 | (HL) ← reg8 | `ld (hl), d` | Write byte to address HL |
 | (HL) ← n | `ld (hl), 0` | Write immediate to address HL |
-| reg8 ← (IX+n) | `ld a, (ix+3)` | Read byte at IX + offset (n: −128 to +127) |
-| (IX+n) ← reg8 | `ld (ix+3), a` | Write byte to IX + offset |
 | A ← (BC) | `ld a, (bc)` | Read byte at address BC; A only |
 | (DE) ← A | `ld (de), a` | Write A to address DE; A only |
 | A ← (nn) | `ld a, ($8000)` | Read byte from fixed address |

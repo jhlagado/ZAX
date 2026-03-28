@@ -2,11 +2,13 @@
 
 # Chapter 9 — A Complete Program
 
-This chapter builds a complete program using everything from Chapters 3–7:
+This chapter builds a complete program using the techniques from Chapters 3–7:
 a data table, a DJNZ loop, subroutines called from the loop, conditional
-branches, and push/pop register preservation. The two subroutines that result
-expose every friction point in raw Z80 programming — the exact problems
-Chapters 10–13 address.
+branches, and push/pop register preservation. Chapter 8 covered I/O and ports —
+a separate hardware concern. This capstone focuses on data operations in memory,
+which is where the friction points in raw Z80 programming are most visible.
+The two subroutines that result expose exactly those friction points — the
+problems Chapters 10–13 address.
 
 ---
 
