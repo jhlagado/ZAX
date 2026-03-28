@@ -76,17 +76,26 @@ const REG8_CODES = new Map([
 ]);
 
 export type EmitPhase1Helpers = {
+  /** Flushes trailing user comments from the lowered asm recording buffer. */
   flushTrailingUserComments: () => void;
+  /** Live lowered asm stream (same ref as workspace). */
   loweredAsmStream: EmitPhase1Workspace['loweredAsmStream'];
+  /** Program-level lowering context (symbols, traversal, function lowerer). */
   programLoweringContext: ReturnType<typeof createEmitProgramContext>['programLoweringContext'];
+  /** Sinks for named section contributions during emit. */
   namedSectionSinks: ReturnType<typeof createEmitStateHelpers>['namedSectionSinks'];
 };
 
 type Context = {
+  /** Whole program AST. */
   program: ProgramNode;
+  /** Compile environment (consts, types, modules). */
   env: CompileEnv;
+  /** Shared diagnostic sink for emit phase 1. */
   diagnostics: Diagnostic[];
+  /** Optional emit options (listing sources, section keys, etc.). */
   options?: EmitProgramOptions;
+  /** Mutable workspace shared with program lowering. */
   workspace: EmitPhase1Workspace;
 };
 
