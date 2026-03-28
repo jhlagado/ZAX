@@ -38,6 +38,8 @@ Raw register passing does not scale. It works for small programs where you can h
 
 ## The stack frame
 
+A stack frame is a region of the stack that belongs to one function call. It holds that call's parameters — placed there by the caller before the call — and any local variables the function needs while it runs. When the function returns, the frame is released.
+
 The solution is the same one that nearly every CPU architecture uses: dedicate a register as a **base pointer** into the stack, and place parameters and local variables at known offsets from that pointer.
 
 On the Z80, that register is IX. When a ZAX function with parameters or locals is called, the compiler emits a three-instruction prologue:
@@ -59,6 +61,8 @@ ret
 ```
 
 Six instructions of overhead — three in, three out — plus any register saves. A raw `call` and `ret` are two instructions with no frame at all. I want to be clear about this: the frame is not free. For a tight inner loop calling a tiny helper, the overhead may matter. For a function called a handful of times from a larger program, the cost is small relative to what the function actually does, and the gain in clarity is real.
+
+For the duration of a framed function, IX is the frame pointer — its only job while the function runs. That means the `(ix+d)` indexed access you learned in Ch6 is unavailable here: loading IX with a table base overwrites the frame pointer, and every parameter and local access after that reads from the wrong address with no error to show for it. If you need displaced access to a data structure inside a function, IY is the alternative — the Z80's second index register, identical to IX in capability, and free because the frame machinery uses only IX. Now the `push ix` in the prologue makes sense: the caller may have been using IX for their own indexed access, and the function must return it intact.
 
 ---
 
