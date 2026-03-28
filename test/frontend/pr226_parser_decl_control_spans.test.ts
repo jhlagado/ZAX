@@ -3,7 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../../src/compile.js';
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
+import { expectDiagnostic } from '../helpers/diagnostics/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -57,18 +59,24 @@ describe('PR226 parser declaration/control span matrix', () => {
     const funcEntry = join(__dirname, '..', 'fixtures', 'pr217_parser_func_missing_body_eof.zax');
     const funcRes = await compile(funcEntry, {}, { formats: defaultFormatWriters });
     expect(funcRes.diagnostics).toHaveLength(1);
-    expect(funcRes.diagnostics[0]?.message).toBe(
-      'Unterminated func "no_body": expected function body',
-    );
-    expect(funcRes.diagnostics[0]?.line).toBe(1);
-    expect(funcRes.diagnostics[0]?.column).toBe(1);
+    expectDiagnostic(funcRes.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: 'Unterminated func "no_body": expected function body',
+      line: 1,
+      column: 1,
+    });
 
     const opEntry = join(__dirname, '..', 'fixtures', 'pr217_parser_op_missing_end_eof.zax');
     const opRes = await compile(opEntry, {}, { formats: defaultFormatWriters });
     expect(opRes.diagnostics).toHaveLength(1);
-    expect(opRes.diagnostics[0]?.message).toBe('Unterminated op "no_end": missing "end"');
-    expect(opRes.diagnostics[0]?.line).toBe(1);
-    expect(opRes.diagnostics[0]?.column).toBe(1);
+    expectDiagnostic(opRes.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: 'Unterminated op "no_end": missing "end"',
+      line: 1,
+      column: 1,
+    });
   });
 
   it('pins line/column for explicit asm-marker body diagnostics', async () => {
