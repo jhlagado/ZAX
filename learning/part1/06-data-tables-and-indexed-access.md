@@ -298,6 +298,16 @@ the same scan in the decrementing direction.
 `ldir`, `lddr`, `cpir`, and `cpdr` are raw Z80 mnemonics used directly in ZAX,
 exactly like `djnz` — the assembler emits them as-is.
 
+When both HL and DE are live pointers — as they are during any `ldir` sequence — you sometimes need to exchange them. After a copy, the destination you wrote may become the source for the next pass, or you need to hand that address to a routine that expects it in HL. Without a swap instruction, exchanging the two pairs takes six instructions and clobbers A. `EX DE, HL` does it in one: afterward, DE holds what HL had and HL holds what DE had, and nothing else changes.
+
+```zax
+ld hl, source
+ld de, dest
+ld bc, 64
+ldir              ; copy 64 bytes; HL and DE now point past the copied region
+ex de, hl         ; HL now points past dest; DE points past source
+```
+
 ---
 
 ## Summary
