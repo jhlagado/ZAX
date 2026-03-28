@@ -4,7 +4,13 @@ import type { SourceFile } from './source.js';
 import { span } from './source.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import { diagIfInferredArrayLengthNotAllowed, parseTypeExprFromText } from './parseImm.js';
-import { diagInvalidBlockLine, formatIdentifierToken } from './parseModuleCommon.js';
+import {
+  diagInvalidBlockLine,
+  formatIdentifierToken,
+  looksLikeKeywordBodyDeclLine,
+  topLevelStartKeyword,
+} from './parseModuleCommon.js';
+import { stripLineComment as stripComment } from './parseParserShared.js';
 
 export type RecordFieldLine = {
   raw: string;
@@ -19,6 +25,27 @@ export type RecordFieldValidationContext = {
   diagnostics: Diagnostic[];
   modulePath: string;
   isReservedTopLevelName: (name: string) => boolean;
+};
+
+export type RecordFieldBlockContext = RecordFieldValidationContext & {
+  lineCount: number;
+  getRawLine: (lineIndex: number) => RecordFieldLine;
+};
+
+type ParsedRecordFields = {
+  fields: RecordFieldNode[];
+  nextIndex: number;
+  terminated: boolean;
+  endOffset: number;
+  interruptedByKeyword?: string;
+  interruptedByLine?: number;
+  interruptedByFilePath?: string;
+};
+
+export type ParsedFieldBlock = {
+  fields: RecordFieldNode[];
+  nextIndex: number;
+  endOffset: number;
 };
 
 export function parseRecordFieldDecl(
@@ -103,5 +130,141 @@ export function parseRecordFieldDecl(
     span: fieldSpan,
     name: fieldName,
     typeExpr,
+  };
+}
+
+function parseRecordFields(
+  fieldKind: string,
+  allowFuncKeywordStart: boolean,
+  startIndex: number,
+  ctx: RecordFieldBlockContext,
+): ParsedRecordFields {
+  const { file, lineCount, diagnostics, modulePath, getRawLine, isReservedTopLevelName } = ctx;
+  const fields: RecordFieldNode[] = [];
+  const fieldNamesLower = new Set<string>();
+  let terminated = false;
+  let interruptedByKeyword: string | undefined;
+  let interruptedByLine: number | undefined;
+  let interruptedByFilePath: string | undefined;
+  let endOffset = file.text.length;
+  let index = startIndex;
+
+  while (index < lineCount) {
+    const fieldLine = getRawLine(index);
+    const { endOffset: lineEndOffset, lineNo, filePath } = fieldLine;
+    const fieldText = stripComment(fieldLine.raw).trim();
+    const fieldTextLower = fieldText.toLowerCase();
+    if (fieldText.length === 0) {
+      index++;
+      continue;
+    }
+    if (fieldTextLower === 'end') {
+      terminated = true;
+      endOffset = lineEndOffset;
+      index++;
+      break;
+    }
+    const topKeyword = topLevelStartKeyword(fieldText);
+    if (topKeyword !== undefined) {
+      if (allowFuncKeywordStart && topKeyword === 'func') {
+        // func field forms are allowed inside unions in current parser behavior.
+      } else {
+        if (looksLikeKeywordBodyDeclLine(fieldText)) {
+          diagInvalidBlockLine(
+            diagnostics,
+            filePath,
+            `${fieldKind} field declaration`,
+            fieldText,
+            '<name>: <type>',
+            lineNo,
+          );
+          index++;
+          continue;
+        }
+        interruptedByKeyword = topKeyword;
+        interruptedByLine = lineNo;
+        interruptedByFilePath = filePath;
+        break;
+      }
+    }
+
+    const field = parseRecordFieldDecl(fieldKind, fieldText, fieldLine, fieldNamesLower, {
+      file,
+      diagnostics,
+      modulePath,
+      isReservedTopLevelName,
+    });
+    if (field) fields.push(field);
+    index++;
+  }
+
+  return {
+    fields,
+    nextIndex: index,
+    terminated,
+    endOffset,
+    ...(interruptedByKeyword !== undefined ? { interruptedByKeyword } : {}),
+    ...(interruptedByLine !== undefined ? { interruptedByLine } : {}),
+    ...(interruptedByFilePath !== undefined ? { interruptedByFilePath } : {}),
+  };
+}
+
+export function parseRecordFieldBlock(params: {
+  declarationKind: 'type' | 'union';
+  declarationName: string;
+  fieldKind: 'record' | 'union';
+  allowFuncKeywordStart: boolean;
+  declarationLineNo: number;
+  startIndex: number;
+  ctx: RecordFieldBlockContext;
+}): ParsedFieldBlock {
+  const {
+    declarationKind,
+    declarationName,
+    fieldKind,
+    allowFuncKeywordStart,
+    declarationLineNo,
+    startIndex,
+    ctx,
+  } = params;
+  const { file, diagnostics, modulePath } = ctx;
+  const parsed = parseRecordFields(fieldKind, allowFuncKeywordStart, startIndex, ctx);
+
+  if (!parsed.terminated) {
+    if (
+      parsed.interruptedByKeyword !== undefined &&
+      parsed.interruptedByLine !== undefined &&
+      parsed.interruptedByFilePath !== undefined
+    ) {
+      diag(
+        diagnostics,
+        parsed.interruptedByFilePath,
+        `Unterminated ${declarationKind} "${declarationName}": expected "end" before "${parsed.interruptedByKeyword}"`,
+        { line: parsed.interruptedByLine, column: 1 },
+      );
+    } else {
+      diag(
+        diagnostics,
+        modulePath,
+        `Unterminated ${declarationKind} "${declarationName}": missing "end"`,
+        { line: declarationLineNo, column: 1 },
+      );
+    }
+  }
+
+  if (parsed.fields.length === 0) {
+    const declarationLabel = declarationKind === 'type' ? 'Type' : 'Union';
+    diag(
+      diagnostics,
+      modulePath,
+      `${declarationLabel} "${declarationName}" must contain at least one field`,
+      { line: declarationLineNo, column: 1 },
+    );
+  }
+
+  return {
+    fields: parsed.fields,
+    nextIndex: parsed.nextIndex,
+    endOffset: parsed.terminated ? parsed.endOffset : file.text.length,
   };
 }
