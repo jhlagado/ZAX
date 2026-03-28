@@ -14,8 +14,7 @@ import type {
   VarBlockNode,
 } from '../frontend/ast.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
-import type { PrescanResult } from './prescanTypes.js';
-import type { Context, LoweringResult } from './programLowering.js';
+import type { LoweringContext, LoweringResult } from './programLowering.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { lowerDataBlock } from './programLoweringData.js';
 import { createProgramLoweringDeclarationHelpers } from './programLoweringDeclarations.js';
@@ -32,14 +31,14 @@ function sinkOffsetRef(sink: NamedSectionContributionSink) {
 }
 
 function alignNamedSection(
-  ctx: Context,
+  ctx: LoweringContext,
   sink: NamedSectionContributionSink,
   value: number,
 ): void {
   sink.offset = ctx.alignTo(sink.offset, value);
 }
 
-function lowerVarBlock(ctx: Context, varBlock: VarBlockNode): void {
+function lowerVarBlock(ctx: LoweringContext, varBlock: VarBlockNode): void {
   for (const decl of varBlock.decls) {
     if (decl.form !== 'typed') continue;
     const size = sizeOfTypeExpr(decl.typeExpr, ctx.env, ctx.diagnostics);
@@ -79,7 +78,7 @@ function lowerVarBlock(ctx: Context, varBlock: VarBlockNode): void {
   }
 }
 
-function lowerExternDecl(ctx: Context, externDecl: ExternDeclNode): void {
+function lowerExternDecl(ctx: LoweringContext, externDecl: ExternDeclNode): void {
   const baseLower = externDecl.base?.toLowerCase();
   if (baseLower !== undefined && !ctx.declaredBinNames.has(baseLower)) {
     ctx.diag(
@@ -135,7 +134,7 @@ function lowerExternDecl(ctx: Context, externDecl: ExternDeclNode): void {
 }
 
 function lowerItem(
-  ctx: Context,
+  ctx: LoweringContext,
   lowerBinDecl: ReturnType<typeof createProgramLoweringDeclarationHelpers>['lowerBinDecl'],
   lowerRawDataDecl: ReturnType<typeof createProgramLoweringDeclarationHelpers>['lowerRawDataDecl'],
   item: ModuleItemNode | SectionItemNode,
@@ -382,8 +381,7 @@ function lowerItem(
 }
 
 export function lowerProgramDeclarations(
-  ctx: Context,
-  _prescan: PrescanResult,
+  ctx: LoweringContext,
 ): LoweringResult {
   const { lowerBinDecl, lowerRawDataDecl } = createProgramLoweringDeclarationHelpers(ctx);
 
