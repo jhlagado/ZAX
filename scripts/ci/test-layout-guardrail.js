@@ -1,6 +1,9 @@
 import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 
 const TOP_LEVEL_PR_TEST = /^test\/pr\d+_.*\.test\.ts$/;
+const baseSha = process.env.TEST_GUARDRAIL_BASE_SHA;
+const headSha = process.env.TEST_GUARDRAIL_HEAD_SHA;
 
 function normalizePath(path) {
   return path.replaceAll('\\', '/');
@@ -33,7 +36,33 @@ for (const rawLine of input.split(/\r?\n/)) {
 }
 
 if (violations.length === 0) {
-  process.stdout.write('test layout guardrail: no new top-level PR tests\n');
+  let countWarning = '';
+  if (baseSha && headSha) {
+    try {
+      const baseList = execSync(`git ls-tree -r --name-only ${baseSha} -- test`, {
+        encoding: 'utf8',
+      });
+      const headList = execSync(`git ls-tree -r --name-only ${headSha} -- test`, {
+        encoding: 'utf8',
+      });
+      const baseCount = baseList
+        .split(/\r?\n/)
+        .filter((entry) => TOP_LEVEL_PR_TEST.test(normalizePath(entry))).length;
+      const headCount = headList
+        .split(/\r?\n/)
+        .filter((entry) => TOP_LEVEL_PR_TEST.test(normalizePath(entry))).length;
+      if (headCount > baseCount) {
+        process.stderr.write(
+          `test layout guardrail: root PR test count increased (${baseCount} -> ${headCount})\n`,
+        );
+        process.exit(1);
+      }
+      countWarning = ` (root count ${baseCount} -> ${headCount})`;
+    } catch (err) {
+      process.stderr.write(`test layout guardrail: count check skipped (${err})\n`);
+    }
+  }
+  process.stdout.write(`test layout guardrail: no new top-level PR tests${countWarning}\n`);
   process.exit(0);
 }
 
