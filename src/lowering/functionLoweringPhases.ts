@@ -12,7 +12,59 @@ import { createFunctionCallLoweringHelpers } from './functionCallLowering.js';
 import { initializeFunctionFrame } from './functionFrameSetup.js';
 import type { FunctionLoweringContext } from './functionLowering.js';
 
-export function prepareFunctionLoweringSetupPhase(ctx: FunctionLoweringContext) {
+export interface FunctionLoweringSetupPhase {
+  readonly ctx: FunctionLoweringContext;
+  readonly item: FunctionLoweringContext['item'];
+  readonly diagnostics: FunctionLoweringContext['diagnostics'];
+  readonly pending: FunctionLoweringContext['pending'];
+  readonly traceComment: FunctionLoweringContext['traceComment'];
+  readonly traceLabel: FunctionLoweringContext['traceLabel'];
+  readonly bindSpTracking: FunctionLoweringContext['bindSpTracking'];
+  readonly getCodeOffset: FunctionLoweringContext['getCodeOffset'];
+  readonly emitInstr: FunctionLoweringContext['emitInstr'];
+  readonly getCurrentCodeSegmentTag: () => SourceSegmentTag | undefined;
+  readonly setCurrentCodeSegmentTag: (tag: SourceSegmentTag | undefined) => void;
+  readonly frameSetupContext: ReturnType<typeof buildFrameSetupContext>;
+  readonly resolveLocalAliasTargetName: (name: string) => string | undefined;
+  readonly evalImmExprForAsm: (expr: FunctionLoweringContext['item']['asm']['items'][number]['span'] extends never ? never : import('../frontend/ast.js').ImmExprNode) => number | undefined;
+  readonly symbolicTargetFromExprForAsm: (expr: import('../frontend/ast.js').ImmExprNode) => { baseLower: string; addend: number } | undefined;
+  readonly emitInstrForAsm: FunctionLoweringContext['emitInstr'];
+}
+
+export interface FunctionFramePhase {
+  readonly hasStackSlots: boolean;
+  readonly emitSyntheticEpilogue: boolean;
+  readonly epilogueLabel: string;
+  readonly preserveSet: ReadonlyArray<string>;
+  readonly trackedSp: { valid: boolean; delta: number; invalid: boolean };
+  readonly opExpansionStack: OpExpansionFrame[];
+  readonly getFlow: () => FlowState;
+  readonly setFlow: (state: FlowState) => void;
+  readonly flowRef: { readonly current: FlowState };
+  readonly syncFromFlow: () => void;
+  readonly syncToFlow: () => void;
+  readonly snapshotFlow: () => FlowState;
+  readonly restoreFlow: (state: FlowState) => void;
+  readonly appendInvalidOpExpansionDiagnostic: ReturnType<typeof createFunctionBodySetupHelpers>['appendInvalidOpExpansionDiagnostic'];
+  readonly sourceTagForSpan: ReturnType<typeof createFunctionBodySetupHelpers>['sourceTagForSpan'];
+  readonly withCodeSourceTag: ReturnType<typeof createFunctionBodySetupHelpers>['withCodeSourceTag'];
+  readonly newHiddenLabel: ReturnType<typeof createFunctionBodySetupHelpers>['newHiddenLabel'];
+  readonly defineCodeLabel: ReturnType<typeof createFunctionBodySetupHelpers>['defineCodeLabel'];
+  readonly emitJumpTo: ReturnType<typeof createFunctionBodySetupHelpers>['emitJumpTo'];
+  readonly emitJumpCondTo: ReturnType<typeof createFunctionBodySetupHelpers>['emitJumpCondTo'];
+  readonly emitJumpIfFalse: ReturnType<typeof createFunctionBodySetupHelpers>['emitJumpIfFalse'];
+  readonly emitVirtualReg16Transfer: ReturnType<typeof createFunctionBodySetupHelpers>['emitVirtualReg16Transfer'];
+  readonly joinFlows: ReturnType<typeof createFunctionBodySetupHelpers>['joinFlows'];
+  readonly emitSelectCompareToImm16: ReturnType<typeof createFunctionBodySetupHelpers>['emitSelectCompareToImm16'];
+  readonly emitSelectCompareReg8ToImm8: ReturnType<typeof createFunctionBodySetupHelpers>['emitSelectCompareReg8ToImm8'];
+  readonly emitSelectCompareReg8Range: ReturnType<typeof createFunctionBodySetupHelpers>['emitSelectCompareReg8Range'];
+  readonly emitSelectCompareImm16Range: ReturnType<typeof createFunctionBodySetupHelpers>['emitSelectCompareImm16Range'];
+  readonly loadSelectorIntoHL: ReturnType<typeof createFunctionBodySetupHelpers>['loadSelectorIntoHL'];
+}
+
+export type FunctionBodyPhase = Readonly<ReturnType<typeof createAsmBodyOrchestrationHelpers>>;
+
+function buildFrameSetupContext(ctx: FunctionLoweringContext, currentCodeSegmentTagRef: { current: SourceSegmentTag | undefined }) {
   const {
     item,
     diagnostics,
@@ -22,43 +74,27 @@ export function prepareFunctionLoweringSetupPhase(ctx: FunctionLoweringContext) 
     pending,
     traceComment,
     traceLabel,
-    currentCodeSegmentTagRef,
     bindSpTracking,
     getCodeOffset,
-    emitInstr: emitInstrBase,
-    evalImmExpr,
+    emitInstr,
     env,
     resolveScalarBinding,
     resolveScalarKind,
     resolveEaTypeExpr,
+    evalImmExpr,
     stackSlotOffsets,
     stackSlotTypes,
     localAliasTargets,
     storageTypes,
     moduleAliasTargets,
-    symbolicTargetFromExpr,
-    loadImm16ToHL,
     generatedLabelCounterRef,
+    loadImm16ToHL,
   } = ctx;
-  let currentCodeSegmentTag = currentCodeSegmentTagRef.current;
   const setCurrentCodeSegmentTag = (tag: SourceSegmentTag | undefined): void => {
-    currentCodeSegmentTag = tag;
     currentCodeSegmentTagRef.current = tag;
   };
-  const emitInstr = emitInstrBase;
-  const asmRewriting = createFunctionAsmRewritingHelpers({
-    diagnostics,
-    diagAt,
-    evalImmExpr,
-    env,
-    stackSlotOffsets,
-    stackSlotTypes,
-    localAliasTargets,
-    resolveScalarKind,
-    symbolicTargetFromExpr,
-    emitInstr,
-  });
-  const frameSetupContext = {
+
+  return {
     item,
     diagnostics,
     diag,
@@ -86,7 +122,7 @@ export function prepareFunctionLoweringSetupPhase(ctx: FunctionLoweringContext) 
     },
     emission: {
       getCodeOffset,
-      getCurrentCodeSegmentTag: () => currentCodeSegmentTag,
+      getCurrentCodeSegmentTag: () => currentCodeSegmentTagRef.current,
       setCurrentCodeSegmentTag,
       emitInstr,
       loadImm16ToHL,
@@ -95,6 +131,58 @@ export function prepareFunctionLoweringSetupPhase(ctx: FunctionLoweringContext) 
       bindSpTracking,
     },
   } as const;
+}
+
+export function prepareFunctionLoweringSetupPhase(ctx: FunctionLoweringContext): FunctionLoweringSetupPhase {
+  const {
+    item,
+    diagnostics,
+    diagAt,
+    pending,
+    traceComment,
+    traceLabel,
+    currentCodeSegmentTagRef,
+    bindSpTracking,
+    getCodeOffset,
+    emitInstr: emitInstrBase,
+    evalImmExpr,
+    env,
+    resolveScalarKind,
+    stackSlotOffsets,
+    stackSlotTypes,
+    localAliasTargets,
+    symbolicTargetFromExpr,
+  } = ctx;
+  let currentCodeSegmentTag = currentCodeSegmentTagRef.current;
+  const setCurrentCodeSegmentTag = (tag: SourceSegmentTag | undefined): void => {
+    currentCodeSegmentTag = tag;
+    currentCodeSegmentTagRef.current = tag;
+  };
+  const emitInstr = emitInstrBase;
+  const asmRewriting = createFunctionAsmRewritingHelpers({
+    diagnostics,
+    diagAt,
+    evalImmExpr,
+    env,
+    stackSlotOffsets,
+    stackSlotTypes,
+    localAliasTargets,
+    resolveScalarKind,
+    symbolicTargetFromExpr,
+    emitInstr,
+  });
+  const frameSetupContext = buildFrameSetupContext(
+    { ...ctx, emitInstr },
+    {
+      get current() {
+        return currentCodeSegmentTag;
+      },
+      set current(value: SourceSegmentTag | undefined) {
+        currentCodeSegmentTag = value;
+        currentCodeSegmentTagRef.current = value;
+      },
+    },
+  );
 
   return {
     ctx,
@@ -115,7 +203,7 @@ export function prepareFunctionLoweringSetupPhase(ctx: FunctionLoweringContext) 
 
 export function runFunctionFrameSetupPhase(
   setup: ReturnType<typeof prepareFunctionLoweringSetupPhase>,
-) {
+): FunctionFramePhase {
   const {
     ctx: {
       diagnostics,
