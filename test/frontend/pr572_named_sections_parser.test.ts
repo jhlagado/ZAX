@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { parseProgram } from '../../src/frontend/parser.js';
+import { expectDiagnostic } from '../helpers/diagnostics/index.js';
 
 describe('PR572 named section parser scaffolding', () => {
   it('parses named sections with anchors and section-contained declarations', () => {
@@ -85,12 +87,16 @@ describe('PR572 named section parser scaffolding', () => {
     });
     expect(program.files[0]?.items).toHaveLength(1);
     expect(diagnostics).toHaveLength(2);
-    expect(diagnostics[0]).toMatchObject({
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
       message: 'import is only permitted at module scope',
       line: 2,
       column: 1,
     });
-    expect(diagnostics[1]).toMatchObject({
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
       message:
         'Legacy active-counter section directive "section data at ..." is removed; use a named section like "section data <name> at ..." instead.',
       line: 5,
@@ -111,7 +117,9 @@ describe('PR572 named section parser scaffolding', () => {
     );
 
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
       message: 'export not supported on bin declarations',
       line: 2,
       column: 1,
