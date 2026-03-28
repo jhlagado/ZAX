@@ -15,7 +15,7 @@ export type DiagnosticExpectation = {
   line?: number;
 };
 
-function makeDiagnosticMatcher(expected: DiagnosticExpectation) {
+export function makeDiagnosticMatcher(expected: DiagnosticExpectation) {
   if (expected.message !== undefined && expected.messageIncludes !== undefined) {
     throw new Error('DiagnosticExpectation cannot specify both message and messageIncludes.');
   }
