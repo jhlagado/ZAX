@@ -62,9 +62,9 @@ ret
 
 Six instructions of overhead — three in, three out — plus any register saves. A raw `call` and `ret` are two instructions with no frame at all. I want to be clear about this: the frame is not free. For a tight inner loop calling a tiny helper, the overhead may matter. For a function called a handful of times from a larger program, the cost is small relative to what the function actually does, and the gain in clarity is real.
 
-Chapter 6 used IX as a base for table access: point IX at a structure, then read with `(ix+d)`. Inside a framed ZAX function, IX holds the **frame** base. The same addressing mode now means "parameter or local slot" — not "byte of some other structure". If you load a new address into IX to walk a second table, you overwrite the frame pointer; every later `(ix+…)` reads the wrong place, and the bug is silent. For that second structure, use **IY** — same index addressing as IX, and ZAX does not use IY for the frame. If you must use IX for the table, `push ix` before the indexed work and `pop ix` before any further frame access; IY is usually simpler. The prologue's `push ix` also covers the caller: they may have been using IX for their own `(ix+d)` access, so you save their IX, take IX for the frame, and restore it at exit.
+Chapter 6 used IX as a base for table access: point IX at a structure, then read with `(ix+d)`. Inside a framed ZAX function, IX holds the **frame** base. The same addressing mode now serves the frame — each `(ix+d)` names a parameter or local slot. If you load a new address into IX to walk a second table, you overwrite the frame pointer; every later `(ix+…)` reads the wrong place, and the bug is silent. For that second structure, use **IY** — same index addressing as IX, and ZAX does not use IY for the frame. If you must use IX for the table, `push ix` before the indexed work and `pop ix` before any further frame access; IY is usually simpler. The prologue's `push ix` also covers the caller: they may have been using IX for their own `(ix+d)` access, so you save their IX, take IX for the frame, and restore it at exit.
 
-IXH and IXL are the high and low bytes of IX (Chapter 3). When IX is the frame pointer, you cannot treat IXH or IXL as independent scratch — you would corrupt the pointer. IYH and IYL stay free unless you deliberately use IY for indexing.
+IXH and IXL are the high and low bytes of IX (Chapter 3). Using IXH or IXL as scratch inside a framed function corrupts the frame pointer. IYH and IYL stay free unless you deliberately use IY for indexing.
 
 ---
 
@@ -191,7 +191,7 @@ Three parameters and one local — four named values, each at its own IX-relativ
 
 ## Frameless vs framed
 
-Not every function pays the frame cost. A function with no parameters and no `var` block is **frameless**. The compiler emits no prologue and no epilogue — just the instructions you wrote, with a `ret` at the end. Every function before this chapter was frameless. With no frame, IX is not reserved — you can use IX and IY for Chapter 6-style indexing, and IXH, IXL, IYH, and IYL as byte-sized scratch registers the same way as in Chapter 3.
+Not every function pays the frame cost. A function with no parameters and no `var` block is **frameless**. The compiler emits no prologue and no epilogue — just the instructions you wrote, with a `ret` at the end. Every function before this chapter was frameless. With no frame, IX is free — you can use IX and IY for Chapter 6-style indexing, and IXH, IXL, IYH, and IYL as byte-sized scratch registers the same way as in Chapter 3.
 
 The frame exists only to support named parameters and locals. If you do not need them — because the function is short enough that register passing works fine — skip the declaration and write a raw subroutine. The frame is a tool, not a tax.
 
@@ -206,7 +206,7 @@ The frame exists only to support named parameters and locals. If you do not need
 - The `+0` / `+1` suffix selects the byte lane within a slot.
 - The caller names arguments in the call; the compiler emits the pushes and cleanup.
 - The return clause (`: AF`, `: HL`, or omitted) controls which registers survive and which the compiler preserves.
-- Inside a framed function, IX is the frame pointer — IXH/IXL are not independent scratch; IYH/IYL stay free unless you use IY for indexing. Frameless functions leave IX free for indexing and all four half-index registers for scratch.
+- Inside a framed function, IX is the frame pointer. IXH and IXL are reserved with it; IYH/IYL stay free unless you use IY for indexing. Frameless functions leave IX free for indexing and all four half-index registers for scratch.
 - Chapter 12 introduces `:=`, which automates the frame access you wrote by hand here. By then you will know what it generates.
 
 ---
