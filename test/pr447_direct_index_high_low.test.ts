@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import type { BinArtifact } from '../src/formats/types.js';
+import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
 import {
   compilePlacedProgram,
   flattenLoweredInstructions,
@@ -79,7 +80,7 @@ describe('PR447: direct IXH/IXL/IYH/IYL forms', () => {
     expected.push(0xc9);
 
     const { entry, res } = await compileSource(buildProgram(lines));
-    expect(res.diagnostics).toEqual([]);
+    expectNoDiagnostics(res.diagnostics);
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
@@ -115,10 +116,12 @@ describe('PR447: direct IXH/IXL/IYH/IYL forms', () => {
     ];
 
     const { res } = await compileSource(buildProgram(lines));
-    const messages = res.diagnostics.map((d) => d.message);
-
-    expect(messages).toContain('ld with IX*/IY* does not support legacy H/L counterpart operands');
-    expect(messages).toContain('ld between IX* and IY* byte registers is not supported');
-    expect(messages).toHaveLength(lines.length);
+    expectDiagnostic(res.diagnostics, {
+      message: 'ld with IX*/IY* does not support legacy H/L counterpart operands',
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'ld between IX* and IY* byte registers is not supported',
+    });
+    expect(res.diagnostics).toHaveLength(lines.length);
   });
 });
