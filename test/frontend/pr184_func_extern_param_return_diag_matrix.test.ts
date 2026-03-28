@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../../src/compile.js';
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
 import { expectDiagnostic, expectNoDiagnostic } from '../helpers/diagnostics.js';
 
@@ -15,26 +16,31 @@ describe('PR184 parser: func/extern parameter and return diagnostics matrix', ()
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
       severity: 'error',
       line: 1,
       message: 'Invalid parameter declaration: expected <name>: <type>',
     });
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
       severity: 'error',
       line: 5,
       message: 'Invalid parameter type "[byte]": expected <type>',
     });
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
       severity: 'error',
       line: 9,
       message: 'Invalid return register "[word]": expected HL, DE, BC, or AF.',
     });
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
       severity: 'error',
       line: 13,
       message: 'Invalid op parameter declaration: expected <name>: <matcher>',
     });
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
       severity: 'error',
       line: 19,
       message: 'Invalid return register "[word]": expected HL, DE, BC, or AF.',

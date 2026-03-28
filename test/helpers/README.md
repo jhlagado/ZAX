@@ -42,7 +42,7 @@ Avoid duplicating the same helper import across **three** styles (barrel + shim 
 
 ## Vitest setup (`toHaveDiagnostic`)
 
-`vitest.config.ts` sets `setupFiles: ['test/helpers/setup.ts']`. That file registers the custom matcher **`toHaveDiagnostic`** (see `test/helpers/vitest.d.ts`). Tests that call `expect(diagnostics).toHaveDiagnostic(...)` rely on this global setup; they do not need to import `setup.ts` themselves.
+`vitest.config.ts` sets `setupFiles: ['test/helpers/setup.ts']`. That file registers the custom matcher **`toHaveDiagnostic`** (see `test/helpers/vitest.d.ts`). Use `expect(diagnostics).toHaveDiagnostic({ id, severity, messageIncludes?, line?, column?, file? })` for full control, or the shorthand `expect(diagnostics).toHaveDiagnostic(DiagnosticIds.EmitError, 'error')`. Tests rely on this global setup; they do not need to import `setup.ts` themselves.
 
 ## What the barrel includes
 

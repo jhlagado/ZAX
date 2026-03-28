@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../../src/compile.js';
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
 import { expectDiagnostic, expectNoDiagnostic } from '../helpers/diagnostics.js';
 
@@ -15,14 +16,20 @@ describe('PR176 parser: mixed keyword-shaped line recovery parity', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
       message:
         'Invalid extern func declaration line "data x: byte": expected func <name>(...): <retType> at <imm16>',
     });
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
       message:
         'Invalid data declaration line "op x: byte = [1]": expected <name>: <type> = <initializer>',
     });
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
       message: 'Invalid var declaration line "extern y: byte": expected <name>: <type>',
     });
     expectNoDiagnostic(res.diagnostics, {
