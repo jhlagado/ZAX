@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import type { NamedSectionNode, RawDataDeclNode } from '../../src/frontend/ast.js';
 import { parseModuleFile } from '../../src/frontend/parser.js';
+import { expectDiagnostic, expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 function parse(source: string): { diagnostics: Diagnostic[]; module: ReturnType<typeof parseModuleFile> } {
   const diagnostics: Diagnostic[] = [];
@@ -38,7 +39,7 @@ func handler_b()
 end
     `);
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     const section = getFirstSection(module);
     const rawItems = section.items.filter(
       (item): item is RawDataDeclNode => item.kind === 'RawDataDecl',
@@ -87,8 +88,7 @@ end
     const { diagnostics } = parse(`
 db 1, 2, 3
     `);
-    expect(diagnostics.length).toBeGreaterThan(0);
-    expect(diagnostics[0]?.message).toContain('Raw data directives');
+    expectDiagnostic(diagnostics, { messageIncludes: 'Raw data directives' });
   });
 
   it('rejects raw directives inside code sections', () => {
@@ -99,7 +99,7 @@ section code text at $0000
 end
     `);
     expect(diagnostics.length).toBeGreaterThan(0);
-    expect(diagnostics.some((d) => d.message.includes('Raw data'))).toBe(true);
+    expectDiagnostic(diagnostics, { messageIncludes: 'Raw data' });
   });
 
   it('rejects malformed db/dw/ds directives', () => {
@@ -135,7 +135,8 @@ section code text at $0000
   nop
 end
     `);
-    expect(diagnostics.length).toBeGreaterThan(0);
-    expect(diagnostics[0]?.message).toContain('Unsupported section-contained construct');
+    expectDiagnostic(diagnostics, {
+      messageIncludes: 'Unsupported section-contained construct',
+    });
   });
 });
