@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,9 +16,10 @@ describe('PR273: typed call arg value semantics vs direct ea budget', () => {
 
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toContain(
-      'Direct call-site ea argument for "sink" must be runtime-atom-free in v0.2',
-    );
+    expectDiagnostic(res.diagnostics, {
+      messageIncludes:
+        'Direct call-site ea argument for "sink" must be runtime-atom-free in v0.2',
+    });
   });
 
   it('still rejects runtime call-site address ea args that must remain atom-free in v0.2', async () => {
@@ -26,8 +28,9 @@ describe('PR273: typed call arg value semantics vs direct ea budget', () => {
 
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toContain(
-      'Direct call-site ea argument for "takeAddr" must be runtime-atom-free in v0.2',
-    );
+    expectDiagnostic(res.diagnostics, {
+      messageIncludes:
+        'Direct call-site ea argument for "takeAddr" must be runtime-atom-free in v0.2',
+    });
   });
 });
