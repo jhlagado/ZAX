@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { writeAsm80 } from '../src/formats/writeAsm80.js';
-import type { LoweredAsmProgram, LoweredEaExpr } from '../src/lowering/loweredAsmTypes.js';
+import { writeAsm80 } from '../../src/formats/writeAsm80.js';
+import type { LoweredAsmProgram, LoweredEaExpr } from '../../src/lowering/loweredAsmTypes.js';
 
 describe('writeAsm80', () => {
   it('formats lowered asm programs across expression and item variants', () => {
