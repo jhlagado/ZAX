@@ -13,10 +13,10 @@ import type {
 } from '../frontend/ast.js';
 import type { Callable } from './loweringTypes.js';
 import type { PrescanResult } from './prescanTypes.js';
-import type { ProgramPrescanContext } from './programLowering.js';
+import type { PrescanContext } from './programLowering.js';
 
 function getOrCreateFileCallables(
-  ctx: ProgramPrescanContext,
+  ctx: PrescanContext,
   file: string,
 ): Map<string, Callable> {
   const existing = ctx.localCallablesByFile.get(file);
@@ -27,7 +27,7 @@ function getOrCreateFileCallables(
 }
 
 function getOrCreateFileOps(
-  ctx: ProgramPrescanContext,
+  ctx: PrescanContext,
   file: string,
 ): Map<string, OpDeclNode[]> {
   const existing = ctx.localOpsByFile.get(file);
@@ -38,7 +38,7 @@ function getOrCreateFileOps(
 }
 
 function preScanItem(
-  ctx: ProgramPrescanContext,
+  ctx: PrescanContext,
   item: ModuleItemNode | SectionItemNode,
   namedSection?: NamedSectionNode,
 ): void {
@@ -152,7 +152,7 @@ function preScanItem(
   }
 }
 
-export function preScanProgramDeclarations(ctx: ProgramPrescanContext): PrescanResult {
+export function preScanProgramDeclarations(ctx: PrescanContext): PrescanResult {
   for (const module of ctx.program.files) {
     for (const item of module.items) preScanItem(ctx, item);
   }
