@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../../../src/diagnosticTypes.js';
-import { parseTopLevelOpDecl } from '../../../src/frontend/parseOp.js';
-import { parseOpParamsFromText } from '../../../src/frontend/parseParams.js';
-import { parseProgram } from '../../../src/frontend/parser.js';
-import { makeSourceFile, span } from '../../../src/frontend/source.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { parseTopLevelOpDecl } from '../../src/frontend/parseOp.js';
+import { parseOpParamsFromText } from '../../src/frontend/parseParams.js';
+import { parseProgram } from '../../src/frontend/parser.js';
+import { makeSourceFile, span } from '../../src/frontend/source.js';
 
 describe('PR476 op parser extraction', () => {
   it('keeps top-level op parsing intact', () => {

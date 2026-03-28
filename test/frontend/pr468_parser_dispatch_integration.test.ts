@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../../../src/diagnosticTypes.js';
-import { parseProgram } from '../../../src/frontend/parser.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { parseProgram } from '../../src/frontend/parser.js';
 
 describe('PR468 parser dispatcher integration coverage', () => {
   it('keeps the split top-level dispatcher wired across extracted declaration families', () => {

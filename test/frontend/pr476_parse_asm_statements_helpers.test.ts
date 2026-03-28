@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../../../src/diagnosticTypes.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import {
   appendParsedAsmStatement,
   isRecoverOnlyControlFrame,
   parseAsmStatement,
   type AsmControlFrame,
-} from '../../../src/frontend/parseAsmStatements.js';
-import { makeSourceFile, span } from '../../../src/frontend/source.js';
+} from '../../src/frontend/parseAsmStatements.js';
+import { makeSourceFile, span } from '../../src/frontend/source.js';
 
 describe('PR476 asm statement parsing extraction', () => {
   const file = makeSourceFile('pr476_parse_asm_statements_helpers.zax', '');
