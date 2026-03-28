@@ -88,6 +88,23 @@ export type Context = FunctionLoweringSharedContext & {
   withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T) => T;
 };
 
+export type ProgramPrescanContext = Pick<
+  Context,
+  | 'program'
+  | 'env'
+  | 'localCallablesByFile'
+  | 'visibleCallables'
+  | 'localOpsByFile'
+  | 'visibleOpsByName'
+  | 'declaredOpNames'
+  | 'declaredBinNames'
+  | 'storageTypes'
+  | 'moduleAliasTargets'
+  | 'moduleAliasDecls'
+  | 'rawAddressSymbols'
+  | 'resolveScalarKind'
+>;
+
 // --- Phase 2 product: lowered bytes, symbols, and deferred externs ---
 export type LoweringResult = {
   codeOffset: number;
@@ -151,7 +168,7 @@ export type FinalizationContext = {
 };
 
 // --- Phase 1: prescan declarations (callables, ops, storage aliases) ---
-export function preScanProgramDeclarations(ctx: Context): PrescanResult {
+export function preScanProgramDeclarations(ctx: ProgramPrescanContext): PrescanResult {
   return runProgramPrescan(ctx);
 }
 
