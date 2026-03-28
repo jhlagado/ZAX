@@ -287,9 +287,16 @@ export type FunctionLoweringSharedContext = FunctionLoweringDiagnosticsContext &
 
 export type FunctionLoweringContext = FunctionLoweringItemContext & FunctionLoweringSharedContext;
 
-export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
-  const { item, diagnostics, diag, diagAt, diagAtWithId, diagAtWithSeverityAndId, warnAt } = ctx;
+type FunctionLoweringSetupPhase = ReturnType<typeof prepareFunctionLoweringSetupPhase>;
+type FunctionFramePhase = ReturnType<typeof runFunctionFrameSetupPhase>;
+type FunctionBodyPhase = ReturnType<typeof prepareFunctionBodyLoweringPhase>;
+
+function prepareFunctionLoweringSetupPhase(ctx: FunctionLoweringContext) {
   const {
+    item,
+    diagnostics,
+    diag,
+    diagAt,
     taken,
     pending,
     traceComment,
@@ -297,48 +304,20 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     currentCodeSegmentTagRef,
     bindSpTracking,
     getCodeOffset,
-  } = ctx;
-  const {
     emitInstr: emitInstrBase,
-    emitRawCodeBytes,
-    emitAbs16Fixup,
-    emitAbs16FixupPrefixed,
-    emitRel8Fixup,
-  } = ctx;
-  const { conditionOpcodeFromName, conditionNameFromOpcode, callConditionOpcodeFromName } = ctx;
-  const {
-    jrConditionOpcodeFromName,
-    conditionOpcode,
-    inverseConditionName,
+    evalImmExpr,
+    env,
+    resolveScalarBinding,
+    resolveScalarKind,
+    resolveEaTypeExpr,
+    stackSlotOffsets,
+    stackSlotTypes,
+    localAliasTargets,
+    storageTypes,
+    moduleAliasTargets,
     symbolicTargetFromExpr,
-  } = ctx;
-  const { evalImmExpr, env, resolveScalarBinding, resolveScalarKind, resolveEaTypeExpr } = ctx;
-  const { resolveScalarTypeForEa, resolveScalarTypeForLd, resolveArrayType, buildEaWordPipeline } =
-    ctx;
-  const { enforceEaRuntimeAtomBudget, enforceDirectCallSiteEaBudget } = ctx;
-  const {
-    resolveEa,
-    pushEaAddress,
-    materializeEaAddressToHL,
-    pushMemValue,
-    pushImm16,
-    pushZeroExtendedReg8,
     loadImm16ToHL,
-  } = ctx;
-  const { stackSlotOffsets, stackSlotTypes, localAliasTargets, storageTypes, moduleAliasTargets } =
-    ctx;
-  const { rawTypedCallWarningsEnabled, resolveCallable, resolveOpCandidates, opStackPolicyMode } =
-    ctx;
-  const { formatAsmOperandForOpDiag, selectOpOverload, summarizeOpStackEffect } = ctx;
-  const { cloneImmExpr, cloneEaExpr, cloneOperand } = ctx;
-  const { flattenEaDottedName, normalizeFixedToken, reg8, reg16, generatedLabelCounterRef } = ctx;
-  const {
-    typeDisplay,
-    sameTypeShape,
-    emitStepPipeline,
-    emitScalarWordLoad,
-    emitScalarWordStore,
-    lowerLdWithEa,
+    generatedLabelCounterRef,
   } = ctx;
   let currentCodeSegmentTag = currentCodeSegmentTagRef.current;
   const setCurrentCodeSegmentTag = (tag: SourceSegmentTag | undefined): void => {
@@ -346,12 +325,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     currentCodeSegmentTagRef.current = tag;
   };
   const emitInstr = emitInstrBase;
-  const {
-    resolveLocalAliasTargetName,
-    evalImmExprForAsm,
-    symbolicTargetFromExprForAsm,
-    emitInstrForAsm,
-  } = createFunctionAsmRewritingHelpers({
+  const asmRewriting = createFunctionAsmRewritingHelpers({
     diagnostics,
     diagAt,
     evalImmExpr,
@@ -401,6 +375,51 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     },
   } as const;
 
+  return {
+    ctx,
+    item,
+    diagnostics,
+    pending,
+    traceComment,
+    traceLabel,
+    bindSpTracking,
+    getCodeOffset,
+    emitInstr,
+    getCurrentCodeSegmentTag: () => currentCodeSegmentTag,
+    setCurrentCodeSegmentTag,
+    frameSetupContext,
+    ...asmRewriting,
+  };
+}
+
+function runFunctionFrameSetupPhase(setup: FunctionLoweringSetupPhase) {
+  const {
+    ctx: {
+      diagnostics,
+      diagAt,
+      diagAtWithId,
+      conditionNameFromOpcode,
+      inverseConditionName,
+      conditionOpcodeFromName,
+      emitRawCodeBytes,
+      pushEaAddress,
+      pushMemValue,
+      evalImmExpr,
+      env,
+      reg8,
+      formatAsmOperandForOpDiag,
+      generatedLabelCounterRef,
+      emitAbs16Fixup,
+      taken,
+    },
+    pending,
+    traceLabel,
+    getCodeOffset,
+    emitInstr,
+    getCurrentCodeSegmentTag,
+    setCurrentCodeSegmentTag,
+    frameSetupContext,
+  } = setup;
   const { hasStackSlots, emitSyntheticEpilogue, epilogueLabel, preserveSet, trackedSp } =
     initializeFunctionFrame(frameSetupContext);
 
@@ -440,7 +459,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     diagnostics,
     diagAt,
     diagAtWithId,
-    getCurrentCodeSegmentTag: () => currentCodeSegmentTag,
+    getCurrentCodeSegmentTag,
     setCurrentCodeSegmentTag,
     taken,
     traceLabel,
@@ -452,7 +471,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     conditionOpcodeFromName,
     emitInstr,
     emitRawCodeBytes,
-    loadImm16ToHL,
+    loadImm16ToHL: setup.ctx.loadImm16ToHL,
     pushEaAddress,
     pushMemValue,
     evalImmExpr: (expr) => evalImmExpr(expr, env, diagnostics),
@@ -460,6 +479,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     generatedLabelCounterRef,
     formatAsmOperandForOpDiag,
   });
+
   const syncFromFlow = (): void => {
     syncFromFlowBase(flow, trackedSp);
   };
@@ -480,6 +500,115 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       trackedSp,
     );
   };
+
+  return {
+    hasStackSlots,
+    emitSyntheticEpilogue,
+    epilogueLabel,
+    preserveSet,
+    trackedSp,
+    opExpansionStack,
+    getFlow: () => flow,
+    setFlow: (state: FlowState) => {
+      flow = state;
+    },
+    flowRef,
+    syncFromFlow,
+    syncToFlow,
+    snapshotFlow: () => snapshotFlow(flow),
+    restoreFlow,
+    appendInvalidOpExpansionDiagnostic,
+    sourceTagForSpan,
+    withCodeSourceTag,
+    newHiddenLabel,
+    defineCodeLabel,
+    emitJumpTo,
+    emitJumpCondTo,
+    emitJumpIfFalse,
+    emitVirtualReg16Transfer,
+    joinFlows,
+    emitSelectCompareToImm16,
+    emitSelectCompareReg8ToImm8,
+    emitSelectCompareReg8Range,
+    emitSelectCompareImm16Range,
+    loadSelectorIntoHL,
+  };
+}
+
+function prepareFunctionBodyLoweringPhase(
+  setup: FunctionLoweringSetupPhase,
+  frame: FunctionFramePhase,
+) {
+  const {
+    ctx: {
+      item,
+      diagnostics,
+      diagAt,
+      diagAtWithId,
+      diagAtWithSeverityAndId,
+      warnAt,
+      emitRawCodeBytes,
+      emitAbs16Fixup,
+      emitAbs16FixupPrefixed,
+      emitRel8Fixup,
+      conditionOpcodeFromName,
+      callConditionOpcodeFromName,
+      jrConditionOpcodeFromName,
+      conditionOpcode,
+      inverseConditionName,
+      resolveScalarBinding,
+      resolveScalarKind,
+      resolveEaTypeExpr,
+      resolveScalarTypeForEa,
+      resolveScalarTypeForLd,
+      resolveArrayType,
+      buildEaWordPipeline,
+      enforceEaRuntimeAtomBudget,
+      enforceDirectCallSiteEaBudget,
+      resolveEa,
+      pushEaAddress,
+      materializeEaAddressToHL,
+      pushMemValue,
+      pushImm16,
+      pushZeroExtendedReg8,
+      stackSlotOffsets,
+      stackSlotTypes,
+      storageTypes,
+      rawTypedCallWarningsEnabled,
+      resolveCallable,
+      resolveOpCandidates,
+      opStackPolicyMode,
+      formatAsmOperandForOpDiag,
+      selectOpOverload,
+      summarizeOpStackEffect,
+      cloneImmExpr,
+      cloneEaExpr,
+      cloneOperand,
+      flattenEaDottedName,
+      normalizeFixedToken,
+      reg8,
+      reg16,
+      typeDisplay,
+      sameTypeShape,
+      emitStepPipeline,
+      emitScalarWordLoad,
+      emitScalarWordStore,
+      lowerLdWithEa,
+      env,
+      evalImmExpr,
+    },
+    pending,
+    traceComment,
+    traceLabel,
+    getCodeOffset,
+    emitInstr,
+    getCurrentCodeSegmentTag,
+    setCurrentCodeSegmentTag,
+    resolveLocalAliasTargetName,
+    evalImmExprForAsm,
+    symbolicTargetFromExprForAsm,
+    emitInstrForAsm,
+  } = setup;
 
   const { lowerAsmInstructionDispatcher } = createAsmInstructionLoweringHelpers({
     diagnostics,
@@ -502,16 +631,16 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     resolveScalarTypeForLd,
     resolveEa,
     diagIfRetStackImbalanced: (span, mnemonic) => {
-      if (emitSyntheticEpilogue) return;
-      if (trackedSp.valid && trackedSp.delta !== 0) {
+      if (frame.emitSyntheticEpilogue) return;
+      if (frame.trackedSp.valid && frame.trackedSp.delta !== 0) {
         diagAt(
           diagnostics,
           span,
-          `${mnemonic ?? 'ret'} with non-zero tracked stack delta (${trackedSp.delta}); function stack is imbalanced.`,
+          `${mnemonic ?? 'ret'} with non-zero tracked stack delta (${frame.trackedSp.delta}); function stack is imbalanced.`,
         );
         return;
       }
-      if (!trackedSp.valid && trackedSp.invalid && hasStackSlots) {
+      if (!frame.trackedSp.valid && frame.trackedSp.invalid && frame.hasStackSlots) {
         diagAt(
           diagnostics,
           span,
@@ -519,7 +648,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
         );
         return;
       }
-      if (!trackedSp.valid && hasStackSlots) {
+      if (!frame.trackedSp.valid && frame.hasStackSlots) {
         diagAt(
           diagnostics,
           span,
@@ -533,15 +662,15 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       const contractKind = options.contractKind ?? 'callee';
       const contractNoun =
         contractKind === 'typed-call' ? 'typed-call boundary contract' : 'callee stack contract';
-      if (hasStackSlots && trackedSp.valid && trackedSp.delta > 0) {
+      if (frame.hasStackSlots && frame.trackedSp.valid && frame.trackedSp.delta > 0) {
         diagAt(
           diagnostics,
           span,
-          `${mnemonic} reached with positive tracked stack delta (${trackedSp.delta}); cannot verify ${contractNoun}.`,
+          `${mnemonic} reached with positive tracked stack delta (${frame.trackedSp.delta}); cannot verify ${contractNoun}.`,
         );
         return;
       }
-      if (hasStackSlots && !trackedSp.valid && trackedSp.invalid) {
+      if (frame.hasStackSlots && !frame.trackedSp.valid && frame.trackedSp.invalid) {
         diagAt(
           diagnostics,
           span,
@@ -549,7 +678,7 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
         );
         return;
       }
-      if (hasStackSlots && !trackedSp.valid) {
+      if (frame.hasStackSlots && !frame.trackedSp.valid) {
         diagAt(
           diagnostics,
           span,
@@ -575,14 +704,14 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     materializeEaAddressToHL,
     emitScalarWordLoad,
     emitScalarWordStore,
-    emitVirtualReg16Transfer,
+    emitVirtualReg16Transfer: frame.emitVirtualReg16Transfer,
     reg16,
-    emitSyntheticEpilogue,
-    epilogueLabel,
-    emitJumpTo,
-    emitJumpCondTo,
-    syncToFlow,
-    flowRef,
+    emitSyntheticEpilogue: frame.emitSyntheticEpilogue,
+    epilogueLabel: frame.epilogueLabel,
+    emitJumpTo: frame.emitJumpTo,
+    emitJumpCondTo: frame.emitJumpCondTo,
+    syncToFlow: frame.syncToFlow,
+    flowRef: frame.flowRef,
   });
 
   const callMaterialization = {
@@ -602,24 +731,24 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
 
   const { lowerAsmRange } = createFunctionCallLoweringHelpers({
     diagnostics,
-    asmItemSpanSourceTag: (span) => sourceTagForSpan(span, opExpansionStack),
-    getCurrentCodeSegmentTag: () => currentCodeSegmentTag,
+    asmItemSpanSourceTag: (span) => frame.sourceTagForSpan(span, frame.opExpansionStack),
+    getCurrentCodeSegmentTag,
     setCurrentCodeSegmentTag,
-    appendInvalidOpExpansionDiagnostic,
+    appendInvalidOpExpansionDiagnostic: frame.appendInvalidOpExpansionDiagnostic,
     enforceEaRuntimeAtomBudget,
-    hasStackSlots,
-    emitSyntheticEpilogue,
-    getTrackedSpDelta: () => trackedSp.delta,
+    hasStackSlots: frame.hasStackSlots,
+    emitSyntheticEpilogue: frame.emitSyntheticEpilogue,
+    getTrackedSpDelta: () => frame.trackedSp.delta,
     setTrackedSpDelta: (value) => {
-      trackedSp.delta = value;
+      frame.trackedSp.delta = value;
     },
-    getTrackedSpValid: () => trackedSp.valid,
+    getTrackedSpValid: () => frame.trackedSp.valid,
     setTrackedSpValid: (value) => {
-      trackedSp.valid = value;
+      frame.trackedSp.valid = value;
     },
-    getTrackedSpInvalid: () => trackedSp.invalid,
+    getTrackedSpInvalid: () => frame.trackedSp.invalid,
     setTrackedSpInvalid: (value) => {
-      trackedSp.invalid = value;
+      frame.trackedSp.invalid = value;
     },
     materialization: callMaterialization,
     rawTypedCallWarningsEnabled,
@@ -638,10 +767,10 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     reg16,
     emitInstr,
     emitAbs16Fixup,
-    syncToFlow,
+    syncToFlow: frame.syncToFlow,
     resolveOpCandidates,
     opStackPolicyMode,
-    opExpansionStack,
+    opExpansionStack: frame.opExpansionStack,
     diagAtWithId,
     formatAsmOperandForOpDiag: (operand) => formatAsmOperandForOpDiag(operand) ?? '?',
     selectOpOverload,
@@ -651,61 +780,59 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
     cloneOperand,
     normalizeFixedToken,
     inverseConditionName,
-    newHiddenLabel,
+    newHiddenLabel: frame.newHiddenLabel,
     lowerAsmInstructionDispatcher,
-    defineCodeLabel,
-    flowRef,
-    syncFromFlow,
-    snapshotFlow: () => snapshotFlow(flow),
-    restoreFlow,
-    emitJumpIfFalse,
-    emitJumpTo,
+    defineCodeLabel: frame.defineCodeLabel,
+    flowRef: frame.flowRef,
+    syncFromFlow: frame.syncFromFlow,
+    snapshotFlow: frame.snapshotFlow,
+    restoreFlow: frame.restoreFlow,
+    emitJumpIfFalse: frame.emitJumpIfFalse,
+    emitJumpTo: frame.emitJumpTo,
     warnAt,
     joinFlows: (left, right, span, contextName) =>
-      joinFlows(left, right, span, contextName, hasStackSlots),
-    loadSelectorIntoHL,
+      frame.joinFlows(left, right, span, contextName, frame.hasStackSlots),
+    loadSelectorIntoHL: frame.loadSelectorIntoHL,
     emitRawCodeBytes,
-    emitSelectCompareReg8ToImm8,
-    emitSelectCompareToImm16,
-    emitSelectCompareReg8Range,
-    emitSelectCompareImm16Range,
+    emitSelectCompareReg8ToImm8: frame.emitSelectCompareReg8ToImm8,
+    emitSelectCompareToImm16: frame.emitSelectCompareToImm16,
+    emitSelectCompareReg8Range: frame.emitSelectCompareReg8Range,
+    emitSelectCompareImm16Range: frame.emitSelectCompareImm16Range,
   });
 
-  const { lowerAndFinalizeFunctionBody } = createAsmBodyOrchestrationHelpers({
+  return createAsmBodyOrchestrationHelpers({
     asmItems: item.asm.items,
     itemName: item.name,
     itemSpan: item.span,
-    emitSyntheticEpilogue,
-    hasStackSlots,
+    emitSyntheticEpilogue: frame.emitSyntheticEpilogue,
+    hasStackSlots: frame.hasStackSlots,
     lowerAsmRange,
-    syncToFlow,
-    getFlow: () => flow,
-    setFlow: (state) => {
-      flow = state;
-    },
+    syncToFlow: frame.syncToFlow,
+    getFlow: frame.getFlow,
+    setFlow: frame.setFlow,
     diagAt: (span, message) => diagAt(diagnostics, span, message),
     emitImplicitRet: () => {
-      withCodeSourceTag(sourceTagForSpan(item.span, opExpansionStack), () => {
+      frame.withCodeSourceTag(frame.sourceTagForSpan(item.span, frame.opExpansionStack), () => {
         emitInstr('ret', [], item.span);
       });
     },
     emitSyntheticEpilogueBody: () => {
-      withCodeSourceTag(sourceTagForSpan(item.span, opExpansionStack), () => {
+      frame.withCodeSourceTag(frame.sourceTagForSpan(item.span, frame.opExpansionStack), () => {
         pending.push({
           kind: 'label',
-          name: epilogueLabel,
+          name: frame.epilogueLabel,
           section: 'code',
           offset: getCodeOffset(),
           file: item.span.file,
           line: item.span.start.line,
           scope: 'local',
         });
-        traceLabel(getCodeOffset(), epilogueLabel);
-        const popOrder = preserveSet.slice().reverse();
+        traceLabel(getCodeOffset(), frame.epilogueLabel);
+        const popOrder = frame.preserveSet.slice().reverse();
         for (const reg of popOrder) {
           emitInstr('pop', [{ kind: 'Reg', span: item.span, name: reg }], item.span);
         }
-        if (hasStackSlots) {
+        if (frame.hasStackSlots) {
           emitInstr(
             'ld',
             [
@@ -723,7 +850,20 @@ export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
       traceComment(getCodeOffset(), `func ${item.name} end`);
     },
   });
-  lowerAndFinalizeFunctionBody();
-  bindSpTracking(undefined);
-  setCurrentCodeSegmentTag(currentCodeSegmentTag);
+}
+
+function finalizeFunctionLoweringPhase(
+  setup: FunctionLoweringSetupPhase,
+  body: FunctionBodyPhase,
+): void {
+  body.lowerAndFinalizeFunctionBody();
+  setup.bindSpTracking(undefined);
+  setup.setCurrentCodeSegmentTag(setup.getCurrentCodeSegmentTag());
+}
+
+export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
+  const setup = prepareFunctionLoweringSetupPhase(ctx);
+  const frame = runFunctionFrameSetupPhase(setup);
+  const body = prepareFunctionBodyLoweringPhase(setup, frame);
+  finalizeFunctionLoweringPhase(setup, body);
 }
