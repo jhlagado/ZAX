@@ -7,7 +7,6 @@ import type {
   EnumDeclNode,
   EaExprNode,
   ExternDeclNode,
-  FuncDeclNode,
   HexDeclNode,
   ImmExprNode,
   ModuleItemNode,
@@ -40,6 +39,7 @@ import type { AggregateType } from './typeResolution.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { lowerDataBlock } from './programLoweringData.js';
 import { createProgramLoweringDeclarationHelpers } from './programLoweringDeclarations.js';
+import { preScanProgramDeclarations as runProgramPrescan } from './programPrescan.js';
 
 // Program lowering owns module-wide declaration traversal and the final
 // emission/fixup passes after all symbols and section bases are known.
@@ -179,127 +179,7 @@ export type FinalizationContext = {
 
 // --- Phase 1: prescan declarations (callables, ops, storage aliases) ---
 export function preScanProgramDeclarations(ctx: Context): PrescanResult {
-  const preScanItem = (
-    item: ModuleItemNode | SectionItemNode,
-    namedSection?: NamedSectionNode,
-  ): void => {
-    if (item.kind === 'NamedSection') {
-      for (const sectionItem of item.items) preScanItem(sectionItem, item);
-      return;
-    }
-
-    if (item.kind === 'FuncDecl') {
-      const f = item as FuncDeclNode;
-      const fileCallables =
-        ctx.localCallablesByFile.get(f.span.file) ??
-        (() => {
-          const m = new Map<string, Callable>();
-          ctx.localCallablesByFile.set(f.span.file, m);
-          return m;
-        })();
-      fileCallables.set(f.name.toLowerCase(), { kind: 'func', node: f });
-      if (f.exported) {
-        const moduleId = (ctx.env.moduleIds?.get(f.span.file) ?? f.span.file).toLowerCase();
-        ctx.visibleCallables.set(`${moduleId}.${f.name.toLowerCase()}`, { kind: 'func', node: f });
-      }
-    } else if (item.kind === 'OpDecl') {
-      const op = item as OpDeclNode;
-      const key = op.name.toLowerCase();
-      const fileOps =
-        ctx.localOpsByFile.get(op.span.file) ??
-        (() => {
-          const m = new Map<string, OpDeclNode[]>();
-          ctx.localOpsByFile.set(op.span.file, m);
-          return m;
-        })();
-      const existing = fileOps.get(key);
-      if (existing) existing.push(op);
-      else fileOps.set(key, [op]);
-      if (op.exported) {
-        const moduleId = (ctx.env.moduleIds?.get(op.span.file) ?? op.span.file).toLowerCase();
-        const qualified = `${moduleId}.${key}`;
-        const visible = ctx.visibleOpsByName.get(qualified);
-        if (visible) visible.push(op);
-        else ctx.visibleOpsByName.set(qualified, [op]);
-      }
-    } else if (item.kind === 'ExternDecl') {
-      const ex = item as ExternDeclNode;
-      const fileCallables =
-        ctx.localCallablesByFile.get(ex.span.file) ??
-        (() => {
-          const m = new Map<string, Callable>();
-          ctx.localCallablesByFile.set(ex.span.file, m);
-          return m;
-        })();
-      for (const fn of ex.funcs) {
-        fileCallables.set(fn.name.toLowerCase(), {
-          kind: 'extern',
-          node: fn,
-          targetLower: fn.name.toLowerCase(),
-        });
-      }
-    } else if (item.kind === 'VarBlock' && item.scope === 'module') {
-      if (namedSection) return;
-      const vb = item as VarBlockNode;
-      for (const decl of vb.decls) {
-        const lower = decl.name.toLowerCase();
-        if (decl.form === 'typed') {
-          ctx.storageTypes.set(lower, decl.typeExpr);
-          continue;
-        }
-        if (decl.initializer.kind === 'VarInitAlias') {
-          ctx.moduleAliasTargets.set(lower, decl.initializer.expr);
-          ctx.moduleAliasDecls.set(lower, decl);
-        }
-      }
-    } else if (item.kind === 'BinDecl') {
-      const bd = item as BinDeclNode;
-      if (namedSection && bd.section !== namedSection.section) return;
-      ctx.declaredBinNames.add(bd.name.toLowerCase());
-      ctx.rawAddressSymbols.add(bd.name.toLowerCase());
-      ctx.storageTypes.set(bd.name.toLowerCase(), { kind: 'TypeName', span: bd.span, name: 'addr' });
-    } else if (item.kind === 'HexDecl') {
-      const hd = item as HexDeclNode;
-      ctx.rawAddressSymbols.add(hd.name.toLowerCase());
-      ctx.storageTypes.set(hd.name.toLowerCase(), { kind: 'TypeName', span: hd.span, name: 'addr' });
-    } else if (item.kind === 'DataBlock') {
-      const db = item as DataBlockNode;
-      for (const decl of db.decls) {
-        const lower = decl.name.toLowerCase();
-        ctx.storageTypes.set(lower, decl.typeExpr);
-        const scalar = ctx.resolveScalarKind(decl.typeExpr);
-        if (!scalar) ctx.rawAddressSymbols.add(lower);
-      }
-    } else if (item.kind === 'DataDecl') {
-      if (namedSection && namedSection.section !== 'data') return;
-      const decl = item as DataDeclNode;
-      const lower = decl.name.toLowerCase();
-      ctx.storageTypes.set(lower, decl.typeExpr);
-      const scalar = ctx.resolveScalarKind(decl.typeExpr);
-      if (!scalar) ctx.rawAddressSymbols.add(lower);
-    } else if (item.kind === 'RawDataDecl') {
-      if (namedSection && namedSection.section !== 'data') return;
-      const decl = item as RawDataDeclNode;
-      ctx.rawAddressSymbols.add(decl.name.toLowerCase());
-    }
-  };
-
-  for (const module of ctx.program.files) {
-    for (const item of module.items) preScanItem(item);
-  }
-
-  return {
-    localCallablesByFile: ctx.localCallablesByFile,
-    visibleCallables: ctx.visibleCallables,
-    localOpsByFile: ctx.localOpsByFile,
-    visibleOpsByName: ctx.visibleOpsByName,
-    declaredOpNames: ctx.declaredOpNames,
-    declaredBinNames: ctx.declaredBinNames,
-    storageTypes: ctx.storageTypes,
-    moduleAliasTargets: ctx.moduleAliasTargets,
-    moduleAliasDecls: ctx.moduleAliasDecls,
-    rawAddressSymbols: ctx.rawAddressSymbols,
-  };
+  return runProgramPrescan(ctx);
 }
 
 // --- Phase 2: lower declarations and functions into section bytes ---
