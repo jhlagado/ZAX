@@ -18,121 +18,233 @@ import type {
 } from './programLowering.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
 
-/** Flat field bag passed into {@link createEmitLoweringContexts} for function-body lowering. */
+/**
+ * Flat field bag passed into {@link createEmitLoweringContexts} for function-body lowering.
+ * Each field matches the same-named member on {@link import('./functionLowering.js').FunctionLoweringContext}.
+ */
 export type EmitFunctionLoweringContextInputs = {
+  /** @inheritdoc FunctionLoweringDiagnosticsContext */
   diagnostics: FunctionLoweringDiagnosticsContext['diagnostics'];
+  /** @inheritdoc FunctionLoweringDiagnosticsContext */
   diag: FunctionLoweringDiagnosticsContext['diag'];
+  /** @inheritdoc FunctionLoweringDiagnosticsContext */
   diagAt: FunctionLoweringDiagnosticsContext['diagAt'];
+  /** @inheritdoc FunctionLoweringDiagnosticsContext */
   diagAtWithId: FunctionLoweringDiagnosticsContext['diagAtWithId'];
+  /** @inheritdoc FunctionLoweringDiagnosticsContext */
   diagAtWithSeverityAndId: FunctionLoweringDiagnosticsContext['diagAtWithSeverityAndId'];
+  /** @inheritdoc FunctionLoweringDiagnosticsContext */
   warnAt: FunctionLoweringDiagnosticsContext['warnAt'];
+  /** @inheritdoc FunctionLoweringSymbolContext */
   taken: FunctionLoweringSymbolContext['taken'];
+  /** @inheritdoc FunctionLoweringSymbolContext */
   pending: FunctionLoweringSymbolContext['pending'];
+  /** @inheritdoc FunctionLoweringSymbolContext */
   traceComment: FunctionLoweringSymbolContext['traceComment'];
+  /** @inheritdoc FunctionLoweringSymbolContext */
   traceLabel: FunctionLoweringSymbolContext['traceLabel'];
+  /** @inheritdoc FunctionLoweringSymbolContext */
   currentCodeSegmentTagRef: FunctionLoweringSymbolContext['currentCodeSegmentTagRef'];
+  /** @inheritdoc FunctionLoweringSymbolContext */
   generatedLabelCounterRef: FunctionLoweringSymbolContext['generatedLabelCounterRef'];
+  /** @inheritdoc FunctionLoweringSpTrackingContext */
   bindSpTracking: FunctionLoweringSpTrackingContext['bindSpTracking'];
+  /** @inheritdoc FunctionLoweringEmissionContext */
   getCodeOffset: FunctionLoweringEmissionContext['getCodeOffset'];
+  /** @inheritdoc FunctionLoweringEmissionContext */
   emitInstr: FunctionLoweringEmissionContext['emitInstr'];
+  /** @inheritdoc FunctionLoweringEmissionContext */
   emitRawCodeBytes: FunctionLoweringEmissionContext['emitRawCodeBytes'];
+  /** @inheritdoc FunctionLoweringEmissionContext */
   emitAbs16Fixup: FunctionLoweringEmissionContext['emitAbs16Fixup'];
+  /** @inheritdoc FunctionLoweringEmissionContext */
   emitAbs16FixupPrefixed: FunctionLoweringEmissionContext['emitAbs16FixupPrefixed'];
+  /** @inheritdoc FunctionLoweringEmissionContext */
   emitRel8Fixup: FunctionLoweringEmissionContext['emitRel8Fixup'];
+  /** @inheritdoc FunctionLoweringConditionContext */
   conditionOpcodeFromName: FunctionLoweringConditionContext['conditionOpcodeFromName'];
+  /** @inheritdoc FunctionLoweringConditionContext */
   conditionNameFromOpcode: FunctionLoweringConditionContext['conditionNameFromOpcode'];
+  /** @inheritdoc FunctionLoweringConditionContext */
   callConditionOpcodeFromName: FunctionLoweringConditionContext['callConditionOpcodeFromName'];
+  /** @inheritdoc FunctionLoweringConditionContext */
   jrConditionOpcodeFromName: FunctionLoweringConditionContext['jrConditionOpcodeFromName'];
+  /** @inheritdoc FunctionLoweringConditionContext */
   conditionOpcode: FunctionLoweringConditionContext['conditionOpcode'];
+  /** @inheritdoc FunctionLoweringConditionContext */
   inverseConditionName: FunctionLoweringConditionContext['inverseConditionName'];
+  /** @inheritdoc FunctionLoweringConditionContext */
   symbolicTargetFromExpr: FunctionLoweringConditionContext['symbolicTargetFromExpr'];
+  /** @inheritdoc FunctionLoweringTypeContext */
   evalImmExpr: FunctionLoweringTypeContext['evalImmExpr'];
+  /** @inheritdoc FunctionLoweringTypeContext */
   env: FunctionLoweringTypeContext['env'];
+  /** @inheritdoc FunctionLoweringTypeContext */
   resolveScalarBinding: FunctionLoweringTypeContext['resolveScalarBinding'];
+  /** @inheritdoc FunctionLoweringTypeContext */
   resolveScalarKind: FunctionLoweringTypeContext['resolveScalarKind'];
+  /** @inheritdoc FunctionLoweringTypeContext */
   resolveEaTypeExpr: FunctionLoweringTypeContext['resolveEaTypeExpr'];
+  /** @inheritdoc FunctionLoweringTypeContext */
   resolveScalarTypeForEa: FunctionLoweringTypeContext['resolveScalarTypeForEa'];
+  /** @inheritdoc FunctionLoweringTypeContext */
   resolveScalarTypeForLd: FunctionLoweringTypeContext['resolveScalarTypeForLd'];
+  /** @inheritdoc FunctionLoweringTypeContext */
   resolveArrayType: FunctionLoweringTypeContext['resolveArrayType'];
+  /** @inheritdoc FunctionLoweringTypeContext */
   typeDisplay: FunctionLoweringTypeContext['typeDisplay'];
+  /** @inheritdoc FunctionLoweringTypeContext */
   sameTypeShape: FunctionLoweringTypeContext['sameTypeShape'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   resolveEa: FunctionLoweringMaterializationContext['resolveEa'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   buildEaWordPipeline: FunctionLoweringMaterializationContext['buildEaWordPipeline'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   enforceEaRuntimeAtomBudget: FunctionLoweringMaterializationContext['enforceEaRuntimeAtomBudget'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   enforceDirectCallSiteEaBudget:
     FunctionLoweringMaterializationContext['enforceDirectCallSiteEaBudget'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   pushEaAddress: FunctionLoweringMaterializationContext['pushEaAddress'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   materializeEaAddressToHL: FunctionLoweringMaterializationContext['materializeEaAddressToHL'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   pushMemValue: FunctionLoweringMaterializationContext['pushMemValue'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   pushImm16: FunctionLoweringMaterializationContext['pushImm16'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   pushZeroExtendedReg8: FunctionLoweringMaterializationContext['pushZeroExtendedReg8'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   loadImm16ToHL: FunctionLoweringMaterializationContext['loadImm16ToHL'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   emitStepPipeline: FunctionLoweringMaterializationContext['emitStepPipeline'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   emitScalarWordLoad: FunctionLoweringMaterializationContext['emitScalarWordLoad'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   emitScalarWordStore: FunctionLoweringMaterializationContext['emitScalarWordStore'];
+  /** @inheritdoc FunctionLoweringMaterializationContext */
   lowerLdWithEa: FunctionLoweringMaterializationContext['lowerLdWithEa'];
+  /** @inheritdoc FunctionLoweringStorageContext */
   stackSlotOffsets: FunctionLoweringStorageContext['stackSlotOffsets'];
+  /** @inheritdoc FunctionLoweringStorageContext */
   stackSlotTypes: FunctionLoweringStorageContext['stackSlotTypes'];
+  /** @inheritdoc FunctionLoweringStorageContext */
   localAliasTargets: FunctionLoweringStorageContext['localAliasTargets'];
+  /** @inheritdoc FunctionLoweringStorageContext */
   storageTypes: FunctionLoweringStorageContext['storageTypes'];
+  /** @inheritdoc FunctionLoweringStorageContext */
   moduleAliasTargets: FunctionLoweringStorageContext['moduleAliasTargets'];
+  /** @inheritdoc FunctionLoweringStorageContext */
   rawTypedCallWarningsEnabled: FunctionLoweringStorageContext['rawTypedCallWarningsEnabled'];
+  /** @inheritdoc FunctionLoweringCallableResolutionContext */
   resolveCallable: FunctionLoweringCallableResolutionContext['resolveCallable'];
+  /** @inheritdoc FunctionLoweringCallableResolutionContext */
   resolveOpCandidates: FunctionLoweringCallableResolutionContext['resolveOpCandidates'];
+  /** @inheritdoc FunctionLoweringCallableResolutionContext */
   opStackPolicyMode: FunctionLoweringCallableResolutionContext['opStackPolicyMode'];
+  /** @inheritdoc FunctionLoweringOpOverloadContext */
   formatAsmOperandForOpDiag: FunctionLoweringOpOverloadContext['formatAsmOperandForOpDiag'];
+  /** @inheritdoc FunctionLoweringOpOverloadContext */
   selectOpOverload: FunctionLoweringOpOverloadContext['selectOpOverload'];
+  /** @inheritdoc FunctionLoweringOpOverloadContext */
   summarizeOpStackEffect: FunctionLoweringOpOverloadContext['summarizeOpStackEffect'];
+  /** @inheritdoc FunctionLoweringAstUtilityContext */
   cloneImmExpr: FunctionLoweringAstUtilityContext['cloneImmExpr'];
+  /** @inheritdoc FunctionLoweringAstUtilityContext */
   cloneEaExpr: FunctionLoweringAstUtilityContext['cloneEaExpr'];
+  /** @inheritdoc FunctionLoweringAstUtilityContext */
   cloneOperand: FunctionLoweringAstUtilityContext['cloneOperand'];
+  /** @inheritdoc FunctionLoweringAstUtilityContext */
   flattenEaDottedName: FunctionLoweringAstUtilityContext['flattenEaDottedName'];
+  /** @inheritdoc FunctionLoweringAstUtilityContext */
   normalizeFixedToken: FunctionLoweringAstUtilityContext['normalizeFixedToken'];
+  /** @inheritdoc FunctionLoweringRegisterContext */
   reg8: FunctionLoweringRegisterContext['reg8'];
+  /** @inheritdoc FunctionLoweringRegisterContext */
   reg16: FunctionLoweringRegisterContext['reg16'];
 };
 
-/** Flat field bag for program-level lowering (merged with shared function-lowering fields in the builder). */
+/**
+ * Flat field bag for program-level lowering (merged with shared function-lowering fields in the builder).
+ * Each field matches the same-named member on {@link import('./programLowering.js').Context}.
+ */
 export type EmitProgramLoweringContextInputs = {
+  /** @inheritdoc ProgramLoweringContext */
   program: ProgramLoweringContext['program'];
+  /** @inheritdoc ProgramLoweringContext */
   includeDirs: ProgramLoweringContext['includeDirs'];
+  /** @inheritdoc ProgramLoweringContext */
   localCallablesByFile: ProgramLoweringContext['localCallablesByFile'];
+  /** @inheritdoc ProgramLoweringContext */
   visibleCallables: ProgramLoweringContext['visibleCallables'];
+  /** @inheritdoc ProgramLoweringContext */
   localOpsByFile: ProgramLoweringContext['localOpsByFile'];
+  /** @inheritdoc ProgramLoweringContext */
   visibleOpsByName: ProgramLoweringContext['visibleOpsByName'];
+  /** @inheritdoc ProgramLoweringContext */
   declaredOpNames: ProgramLoweringContext['declaredOpNames'];
+  /** @inheritdoc ProgramLoweringContext */
   declaredBinNames: ProgramLoweringContext['declaredBinNames'];
+  /** @inheritdoc ProgramLoweringContext */
   deferredExterns: ProgramLoweringContext['deferredExterns'];
+  /** @inheritdoc ProgramLoweringContext */
   storageTypes: ProgramLoweringContext['storageTypes'];
+  /** @inheritdoc ProgramLoweringContext */
   moduleAliasTargets: ProgramLoweringContext['moduleAliasTargets'];
+  /** @inheritdoc ProgramLoweringContext */
   moduleAliasDecls: ProgramLoweringContext['moduleAliasDecls'];
+  /** @inheritdoc ProgramLoweringContext */
   rawAddressSymbols: ProgramLoweringContext['rawAddressSymbols'];
+  /** @inheritdoc ProgramLoweringContext */
   absoluteSymbols: ProgramLoweringContext['absoluteSymbols'];
+  /** @inheritdoc ProgramLoweringContext */
   symbols: ProgramLoweringContext['symbols'];
+  /** @inheritdoc ProgramLoweringContext */
   dataBytes: ProgramLoweringContext['dataBytes'];
+  /** @inheritdoc ProgramLoweringContext */
   codeBytes: ProgramLoweringContext['codeBytes'];
+  /** @inheritdoc ProgramLoweringContext */
   hexBytes: ProgramLoweringContext['hexBytes'];
+  /** @inheritdoc ProgramLoweringContext */
   activeSectionRef: ProgramLoweringContext['activeSectionRef'];
+  /** @inheritdoc ProgramLoweringContext */
   codeOffsetRef: ProgramLoweringContext['codeOffsetRef'];
+  /** @inheritdoc ProgramLoweringContext */
   dataOffsetRef: ProgramLoweringContext['dataOffsetRef'];
+  /** @inheritdoc ProgramLoweringContext */
   varOffsetRef: ProgramLoweringContext['varOffsetRef'];
+  /** @inheritdoc ProgramLoweringContext */
   baseExprs: ProgramLoweringContext['baseExprs'];
+  /** @inheritdoc ProgramLoweringContext */
   advanceAlign: ProgramLoweringContext['advanceAlign'];
+  /** @inheritdoc ProgramLoweringContext */
   alignTo: ProgramLoweringContext['alignTo'];
+  /** @inheritdoc ProgramLoweringContext */
   loadBinInput: ProgramLoweringContext['loadBinInput'];
+  /** @inheritdoc ProgramLoweringContext */
   loadHexInput: ProgramLoweringContext['loadHexInput'];
+  /** @inheritdoc ProgramLoweringContext */
   resolveAggregateType: ProgramLoweringContext['resolveAggregateType'];
+  /** @inheritdoc ProgramLoweringContext */
   sizeOfTypeExpr: ProgramLoweringContext['sizeOfTypeExpr'];
+  /** @inheritdoc ProgramLoweringContext */
   lowerFunctionDecl: ProgramLoweringContext['lowerFunctionDecl'];
+  /** @inheritdoc ProgramLoweringContext */
   recordLoweredAsmItem: ProgramLoweringContext['recordLoweredAsmItem'];
+  /** @inheritdoc ProgramLoweringContext */
   lowerImmExprForLoweredAsm: ProgramLoweringContext['lowerImmExprForLoweredAsm'];
+  /** @inheritdoc ProgramLoweringContext */
   namedSectionSinksByNode: ProgramLoweringContext['namedSectionSinksByNode'];
+  /** Current sink for the active named section contribution; `undefined` when not in a named block. */
   currentNamedSectionSinkRef: { current: NamedSectionContributionSink | undefined };
+  /** @inheritdoc FunctionLoweringSymbolContext */
   currentCodeSegmentTagRef: FunctionLoweringSymbolContext['currentCodeSegmentTagRef'];
 };
 
 export type EmitLoweringContextBuilderInput = {
+  /** Flattened function-lowering inputs (see {@link EmitFunctionLoweringContextInputs}). */
   readonly functionLowering: Readonly<EmitFunctionLoweringContextInputs>;
+  /** Flattened program-lowering inputs (see {@link EmitProgramLoweringContextInputs}). */
   readonly programLowering: Readonly<EmitProgramLoweringContextInputs>;
 };
 

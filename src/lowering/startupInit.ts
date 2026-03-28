@@ -6,22 +6,33 @@ import { encodeInstruction } from '../z80/encode.js';
 import type { PlacedNamedSectionContribution } from './sectionPlacement.js';
 
 export type StartupInitCopyEntry = {
+  /** Copy region descriptor. */
   kind: 'copy';
+  /** Destination address in the final image. */
   destination: number;
+  /** Source offset within the packed blob. */
   sourceOffset: number;
+  /** Byte length. */
   length: number;
 };
 
 export type StartupInitZeroEntry = {
+  /** Zero-fill descriptor. */
   kind: 'zero';
+  /** Destination start address. */
   destination: number;
+  /** Byte length. */
   length: number;
 };
 
 export type StartupInitRegion = {
+  /** Ordered copy operations. */
   copyEntries: StartupInitCopyEntry[];
+  /** Ordered zero-fill operations. */
   zeroEntries: StartupInitZeroEntry[];
+  /** Packed init payload bytes. */
   blob: number[];
+  /** Encoded opcode bytes for the startup routine. */
   encoded: number[];
 };
 

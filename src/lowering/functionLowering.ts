@@ -27,7 +27,13 @@ import {
 // This module owns the per-function lowering coordinator. It assembles the
 // function-local helpers, state, and diagnostics around the extracted
 // rewriting, frame-setup, body-setup, and call-lowering submodules.
-type ResolvedArrayType = { element: TypeExprNode; length?: number };
+/** Array shape extracted for lowering; `length` omitted when unknown. */
+type ResolvedArrayType = {
+  /** Element type expression. */
+  element: TypeExprNode;
+  /** Fixed length when statically known. */
+  length?: number;
+};
 export type FunctionLoweringItemContext = {
   /** Set by: program lowering construction. Used by: frame setup, body orchestration. */
   readonly item: FuncDeclNode;
