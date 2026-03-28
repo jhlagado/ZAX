@@ -6,6 +6,7 @@ import { defaultFormatWriters } from '../../src/formats/index.js';
 import type { BinArtifact } from '../../src/formats/types.js';
 import { parseProgram } from '../../src/frontend/parser.js';
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { expectDiagnostic, expectNoErrors } from '../helpers/diagnostics.js';
 
 const indexOfSubarray = (haystack: number[], needle: number[]): number => {
   if (needle.length === 0) return 0;
@@ -30,7 +31,7 @@ describe('PR922: parenthesized imm indirection and backslash separators', () => 
       { emitAsm80: true, emitBin: true, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expectNoErrors(res.diagnostics);
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
@@ -47,7 +48,7 @@ describe('PR922: parenthesized imm indirection and backslash separators', () => 
       { emitAsm80: false, emitBin: true, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expectNoErrors(res.diagnostics);
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
@@ -63,7 +64,9 @@ describe('PR922: parenthesized imm indirection and backslash separators', () => 
       ['export func main()', '  ld a, 1 \\', 'end', ''].join('\n'),
       diagnostics,
     );
-    expect(diagnostics.some((d) => d.message.includes('Trailing backslash must be followed'))).toBe(true);
+    expectDiagnostic(diagnostics, {
+      messageIncludes: 'Trailing backslash must be followed',
+    });
   });
 
   it('keeps physical line numbers for diagnostics after backslash separators', () => {
@@ -73,8 +76,7 @@ describe('PR922: parenthesized imm indirection and backslash separators', () => 
       ['export func main()', '  ld a, 1 \\ ld a, ?', 'end', ''].join('\n'),
       diagnostics,
     );
-    const bad = diagnostics.find((d) => d.message.includes('Unsupported operand'));
-    expect(bad?.line).toBe(2);
+    expectDiagnostic(diagnostics, { messageIncludes: 'Unsupported operand', line: 2 });
   });
 
   it('does not treat a tight backslash as a separator', () => {

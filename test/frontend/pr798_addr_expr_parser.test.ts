@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { parseProgram } from '../../src/frontend/parser.js';
+import { expectDiagnostic, expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 const parse = (text: string) => {
-  const diagnostics: Array<{ message: string }> = [];
-  const program = parseProgram('pr798_addr_expr.zax', text, diagnostics as any);
+  const diagnostics: Diagnostic[] = [];
+  const program = parseProgram('pr798_addr_expr.zax', text, diagnostics);
   return { program, diagnostics };
 };
 
@@ -21,7 +23,7 @@ export func main()
 end
 end
     `);
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
 
     const section = program.files[0]?.items.find((i: any) => i.kind === 'NamedSection');
     expect(section).toBeDefined();
@@ -36,8 +38,7 @@ export func main()
 end
 end
     `);
-    expect(diagnostics.length).toBeGreaterThan(0);
-    expect(diagnostics[0]?.message).toContain('":="');
+    expectDiagnostic(diagnostics, { messageIncludes: '":="' });
   });
 
   it('rejects nested or parenthesized @ forms', () => {
@@ -53,7 +54,7 @@ end
 end
     `);
     expect(diagnostics.length).toBeGreaterThan(0);
-    expect(diagnostics.some((d) => d.message.includes('address-of'))).toBe(true);
+    expectDiagnostic(diagnostics, { messageIncludes: 'address-of' });
   });
 
   it('rejects ld with @path', () => {
@@ -77,6 +78,6 @@ export func main()
 end
 end
     `);
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
   });
 });
