@@ -9,8 +9,12 @@ import {
 } from './functionBodySetup.js';
 import { createFunctionAsmRewritingHelpers } from './functionAsmRewriting.js';
 import { createFunctionCallLoweringHelpers } from './functionCallLowering.js';
+import type { FunctionFrameSetupContext } from './functionFrameSetup.js';
 import { initializeFunctionFrame } from './functionFrameSetup.js';
 import type { FunctionLoweringContext } from './functionLowering.js';
+
+/** #1123 — inputs to {@link initializeFunctionFrame} (alias of {@link FunctionFrameSetupContext}). */
+export type FrameContext = FunctionFrameSetupContext;
 
 export interface FunctionLoweringSetupPhase {
   readonly ctx: FunctionLoweringContext;
@@ -63,6 +67,16 @@ export interface FunctionFramePhase {
 }
 
 export type FunctionBodyPhase = Readonly<ReturnType<typeof createAsmBodyOrchestrationHelpers>>;
+
+/** #1123 — setup bundle plus frame phase result (before body lowering). */
+export type BodyContext = FunctionLoweringSetupPhase & {
+  readonly frame: FunctionFramePhase;
+};
+
+/** #1123 — frame + body orchestration product for finalization. */
+export type RewriteContext = BodyContext & {
+  readonly body: FunctionBodyPhase;
+};
 
 function buildFrameSetupContext(ctx: FunctionLoweringContext, currentCodeSegmentTagRef: { current: SourceSegmentTag | undefined }) {
   const {
@@ -201,9 +215,7 @@ export function prepareFunctionLoweringSetupPhase(ctx: FunctionLoweringContext):
   };
 }
 
-export function runFunctionFrameSetupPhase(
-  setup: ReturnType<typeof prepareFunctionLoweringSetupPhase>,
-): FunctionFramePhase {
+export function runFunctionFrameSetupPhase(setup: FunctionLoweringSetupPhase): FunctionFramePhase {
   const {
     ctx: {
       diagnostics,
@@ -346,10 +358,8 @@ export function runFunctionFrameSetupPhase(
   };
 }
 
-export function prepareFunctionBodyLoweringPhase(
-  setup: ReturnType<typeof prepareFunctionLoweringSetupPhase>,
-  frame: ReturnType<typeof runFunctionFrameSetupPhase>,
-) {
+export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBodyPhase {
+  const { frame, ...setup } = ctx;
   const {
     ctx: {
       item,
@@ -662,10 +672,9 @@ export function prepareFunctionBodyLoweringPhase(
   });
 }
 
-export function finalizeFunctionLoweringPhase(
-  setup: ReturnType<typeof prepareFunctionLoweringSetupPhase>,
-  body: ReturnType<typeof prepareFunctionBodyLoweringPhase>,
-): void {
+export function finalizeFunctionLoweringPhase(ctx: RewriteContext): void {
+  const { body, frame, ...setup } = ctx;
+  void frame;
   body.lowerAndFinalizeFunctionBody();
   setup.bindSpTracking(undefined);
   setup.setCurrentCodeSegmentTag(setup.getCurrentCodeSegmentTag());
