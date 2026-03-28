@@ -38,6 +38,8 @@ Raw register passing does not scale. It works for small programs where you can h
 
 ## The stack frame
 
+A stack frame is a region of the stack that belongs to one function call. It holds that function's parameters — placed there by the caller before the call — and any local variables the function needs while it runs. When the function returns, the frame is gone. The next call builds a new one.
+
 The solution is the same one that nearly every CPU architecture uses: dedicate a register as a **base pointer** into the stack, and place parameters and local variables at known offsets from that pointer.
 
 On the Z80, that register is IX. When a ZAX function with parameters or locals is called, the compiler emits a three-instruction prologue:
@@ -59,6 +61,8 @@ ret
 ```
 
 Six instructions of overhead — three in, three out — plus any register saves. A raw `call` and `ret` are two instructions with no frame at all. I want to be clear about this: the frame is not free. For a tight inner loop calling a tiny helper, the overhead may matter. For a function called a handful of times from a larger program, the cost is small relative to what the function actually does, and the gain in clarity is real.
+
+For the duration of a framed function, IX belongs to the frame. That means you cannot use IX for the displaced table access you learned in Chapter 6 — loading IX with a base address and reading via `(ix+d)` — without overwriting the frame pointer. Every parameter and local access after that point reads from the wrong address, and the bug is silent. If you need displaced access to a second data structure inside a function, use IY instead — the Z80's other index register, identical to IX in every capability and not used by ZAX's frame machinery. Alternatively, `push ix` before the indexed work and `pop ix` before any further frame access, but reach for IY first. The prologue's `push ix` now makes another kind of sense: the caller may have been using IX for their own indexed access, so the function saves it, takes IX for the frame, and restores it at exit.
 
 ---
 
