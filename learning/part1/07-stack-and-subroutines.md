@@ -157,11 +157,10 @@ describes exactly what happens.
 `pop hl` is the inverse: virtually `ld hl, (sp)` happens first — two bytes are
 read from SP into HL — then SP is incremented by two.
 
-The operand can be any of AF, BC, DE, HL, IX, or IY. Many people misunderstand
-how the stack works, so let me be clear about this: the stack does not know
+The operand can be any of AF, BC, DE, HL, IX, or IY. The stack does not know
 whose value it is holding. All register pairs are saved to the same area of
 memory — the bytes at and below SP. The stack is the same RAM where your
-program and variables reside. There is nothing "magical" about it.
+program and variables reside.
 
 A subroutine uses `push` / `pop` to preserve registers it needs to modify
 internally. The pattern:
@@ -385,10 +384,6 @@ balance: `call` pushed one word, `pop hl` consumed it. The stack is clean.
 This trick demonstrates the freedom assembly gives you: `call` and `ret` are
 not ceremonial pairs that must always appear together. They are stack
 operations, and you can use them however the stack discipline permits.
-
-`call` and `ret` are stack operations that happen to pair up in normal use.
-Nothing binds them mechanically — only the stack does. `call` pushed one word;
-`pop hl` consumed it. That is the whole contract.
 
 ---
 
