@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import { parseProgram } from '../../src/frontend/parser.js';
 import { expectDiagnostic, expectNoDiagnostics } from '../helpers/diagnostics.js';
 
@@ -38,7 +39,11 @@ export func main()
 end
 end
     `);
-    expectDiagnostic(diagnostics, { messageIncludes: '":="' });
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      messageIncludes: '":="',
+    });
   });
 
   it('rejects nested or parenthesized @ forms', () => {
@@ -54,7 +59,11 @@ end
 end
     `);
     expect(diagnostics.length).toBeGreaterThan(0);
-    expectDiagnostic(diagnostics, { messageIncludes: 'address-of' });
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      messageIncludes: 'address-of',
+    });
   });
 
   it('rejects ld with @path', () => {

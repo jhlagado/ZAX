@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import { expectDiagnostic } from './helpers/diagnostics.js';
 
@@ -15,6 +16,8 @@ describe('PR37 fixup negatives', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
       messageIncludes: 'Unresolved symbol "missing_label"',
     });
   });
@@ -24,9 +27,15 @@ describe('PR37 fixup negatives', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
       messageIncludes: 'Unresolved symbol "missing_label"',
     });
-    expectDiagnostic(res.diagnostics, { messageIncludes: 'rel8 jr fixup' });
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
+      messageIncludes: 'rel8 jr fixup',
+    });
   });
 
   it('diagnoses rel8 out-of-range fixups', async () => {
@@ -34,6 +43,8 @@ describe('PR37 fixup negatives', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
       messageIncludes: 'jr target out of range for rel8 branch',
     });
   });
@@ -43,6 +54,8 @@ describe('PR37 fixup negatives', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
       messageIncludes: 'jr nz target out of range for rel8 branch',
     });
   });
@@ -52,6 +65,8 @@ describe('PR37 fixup negatives', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
       messageIncludes: 'djnz target out of range for rel8 branch',
     });
   });

@@ -12,8 +12,10 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { compile } from '../../src/compile.js';
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
 import { compilePlacedProgram } from '../helpers/lowered_program.js';
+import { expectDiagnostic } from '../helpers/diagnostics.js';
 
 function writeTempEntry(source: string): { entry: string; cleanup: () => void } {
   const dir = mkdtempSync(join(tmpdir(), 'zax-boundary-'));
@@ -23,10 +25,6 @@ function writeTempEntry(source: string): { entry: string; cleanup: () => void } 
     entry,
     cleanup: () => rmSync(dir, { recursive: true, force: true }),
   };
-}
-
-function hasErrorMessage(diagnostics: { severity: string; message: string }[], substr: string): boolean {
-  return diagnostics.some((d) => d.severity === 'error' && d.message.includes(substr));
 }
 
 describe('lowering boundary conditions (#1134)', () => {
@@ -55,9 +53,12 @@ end
     const { entry, cleanup } = writeTempEntry(lines.join('\n'));
     try {
       const res = await compile(entry, {}, { formats: defaultFormatWriters });
-      expect(res.diagnostics.some((d) => d.message.includes('IX/IY displacement out of range'))).toBe(
-        true,
-      );
+      expectDiagnostic(res.diagnostics, {
+        id: DiagnosticIds.EmitError,
+        severity: 'error',
+        messageIncludes: 'IX/IY displacement out of range',
+        line: 69,
+      });
     } finally {
       cleanup();
     }
@@ -243,7 +244,12 @@ end
     );
     try {
       const res = await compile(entry, {}, { formats: defaultFormatWriters });
-      expect(hasErrorMessage(res.diagnostics, 'does not fit')).toBe(true);
+      expectDiagnostic(res.diagnostics, {
+        id: DiagnosticIds.EmitError,
+        severity: 'error',
+        messageIncludes: 'does not fit',
+        line: 3,
+      });
     } finally {
       cleanup();
     }
