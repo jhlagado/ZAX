@@ -48,6 +48,7 @@ describe('PR268: op diagnostics matrix', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expectDiagnostic(res.diagnostics, {
       id: row.id,
+      severity: 'error',
       messageIncludes: row.messageIncludes,
     });
   });
@@ -70,6 +71,7 @@ describe('PR268: op diagnostics matrix', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expectDiagnostic(res.diagnostics, {
       id: row.id,
+      severity: 'error',
       messageIncludes: row.messageIncludes,
     });
   });
@@ -92,6 +94,7 @@ describe('PR268: op diagnostics matrix', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expectDiagnostic(res.diagnostics, {
       id: row.id,
+      severity: 'error',
       messageIncludes: row.messageIncludes,
     });
   });
@@ -120,6 +123,7 @@ describe('PR268: op diagnostics matrix', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expectDiagnostic(res.diagnostics, {
       id: row.id,
+      severity: 'error',
       messageIncludes: row.messageIncludes,
     });
   });
@@ -154,6 +158,7 @@ describe('PR268: op diagnostics matrix', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expectDiagnostic(res.diagnostics, {
       id: row.id,
+      severity: 'error',
       messageIncludes: row.messageIncludes,
     });
   });
@@ -182,6 +187,7 @@ describe('PR268: op diagnostics matrix', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expectDiagnostic(res.diagnostics, {
       id: row.id,
+      severity: 'error',
       messageIncludes: row.messageIncludes,
     });
   });
@@ -205,6 +211,7 @@ describe('PR268: op diagnostics matrix', () => {
     expect(invalids).toHaveLength(2);
     expectDiagnostic(invalids, {
       id: DiagnosticIds.OpInvalidExpansion,
+      severity: 'error',
       messageIncludes: row.messageIncludes,
     });
   });
@@ -213,6 +220,6 @@ describe('PR268: op diagnostics matrix', () => {
     const entry = join(__dirname, 'fixtures', 'pr270_nonop_invalid_instruction_baseline.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expectNoDiagnostic(res.diagnostics, { id: DiagnosticIds.OpInvalidExpansion });
-    expectDiagnostic(res.diagnostics, { id: DiagnosticIds.EncodeError });
+    expectDiagnostic(res.diagnostics, { id: DiagnosticIds.EncodeError, severity: 'error' });
   });
 });
