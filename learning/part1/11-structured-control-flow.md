@@ -260,11 +260,6 @@ dispatch sequence may modify A and flags, so do not rely on A still holding
 the selector value inside a case body. When the selector is any other register,
 that register is preserved across dispatch.
 
-For a real-world example of `select` in a larger program, see
-`learning/part2/examples/unit7/rpn_calculator.zax`. That file (Volume 2 material)
-dispatches on token kind constants using `select A` with three `case` arms,
-one for each operator type. The structure of the dispatch is directly readable
-from the case labels.
 
 ---
 
