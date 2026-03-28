@@ -32,7 +32,7 @@ ld d, (ix-3)
 ex de, hl
 ```
 
-It saves HL into DE, loads the word into DE using byte-lane access, then swaps back. The result is HL = total, with DE preserved. You could write this sequence yourself — you now know exactly how — but with `:=` you do not have to.
+It saves HL into DE, loads the word into DE using byte-lane access, then swaps back. The result is HL = total, with DE preserved. The old value of HL is gone — if you need it after this point, push HL before the assignment. You could write this sequence yourself — you now know exactly how — but with `:=` you do not have to.
 
 ---
 
@@ -122,6 +122,8 @@ One line instead of three. Same effect.
 ---
 
 ## Raw Z80 instructions can still use typed names
+
+The `find_max` above uses all three layers at once. The IX frame — declared once in the function header — gives every parameter and local a stable name that survives the entire call. The `jr c` and `djnz` control the loop; `:=` handles the running maximum load and store. Each layer does one job; none of them duplicate the others.
 
 `:=` does not replace raw Z80 instructions — it complements them. In the typed version of `find_max`, `cp running_max` uses the typed name as an operand to a raw Z80 instruction. The compiler recognises the name and emits `cp (ix-N)`. This is not a `:=` assignment; it is a raw `cp` with a compiler-resolved operand.
 
