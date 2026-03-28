@@ -280,11 +280,17 @@ export type FunctionLoweringSharedContext = FunctionLoweringDiagnosticsContext &
   FunctionLoweringAstUtilityContext &
   FunctionLoweringRegisterContext;
 
+/**
+ * Entry context for lowering a whole function. Narrower phase views are
+ * {@link FrameContext}, {@link BodyContext}, and {@link RewriteContext} (#1123).
+ */
 export type FunctionLoweringContext = FunctionLoweringItemContext & FunctionLoweringSharedContext;
+
+export type { BodyContext, FrameContext, RewriteContext } from './functionLoweringPhases.js';
 
 export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const setup = prepareFunctionLoweringSetupPhase(ctx);
   const frame = runFunctionFrameSetupPhase(setup);
-  const body = prepareFunctionBodyLoweringPhase(setup, frame);
-  finalizeFunctionLoweringPhase(setup, body);
+  const body = prepareFunctionBodyLoweringPhase({ ...setup, frame });
+  finalizeFunctionLoweringPhase({ ...setup, frame, body });
 }
