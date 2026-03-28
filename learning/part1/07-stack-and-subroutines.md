@@ -212,7 +212,7 @@ about the stack.
 
 In a tight interrupt handler or innermost loop, saving BC, DE, and HL via
 `push` and `pop` costs six instructions — three pushes, three pops — and takes
-twelve stack bytes. `EXX` does the same job in a single instruction: it swaps
+six bytes of stack space. `EXX` does the same job in a single instruction: it swaps
 BC, DE, and HL with a second hidden set of registers (BC′, DE′, HL′)
 simultaneously. A second instruction, `EX AF, AF′`, swaps A and F with their
 shadow counterparts.
