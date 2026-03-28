@@ -5,6 +5,7 @@ import { parseTopLevelOpDecl } from '../../src/frontend/parseOp.js';
 import { parseOpParamsFromText } from '../../src/frontend/parseParams.js';
 import { parseProgram } from '../../src/frontend/parser.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
+import { expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 describe('PR476 op parser extraction', () => {
   it('keeps top-level op parsing intact', () => {
@@ -58,7 +59,7 @@ describe('PR476 op parser extraction', () => {
       },
     );
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(parsed?.nextIndex).toBe(4);
     expect(parsed?.node).toMatchObject({
       kind: 'OpDecl',
@@ -76,7 +77,7 @@ describe('PR476 op parser extraction', () => {
       diagnostics,
     );
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(program.files[0]?.items[0]).toMatchObject({
       kind: 'OpDecl',
       name: 'add',
