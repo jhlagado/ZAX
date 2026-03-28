@@ -4,7 +4,7 @@
 
 Every computer, at the lowest level, runs **machine code** — raw numeric instructions built into the CPU's hardware. High-level languages like C or Python hide the machine entirely; a compiler or interpreter handles the translation down to those numbers. Assembly does not hide the machine. Each line you write corresponds directly to one CPU instruction, and the assembler's job is mostly mechanical: turn your readable text into the exact bytes the CPU expects.
 
-Assembly requires you to think like the computer. You get full control — every register, every memory access, every branch is yours to specify. But you also carry the full burden: you must understand what the CPU can do, how it stores data, and how it steps through a program byte by byte. There is no safety net of type checking, garbage collection, or automatic memory management.
+You decide what goes in every register, what address every memory access targets, and which branch the program takes at every decision point. The CPU tracks none of this for you — it does not know whether the byte in A is a counter, a character, or a flag. What those bytes mean is information you hold in your head, expressed only in the labels and comments you write.
 
 ZAX is an assembler for the Z80 that adds some structure on top — named variables, typed storage, and control flow keywords like `if` and `while` — but the underlying model is the same. Every ZAX program compiles down to Z80 machine code, and understanding that machine code is what this book teaches.
 
