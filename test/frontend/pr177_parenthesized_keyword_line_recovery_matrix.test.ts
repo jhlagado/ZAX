@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { compile } from '../../src/compile.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
+import { expectNoDiagnostic } from '../helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,7 +16,6 @@ describe('PR177 parser: parenthesized keyword-shaped line recovery matrix', () =
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
-    const messages = res.diagnostics.map((d) => d.message);
     const expectedOrder = [
       'Invalid record field declaration line "op y(a: byte): byte": expected <name>: <type>',
       'Invalid record field name "const": collides with a top-level keyword.',
@@ -31,8 +31,12 @@ describe('PR177 parser: parenthesized keyword-shaped line recovery matrix', () =
       'Invalid var declaration name "extern": collides with a top-level keyword.',
     ];
 
-    const actualOrder = messages.filter((m) => expectedOrder.includes(m));
+    const actualOrder = res.diagnostics
+      .map(({ message }) => message)
+      .filter((message) => expectedOrder.includes(message));
     expect(actualOrder).toEqual(expectedOrder);
-    expect(messages.some((m) => m.startsWith('Unsupported top-level construct:'))).toBe(false);
+    expectNoDiagnostic(res.diagnostics, {
+      messageIncludes: 'Unsupported top-level construct:',
+    });
   });
 });

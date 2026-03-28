@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { compile } from '../../src/compile.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
+import { expectNoDiagnostic } from '../helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,8 +13,6 @@ describe('PR174 parser: mixed malformed + keyword-collision ordering', () => {
   it('keeps block diagnostics explicit and stable when malformed and keyword-collision lines are mixed', async () => {
     const entry = join(__dirname, '..', 'fixtures', 'pr174_mixed_malformed_keyword_ordering.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-
-    const messages = res.diagnostics.map((d) => d.message);
 
     const expectedOrder = [
       'Invalid record field declaration line "func x: byte": expected <name>: <type>',
@@ -28,8 +27,12 @@ describe('PR174 parser: mixed malformed + keyword-collision ordering', () => {
       'Invalid data declaration name "extern": collides with a top-level keyword.',
     ];
 
-    const actualOrder = messages.filter((m) => expectedOrder.includes(m));
+    const actualOrder = res.diagnostics
+      .map(({ message }) => message)
+      .filter((message) => expectedOrder.includes(message));
     expect(actualOrder).toEqual(expectedOrder);
-    expect(messages.some((m) => m.startsWith('Unsupported top-level construct:'))).toBe(false);
+    expectNoDiagnostic(res.diagnostics, {
+      messageIncludes: 'Unsupported top-level construct:',
+    });
   });
 });
