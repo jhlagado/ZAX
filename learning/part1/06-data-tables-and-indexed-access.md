@@ -2,9 +2,10 @@
 
 # Chapter 6 — Data Tables and Indexed Access
 
-This chapter shows how to lay out a byte or word table in memory and read
-entries from it — using HL as a sequential pointer and IX as a displaced-access
-pointer.
+Once your data lives in a table, you need two things: a way to process every
+entry in order, and a way to reach one specific entry directly. HL handles the
+first — load the base, read, advance, repeat. IX handles the second — load the
+base once and name any entry by its offset from there.
 
 ---
 
@@ -113,6 +114,9 @@ space, and it is your job to keep them organised.
 
 ## IX-based displaced access
 
+With HL you would increment between each read. With IX you load the base once
+and name each field by its offset.
+
 IX is a 16-bit index register. Its specific capability is the `(ix+d)`
 addressing mode: `d` is a signed byte offset, any value from -128 to +127, and
 `ld a, (ix+d)` reads the byte at address IX + d without touching IX itself.
@@ -128,9 +132,6 @@ ld b, (ix+1)         ; B = high byte field
 ld c, (ix+2)         ; C = low byte field
 ; IX is unchanged throughout — all three fields read from one base address
 ```
-
-With HL you would increment between each read. With IX you load the base once
-and name each field by its offset.
 
 The displacement `d` is a byte-sized signed offset. Offsets larger than 127 or
 smaller than -128 are not encodable and will cause an assembler error.
