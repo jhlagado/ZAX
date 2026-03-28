@@ -135,8 +135,7 @@ describe('PR762 grammar-data conformance', () => {
       );
       expect(diagnostics).toHaveLength(1);
       expectDiagnostic(diagnostics, {
-        messageIncludes:
-          `Legacy active-counter section directive "section ${sectionKind}" is removed`,
+        messageIncludes: `Legacy active-counter section directive "section ${sectionKind}" is removed`,
       });
     }
   });
