@@ -55,3 +55,11 @@ Example cluster:
 - Tests moved into subsystem folders should reference fixtures via:
   `join(__dirname, '..', 'fixtures', '<name>.zax')`
 - This keeps fixture access stable even as tests migrate into `test/backend`, `test/semantics`, etc.
+
+## Coverage map (`coverage-map.md`)
+
+- `coverage-map.md` is **generated** by `scripts/dev/fixture-coverage.js` (static test references plus
+  fixture `include` / `import` edges; assumptions match the banner in that file).
+- After changing fixtures or tests that affect the map, regenerate from the repo root:
+  `node scripts/dev/fixture-coverage.js > test/fixtures/coverage-map.md`
+- CI runs `npm run check:fixture-coverage` (fails if the committed map drifts from the generator).

@@ -15,6 +15,9 @@ import { basename, dirname, join, relative, resolve, sep } from 'node:path';
  * "Potentially unreferenced" means: not reachable from any test string reference to
  * test/fixtures/... via transitive include/import edges using the rules above — not a
  * safe deletion list when limits apply.
+ *
+ * CLI: `--check` compares generated Markdown to test/fixtures/coverage-map.md (exit 1 on drift).
+ * Regenerate: `node scripts/dev/fixture-coverage.js > test/fixtures/coverage-map.md`
  */
 
 const repoRoot = process.cwd();
@@ -420,7 +423,42 @@ function formatMarkdown(summary, fixtureMap) {
   return lines.join('\n');
 }
 
+/** Stable comparison: LF-only, single trailing newline (matches typical editor + CI checkout). */
+function normalizeGeneratedDoc(text) {
+  return `${text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trimEnd()}\n`;
+}
+
+const coverageMapRel = join('test', 'fixtures', 'coverage-map.md');
+const coverageMapAbs = join(repoRoot, coverageMapRel);
+
+function runCheck() {
+  const fixtureMap = buildFixtureMap();
+  const summary = summarizeMap(fixtureMap);
+  const generated = normalizeGeneratedDoc(formatMarkdown(summary, fixtureMap));
+
+  if (!existsSync(coverageMapAbs)) {
+    console.error(`fixture-coverage --check: missing ${coverageMapRel}`);
+    console.error(`Regenerate: node scripts/dev/fixture-coverage.js > ${coverageMapRel}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const onDisk = normalizeGeneratedDoc(readFileSync(coverageMapAbs, 'utf8'));
+  if (generated === onDisk) {
+    return;
+  }
+
+  console.error(`fixture-coverage --check: ${coverageMapRel} is out of date (differs from generator output).`);
+  console.error(`Regenerate from repo root: node scripts/dev/fixture-coverage.js > ${coverageMapRel}`);
+  process.exitCode = 1;
+}
+
 function main() {
+  if (process.argv.includes('--check')) {
+    runCheck();
+    return;
+  }
+
   const format = process.argv.includes('--format=json') ? 'json' : 'md';
   const fixtureMap = buildFixtureMap();
   const summary = summarizeMap(fixtureMap);
