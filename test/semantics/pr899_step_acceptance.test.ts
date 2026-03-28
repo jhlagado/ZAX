@@ -1,11 +1,11 @@
 import { describe, it } from 'vitest';
 
-import type { Diagnostic } from '../src/diagnosticTypes.js';
-import type { ProgramNode } from '../src/frontend/ast.js';
-import { parseModuleFile } from '../src/frontend/parser.js';
-import { validateStepAcceptance } from '../src/semantics/stepAcceptance.js';
-import { buildEnv } from '../src/semantics/env.js';
-import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import type { ProgramNode } from '../../src/frontend/ast.js';
+import { parseModuleFile } from '../../src/frontend/parser.js';
+import { validateStepAcceptance } from '../../src/semantics/stepAcceptance.js';
+import { buildEnv } from '../../src/semantics/env.js';
+import { expectDiagnostic, expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 function parseProgram(modulePath: string, source: string): { program: ProgramNode; diagnostics: Diagnostic[] } {
   const diagnostics: Diagnostic[] = [];

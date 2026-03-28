@@ -2,15 +2,15 @@ import { describe, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
+import { compile } from '../../src/compile.js';
+import { defaultFormatWriters } from '../../src/formats/index.js';
+import { expectDiagnostic, expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const compileFixture = async (name: string) => {
-  const entry = join(__dirname, 'fixtures', name);
+  const entry = join(__dirname, '..', 'fixtures', name);
   return compile(entry, {}, { formats: defaultFormatWriters });
 };
 
