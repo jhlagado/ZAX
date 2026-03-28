@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import type { BinArtifact, D8mArtifact } from '../src/formats/types.js';
+import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -16,7 +17,7 @@ describe('PR468 targeted integration coverage for previously skipped suites', ()
       {},
       { formats: defaultFormatWriters },
     );
-    expect(basic.diagnostics).toEqual([]);
+    expectNoDiagnostics(basic.diagnostics);
 
     const basicBin = basic.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     const basicD8m = basic.artifacts.find((a): a is D8mArtifact => a.kind === 'd8m');
@@ -34,7 +35,7 @@ describe('PR468 targeted integration coverage for previously skipped suites', ()
       {},
       { formats: defaultFormatWriters },
     );
-    expect(code.diagnostics).toEqual([]);
+    expectNoDiagnostics(code.diagnostics);
     const codeBin = code.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(codeBin).toBeDefined();
     expect(Array.from(codeBin!.bytes.slice(-3))).toEqual([0xaa, 0xbb, 0xcc]);
@@ -45,10 +46,9 @@ describe('PR468 targeted integration coverage for previously skipped suites', ()
       { formats: defaultFormatWriters },
     );
     expect(overlap.artifacts).toEqual([]);
-    expect(overlap.diagnostics.map((d) => d.message)).toEqual([
-      'Byte overlap at address 16.',
-      'Byte overlap at address 17.',
-    ]);
+    expect(overlap.diagnostics).toHaveLength(2);
+    expectDiagnostic(overlap.diagnostics, { message: 'Byte overlap at address 16.' });
+    expectDiagnostic(overlap.diagnostics, { message: 'Byte overlap at address 17.' });
   });
 
   it('locks current structured-control lowering shape without relying on pre-frame exact byte images', async () => {
@@ -57,7 +57,7 @@ describe('PR468 targeted integration coverage for previously skipped suites', ()
       {},
       { formats: defaultFormatWriters },
     );
-    expect(ifElse.diagnostics).toEqual([]);
+    expectNoDiagnostics(ifElse.diagnostics);
     const ifElseBin = ifElse.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(ifElseBin).toBeDefined();
     const ifElseBytes = Array.from(ifElseBin!.bytes);
@@ -72,7 +72,7 @@ describe('PR468 targeted integration coverage for previously skipped suites', ()
       {},
       { formats: defaultFormatWriters },
     );
-    expect(whileLoop.diagnostics).toEqual([]);
+    expectNoDiagnostics(whileLoop.diagnostics);
     const whileBin = whileLoop.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(whileBin).toBeDefined();
     const whileBytes = Array.from(whileBin!.bytes);

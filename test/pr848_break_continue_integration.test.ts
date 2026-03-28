@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import type { BinArtifact } from '../src/formats/types.js';
+import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,15 +16,16 @@ describe('#848 break/continue structured control', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
     expect(res.artifacts).toEqual([]);
-    expect(res.diagnostics.map((d) => d.message)).toEqual([
-      '"break" is only valid inside "while" or "repeat"',
-    ]);
+    expect(res.diagnostics).toHaveLength(1);
+    expectDiagnostic(res.diagnostics, {
+      message: '"break" is only valid inside "while" or "repeat"',
+    });
   });
 
   it('lowers while-loop break and continue through the innermost loop targets', async () => {
     const entry = join(__dirname, 'fixtures', 'pr848_while_break_continue.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics).toEqual([]);
+    expectNoDiagnostics(res.diagnostics);
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
@@ -37,7 +39,7 @@ describe('#848 break/continue structured control', () => {
   it('routes repeat-loop continue to the until-condition check', async () => {
     const entry = join(__dirname, 'fixtures', 'pr848_repeat_continue_check.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics).toEqual([]);
+    expectNoDiagnostics(res.diagnostics);
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
@@ -51,7 +53,7 @@ describe('#848 break/continue structured control', () => {
   it('keeps nested break targeting the innermost loop only', async () => {
     const entry = join(__dirname, 'fixtures', 'pr848_nested_loop_escape.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics).toEqual([]);
+    expectNoDiagnostics(res.diagnostics);
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
