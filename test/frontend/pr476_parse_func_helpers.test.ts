@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../../src/diagnosticTypes.js';
-import { parseTopLevelFuncDecl } from '../../src/frontend/parseFunc.js';
-import { parseParamsFromText } from '../../src/frontend/parseParams.js';
-import { parseProgram } from '../../src/frontend/parser.js';
-import { makeSourceFile, span } from '../../src/frontend/source.js';
+import type { Diagnostic } from '../../../src/diagnosticTypes.js';
+import { parseTopLevelFuncDecl } from '../../../src/frontend/parseFunc.js';
+import { parseParamsFromText } from '../../../src/frontend/parseParams.js';
+import { parseProgram } from '../../../src/frontend/parser.js';
+import { makeSourceFile, span } from '../../../src/frontend/source.js';
 
 describe('PR476 func parser extraction', () => {
   it('keeps top-level func parsing intact', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import type { Diagnostic } from '../../../src/diagnosticTypes.js';
 import {
   ASM_CONTROL_KEYWORD_LIST,
   ASM_CONTROL_KEYWORDS,
@@ -23,19 +23,19 @@ import {
   SCALAR_TYPES,
   TOP_LEVEL_KEYWORD_LIST,
   TOP_LEVEL_KEYWORDS,
-} from '../../src/frontend/grammarData.js';
+} from '../../../src/frontend/grammarData.js';
 import {
   appendParsedAsmStatement,
   parseAsmStatement,
   type AsmControlFrame,
-} from '../../src/frontend/parseAsmStatements.js';
+} from '../../../src/frontend/parseAsmStatements.js';
 import {
   malformedTopLevelHeaderExpectations,
   parseReturnRegsFromText,
-} from '../../src/frontend/parseModuleCommon.js';
-import { parseOpParamsFromText } from '../../src/frontend/parseParams.js';
-import { parseProgram } from '../../src/frontend/parser.js';
-import { makeSourceFile, span } from '../../src/frontend/source.js';
+} from '../../../src/frontend/parseModuleCommon.js';
+import { parseOpParamsFromText } from '../../../src/frontend/parseParams.js';
+import { parseProgram } from '../../../src/frontend/parser.js';
+import { makeSourceFile, span } from '../../../src/frontend/source.js';
 
 function sortedStrings(values: Iterable<string>): string[] {
   return [...values].sort();

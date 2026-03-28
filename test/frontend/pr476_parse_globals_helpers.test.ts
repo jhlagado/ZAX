@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../../src/diagnosticTypes.js';
-import { parseGlobalsBlock } from '../../src/frontend/parseGlobals.js';
-import { parseProgram } from '../../src/frontend/parser.js';
-import { makeSourceFile } from '../../src/frontend/source.js';
+import type { Diagnostic } from '../../../src/diagnosticTypes.js';
+import { parseGlobalsBlock } from '../../../src/frontend/parseGlobals.js';
+import { parseProgram } from '../../../src/frontend/parser.js';
+import { makeSourceFile } from '../../../src/frontend/source.js';
 
 describe('PR476 globals parser extraction', () => {
   it('keeps globals block parsing intact', () => {
