@@ -4,48 +4,100 @@ import { evalImmExpr, type CompileEnv } from '../semantics/env.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 
 export type EaResolution =
-  | { kind: 'abs'; baseLower: string; addend: number; typeExpr?: TypeExprNode }
-  | { kind: 'stack'; ixDisp: number; typeExpr?: TypeExprNode }
-  | { kind: 'indirect'; ixDisp: number; addend: number; typeExpr?: TypeExprNode };
+  | {
+      /** Resolved global/absolute label or numeric base. */
+      kind: 'abs';
+      /** Lowercased symbol name or stringified numeric base for fixups. */
+      baseLower: string;
+      /** Byte offset added to the base symbol. */
+      addend: number;
+      /** Optional inferred type at this address; omit when unknown. */
+      typeExpr?: TypeExprNode;
+    }
+  | {
+      /** IX/IY-relative stack or direct stack slot. */
+      kind: 'stack';
+      /** Displacement in bytes from the frame base register. */
+      ixDisp: number;
+      /** Optional slot/aggregate type when known. */
+      typeExpr?: TypeExprNode;
+    }
+  | {
+      /** Stack slot holds an address; access is indirect with offset. */
+      kind: 'indirect';
+      /** Frame displacement of the pointer slot. */
+      ixDisp: number;
+      /** Byte offset applied after loading the pointer. */
+      addend: number;
+      /** Optional pointee type when known. */
+      typeExpr?: TypeExprNode;
+    };
 
 /** Maps, env, and type hooks used by {@link createEaResolutionHelpers} — not the full function-lowering context. */
 export type EAResolutionContext = {
+  /** Compile-time const/enum/type environment for imm evaluation. */
   env: CompileEnv;
+  /** Mutable diagnostic list for resolution errors. */
   diagnostics: Diagnostic[];
+  /** Appends a span-attached diagnostic. */
   diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
+  /** Lowercased stack slot name → IX/IY displacement (bytes). */
   stackSlotOffsets: Map<string, number>;
+  /** Lowercased stack slot name → declared slot type, when known. */
   stackSlotTypes: Map<string, TypeExprNode>;
+  /** Lowercased symbol → global/storage type expression. */
   storageTypes: Map<string, TypeExprNode>;
+  /** Cross-module alias name → target EA expression. */
   moduleAliasTargets: Map<string, EaExprNode>;
+  /** Current function’s local alias map (fresh each function). */
   getLocalAliasTargets: () => Map<string, EaExprNode>;
+  /** Evaluates immediates with diagnostics; `undefined` if ill-typed or non-const. */
   evalImmExpr: (expr: import('../frontend/ast.js').ImmExprNode) => number | undefined;
+  /** Evaluates immediates without recording diagnostics (best-effort). */
   evalImmNoDiag: (expr: import('../frontend/ast.js').ImmExprNode) => number | undefined;
+  /** Classifies scalar kinds for layout; `undefined` if not a scalar shape. */
   resolveScalarKind: (typeExpr: TypeExprNode) => 'byte' | 'word' | 'addr' | undefined;
+  /** Unwraps record/union for field walk; `undefined` if not aggregate. */
   resolveAggregateType: (
     te: TypeExprNode,
   ) => { kind: 'record' | 'union'; fields: import('../frontend/ast.js').RecordFieldNode[] } | undefined;
+  /** Infers a type for an EA subexpression when possible; `undefined` if unknown. */
   resolveEaTypeExpr: (ea: EaExprNode) => TypeExprNode | undefined;
+  /** Storage size in bytes; `undefined` if layout cannot be computed. */
   sizeOfTypeExpr: (te: TypeExprNode) => number | undefined;
 };
 
 /** Workspace fields that feed EA resolution (emit phase 1 `EmitPhase1Workspace` slice). */
 export type EaResolutionWorkspaceSlice = {
+  /** See {@link EAResolutionContext.stackSlotOffsets}. */
   stackSlotOffsets: Map<string, number>;
+  /** See {@link EAResolutionContext.stackSlotTypes}. */
   stackSlotTypes: Map<string, TypeExprNode>;
+  /** See {@link EAResolutionContext.storageTypes}. */
   storageTypes: Map<string, TypeExprNode>;
+  /** See {@link EAResolutionContext.moduleAliasTargets}. */
   moduleAliasTargets: Map<string, EaExprNode>;
+  /** Snapshot of local aliases (not a getter); paired with `getLocalAliasTargets` in builders. */
   localAliasTargets: Map<string, EaExprNode>;
 };
 
 /** Builds {@link EAResolutionContext} from emit-phase env/workspace plus type-resolution hooks. */
 export function buildEaResolutionContext(params: {
+  /** See {@link EAResolutionContext.env}. */
   env: CompileEnv;
+  /** See {@link EAResolutionContext.diagnostics}. */
   diagnostics: Diagnostic[];
+  /** See {@link EAResolutionContext.diagAt}. */
   diagAt: EAResolutionContext['diagAt'];
+  /** Workspace maps aliasing the fields on {@link EAResolutionContext}. */
   workspace: EaResolutionWorkspaceSlice;
+  /** See {@link EAResolutionContext.resolveScalarKind}. */
   resolveScalarKind: EAResolutionContext['resolveScalarKind'];
+  /** See {@link EAResolutionContext.resolveAggregateType}. */
   resolveAggregateType: EAResolutionContext['resolveAggregateType'];
+  /** See {@link EAResolutionContext.resolveEaTypeExpr}. */
   resolveEaTypeExpr: EAResolutionContext['resolveEaTypeExpr'];
+  /** See {@link EAResolutionContext.evalImmNoDiag}. */
   evalImmNoDiag: EAResolutionContext['evalImmNoDiag'];
 }): EAResolutionContext {
   const { env, diagnostics, diagAt, workspace } = params;

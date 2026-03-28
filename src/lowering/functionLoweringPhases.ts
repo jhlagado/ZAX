@@ -17,52 +17,96 @@ import type { FunctionLoweringContext } from './functionLowering.js';
 export type FrameContext = FunctionFrameSetupContext;
 
 export interface FunctionLoweringSetupPhase {
+  /** Full function-lowering context. */
   readonly ctx: FunctionLoweringContext;
+  /** Function being lowered. */
   readonly item: FunctionLoweringContext['item'];
+  /** Shared diagnostic list. */
   readonly diagnostics: FunctionLoweringContext['diagnostics'];
+  /** Pending forward symbols. */
   readonly pending: FunctionLoweringContext['pending'];
+  /** Trace hook for comments. */
   readonly traceComment: FunctionLoweringContext['traceComment'];
+  /** Trace hook for labels. */
   readonly traceLabel: FunctionLoweringContext['traceLabel'];
+  /** Registers SP tracking callbacks for asm emission. */
   readonly bindSpTracking: FunctionLoweringContext['bindSpTracking'];
+  /** Current emitted code offset. */
   readonly getCodeOffset: FunctionLoweringContext['getCodeOffset'];
+  /** General instruction emitter. */
   readonly emitInstr: FunctionLoweringContext['emitInstr'];
+  /** Active source segment tag for listing, if any. */
   readonly getCurrentCodeSegmentTag: () => SourceSegmentTag | undefined;
+  /** Sets active source segment tag; `undefined` clears. */
   readonly setCurrentCodeSegmentTag: (tag: SourceSegmentTag | undefined) => void;
+  /** Narrow context passed into frame setup. */
   readonly frameSetupContext: ReturnType<typeof buildFrameSetupContext>;
+  /** Resolves a local alias name to its canonical target; `undefined` if not aliased. */
   readonly resolveLocalAliasTargetName: (name: string) => string | undefined;
+  /** Evaluates imms in asm with diagnostics; `undefined` if not const. */
   readonly evalImmExprForAsm: (expr: FunctionLoweringContext['item']['asm']['items'][number]['span'] extends never ? never : import('../frontend/ast.js').ImmExprNode) => number | undefined;
+  /** Symbolic branch target from imm; `undefined` if not a simple symbol+addend. */
   readonly symbolicTargetFromExprForAsm: (expr: import('../frontend/ast.js').ImmExprNode) => { baseLower: string; addend: number } | undefined;
+  /** Instruction emitter bound for asm lowering (same as `emitInstr`). */
   readonly emitInstrForAsm: FunctionLoweringContext['emitInstr'];
 }
 
 export interface FunctionFramePhase {
+  /** True when the frame allocates stack slots. */
   readonly hasStackSlots: boolean;
+  /** Whether a synthetic epilogue must be emitted at exits. */
   readonly emitSyntheticEpilogue: boolean;
+  /** Label name for the shared epilogue target. */
   readonly epilogueLabel: string;
+  /** Callee-saved registers that must be preserved across the body. */
   readonly preserveSet: ReadonlyArray<string>;
+  /** SP tracking summary: `invalid` when analysis cannot trust SP. */
   readonly trackedSp: { valid: boolean; delta: number; invalid: boolean };
+  /** Nested op-expansion frames for structured control. */
   readonly opExpansionStack: OpExpansionFrame[];
+  /** Reads current structured-control flow state. */
   readonly getFlow: () => FlowState;
+  /** Replaces flow state (e.g. after branches). */
   readonly setFlow: (state: FlowState) => void;
+  /** Mutable ref to the active flow state. */
   readonly flowRef: { readonly current: FlowState };
+  /** Pulls frame-local flags from `flowRef` into lowering scratch state. */
   readonly syncFromFlow: () => void;
+  /** Pushes lowering scratch state back into `flowRef`. */
   readonly syncToFlow: () => void;
+  /** Captures flow for nested regions. */
   readonly snapshotFlow: () => FlowState;
+  /** Restores a prior snapshot. */
   readonly restoreFlow: (state: FlowState) => void;
+  /** Emits diagnostic for invalid op expansion in structured control. */
   readonly appendInvalidOpExpansionDiagnostic: ReturnType<typeof createFunctionBodySetupHelpers>['appendInvalidOpExpansionDiagnostic'];
+  /** Maps a source span to a segment tag for tracing. */
   readonly sourceTagForSpan: ReturnType<typeof createFunctionBodySetupHelpers>['sourceTagForSpan'];
+  /** Runs a callback with a bound code-source tag. */
   readonly withCodeSourceTag: ReturnType<typeof createFunctionBodySetupHelpers>['withCodeSourceTag'];
+  /** Allocates a fresh compiler-generated label name. */
   readonly newHiddenLabel: ReturnType<typeof createFunctionBodySetupHelpers>['newHiddenLabel'];
+  /** Defines a code label at the current offset. */
   readonly defineCodeLabel: ReturnType<typeof createFunctionBodySetupHelpers>['defineCodeLabel'];
+  /** Unconditional jump emitter. */
   readonly emitJumpTo: ReturnType<typeof createFunctionBodySetupHelpers>['emitJumpTo'];
+  /** Conditional jump emitter. */
   readonly emitJumpCondTo: ReturnType<typeof createFunctionBodySetupHelpers>['emitJumpCondTo'];
+  /** False-edge jump for structured `if`. */
   readonly emitJumpIfFalse: ReturnType<typeof createFunctionBodySetupHelpers>['emitJumpIfFalse'];
+  /** Virtual 16-bit register move (lowering helper). */
   readonly emitVirtualReg16Transfer: ReturnType<typeof createFunctionBodySetupHelpers>['emitVirtualReg16Transfer'];
+  /** Merges control-flow at join points. */
   readonly joinFlows: ReturnType<typeof createFunctionBodySetupHelpers>['joinFlows'];
+  /** `select` compare to imm16. */
   readonly emitSelectCompareToImm16: ReturnType<typeof createFunctionBodySetupHelpers>['emitSelectCompareToImm16'];
+  /** `select` compare reg8 to imm8. */
   readonly emitSelectCompareReg8ToImm8: ReturnType<typeof createFunctionBodySetupHelpers>['emitSelectCompareReg8ToImm8'];
+  /** `select` compare reg8 range. */
   readonly emitSelectCompareReg8Range: ReturnType<typeof createFunctionBodySetupHelpers>['emitSelectCompareReg8Range'];
+  /** `select` compare imm16 range. */
   readonly emitSelectCompareImm16Range: ReturnType<typeof createFunctionBodySetupHelpers>['emitSelectCompareImm16Range'];
+  /** Loads `select` discriminator into HL. */
   readonly loadSelectorIntoHL: ReturnType<typeof createFunctionBodySetupHelpers>['loadSelectorIntoHL'];
 }
 
@@ -70,11 +114,13 @@ export type FunctionBodyPhase = Readonly<ReturnType<typeof createAsmBodyOrchestr
 
 /** #1123 — setup bundle plus frame phase result (before body lowering). */
 export type BodyContext = FunctionLoweringSetupPhase & {
+  /** Frame layout, flow state, and synthetic prologue/epilogue helpers after frame setup. */
   readonly frame: FunctionFramePhase;
 };
 
 /** #1123 — frame + body orchestration product for finalization. */
 export type RewriteContext = BodyContext & {
+  /** Asm body orchestration helpers (structured control, instruction lowering). */
   readonly body: FunctionBodyPhase;
 };
 

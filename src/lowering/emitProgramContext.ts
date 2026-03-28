@@ -131,17 +131,29 @@ export type EmitRegistersBundle = Pick<EmitFunctionLoweringContextInputs, 'reg8'
 
 /** Named bundles passed from `emitProgram` into lowering context construction. */
 export type EmitProgramContextBundles = {
+  /** Diagnostic helpers and mutable sink refs. */
   readonly diagnostics: Readonly<EmitDiagnosticsBundle>;
+  /** Symbol tables, pending, trace hooks. */
   readonly symbolsAndTrace: Readonly<EmitSymbolsAndTraceBundle>;
+  /** SP tracking binder for asm emission. */
   readonly spTracking: Readonly<EmitSpTrackingBundle>;
+  /** Code emission and fixup hooks. */
   readonly emission: Readonly<EmitEmissionBundle>;
+  /** Branch/condition opcode helpers. */
   readonly conditions: Readonly<EmitConditionsBundle>;
+  /** Type and imm evaluation hooks. */
   readonly types: Readonly<EmitTypesBundle>;
+  /** EA / step pipeline materialization. */
   readonly materialization: Readonly<EmitMaterializationBundle>;
+  /** Stack slots, storage maps, alias targets. */
   readonly storage: Readonly<EmitStorageBundle>;
+  /** Callable and op resolution. */
   readonly callableResolution: Readonly<EmitCallableResolutionBundle>;
+  /** Op overload selection and stack summaries. */
   readonly opOverload: Readonly<EmitOpOverloadBundle>;
+  /** AST clone / operand normalization utilities. */
   readonly astUtilities: Readonly<EmitAstUtilitiesBundle>;
+  /** Virtual register sets for lowering. */
   readonly registers: Readonly<EmitRegistersBundle>;
   /** Program-level fields (visibility, sections, placement hooks, …). */
   readonly program: Readonly<EmitProgramLoweringContextInputs>;
