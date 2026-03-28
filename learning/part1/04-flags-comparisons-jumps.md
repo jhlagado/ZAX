@@ -304,7 +304,9 @@ flips the sign, leaving A with the absolute value.
 This pattern works because signed and unsigned representations share the same
 bits — the only difference is how you interpret bit 7. Comparing against `$80`
 is the dividing line between the two halves: 0–127 (non-negative) and 128–255
-(negative when read as signed).
+(negative when read as signed). If A holds an unsigned value, this test gives
+the wrong answer — 128 through 255 are valid positive results in unsigned
+arithmetic, and `cp $80` will treat them all as negative.
 
 `neg` applied to −128 gives −128 — the mathematical result (+128) does not fit
 in a signed byte, so the bit pattern (`$80`) is unchanged.
