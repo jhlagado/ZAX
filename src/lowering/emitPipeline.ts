@@ -32,9 +32,25 @@ import {
   preScanProgramDeclarations,
   type Context as ProgramLoweringContext,
   type LoweringResult,
+  type ProgramPrescanContext,
 } from './programLowering.js';
 
-export type { LoweringResult, PrescanResult };
+export type EmitPrescanPhaseContext = ProgramPrescanContext;
+export type EmitPrescanPhaseResult = PrescanResult;
+export type EmitLoweringPhaseContext = ProgramLoweringContext;
+
+export interface EmitLoweringPhaseResult {
+  readonly codeOffset: LoweringResult['codeOffset'];
+  readonly dataOffset: LoweringResult['dataOffset'];
+  readonly varOffset: LoweringResult['varOffset'];
+  readonly pending: LoweringResult['pending'];
+  readonly symbols: LoweringResult['symbols'];
+  readonly absoluteSymbols: LoweringResult['absoluteSymbols'];
+  readonly deferredExterns: LoweringResult['deferredExterns'];
+  readonly codeBytes: LoweringResult['codeBytes'];
+  readonly dataBytes: LoweringResult['dataBytes'];
+  readonly hexBytes: LoweringResult['hexBytes'];
+}
 
 /** Options for `emitProgram` (include paths, policy flags, listing sources). */
 export type EmitProgramOptions = {
@@ -55,8 +71,30 @@ export type EmitProgramResult = {
   placedLoweredAsmProgram: LoweredAsmProgram;
 };
 
-/** Environment for finalization that is *not* part of {@link LoweringResult}. */
-export type EmitFinalizationPhaseEnv = Omit<EmitFinalizationContext, keyof LoweringResult>;
+/** Finalization inputs that come from phase-1 wiring rather than phase-3 lowering. */
+export interface EmitFinalizationPhaseEnv {
+  readonly namedSectionSinks: EmitFinalizationContext['namedSectionSinks'];
+  readonly diagnostics: EmitFinalizationContext['diagnostics'];
+  readonly diag: EmitFinalizationContext['diag'];
+  readonly diagAt: EmitFinalizationContext['diagAt'];
+  readonly primaryFile: EmitFinalizationContext['primaryFile'];
+  readonly baseExprs: EmitFinalizationContext['baseExprs'];
+  readonly evalImmExpr: EmitFinalizationContext['evalImmExpr'];
+  readonly env: EmitFinalizationContext['env'];
+  readonly loweredAsmStream: EmitFinalizationContext['loweredAsmStream'];
+  readonly fixups: EmitFinalizationContext['fixups'];
+  readonly rel8Fixups: EmitFinalizationContext['rel8Fixups'];
+  readonly bytes: EmitFinalizationContext['bytes'];
+  readonly codeSourceSegments: EmitFinalizationContext['codeSourceSegments'];
+  readonly alignTo: EmitFinalizationContext['alignTo'];
+  readonly writeSection: EmitFinalizationContext['writeSection'];
+  readonly computeWrittenRange: EmitFinalizationContext['computeWrittenRange'];
+  readonly rebaseCodeSourceSegments: EmitFinalizationContext['rebaseCodeSourceSegments'];
+  readonly defaultCodeBase?: number;
+}
+
+export type EmitPlacementPhaseContext = EmitLoweringPhaseResult & EmitFinalizationPhaseEnv;
+export type EmitPlacementPhaseResult = Omit<EmitProgramResult, 'loweredAsmStream'>;
 
 // --- Phase handoff: merge lowering output with finalization inputs ---
 /**
@@ -64,9 +102,9 @@ export type EmitFinalizationPhaseEnv = Omit<EmitFinalizationContext, keyof Lower
  * the lowering phase; `env` holds shared refs (maps, diagnostics, helpers) held across phases.
  */
 export function mergeEmitFinalizationContext(
-  lowered: LoweringResult,
+  lowered: EmitLoweringPhaseResult,
   env: EmitFinalizationPhaseEnv,
-): EmitFinalizationContext {
+): EmitPlacementPhaseContext {
   return { ...lowered, ...env };
 }
 
@@ -82,23 +120,23 @@ export function emitProgramEmptyResult(): EmitProgramResult {
 
 // --- Phase 2: prescan (callables, ops, storage aliases) ---
 /** Phase 2 — prescan: build visibility maps and alias metadata before emission. */
-export function runEmitPrescanPhase(ctx: ProgramLoweringContext): PrescanResult {
+export function runEmitPrescanPhase(ctx: EmitPrescanPhaseContext): EmitPrescanPhaseResult {
   return preScanProgramDeclarations(ctx);
 }
 
 // --- Phase 3: lowering (emit bytes, fixups, lowered ASM stream) ---
 /** Phase 3 — lowering: emit declarations and functions into section bytes and fixup queues. */
 export function runEmitLoweringPhase(
-  ctx: ProgramLoweringContext,
-  prescan: PrescanResult,
-): LoweringResult {
+  ctx: EmitLoweringPhaseContext,
+  prescan: EmitPrescanPhaseResult,
+): EmitLoweringPhaseResult {
   return lowerProgramDeclarations(ctx, prescan);
 }
 
 // --- Phase 4: finalization (placement, fixups, artifact assembly) ---
 /** Phase 4 — placement, fixups, merged map and placed lowered ASM. */
 export function runEmitPlacementAndArtifactPhase(
-  context: EmitFinalizationContext,
-): Omit<EmitProgramResult, 'loweredAsmStream'> {
+  context: EmitPlacementPhaseContext,
+): EmitPlacementPhaseResult {
   return finalizeEmitProgram(context);
 }
