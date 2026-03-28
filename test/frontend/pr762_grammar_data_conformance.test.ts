@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { expectDiagnostic, expectNoDiagnostic, expectNoDiagnostics } from '../helpers/diagnostics.js';
 import {
   ASM_CONTROL_KEYWORD_LIST,
   ASM_CONTROL_KEYWORDS,
@@ -103,13 +104,10 @@ describe('PR762 grammar-data conformance', () => {
     for (const [keyword, source] of Object.entries(samples)) {
       const diagnostics: Diagnostic[] = [];
       parseProgram(`pr762_${keyword}.zax`, source, diagnostics);
-      expect(
-        diagnostics.some(
-          (diagnostic) =>
-            diagnostic.message.startsWith('Unsupported top-level construct:') ||
-            diagnostic.message.startsWith('Unsupported section-contained construct:'),
-        ),
-      ).toBe(false);
+      expectNoDiagnostic(diagnostics, { messageIncludes: 'Unsupported top-level construct:' });
+      expectNoDiagnostic(diagnostics, {
+        messageIncludes: 'Unsupported section-contained construct:',
+      });
     }
   });
 
@@ -124,7 +122,7 @@ describe('PR762 grammar-data conformance', () => {
         diagnostics,
       );
 
-      expect(diagnostics).toEqual([]);
+      expectNoDiagnostics(diagnostics);
     }
 
     for (const sectionKind of LEGACY_SECTION_DIRECTIVE_KIND_LIST) {
@@ -136,9 +134,10 @@ describe('PR762 grammar-data conformance', () => {
         diagnostics,
       );
       expect(diagnostics).toHaveLength(1);
-      expect(diagnostics[0]?.message).toContain(
-        `Legacy active-counter section directive "section ${sectionKind}" is removed`,
-      );
+      expectDiagnostic(diagnostics, {
+        messageIncludes:
+          `Legacy active-counter section directive "section ${sectionKind}" is removed`,
+      });
     }
   });
   it('routes every asm control keyword from the grammar baseline through the structured-control parser', () => {
@@ -190,7 +189,7 @@ describe('PR762 grammar-data conformance', () => {
       const out: Array<{ kind: string }> = [];
       appendParsedAsmStatement(out as any[], parsed);
 
-      expect(diagnostics).toEqual([]);
+      expectNoDiagnostics(diagnostics);
       expect(parsed).toBeDefined();
       expect(out.length > 0 || (parsed && !Array.isArray(parsed))).toBe(true);
 
