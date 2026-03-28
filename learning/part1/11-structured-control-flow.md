@@ -427,6 +427,16 @@ jump. In the structured version, each is expressed by the keyword that carries i
 
 ---
 
+## When to use `if`/`while`/`select` vs raw labels
+
+Use structured control flow when the branch or loop has a single entry and a single exit. `if`/`else`/`end` and `while`/`end` each map to exactly that shape — one way in, one way out. The compiler manages the labels; you name only the condition.
+
+Use raw labels and jumps when the control flow does not fit that shape: multiple exit points mid-loop, a branch that jumps into the middle of another block, or an interrupt handler that must jump to a specific address. Some Z80 programs genuinely need them. `jr`, `jp`, and `djnz` are always available alongside the structured keywords.
+
+Both are always available. Use whichever matches the shape of the logic.
+
+---
+
 ## Summary
 
 - `if <cc> ... end` tests the current flags at `if`. If the condition is true,
