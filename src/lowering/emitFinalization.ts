@@ -8,7 +8,7 @@ import type { SourceSpan } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import {
   finalizeProgramEmission,
-  type FinalizationContext,
+  type ProgramEmissionFinalizeContext,
 } from './programLowering.js';
 import { computeSectionBases } from './programLoweringFinalize.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
@@ -38,28 +38,28 @@ export type EmitFinalizationContext = {
   diag: (diagnostics: Diagnostic[], file: string, message: string) => void;
   diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
   primaryFile: string;
-  baseExprs: FinalizationContext['baseExprs'];
-  evalImmExpr: FinalizationContext['evalImmExpr'];
+  baseExprs: ProgramEmissionFinalizeContext['baseExprs'];
+  evalImmExpr: ProgramEmissionFinalizeContext['evalImmExpr'];
   env: CompileEnv;
   loweredAsmStream: LoweredAsmStream;
   codeOffset: number;
   dataOffset: number;
   varOffset: number;
-  pending: FinalizationContext['pending'];
+  pending: ProgramEmissionFinalizeContext['pending'];
   symbols: SymbolEntry[];
-  absoluteSymbols: FinalizationContext['absoluteSymbols'];
-  deferredExterns: FinalizationContext['deferredExterns'];
-  fixups: FinalizationContext['fixups'];
-  rel8Fixups: FinalizationContext['rel8Fixups'];
-  codeBytes: FinalizationContext['codeBytes'];
-  dataBytes: FinalizationContext['dataBytes'];
-  hexBytes: FinalizationContext['hexBytes'];
+  absoluteSymbols: ProgramEmissionFinalizeContext['absoluteSymbols'];
+  deferredExterns: ProgramEmissionFinalizeContext['deferredExterns'];
+  fixups: ProgramEmissionFinalizeContext['fixups'];
+  rel8Fixups: ProgramEmissionFinalizeContext['rel8Fixups'];
+  codeBytes: ProgramEmissionFinalizeContext['codeBytes'];
+  dataBytes: ProgramEmissionFinalizeContext['dataBytes'];
+  hexBytes: ProgramEmissionFinalizeContext['hexBytes'];
   bytes: Map<number, number>;
   codeSourceSegments: EmittedSourceSegment[];
-  alignTo: FinalizationContext['alignTo'];
-  writeSection: FinalizationContext['writeSection'];
-  computeWrittenRange: FinalizationContext['computeWrittenRange'];
-  rebaseCodeSourceSegments: FinalizationContext['rebaseCodeSourceSegments'];
+  alignTo: ProgramEmissionFinalizeContext['alignTo'];
+  writeSection: ProgramEmissionFinalizeContext['writeSection'];
+  computeWrittenRange: ProgramEmissionFinalizeContext['computeWrittenRange'];
+  rebaseCodeSourceSegments: ProgramEmissionFinalizeContext['rebaseCodeSourceSegments'];
   defaultCodeBase?: number;
 };
 
