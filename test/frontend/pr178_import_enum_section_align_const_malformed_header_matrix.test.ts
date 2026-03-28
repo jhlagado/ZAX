@@ -11,9 +11,7 @@ const __dirname = dirname(__filename);
 
 describe('PR178 parser: malformed import/enum/section/align/const headers', () => {
   it('emits explicit expected-shape diagnostics for malformed declaration headers', async () => {
-    const entry = join(
-      __dirname,
-      'fixtures',
+    const entry = join(__dirname, '..', 'fixtures',
       'pr178_import_enum_section_align_const_malformed_header_matrix.zax',
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });

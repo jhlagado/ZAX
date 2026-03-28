@@ -10,9 +10,7 @@ const __dirname = dirname(__filename);
 
 describe('PR216 parser: remaining declaration/control recovery matrix', () => {
   it('emits deterministic diagnostics for uncovered declaration/control malformed forms', async () => {
-    const entry = join(
-      __dirname,
-      'fixtures',
+    const entry = join(__dirname, '..', 'fixtures',
       'pr216_parser_remaining_decl_control_recovery_matrix.zax',
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });

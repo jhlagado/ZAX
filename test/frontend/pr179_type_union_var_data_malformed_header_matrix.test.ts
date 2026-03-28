@@ -11,9 +11,7 @@ const __dirname = dirname(__filename);
 
 describe('PR179 parser: malformed type/union/var/data headers', () => {
   it('emits explicit expected-shape diagnostics for malformed type/union/var/data declarations', async () => {
-    const entry = join(
-      __dirname,
-      'fixtures',
+    const entry = join(__dirname, '..', 'fixtures',
       'pr179_type_union_var_data_malformed_header_matrix.zax',
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });

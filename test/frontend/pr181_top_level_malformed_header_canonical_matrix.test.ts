@@ -11,9 +11,7 @@ const __dirname = dirname(__filename);
 
 describe('PR181 parser: canonical top-level malformed-header matrix', () => {
   it('emits canonical expected-shape diagnostics for malformed known top-level headers', async () => {
-    const entry = join(
-      __dirname,
-      'fixtures',
+    const entry = join(__dirname, '..', 'fixtures',
       'pr181_top_level_malformed_header_canonical_matrix.zax',
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });

@@ -10,9 +10,7 @@ const __dirname = dirname(__filename);
 
 describe('PR227 parser top-level malformed header span matrix', () => {
   it('pins line/column and ordering for the top-level malformed keyword matrix', async () => {
-    const entry = join(
-      __dirname,
-      'fixtures',
+    const entry = join(__dirname, '..', 'fixtures',
       'pr154_parser_top_level_malformed_keyword_matrix.zax',
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
@@ -101,9 +99,7 @@ describe('PR227 parser top-level malformed header span matrix', () => {
   });
 
   it('pins line/column for canonical malformed header diagnostics including extern base-name errors', async () => {
-    const entry = join(
-      __dirname,
-      'fixtures',
+    const entry = join(__dirname, '..', 'fixtures',
       'pr181_top_level_malformed_header_canonical_matrix.zax',
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });

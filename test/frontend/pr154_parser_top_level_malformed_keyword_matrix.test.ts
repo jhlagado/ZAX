@@ -11,9 +11,7 @@ const __dirname = dirname(__filename);
 
 describe('PR154 parser: top-level malformed keyword matrix', () => {
   it('emits declaration-specific diagnostics instead of unsupported top-level fallback', async () => {
-    const entry = join(
-      __dirname,
-      'fixtures',
+    const entry = join(__dirname, '..', 'fixtures',
       'pr154_parser_top_level_malformed_keyword_matrix.zax',
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
