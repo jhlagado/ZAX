@@ -118,6 +118,8 @@ modified by the time the function returns.
 
 ## `count_above`: the cost of manual register discipline
 
+`count_above` works, but it contains a push/pop pair that does no useful work — the explanation is below the code.
+
 ```zax
 func count_above(): AF
   push bc
