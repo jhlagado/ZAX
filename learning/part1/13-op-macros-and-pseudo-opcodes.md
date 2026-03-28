@@ -112,14 +112,9 @@ You have completed Volume 1.
 
 By this point you can:
 
-- explain bytes, words, addresses, the Z80 registers, and the hardware stack
-- write raw Z80 instructions: `ld`, `add`, `sub`, `cp`, `and`, `or`, `jp`, `jr`, `djnz`, `call`, `ret`, `push`, `pop`
-- use `section data` to declare named module storage
-- write a ZAX `func` with typed parameters and locals, accessed through raw IX-relative offsets
-- use `if`/`else` and `while` loops with `break` and `continue`
-- use `:=` for typed assignment and `step` for typed scalar mutation
-- write an `op` for inline named instruction sequences
-- use IXH/IXL/IYH/IYL and the ZAX pseudo-opcodes for 16-bit register moves
+- write a complete function that scans a table of bytes, makes comparisons, and returns a result — with typed parameters, a counting loop, and a frame-managed local for the running total
+- write a hardware polling routine that reads a status port, waits on a specific bit, and acts when the device signals ready
+- structure a multi-function program with named data sections, typed storage, and control flow that reads like the algorithm it implements
 
 **Volume 2: `learning/part2/`**
 
