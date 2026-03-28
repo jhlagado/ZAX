@@ -98,7 +98,7 @@ The comment block is gone — the parameter names `tbl` and `len` say what the f
 
 `tbl: addr` is a 16-bit address parameter — it occupies a two-byte frame slot. To load it into HL you need two byte-wide loads: `(ix+tbl+0)` for the low byte into L, `(ix+tbl+1)` for the high byte into H.
 
-`len: byte` is a one-byte parameter. It still occupies a 16-bit slot on the stack (everything is pushed as a word), but only the low byte matters: `(ix+len+0)` is all you need.
+`len: byte` is a one-byte parameter, but it still occupies a 16-bit slot on the stack. The Z80's `push` instruction always writes a full register pair — there is no single-byte push — so every argument takes two bytes of stack space regardless of its declared type. Only the low byte carries the value: `(ix+len+0)` is all you need.
 
 `running_max: byte = 0` is a local variable initialized to zero. It sits at a negative offset from IX. You read it with `ld a, (ix+running_max+0)` and write it with `ld (ix+running_max+0), a`.
 
