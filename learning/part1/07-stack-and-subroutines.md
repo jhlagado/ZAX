@@ -210,18 +210,16 @@ about the stack.
 
 ## Shadow registers: saving state without the stack
 
-The Z80 has a second, hidden copy of A, F, B, C, D, E, H, and L — denoted A′,
-F′, B′, C′, D′, E′, H′, and L′. These are the **shadow registers**. You cannot
-use them directly in instructions. Two dedicated exchange instructions swap the
-main registers with their shadow counterparts:
+In a tight interrupt handler or innermost loop, saving BC, DE, and HL via
+`push` and `pop` costs six instructions — three pushes, three pops — and takes
+twelve stack bytes. `EXX` does the same job in a single instruction: it swaps
+BC, DE, and HL with a second hidden set of registers (BC′, DE′, HL′)
+simultaneously. A second instruction, `EX AF, AF′`, swaps A and F with their
+shadow counterparts.
 
-- `EX AF, AF′` swaps A and F with A′ and F′.
-- `EXX` swaps BC, DE, and HL with BC′, DE′, and HL′ simultaneously.
-
-One `EXX` moves six registers in a single instruction — much faster than six
-individual `push` / `pop` pairs. This makes the shadow registers useful for
-very tight interrupt handlers or innermost loops where you need to save and
-restore a full register state instantly.
+These are the **shadow registers** — a second, hidden copy of A, F, B, C, D,
+E, H, and L. You cannot use them directly in instructions; `EXX` and
+`EX AF, AF′` are the only way in.
 
 The trade-off is that there is only one shadow set. If both your main code and
 an interrupt handler rely on `EXX`, the interrupt can silently destroy the
