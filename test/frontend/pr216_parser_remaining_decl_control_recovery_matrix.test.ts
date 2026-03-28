@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { compile } from '../../src/compile.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
+import { expectNoDiagnostic } from '../helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,7 +15,6 @@ describe('PR216 parser: remaining declaration/control recovery matrix', () => {
       'pr216_parser_remaining_decl_control_recovery_matrix.zax',
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    const messages = res.diagnostics.map((d) => d.message);
 
     const expectedInOrder = [
       'Unexpected "end" in asm block',
@@ -23,8 +23,12 @@ describe('PR216 parser: remaining declaration/control recovery matrix', () => {
       'Trailing commas are not permitted in enum member lists',
     ];
 
-    const actualInOrder = messages.filter((m) => expectedInOrder.includes(m));
+    const actualInOrder = res.diagnostics
+      .map(({ message }) => message)
+      .filter((message) => expectedInOrder.includes(message));
     expect(actualInOrder).toEqual(expectedInOrder);
-    expect(messages.some((m) => m.startsWith('Unsupported top-level construct:'))).toBe(false);
+    expectNoDiagnostic(res.diagnostics, {
+      messageIncludes: 'Unsupported top-level construct:',
+    });
   });
 });
