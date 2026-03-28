@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 
 import type { Diagnostic } from '../src/diagnosticTypes.js';
 import type { ProgramNode } from '../src/frontend/ast.js';
 import { parseModuleFile } from '../src/frontend/parser.js';
 import { validateStepAcceptance } from '../src/semantics/stepAcceptance.js';
 import { buildEnv } from '../src/semantics/env.js';
+import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
 
 function parseProgram(modulePath: string, source: string): { program: ProgramNode; diagnostics: Diagnostic[] } {
   const diagnostics: Diagnostic[] = [];
@@ -51,7 +52,7 @@ end
     const env = buildEnv(program, diagnostics);
     validateStepAcceptance(program, env, diagnostics);
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
   });
 
   it('rejects composite and address-typed operands', () => {
@@ -83,10 +84,11 @@ end
     const env = buildEnv(program, diagnostics);
     validateStepAcceptance(program, env, diagnostics);
 
-    const messages = diagnostics.map((d) => d.message);
-    expect(messages).toContain('"step" requires scalar storage; got Rec.');
-    expect(messages).toContain('"step" only supports byte and word scalar paths in this slice.');
-    expect(messages).toContain('"step" requires scalar storage; got unknown.');
+    expectDiagnostic(diagnostics, { message: '"step" requires scalar storage; got Rec.' });
+    expectDiagnostic(diagnostics, {
+      message: '"step" only supports byte and word scalar paths in this slice.',
+    });
+    expectDiagnostic(diagnostics, { message: '"step" requires scalar storage; got unknown.' });
   });
 
   it('rejects step amounts that are not compile-time integer expressions', () => {
@@ -110,8 +112,9 @@ end
     const env = buildEnv(program, diagnostics);
     validateStepAcceptance(program, env, diagnostics);
 
-    const messages = diagnostics.map((d) => d.message);
-    expect(messages).toContain('"step" amount must be a compile-time integer expression.');
+    expectDiagnostic(diagnostics, {
+      message: '"step" amount must be a compile-time integer expression.',
+    });
   });
 
   it('rejects typed-path forms inside ops in this slice', () => {
@@ -127,7 +130,8 @@ end
     const env = buildEnv(program, diagnostics);
     validateStepAcceptance(program, env, diagnostics);
 
-    const messages = diagnostics.map((d) => d.message);
-    expect(messages).toContain('"step" typed-path forms are not supported inside ops in this slice.');
+    expectDiagnostic(diagnostics, {
+      message: '"step" typed-path forms are not supported inside ops in this slice.',
+    });
   });
 });
