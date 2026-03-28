@@ -10,9 +10,7 @@ const __dirname = dirname(__filename);
 
 describe('PR226 parser declaration/control span matrix', () => {
   it('pins line/column for remaining declaration/control recovery diagnostics', async () => {
-    const entry = join(
-      __dirname,
-      'fixtures',
+    const entry = join(__dirname, '..', 'fixtures',
       'pr216_parser_remaining_decl_control_recovery_matrix.zax',
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });

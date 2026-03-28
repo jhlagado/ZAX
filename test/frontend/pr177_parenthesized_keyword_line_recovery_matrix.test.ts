@@ -10,9 +10,7 @@ const __dirname = dirname(__filename);
 
 describe('PR177 parser: parenthesized keyword-shaped line recovery matrix', () => {
   it('keeps block-specific diagnostics for keyword-shaped malformed lines with parentheses', async () => {
-    const entry = join(
-      __dirname,
-      'fixtures',
+    const entry = join(__dirname, '..', 'fixtures',
       'pr177_parenthesized_keyword_line_recovery_matrix.zax',
     );
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
