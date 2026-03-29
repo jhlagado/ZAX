@@ -1,6 +1,6 @@
 import type { AsmOperandNode, EaExprNode, ImmExprNode, OffsetofPathNode } from '../frontend/ast.js';
 
-type Context = {
+type AsmUtilsContext = {
   /** Returns true when `name` matches a declared enum (used to normalize asm tokens); callback must stay pure. */
   isEnumName: (name: string) => boolean;
 };
@@ -77,7 +77,7 @@ export function flattenEaDottedName(ea: EaExprNode): string | undefined {
   return undefined;
 }
 
-export function createAsmUtilityHelpers(ctx: Context) {
+export function createAsmUtilityHelpers(ctx: AsmUtilsContext) {
   const enumImmExprFromOperand = (op: AsmOperandNode): ImmExprNode | undefined => {
     if (op.kind === 'Imm') return op.expr;
     if (op.kind !== 'Ea') return undefined;

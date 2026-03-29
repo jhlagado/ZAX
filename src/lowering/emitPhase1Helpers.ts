@@ -86,7 +86,7 @@ export type EmitPhase1Helpers = {
   namedSectionSinks: ReturnType<typeof createEmitStateHelpers>['namedSectionSinks'];
 };
 
-type Context = {
+type EmitPhase1HelpersContext = {
   /** Whole program AST. */
   program: ProgramNode;
   /** Compile environment (consts, types, modules). */
@@ -99,7 +99,7 @@ type Context = {
   workspace: EmitPhase1Workspace;
 };
 
-export function createEmitPhase1Helpers(ctx: Context): EmitPhase1Helpers {
+export function createEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhase1Helpers {
   let applySpTracking: ((headRaw: string, operands: AsmOperandNode[]) => void) | undefined;
   let invalidateSpTracking: (() => void) | undefined;
   let emitCodeBytes: (bs: Uint8Array, file: string) => void;

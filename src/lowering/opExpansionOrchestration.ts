@@ -29,7 +29,7 @@ type OpExpansionStackEntry = {
   callSiteSpan: SourceSpan;
 };
 
-type Context = LoweringDiagnosticsWithSeverityCapability &
+type OpExpansionOrchestrationContext = LoweringDiagnosticsWithSeverityCapability &
   CompileEnvCapability &
   OpCandidateResolverCapability &
   OpOperandFormattingCapability &
@@ -47,7 +47,7 @@ type Context = LoweringDiagnosticsWithSeverityCapability &
   opExpansionStack: OpExpansionStackEntry[];
 };
 
-export function createOpExpansionOrchestrationHelpers(ctx: Context) {
+export function createOpExpansionOrchestrationHelpers(ctx: OpExpansionOrchestrationContext) {
   const tryHandleOpExpansion = (asmItem: AsmInstructionNode): boolean => {
     const opCandidates = ctx.resolveOpCandidates(asmItem.head, asmItem.span.file);
     if (!opCandidates || opCandidates.length === 0) return false;

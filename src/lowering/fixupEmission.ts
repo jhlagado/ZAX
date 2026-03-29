@@ -35,7 +35,7 @@ type EvalImmExpr = (expr: ImmExprNode) => number | undefined;
 
 type TraceInstruction = (start: number, bytes: Uint8Array, asmText: string) => void;
 
-type Context = {
+type FixupEmissionContext = {
   /** Current code offset. */
   getCodeOffset: () => number;
   /** Sets code offset. */
@@ -56,7 +56,7 @@ type Context = {
   evalImmExpr: EvalImmExpr;
 };
 
-export function createFixupEmissionHelpers(ctx: Context) {
+export function createFixupEmissionHelpers(ctx: FixupEmissionContext) {
   const recordLoweredInstr = (bytes: Uint8Array, asmText: string, span: SourceSpan): void => {
     ctx.recordLoweredInstr?.(bytes, asmText, span);
   };

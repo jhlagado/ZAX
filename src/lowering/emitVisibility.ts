@@ -3,7 +3,7 @@ import { moduleQualifierOf } from '../moduleVisibility.js';
 import type { Callable } from './loweringTypes.js';
 import type { OpDeclNode } from '../frontend/ast.js';
 
-type Context = {
+type EmitVisibilityContext = {
   /** Compile environment (module ids, imports) used with visibility maps. */
   env: CompileEnv;
   /** Per-file map of lowered callables keyed by lowercased name. */
@@ -16,7 +16,7 @@ type Context = {
   visibleOpsByName: Map<string, OpDeclNode[]>;
 };
 
-export function createEmitVisibilityHelpers(ctx: Context) {
+export function createEmitVisibilityHelpers(ctx: EmitVisibilityContext) {
   const canAccessLoweredQualifiedName = (name: string, file: string): boolean => {
     const qualifier = moduleQualifierOf(name);
     if (!qualifier) return true;

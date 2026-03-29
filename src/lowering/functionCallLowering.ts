@@ -37,7 +37,7 @@ type FunctionCallMaterializationContext = {
   pushImm16: (value: number, span: SourceSpan) => boolean;
 };
 
-type Context = {
+type FunctionCallLoweringHelpersContext = {
   diagnostics: Diagnostic[];
   asmItemSpanSourceTag: (span: SourceSpan) => SourceSegmentTag;
   getCurrentCodeSegmentTag: () => SourceSegmentTag | undefined;
@@ -132,7 +132,7 @@ type Context = {
   ) => void;
 };
 
-export function createFunctionCallLoweringHelpers(ctx: Context) {
+export function createFunctionCallLoweringHelpers(ctx: FunctionCallLoweringHelpersContext) {
   const emitAsmInstruction = (asmItem: AsmInstructionNode): void => {
     const prevTag = ctx.getCurrentCodeSegmentTag();
     const diagnosticsStart = ctx.diagnostics.length;

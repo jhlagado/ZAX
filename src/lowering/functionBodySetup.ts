@@ -23,7 +23,7 @@ export type OpExpansionFrame = {
   callSiteSpan: SourceSpan;
 };
 
-type Context = {
+type FunctionBodySetupContext = {
   diagnostics: Diagnostic[];
   diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
   diagAtWithId: (
@@ -95,7 +95,7 @@ export function createFunctionBodySetupHelpers({
   reg8,
   generatedLabelCounterRef,
   formatAsmOperandForOpDiag,
-}: Context) {
+}: FunctionBodySetupContext) {
   const currentOpExpansionFrame = (
     opExpansionStack: OpExpansionFrame[],
   ): OpExpansionFrame | undefined =>
