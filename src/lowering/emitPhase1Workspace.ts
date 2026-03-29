@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import type { OpDeclNode, ProgramNode, TypeExprNode, VarDeclNode, EaExprNode } from '../frontend/ast.js';
+import type { ImmExprNode, OpDeclNode, ProgramNode, TypeExprNode, VarDeclNode, EaExprNode } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import type { EmittedSourceSegment, SymbolEntry } from '../formats/types.js';
 import type { EmitProgramOptions } from './emitPipeline.js';
@@ -8,7 +8,8 @@ import type { LoweredAsmStream, LoweredAsmStreamBlock } from './loweredAsmTypes.
 import { createEmitVisibilityHelpers } from './emitVisibility.js';
 import { createOpStackAnalysisHelpers } from './opStackAnalysis.js';
 
-export type EmitPhase1Workspace = {
+/** Byte maps, listing segments, and lowered-asm recording for phase 1. */
+export type EmitPhase1EmissionState = {
   /** Merged map of all emitted bytes across sections (code/data/var/hex). */
   bytes: Map<number, number>;
   /** Code section bytes only (before merge into `bytes` for some paths). */
@@ -23,6 +24,34 @@ export type EmitPhase1Workspace = {
   loweredAsmStream: LoweredAsmStream;
   /** Lookup of lowered asm blocks by stable key (named sections, etc.). */
   loweredAsmBlocksByKey: Map<string, LoweredAsmStreamBlock>;
+};
+
+export type EmitPhase1AbsFixup = {
+  offset: number;
+  baseLower: string;
+  addend: number;
+  file: string;
+};
+
+export type EmitPhase1Rel8Fixup = {
+  offset: number;
+  origin: number;
+  baseLower: string;
+  addend: number;
+  file: string;
+  mnemonic: string;
+};
+
+export type EmitPhase1DeferredExtern = {
+  name: string;
+  baseLower: string;
+  addend: number;
+  file: string;
+  line: number;
+};
+
+/** Symbol tables, fixup queues, and name reservation. */
+export type EmitPhase1SymbolState = {
   /** Symbols with absolute addresses after prescan/lowering. */
   absoluteSymbols: SymbolEntry[];
   /** All collected symbol table entries. */
@@ -32,44 +61,15 @@ export type EmitPhase1Workspace = {
   /** Lowercased names already claimed (labels, locals). */
   taken: Set<string>;
   /** Absolute 16-bit fixups pending placement (offset in output, symbol, addend). */
-  fixups: {
-    /** Byte offset where the fixup applies. */
-    offset: number;
-    /** Target symbol (lowercased). */
-    baseLower: string;
-    /** Addend in bytes. */
-    addend: number;
-    /** Source file owning the emission site. */
-    file: string;
-  }[];
+  fixups: EmitPhase1AbsFixup[];
   /** Relative 8-bit PC-relative fixups. */
-  rel8Fixups: {
-    /** Patch offset. */
-    offset: number;
-    /** Instruction origin for range checks. */
-    origin: number;
-    /** Target symbol (lowercased). */
-    baseLower: string;
-    /** Addend to target. */
-    addend: number;
-    /** Source file. */
-    file: string;
-    /** Mnemonic for diagnostics. */
-    mnemonic: string;
-  }[];
+  rel8Fixups: EmitPhase1Rel8Fixup[];
   /** Extern symbols deferred until link/finalize. */
-  deferredExterns: {
-    /** Declared extern name. */
-    name: string;
-    /** Resolved base symbol when known. */
-    baseLower: string;
-    /** Offset addend. */
-    addend: number;
-    /** Referencing file. */
-    file: string;
-    /** Source line of reference. */
-    line: number;
-  }[];
+  deferredExterns: EmitPhase1DeferredExtern[];
+};
+
+/** Callable and op visibility, plus op-stack summaries. */
+export type EmitPhase1CallableRegistry = {
   /** Per compilation unit: local callable map by lowercased name. */
   localCallablesByFile: Map<string, Map<string, Callable>>;
   /** Globally visible callables after imports. */
@@ -78,14 +78,32 @@ export type EmitPhase1Workspace = {
   localOpsByFile: Map<string, Map<string, OpDeclNode[]>>;
   /** Visible ops merged by name. */
   visibleOpsByName: Map<string, OpDeclNode[]>;
-  /** User-selected op stack policy (`off` when unset in options). */
-  opStackPolicyMode: NonNullable<EmitProgramOptions['opStackPolicy']>;
-  /** When true, emit extra warnings for raw typed calls. */
-  rawTypedCallWarningsEnabled: boolean;
   /** All declared `op` names (lowercased) for diagnostics. */
   declaredOpNames: Set<string>;
   /** Declared `bin` resource names. */
   declaredBinNames: Set<string>;
+  /** Resolves callables visible from a file. */
+  resolveVisibleCallable: ReturnType<typeof createEmitVisibilityHelpers>['resolveVisibleCallable'];
+  /** Resolves op candidates visible from a file. */
+  resolveVisibleOpCandidates: ReturnType<typeof createEmitVisibilityHelpers>['resolveVisibleOpCandidates'];
+  /** Cached op stack effect summary for overload policy. */
+  summarizeOpStackEffect: ReturnType<typeof createOpStackAnalysisHelpers>['summarizeOpStackEffect'];
+};
+
+/** Options and paths fixed for the emit run. */
+export type EmitPhase1EmitConfig = {
+  /** User-selected op stack policy (`off` when unset in options). */
+  opStackPolicyMode: NonNullable<EmitProgramOptions['opStackPolicy']>;
+  /** When true, emit extra warnings for raw typed calls. */
+  rawTypedCallWarningsEnabled: boolean;
+  /** Entry / primary source file path. */
+  primaryFile: string;
+  /** Resolved include directories for asset loads. */
+  includeDirs: string[];
+};
+
+/** Mutable storage typing and alias maps for the current lowering context. */
+export type EmitPhase1StorageState = {
   /** Global/storage type map from prescan. */
   storageTypes: Map<string, TypeExprNode>;
   /** Module-level alias targets. */
@@ -101,17 +119,16 @@ export type EmitPhase1Workspace = {
   /** Function-local alias targets. */
   localAliasTargets: Map<string, EaExprNode>;
   /** Optional base imm expressions per section for placement. */
-  baseExprs: Partial<Record<'code' | 'data' | 'var', import('../frontend/ast.js').ImmExprNode>>;
-  /** Entry / primary source file path. */
-  primaryFile: string;
-  /** Resolved include directories for asset loads. */
-  includeDirs: string[];
-  /** Resolves callables visible from a file. */
-  resolveVisibleCallable: ReturnType<typeof createEmitVisibilityHelpers>['resolveVisibleCallable'];
-  /** Resolves op candidates visible from a file. */
-  resolveVisibleOpCandidates: ReturnType<typeof createEmitVisibilityHelpers>['resolveVisibleOpCandidates'];
-  /** Cached op stack effect summary for overload policy. */
-  summarizeOpStackEffect: ReturnType<typeof createOpStackAnalysisHelpers>['summarizeOpStackEffect'];
+  baseExprs: Partial<Record<'code' | 'data' | 'var', ImmExprNode>>;
+};
+
+/** Root workspace for emit phase 1: grouped sub-objects replace a single flat struct. */
+export type EmitPhase1Workspace = {
+  emission: EmitPhase1EmissionState;
+  symbols: EmitPhase1SymbolState;
+  callables: EmitPhase1CallableRegistry;
+  config: EmitPhase1EmitConfig;
+  storage: EmitPhase1StorageState;
 };
 
 export function createEmitPhase1Workspace(
@@ -130,22 +147,9 @@ export function createEmitPhase1Workspace(
   const symbols: SymbolEntry[] = [];
   const pending: PendingSymbol[] = [];
   const taken = new Set<string>();
-  const fixups: { offset: number; baseLower: string; addend: number; file: string }[] = [];
-  const rel8Fixups: {
-    offset: number;
-    origin: number;
-    baseLower: string;
-    addend: number;
-    file: string;
-    mnemonic: string;
-  }[] = [];
-  const deferredExterns: {
-    name: string;
-    baseLower: string;
-    addend: number;
-    file: string;
-    line: number;
-  }[] = [];
+  const fixups: EmitPhase1AbsFixup[] = [];
+  const rel8Fixups: EmitPhase1Rel8Fixup[] = [];
+  const deferredExterns: EmitPhase1DeferredExtern[] = [];
 
   const localCallablesByFile = new Map<string, Map<string, Callable>>();
   const visibleCallables = new Map<string, Callable>();
@@ -173,7 +177,7 @@ export function createEmitPhase1Workspace(
   const stackSlotTypes = new Map<string, TypeExprNode>();
   const stackSlotOffsets = new Map<string, number>();
   const localAliasTargets = new Map<string, EaExprNode>();
-  const baseExprs: Partial<Record<'code' | 'data' | 'var', import('../frontend/ast.js').ImmExprNode>> = {};
+  const baseExprs: Partial<Record<'code' | 'data' | 'var', ImmExprNode>> = {};
 
   const firstModule = program.files[0]!;
 
@@ -181,40 +185,50 @@ export function createEmitPhase1Workspace(
   const includeDirs = (options?.includeDirs ?? []).map((p) => resolve(p));
 
   return {
-    bytes,
-    codeBytes,
-    dataBytes,
-    hexBytes,
-    codeSourceSegments,
-    loweredAsmStream,
-    loweredAsmBlocksByKey,
-    absoluteSymbols,
-    symbols,
-    pending,
-    taken,
-    fixups,
-    rel8Fixups,
-    deferredExterns,
-    localCallablesByFile,
-    visibleCallables,
-    localOpsByFile,
-    visibleOpsByName,
-    opStackPolicyMode,
-    rawTypedCallWarningsEnabled,
-    declaredOpNames,
-    declaredBinNames,
-    storageTypes,
-    moduleAliasTargets,
-    moduleAliasDecls,
-    rawAddressSymbols,
-    stackSlotTypes,
-    stackSlotOffsets,
-    localAliasTargets,
-    baseExprs,
-    primaryFile,
-    includeDirs,
-    resolveVisibleCallable,
-    resolveVisibleOpCandidates,
-    summarizeOpStackEffect,
+    emission: {
+      bytes,
+      codeBytes,
+      dataBytes,
+      hexBytes,
+      codeSourceSegments,
+      loweredAsmStream,
+      loweredAsmBlocksByKey,
+    },
+    symbols: {
+      absoluteSymbols,
+      symbols,
+      pending,
+      taken,
+      fixups,
+      rel8Fixups,
+      deferredExterns,
+    },
+    callables: {
+      localCallablesByFile,
+      visibleCallables,
+      localOpsByFile,
+      visibleOpsByName,
+      declaredOpNames,
+      declaredBinNames,
+      resolveVisibleCallable,
+      resolveVisibleOpCandidates,
+      summarizeOpStackEffect,
+    },
+    config: {
+      opStackPolicyMode,
+      rawTypedCallWarningsEnabled,
+      primaryFile,
+      includeDirs,
+    },
+    storage: {
+      storageTypes,
+      moduleAliasTargets,
+      moduleAliasDecls,
+      rawAddressSymbols,
+      stackSlotTypes,
+      stackSlotOffsets,
+      localAliasTargets,
+      baseExprs,
+    },
   };
 }
