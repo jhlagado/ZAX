@@ -64,6 +64,43 @@ return the updated depth.
 
 ---
 
+## `include`: text insertion
+
+`import` compiles a separate module and makes its exported names available under
+a module qualifier. `include` does something simpler: it inserts the text of
+another file at the point where `include` appears, exactly as if you had typed
+that file's contents there yourself.
+
+```zax
+include "constants.zax"
+```
+
+There is no module qualifier, no separate compilation, and no namespace boundary.
+Any `const`, `enum`, `type`, or `op` declaration in the included file lands
+directly in the including file's namespace. If `constants.zax` defines
+`const MaxLen = 64`, then `MaxLen` is available without any qualifier after the
+`include`.
+
+**When to use each:**
+
+Use `import` when you are pulling in a module with its own functions and data —
+a library, a support module, anything that has its own identity. The module
+qualifier makes the origin of every function call explicit at the call site.
+
+Use `include` when you are sharing definitions that logically belong to every
+file that uses them: constants, type declarations, `op` macro libraries, shared
+enums. These have no functions to qualify; they are just names that all files
+need to know. An `include` of a constants file is closer to a C header than to
+a C `#include` of a `.c` source file — it brings in declarations, not
+implementations.
+
+**Caution:** `include` has no circular-detection. If file A includes file B and
+file B includes file A, the compiler will loop. Use `import` when in doubt,
+especially across module boundaries. Reserve `include` for flat, definition-only
+files that carry no `func` or `export` declarations.
+
+---
+
 ## Token Kinds and Enums
 
 The calculator recognises three token kinds: a number to push, an addition
@@ -189,6 +226,10 @@ operand is popped, the operation is applied.
 
 - `import "module.zax"` makes exported functions available under the module
   name. Calls are qualified: `word_stack.push_word`.
+- `include "file.zax"` inserts the text of another file at the current position.
+  Definitions land in the including file's namespace with no qualifier. Use for
+  shared constants, types, and `op` libraries — not for modules with their own
+  functions. `include` has no circular-detection; prefer `import` when in doubt.
 - `enum TypeName Member, Member, ...` assigns sequential integers starting at 0.
   Members must be referenced as `TypeName.Member`; bare member names are compile
   errors. Enum members are compile-time immediates — the same as `const` values,
@@ -204,6 +245,17 @@ operand is popped, the operation is applied.
 - Store intermediate results into typed locals before the next call overwrites
   HL. This is the same pattern as the recursion chapter, applied here to a
   software-stack evaluator.
+- `extern func name(params): ret at $ADDR` binds a ZAX callable name to a
+  fixed ROM address. The calling convention is declared as normal; the compiler
+  generates a `call` to the absolute address.
+- `extern binName ... end` declares multiple entry points as offsets from a
+  `bin` base, allowing a whole ROM module to be named without hard-coding
+  absolute addresses.
+- `bin name in code from "file.bin"` embeds a binary file into a section.
+  The name is an `addr` pointing to the first byte of the blob.
+- `hex name from "file.hex"` reads an Intel HEX file and places its bytes at
+  the absolute addresses in the HEX records. The name binds to the lowest
+  written address.
 
 ---
 
@@ -213,6 +265,95 @@ operand is popped, the operation is applied.
   with operator dispatch and software-stack management
 - `learning/part2/examples/unit7/word_stack.zax` — support module: `push_word` and
   `pop_word` over a caller-managed word array
+
+---
+
+## Integrating with the outside world
+
+`import` and `include` connect ZAX files to each other. Three more features
+connect ZAX programs to the outside world: existing ROM routines, binary files,
+and Intel HEX images.
+
+### `extern func`: calling fixed-address routines
+
+ROM monitors, BIOS tables, and legacy firmware expose callable routines at fixed
+addresses in the Z80 address space. `extern func` binds a ZAX function name to
+one of those fixed addresses.
+
+```zax
+extern func rst08(): void at $0008
+```
+
+After this declaration, `rst08` in any function body generates a `call $0008`.
+
+ZAX passes arguments on the stack. Most ROM routines expect arguments in
+registers instead. For those routines, declare `extern func` with no parameters
+and set the registers manually before the call:
+
+```zax
+ld a, $41   ; 'A' — load the argument the ROM routine expects in A
+rst08       ; generates: call $0008
+```
+
+The call site names the routine and the compiler emits the `call` — but loading
+the correct registers before the call is your responsibility. If the ROM routine
+clobbers something you did not account for, that is also your responsibility to
+work around. ZAX does not know the ROM's register ABI; it only knows the address.
+
+### `extern` block: relative entry points
+
+When a binary module exposes several entry points at offsets from a common base,
+an `extern` block names them all relative to that base:
+
+```zax
+bin legacy in code from "asm80/legacy.bin"
+extern legacy
+  func legacy_init(): void at $0000
+  func legacy_putc(ch: byte): void at $0030
+end
+```
+
+`legacy` is the base name of the binary blob. Every `func` in the `extern`
+block is resolved as an offset from `legacy`'s base address. If the blob is
+placed at `$C000`, then `legacy_putc` resolves to `$C030`. This is how you
+bind a complete ROM module — with multiple callable entry points — without
+hard-coding any absolute address in the ZAX source.
+
+### `bin`: embedding binary data
+
+`bin` reads a binary file from disk and emits its bytes into a section:
+
+```zax
+section data assets
+  sprites: bin "sprites.bin"
+end
+```
+
+`sprites` becomes an address-valued name pointing to the first byte of the
+embedded data. The file's full content lands in the binary at that address.
+Use `bin` for sprite sheets, font tables, lookup tables, and any pre-built data
+blob where the bytes are already exactly what you need.
+
+The compiler resolves the file path the same way it resolves `import` paths:
+first relative to the current source file, then via the search path. A missing
+file is a compile error.
+
+### `hex`: embedding Intel HEX images
+
+`hex` reads an Intel HEX file and places its data at the absolute addresses
+specified in the HEX records:
+
+```zax
+hex firmware from "monitor.hex"
+```
+
+The name `firmware` binds to the lowest address written by the HEX file. Unlike
+`bin`, which fills a section sequentially, `hex` writes to absolute addresses —
+the addresses come from the HEX records themselves, not from a section
+placement. Checksums are validated; an invalid record is a compile error.
+
+Use `hex` when the data source is an Intel HEX file, as is common with Z80
+development tools and EPROM programmers.
 
 ---
 
