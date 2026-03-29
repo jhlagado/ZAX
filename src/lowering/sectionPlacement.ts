@@ -31,7 +31,7 @@ export type PlacedNamedSectionRegion = {
   contributions: PlacedNamedSectionContribution[];
 };
 
-type Context = {
+type SectionPlacementContext = {
   /** Diagnostic sink. */
   diagnostics: Diagnostic[];
   /** Compile environment for imm eval. */
@@ -66,7 +66,7 @@ function startOf(sink: NamedSectionContributionSink): {
   };
 }
 
-function evaluateAnchorBase(ctx: Context, sink: NamedSectionContributionSink): number | undefined {
+function evaluateAnchorBase(ctx: SectionPlacementContext, sink: NamedSectionContributionSink): number | undefined {
   const anchor = sink.anchor.node.anchor;
   if (!anchor) return undefined;
   const at = ctx.evalImmExpr(anchor.at, ctx.env, ctx.diagnostics);
@@ -92,7 +92,7 @@ function evaluateAnchorBase(ctx: Context, sink: NamedSectionContributionSink): n
 }
 
 function evaluateCapacity(
-  ctx: Context,
+  ctx: SectionPlacementContext,
   sink: NamedSectionContributionSink,
   baseAddress: number,
 ): number | undefined {
@@ -161,7 +161,7 @@ function evaluateCapacity(
 
 export function placeNonBankedSectionContributions(
   sinks: NamedSectionContributionSink[],
-  ctx: Context,
+  ctx: SectionPlacementContext,
 ): { placedRegions: PlacedNamedSectionRegion[]; placedContributions: PlacedNamedSectionContribution[] } {
   const placedRegions: PlacedNamedSectionRegion[] = [];
   const placedContributions: PlacedNamedSectionContribution[] = [];

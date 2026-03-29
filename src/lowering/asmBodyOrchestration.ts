@@ -1,7 +1,7 @@
 import type { AsmItemNode, SourceSpan } from '../frontend/ast.js';
 import type { FlowState } from './functionBodySetup.js';
 
-type Context = {
+type AsmBodyOrchestrationContext = {
   asmItems: readonly AsmItemNode[];
   itemName: string;
   itemSpan: SourceSpan;
@@ -17,7 +17,7 @@ type Context = {
   traceFunctionEnd: () => void;
 };
 
-export function createAsmBodyOrchestrationHelpers(ctx: Context) {
+export function createAsmBodyOrchestrationHelpers(ctx: AsmBodyOrchestrationContext) {
   const lowerAndFinalizeFunctionBody = (): void => {
     const consumed = ctx.lowerAsmRange(ctx.asmItems, 0, new Set());
     if (consumed < ctx.asmItems.length) {
