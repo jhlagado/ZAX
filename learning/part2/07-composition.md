@@ -281,28 +281,24 @@ addresses in the Z80 address space. `extern func` binds a ZAX function name to
 one of those fixed addresses.
 
 ```zax
-extern func rst08(ch: byte): void at $0008
+extern func rst08(): void at $0008
 ```
 
-After this declaration, `rst08 ch` in any function body generates a `call
-$0008` — the same call you would write by hand, but now guarded by the ZAX
-calling convention. The parameter declaration tells the compiler to pass `ch`
-in A before the call, matching what the TEC-1 monitor print routine expects.
+After this declaration, `rst08` in any function body generates a `call $0008`.
 
-The calling convention must match what the ROM routine actually does. If the ROM
-routine preserves IX and you declare a return in HL, the compiler arranges the
-frame accordingly — but if the ROM routine clobbers something you did not
-account for, that is your responsibility to work around.
-
-`extern func` makes the call site read like any other ZAX function call:
+ZAX passes arguments on the stack. Most ROM routines expect arguments in
+registers instead. For those routines, declare `extern func` with no parameters
+and set the registers manually before the call:
 
 ```zax
-rst08 $41   ; 'A' — calls the TEC-1 monitor print routine
+ld a, $41   ; 'A' — load the argument the ROM routine expects in A
+rst08       ; generates: call $0008
 ```
 
-No raw `call $0008`, no hand-managed registers. The routine still runs exactly
-the same code — `extern func` generates nothing new in the binary — but the
-source reads the algorithm, not the plumbing.
+The call site names the routine and the compiler emits the `call` — but loading
+the correct registers before the call is your responsibility. If the ROM routine
+clobbers something you did not account for, that is also your responsibility to
+work around. ZAX does not know the ROM's register ABI; it only knows the address.
 
 ### `extern` block: relative entry points
 

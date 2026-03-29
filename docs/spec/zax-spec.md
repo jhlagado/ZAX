@@ -806,7 +806,7 @@ dw handler_a        ; label reference → fixup (two bytes)
 
 **`ds` — space reservation**
 
-`ds expr` reserves `expr` bytes, each initialised to zero. `expr` must be a compile-time constant (it must not contain label references or fixup targets). `ds 0` is a compile error.
+`ds expr` reserves `expr` bytes, each initialised to zero. `expr` must be a compile-time constant (it must not contain label references or fixup targets). `ds 0` has no effect; `ds` with a negative value is a compile error.
 
 ```
 ds 2                ; reserves two zero bytes
