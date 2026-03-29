@@ -336,125 +336,111 @@ export const STORE_RP_FVAR = (rp: StepReg16, disp: number): StepPipeline => [
       ]),
 ];
 
+/** Base side of an EA: global symbol or IX/IY frame displacement base. */
+type EaAddrBase = { kind: 'glob'; glob: string } | { kind: 'fvar'; fvar: number };
+
+/** Index side of an EA: const, reg8, reg16 pair, frame slot, or global symbol. */
+type EaAddrIdx =
+  | { kind: 'const'; value: number }
+  | { kind: 'reg'; reg8: StepReg8 }
+  | { kind: 'rp'; rp: StepReg16 }
+  | { kind: 'fvar'; disp: number }
+  | { kind: 'glob'; glob: string };
+
+function loadEaBase(b: EaAddrBase): StepPipeline {
+  return b.kind === 'glob' ? LOAD_BASE_GLOB(b.glob) : LOAD_BASE_FVAR(b.fvar);
+}
+
+function loadEaIdx(i: EaAddrIdx): StepPipeline {
+  switch (i.kind) {
+    case 'const':
+      return LOAD_IDX_CONST(i.value);
+    case 'reg':
+      return LOAD_IDX_REG(i.reg8);
+    case 'rp':
+      return LOAD_IDX_RP(i.rp);
+    case 'fvar':
+      return LOAD_IDX_FVAR(i.disp);
+    case 'glob':
+      return LOAD_IDX_GLOB(i.glob);
+  }
+}
+
+/** Byte EA: base + index + HL += DE (see `CALC_EA`). */
+function eaByteFromParts(base: EaAddrBase, idx: EaAddrIdx): StepPipeline {
+  return [...loadEaBase(base), ...loadEaIdx(idx), ...CALC_EA()];
+}
+
+/** Word/scaled EA: base + index + wide multiply-add (see `CALC_EA_WIDE`). */
+function eaWideFromParts(base: EaAddrBase, idx: EaAddrIdx, elemSize: number): StepPipeline {
+  return [...loadEaBase(base), ...loadEaIdx(idx), ...CALC_EA_WIDE(elemSize)];
+}
+
 // --- Section: EA builders (byte size, HL = EA) ---
-export const EA_GLOB_CONST = (glob: string, idxConst: number): StepPipeline => [
-  ...LOAD_BASE_GLOB(glob),
-  ...LOAD_IDX_CONST(idxConst),
-  ...CALC_EA(),
-];
+export const EA_GLOB_CONST = (glob: string, idxConst: number): StepPipeline =>
+  eaByteFromParts({ kind: 'glob', glob }, { kind: 'const', value: idxConst });
 
-export const EA_GLOB_REG = (glob: string, reg8: StepReg8): StepPipeline => [
-  ...LOAD_BASE_GLOB(glob),
-  ...LOAD_IDX_REG(reg8),
-  ...CALC_EA(),
-];
+export const EA_GLOB_REG = (glob: string, reg8: StepReg8): StepPipeline =>
+  eaByteFromParts({ kind: 'glob', glob }, { kind: 'reg', reg8 });
 
-export const EA_GLOB_RP = (glob: string, rp: StepReg16): StepPipeline => [
-  ...LOAD_BASE_GLOB(glob),
-  ...LOAD_IDX_RP(rp),
-  ...CALC_EA(),
-];
+export const EA_GLOB_RP = (glob: string, rp: StepReg16): StepPipeline =>
+  eaByteFromParts({ kind: 'glob', glob }, { kind: 'rp', rp });
 
 export const EA_FVAR_CONST = (fvar: number, idxConst: number): StepPipeline => {
   const folded = foldFvar(fvar, idxConst);
-  return [...LOAD_BASE_FVAR(folded.base), ...LOAD_IDX_CONST(folded.idx), ...CALC_EA()];
+  return eaByteFromParts({ kind: 'fvar', fvar: folded.base }, { kind: 'const', value: folded.idx });
 };
 
-export const EA_FVAR_REG = (fvar: number, reg8: StepReg8): StepPipeline => [
-  ...LOAD_BASE_FVAR(fvar),
-  ...LOAD_IDX_REG(reg8),
-  ...CALC_EA(),
-];
+export const EA_FVAR_REG = (fvar: number, reg8: StepReg8): StepPipeline =>
+  eaByteFromParts({ kind: 'fvar', fvar }, { kind: 'reg', reg8 });
 
-export const EA_FVAR_RP = (fvar: number, rp: StepReg16): StepPipeline => [
-  ...LOAD_BASE_FVAR(fvar),
-  ...LOAD_IDX_RP(rp),
-  ...CALC_EA(),
-];
+export const EA_FVAR_RP = (fvar: number, rp: StepReg16): StepPipeline =>
+  eaByteFromParts({ kind: 'fvar', fvar }, { kind: 'rp', rp });
 
-export const EA_GLOB_FVAR = (glob: string, fvar: number): StepPipeline => [
-  ...LOAD_BASE_GLOB(glob),
-  ...LOAD_IDX_FVAR(fvar),
-  ...CALC_EA(),
-];
+export const EA_GLOB_FVAR = (glob: string, fvar: number): StepPipeline =>
+  eaByteFromParts({ kind: 'glob', glob }, { kind: 'fvar', disp: fvar });
 
-export const EA_FVAR_FVAR = (fvarBase: number, fvarIdx: number): StepPipeline => [
-  ...LOAD_BASE_FVAR(fvarBase),
-  ...LOAD_IDX_FVAR(fvarIdx),
-  ...CALC_EA(),
-];
+export const EA_FVAR_FVAR = (fvarBase: number, fvarIdx: number): StepPipeline =>
+  eaByteFromParts({ kind: 'fvar', fvar: fvarBase }, { kind: 'fvar', disp: fvarIdx });
 
-export const EA_FVAR_GLOB = (fvar: number, glob: string): StepPipeline => [
-  ...LOAD_BASE_FVAR(fvar),
-  ...LOAD_IDX_GLOB(glob),
-  ...CALC_EA(),
-];
+export const EA_FVAR_GLOB = (fvar: number, glob: string): StepPipeline =>
+  eaByteFromParts({ kind: 'fvar', fvar }, { kind: 'glob', glob });
 
-export const EA_GLOB_GLOB = (globBase: string, globIdx: string): StepPipeline => [
-  ...LOAD_BASE_GLOB(globBase),
-  ...LOAD_IDX_GLOB(globIdx),
-  ...CALC_EA(),
-];
+export const EA_GLOB_GLOB = (globBase: string, globIdx: string): StepPipeline =>
+  eaByteFromParts({ kind: 'glob', glob: globBase }, { kind: 'glob', glob: globIdx });
 
 // --- Section: EA builders (word size, HL = EA, scaled) ---
-export const EAW_GLOB_CONST = (glob: string, idxConst: number, elemSize = 2): StepPipeline => [
-  ...LOAD_BASE_GLOB(glob),
-  ...LOAD_IDX_CONST(idxConst),
-  ...CALC_EA_WIDE(elemSize),
-];
+export const EAW_GLOB_CONST = (glob: string, idxConst: number, elemSize = 2): StepPipeline =>
+  eaWideFromParts({ kind: 'glob', glob }, { kind: 'const', value: idxConst }, elemSize);
 
-export const EAW_GLOB_REG = (glob: string, reg8: StepReg8, elemSize = 2): StepPipeline => [
-  ...LOAD_BASE_GLOB(glob),
-  ...LOAD_IDX_REG(reg8),
-  ...CALC_EA_WIDE(elemSize),
-];
+export const EAW_GLOB_REG = (glob: string, reg8: StepReg8, elemSize = 2): StepPipeline =>
+  eaWideFromParts({ kind: 'glob', glob }, { kind: 'reg', reg8 }, elemSize);
 
-export const EAW_GLOB_RP = (glob: string, rp: StepReg16, elemSize = 2): StepPipeline => [
-  ...LOAD_BASE_GLOB(glob),
-  ...LOAD_IDX_RP(rp),
-  ...CALC_EA_WIDE(elemSize),
-];
+export const EAW_GLOB_RP = (glob: string, rp: StepReg16, elemSize = 2): StepPipeline =>
+  eaWideFromParts({ kind: 'glob', glob }, { kind: 'rp', rp }, elemSize);
 
 export const EAW_FVAR_CONST = (fvar: number, idxConst: number, elemSize = 2): StepPipeline => {
   const folded = foldFvar(fvar, idxConst * elemSize);
-  return [...LOAD_BASE_FVAR(folded.base), ...LOAD_IDX_CONST(folded.idx), ...CALC_EA_WIDE(elemSize)];
+  return eaWideFromParts({ kind: 'fvar', fvar: folded.base }, { kind: 'const', value: folded.idx }, elemSize);
 };
 
-export const EAW_FVAR_REG = (fvar: number, reg8: StepReg8, elemSize = 2): StepPipeline => [
-  ...LOAD_BASE_FVAR(fvar),
-  ...LOAD_IDX_REG(reg8),
-  ...CALC_EA_WIDE(elemSize),
-];
+export const EAW_FVAR_REG = (fvar: number, reg8: StepReg8, elemSize = 2): StepPipeline =>
+  eaWideFromParts({ kind: 'fvar', fvar }, { kind: 'reg', reg8 }, elemSize);
 
-export const EAW_FVAR_RP = (fvar: number, rp: StepReg16, elemSize = 2): StepPipeline => [
-  ...LOAD_BASE_FVAR(fvar),
-  ...LOAD_IDX_RP(rp),
-  ...CALC_EA_WIDE(elemSize),
-];
+export const EAW_FVAR_RP = (fvar: number, rp: StepReg16, elemSize = 2): StepPipeline =>
+  eaWideFromParts({ kind: 'fvar', fvar }, { kind: 'rp', rp }, elemSize);
 
-export const EAW_GLOB_FVAR = (glob: string, fvar: number, elemSize = 2): StepPipeline => [
-  ...LOAD_BASE_GLOB(glob),
-  ...LOAD_IDX_FVAR(fvar),
-  ...CALC_EA_WIDE(elemSize),
-];
+export const EAW_GLOB_FVAR = (glob: string, fvar: number, elemSize = 2): StepPipeline =>
+  eaWideFromParts({ kind: 'glob', glob }, { kind: 'fvar', disp: fvar }, elemSize);
 
-export const EAW_FVAR_FVAR = (fvarBase: number, fvarIdx: number, elemSize = 2): StepPipeline => [
-  ...LOAD_BASE_FVAR(fvarBase),
-  ...LOAD_IDX_FVAR(fvarIdx),
-  ...CALC_EA_WIDE(elemSize),
-];
+export const EAW_FVAR_FVAR = (fvarBase: number, fvarIdx: number, elemSize = 2): StepPipeline =>
+  eaWideFromParts({ kind: 'fvar', fvar: fvarBase }, { kind: 'fvar', disp: fvarIdx }, elemSize);
 
-export const EAW_FVAR_GLOB = (fvar: number, glob: string, elemSize = 2): StepPipeline => [
-  ...LOAD_BASE_FVAR(fvar),
-  ...LOAD_IDX_GLOB(glob),
-  ...CALC_EA_WIDE(elemSize),
-];
+export const EAW_FVAR_GLOB = (fvar: number, glob: string, elemSize = 2): StepPipeline =>
+  eaWideFromParts({ kind: 'fvar', fvar }, { kind: 'glob', glob }, elemSize);
 
-export const EAW_GLOB_GLOB = (globBase: string, globIdx: string, elemSize = 2): StepPipeline => [
-  ...LOAD_BASE_GLOB(globBase),
-  ...LOAD_IDX_GLOB(globIdx),
-  ...CALC_EA_WIDE(elemSize),
-];
+export const EAW_GLOB_GLOB = (globBase: string, globIdx: string, elemSize = 2): StepPipeline =>
+  eaWideFromParts({ kind: 'glob', glob: globBase }, { kind: 'glob', glob: globIdx }, elemSize);
 
 // --- Section: Templates — byte loads ---
 export const TEMPLATE_L_ABC = (dest: StepReg8, ea: StepPipeline): StepPipeline => [
