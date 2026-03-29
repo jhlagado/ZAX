@@ -2,9 +2,9 @@
 
 # Chapter 11 — Structured Control Flow
 
-This chapter introduces `if`/`else`, `while`, `break`, and `continue` — the
-structured replacements for manual flag-test-and-jump sequences and invented
-loop labels.
+This chapter introduces `if`/`else`, `while`, `repeat...until`, `break`, and
+`continue` — the structured replacements for manual flag-test-and-jump
+sequences and invented loop labels.
 
 ---
 
@@ -157,10 +157,72 @@ body, then the back-edge test sees the correct NZ state for the next iteration.
 
 ---
 
+## `repeat ... until`: a post-tested loop
+
+`while` is pre-tested: if the condition is false on entry, the body never runs.
+Sometimes you need the opposite — the body must always run at least once, and
+the condition is only checked at the end. `repeat ... until <cc>` is the
+post-tested form.
+
+```zax
+repeat
+  ; body
+until <cc>
+```
+
+The body always executes at least once. After the body, the compiler tests the
+current flags against `<cc>`. If the condition is true, the loop exits. If
+false, the body runs again.
+
+Compare the two forms side by side:
+
+```zax
+; while: pre-tested — body may run zero times
+ld a, b
+or a
+while NZ
+  ; body
+  dec b
+  ld a, b
+  or a
+end
+
+; repeat...until: post-tested — body always runs at least once
+repeat
+  ; body
+  dec b
+  ld a, b
+  or a
+until Z
+```
+
+In the `while` form, if B is already zero when the loop is reached, the body
+does not execute. In the `repeat...until` form, the body runs once before the
+check, so B always decrements at least once.
+
+**Establishing flags before `until`.** `until` reads the flags at the moment
+the `until` keyword is reached. The body is responsible for establishing the
+correct flags on every path that falls through to `until`. The same rules that
+apply to the `while` back edge apply here: `ld` instructions do not set flags,
+so use `or a` or a comparison instruction before `until` to be sure the flags
+are correct.
+
+**Z80 idiom match.** Many Z80 patterns are naturally post-tested. Reading from
+a hardware port until a ready bit clears, processing bytes in a buffer until a
+sentinel is found, or running a loop that must execute at least one iteration —
+all of these map onto `repeat ... until` more directly than onto `while`.
+
+`break` and `continue` work inside `repeat ... until` the same way they do
+inside `while`: `break` exits the loop, and `continue` jumps to the `until`
+condition test.
+
+---
+
 ## `break` and `continue`
 
 `break` exits the immediately enclosing loop immediately. Control jumps to the
-first instruction after the loop's `end`.
+first instruction after the loop's closing `end` (for `while`) or `until` (for
+`repeat`).
 
 `continue` transfers control to the condition test at the top of the loop, re-
 testing `<cc>` with the current flags. For `while`, that means the flags must
@@ -196,8 +258,37 @@ end
 the flags must correctly represent the intended condition at the moment
 `continue` executes.
 
-`break` and `continue` only affect the immediately enclosing loop. Nested `while`
-loops have no labeled form — `break` always exits the innermost one.
+`break` and `continue` target the immediately enclosing loop — the same rule as C.
+No labels are needed. In nested loops, `break` always exits the innermost one and
+`continue` restarts the innermost one. An outer loop is unaffected until execution
+reaches its own condition test or its own `break`.
+
+```zax
+ld a, b
+or a
+while NZ           ; outer loop
+  ld a, c
+  or a
+  while NZ         ; inner loop
+    ld a, (hl)
+    or a
+    if Z
+      break        ; exits the inner while only
+    end
+    inc hl
+    dec c
+    ld a, c
+    or a
+  end              ; after break, control resumes here
+  dec b
+  ld a, b
+  or a
+end
+```
+
+After the inner `break`, control transfers to the instruction after the inner
+`end`. The outer `while` continues normally, testing the outer condition on
+the next iteration.
 
 ---
 
@@ -451,10 +542,18 @@ Both are always available. Use whichever matches the shape of the logic.
 - The body of a `while` loop is responsible for re-establishing the flags before
   each back-edge test. Any path that reaches `end` without a `break` or `ret`
   will re-test the condition with the current flags.
-- `break` exits the immediately enclosing loop. Flags do not need to be set
-  before `break`.
-- `continue` restarts from the condition test. Flags must be correct for the
-  condition before `continue` executes in a `while` loop.
+- `repeat ... until <cc>` is post-tested: the body always runs at least once.
+  The condition is checked at the `until` keyword using the current flags. If
+  the condition is true, the loop exits; if false, the body runs again. Use
+  `repeat...until` when the body must always execute at least once, or when
+  the Z80 idiom is naturally post-tested (polling a port, scanning until a
+  sentinel).
+- `break` exits the immediately enclosing loop. In nested loops, it exits only
+  the innermost one — the same rule as C. Flags do not need to be set before
+  `break`.
+- `continue` restarts from the condition test of the immediately enclosing loop.
+  Flags must be correct for the condition before `continue` executes in a
+  `while` loop.
 - Structured control flow does not hide the machine. Each `if`/`else`/`end` and
   `while`/`end` generates the same conditional jumps and labels. The compiler manages the labels;
   you manage the flags.

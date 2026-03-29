@@ -92,13 +92,16 @@ after finding a solution.
 
 The `found_solution` flag is explicit module state. Every level of recursion
 checks it on entry and again after the recursive call returns. This is correct,
-but it is a workaround: the flag exists because ZAX has no way to break out of
-a recursive call chain from inside a nested frame. In a language with named
-exits from nested structures, the termination would propagate structurally
-instead of through a shared flag.
+but it is a workaround: the flag exists because `break` exits a loop, not a
+recursive call stack. Once `place_row` has recursed eight levels deep and found
+a solution, there is no structured way to unwind all eight frames at once.
+Instead, the found flag propagates back through each return, one frame at a
+time.
 
-No design has been finalised. Whether the right answer is a named exit label,
-a propagated break, or something else is an open question.
+`break` and `continue` in nested loops work correctly — they target the
+immediately enclosing loop, the same rule as C. The gap here is specifically
+about recursive call chains: early termination inside recursion still requires
+manual flag propagation. No structured alternative has been designed yet.
 
 ---
 
@@ -112,15 +115,21 @@ course. It is now implemented. The course examples use it.
 
 **Design open**:
 
-- _Named exit from nested structures._ The `found_solution` flag in
-  `eight_queens.zax` is a direct workaround for this. The gap is recorded;
-  no specific design has been decided.
+- _Propagating termination across recursive call frames._ The `found_solution`
+  flag in `eight_queens.zax` is a workaround for this. `break` exits the
+  immediately enclosing loop — the same rule as C, and it works correctly in
+  nested loops without any labels. The gap here is different: when the algorithm
+  wants to stop a recursion from inside a deeply nested frame, it must propagate
+  a result through every frame on the call stack. In `eight_queens.zax` that
+  mechanism is a module-level flag that every recursive level checks on return.
+  No structured alternative exists yet; the gap is recorded and the design is
+  open.
 
-- _Pointer type annotation._ `linked_list.zax` and `bst.zax` both require
+- _Typed dereference annotation._ `linked_list.zax` and `bst.zax` both require
   `<Type>local.field` at every traversal step. The `addr` type carries no type
-  information — there is no `addr<ListNode>`. Every dereference must repeat the
-  type annotation at the use site. The design is not settled. See `docs/design/`
-  for live design work as it progresses.
+  information. Every dereference must repeat the type annotation at the use site.
+  The design is not settled. See `docs/design/` for live design work as it
+  progresses.
 
 - _Software-stack storage verbosity._ `rpn_calculator.zax` requires storing
   every `pop_word` result into a local immediately to survive the next
@@ -158,8 +167,10 @@ the same source file.
   The eight-queens column loop shows both in a single algorithm: `continue`
   skips failed constraint checks cleanly; `break` exits on a found solution.
 - An explicit flag variable is still the necessary mechanism for propagating a
-  found result across recursive frames. ZAX has no named exit from nested
-  structures; this is a recorded gap, not a design oversight.
+  found result across recursive frames. `break` exits the immediately enclosing
+  loop and works correctly in nested loops — the same rule as C. The open gap
+  is about propagating early termination across a recursive call stack, which
+  requires explicit shared state until a structural mechanism exists.
 - The `<Type>local.field` repetition from Chapter 08 and the `pop_word`/`stack_depth`
   bouncing from Chapter 07 are both known design issues. See `docs/design/` for
   current work.
