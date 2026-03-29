@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import type { Diagnostic } from '../src/diagnosticTypes.js';
+import { expectDiagnostic } from './helpers/diagnostics/index.js';
 import type { AnchorBoundNode, NamedSectionNode } from '../src/frontend/ast.js';
 import { parseProgram } from '../src/frontend/parser.js';
 import { emitProgram } from '../src/lowering/emit.js';
@@ -163,10 +165,10 @@ describe('PR583 section placement helpers', () => {
     });
 
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
-      id: 'ZAX300',
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.EmitError,
       severity: 'error',
+      messageIncludes: 'Section "code boot" exceeds its anchored capacity',
     });
-    expect(diagnostics[0]?.message).toContain('Section "code boot" exceeds its anchored capacity');
   });
 });

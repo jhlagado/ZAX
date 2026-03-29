@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AsmOperandNode, EaExprNode, SourceSpan } from '../../src/frontend/ast.js';
-import { createEaMaterializationHelpers } from '../../src/lowering/eaMaterialization.js';
+import {
+  createEaMaterializationHelpers,
+  type EAMaterializationContext,
+} from '../../src/lowering/eaMaterialization.js';
 import type { EaResolution } from '../../src/lowering/eaResolution.js';
 
 const span: SourceSpan = {
@@ -33,7 +36,7 @@ describe('#509 ea materialization helpers', () => {
       return true;
     };
 
-    const helpers = createEaMaterializationHelpers({
+    const materializationCtx: EAMaterializationContext = {
       resolveEa: (ea) => (ea.kind === 'EaName' ? resolutions.get(ea.name.toLowerCase()) : undefined),
       pushEaAddress: () => {
         emitted.push('pushEaAddress');
@@ -47,7 +50,8 @@ describe('#509 ea materialization helpers', () => {
         emitted.push(`loadImm16ToDE ${value}`);
         return true;
       },
-    });
+    };
+    const helpers = createEaMaterializationHelpers(materializationCtx);
 
     expect(helpers.materializeEaAddressToHL(eaName('globw'), span)).toBe(true);
     expect(helpers.materializeEaAddressToHL(eaName('slotw'), span)).toBe(true);

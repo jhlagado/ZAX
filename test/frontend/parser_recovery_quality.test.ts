@@ -13,6 +13,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import type { ConstDeclNode, ModuleItemNode, TypeDeclNode } from '../../src/frontend/ast.js';
 import { parseModuleFile } from '../../src/frontend/parser.js';
 import { expectDiagnostic } from '../helpers/diagnostics.js';
@@ -36,8 +37,14 @@ describe('parseModuleFile recovery AST shape', () => {
     const { mod, diagnostics } = parseModule(src);
 
     expect(mod.items).toHaveLength(0);
-    expectDiagnostic(diagnostics, { messageIncludes: 'Unterminated func "f"' });
-    expectDiagnostic(diagnostics, { messageIncludes: 'missing "end"' });
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      file: FILE,
+      line: 1,
+      column: 1,
+      messageIncludes: 'Unterminated func "f"',
+    });
   });
 
   it('function body interrupted by next top-level: no FuncDecl; following const is still parsed', () => {
@@ -47,9 +54,13 @@ const After = 1`;
     const { mod, diagnostics } = parseModule(src);
 
     expect(itemKinds(mod.items)).toEqual(['ConstDecl']);
-    expectDiagnostic(diagnostics, { messageIncludes: 'Unterminated func "g"' });
     expectDiagnostic(diagnostics, {
-      messageIncludes: 'expected "end" before "const"',
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      file: FILE,
+      line: 3,
+      column: 1,
+      messageIncludes: 'Unterminated func "g"',
     });
 
     const c = mod.items[0] as ConstDeclNode;
@@ -64,6 +75,11 @@ const K = 42`;
 
     expect(itemKinds(mod.items)).toEqual(['ConstDecl']);
     expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      file: FILE,
+      line: 1,
+      column: 1,
       messageIncludes: 'Unsupported top-level construct: totally_unknown_construct',
     });
 
@@ -82,6 +98,11 @@ end`;
     expect(mod.items).toHaveLength(1);
     expect(itemKinds(mod.items)).toEqual(['TypeDecl']);
     expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      file: FILE,
+      line: 3,
+      column: 1,
       messageIncludes: 'record field declaration line "not a field": expected <name>: <type>',
     });
 
@@ -109,8 +130,14 @@ end`;
       expect(t.typeExpr.fields).toHaveLength(1);
       expect(t.typeExpr.fields[0]!.name).toBe('a');
     }
-    expectDiagnostic(diagnostics, { messageIncludes: 'Unterminated type "T"' });
-    expectDiagnostic(diagnostics, { messageIncludes: 'missing "end"' });
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      file: FILE,
+      line: 1,
+      column: 1,
+      messageIncludes: 'Unterminated type "T"',
+    });
   });
 
   it('top-level asm: skipped with diagnostic; following declaration still parsed', () => {
@@ -120,6 +147,11 @@ const Z = 0`;
 
     expect(itemKinds(mod.items)).toEqual(['ConstDecl']);
     expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      file: FILE,
+      line: 1,
+      column: 1,
       messageIncludes: '"asm" is not a top-level construct',
     });
     expect((mod.items[0] as ConstDeclNode).name).toBe('Z');

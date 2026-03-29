@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { DiagnosticIds, type Diagnostic } from '../../src/diagnosticTypes.js';
+import { expectDiagnostic } from '../helpers/diagnostics/index.js';
 import type { AsmInstructionNode, AsmOperandNode, SourceSpan } from '../../src/frontend/ast.js';
 import { getEncoderRegistryEntry } from '../../src/z80/encoderRegistry.js';
 import { encodeInstruction } from '../../src/z80/encode.js';
@@ -60,7 +61,11 @@ describe('PR694 encoder registry dispatch', () => {
 
     const zeroArityError = encodeInstruction(instruction('ldi', [reg('A')]), env, diagnostics);
     expect(zeroArityError).toBeUndefined();
-    expect(diagnostics[0]?.message).toBe('ldi expects no operands');
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.EncodeError,
+      severity: 'error',
+      message: 'ldi expects no operands',
+    });
 
     const familyArityError = encodeInstruction(
       instruction('add', [reg('A'), reg('B'), reg('C')]),
@@ -68,10 +73,18 @@ describe('PR694 encoder registry dispatch', () => {
       diagnostics,
     );
     expect(familyArityError).toBeUndefined();
-    expect(diagnostics[1]?.message).toBe('add expects two operands');
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.EncodeError,
+      severity: 'error',
+      message: 'add expects two operands',
+    });
 
     const unknown = encodeInstruction(instruction('bogus_op', [imm(1)]), env, diagnostics);
     expect(unknown).toBeUndefined();
-    expect(diagnostics[2]?.message).toBe('Unsupported instruction: bogus_op');
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.EncodeError,
+      severity: 'error',
+      message: 'Unsupported instruction: bogus_op',
+    });
   });
 });

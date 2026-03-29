@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import type { Diagnostic } from '../src/diagnosticTypes.js';
 import type { EaExprNode, RecordFieldNode, SourceSpan, TypeExprNode } from '../src/frontend/ast.js';
-import { createEaResolutionHelpers } from '../src/lowering/eaResolution.js';
+import { buildEaResolutionContext, createEaResolutionHelpers } from '../src/lowering/eaResolution.js';
 
 const span: SourceSpan = {
   file: 'pr709.zax',
@@ -52,45 +52,40 @@ function makeHelpers() {
   ]);
   const localAliasTargets = new Map<string, EaExprNode>([['alias_table', eaName('table')]]);
 
-  const helpers = createEaResolutionHelpers({
-    env: { consts: new Map(), enums: new Map(), types: new Map() },
-    diagnostics,
-    diagAt: (diags, s, message) => {
-      diags.push({
-        id: DiagnosticIds.TypeError,
-        severity: 'error',
-        message,
-        file: s.file,
-        line: s.start.line,
-        column: s.start.column,
-      });
-    },
-    stackSlotOffsets,
-    stackSlotTypes,
-    storageTypes: new Map(),
-    moduleAliasTargets: new Map(),
-    getLocalAliasTargets: () => localAliasTargets,
-    evalImmExpr: (expr) => (expr.kind === 'ImmLiteral' ? expr.value : undefined),
-    evalImmNoDiag: (expr) => (expr.kind === 'ImmLiteral' ? expr.value : undefined),
-    resolveScalarKind: (typeExpr) => {
-      if (typeExpr.kind !== 'TypeName') return undefined;
-      const lower = typeExpr.name.toLowerCase();
-      return lower === 'byte' || lower === 'word' || lower === 'addr' ? lower : undefined;
-    },
-    resolveAggregateType: (typeExpr) => {
-      if (typeExpr.kind === 'RecordType') return { kind: 'record', fields: typeExpr.fields };
-      return undefined;
-    },
-    resolveEaTypeExpr: () => undefined,
-    sizeOfTypeExpr: (typeExpr) => {
-      if (typeExpr.kind === 'TypeName') {
-        if (typeExpr.name === 'byte') return 1;
-        if (typeExpr.name === 'word') return 2;
-      }
-      if (typeExpr.kind === 'RecordType') return 4;
-      return undefined;
-    },
-  });
+  const helpers = createEaResolutionHelpers(
+    buildEaResolutionContext({
+      env: { consts: new Map(), enums: new Map(), types: new Map() },
+      diagnostics,
+      diagAt: (diags, s, message) => {
+        diags.push({
+          id: DiagnosticIds.TypeError,
+          severity: 'error',
+          message,
+          file: s.file,
+          line: s.start.line,
+          column: s.start.column,
+        });
+      },
+      workspace: {
+        stackSlotOffsets,
+        stackSlotTypes,
+        storageTypes: new Map(),
+        moduleAliasTargets: new Map(),
+        localAliasTargets,
+      },
+      evalImmNoDiag: (expr) => (expr.kind === 'ImmLiteral' ? expr.value : undefined),
+      resolveScalarKind: (typeExpr) => {
+        if (typeExpr.kind !== 'TypeName') return undefined;
+        const lower = typeExpr.name.toLowerCase();
+        return lower === 'byte' || lower === 'word' || lower === 'addr' ? lower : undefined;
+      },
+      resolveAggregateType: (typeExpr) => {
+        if (typeExpr.kind === 'RecordType') return { kind: 'record', fields: typeExpr.fields };
+        return undefined;
+      },
+      resolveEaTypeExpr: () => undefined,
+    }),
+  );
 
   return { diagnostics, resolveEa: helpers.resolveEa };
 }
