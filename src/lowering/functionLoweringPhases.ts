@@ -12,6 +12,7 @@ import { createFunctionCallLoweringHelpers } from './functionCallLowering.js';
 import type { FunctionFrameSetupContext } from './functionFrameSetup.js';
 import { initializeFunctionFrame } from './functionFrameSetup.js';
 import type { FunctionLoweringContext } from './functionLowering.js';
+import { splitFunctionLoweringContext } from './functionLoweringSplit.js';
 
 /** #1123 — inputs to {@link initializeFunctionFrame} (alias of {@link FunctionFrameSetupContext}). */
 export type FrameContext = FunctionFrameSetupContext;
@@ -194,10 +195,10 @@ function buildFrameSetupContext(ctx: FunctionLoweringContext, currentCodeSegment
 }
 
 export function prepareFunctionLoweringSetupPhase(ctx: FunctionLoweringContext): FunctionLoweringSetupPhase {
+  const fp = splitFunctionLoweringContext(ctx);
   const {
     item,
     diagnostics,
-    diagAt,
     pending,
     traceComment,
     traceLabel,
@@ -205,13 +206,6 @@ export function prepareFunctionLoweringSetupPhase(ctx: FunctionLoweringContext):
     bindSpTracking,
     getCodeOffset,
     emitInstr: emitInstrBase,
-    evalImmExpr,
-    env,
-    resolveScalarKind,
-    stackSlotOffsets,
-    stackSlotTypes,
-    localAliasTargets,
-    symbolicTargetFromExpr,
   } = ctx;
   let currentCodeSegmentTag = currentCodeSegmentTagRef.current;
   const setCurrentCodeSegmentTag = (tag: SourceSegmentTag | undefined): void => {
@@ -220,15 +214,15 @@ export function prepareFunctionLoweringSetupPhase(ctx: FunctionLoweringContext):
   };
   const emitInstr = emitInstrBase;
   const asmRewriting = createFunctionAsmRewritingHelpers({
-    diagnostics,
-    diagAt,
-    evalImmExpr,
-    env,
-    stackSlotOffsets,
-    stackSlotTypes,
-    localAliasTargets,
-    resolveScalarKind,
-    symbolicTargetFromExpr,
+    diagnostics: fp.diagnostics.diagnostics,
+    diagAt: fp.diagnostics.diagAt,
+    evalImmExpr: fp.types.evalImmExpr,
+    env: fp.types.env,
+    stackSlotOffsets: fp.storage.stackSlotOffsets,
+    stackSlotTypes: fp.storage.stackSlotTypes,
+    localAliasTargets: fp.storage.localAliasTargets,
+    resolveScalarKind: fp.types.resolveScalarKind,
+    symbolicTargetFromExpr: fp.conditions.symbolicTargetFromExpr,
     emitInstr,
   });
   const frameSetupContext = buildFrameSetupContext(
@@ -406,64 +400,9 @@ export function runFunctionFrameSetupPhase(setup: FunctionLoweringSetupPhase): F
 
 export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBodyPhase {
   const { frame, ...setup } = ctx;
+  const fp = splitFunctionLoweringContext(setup.ctx);
+  const { item } = setup.ctx;
   const {
-    ctx: {
-      item,
-      diagnostics,
-      diagAt,
-      diagAtWithId,
-      diagAtWithSeverityAndId,
-      warnAt,
-      emitRawCodeBytes,
-      emitAbs16Fixup,
-      emitAbs16FixupPrefixed,
-      emitRel8Fixup,
-      conditionOpcodeFromName,
-      callConditionOpcodeFromName,
-      jrConditionOpcodeFromName,
-      conditionOpcode,
-      inverseConditionName,
-      resolveScalarBinding,
-      resolveScalarKind,
-      resolveEaTypeExpr,
-      resolveScalarTypeForEa,
-      resolveScalarTypeForLd,
-      resolveArrayType,
-      buildEaWordPipeline,
-      enforceEaRuntimeAtomBudget,
-      enforceDirectCallSiteEaBudget,
-      resolveEa,
-      pushEaAddress,
-      materializeEaAddressToHL,
-      pushMemValue,
-      pushImm16,
-      pushZeroExtendedReg8,
-      stackSlotOffsets,
-      stackSlotTypes,
-      storageTypes,
-      rawTypedCallWarningsEnabled,
-      resolveCallable,
-      resolveOpCandidates,
-      opStackPolicyMode,
-      formatAsmOperandForOpDiag,
-      selectOpOverload,
-      summarizeOpStackEffect,
-      cloneImmExpr,
-      cloneEaExpr,
-      cloneOperand,
-      flattenEaDottedName,
-      normalizeFixedToken,
-      reg8,
-      reg16,
-      typeDisplay,
-      sameTypeShape,
-      emitStepPipeline,
-      emitScalarWordLoad,
-      emitScalarWordStore,
-      lowerLdWithEa,
-      env,
-      evalImmExpr,
-    },
     pending,
     traceComment,
     traceLabel,
@@ -475,31 +414,32 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
     symbolicTargetFromExprForAsm,
     emitInstrForAsm,
   } = setup;
+  const diagnostics = fp.diagnostics.diagnostics;
 
   const { lowerAsmInstructionDispatcher } = createAsmInstructionLoweringHelpers({
-    diagnostics,
-    diagAt,
+    ...fp.diagnostics,
+    ...fp.emission,
+    ...fp.conditions,
+    ...fp.types,
+    ...fp.materialization,
+    ...fp.storage,
+    ...fp.callableResolution,
+    ...fp.opOverload,
+    ...fp.astUtilities,
+    ...fp.registers,
     emitInstr: emitInstrForAsm,
-    emitRawCodeBytes,
-    emitAbs16Fixup,
-    emitAbs16FixupPrefixed,
-    emitRel8Fixup,
-    conditionOpcodeFromName,
-    callConditionOpcodeFromName,
-    jrConditionOpcodeFromName,
-    conditionOpcode,
     symbolicTargetFromExpr: symbolicTargetFromExprForAsm,
     evalImmExpr: evalImmExprForAsm,
-    resolveScalarBinding,
+    resolveScalarBinding: fp.types.resolveScalarBinding,
     resolveRawAliasTargetName: (name) => resolveLocalAliasTargetName(name.toLowerCase()),
-    isModuleStorageName: (name) => storageTypes.has(name.toLowerCase()),
-    isFrameSlotName: (name) => stackSlotOffsets.has(name.toLowerCase()),
-    resolveScalarTypeForLd,
-    resolveEa,
+    isModuleStorageName: (name) => fp.storage.storageTypes.has(name.toLowerCase()),
+    isFrameSlotName: (name) => fp.storage.stackSlotOffsets.has(name.toLowerCase()),
+    resolveScalarTypeForLd: fp.types.resolveScalarTypeForLd,
+    resolveEa: fp.materialization.resolveEa,
     diagIfRetStackImbalanced: (span, mnemonic) => {
       if (frame.emitSyntheticEpilogue) return;
       if (frame.trackedSp.valid && frame.trackedSp.delta !== 0) {
-        diagAt(
+        fp.diagnostics.diagAt(
           diagnostics,
           span,
           `${mnemonic ?? 'ret'} with non-zero tracked stack delta (${frame.trackedSp.delta}); function stack is imbalanced.`,
@@ -507,7 +447,7 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
         return;
       }
       if (!frame.trackedSp.valid && frame.trackedSp.invalid && frame.hasStackSlots) {
-        diagAt(
+        fp.diagnostics.diagAt(
           diagnostics,
           span,
           `${mnemonic ?? 'ret'} reached after untracked SP mutation; cannot verify function stack balance.`,
@@ -515,7 +455,7 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
         return;
       }
       if (!frame.trackedSp.valid && frame.hasStackSlots) {
-        diagAt(
+        fp.diagnostics.diagAt(
           diagnostics,
           span,
           `${mnemonic ?? 'ret'} reached with unknown stack depth; cannot verify function stack balance.`,
@@ -529,7 +469,7 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
       const contractNoun =
         contractKind === 'typed-call' ? 'typed-call boundary contract' : 'callee stack contract';
       if (frame.hasStackSlots && frame.trackedSp.valid && frame.trackedSp.delta > 0) {
-        diagAt(
+        fp.diagnostics.diagAt(
           diagnostics,
           span,
           `${mnemonic} reached with positive tracked stack delta (${frame.trackedSp.delta}); cannot verify ${contractNoun}.`,
@@ -537,7 +477,7 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
         return;
       }
       if (frame.hasStackSlots && !frame.trackedSp.valid && frame.trackedSp.invalid) {
-        diagAt(
+        fp.diagnostics.diagAt(
           diagnostics,
           span,
           `${mnemonic} reached after untracked SP mutation; cannot verify ${contractNoun}.`,
@@ -545,7 +485,7 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
         return;
       }
       if (frame.hasStackSlots && !frame.trackedSp.valid) {
-        diagAt(
+        fp.diagnostics.diagAt(
           diagnostics,
           span,
           `${mnemonic} reached with unknown stack depth; cannot verify ${contractNoun}.`,
@@ -553,11 +493,12 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
       }
     },
     warnIfRawCallTargetsTypedCallable: (span, symbolicTarget) => {
-      if (!rawTypedCallWarningsEnabled || !symbolicTarget || symbolicTarget.addend !== 0) return;
-      const callable = resolveCallable(symbolicTarget.baseLower, span.file);
+      if (!fp.storage.rawTypedCallWarningsEnabled || !symbolicTarget || symbolicTarget.addend !== 0)
+        return;
+      const callable = fp.callableResolution.resolveCallable(symbolicTarget.baseLower, span.file);
       if (!callable) return;
       const typedName = callable.node.name;
-      diagAtWithSeverityAndId(
+      fp.diagnostics.diagAtWithSeverityAndId(
         diagnostics,
         span,
         DiagnosticIds.RawCallTypedTargetWarning,
@@ -565,13 +506,7 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
         `Raw call targets typed callable \"${typedName}\" and bypasses typed-call argument/preservation semantics; use typed call syntax unless raw ABI is intentional.`,
       );
     },
-    lowerLdWithEa,
-    pushEaAddress,
-    materializeEaAddressToHL,
-    emitScalarWordLoad,
-    emitScalarWordStore,
     emitVirtualReg16Transfer: frame.emitVirtualReg16Transfer,
-    reg16,
     emitSyntheticEpilogue: frame.emitSyntheticEpilogue,
     epilogueLabel: frame.epilogueLabel,
     emitJumpTo: frame.emitJumpTo,
@@ -581,18 +516,18 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
   });
 
   const callMaterialization = {
-    enforceEaRuntimeAtomBudget,
-    resolveScalarTypeForEa,
-    enforceDirectCallSiteEaBudget,
-    resolveEaTypeExpr,
-    pushEaAddress,
-    pushMemValue,
-    resolveScalarBinding,
-    flattenEaDottedName,
-    buildEaWordPipeline,
-    emitStepPipeline,
-    pushZeroExtendedReg8,
-    pushImm16,
+    enforceEaRuntimeAtomBudget: fp.materialization.enforceEaRuntimeAtomBudget,
+    resolveScalarTypeForEa: fp.types.resolveScalarTypeForEa,
+    enforceDirectCallSiteEaBudget: fp.materialization.enforceDirectCallSiteEaBudget,
+    resolveEaTypeExpr: fp.types.resolveEaTypeExpr,
+    pushEaAddress: fp.materialization.pushEaAddress,
+    pushMemValue: fp.materialization.pushMemValue,
+    resolveScalarBinding: fp.types.resolveScalarBinding,
+    flattenEaDottedName: fp.astUtilities.flattenEaDottedName,
+    buildEaWordPipeline: fp.materialization.buildEaWordPipeline,
+    emitStepPipeline: fp.materialization.emitStepPipeline,
+    pushZeroExtendedReg8: fp.materialization.pushZeroExtendedReg8,
+    pushImm16: fp.materialization.pushImm16,
   } as const;
 
   const { lowerAsmRange } = createFunctionCallLoweringHelpers({
@@ -601,7 +536,7 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
     getCurrentCodeSegmentTag,
     setCurrentCodeSegmentTag,
     appendInvalidOpExpansionDiagnostic: frame.appendInvalidOpExpansionDiagnostic,
-    enforceEaRuntimeAtomBudget,
+    enforceEaRuntimeAtomBudget: fp.materialization.enforceEaRuntimeAtomBudget,
     hasStackSlots: frame.hasStackSlots,
     emitSyntheticEpilogue: frame.emitSyntheticEpilogue,
     getTrackedSpDelta: () => frame.trackedSp.delta,
@@ -617,35 +552,35 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
       frame.trackedSp.invalid = value;
     },
     materialization: callMaterialization,
-    rawTypedCallWarningsEnabled,
-    resolveCallable,
-    diagAt,
-    diagAtWithSeverityAndId,
-    stackSlotTypes,
-    storageTypes,
-    resolveArrayType,
-    sameTypeShape,
-    typeDisplay,
-    env,
-    evalImmExpr,
-    resolveScalarKind,
-    reg8,
-    reg16,
+    rawTypedCallWarningsEnabled: fp.storage.rawTypedCallWarningsEnabled,
+    resolveCallable: fp.callableResolution.resolveCallable,
+    diagAt: fp.diagnostics.diagAt,
+    diagAtWithSeverityAndId: fp.diagnostics.diagAtWithSeverityAndId,
+    stackSlotTypes: fp.storage.stackSlotTypes,
+    storageTypes: fp.storage.storageTypes,
+    resolveArrayType: fp.types.resolveArrayType,
+    sameTypeShape: fp.types.sameTypeShape,
+    typeDisplay: fp.types.typeDisplay,
+    env: fp.types.env,
+    evalImmExpr: fp.types.evalImmExpr,
+    resolveScalarKind: fp.types.resolveScalarKind,
+    reg8: fp.registers.reg8,
+    reg16: fp.registers.reg16,
     emitInstr,
-    emitAbs16Fixup,
+    emitAbs16Fixup: fp.emission.emitAbs16Fixup,
     syncToFlow: frame.syncToFlow,
-    resolveOpCandidates,
-    opStackPolicyMode,
+    resolveOpCandidates: fp.callableResolution.resolveOpCandidates,
+    opStackPolicyMode: fp.callableResolution.opStackPolicyMode,
     opExpansionStack: frame.opExpansionStack,
-    diagAtWithId,
-    formatAsmOperandForOpDiag: (operand) => formatAsmOperandForOpDiag(operand) ?? '?',
-    selectOpOverload,
-    summarizeOpStackEffect,
-    cloneImmExpr,
-    cloneEaExpr,
-    cloneOperand,
-    normalizeFixedToken,
-    inverseConditionName,
+    diagAtWithId: fp.diagnostics.diagAtWithId,
+    formatAsmOperandForOpDiag: (operand) => fp.opOverload.formatAsmOperandForOpDiag(operand) ?? '?',
+    selectOpOverload: fp.opOverload.selectOpOverload,
+    summarizeOpStackEffect: fp.opOverload.summarizeOpStackEffect,
+    cloneImmExpr: fp.astUtilities.cloneImmExpr,
+    cloneEaExpr: fp.astUtilities.cloneEaExpr,
+    cloneOperand: fp.astUtilities.cloneOperand,
+    normalizeFixedToken: fp.astUtilities.normalizeFixedToken,
+    inverseConditionName: fp.conditions.inverseConditionName,
     newHiddenLabel: frame.newHiddenLabel,
     lowerAsmInstructionDispatcher,
     defineCodeLabel: frame.defineCodeLabel,
@@ -655,11 +590,11 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
     restoreFlow: frame.restoreFlow,
     emitJumpIfFalse: frame.emitJumpIfFalse,
     emitJumpTo: frame.emitJumpTo,
-    warnAt,
+    warnAt: fp.diagnostics.warnAt,
     joinFlows: (left, right, span, contextName) =>
       frame.joinFlows(left, right, span, contextName, frame.hasStackSlots),
     loadSelectorIntoHL: frame.loadSelectorIntoHL,
-    emitRawCodeBytes,
+    emitRawCodeBytes: fp.emission.emitRawCodeBytes,
     emitSelectCompareReg8ToImm8: frame.emitSelectCompareReg8ToImm8,
     emitSelectCompareToImm16: frame.emitSelectCompareToImm16,
     emitSelectCompareReg8Range: frame.emitSelectCompareReg8Range,
@@ -676,7 +611,7 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
     syncToFlow: frame.syncToFlow,
     getFlow: frame.getFlow,
     setFlow: frame.setFlow,
-    diagAt: (span, message) => diagAt(diagnostics, span, message),
+    diagAt: (span, message) => fp.diagnostics.diagAt(diagnostics, span, message),
     emitImplicitRet: () => {
       frame.withCodeSourceTag(frame.sourceTagForSpan(item.span, frame.opExpansionStack), () => {
         emitInstr('ret', [], item.span);
