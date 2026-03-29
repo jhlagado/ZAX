@@ -79,7 +79,7 @@ export type EmitPhase1Helpers = {
   /** Flushes trailing user comments from the lowered asm recording buffer. */
   flushTrailingUserComments: () => void;
   /** Live lowered asm stream (same ref as workspace). */
-  loweredAsmStream: EmitPhase1Workspace['loweredAsmStream'];
+  loweredAsmStream: EmitPhase1Workspace['emission']['loweredAsmStream'];
   /** Program-level lowering context (symbols, traversal, function lowerer). */
   programLoweringContext: ReturnType<typeof createEmitProgramContext>['programLoweringContext'];
   /** Sinks for named section contributions during emit. */
@@ -118,11 +118,11 @@ export function createEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhas
     typeDisplay,
   } = createTypeResolutionHelpers({
     env: ctx.env,
-    storageTypes: ctx.workspace.storageTypes,
-    stackSlotTypes: ctx.workspace.stackSlotTypes,
-    rawAddressSymbols: ctx.workspace.rawAddressSymbols,
-    moduleAliasTargets: ctx.workspace.moduleAliasTargets,
-    getLocalAliasTargets: () => ctx.workspace.localAliasTargets,
+    storageTypes: ctx.workspace.storage.storageTypes,
+    stackSlotTypes: ctx.workspace.storage.stackSlotTypes,
+    rawAddressSymbols: ctx.workspace.storage.rawAddressSymbols,
+    moduleAliasTargets: ctx.workspace.storage.moduleAliasTargets,
+    getLocalAliasTargets: () => ctx.workspace.storage.localAliasTargets,
   });
 
   const evalImmNoDiag = (expr: ImmExprNode): number | undefined => {
@@ -157,12 +157,12 @@ export function createEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhas
     ...(ctx.options?.namedSectionKeys ? { namedSectionKeys: ctx.options.namedSectionKeys } : {}),
     ...(ctx.options?.sourceTexts ? { sourceTexts: ctx.options.sourceTexts } : {}),
     ...(ctx.options?.sourceLineComments ? { sourceLineComments: ctx.options.sourceLineComments } : {}),
-    codeBytes: ctx.workspace.codeBytes,
-    codeSourceSegments: ctx.workspace.codeSourceSegments,
-    fixups: ctx.workspace.fixups,
-    rel8Fixups: ctx.workspace.rel8Fixups,
-    loweredAsmStream: ctx.workspace.loweredAsmStream,
-    loweredAsmBlocksByKey: ctx.workspace.loweredAsmBlocksByKey,
+    codeBytes: ctx.workspace.emission.codeBytes,
+    codeSourceSegments: ctx.workspace.emission.codeSourceSegments,
+    fixups: ctx.workspace.symbols.fixups,
+    rel8Fixups: ctx.workspace.symbols.rel8Fixups,
+    loweredAsmStream: ctx.workspace.emission.loweredAsmStream,
+    loweredAsmBlocksByKey: ctx.workspace.emission.loweredAsmBlocksByKey,
     alignTo,
     evalImmNoDiag,
     symbolicTargetFromExpr: (expr) => symbolicTargetFromExpr(expr),
@@ -261,11 +261,11 @@ export function createEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhas
       diagnostics: ctx.diagnostics,
       diagAt,
       workspace: {
-        stackSlotOffsets: ctx.workspace.stackSlotOffsets,
-        stackSlotTypes: ctx.workspace.stackSlotTypes,
-        storageTypes: ctx.workspace.storageTypes,
-        moduleAliasTargets: ctx.workspace.moduleAliasTargets,
-        localAliasTargets: ctx.workspace.localAliasTargets,
+        stackSlotOffsets: ctx.workspace.storage.stackSlotOffsets,
+        stackSlotTypes: ctx.workspace.storage.stackSlotTypes,
+        storageTypes: ctx.workspace.storage.storageTypes,
+        moduleAliasTargets: ctx.workspace.storage.moduleAliasTargets,
+        localAliasTargets: ctx.workspace.storage.localAliasTargets,
       },
       resolveScalarKind,
       resolveAggregateType,
@@ -298,11 +298,11 @@ export function createEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhas
     inferMemWidth,
   });
 
-  for (const [aliasLower, aliasTarget] of ctx.workspace.moduleAliasTargets) {
-    if (ctx.workspace.storageTypes.has(aliasLower)) continue;
+  for (const [aliasLower, aliasTarget] of ctx.workspace.storage.moduleAliasTargets) {
+    if (ctx.workspace.storage.storageTypes.has(aliasLower)) continue;
     const inferred = resolveEaTypeExpr(aliasTarget);
     if (!inferred) {
-      const decl = ctx.workspace.moduleAliasDecls.get(aliasLower);
+      const decl = ctx.workspace.storage.moduleAliasDecls.get(aliasLower);
       const target = decl?.name ?? aliasLower;
       if (decl) {
         diagAt(
@@ -319,7 +319,7 @@ export function createEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhas
       }
       continue;
     }
-    ctx.workspace.storageTypes.set(aliasLower, inferred);
+    ctx.workspace.storage.storageTypes.set(aliasLower, inferred);
   }
 
   const { enforceDirectCallSiteEaBudget, enforceEaRuntimeAtomBudget } =
@@ -327,9 +327,9 @@ export function createEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhas
       diagnostics: ctx.diagnostics,
       diagAt,
       resolveScalarBinding,
-      stackSlotOffsets: ctx.workspace.stackSlotOffsets,
-      stackSlotTypes: ctx.workspace.stackSlotTypes,
-      storageTypes: ctx.workspace.storageTypes,
+      stackSlotOffsets: ctx.workspace.storage.stackSlotOffsets,
+      stackSlotTypes: ctx.workspace.storage.stackSlotTypes,
+      storageTypes: ctx.workspace.storage.storageTypes,
     });
 
   const { buildEaBytePipeline, buildEaWordPipeline } = createAddressingPipelineBuilders({
@@ -446,8 +446,8 @@ export function createEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhas
     setSpTrackingInvalid: () => {
       invalidateSpTracking?.();
     },
-    stackSlotOffsets: ctx.workspace.stackSlotOffsets,
-    storageTypes: ctx.workspace.storageTypes,
+    stackSlotOffsets: ctx.workspace.storage.stackSlotOffsets,
+    storageTypes: ctx.workspace.storage.storageTypes,
   });
 
   const { programLoweringContext } = createEmitProgramContext({
@@ -460,8 +460,8 @@ export function createEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhas
       warnAt,
     },
     symbolsAndTrace: {
-      taken: ctx.workspace.taken,
-      pending: ctx.workspace.pending,
+      taken: ctx.workspace.symbols.taken,
+      pending: ctx.workspace.symbols.pending,
       traceComment,
       traceLabel,
       currentCodeSegmentTagRef,
@@ -526,22 +526,22 @@ export function createEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhas
       lowerLdWithEa,
     },
     storage: {
-      stackSlotOffsets: ctx.workspace.stackSlotOffsets,
-      stackSlotTypes: ctx.workspace.stackSlotTypes,
-      localAliasTargets: ctx.workspace.localAliasTargets,
-      storageTypes: ctx.workspace.storageTypes,
-      moduleAliasTargets: ctx.workspace.moduleAliasTargets,
-      rawTypedCallWarningsEnabled: ctx.workspace.rawTypedCallWarningsEnabled,
+      stackSlotOffsets: ctx.workspace.storage.stackSlotOffsets,
+      stackSlotTypes: ctx.workspace.storage.stackSlotTypes,
+      localAliasTargets: ctx.workspace.storage.localAliasTargets,
+      storageTypes: ctx.workspace.storage.storageTypes,
+      moduleAliasTargets: ctx.workspace.storage.moduleAliasTargets,
+      rawTypedCallWarningsEnabled: ctx.workspace.config.rawTypedCallWarningsEnabled,
     },
     callableResolution: {
-      resolveCallable: ctx.workspace.resolveVisibleCallable,
-      resolveOpCandidates: ctx.workspace.resolveVisibleOpCandidates,
-      opStackPolicyMode: ctx.workspace.opStackPolicyMode,
+      resolveCallable: ctx.workspace.callables.resolveVisibleCallable,
+      resolveOpCandidates: ctx.workspace.callables.resolveVisibleOpCandidates,
+      opStackPolicyMode: ctx.workspace.config.opStackPolicyMode,
     },
     opOverload: {
       formatAsmOperandForOpDiag,
       selectOpOverload,
-      summarizeOpStackEffect: ctx.workspace.summarizeOpStackEffect,
+      summarizeOpStackEffect: ctx.workspace.callables.summarizeOpStackEffect,
     },
     astUtilities: {
       cloneImmExpr,
@@ -556,28 +556,28 @@ export function createEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhas
     },
     program: {
       program: ctx.program,
-      includeDirs: ctx.workspace.includeDirs,
-      localCallablesByFile: ctx.workspace.localCallablesByFile,
-      visibleCallables: ctx.workspace.visibleCallables,
-      localOpsByFile: ctx.workspace.localOpsByFile,
-      visibleOpsByName: ctx.workspace.visibleOpsByName,
-      declaredOpNames: ctx.workspace.declaredOpNames,
-      declaredBinNames: ctx.workspace.declaredBinNames,
-      deferredExterns: ctx.workspace.deferredExterns,
-      storageTypes: ctx.workspace.storageTypes,
-      moduleAliasTargets: ctx.workspace.moduleAliasTargets,
-      moduleAliasDecls: ctx.workspace.moduleAliasDecls,
-      rawAddressSymbols: ctx.workspace.rawAddressSymbols,
-      absoluteSymbols: ctx.workspace.absoluteSymbols,
-      symbols: ctx.workspace.symbols,
-      dataBytes: ctx.workspace.dataBytes,
-      codeBytes: ctx.workspace.codeBytes,
-      hexBytes: ctx.workspace.hexBytes,
+      includeDirs: ctx.workspace.config.includeDirs,
+      localCallablesByFile: ctx.workspace.callables.localCallablesByFile,
+      visibleCallables: ctx.workspace.callables.visibleCallables,
+      localOpsByFile: ctx.workspace.callables.localOpsByFile,
+      visibleOpsByName: ctx.workspace.callables.visibleOpsByName,
+      declaredOpNames: ctx.workspace.callables.declaredOpNames,
+      declaredBinNames: ctx.workspace.callables.declaredBinNames,
+      deferredExterns: ctx.workspace.symbols.deferredExterns,
+      storageTypes: ctx.workspace.storage.storageTypes,
+      moduleAliasTargets: ctx.workspace.storage.moduleAliasTargets,
+      moduleAliasDecls: ctx.workspace.storage.moduleAliasDecls,
+      rawAddressSymbols: ctx.workspace.storage.rawAddressSymbols,
+      absoluteSymbols: ctx.workspace.symbols.absoluteSymbols,
+      symbols: ctx.workspace.symbols.symbols,
+      dataBytes: ctx.workspace.emission.dataBytes,
+      codeBytes: ctx.workspace.emission.codeBytes,
+      hexBytes: ctx.workspace.emission.hexBytes,
       activeSectionRef,
       codeOffsetRef,
       dataOffsetRef,
       varOffsetRef,
-      baseExprs: ctx.workspace.baseExprs,
+      baseExprs: ctx.workspace.storage.baseExprs,
       advanceAlign,
       alignTo,
       loadBinInput,
@@ -595,7 +595,7 @@ export function createEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhas
 
   return {
     flushTrailingUserComments,
-    loweredAsmStream: ctx.workspace.loweredAsmStream,
+    loweredAsmStream: ctx.workspace.emission.loweredAsmStream,
     programLoweringContext,
     namedSectionSinks,
   };
