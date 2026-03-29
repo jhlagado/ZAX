@@ -408,7 +408,7 @@ This file is a single flat module of exported constants — think of it as the g
 - `IMM_OPERATOR_PRECEDENCE` — an array of `{ level, ops }` objects that defines the full operator precedence table for immediate expressions, from multiply/divide (level 7) down to bitwise OR (level 2). This drives the Pratt parser in `parseImm.ts`.
 - `MATCHER_TYPES` — the types that can appear in `op` parameter declarations: `reg8`, `reg16`, `idx16`, `cc`, `imm8`, `imm16`, `ea`, `mem8`, `mem16`.
 - `CHAR_ESCAPE_VALUES` — the escape sequences recognised in character and string literals.
-- `SCALAR_TYPES` — `byte`, `word`, `addr`, `ptr`.
+- `SCALAR_TYPES` — `byte`, `word`, `addr`.
 
 Nothing in `grammarData.ts` has any side effects; it is pure data.
 
@@ -599,7 +599,7 @@ Division by zero is caught and reported as a diagnostic.
 
 `sizeOfTypeExpr(typeExpr, env)` computes the byte size of a type expression:
 - `byte` → 1
-- `word`, `addr`, `ptr` → 2
+- `word`, `addr` → 2
 - `TypeName` → looks up the named type in `env.types` and recurses.
 - `ArrayType` → `element_size * length`.
 - `RecordType` → sum of all field sizes.

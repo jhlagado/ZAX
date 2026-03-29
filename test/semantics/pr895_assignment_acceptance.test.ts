@@ -34,7 +34,7 @@ section data globals at $8000
   arr2: byte[4]
   src_word: word
   dst: word
-  ptr: ptr
+  ptr: addr
 end
 
 section code text at $0000
@@ -66,7 +66,7 @@ end
 section data globals at $8000
   arr1: byte[4]
   arr2: byte[4]
-  ptr: ptr
+  ptr: addr
   dst_rec: Rec
   src_rec: Rec
 end

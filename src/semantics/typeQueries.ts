@@ -38,8 +38,6 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
     if (typeExpr.kind !== 'TypeName') return undefined;
     const lower = typeExpr.name.toLowerCase();
     if (lower === 'byte' || lower === 'word' || lower === 'addr') return lower;
-    // `ptr` is a source-language alias for address-sized scalar storage.
-    if (lower === 'ptr') return 'addr';
     if (seen.has(lower)) return undefined;
     seen.add(lower);
     const decl = resolveVisibleType(typeExpr.name, typeExpr.span.file, ctx.env);

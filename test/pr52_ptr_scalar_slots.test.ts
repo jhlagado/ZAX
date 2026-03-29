@@ -9,8 +9,8 @@ import type { BinArtifact } from '../src/formats/types.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-describe('PR52: treat ptr as 16-bit scalar in codegen', () => {
-  it('allows ptr locals/args as 16-bit slots', async () => {
+describe('PR52: addr as 16-bit scalar in codegen', () => {
+  it('allows addr locals/args as 16-bit slots', async () => {
     const entry = join(__dirname, 'fixtures', 'pr52_ptr_scalar_slots.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.diagnostics).toEqual([]);

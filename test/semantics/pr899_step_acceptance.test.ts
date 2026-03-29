@@ -65,7 +65,7 @@ end
 
 section data globals at $8000
   rec: Rec
-  ptr: ptr
+  addr_slot: addr
   raw_buf:
     db 1, 2, 3
 end
@@ -73,7 +73,7 @@ end
 section code text at $0000
 func main()
   step rec
-  step ptr
+  step addr_slot
   step raw_buf
   ret
 end

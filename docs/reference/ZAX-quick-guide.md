@@ -16,7 +16,7 @@ ZAX combines:
 
 - raw Z80 instruction authoring (mnemonics, registers, and flags written directly)
 - structured control flow (`if`, `while`, `repeat`, `select`)
-- typed storage (`byte`, `word`, `addr`, `ptr`, arrays, records, unions)
+- typed storage (`byte`, `word`, `addr`, arrays, records, unions)
 - compile-time expressions (`const`, `sizeof`, `offsetof`, `enum`)
 - inline macro-instructions (`op`) with AST-level operand matching and overload resolution
 
@@ -136,13 +136,10 @@ The full CLI contract is in `docs/spec/zax-spec.md` Appendix D.
 | ------ | ------------ | -------------------------------------------------------------- |
 | `byte` | 1            | 8-bit unsigned                                                 |
 | `word` | 2            | 16-bit unsigned                                                |
-| `addr` | 2            | 16-bit address; semantic signal for "holds a memory address"   |
-| `ptr`  | 2            | 16-bit pointer; untyped in the current language (no `ptr<T>`)  |
+| `addr` | 2            | 16-bit address; used for raw addresses, pointers, and other address-sized scalars (no `ptr<T>` in the current language) |
 | `void` | —            | Return type only; not valid as a storage, field, or param type |
 
 There are no signed storage types in the current language.
-
-`ptr` and `addr` are identical in size and code generation. The distinction is semantic intent: `addr` signals "this holds a data address," `ptr` signals "this holds a pointer to something." Use whichever communicates your intent more clearly; the compiler treats them identically.
 
 `void` may only appear as a function return type. Using `void` as a variable type, parameter type, record field type, or array element type is a compile error.
 
@@ -886,7 +883,7 @@ Three declaration forms are valid inside a `var` block:
 
 The **typed alias form** `name: Type = rhs` is always a compile error.
 
-Only scalar types (`byte`, `word`, `addr`, `ptr`, or aliases resolving to those) may have frame slots. Non-scalar locals (arrays, records) are allowed only as alias declarations to direct module-scope storage — they name an existing address but allocate no storage:
+Only scalar types (`byte`, `word`, `addr`, or aliases resolving to those) may have frame slots. Non-scalar locals (arrays, records) are allowed only as alias declarations to direct module-scope storage — they name an existing address but allocate no storage:
 
 ```zax
 section data vars at $8000
@@ -931,7 +928,7 @@ When the compiler generates a call to a typed internal `func`, it enforces a pre
 | ----------------------------- | -------------------------------------------------------------- |
 | `HL`                          | **boundary-volatile** for all typed calls including `void`     |
 | `L`                           | carries 8-bit return value for `byte`-returning calls          |
-| `HL`                          | carries 16-bit return value for `word`/`addr`/`ptr` returns    |
+| `HL`                          | carries 16-bit return value for `word`/`addr` returns          |
 | all other registers and flags | **callee-preserved** — restored by compiler-generated epilogue |
 
 This guarantee applies **only** to typed internal `func` calls. It does not apply to:
