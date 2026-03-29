@@ -1,182 +1,88 @@
 /**
- * Emit program context wiring (#1084)
+ * Emit program context wiring (#1084, #1316)
  *
- * `emit.ts` assembles a large amount of state for lowering. Grouping the *inputs* into named
- * bundles (diagnostics, emission, types, program-level layout, …) keeps the call site readable and
- * localizes future churn: most edits touch one bundle instead of a single flat record.
- *
- * Tradeoffs:
- * - **Pros:** Clearer ownership at the call site; bundles align with `createEmitLoweringContexts`
- *   internal splits (diagnostics, emission, …) without changing runtime behavior.
- * - **Cons:** Callers must pass every bundle key; there is no partial/default merge. Flattening
- *   still happens once in {@link emitProgramBundlesToLoweringBuilderInput} before the builder runs.
- *
- * Behavior is unchanged from the previous flat `Context` object: the merged object passed to
- * `createEmitLoweringContexts` is identical aside from object construction order (spread order is
- * fixed to match the prior explicit field list).
+ * Callers pass named bundles aligned with {@link FunctionLoweringComponentContexts}; the builder
+ * forwards them without flattening to {@link createEmitLoweringContexts}.
  */
 
 import type {
-  EmitFunctionLoweringContextInputs,
-  EmitLoweringContextBuilderInput,
-  EmitProgramLoweringContextInputs,
-} from './emitContextBuilder.js';
+  FunctionLoweringAstUtilityContext,
+  FunctionLoweringCallableResolutionContext,
+  FunctionLoweringComponentContexts,
+  FunctionLoweringConditionContext,
+  FunctionLoweringDiagnosticsContext,
+  FunctionLoweringEmissionContext,
+  FunctionLoweringMaterializationContext,
+  FunctionLoweringOpOverloadContext,
+  FunctionLoweringRegisterContext,
+  FunctionLoweringSpTrackingContext,
+  FunctionLoweringStorageContext,
+  FunctionLoweringSymbolContext,
+  FunctionLoweringTypeContext,
+} from './functionLowering.js';
+import type { EmitProgramLoweringContextInputs, EmitLoweringContextBuilderInput } from './emitContextBuilder.js';
 import { createEmitLoweringContexts } from './emitContextBuilder.js';
 
-export type EmitDiagnosticsBundle = Pick<
-  EmitFunctionLoweringContextInputs,
-  | 'diagnostics'
-  | 'diag'
-  | 'diagAt'
-  | 'diagAtWithId'
-  | 'diagAtWithSeverityAndId'
-  | 'warnAt'
->;
+export type EmitDiagnosticsBundle = FunctionLoweringDiagnosticsContext;
 
-export type EmitSymbolsAndTraceBundle = Pick<
-  EmitFunctionLoweringContextInputs,
-  | 'taken'
-  | 'pending'
-  | 'traceComment'
-  | 'traceLabel'
-  | 'currentCodeSegmentTagRef'
-  | 'generatedLabelCounterRef'
->;
+export type EmitSymbolsAndTraceBundle = FunctionLoweringSymbolContext;
 
-export type EmitSpTrackingBundle = Pick<EmitFunctionLoweringContextInputs, 'bindSpTracking'>;
+export type EmitSpTrackingBundle = FunctionLoweringSpTrackingContext;
 
-export type EmitEmissionBundle = Pick<
-  EmitFunctionLoweringContextInputs,
-  | 'getCodeOffset'
-  | 'emitInstr'
-  | 'emitRawCodeBytes'
-  | 'emitAbs16Fixup'
-  | 'emitAbs16FixupPrefixed'
-  | 'emitRel8Fixup'
->;
+export type EmitEmissionBundle = FunctionLoweringEmissionContext;
 
-export type EmitConditionsBundle = Pick<
-  EmitFunctionLoweringContextInputs,
-  | 'conditionOpcodeFromName'
-  | 'conditionNameFromOpcode'
-  | 'callConditionOpcodeFromName'
-  | 'jrConditionOpcodeFromName'
-  | 'conditionOpcode'
-  | 'inverseConditionName'
-  | 'symbolicTargetFromExpr'
->;
+export type EmitConditionsBundle = FunctionLoweringConditionContext;
 
-export type EmitTypesBundle = Pick<
-  EmitFunctionLoweringContextInputs,
-  | 'evalImmExpr'
-  | 'env'
-  | 'resolveScalarBinding'
-  | 'resolveScalarKind'
-  | 'resolveEaTypeExpr'
-  | 'resolveScalarTypeForEa'
-  | 'resolveScalarTypeForLd'
-  | 'resolveArrayType'
-  | 'typeDisplay'
-  | 'sameTypeShape'
->;
+export type EmitTypesBundle = FunctionLoweringTypeContext;
 
-export type EmitMaterializationBundle = Pick<
-  EmitFunctionLoweringContextInputs,
-  | 'resolveEa'
-  | 'buildEaWordPipeline'
-  | 'enforceEaRuntimeAtomBudget'
-  | 'enforceDirectCallSiteEaBudget'
-  | 'pushEaAddress'
-  | 'materializeEaAddressToHL'
-  | 'pushMemValue'
-  | 'pushImm16'
-  | 'pushZeroExtendedReg8'
-  | 'loadImm16ToHL'
-  | 'emitStepPipeline'
-  | 'emitScalarWordLoad'
-  | 'emitScalarWordStore'
-  | 'lowerLdWithEa'
->;
+export type EmitMaterializationBundle = FunctionLoweringMaterializationContext;
 
-export type EmitStorageBundle = Pick<
-  EmitFunctionLoweringContextInputs,
-  | 'stackSlotOffsets'
-  | 'stackSlotTypes'
-  | 'localAliasTargets'
-  | 'storageTypes'
-  | 'moduleAliasTargets'
-  | 'rawTypedCallWarningsEnabled'
->;
+export type EmitStorageBundle = FunctionLoweringStorageContext;
 
-export type EmitCallableResolutionBundle = Pick<
-  EmitFunctionLoweringContextInputs,
-  'resolveCallable' | 'resolveOpCandidates' | 'opStackPolicyMode'
->;
+export type EmitCallableResolutionBundle = FunctionLoweringCallableResolutionContext;
 
-export type EmitOpOverloadBundle = Pick<
-  EmitFunctionLoweringContextInputs,
-  'formatAsmOperandForOpDiag' | 'selectOpOverload' | 'summarizeOpStackEffect'
->;
+export type EmitOpOverloadBundle = FunctionLoweringOpOverloadContext;
 
-export type EmitAstUtilitiesBundle = Pick<
-  EmitFunctionLoweringContextInputs,
-  | 'cloneImmExpr'
-  | 'cloneEaExpr'
-  | 'cloneOperand'
-  | 'flattenEaDottedName'
-  | 'normalizeFixedToken'
->;
+export type EmitAstUtilitiesBundle = FunctionLoweringAstUtilityContext;
 
-export type EmitRegistersBundle = Pick<EmitFunctionLoweringContextInputs, 'reg8' | 'reg16'>;
+export type EmitRegistersBundle = FunctionLoweringRegisterContext;
 
 /** Named bundles passed from `emitProgram` into lowering context construction. */
 export type EmitProgramContextBundles = {
-  /** Diagnostic helpers and mutable sink refs. */
   readonly diagnostics: Readonly<EmitDiagnosticsBundle>;
-  /** Symbol tables, pending, trace hooks. */
   readonly symbolsAndTrace: Readonly<EmitSymbolsAndTraceBundle>;
-  /** SP tracking binder for asm emission. */
   readonly spTracking: Readonly<EmitSpTrackingBundle>;
-  /** Code emission and fixup hooks. */
   readonly emission: Readonly<EmitEmissionBundle>;
-  /** Branch/condition opcode helpers. */
   readonly conditions: Readonly<EmitConditionsBundle>;
-  /** Type and imm evaluation hooks. */
   readonly types: Readonly<EmitTypesBundle>;
-  /** EA / step pipeline materialization. */
   readonly materialization: Readonly<EmitMaterializationBundle>;
-  /** Stack slots, storage maps, alias targets. */
   readonly storage: Readonly<EmitStorageBundle>;
-  /** Callable and op resolution. */
   readonly callableResolution: Readonly<EmitCallableResolutionBundle>;
-  /** Op overload selection and stack summaries. */
   readonly opOverload: Readonly<EmitOpOverloadBundle>;
-  /** AST clone / operand normalization utilities. */
   readonly astUtilities: Readonly<EmitAstUtilitiesBundle>;
-  /** Virtual register sets for lowering. */
   readonly registers: Readonly<EmitRegistersBundle>;
-  /** Program-level fields (visibility, sections, placement hooks, …). */
   readonly program: Readonly<EmitProgramLoweringContextInputs>;
 };
 
 export function emitProgramBundlesToLoweringBuilderInput(
   b: Readonly<EmitProgramContextBundles>,
 ): EmitLoweringContextBuilderInput {
+  const functionLowering: FunctionLoweringComponentContexts = {
+    diagnostics: b.diagnostics,
+    symbols: b.symbolsAndTrace,
+    spTracking: b.spTracking,
+    emission: b.emission,
+    conditions: b.conditions,
+    types: b.types,
+    materialization: b.materialization,
+    storage: b.storage,
+    callableResolution: b.callableResolution,
+    opOverload: b.opOverload,
+    astUtilities: b.astUtilities,
+    registers: b.registers,
+  };
   return {
-    functionLowering: {
-      ...b.diagnostics,
-      ...b.symbolsAndTrace,
-      ...b.spTracking,
-      ...b.emission,
-      ...b.conditions,
-      ...b.types,
-      ...b.materialization,
-      ...b.storage,
-      ...b.callableResolution,
-      ...b.opOverload,
-      ...b.astUtilities,
-      ...b.registers,
-    },
+    functionLowering,
     programLowering: b.program,
   };
 }

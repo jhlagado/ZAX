@@ -281,12 +281,59 @@ export type FunctionLoweringSharedContext = FunctionLoweringDiagnosticsContext &
   FunctionLoweringRegisterContext;
 
 /**
- * Entry context for lowering a whole function. Narrower phase views are
- * {@link FrameContext}, {@link BodyContext}, and {@link RewriteContext} (#1123).
+ * The twelve named slices that merge into {@link FunctionLoweringSharedContext}. Emit wiring
+ * (`emitContextBuilder`) and phase code pass these groups instead of a single flat field bag (#1316).
+ */
+export type FunctionLoweringComponentContexts = {
+  readonly diagnostics: FunctionLoweringDiagnosticsContext;
+  readonly symbols: FunctionLoweringSymbolContext;
+  readonly spTracking: FunctionLoweringSpTrackingContext;
+  readonly emission: FunctionLoweringEmissionContext;
+  readonly conditions: FunctionLoweringConditionContext;
+  readonly types: FunctionLoweringTypeContext;
+  readonly materialization: FunctionLoweringMaterializationContext;
+  readonly storage: FunctionLoweringStorageContext;
+  readonly callableResolution: FunctionLoweringCallableResolutionContext;
+  readonly opOverload: FunctionLoweringOpOverloadContext;
+  readonly astUtilities: FunctionLoweringAstUtilityContext;
+  readonly registers: FunctionLoweringRegisterContext;
+};
+
+/** Merge named sub-contexts into the flat intersection used at lowering boundaries. */
+export function mergeFunctionLoweringSharedContext(
+  parts: Readonly<FunctionLoweringComponentContexts>,
+): FunctionLoweringSharedContext {
+  return {
+    ...parts.diagnostics,
+    ...parts.symbols,
+    ...parts.spTracking,
+    ...parts.emission,
+    ...parts.conditions,
+    ...parts.types,
+    ...parts.materialization,
+    ...parts.storage,
+    ...parts.callableResolution,
+    ...parts.opOverload,
+    ...parts.astUtilities,
+    ...parts.registers,
+  };
+}
+
+/**
+ * Entry context for lowering one function: the AST node plus the shared per-function lowering
+ * hooks. {@link FunctionLoweringSharedContext} is the hook bundle reused when merging into program
+ * lowering; this type adds {@link FunctionLoweringItemContext.item}.
+ *
+ * Narrower phase views: {@link FrameContext}, {@link BodyContext}, {@link RewriteContext} (#1123).
  */
 export type FunctionLoweringContext = FunctionLoweringItemContext & FunctionLoweringSharedContext;
 
 export type { BodyContext, FrameContext, RewriteContext } from './functionLoweringPhases.js';
+
+export {
+  splitFunctionLoweringContext,
+  splitFunctionLoweringSharedContext,
+} from './functionLoweringSplit.js';
 
 export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const setup = prepareFunctionLoweringSetupPhase(ctx);
