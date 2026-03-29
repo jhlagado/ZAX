@@ -6,6 +6,18 @@ export function diag(diagnostics: Diagnostic[], file: string, message: string): 
   diagnostics.push({ id: DiagnosticIds.EmitError, severity: 'error', message, file });
 }
 
+/** Encoder-time diagnostic with stable {@link DiagnosticIds.EncodeError} id and source span. */
+export function diagEncodeAt(diagnostics: Diagnostic[], span: SourceSpan, message: string): void {
+  diagnostics.push({
+    id: DiagnosticIds.EncodeError,
+    severity: 'error',
+    message,
+    file: span.file,
+    line: span.start.line,
+    column: span.start.column,
+  });
+}
+
 export function diagAt(diagnostics: Diagnostic[], span: SourceSpan, message: string): void {
   diagnostics.push({
     id: DiagnosticIds.EmitError,

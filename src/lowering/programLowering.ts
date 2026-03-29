@@ -146,9 +146,6 @@ export type PrescanContext = Pick<
   | 'resolveScalarKind'
 >;
 
-/** @deprecated Use {@link PrescanContext} */
-export type ProgramPrescanContext = PrescanContext;
-
 /**
  * Phase 2 — full program-lowering context after prescan. Prescan outputs are frozen in
  * {@link PrescanResult}; the same map instances remain on `ctx` for lowering (shared refs).

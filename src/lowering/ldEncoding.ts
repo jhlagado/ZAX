@@ -1,4 +1,4 @@
-import type { StepPipeline } from './steps.js';
+import type { StepPipeline, StepReg8 } from './steps.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
 import type { AsmOperandNode, EaExprNode } from '../frontend/ast.js';
 import type { ImmExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';
@@ -17,13 +17,13 @@ export type LdEncodingContext = {
   LOAD_RP_GLOB: (rp: 'HL' | 'DE' | 'BC', baseLower: string) => StepPipeline;
   STORE_RP_FVAR: (rp: 'HL' | 'DE' | 'BC', ixDisp: number) => StepPipeline;
   STORE_RP_GLOB: (rp: 'HL' | 'DE' | 'BC', baseLower: string) => StepPipeline;
-  TEMPLATE_L_ABC: (dest: string, ea: StepPipeline) => StepPipeline;
+  TEMPLATE_L_ABC: (dest: StepReg8, ea: StepPipeline) => StepPipeline;
   TEMPLATE_L_DE: (dest: 'D' | 'E', ea: StepPipeline) => StepPipeline;
   TEMPLATE_L_HL: (dest: 'H' | 'L', ea: StepPipeline) => StepPipeline;
   TEMPLATE_LW_BC: (ea: StepPipeline) => StepPipeline;
   TEMPLATE_LW_DE: (ea: StepPipeline) => StepPipeline;
   TEMPLATE_LW_HL: (ea: StepPipeline) => StepPipeline;
-  TEMPLATE_S_ANY: (src: string, ea: StepPipeline) => StepPipeline;
+  TEMPLATE_S_ANY: (src: StepReg8, ea: StepPipeline) => StepPipeline;
   TEMPLATE_S_HL: (src: 'H' | 'L', ea: StepPipeline) => StepPipeline;
   TEMPLATE_SW_DEBC: (src: 'DE' | 'BC', ea: StepPipeline) => StepPipeline;
   TEMPLATE_SW_HL: (ea: StepPipeline) => StepPipeline;

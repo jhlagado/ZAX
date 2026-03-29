@@ -12,7 +12,7 @@ import type {
 } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
-import type { Callable, PendingSymbol, SourceSegmentTag } from './loweringTypes.js';
+import type { Callable, PendingSymbol, ResolvedArrayType, SourceSegmentTag } from './loweringTypes.js';
 import type { OpOverloadSelection } from './opMatching.js';
 import type { OpStackSummary } from './opStackAnalysis.js';
 import type { EaResolution } from './eaResolution.js';
@@ -27,13 +27,7 @@ import {
 // This module owns the per-function lowering coordinator. It assembles the
 // function-local helpers, state, and diagnostics around the extracted
 // rewriting, frame-setup, body-setup, and call-lowering submodules.
-/** Array shape extracted for lowering; `length` omitted when unknown. */
-type ResolvedArrayType = {
-  /** Element type expression. */
-  element: TypeExprNode;
-  /** Fixed length when statically known. */
-  length?: number;
-};
+export type { ResolvedArrayType } from './loweringTypes.js';
 export type FunctionLoweringItemContext = {
   /** Set by: program lowering construction. Used by: frame setup, body orchestration. */
   readonly item: FuncDeclNode;
