@@ -1,5 +1,7 @@
 # ZAX Developer Playbook (Non-normative)
 
+For a short branch → PR → checks checklist, see [`CONTRIBUTING.md`](../../CONTRIBUTING.md) at the repo root. This playbook goes deeper (authority, refactors, review norms).
+
 This document is the contributor workflow guide.
 
 It is intentionally narrow. It does not own roadmap history, version closeout status,
