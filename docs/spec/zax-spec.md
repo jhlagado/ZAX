@@ -305,7 +305,7 @@ Types exist for layout/width/intent only. No runtime type checks are emitted.
 
 Notes (v0.1):
 
-- `addr` is untyped in v0.1 (there is no `ptr<T>` or typed pointers). This is intentional; future versions may add optional pointer parameterization.
+- `addr` is untyped. It carries no element-type information. Every dereference through an `addr` value requires an explicit typed reinterpretation at the use site: `<Type>local.field` (Section 7.2.1). There is no `ptr` keyword in ZAX; use `addr` for all address-typed storage.
 - `void` may only appear as a function return type. Using `void` as a variable type, parameter type, record field type, or array element type is a compile error.
 
 Type sizes (v0.1):
@@ -770,6 +770,73 @@ Relative `extern` semantics (v0.1):
   - Example: if `legacy` is placed at `$C000`, then `legacy_putc ... at $0030` resolves to absolute address `$C030`.
 
 `extern`-declared names are normal global symbols; collisions are errors. Prefer `<binName>_name` conventions (e.g., `legacy_putc`).
+
+### 6.6 Raw Data Directives: `db`, `dw`, `ds`
+
+Raw data directives emit bytes directly into the output without a type annotation. They are first-class surface forms with dedicated AST node types, a dedicated parser, and lowering handlers.
+
+Syntax:
+
+```
+db expr [, expr ...]        ; one byte per expression
+dw expr [, expr ...]        ; one word (two bytes, little-endian) per expression
+ds expr                     ; reserve expr bytes (zero-initialised)
+```
+
+**`db` — byte data**
+
+Each `expr` is an `imm` expression (Section 7.1) that must resolve to a value in the range 0–255. A compile error is issued if the value is out of range. Expressions are emitted in order.
+
+String literal form: `db "TEXT"` emits one byte per character (ASCII). The string must be quoted and must not contain escape sequences other than `\\` and `\"` in v0.1. No null terminator is appended automatically.
+
+```
+db 1, 2, 3          ; emits three bytes: $01 $02 $03
+db "HELLO"          ; emits five bytes: $48 $45 $4C $4C $4F
+db $FF, 0, 'A'      ; mixed: literal hex, decimal, char literal
+```
+
+**`dw` — word data**
+
+Each `expr` is an `imm` expression that must resolve to a value in the range 0–65535. Each value is emitted as two bytes in little-endian order (low byte first). Label references are valid and produce fixups resolved after all addresses are known.
+
+```
+dw $1234, $5678     ; emits $34 $12 $78 $56
+dw handler_a        ; label reference → fixup (two bytes)
+```
+
+**`ds` — space reservation**
+
+`ds expr` reserves `expr` bytes, each initialised to zero. `expr` must be a compile-time constant (it must not contain label references or fixup targets). `ds 0` is a compile error.
+
+```
+ds 2                ; reserves two zero bytes
+ds 16               ; reserves sixteen zero bytes
+```
+
+**Labels and raw data directives**
+
+A label placed on the line immediately before a raw data directive names the first byte of the emitted data. This is the standard way to reference raw data from code or other directives:
+
+```
+section data tables at $8000
+  lookup:
+  db 0, 1, 4, 9, 16, 25    ; lookup[0..5]: squares 0..5
+  handlers:
+  dw handle_a, handle_b    ; address table
+  padding:
+  ds 4
+end
+```
+
+`lookup`, `handlers`, and `padding` are address-valued names of type `addr`, each pointing to the first byte of their respective data block. `ld hl, lookup` loads the address `$8000` into HL; `ld a, (lookup)` reads the byte `$00` at `$8000`.
+
+**Valid placement**
+
+Raw data directives are valid inside `section data` and `section code` blocks. Using them inside a `func` body is not defined behaviour in v0.1.
+
+**Relationship to typed storage**
+
+`db`/`dw`/`ds` bypass the type system. They emit bytes directly with no name, no type annotation, and no compiler-tracked offset. Use typed storage declarations (`name: Type [= value]`) when the type system's name resolution, offset tracking, and `:=` assignment surface are needed. Use raw directives when you are building a byte-level table, address vector, or space reservation that has no useful type beyond its byte layout.
 
 ---
 

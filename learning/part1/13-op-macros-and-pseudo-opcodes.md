@@ -42,6 +42,144 @@ load_and_or B
 
 ---
 
+## All matcher types
+
+`reg8` is the most common matcher, but it is only one of several. The full set
+lets you match register pairs, immediate values, memory operands, and storage
+references.
+
+**Register matchers**
+
+`reg8` matches any of the seven physical byte registers: `A B C D E H L`.
+
+`reg16` matches any of the four register pairs: `HL DE BC SP`. Use this when
+the op body needs a 16-bit register as a unit.
+
+```zax
+op zero16(dst: reg16)
+  ld dst, 0
+end
+
+zero16 HL   ; expands to: ld hl, 0
+zero16 DE   ; expands to: ld de, 0
+```
+
+**Fixed-register matchers**
+
+A parameter can be constrained to a single register by naming it directly:
+`A`, `HL`, `DE`, `BC`. These are useful when the op body only makes sense for
+one specific register.
+
+```zax
+op negate_a(dst: A)
+  cpl
+  inc a
+end
+```
+
+The compiler uses fixed-register matchers for overload resolution — a
+fixed-register overload wins over a class overload (`reg8`, `reg16`) when the
+call site provides that exact register. This is explained in the overloading
+section below.
+
+**Immediate matchers**
+
+`imm8` matches a compile-time expression that fits in a single byte (0–255).
+`imm16` matches any compile-time expression that fits in 16 bits. The compiler
+substitutes the value directly into the body.
+
+```zax
+op load_const(dst: reg8, val: imm8)
+  ld dst, val
+end
+
+load_const A, 42    ; expands to: ld a, 42
+load_const B, $FF   ; expands to: ld b, $FF
+```
+
+`imm8` is more specific than `imm16` for values that fit in 8 bits, so an
+overload with `imm8` wins over one with `imm16` when the call provides a small
+constant.
+
+**Storage-reference and memory matchers**
+
+`ea` matches a storage-reference expression — a named variable, a record field,
+an array element, or an address arithmetic expression. The parameter substitutes
+the storage address, not the stored value.
+
+`mem8` and `mem16` match a memory-dereference operand written with parentheses:
+`(ea)`. They substitute the full dereference, parentheses included. `mem8` is
+for byte-wide access; `mem16` is for word-wide access. Both are more specific
+than `ea`.
+
+```zax
+op load_byte(src: mem8)
+  ld a, src    ; src includes parentheses: ld a, (hero.flags)
+end
+
+load_byte (hero.flags)
+load_byte (hl)
+```
+
+When an `ea` operand is provided, the op body decides whether to treat it as an
+address or dereference it. When a `mem8` or `mem16` operand is provided, the
+parentheses are part of the substitution.
+
+---
+
+## Op overloading
+
+One `op` name can have multiple declarations with different parameter signatures.
+The compiler picks the best match at each call site.
+
+```zax
+op transfer(dst: reg16, src: reg16)
+  ld d, h
+  ld e, l
+end
+
+op transfer(dst: HL, src: reg16)
+  ; HL is already the destination register pair
+  ld h, src_hi      ; illustrative — real body depends on src
+  ld l, src_lo
+end
+```
+
+Overloads are resolved by specificity. A fixed-register match beats a class
+match. If the call is `transfer HL, DE`, the second overload wins because `HL`
+is more specific than `reg16`. If the call is `transfer BC, DE`, the first
+overload wins because `BC` is not `HL`.
+
+You can use overloading to provide a fast path for the most common case while
+keeping a general path for everything else:
+
+```zax
+op push_word(src: HL)
+  push hl
+end
+
+op push_word(src: reg16)
+  push src
+end
+
+push_word HL    ; fast path: push hl
+push_word DE    ; general: push de
+```
+
+Two rules the compiler enforces: if no overload matches the call, compilation
+fails. If two overloads match equally — neither is more specific than the other
+— compilation fails with an ambiguity error. You must ensure your overload set
+has a unique best match for every call pattern you intend to use.
+
+**Specificity ranking (from most to least specific):**
+1. Fixed-register match (e.g., `A`, `HL`)
+2. Class match (`reg8`, `reg16`, `imm8`, `mem8`, `mem16`)
+3. Wider class match (`imm16`, `ea`)
+
+`imm8` beats `imm16` when the value fits in 8 bits. `mem8`/`mem16` beat `ea`.
+
+---
+
 ## When to use `op` vs `func`
 
 Here is how I decide between the two.
@@ -104,7 +242,15 @@ Each expands to two one-byte instructions — the same two `ld` moves you would 
 ## Summary
 
 - `op` defines an inline expansion — no call, no frame, no `ret`. The body is pasted at each invocation.
-- `op` parameters typed `reg8` accept only physical register names at the call site. Load frame slots into registers first.
+- Matcher types for `op` parameters: `reg8` (A–L), `reg16` (HL/DE/BC/SP),
+  fixed-register (`A`, `HL`, `DE`, `BC`), `imm8`, `imm16`, `ea`, `mem8`,
+  `mem16`. Each constrains what the call site may supply.
+- `reg8` and `reg16` parameters accept only physical register names at the call
+  site. Load frame slots into registers first.
+- One `op` name can have multiple overloads with different parameter signatures.
+  The compiler selects the best match by specificity. Fixed-register matchers
+  beat class matchers; `imm8` beats `imm16` for small values; `mem8`/`mem16`
+  beat `ea`. Ambiguous or unmatched calls are compile errors.
 - Use `op` for short repeating patterns. Use `func` for anything that benefits from a clean call boundary and typed parameters.
 - ZAX pseudo-opcodes — `ld hl, de`, `ld de, bc`, and the other four pair-to-pair combinations — expand to two 8-bit moves with no run-time cost.
 
