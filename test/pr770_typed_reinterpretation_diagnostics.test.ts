@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { DiagnosticIds, type Diagnostic } from '../src/diagnosticTypes.js';
 import type { AsmOperandNode, EaExprNode, RecordFieldNode, SourceSpan, TypeExprNode } from '../src/frontend/ast.js';
 import { createValueMaterializationHelpers } from '../src/lowering/valueMaterialization.js';
+import { expectDiagnostic } from './helpers/diagnostics.js';
 
 const span: SourceSpan = {
   file: 'pr770.zax',
@@ -17,7 +19,7 @@ function reinterpret(typeExpr: TypeExprNode, base: EaExprNode): EaExprNode {
 }
 
 function makeHelpers() {
-  const diagnostics: Array<{ message: string }> = [];
+  const diagnostics: Diagnostic[] = [];
   const headerType: { kind: 'record'; fields: RecordFieldNode[] } = {
     kind: 'record' as const,
     fields: [
@@ -31,7 +33,14 @@ function makeHelpers() {
     helpers: createValueMaterializationHelpers({
       diagnostics: diagnostics as never[],
       diagAt: (_diagnostics, _span, message) => {
-        diagnostics.push({ message });
+        diagnostics.push({
+          id: DiagnosticIds.EmitError,
+          severity: 'error',
+          message,
+          file: span.file,
+          line: span.start.line,
+          column: span.start.column,
+        });
       },
       reg8: new Set(['A', 'B', 'C', 'D', 'E', 'H', 'L']),
       resolveEa: () => undefined,
@@ -125,13 +134,14 @@ describe('LOWER-01 typed reinterpretation diagnostics', () => {
       ),
     ).toBe(false);
 
-    expect(diagnostics.map((d) => d.message)).toContain(
-      'Invalid reinterpret base "byteSlot": expected HL/DE/BC/IX/IY, a scalar word/addr name, or a parenthesized base +/- imm form built from one of those.',
-    );
-    expect(diagnostics.map((d) => d.message)).toContain(
-      'Field access ".flags" requires a record or union type.',
-    );
-    expect(diagnostics.map((d) => d.message)).toContain('Indexing requires an array type.');
-    expect(diagnostics.map((d) => d.message)).toContain('Unknown reinterpret cast type "Missing".');
+    expectDiagnostic(diagnostics, {
+      message:
+        'Invalid reinterpret base "byteSlot": expected HL/DE/BC/IX/IY, a scalar word/addr name, or a parenthesized base +/- imm form built from one of those.',
+    });
+    expectDiagnostic(diagnostics, {
+      message: 'Field access ".flags" requires a record or union type.',
+    });
+    expectDiagnostic(diagnostics, { message: 'Indexing requires an array type.' });
+    expectDiagnostic(diagnostics, { message: 'Unknown reinterpret cast type "Missing".' });
   });
 });

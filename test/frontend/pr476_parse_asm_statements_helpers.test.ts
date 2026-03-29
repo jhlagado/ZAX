@@ -8,6 +8,7 @@ import {
   type AsmControlFrame,
 } from '../../src/frontend/parseAsmStatements.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
+import { expectDiagnostic, expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 describe('PR476 asm statement parsing extraction', () => {
   const file = makeSourceFile('pr476_parse_asm_statements_helpers.zax', '');
@@ -33,7 +34,7 @@ describe('PR476 asm statement parsing extraction', () => {
       { kind: 'Case', span: zeroSpan, value: { kind: 'ImmLiteral', span: zeroSpan, value: 1 } },
       { kind: 'Case', span: zeroSpan, value: { kind: 'ImmLiteral', span: zeroSpan, value: 2 } },
     ]);
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
   });
 
   it('parses grouped range case items without flattening the ranges away', () => {
@@ -53,7 +54,7 @@ describe('PR476 asm statement parsing extraction', () => {
       },
       { kind: 'Case', span: zeroSpan, value: { kind: 'ImmLiteral', span: zeroSpan, value: 95 } },
     ]);
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
   });
 
   it('keeps recovery markers intact', () => {
@@ -70,7 +71,7 @@ describe('PR476 asm statement parsing extraction', () => {
     expect(parsed).toMatchObject({ kind: 'If', cc: '__missing__' });
     expect(controlStack).toHaveLength(1);
     expect(isRecoverOnlyControlFrame(controlStack[0]!)).toBe(true);
-    expect(diagnostics[0]?.message).toContain('"if" expects a condition code');
+    expectDiagnostic(diagnostics, { messageIncludes: '"if" expects a condition code' });
   });
 
   it('validates structured-control condition codes at parse time', () => {
@@ -94,11 +95,16 @@ describe('PR476 asm statement parsing extraction', () => {
       cc: '__missing__',
     });
     expect(repeatStack).toHaveLength(0);
-    expect(diagnostics.map((d) => d.message)).toEqual([
-      'Invalid if condition code "nope": expected z, nz, c, nc, pe, po, m, p.',
-      'Invalid while condition code "nope": expected z, nz, c, nc, pe, po, m, p.',
-      'Invalid until condition code "nope": expected z, nz, c, nc, pe, po, m, p.',
-    ]);
+    expect(diagnostics).toHaveLength(3);
+    expectDiagnostic(diagnostics, {
+      message: 'Invalid if condition code "nope": expected z, nz, c, nc, pe, po, m, p.',
+    });
+    expectDiagnostic(diagnostics, {
+      message: 'Invalid while condition code "nope": expected z, nz, c, nc, pe, po, m, p.',
+    });
+    expectDiagnostic(diagnostics, {
+      message: 'Invalid until condition code "nope": expected z, nz, c, nc, pe, po, m, p.',
+    });
   });
 
   it('allows symbolic condition placeholders when explicitly permitted', () => {
@@ -110,7 +116,7 @@ describe('PR476 asm statement parsing extraction', () => {
     });
 
     expect(parsed).toMatchObject({ kind: 'If', cc: 'cond' });
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
   });
 
   it('falls back to instruction parsing for plain asm lines', () => {
@@ -126,7 +132,7 @@ describe('PR476 asm statement parsing extraction', () => {
         { kind: 'Imm', span: zeroSpan, expr: { kind: 'ImmLiteral', span: zeroSpan, value: 18 } },
       ],
     });
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
   });
 
   it('parses break and continue only when enclosed by a loop', () => {
@@ -150,7 +156,7 @@ describe('PR476 asm statement parsing extraction', () => {
         [{ kind: 'Repeat', openSpan: zeroSpan }],
       ),
     ).toEqual({ kind: 'Continue', span: zeroSpan });
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
   });
 
   it('diagnoses out-of-loop or malformed break and continue', () => {
@@ -158,9 +164,12 @@ describe('PR476 asm statement parsing extraction', () => {
 
     expect(parseAsmStatement(file.path, 'break', zeroSpan, diagnostics, [])).toBeUndefined();
     expect(parseAsmStatement(file.path, 'continue extra', zeroSpan, diagnostics, [])).toBeUndefined();
-    expect(diagnostics.map((d) => d.message)).toEqual([
-      '"break" is only valid inside "while" or "repeat"',
-      '"continue" does not take operands',
-    ]);
+    expect(diagnostics).toHaveLength(2);
+    expectDiagnostic(diagnostics, {
+      message: '"break" is only valid inside "while" or "repeat"',
+    });
+    expectDiagnostic(diagnostics, {
+      message: '"continue" does not take operands',
+    });
   });
 });

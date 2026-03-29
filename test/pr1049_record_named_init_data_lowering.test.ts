@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import type { D8mArtifact, HexArtifact } from '../src/formats/types.js';
+import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -43,7 +44,7 @@ describe('PR1049 record data lowering', () => {
       { formats: defaultFormatWriters },
     );
 
-    expect(result.diagnostics).toEqual([]);
+    expectNoDiagnostics(result.diagnostics);
 
     const hex = result.artifacts.find((artifact): artifact is HexArtifact => artifact.kind === 'hex');
     const d8m = result.artifacts.find((artifact): artifact is D8mArtifact => artifact.kind === 'd8m');
@@ -64,28 +65,38 @@ describe('PR1049 record data lowering', () => {
   it('diagnoses invalid record initializer shapes and duplicate taken symbols', async () => {
     const entry = join(__dirname, 'fixtures', 'pr286_record_named_init_negative.zax');
     const result = await compile(entry, {}, { formats: defaultFormatWriters });
-    const messages = result.diagnostics.map((diagnostic) => diagnostic.message);
-
-    expect(messages).toContain('Unknown record field "xx" in initializer for "bad_unknown".');
-    expect(messages).toContain('Duplicate record field "lo" in initializer for "bad_duplicate".');
-    expect(messages).toContain('Missing record field "hi" in initializer for "bad_missing".');
-    expect(messages).toContain(
-      'Named-field aggregate initializer requires a record type for "bad_shape".',
-    );
-    expect(messages).toContain('Record initializer field count mismatch for "bad_positional".');
-    expect(messages).toContain('Record initializer for "bad_record_string" must use aggregate form.');
-    expect(messages).toContain(
-      'Unsupported record field type "pair" in initializer for "bad_nested" (expected byte/word/addr/ptr).',
-    );
-    expect(messages).toContain('Duplicate symbol name "dup".');
+    expectDiagnostic(result.diagnostics, {
+      message: 'Unknown record field "xx" in initializer for "bad_unknown".',
+    });
+    expectDiagnostic(result.diagnostics, {
+      message: 'Duplicate record field "lo" in initializer for "bad_duplicate".',
+    });
+    expectDiagnostic(result.diagnostics, {
+      message: 'Missing record field "hi" in initializer for "bad_missing".',
+    });
+    expectDiagnostic(result.diagnostics, {
+      message: 'Named-field aggregate initializer requires a record type for "bad_shape".',
+    });
+    expectDiagnostic(result.diagnostics, {
+      message: 'Record initializer field count mismatch for "bad_positional".',
+    });
+    expectDiagnostic(result.diagnostics, {
+      message: 'Record initializer for "bad_record_string" must use aggregate form.',
+    });
+    expectDiagnostic(result.diagnostics, {
+      message:
+        'Unsupported record field type "pair" in initializer for "bad_nested" (expected byte/word/addr/ptr).',
+    });
+    expectDiagnostic(result.diagnostics, { message: 'Duplicate symbol name "dup".' });
   });
 
   it('rejects mixed positional and named aggregate entries before lowering', async () => {
     const entry = join(__dirname, 'fixtures', 'pr286_record_named_init_mixed_negative.zax');
     const result = await compile(entry, {}, { formats: defaultFormatWriters });
 
-    expect(result.diagnostics.map((diagnostic) => diagnostic.message)).toContain(
-      'Mixed positional and named aggregate initializer entries are not allowed for "bad_mixed".',
-    );
+    expectDiagnostic(result.diagnostics, {
+      message:
+        'Mixed positional and named aggregate initializer entries are not allowed for "bad_mixed".',
+    });
   });
 });

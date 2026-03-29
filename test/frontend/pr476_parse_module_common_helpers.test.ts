@@ -8,6 +8,7 @@ import {
   topLevelStartKeyword,
 } from '../../src/frontend/parseModuleCommon.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
+import { expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 describe('PR476 module helper extraction', () => {
   const file = makeSourceFile('pr476_parse_module_common_helpers.zax', '');
@@ -24,7 +25,7 @@ describe('PR476 module helper extraction', () => {
     expect(parseReturnRegsFromText('HL, de', zeroSpan, 1, diagnostics, file.path)).toEqual({
       regs: ['HL', 'DE'],
     });
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
   });
 
   it('keeps var declaration parsing intact', () => {
@@ -35,7 +36,7 @@ describe('PR476 module helper extraction', () => {
       isReservedTopLevelName: () => false,
     });
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(decl).toMatchObject({
       kind: 'VarDecl',
       name: 'value',
@@ -55,7 +56,7 @@ describe('PR476 module helper extraction', () => {
       isReservedTopLevelName: () => false,
     });
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(decl).toMatchObject({
       kind: 'VarDecl',
       name: 'value',

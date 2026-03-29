@@ -8,7 +8,7 @@ import type { SourceSpan } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
 import {
   finalizeProgramEmission,
-  type FinalizationContext,
+  type ProgramEmissionFinalizeContext,
 } from './programLowering.js';
 import { computeSectionBases } from './programLoweringFinalize.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
@@ -33,33 +33,61 @@ import {
 import type { LoweredAsmProgram, LoweredAsmStream } from './loweredAsmTypes.js';
 
 export type EmitFinalizationContext = {
+  /** Sinks carrying named section bytes/fixups from lowering. */
   namedSectionSinks: NamedSectionContributionSink[];
+  /** Mutable diagnostics for placement and emission. */
   diagnostics: Diagnostic[];
+  /** File-scoped diagnostic helper. */
   diag: (diagnostics: Diagnostic[], file: string, message: string) => void;
+  /** Span-scoped diagnostic helper. */
   diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
+  /** Entry file path for diagnostics. */
   primaryFile: string;
-  baseExprs: FinalizationContext['baseExprs'];
-  evalImmExpr: FinalizationContext['evalImmExpr'];
+  /** Optional section base expressions. */
+  baseExprs: ProgramEmissionFinalizeContext['baseExprs'];
+  /** Imm evaluator for bases and fixups. */
+  evalImmExpr: ProgramEmissionFinalizeContext['evalImmExpr'];
+  /** Compile environment. */
   env: CompileEnv;
+  /** Lowered asm stream before placement. */
   loweredAsmStream: LoweredAsmStream;
+  /** Current code section size cursor after lowering. */
   codeOffset: number;
+  /** Current data section size cursor. */
   dataOffset: number;
+  /** Current var section size cursor. */
   varOffset: number;
-  pending: FinalizationContext['pending'];
+  /** Pending forward symbols from lowering. */
+  pending: ProgramEmissionFinalizeContext['pending'];
+  /** Symbol table (mutated when placing named sections). */
   symbols: SymbolEntry[];
-  absoluteSymbols: FinalizationContext['absoluteSymbols'];
-  deferredExterns: FinalizationContext['deferredExterns'];
-  fixups: FinalizationContext['fixups'];
-  rel8Fixups: FinalizationContext['rel8Fixups'];
-  codeBytes: FinalizationContext['codeBytes'];
-  dataBytes: FinalizationContext['dataBytes'];
-  hexBytes: FinalizationContext['hexBytes'];
+  /** Absolute symbols from lowering. */
+  absoluteSymbols: ProgramEmissionFinalizeContext['absoluteSymbols'];
+  /** Deferred extern metadata. */
+  deferredExterns: ProgramEmissionFinalizeContext['deferredExterns'];
+  /** Absolute fixup queue. */
+  fixups: ProgramEmissionFinalizeContext['fixups'];
+  /** Relative fixup queue. */
+  rel8Fixups: ProgramEmissionFinalizeContext['rel8Fixups'];
+  /** Code section bytes. */
+  codeBytes: ProgramEmissionFinalizeContext['codeBytes'];
+  /** Data section bytes. */
+  dataBytes: ProgramEmissionFinalizeContext['dataBytes'];
+  /** Hex-ingested bytes. */
+  hexBytes: ProgramEmissionFinalizeContext['hexBytes'];
+  /** Merged working byte map across sections. */
   bytes: Map<number, number>;
+  /** Code source segment map for listings. */
   codeSourceSegments: EmittedSourceSegment[];
-  alignTo: FinalizationContext['alignTo'];
-  writeSection: FinalizationContext['writeSection'];
-  computeWrittenRange: FinalizationContext['computeWrittenRange'];
-  rebaseCodeSourceSegments: FinalizationContext['rebaseCodeSourceSegments'];
+  /** Align helper (section padding). */
+  alignTo: ProgramEmissionFinalizeContext['alignTo'];
+  /** Writes a section range into `bytes`. */
+  writeSection: ProgramEmissionFinalizeContext['writeSection'];
+  /** Computes min/max written for overlap detection. */
+  computeWrittenRange: ProgramEmissionFinalizeContext['computeWrittenRange'];
+  /** Rebases source segments after moves. */
+  rebaseCodeSourceSegments: ProgramEmissionFinalizeContext['rebaseCodeSourceSegments'];
+  /** Optional default code base when not inferred. */
   defaultCodeBase?: number;
 };
 

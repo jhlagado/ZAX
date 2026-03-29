@@ -2,54 +2,21 @@ import type {
   BinDeclNode,
   DataBlockNode,
   DataDeclNode,
-  EaExprNode,
   ExternDeclNode,
   FuncDeclNode,
-  HexDeclNode,
   ModuleItemNode,
   NamedSectionNode,
   OpDeclNode,
-  ProgramNode,
   RawDataDeclNode,
   SectionItemNode,
-  TypeExprNode,
   VarBlockNode,
-  VarDeclNode,
 } from '../frontend/ast.js';
-import type { CompileEnv } from '../semantics/env.js';
 import type { Callable } from './loweringTypes.js';
-
-export type ProgramPrescanContext = {
-  program: ProgramNode;
-  env: CompileEnv;
-  localCallablesByFile: Map<string, Map<string, Callable>>;
-  visibleCallables: Map<string, Callable>;
-  localOpsByFile: Map<string, Map<string, OpDeclNode[]>>;
-  visibleOpsByName: Map<string, OpDeclNode[]>;
-  declaredOpNames: Set<string>;
-  declaredBinNames: Set<string>;
-  storageTypes: Map<string, TypeExprNode>;
-  moduleAliasTargets: Map<string, EaExprNode>;
-  moduleAliasDecls: Map<string, VarDeclNode>;
-  rawAddressSymbols: Set<string>;
-  resolveScalarKind: (typeExpr: TypeExprNode) => 'byte' | 'word' | 'addr' | undefined;
-};
-
-export type PrescanResult = {
-  localCallablesByFile: ProgramPrescanContext['localCallablesByFile'];
-  visibleCallables: ProgramPrescanContext['visibleCallables'];
-  localOpsByFile: ProgramPrescanContext['localOpsByFile'];
-  visibleOpsByName: ProgramPrescanContext['visibleOpsByName'];
-  declaredOpNames: ProgramPrescanContext['declaredOpNames'];
-  declaredBinNames: ProgramPrescanContext['declaredBinNames'];
-  storageTypes: ProgramPrescanContext['storageTypes'];
-  moduleAliasTargets: ProgramPrescanContext['moduleAliasTargets'];
-  moduleAliasDecls: ProgramPrescanContext['moduleAliasDecls'];
-  rawAddressSymbols: ProgramPrescanContext['rawAddressSymbols'];
-};
+import type { PrescanResult } from './prescanTypes.js';
+import type { PrescanContext } from './programLowering.js';
 
 function getOrCreateFileCallables(
-  ctx: ProgramPrescanContext,
+  ctx: PrescanContext,
   file: string,
 ): Map<string, Callable> {
   const existing = ctx.localCallablesByFile.get(file);
@@ -60,7 +27,7 @@ function getOrCreateFileCallables(
 }
 
 function getOrCreateFileOps(
-  ctx: ProgramPrescanContext,
+  ctx: PrescanContext,
   file: string,
 ): Map<string, OpDeclNode[]> {
   const existing = ctx.localOpsByFile.get(file);
@@ -71,42 +38,39 @@ function getOrCreateFileOps(
 }
 
 function preScanItem(
+  ctx: PrescanContext,
   item: ModuleItemNode | SectionItemNode,
-  ctx: ProgramPrescanContext,
   namedSection?: NamedSectionNode,
 ): void {
   if (item.kind === 'NamedSection') {
-    for (const sectionItem of item.items) preScanItem(sectionItem, ctx, item);
+    for (const sectionItem of item.items) preScanItem(ctx, sectionItem, item);
     return;
   }
 
   if (item.kind === 'FuncDecl') {
-    const funcDecl = item as FuncDeclNode;
-    const fileCallables = getOrCreateFileCallables(ctx, funcDecl.span.file);
-    fileCallables.set(funcDecl.name.toLowerCase(), { kind: 'func', node: funcDecl });
-    if (funcDecl.exported) {
-      const moduleId = (ctx.env.moduleIds?.get(funcDecl.span.file) ?? funcDecl.span.file).toLowerCase();
-      ctx.visibleCallables.set(`${moduleId}.${funcDecl.name.toLowerCase()}`, {
-        kind: 'func',
-        node: funcDecl,
-      });
+    const func = item as FuncDeclNode;
+    const fileCallables = getOrCreateFileCallables(ctx, func.span.file);
+    fileCallables.set(func.name.toLowerCase(), { kind: 'func', node: func });
+    if (func.exported) {
+      const moduleId = (ctx.env.moduleIds?.get(func.span.file) ?? func.span.file).toLowerCase();
+      ctx.visibleCallables.set(`${moduleId}.${func.name.toLowerCase()}`, { kind: 'func', node: func });
     }
     return;
   }
 
   if (item.kind === 'OpDecl') {
-    const opDecl = item as OpDeclNode;
-    const key = opDecl.name.toLowerCase();
-    const fileOps = getOrCreateFileOps(ctx, opDecl.span.file);
+    const op = item as OpDeclNode;
+    const key = op.name.toLowerCase();
+    const fileOps = getOrCreateFileOps(ctx, op.span.file);
     const existing = fileOps.get(key);
-    if (existing) existing.push(opDecl);
-    else fileOps.set(key, [opDecl]);
-    if (opDecl.exported) {
-      const moduleId = (ctx.env.moduleIds?.get(opDecl.span.file) ?? opDecl.span.file).toLowerCase();
+    if (existing) existing.push(op);
+    else fileOps.set(key, [op]);
+    if (op.exported) {
+      const moduleId = (ctx.env.moduleIds?.get(op.span.file) ?? op.span.file).toLowerCase();
       const qualified = `${moduleId}.${key}`;
       const visible = ctx.visibleOpsByName.get(qualified);
-      if (visible) visible.push(opDecl);
-      else ctx.visibleOpsByName.set(qualified, [opDecl]);
+      if (visible) visible.push(op);
+      else ctx.visibleOpsByName.set(qualified, [op]);
     }
     return;
   }
@@ -114,11 +78,11 @@ function preScanItem(
   if (item.kind === 'ExternDecl') {
     const externDecl = item as ExternDeclNode;
     const fileCallables = getOrCreateFileCallables(ctx, externDecl.span.file);
-    for (const fn of externDecl.funcs) {
-      fileCallables.set(fn.name.toLowerCase(), {
+    for (const func of externDecl.funcs) {
+      fileCallables.set(func.name.toLowerCase(), {
         kind: 'extern',
-        node: fn,
-        targetLower: fn.name.toLowerCase(),
+        node: func,
+        targetLower: func.name.toLowerCase(),
       });
     }
     return;
@@ -155,13 +119,8 @@ function preScanItem(
   }
 
   if (item.kind === 'HexDecl') {
-    const hexDecl = item as HexDeclNode;
-    ctx.rawAddressSymbols.add(hexDecl.name.toLowerCase());
-    ctx.storageTypes.set(hexDecl.name.toLowerCase(), {
-      kind: 'TypeName',
-      span: hexDecl.span,
-      name: 'addr',
-    });
+    ctx.rawAddressSymbols.add(item.name.toLowerCase());
+    ctx.storageTypes.set(item.name.toLowerCase(), { kind: 'TypeName', span: item.span, name: 'addr' });
     return;
   }
 
@@ -178,24 +137,24 @@ function preScanItem(
 
   if (item.kind === 'DataDecl') {
     if (namedSection && namedSection.section !== 'data') return;
-    const dataDecl = item as DataDeclNode;
-    const lower = dataDecl.name.toLowerCase();
-    ctx.storageTypes.set(lower, dataDecl.typeExpr);
-    const scalar = ctx.resolveScalarKind(dataDecl.typeExpr);
+    const decl = item as DataDeclNode;
+    const lower = decl.name.toLowerCase();
+    ctx.storageTypes.set(lower, decl.typeExpr);
+    const scalar = ctx.resolveScalarKind(decl.typeExpr);
     if (!scalar) ctx.rawAddressSymbols.add(lower);
     return;
   }
 
   if (item.kind === 'RawDataDecl') {
     if (namedSection && namedSection.section !== 'data') return;
-    const rawDataDecl = item as RawDataDeclNode;
-    ctx.rawAddressSymbols.add(rawDataDecl.name.toLowerCase());
+    const decl = item as RawDataDeclNode;
+    ctx.rawAddressSymbols.add(decl.name.toLowerCase());
   }
 }
 
-export function preScanProgramDeclarations(ctx: ProgramPrescanContext): PrescanResult {
+export function preScanProgramDeclarations(ctx: PrescanContext): PrescanResult {
   for (const module of ctx.program.files) {
-    for (const item of module.items) preScanItem(item, ctx);
+    for (const item of module.items) preScanItem(ctx, item);
   }
 
   return {

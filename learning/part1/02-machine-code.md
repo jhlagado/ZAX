@@ -88,7 +88,7 @@ Machine code is just bytes. Assembly adds names for addresses.
 
 The program above was ten bytes. Real programs are thousands, and raw hex does not scale. Every address is a bare number — `$8000` could be your result variable, a display buffer, or a lookup table, and nothing in the code says which. Insert one instruction anywhere and every downstream address shifts; miss a single update and you get a silent wrong result with no error to point to. Reading the code directly is no help: `3E 05 47 3E 03 80 32 00 80 76` means nothing until you decode each byte by hand. And there are no structural building blocks — no subroutines, no loops, no conditionals, just bytes and jump targets calculated by hand.
 
-The CPU still sees bytes — the assembler changes what you write and maintain.
+The CPU still sees bytes. The assembler changes what you write — not what it executes.
 
 ---
 
