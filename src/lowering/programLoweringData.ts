@@ -129,7 +129,7 @@ export function lowerDataBlock(
         if (!fieldValueExpr) continue;
         const scalar = ctx.resolveScalarKind(field.typeExpr);
         if (!scalar) {
-          ctx.diag(ctx.diagnostics, decl.span.file, `Unsupported record field type "${field.name}" in initializer for "${decl.name}" (expected byte/word/addr/ptr).`);
+          ctx.diag(ctx.diagnostics, decl.span.file, `Unsupported record field type "${field.name}" in initializer for "${decl.name}" (expected byte/word/addr).`);
           recordInitFailed = true;
           continue;
         }
@@ -180,7 +180,7 @@ export function lowerDataBlock(
     const elementScalar = type.kind === 'ArrayType' ? ctx.resolveScalarKind(type.element) : ctx.resolveScalarKind(type);
     const elementSize = elementScalar === 'word' || elementScalar === 'addr' ? 2 : elementScalar === 'byte' ? 1 : undefined;
     if (!elementSize) {
-      ctx.diag(ctx.diagnostics, decl.span.file, `Unsupported data type for "${decl.name}" (expected byte/word/addr/ptr or fixed-length arrays of those).`);
+      ctx.diag(ctx.diagnostics, decl.span.file, `Unsupported data type for "${decl.name}" (expected byte/word/addr or fixed-length arrays of those).`);
       continue;
     }
 

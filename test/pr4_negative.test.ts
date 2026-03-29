@@ -52,7 +52,7 @@ describe('PR4 negative cases', () => {
       id: DiagnosticIds.EmitError,
       severity: 'error',
       message:
-        'Unsupported data type for "p" (expected byte/word/addr/ptr or fixed-length arrays of those).',
+        'Unsupported data type for "p" (expected byte/word/addr or fixed-length arrays of those).',
     });
   });
 });
