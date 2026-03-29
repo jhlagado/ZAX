@@ -4,7 +4,7 @@
 
 Every computer, at the lowest level, runs **machine code** — raw numeric instructions built into the CPU's hardware. High-level languages like C or Python hide the machine entirely; a compiler or interpreter handles the translation down to those numbers. Assembly does not hide the machine. Each line you write corresponds directly to one CPU instruction, and the assembler's job is mostly mechanical: turn your readable text into the exact bytes the CPU expects.
 
-Assembly requires you to think like the computer. You get full control — every register, every memory access, every branch is yours to specify. But you also carry the full burden: you must understand what the CPU can do, how it stores data, and how it steps through a program byte by byte. There is no safety net of type checking, garbage collection, or automatic memory management.
+You decide what goes in every register, what address every memory access targets, and which branch the program takes at every decision point. The CPU tracks none of this for you — it does not know whether the byte in A is a counter, a character, or a flag. What those bytes mean is information you hold in your head, expressed only in the labels and comments you write.
 
 ZAX is an assembler for the Z80 that adds some structure on top — named variables, typed storage, and control flow keywords like `if` and `while` — but the underlying model is the same. Every ZAX program compiles down to Z80 machine code, and understanding that machine code is what this book teaches.
 
@@ -128,19 +128,19 @@ The Z80 also has a second, hidden copy of A, F, B, C, D, E, H, and L called the 
 
 ---
 
-## The Flags Register in Detail
+## The Flags Register
 
-The flags register F contains eight bits, each of which records something about the result of the last operation that affected it. You will use these flags constantly — every conditional branch in the Z80 tests one of them.
+The flags register F records the outcome of the last operation — each flag is one bit. Z (zero) and C (carry) are the two you will use from the start; S (sign) becomes relevant when signed arithmetic arrives in Chapter 4. The other three — H, P/V, and N — appear in specific contexts and are covered when those contexts arise.
 
 | Bit | Symbol | Name | Meaning |
 |-----|--------|------|---------|
 | 7 | S | Sign | Set if the result, interpreted as a signed number, is negative (i.e. bit 7 of the result is 1). |
 | 6 | Z | Zero | Set if the result is zero. |
 | 5 | — | | Undefined. |
-| 4 | H | Half carry | Set if there was a carry from bit 3 to bit 4. Used for BCD arithmetic. You will almost certainly never need this. |
+| 4 | H | Half carry | Used by the DAA instruction for BCD arithmetic. You will not need this unless you are working with BCD data. |
 | 3 | — | | Undefined. |
-| 2 | P/V | Parity / Overflow | Used for two different purposes depending on the instruction: parity (set if the number of 1-bits in the result is even) or overflow (set if the result exceeded the signed range). Which meaning applies is determined by the instruction. |
-| 1 | N | Subtract | Set if the last operation was a subtraction. Used internally for BCD correction. |
+| 2 | P/V | Parity / Overflow | Reports overflow in signed arithmetic, or parity after certain block operations. Covered in Chapter 4 (signed arithmetic) and Chapter 8 (I/O). |
+| 1 | N | Subtract | Set by subtraction instructions; used internally by DAA. You will not read this flag directly. |
 | 0 | C | Carry | Set if the last operation produced a carry out of bit 7, or a borrow in the case of subtraction. |
 
 Not every instruction updates every flag. Some instructions update all flags; some update only Z and C; some leave all flags unchanged. A compact flags and condition-codes reference is in [Appendix 2](../appendices/02-registers-flags-and-conditions.md).

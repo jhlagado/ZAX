@@ -3,11 +3,11 @@ import type {
   EmittedSourceSegment,
 } from '../formats/types.js';
 import type { SectionKind } from './loweringTypes.js';
-import type { FinalizationContext } from './programLowering.js';
+import type { ProgramEmissionFinalizeContext } from './programLowering.js';
 import { parseNumberLiteral } from '../frontend/parseImm.js';
 
 export function computeSectionBases(
-  ctx: Pick<FinalizationContext, 'baseExprs' | 'evalImmExpr' | 'env' | 'diagnostics' | 'diag' | 'primaryFile' | 'alignTo' | 'codeOffset' | 'dataOffset'>,
+  ctx: Pick<ProgramEmissionFinalizeContext, 'baseExprs' | 'evalImmExpr' | 'env' | 'diagnostics' | 'diag' | 'primaryFile' | 'alignTo' | 'codeOffset' | 'dataOffset'>,
   defaultCodeBase?: number,
   options?: { quiet?: boolean },
 ): {
@@ -66,7 +66,7 @@ export function computeSectionBases(
   return { codeBase, dataBase, varBase, codeOk, dataOk, varOk };
 }
 
-export function finalizeProgramEmission(ctx: FinalizationContext): {
+export function finalizeProgramEmission(ctx: ProgramEmissionFinalizeContext): {
   codeBase: number;
   dataBase: number;
   varBase: number;

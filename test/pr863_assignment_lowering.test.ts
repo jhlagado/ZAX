@@ -8,6 +8,7 @@ import type {
   SourceSpan,
 } from '../src/frontend/ast.js';
 import { createAsmInstructionLoweringHelpers } from '../src/lowering/asmInstructionLowering.js';
+import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
 
 const span: SourceSpan = {
   file: 'fixture.zax',
@@ -118,7 +119,7 @@ describe('PR863 := lowering', () => {
 
     helper.lowerAsmInstructionDispatcher(assignItem);
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(loweredLd).toHaveLength(1);
     expect(loweredLd[0]).toMatchObject({
       head: ':=',
@@ -161,7 +162,7 @@ describe('PR863 := lowering', () => {
       ],
     });
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(emittedInstrs).toContain('ld HL,0');
     expect(emittedInstrs).toContain('ld A,1');
     expect(emittedInstrs).toContain('ld IX,0');
@@ -207,7 +208,7 @@ describe('PR863 := lowering', () => {
       ],
     });
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(emittedInstrs).toContain('virtual HL,DE');
     expect(emittedInstrs).toContain('ld H,0');
     expect(emittedInstrs).toContain('ld L,A');
@@ -236,7 +237,7 @@ describe('PR863 := lowering', () => {
       ],
     });
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(harness.pushedEa).toMatchObject({ kind: 'EaName', name: 'x' });
     expect(emittedInstrs).toContain('pop IY');
   });
@@ -257,6 +258,6 @@ describe('PR863 := lowering', () => {
       ],
     });
 
-    expect(diagnostics.map((diag) => diag.message)).toContain('":=" form is not supported.');
+    expectDiagnostic(diagnostics, { message: '":=" form is not supported.' });
   });
 });

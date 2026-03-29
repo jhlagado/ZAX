@@ -4,6 +4,7 @@ import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { parseExternFuncFromTail } from '../../src/frontend/parseExtern.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
 import { parseProgram } from '../../src/frontend/parser.js';
+import { expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 describe('PR476 extern parser extraction', () => {
   const file = makeSourceFile('pr476_parse_extern_helpers.zax', '');
@@ -25,7 +26,7 @@ describe('PR476 extern parser extraction', () => {
       ],
     });
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(parsed).toMatchObject({
       kind: 'ExternFunc',
       name: 'sink',
@@ -42,7 +43,7 @@ describe('PR476 extern parser extraction', () => {
       diagnostics,
     );
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(program.files[0]?.items[0]).toMatchObject({
       kind: 'ExternDecl',
       funcs: [{ kind: 'ExternFunc', name: 'sink', returnRegs: ['HL'] }],

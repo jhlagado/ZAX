@@ -42,6 +42,11 @@ describe('test/helpers/diagnostics', () => {
       severity: 'warning',
       message: 'Raw call targets typed callable "callee_typed".',
     });
+    expect(sampleDiagnostics).toHaveDiagnostic({
+      id: DiagnosticIds.RawCallTypedTargetWarning,
+      severity: 'warning',
+      message: 'Raw call targets typed callable "callee_typed".',
+    });
     expectNoDiagnostic(sampleDiagnostics, {
       id: DiagnosticIds.RawCallTypedTargetWarning,
       severity: 'error',
@@ -52,5 +57,10 @@ describe('test/helpers/diagnostics', () => {
     expect(() => expectNoErrors(sampleDiagnostics)).toThrow();
     expectNoErrors(sampleDiagnostics.filter((d) => d.severity !== 'error'));
     expectNoDiagnostics([]);
+  });
+
+  it('supports positional toHaveDiagnostic(id, severity) from Vitest setup', () => {
+    expect(sampleDiagnostics).toHaveDiagnostic(DiagnosticIds.TypeError, 'error');
+    expect(sampleDiagnostics).toHaveDiagnostic(DiagnosticIds.RawCallTypedTargetWarning, 'warning');
   });
 });

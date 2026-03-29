@@ -10,12 +10,19 @@ import type {
 } from './loweredAsmTypes.js';
 
 type Context = {
+  /** Optional named section metadata for contribution sinks. */
   namedSectionKeys?: NonBankedSectionKeyCollection;
+  /** Full source text per file for listings. */
   sourceTexts?: Map<string, string>;
+  /** Line-end comments keyed by file and line. */
   sourceLineComments?: Map<string, Map<number, string>>;
+  /** Code section byte map. */
   codeBytes: Map<number, number>;
+  /** Source segment ranges for code bytes. */
   codeSourceSegments: EmittedSourceSegment[];
+  /** Pending abs16 fixups. */
   fixups: Array<{ offset: number; baseLower: string; addend: number; file: string }>;
+  /** Pending rel8 fixups. */
   rel8Fixups: Array<{
     offset: number;
     origin: number;
@@ -24,14 +31,21 @@ type Context = {
     file: string;
     mnemonic: string;
   }>;
+  /** Lowered asm trace stream. */
   loweredAsmStream: LoweredAsmStream;
+  /** Lowered asm blocks keyed for random access. */
   loweredAsmBlocksByKey: Map<string, LoweredAsmStreamBlock>;
+  /** Alignment helper. */
   alignTo: (n: number, alignment: number) => number;
+  /** Best-effort imm evaluation. */
   evalImmNoDiag: (expr: ImmExprNode) => number | undefined;
+  /** Parses simple symbolic targets; `undefined` if not symbolic. */
   symbolicTargetFromExpr: (
     expr: ImmExprNode,
   ) => { baseLower: string; addend: number } | undefined;
+  /** Formats an imm for lowered asm text. */
   formatImmExprForAsm: (expr: ImmExprNode) => string;
+  /** Pretty-prints a type for traces. */
   typeDisplay: (typeExpr: import('../frontend/ast.js').TypeExprNode) => string;
 };
 

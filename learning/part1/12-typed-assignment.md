@@ -32,7 +32,71 @@ ld d, (ix-3)
 ex de, hl
 ```
 
-It saves HL into DE, loads the word into DE using byte-lane access, then swaps back. The result is HL = total, with DE preserved. You could write this sequence yourself — you now know exactly how — but with `:=` you do not have to.
+It saves HL into DE, loads the word into DE using byte-lane access, then swaps back. The result is HL = total, with DE preserved. The old value of HL is gone — if you need it after this point, push HL before the assignment. You could write this sequence yourself — you now know exactly how — but with `:=` you do not have to.
+
+---
+
+## All supported assignment directions
+
+`:=` moves data between a typed frame slot and a register. The direction is determined by which side the slot name appears on.
+
+**Byte slots** — one `ld` instruction each:
+
+`count := a` stores A into a byte slot. Any 8-bit register works on the right: `count := b`, `count := c`, and so on.
+
+```zax
+count := a      ; ld (ix-N), a
+```
+
+`a := count` loads a byte slot into A. Any 8-bit register works on the left: `b := count`, `c := count`, and so on.
+
+```zax
+a := count      ; ld a, (ix-N)
+```
+
+**Word slots with HL** — four instructions each:
+
+The Z80 has no IX-relative 16-bit store, so `:=` routes the value through DE. `ptr := hl` stores HL into a word slot:
+
+```zax
+ptr := hl       ; ex de,hl / ld (ix-N),e / ld (ix-N+1),d / ex de,hl
+```
+
+`hl := ptr` loads a word slot into HL by the same sequence in reverse:
+
+```zax
+hl := ptr       ; ex de,hl / ld e,(ix-N) / ld d,(ix-N+1) / ex de,hl
+```
+
+**Word slots with DE** — two instructions each:
+
+DE does not need an intermediate, so the transfer is a direct byte-lane pair. `total := de` stores DE into a word slot:
+
+```zax
+total := de     ; ld (ix-N),e / ld (ix-N+1),d
+```
+
+`de := total` loads a word slot into DE:
+
+```zax
+de := total     ; ld e,(ix-N) / ld d,(ix-N+1)
+```
+
+The DE forms follow from the supported register list but are not demonstrated in the companion example. The HL forms are what the examples show.
+
+---
+
+## What the type check prevents
+
+`:=` checks that left and right sides have compatible widths. The check fires when both sides are typed storage paths. Writing a byte-typed local into a word-typed local is a compile error:
+
+```zax
+total := count  ; error: ":=" path-to-path transfer requires compatible scalar widths; got word and byte.
+```
+
+The compiler knows `total` is a `word` slot and `count` is a `byte` slot — that knowledge comes from the `:` declarations in `var`. The error fires before any code is emitted.
+
+The same check rejects the reverse: `count := total` fails with `got byte and word`. Reading a word slot into a byte register, or writing a word-width register into a byte slot, is also rejected. Use the matching register width, or read the byte lane you need with a raw `ld` instruction.
 
 ---
 
@@ -119,9 +183,31 @@ The generated code is identical. `running_max := a` emits `ld (ix-N), a`. `a := 
 
 One line instead of three. Same effect.
 
+**`advance` — word result returned via HL:**
+
+This function computes a new address from a base and a count, stores it as a typed local, then returns it via HL. The final `hl := result` is the pattern for handing a word value back to the caller.
+
+```zax
+func advance(base: addr, n: byte): HL
+  var
+    result: addr
+  end
+  hl := base             ; load address parameter into HL
+  ld b, 0
+  c := n                 ; load count byte into C
+  add hl, bc             ; HL = base + n
+  result := hl           ; store the computed address into a typed local
+  hl := result           ; retrieve it into HL for return
+end
+```
+
+`hl := result` at the exit is what makes the return typed: the compiler emits the four-instruction DE-intermediate sequence to load the word slot into HL. The function is declared `: HL`, so HL is the live return value when `end` is reached.
+
 ---
 
 ## Raw Z80 instructions can still use typed names
+
+The `find_max` above uses all three layers at once. The IX frame — declared once in the function header — gives every parameter and local a stable name that survives the entire call. The `jr c` and `djnz` control the loop; `:=` handles the running maximum load and store. Each layer does one job; none of them duplicate the others.
 
 `:=` does not replace raw Z80 instructions — it complements them. In the typed version of `find_max`, `cp running_max` uses the typed name as an operand to a raw Z80 instruction. The compiler recognises the name and emits `cp (ix-N)`. This is not a `:=` assignment; it is a raw `cp` with a compiler-resolved operand.
 

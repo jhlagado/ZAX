@@ -3,7 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic } from './helpers/diagnostics/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,17 +27,21 @@ describe('PR952 raw ix slot offsets', () => {
     const entry = join(__dirname, 'fixtures', 'pr952_raw_ix_slot_offsets_alias.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe(
-      'Alias "alias" has no frame slot; cannot be used as a raw IX offset.',
-    );
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
+      message: 'Alias "alias" has no frame slot; cannot be used as a raw IX offset.',
+    });
   });
 
   it('diagnoses out-of-range ix displacements', async () => {
     const entry = join(__dirname, 'fixtures', 'pr952_raw_ix_slot_offsets_range.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe(
-      'IX/IY displacement out of range (-128..127): 204.',
-    );
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
+      message: 'IX/IY displacement out of range (-128..127): 204.',
+    });
   });
 });

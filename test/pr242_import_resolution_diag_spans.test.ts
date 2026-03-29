@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,10 +22,11 @@ describe('PR242 import resolution diagnostics include source spans', () => {
     );
     expect(res.artifacts).toEqual([]);
 
-    const diag = res.diagnostics.find((d) => d.id === DiagnosticIds.ImportNotFound);
-    expect(diag).toBeDefined();
-    expect(diag?.line).toBe(2);
-    expect(diag?.column).toBe(1);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ImportNotFound,
+      line: 2,
+    });
+    expect(res.diagnostics.find((d) => d.id === DiagnosticIds.ImportNotFound)?.column).toBe(1);
   });
 
   it('pins line/column for hard import candidate read failures', async () => {
@@ -32,10 +34,11 @@ describe('PR242 import resolution diagnostics include source spans', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
 
-    const diag = res.diagnostics.find((d) => d.id === DiagnosticIds.IoReadFailed);
-    expect(diag).toBeDefined();
-    expect(diag?.message).toContain('Failed to read import candidate');
-    expect(diag?.line).toBe(1);
-    expect(diag?.column).toBe(1);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.IoReadFailed,
+      line: 1,
+      messageIncludes: 'Failed to read import candidate',
+    });
+    expect(res.diagnostics.find((d) => d.id === DiagnosticIds.IoReadFailed)?.column).toBe(1);
   });
 });

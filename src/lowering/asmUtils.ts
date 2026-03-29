@@ -1,6 +1,7 @@
 import type { AsmOperandNode, EaExprNode, ImmExprNode, OffsetofPathNode } from '../frontend/ast.js';
 
 type Context = {
+  /** Returns true when `name` matches a declared enum (used to normalize asm tokens); callback must stay pure. */
   isEnumName: (name: string) => boolean;
 };
 

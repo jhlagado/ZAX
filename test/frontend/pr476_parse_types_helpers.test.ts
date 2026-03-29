@@ -4,6 +4,7 @@ import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { parseTypeDecl, parseUnionDecl } from '../../src/frontend/parseTypes.js';
 import { parseProgram } from '../../src/frontend/parser.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
+import { expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 describe('PR476 type and union parser extraction', () => {
   it('keeps type helper parsing intact', () => {
@@ -41,7 +42,7 @@ describe('PR476 type and union parser extraction', () => {
       isReservedTopLevelName: () => false,
     });
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(parsed?.nextIndex).toBe(4);
     expect(parsed?.node).toMatchObject({
       kind: 'TypeDecl',
@@ -91,7 +92,7 @@ describe('PR476 type and union parser extraction', () => {
       isReservedTopLevelName: () => false,
     });
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(parsed?.nextIndex).toBe(4);
     expect(parsed?.node).toMatchObject({
       kind: 'UnionDecl',
@@ -111,7 +112,7 @@ describe('PR476 type and union parser extraction', () => {
       diagnostics,
     );
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(program.files[0]?.items[0]).toMatchObject({
       kind: 'TypeDecl',
       name: 'Pair',

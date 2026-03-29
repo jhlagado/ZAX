@@ -151,18 +151,7 @@ Any of A, B, C, D, E, H, L can appear on either side when the other side is
 `ld (de), a`. The standard pattern is: load an address into
 HL, read or write with `(HL)`, increment HL, repeat.
 
-### Indexed memory access through IX and IY
-
-IX and IY support **displaced** addressing. Point IX at the start of a data record and `(IX+0)`, `(IX+1)`, `(IX+2)` address each field directly — no reloading the base address between accesses. That makes IX the natural choice for working with fixed-size records.
-
-`(IX+n)` means "the byte at address IX + n", where n is a signed offset from −128 to +127.
-
-```zax
-ld a, (ix+0)    ; A = byte at address IX
-ld b, (ix+7)    ; B = byte at address IX+7
-ld (iy-2), a    ; byte at address IY-2 = A
-ld (ix+1), $3F  ; byte at address IX+1 = $3F
-```
+IX and IY support displaced addressing — covered in Chapter 6 when the use case makes it concrete.
 
 ### Memory access through BC or DE
 
@@ -221,8 +210,6 @@ complete searchable list.
 | reg8 ← (HL) | `ld c, (hl)` | Read byte at address HL |
 | (HL) ← reg8 | `ld (hl), d` | Write byte to address HL |
 | (HL) ← n | `ld (hl), 0` | Write immediate to address HL |
-| reg8 ← (IX+n) | `ld a, (ix+3)` | Read byte at IX + offset (n: −128 to +127) |
-| (IX+n) ← reg8 | `ld (ix+3), a` | Write byte to IX + offset |
 | A ← (BC) | `ld a, (bc)` | Read byte at address BC; A only |
 | (DE) ← A | `ld (de), a` | Write A to address DE; A only |
 | A ← (nn) | `ld a, ($8000)` | Read byte from fixed address |
@@ -250,8 +237,7 @@ identical whether you treat the inputs as signed or unsigned. Where the differen
 $01` gives `$81`. Read as unsigned that is 128 + 1 = 129. Read as signed that
 is −128 + 1 = −127. Same instruction, same output, two different numbers. The
 bug appears when one part of your program writes a value intending it as signed
-and another reads it as unsigned. Chapter 4 shows how the flags let you select
-which interpretation the CPU acts on. The common landmark values (`$00`, `$7F`,
+and another reads it as unsigned. The common landmark values (`$00`, `$7F`,
 `$80`, `$FF`) and their signed and unsigned meanings are in
 [Appendix 2](../appendices/02-registers-flags-and-conditions.md).
 
@@ -313,42 +299,6 @@ The parentheses mean the same thing everywhere:
 | `ld a, ($8000)` | Read byte at address `$8000` |
 
 **Parentheses always mean "go to this address in memory."**
-
----
-
-## EX DE, HL
-
-`EX DE, HL` swaps DE and HL in a single instruction. Afterward, DE holds what HL had and HL holds what DE had.
-
-Copying HL into DE without caring about DE's old value takes two instructions:
-
-```zax
-ld d, h
-ld e, l        ; DE = old HL; HL unchanged
-```
-
-But if you need a genuine exchange — each pair receiving the other's value — you would need six instructions and a scratch register:
-
-```zax
-ld a, h
-ld h, d
-ld d, a        ; D = old H
-ld a, l
-ld l, e
-ld e, a        ; E = old L — swap complete, A clobbered
-```
-
-`EX DE, HL` replaces all six with one instruction and leaves A untouched:
-
-```zax
-ld hl, $1234
-ld de, $5678
-ex de, hl      ; HL = $5678, DE = $1234
-```
-
-You will reach for it whenever you need to hand an address between these two pairs — after building a result in HL and needing it in DE for the next step, for instance.
-
-Two other exchange instructions exist: `EX AF, AF'` swaps AF with its shadow counterpart, and `EXX` swaps BC, DE, and HL all at once with their shadow counterparts. Both rely on the shadow registers, which are covered in Chapter 7. For now, `EX DE, HL` is the one you will use.
 
 ---
 
@@ -438,7 +388,7 @@ declaring it as `word` instead of `byte` does.
 - Two memory locations cannot appear in a single `LD`; you must go through a register
 - Unsigned bytes hold 0–255; signed bytes use two's complement (bit 7 = sign, range −128 to +127)
 - `const` names a fixed value substituted at assembly time; it produces no output bytes
-- `EX DE, HL` swaps the two register pairs in one instruction
+- `EX DE, HL` swaps the two register pairs in one instruction — introduced in Chapter 6 when both HL and DE are in use as pointers
 - `ADD A, B` writes the result back into A, destroying its previous value; copy A to another register first if you need it later
 - `INC r` and `DEC r` add or subtract 1 in place and update the flags; `DEC` sets the Zero flag at zero, making it useful as a loop counter
 

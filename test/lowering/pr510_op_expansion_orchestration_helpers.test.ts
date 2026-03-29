@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DiagnosticIds, type Diagnostic } from '../../src/diagnosticTypes.js';
 import type { AsmInstructionNode, AsmOperandNode, OpDeclNode, SourceSpan } from '../../src/frontend/ast.js';
 import { createOpExpansionOrchestrationHelpers } from '../../src/lowering/opExpansionOrchestration.js';
+import { expectDiagnostic } from '../helpers/diagnostics/index.js';
 
 const span: SourceSpan = {
   file: 'test.zax',
@@ -68,11 +69,11 @@ describe('#510 op expansion orchestration helpers', () => {
 
     expect(helpers.tryHandleOpExpansion(asmItem)).toBe(true);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
+    expectDiagnostic(diagnostics, {
       id: DiagnosticIds.OpArityMismatch,
       severity: 'error',
       file: 'test.zax',
+      messageIncludes: 'No op overload of "my_op" accepts 0 operand(s).',
     });
-    expect(diagnostics[0]!.message).toContain('No op overload of "my_op" accepts 0 operand(s).');
   });
 });
