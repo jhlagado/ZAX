@@ -1,11 +1,13 @@
 import type { Diagnostic } from '../diagnosticTypes.js';
-import { DiagnosticIds } from '../diagnosticTypes.js';
 import type {
   AsmInstructionNode,
   AsmOperandNode,
   EaExprNode,
   ImmExprNode,
+  SourceSpan,
 } from '../frontend/ast.js';
+import { flattenEaDottedName } from '../lowering/asmUtils.js';
+import { diagEncodeAt } from '../lowering/loweringDiagnostics.js';
 import type { CompileEnv } from '../semantics/env.js';
 import { evalImmExpr } from '../semantics/env.js';
 import type { EncoderFamily } from './encoderRegistry.js';
@@ -17,28 +19,13 @@ import { encodeCoreOpsInstruction } from './encodeCoreOps.js';
 import { encodeIoInstruction } from './encodeIo.js';
 import { encodeLdInstruction } from './encodeLd.js';
 
+/** Pass-through to {@link diagEncodeAt} for encoder submodules that take an instruction node. */
 function diag(
   diagnostics: Diagnostic[],
   node: { span: { file: string; start: { line: number; column: number } } },
   message: string,
 ): void {
-  diagnostics.push({
-    id: DiagnosticIds.EncodeError,
-    severity: 'error',
-    message,
-    file: node.span.file,
-    line: node.span.start.line,
-    column: node.span.start.column,
-  });
-}
-
-function flattenEaDottedName(ea: EaExprNode): string | undefined {
-  if (ea.kind === 'EaName') return ea.name;
-  if (ea.kind === 'EaField') {
-    const base = flattenEaDottedName(ea.base);
-    return base ? `${base}.${ea.field}` : undefined;
-  }
-  return undefined;
+  diagEncodeAt(diagnostics, node.span as SourceSpan, message);
 }
 
 function immValue(op: AsmOperandNode, env: CompileEnv): number | undefined {
@@ -442,13 +429,13 @@ export function encodeInstruction(
   const head = node.head.toLowerCase();
   const entry = getEncoderRegistryEntry(head);
   if (!entry) {
-    diag(diagnostics, node, `Unsupported instruction: ${node.head}`);
+    diagEncodeAt(diagnostics, node.span, `Unsupported instruction: ${node.head}`);
     return undefined;
   }
 
   if (entry.kind === 'zero') {
     if (node.operands.length === 0) return entry.bytes;
-    diag(diagnostics, node, `${head} expects no operands`);
+    diagEncodeAt(diagnostics, node.span, `${head} expects no operands`);
     return undefined;
   }
 
@@ -461,10 +448,10 @@ export function encodeInstruction(
   const arityMessage = entry.arityDiagnostic(head, node.operands.length);
   if (entry.fallback === 'arity-short-circuit' && arityMessage === undefined) return undefined;
   if (arityMessage !== undefined) {
-    diag(diagnostics, node, arityMessage);
+    diagEncodeAt(diagnostics, node.span, arityMessage);
     return undefined;
   }
 
-  diag(diagnostics, node, `${head} has unsupported operand form`);
+  diagEncodeAt(diagnostics, node.span, `${head} has unsupported operand form`);
   return undefined;
 }

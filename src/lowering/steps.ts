@@ -150,14 +150,12 @@ export const LOAD_IDX_CONST = (value: number): StepPipeline => [
   step({ kind: 'ldRpImm', rp: 'HL', value }),
 ];
 
-export const LOAD_IDX_REG = (reg8: string): StepPipeline => [
+export const LOAD_IDX_REG = (reg8: StepReg8): StepPipeline => [
   step({ kind: 'ldHZero' }),
-  step({ kind: 'ldRegReg', dst: 'l', src: reg8 as StepReg8 }),
+  step({ kind: 'ldRegReg', dst: 'l', src: reg8 }),
 ];
 
-export const LOAD_IDX_RP = (rp: string): StepPipeline => [
-  step({ kind: 'ldHlRp', rp: rp.toUpperCase() as StepReg16 }),
-];
+export const LOAD_IDX_RP = (rp: StepReg16): StepPipeline => [step({ kind: 'ldHlRp', rp })];
 
 export const LOAD_IDX_GLOB = (glob: string): StepPipeline => [step({ kind: 'ldHlPtrGlob', glob })];
 
@@ -215,59 +213,59 @@ export const CALC_EA_WIDE = (elemSize: number): StepPipeline => {
 };
 
 // --- Section: Accessors (byte) ---
-export const LOAD_REG_EA = (reg: string): StepPipeline => [
-  step({ kind: 'ldRegMemHl', reg: reg as StepReg8 }),
+export const LOAD_REG_EA = (reg: StepReg8): StepPipeline => [
+  step({ kind: 'ldRegMemHl', reg }),
 ];
 
-export const STORE_REG_EA = (reg: string): StepPipeline => [
-  step({ kind: 'ldMemHlReg', reg: reg as StepReg8 }),
+export const STORE_REG_EA = (reg: StepReg8): StepPipeline => [
+  step({ kind: 'ldMemHlReg', reg }),
 ];
 
-export const LOAD_REG_GLOB = (reg: string, glob: string): StepPipeline => [
-  ...(reg.toUpperCase() === 'A'
+export const LOAD_REG_GLOB = (reg: StepReg8, glob: string): StepPipeline => [
+  ...(reg === 'A' || reg === 'a'
     ? [step({ kind: 'ldRegGlob', reg: 'a', glob })]
     : [
         step({ kind: 'push', reg: 'AF' }),
         step({ kind: 'ldRegGlob', reg: 'a', glob }),
-        step({ kind: 'ldRegReg', dst: reg as StepReg8, src: 'a' }),
+        step({ kind: 'ldRegReg', dst: reg, src: 'a' }),
         step({ kind: 'pop', reg: 'AF' }),
       ]),
 ];
 
-export const STORE_REG_GLOB = (reg: string, glob: string): StepPipeline => [
-  ...(reg.toUpperCase() === 'A'
+export const STORE_REG_GLOB = (reg: StepReg8, glob: string): StepPipeline => [
+  ...(reg === 'A' || reg === 'a'
     ? [step({ kind: 'ldGlobReg', glob, reg: 'a' })]
     : [
         step({ kind: 'push', reg: 'AF' }),
-        step({ kind: 'ldRegReg', dst: 'a', src: reg as StepReg8 }),
+        step({ kind: 'ldRegReg', dst: 'a', src: reg }),
         step({ kind: 'ldGlobReg', glob, reg: 'a' }),
         step({ kind: 'pop', reg: 'AF' }),
       ]),
 ];
 
-export const LOAD_REG_REG = (dst: string, src: string): StepPipeline => [
+export const LOAD_REG_REG = (dst: StepReg8, src: StepReg8): StepPipeline => [
   step({
     kind: 'ldRegReg',
-    dst: dst as StepReg8,
-    src: src as StepReg8,
+    dst,
+    src,
   }),
 ];
 
 // --- Section: Accessors (word) ---
-export const LOAD_RP_EA = (rp: string): StepPipeline => [
+export const LOAD_RP_EA = (rp: StepReg16): StepPipeline => [
   step({ kind: 'ldRegMemHl', reg: 'e' }),
   step({ kind: 'incHl' }),
   step({ kind: 'ldRegMemHl', reg: 'd' }),
-  step({ kind: 'ldRpByteFromReg', part: 'lo', rp: rp.toUpperCase() as StepReg16, reg: 'e' }),
-  step({ kind: 'ldRpByteFromReg', part: 'hi', rp: rp.toUpperCase() as StepReg16, reg: 'd' }),
+  step({ kind: 'ldRpByteFromReg', part: 'lo', rp, reg: 'e' }),
+  step({ kind: 'ldRpByteFromReg', part: 'hi', rp, reg: 'd' }),
 ];
 
-export const STORE_RP_EA = (rp: string): StepPipeline => [
-  ...(rp.toUpperCase() === 'DE'
+export const STORE_RP_EA = (rp: StepReg16): StepPipeline => [
+  ...(rp === 'DE'
     ? []
     : [
-        step({ kind: 'ldRegFromRpByte', reg: 'e', part: 'lo', rp: rp.toUpperCase() as StepReg16 }),
-        step({ kind: 'ldRegFromRpByte', reg: 'd', part: 'hi', rp: rp.toUpperCase() as StepReg16 }),
+        step({ kind: 'ldRegFromRpByte', reg: 'e', part: 'lo', rp }),
+        step({ kind: 'ldRegFromRpByte', reg: 'd', part: 'hi', rp }),
       ]),
   step({ kind: 'ldMemHlReg', reg: 'e' }),
   step({ kind: 'incHl' }),
@@ -281,18 +279,17 @@ export const STORE_RP_EA_FROM_STACK = (): StepPipeline => [
   step({ kind: 'ldMemHlReg', reg: 'd' }),
 ];
 
-export const LOAD_RP_GLOB = (rp: string, glob: string): StepPipeline => {
-  const upper = rp.toUpperCase();
-  if (upper === 'HL') return [step({ kind: 'ldHlPtrGlob', glob })];
-  return [step({ kind: 'ldRpPtrGlob', rp: upper as 'BC' | 'DE', glob })];
+export const LOAD_RP_GLOB = (rp: StepReg16, glob: string): StepPipeline => {
+  if (rp === 'HL') return [step({ kind: 'ldHlPtrGlob', glob })];
+  return [step({ kind: 'ldRpPtrGlob', rp, glob })];
 };
 
-export const STORE_RP_GLOB = (rp: string, glob: string): StepPipeline => [
-  step({ kind: 'ldPtrGlobRp', glob, rp: rp.toUpperCase() as 'BC' | 'DE' | 'HL' }),
+export const STORE_RP_GLOB = (rp: StepReg16, glob: string): StepPipeline => [
+  step({ kind: 'ldPtrGlobRp', glob, rp }),
 ];
 
-export const LOAD_RP_FVAR = (rp: string, disp: number): StepPipeline => [
-  ...(rp.toUpperCase() === 'HL'
+export const LOAD_RP_FVAR = (rp: StepReg16, disp: number): StepPipeline => [
+  ...(rp === 'HL'
     ? [
         step({ kind: 'exDeHl' }),
         step({ kind: 'ldRegIxDisp', reg: 'e', disp }),
@@ -303,20 +300,20 @@ export const LOAD_RP_FVAR = (rp: string, disp: number): StepPipeline => [
         step({
           kind: 'ldRpByteFromIx',
           part: 'lo',
-          rp: rp.toUpperCase() as Exclude<StepReg16, never>,
+          rp,
           disp,
         }),
         step({
           kind: 'ldRpByteFromIx',
           part: 'hi',
-          rp: rp.toUpperCase() as Exclude<StepReg16, never>,
+          rp,
           disp: disp + 1,
         }),
       ]),
 ];
 
-export const STORE_RP_FVAR = (rp: string, disp: number): StepPipeline => [
-  ...(rp.toUpperCase() === 'HL'
+export const STORE_RP_FVAR = (rp: StepReg16, disp: number): StepPipeline => [
+  ...(rp === 'HL'
     ? [
         step({ kind: 'exDeHl' }),
         step({ kind: 'ldIxDispReg', disp, reg: 'e' }),
@@ -328,13 +325,13 @@ export const STORE_RP_FVAR = (rp: string, disp: number): StepPipeline => [
           kind: 'ldIxDispFromRpByte',
           disp,
           part: 'lo',
-          rp: rp.toUpperCase() as Exclude<StepReg16, never>,
+          rp,
         }),
         step({
           kind: 'ldIxDispFromRpByte',
           disp: disp + 1,
           part: 'hi',
-          rp: rp.toUpperCase() as Exclude<StepReg16, never>,
+          rp,
         }),
       ]),
 ];
@@ -346,13 +343,13 @@ export const EA_GLOB_CONST = (glob: string, idxConst: number): StepPipeline => [
   ...CALC_EA(),
 ];
 
-export const EA_GLOB_REG = (glob: string, reg8: string): StepPipeline => [
+export const EA_GLOB_REG = (glob: string, reg8: StepReg8): StepPipeline => [
   ...LOAD_BASE_GLOB(glob),
   ...LOAD_IDX_REG(reg8),
   ...CALC_EA(),
 ];
 
-export const EA_GLOB_RP = (glob: string, rp: string): StepPipeline => [
+export const EA_GLOB_RP = (glob: string, rp: StepReg16): StepPipeline => [
   ...LOAD_BASE_GLOB(glob),
   ...LOAD_IDX_RP(rp),
   ...CALC_EA(),
@@ -363,13 +360,13 @@ export const EA_FVAR_CONST = (fvar: number, idxConst: number): StepPipeline => {
   return [...LOAD_BASE_FVAR(folded.base), ...LOAD_IDX_CONST(folded.idx), ...CALC_EA()];
 };
 
-export const EA_FVAR_REG = (fvar: number, reg8: string): StepPipeline => [
+export const EA_FVAR_REG = (fvar: number, reg8: StepReg8): StepPipeline => [
   ...LOAD_BASE_FVAR(fvar),
   ...LOAD_IDX_REG(reg8),
   ...CALC_EA(),
 ];
 
-export const EA_FVAR_RP = (fvar: number, rp: string): StepPipeline => [
+export const EA_FVAR_RP = (fvar: number, rp: StepReg16): StepPipeline => [
   ...LOAD_BASE_FVAR(fvar),
   ...LOAD_IDX_RP(rp),
   ...CALC_EA(),
@@ -406,13 +403,13 @@ export const EAW_GLOB_CONST = (glob: string, idxConst: number, elemSize = 2): St
   ...CALC_EA_WIDE(elemSize),
 ];
 
-export const EAW_GLOB_REG = (glob: string, reg8: string, elemSize = 2): StepPipeline => [
+export const EAW_GLOB_REG = (glob: string, reg8: StepReg8, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_GLOB(glob),
   ...LOAD_IDX_REG(reg8),
   ...CALC_EA_WIDE(elemSize),
 ];
 
-export const EAW_GLOB_RP = (glob: string, rp: string, elemSize = 2): StepPipeline => [
+export const EAW_GLOB_RP = (glob: string, rp: StepReg16, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_GLOB(glob),
   ...LOAD_IDX_RP(rp),
   ...CALC_EA_WIDE(elemSize),
@@ -423,13 +420,13 @@ export const EAW_FVAR_CONST = (fvar: number, idxConst: number, elemSize = 2): St
   return [...LOAD_BASE_FVAR(folded.base), ...LOAD_IDX_CONST(folded.idx), ...CALC_EA_WIDE(elemSize)];
 };
 
-export const EAW_FVAR_REG = (fvar: number, reg8: string, elemSize = 2): StepPipeline => [
+export const EAW_FVAR_REG = (fvar: number, reg8: StepReg8, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_FVAR(fvar),
   ...LOAD_IDX_REG(reg8),
   ...CALC_EA_WIDE(elemSize),
 ];
 
-export const EAW_FVAR_RP = (fvar: number, rp: string, elemSize = 2): StepPipeline => [
+export const EAW_FVAR_RP = (fvar: number, rp: StepReg16, elemSize = 2): StepPipeline => [
   ...LOAD_BASE_FVAR(fvar),
   ...LOAD_IDX_RP(rp),
   ...CALC_EA_WIDE(elemSize),
@@ -460,7 +457,7 @@ export const EAW_GLOB_GLOB = (globBase: string, globIdx: string, elemSize = 2): 
 ];
 
 // --- Section: Templates — byte loads ---
-export const TEMPLATE_L_ABC = (dest: string, ea: StepPipeline): StepPipeline => [
+export const TEMPLATE_L_ABC = (dest: StepReg8, ea: StepPipeline): StepPipeline => [
   ...SAVE_DE(),
   ...SAVE_HL(),
   ...ea,
@@ -490,7 +487,7 @@ export const TEMPLATE_L_DE = (dest: 'D' | 'E', ea: StepPipeline): StepPipeline =
 ];
 
 // --- Section: Templates — byte stores ---
-export const TEMPLATE_S_ANY = (vreg: string, ea: StepPipeline): StepPipeline => [
+export const TEMPLATE_S_ANY = (vreg: StepReg8, ea: StepPipeline): StepPipeline => [
   ...SAVE_DE(),
   ...SAVE_HL(),
   ...ea,

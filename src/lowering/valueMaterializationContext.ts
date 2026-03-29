@@ -1,7 +1,7 @@
 import type { Diagnostic } from '../diagnosticTypes.js';
 import type { AsmOperandNode, EaExprNode, ImmExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';
 import type { EaResolution } from './eaResolution.js';
-import type { StepPipeline } from './steps.js';
+import type { StepPipeline, StepReg16, StepReg8 } from './steps.js';
 
 export type DiagAt = (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
 
@@ -65,11 +65,11 @@ export type ValueMaterializationContext = {
   /** Formats IX/IY displacement for asm text. */
   formatIxDisp: (disp: number) => string;
   /** Template: load byte ABC form. */
-  TEMPLATE_L_ABC: (dest: string, ea: StepPipeline) => StepPipeline;
+  TEMPLATE_L_ABC: (dest: StepReg8, ea: StepPipeline) => StepPipeline;
   /** Template: load word via DE. */
   TEMPLATE_LW_DE: (ea: StepPipeline) => StepPipeline;
   /** Template: load register pair from EA pipeline. */
-  LOAD_RP_EA: (rp: 'HL' | 'DE' | 'BC') => StepPipeline;
+  LOAD_RP_EA: (rp: StepReg16) => StepPipeline;
   /** Template: store register pair to EA pipeline. */
-  STORE_RP_EA: (rp: 'DE' | 'BC') => StepPipeline;
+  STORE_RP_EA: (rp: StepReg16) => StepPipeline;
 };

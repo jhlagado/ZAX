@@ -1,4 +1,4 @@
-import type { StepPipeline } from './steps.js';
+import type { StepPipeline, StepReg8 } from './steps.js';
 import type { AsmOperandNode, SourceSpan } from '../frontend/ast.js';
 import type { LdForm } from './ldFormSelection.js';
 import type { LdEncodingContext } from './ldEncoding.js';
@@ -129,7 +129,7 @@ export function createLdEncodingRegMemHelpers(ctx: LdEncodingContext) {
         }
         return popReg('AF', inst.span);
       }
-      if (regUp === 'A' || regUp === 'B' || regUp === 'C') templated = TEMPLATE_L_ABC(regUp, eaPipe);
+      if (regUp === 'A' || regUp === 'B' || regUp === 'C') templated = TEMPLATE_L_ABC(regUp as StepReg8, eaPipe);
       else if (regUp === 'H' || regUp === 'L') templated = TEMPLATE_L_HL(regUp as 'H' | 'L', eaPipe);
       else if (regUp === 'D' || regUp === 'E') templated = TEMPLATE_L_DE(regUp as 'D' | 'E', eaPipe);
       if (templated && emitStepPipeline(templated, inst.span)) return true;
@@ -353,7 +353,7 @@ export function createLdEncodingRegMemHelpers(ctx: LdEncodingContext) {
         if ((regUp === 'H' || regUp === 'L') && emitStepPipeline(TEMPLATE_S_HL(regUp as 'H' | 'L', dstPipe), inst.span)) {
           return true;
         }
-        if (emitStepPipeline(TEMPLATE_S_ANY(regUp, dstPipe), inst.span)) return true;
+        if (emitStepPipeline(TEMPLATE_S_ANY(regUp as StepReg8, dstPipe), inst.span)) return true;
       }
       const preserveA = regUp === 'A';
       if (viaA) {

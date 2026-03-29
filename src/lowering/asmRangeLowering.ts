@@ -1,11 +1,5 @@
 import type { AsmInstructionNode, AsmItemNode, AsmOperandNode, ImmExprNode, SourceSpan } from '../frontend/ast.js';
-
-type FlowState = {
-  reachable: boolean;
-  spDelta: number;
-  spValid: boolean;
-  spInvalidDueToMutation: boolean;
-};
+import type { FlowState } from './functionBodySetup.js';
 
 type Context<TCodeSegmentTag> = {
   sourceTagForSpan: (span: SourceSpan) => TCodeSegmentTag;

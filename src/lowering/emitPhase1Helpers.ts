@@ -456,7 +456,7 @@ export function createEmitPhase1Helpers(ctx: Context): EmitPhase1Helpers {
       diag,
       diagAt,
       diagAtWithId,
-      diagAtWithSeverityAndId: diagAtWithSeverityAndId as never,
+      diagAtWithSeverityAndId,
       warnAt,
     },
     symbolsAndTrace: {

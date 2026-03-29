@@ -17,6 +17,7 @@ import { canonicalModuleId } from '../moduleIdentity.js';
 import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
 import { offsetOfPathInTypeExpr, sizeOfTypeExpr } from './layout.js';
 import { visitDeclTree } from './declVisitor.js';
+import { diagSemanticsError } from './semanticsDiagnostics.js';
 
 function reportImmArithmeticError(
   diagnostics: Diagnostic[] | undefined,
@@ -66,9 +67,7 @@ export interface CompileEnv {
   visibleTypes?: Map<string, TypeDeclNode | UnionDeclNode>;
 }
 
-function diag(diagnostics: Diagnostic[], file: string, message: string): void {
-  diagnostics.push({ id: DiagnosticIds.SemanticsError, severity: 'error', message, file });
-}
+const diag = diagSemanticsError;
 
 /**
  * Evaluate an `imm` expression using values from the provided environment.
