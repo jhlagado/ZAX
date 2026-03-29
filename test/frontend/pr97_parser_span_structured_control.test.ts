@@ -3,7 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../../src/compile.js';
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
+import { expectDiagnostic } from '../helpers/diagnostics/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,9 +16,13 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe('"if" expects a condition code');
-    expect(res.diagnostics[0]?.line).toBe(2);
-    expect(res.diagnostics[0]?.column).toBe(5);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: '"if" expects a condition code',
+      line: 2,
+      column: 5,
+    });
   });
 
   it('reports line/column for invalid while condition syntax', async () => {
@@ -24,9 +30,13 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe('"while" expects a condition code');
-    expect(res.diagnostics[0]?.line).toBe(2);
-    expect(res.diagnostics[0]?.column).toBe(3);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: '"while" expects a condition code',
+      line: 2,
+      column: 3,
+    });
   });
 
   it('reports line/column for select without arms', async () => {
@@ -34,11 +44,13 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe(
-      '"select" must contain at least one arm ("case" or "else")',
-    );
-    expect(res.diagnostics[0]?.line).toBe(3);
-    expect(res.diagnostics[0]?.column).toBe(5);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: '"select" must contain at least one arm ("case" or "else")',
+      line: 3,
+      column: 5,
+    });
   });
 
   it('reports line/column for missing until condition', async () => {
@@ -46,9 +58,13 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe('"until" expects a condition code');
-    expect(res.diagnostics[0]?.line).toBe(4);
-    expect(res.diagnostics[0]?.column).toBe(5);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: '"until" expects a condition code',
+      line: 4,
+      column: 5,
+    });
   });
 
   it('reports line/column for invalid until condition syntax', async () => {
@@ -56,9 +72,13 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe('"until" expects a condition code');
-    expect(res.diagnostics[0]?.line).toBe(4);
-    expect(res.diagnostics[0]?.column).toBe(5);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: '"until" expects a condition code',
+      line: 4,
+      column: 5,
+    });
   });
 
   it('reports line/column for case outside select', async () => {
@@ -66,9 +86,13 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe('"case" without matching "select"');
-    expect(res.diagnostics[0]?.line).toBe(2);
-    expect(res.diagnostics[0]?.column).toBe(5);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: '"case" without matching "select"',
+      line: 2,
+      column: 5,
+    });
   });
 
   it('reports line/column for else outside if/select', async () => {
@@ -76,9 +100,13 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe('"else" without matching "if" or "select"');
-    expect(res.diagnostics[0]?.line).toBe(2);
-    expect(res.diagnostics[0]?.column).toBe(5);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: '"else" without matching "if" or "select"',
+      line: 2,
+      column: 5,
+    });
   });
 
   it('reports line/column for missing select selector', async () => {
@@ -86,9 +114,13 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe('"select" expects a selector');
-    expect(res.diagnostics[0]?.line).toBe(2);
-    expect(res.diagnostics[0]?.column).toBe(5);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: '"select" expects a selector',
+      line: 2,
+      column: 5,
+    });
   });
 
   it('reports line/column for case without value', async () => {
@@ -96,9 +128,13 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe('"case" expects a value');
-    expect(res.diagnostics[0]?.line).toBe(3);
-    expect(res.diagnostics[0]?.column).toBe(7);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: '"case" expects a value',
+      line: 3,
+      column: 7,
+    });
   });
 
   it('reports line/column for invalid case value (comma)', async () => {
@@ -106,9 +142,13 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe('Invalid case value');
-    expect(res.diagnostics[0]?.line).toBe(3);
-    expect(res.diagnostics[0]?.column).toBe(7);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: 'Invalid case value',
+      line: 3,
+      column: 7,
+    });
   });
 
   it('reports line/column for invalid case value list', async () => {
@@ -116,8 +156,12 @@ describe('PR97 parser spans for structured-control diagnostics', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe('Invalid case value');
-    expect(res.diagnostics[0]?.line).toBe(3);
-    expect(res.diagnostics[0]?.column).toBe(7);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: 'Invalid case value',
+      line: 3,
+      column: 7,
+    });
   });
 });

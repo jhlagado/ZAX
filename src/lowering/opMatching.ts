@@ -1,13 +1,21 @@
 import type { AsmOperandNode, EaExprNode, ImmExprNode, OpDeclNode, OpMatcherNode } from '../frontend/ast.js';
 
 type Context = {
+  /** 8-bit register names for matching. */
   reg8: Set<string>;
+  /** True when operand uses IX/IY indexed memory form. */
   isIxIyIndexedMem: (operand: AsmOperandNode) => boolean;
+  /** Flattens dotted EA; `undefined` if not expressible as dotted. */
   flattenEaDottedName: (ea: EaExprNode) => string | undefined;
+  /** True for declared enum names. */
   isEnumName: (name: string) => boolean;
+  /** Normalizes fixed tokens for overload keys. */
   normalizeFixedToken: (operand: AsmOperandNode) => string | undefined;
+  /** Maps condition name to opcode; `undefined` if unknown. */
   conditionOpcodeFromName: (name: string) => number | undefined;
+  /** Best-effort imm evaluation. */
   evalImmNoDiag: (expr: ImmExprNode) => number | undefined;
+  /** Infers memory operand width in bytes; `undefined` if unknown. */
   inferMemWidth: (operand: AsmOperandNode) => number | undefined;
 };
 
@@ -15,10 +23,32 @@ type MatcherSpecificity = 'x_more_specific' | 'y_more_specific' | 'equal';
 type OverloadSpecificity = 'x_wins' | 'y_wins' | 'equal' | 'incomparable';
 
 export type OpOverloadSelection =
-  | { kind: 'arity_mismatch'; overloads: OpDeclNode[]; signatures: string[] }
-  | { kind: 'no_match'; overloads: OpDeclNode[]; mismatchDetails: string[] }
-  | { kind: 'ambiguous'; overloads: OpDeclNode[]; definitions: string[] }
-  | { kind: 'selected'; overload: OpDeclNode };
+  | {
+      kind: 'arity_mismatch';
+      /** Candidate overloads. */
+      overloads: OpDeclNode[];
+      /** Rendered arity signatures for diagnostics. */
+      signatures: string[];
+    }
+  | {
+      kind: 'no_match';
+      /** Candidate overloads. */
+      overloads: OpDeclNode[];
+      /** Per-operand mismatch notes. */
+      mismatchDetails: string[];
+    }
+  | {
+      kind: 'ambiguous';
+      /** Competing overloads. */
+      overloads: OpDeclNode[];
+      /** Rendered definitions for diagnostics. */
+      definitions: string[];
+    }
+  | {
+      kind: 'selected';
+      /** Chosen overload. */
+      overload: OpDeclNode;
+    };
 
 const fitsImm8 = (value: number): boolean => value >= -0x80 && value <= 0xff;
 const fitsImm16 = (value: number): boolean => value >= -0x8000 && value <= 0xffff;

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import { expectDiagnostic } from './helpers/diagnostics.js';
 
@@ -15,6 +16,7 @@ describe('PR102 lowering/frame invariants with locals', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
       severity: 'error',
       messageIncludes: 'Stack depth mismatch at if join',
     });
@@ -25,6 +27,7 @@ describe('PR102 lowering/frame invariants with locals', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
       severity: 'error',
       messageIncludes: 'Stack depth mismatch at while back-edge',
     });
@@ -35,6 +38,7 @@ describe('PR102 lowering/frame invariants with locals', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
       severity: 'error',
       messageIncludes: 'Stack depth mismatch at repeat/until',
     });

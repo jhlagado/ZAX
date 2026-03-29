@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { parseProgram } from '../../src/frontend/parser.js';
 import { compile } from '../../src/compile.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
 import type { D8mArtifact } from '../../src/formats/types.js';
+import { expectDiagnostic } from '../helpers/diagnostics/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,7 +44,9 @@ describe('PR576 unified data declarations inside data sections', () => {
     });
 
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
       message: 'Data declarations are only permitted inside data sections.',
       line: 5,
       column: 1,

@@ -2,14 +2,23 @@ import type { AsmOperandNode, ImmExprNode, SourceSpan } from '../frontend/ast.js
 import { renderStepInstr, type StepInstr, type StepPipeline } from './steps.js';
 
 type Context = {
+  /** Current code emission offset. */
   getCodeOffset: () => number;
+  /** Sets absolute code offset cursor. */
   setCodeOffset: (value: number) => void;
+  /** Writes one byte into the code map. */
   setCodeByte: (offset: number, value: number) => void;
+  /** Extends source range map for listings. */
   recordCodeSourceRange: (start: number, end: number) => void;
+  /** Optional trace hook for emitted bytes. */
   traceInstruction: (start: number, bytes: Uint8Array, traceText: string) => void;
+  /** Encodes one asm instruction. */
   emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
+  /** Loads imm16 to DE. */
   loadImm16ToDE: (value: number, span: SourceSpan) => boolean;
+  /** Loads imm16 to HL. */
   loadImm16ToHL: (value: number, span: SourceSpan) => boolean;
+  /** Queues standard abs16 fixup. */
   emitAbs16Fixup: (
     opcode: number,
     baseLower: string,
@@ -17,6 +26,7 @@ type Context = {
     span: SourceSpan,
     asmText?: string,
   ) => void;
+  /** Queues ED-prefixed abs16 fixup. */
   emitAbs16FixupEd: (
     opcode2: number,
     baseLower: string,
