@@ -1,4 +1,4 @@
-import type { StepPipeline } from '../addressing/steps.js';
+import type { StepPipeline } from './steps.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
 import type { AsmOperandNode, EaExprNode } from '../frontend/ast.js';
 import type { ImmExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';

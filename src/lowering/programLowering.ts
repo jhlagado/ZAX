@@ -1,24 +1,11 @@
 import type {
-  AlignDirectiveNode,
-  BinDeclNode,
-  ConstDeclNode,
-  DataBlockNode,
-  DataDeclNode,
-  EnumDeclNode,
   EaExprNode,
-  ExternDeclNode,
-  FuncDeclNode,
-  HexDeclNode,
   ImmExprNode,
-  ModuleItemNode,
   NamedSectionNode,
-  RawDataDeclNode,
   OpDeclNode,
   ProgramNode,
-  SectionItemNode,
   SourceSpan,
   TypeExprNode,
-  VarBlockNode,
   VarDeclNode,
 } from '../frontend/ast.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
@@ -36,115 +23,203 @@ import type {
   SectionKind,
 } from './loweringTypes.js';
 import type { LoweredAsmItem, LoweredImmExpr } from './loweredAsmTypes.js';
+import type { PrescanResult } from './prescanTypes.js';
 import type { AggregateType } from './typeResolution.js';
-import { sizeOfTypeExpr } from '../semantics/layout.js';
-import { lowerDataBlock } from './programLoweringData.js';
-import { createProgramLoweringDeclarationHelpers } from './programLoweringDeclarations.js';
+import { preScanProgramDeclarations as runProgramPrescan } from './programPrescan.js';
+import { lowerProgramDeclarations as runProgramLoweringTraversal } from './programLoweringTraversal.js';
 
 // Program lowering owns module-wide declaration traversal and the final
 // emission/fixup passes after all symbols and section bases are known.
+// --- Phase 0: shared context and products ---
 export type Context = FunctionLoweringSharedContext & {
+  /** Full program AST being lowered. */
   program: ProgramNode;
+  /** Resolved include directories for asset loads. */
   includeDirs: string[];
+  /** Per-file callable maps for visibility. */
   localCallablesByFile: Map<string, Map<string, Callable>>;
+  /** Merged callable visibility map. */
   visibleCallables: Map<string, Callable>;
+  /** Per-file op overload maps. */
   localOpsByFile: Map<string, Map<string, OpDeclNode[]>>;
+  /** Merged op visibility map. */
   visibleOpsByName: Map<string, OpDeclNode[]>;
+  /** All declared `op` names (lowercased). */
   declaredOpNames: Set<string>;
+  /** Declared `bin` names. */
   declaredBinNames: Set<string>;
+  /** Extern references deferred to link/finalize. */
   deferredExterns: Array<{
+    /** Referenced extern name. */
     name: string;
+    /** Resolved target symbol when known. */
     baseLower: string;
+    /** Addend bytes. */
     addend: number;
+    /** Referencing file. */
     file: string;
+    /** Source line. */
     line: number;
   }>;
+  /** Global/storage type map (prescan + lowering). */
   storageTypes: Map<string, TypeExprNode>;
+  /** Module alias EA targets. */
   moduleAliasTargets: Map<string, EaExprNode>;
+  /** Alias declarations for diagnostics. */
   moduleAliasDecls: Map<string, VarDeclNode>;
+  /** Names used as raw addresses. */
   rawAddressSymbols: Set<string>;
+  /** Symbols with absolute addresses. */
   absoluteSymbols: SymbolEntry[];
+  /** Running symbol table. */
   symbols: SymbolEntry[];
+  /** Data section byte map. */
   dataBytes: Map<number, number>;
+  /** Code section byte map. */
   codeBytes: Map<number, number>;
+  /** Hex-ingested bytes. */
   hexBytes: Map<number, number>;
+  /** Currently selected section for emission. */
   activeSectionRef: { current: SectionKind };
+  /** Next code allocation offset (mutable cursor). */
   codeOffsetRef: { current: number };
+  /** Next data allocation offset. */
   dataOffsetRef: { current: number };
+  /** Next var allocation offset. */
   varOffsetRef: { current: number };
+  /** Optional base imm per section. */
   baseExprs: Partial<Record<SectionKind, ImmExprNode>>;
+  /** Advances alignment state for `align` directives. */
   advanceAlign: (a: number) => void;
+  /** Rounds `n` up to `alignment` bytes. */
   alignTo: (n: number, alignment: number) => number;
+  /** Loads a binary asset; `undefined` on failure (diagnostics via `diag`). */
   loadBinInput: (
     file: string,
     fromPath: string,
     includeDirs: string[],
     diag: (file: string, message: string) => void,
   ) => Uint8Array | undefined;
+  /** Loads Intel HEX; `undefined` on failure. */
   loadHexInput: (
     file: string,
     fromPath: string,
     includeDirs: string[],
     diag: (file: string, message: string) => void,
   ) => { bytes: Map<number, number>; minAddress: number } | undefined;
+  /** Structural type resolver for records/unions. */
   resolveAggregateType: (type: TypeExprNode) => AggregateType | undefined;
+  /** Layout size helper; `undefined` if type cannot be sized. */
   sizeOfTypeExpr: (
     typeExpr: TypeExprNode,
     env: CompileEnv,
     diagnostics: Diagnostic[],
   ) => number | undefined;
+  /** Lowers one function body using the shared context. */
   lowerFunctionDecl: (ctx: FunctionLoweringContext) => void;
+  /** Records one lowered asm item for tracing; `span` optional for synthetic items. */
   recordLoweredAsmItem: (item: LoweredAsmItem, span?: SourceSpan) => void;
+  /** Lowers an imm AST node to the trace IR. */
   lowerImmExprForLoweredAsm: (expr: ImmExprNode) => LoweredImmExpr;
+  /** Named section AST node → contribution sink. */
   namedSectionSinksByNode: Map<NamedSectionNode, NamedSectionContributionSink>;
+  /** Runs `fn` with the active named-section sink bound for nested lowering. */
   withNamedSectionSink: <T>(sink: NamedSectionContributionSink, fn: () => T) => T;
 };
 
-export type PrescanResult = {
-  localCallablesByFile: Context['localCallablesByFile'];
-  visibleCallables: Context['visibleCallables'];
-  localOpsByFile: Context['localOpsByFile'];
-  visibleOpsByName: Context['visibleOpsByName'];
-  declaredOpNames: Context['declaredOpNames'];
-  declaredBinNames: Context['declaredBinNames'];
-  storageTypes: Context['storageTypes'];
-  moduleAliasTargets: Context['moduleAliasTargets'];
-  moduleAliasDecls: Context['moduleAliasDecls'];
-  rawAddressSymbols: Context['rawAddressSymbols'];
+/** Phase 1 — inputs mutated while discovering callables, ops, and module-scope metadata. */
+export type PrescanContext = Pick<
+  Context,
+  | 'program'
+  | 'env'
+  | 'diagnostics'
+  | 'localCallablesByFile'
+  | 'visibleCallables'
+  | 'localOpsByFile'
+  | 'visibleOpsByName'
+  | 'declaredOpNames'
+  | 'declaredBinNames'
+  | 'storageTypes'
+  | 'moduleAliasTargets'
+  | 'moduleAliasDecls'
+  | 'rawAddressSymbols'
+  | 'resolveScalarKind'
+>;
+
+/** @deprecated Use {@link PrescanContext} */
+export type ProgramPrescanContext = PrescanContext;
+
+/**
+ * Phase 2 — full program-lowering context after prescan. Prescan outputs are frozen in
+ * {@link PrescanResult}; the same map instances remain on `ctx` for lowering (shared refs).
+ */
+export type LoweringContext = Context & {
+  /** Frozen prescan result; map refs alias `ctx` for shared mutation during lowering. */
+  readonly prescan: PrescanResult;
 };
 
+// --- Phase 2 product: lowered bytes, symbols, and deferred externs ---
 export type LoweringResult = {
+  /** Final code section size cursor. */
   codeOffset: number;
+  /** Final data section size cursor. */
   dataOffset: number;
+  /** Final var section size cursor. */
   varOffset: number;
+  /** Still-unresolved symbols after lowering. */
   pending: Context['pending'];
+  /** Emitted symbol table. */
   symbols: Context['symbols'];
+  /** Absolute-address symbols. */
   absoluteSymbols: Context['absoluteSymbols'];
+  /** Deferred extern list (same shape as on `Context`). */
   deferredExterns: Context['deferredExterns'];
+  /** Emitted code bytes. */
   codeBytes: Context['codeBytes'];
+  /** Emitted data bytes. */
   dataBytes: Context['dataBytes'];
+  /** Emitted hex bytes. */
   hexBytes: Context['hexBytes'];
 };
 
-export type FinalizationContext = {
+/**
+ * Phase 3 — inputs for section placement, fixup resolution, and merged byte emission
+ * (`finalizeProgramEmission`).
+ */
+export type ProgramEmissionFinalizeContext = {
+  /** Diagnostics for placement and merge. */
   diagnostics: Diagnostic[];
+  /** File-scoped diagnostic helper. */
   diag: (diagnostics: Diagnostic[], file: string, message: string) => void;
+  /** Primary source path. */
   primaryFile: string;
+  /** Section base imm expressions. */
   baseExprs: Partial<Record<SectionKind, ImmExprNode>>;
+  /** Imm evaluator; `undefined` when expression is not const. */
   evalImmExpr: (
     expr: ImmExprNode,
     env: CompileEnv,
     diagnostics: Diagnostic[],
   ) => number | undefined;
+  /** Compile environment. */
   env: CompileEnv;
+  /** Code size after lowering. */
   codeOffset: number;
+  /** Data size after lowering. */
   dataOffset: number;
+  /** Var size after lowering. */
   varOffset: number;
+  /** Pending symbols. */
   pending: PendingSymbol[];
+  /** Symbol table (may grow during placement). */
   symbols: SymbolEntry[];
+  /** Absolute symbols. */
   absoluteSymbols: SymbolEntry[];
+  /** Deferred extern metadata. */
   deferredExterns: Context['deferredExterns'];
+  /** Absolute fixup records. */
   fixups: Array<{ offset: number; baseLower: string; addend: number; file: string }>;
+  /** Relative fixup records. */
   rel8Fixups: Array<{
     offset: number;
     origin: number;
@@ -153,517 +228,54 @@ export type FinalizationContext = {
     file: string;
     mnemonic: string;
   }>;
+  /** Code bytes. */
   codeBytes: Map<number, number>;
+  /** Data bytes. */
   dataBytes: Map<number, number>;
+  /** Hex bytes. */
   hexBytes: Map<number, number>;
+  /** Merged working map across sections. */
   bytes: Map<number, number>;
+  /** Code source segments for listing. */
   codeSourceSegments: EmittedSourceSegment[];
+  /** Optional default code load address. */
   defaultCodeBase?: number;
+  /** Alignment helper. */
   alignTo: (n: number, alignment: number) => number;
+  /** Copies one section map into the merged `bytes` map. */
   writeSection: (
     base: number,
     section: Map<number, number>,
     bytes: Map<number, number>,
     report: (message: string) => void,
   ) => void;
+  /** Min/max written addresses for overlap checks. */
   computeWrittenRange: (bytes: Map<number, number>) => AddressRange;
+  /** Rebases listing segments after code base is fixed. */
   rebaseCodeSourceSegments: (
     codeBase: number,
     segments: EmittedSourceSegment[],
   ) => EmittedSourceSegment[];
 };
 
-export function preScanProgramDeclarations(ctx: Context): PrescanResult {
-  const preScanItem = (
-    item: ModuleItemNode | SectionItemNode,
-    namedSection?: NamedSectionNode,
-  ): void => {
-    if (item.kind === 'NamedSection') {
-      for (const sectionItem of item.items) preScanItem(sectionItem, item);
-      return;
-    }
-
-    if (item.kind === 'FuncDecl') {
-      const f = item as FuncDeclNode;
-      const fileCallables =
-        ctx.localCallablesByFile.get(f.span.file) ??
-        (() => {
-          const m = new Map<string, Callable>();
-          ctx.localCallablesByFile.set(f.span.file, m);
-          return m;
-        })();
-      fileCallables.set(f.name.toLowerCase(), { kind: 'func', node: f });
-      if (f.exported) {
-        const moduleId = (ctx.env.moduleIds?.get(f.span.file) ?? f.span.file).toLowerCase();
-        ctx.visibleCallables.set(`${moduleId}.${f.name.toLowerCase()}`, { kind: 'func', node: f });
-      }
-    } else if (item.kind === 'OpDecl') {
-      const op = item as OpDeclNode;
-      const key = op.name.toLowerCase();
-      const fileOps =
-        ctx.localOpsByFile.get(op.span.file) ??
-        (() => {
-          const m = new Map<string, OpDeclNode[]>();
-          ctx.localOpsByFile.set(op.span.file, m);
-          return m;
-        })();
-      const existing = fileOps.get(key);
-      if (existing) existing.push(op);
-      else fileOps.set(key, [op]);
-      if (op.exported) {
-        const moduleId = (ctx.env.moduleIds?.get(op.span.file) ?? op.span.file).toLowerCase();
-        const qualified = `${moduleId}.${key}`;
-        const visible = ctx.visibleOpsByName.get(qualified);
-        if (visible) visible.push(op);
-        else ctx.visibleOpsByName.set(qualified, [op]);
-      }
-    } else if (item.kind === 'ExternDecl') {
-      const ex = item as ExternDeclNode;
-      const fileCallables =
-        ctx.localCallablesByFile.get(ex.span.file) ??
-        (() => {
-          const m = new Map<string, Callable>();
-          ctx.localCallablesByFile.set(ex.span.file, m);
-          return m;
-        })();
-      for (const fn of ex.funcs) {
-        fileCallables.set(fn.name.toLowerCase(), {
-          kind: 'extern',
-          node: fn,
-          targetLower: fn.name.toLowerCase(),
-        });
-      }
-    } else if (item.kind === 'VarBlock' && item.scope === 'module') {
-      if (namedSection) return;
-      const vb = item as VarBlockNode;
-      for (const decl of vb.decls) {
-        const lower = decl.name.toLowerCase();
-        if (decl.form === 'typed') {
-          ctx.storageTypes.set(lower, decl.typeExpr);
-          continue;
-        }
-        if (decl.initializer.kind === 'VarInitAlias') {
-          ctx.moduleAliasTargets.set(lower, decl.initializer.expr);
-          ctx.moduleAliasDecls.set(lower, decl);
-        }
-      }
-    } else if (item.kind === 'BinDecl') {
-      const bd = item as BinDeclNode;
-      if (namedSection && bd.section !== namedSection.section) return;
-      ctx.declaredBinNames.add(bd.name.toLowerCase());
-      ctx.rawAddressSymbols.add(bd.name.toLowerCase());
-      ctx.storageTypes.set(bd.name.toLowerCase(), { kind: 'TypeName', span: bd.span, name: 'addr' });
-    } else if (item.kind === 'HexDecl') {
-      const hd = item as HexDeclNode;
-      ctx.rawAddressSymbols.add(hd.name.toLowerCase());
-      ctx.storageTypes.set(hd.name.toLowerCase(), { kind: 'TypeName', span: hd.span, name: 'addr' });
-    } else if (item.kind === 'DataBlock') {
-      const db = item as DataBlockNode;
-      for (const decl of db.decls) {
-        const lower = decl.name.toLowerCase();
-        ctx.storageTypes.set(lower, decl.typeExpr);
-        const scalar = ctx.resolveScalarKind(decl.typeExpr);
-        if (!scalar) ctx.rawAddressSymbols.add(lower);
-      }
-    } else if (item.kind === 'DataDecl') {
-      if (namedSection && namedSection.section !== 'data') return;
-      const decl = item as DataDeclNode;
-      const lower = decl.name.toLowerCase();
-      ctx.storageTypes.set(lower, decl.typeExpr);
-      const scalar = ctx.resolveScalarKind(decl.typeExpr);
-      if (!scalar) ctx.rawAddressSymbols.add(lower);
-    } else if (item.kind === 'RawDataDecl') {
-      if (namedSection && namedSection.section !== 'data') return;
-      const decl = item as RawDataDeclNode;
-      ctx.rawAddressSymbols.add(decl.name.toLowerCase());
-    }
-  };
-
-  for (const module of ctx.program.files) {
-    for (const item of module.items) preScanItem(item);
-  }
-
-  return {
-    localCallablesByFile: ctx.localCallablesByFile,
-    visibleCallables: ctx.visibleCallables,
-    localOpsByFile: ctx.localOpsByFile,
-    visibleOpsByName: ctx.visibleOpsByName,
-    declaredOpNames: ctx.declaredOpNames,
-    declaredBinNames: ctx.declaredBinNames,
-    storageTypes: ctx.storageTypes,
-    moduleAliasTargets: ctx.moduleAliasTargets,
-    moduleAliasDecls: ctx.moduleAliasDecls,
-    rawAddressSymbols: ctx.rawAddressSymbols,
-  };
+/**
+ * Phase 3 — conceptual bundle: lowering context plus the lowering-phase product (#1124).
+ * (Runtime placement still uses {@link ProgramEmissionFinalizeContext} + merged env.)
+ */
+export interface FinalizationContext extends LoweringContext {
+  /** Snapshot product of `lowerProgramDeclarations` paired with this context (#1124). */
+  readonly lowered: LoweringResult;
 }
 
-export function lowerProgramDeclarations(ctx: Context, _prescan: PrescanResult): LoweringResult {
-  const sinkOffsetRef = (sink: NamedSectionContributionSink) => ({
-    get current() {
-      return sink.offset;
-    },
-    set current(value: number) {
-      sink.offset = value;
-    },
-  });
-  const alignNamedSection = (sink: NamedSectionContributionSink, value: number): void => {
-    sink.offset = ctx.alignTo(sink.offset, value);
-  };
-  const lowerVarBlock = (varBlock: VarBlockNode): void => {
-    for (const decl of varBlock.decls) {
-      if (decl.form !== 'typed') continue;
-      const size = sizeOfTypeExpr(decl.typeExpr, ctx.env, ctx.diagnostics);
-      if (size === undefined) continue;
-      if (ctx.env.consts.has(decl.name)) {
-        ctx.diag(ctx.diagnostics, decl.span.file, `Var name "${decl.name}" collides with a const.`);
-        ctx.varOffsetRef.current += size;
-        continue;
-      }
-      if (ctx.env.enums.has(decl.name)) {
-        ctx.diag(ctx.diagnostics, decl.span.file, `Var name "${decl.name}" collides with an enum member.`);
-        ctx.varOffsetRef.current += size;
-        continue;
-      }
-      if (ctx.env.types.has(decl.name)) {
-        ctx.diag(ctx.diagnostics, decl.span.file, `Var name "${decl.name}" collides with a type name.`);
-        ctx.varOffsetRef.current += size;
-        continue;
-      }
-      if (ctx.taken.has(decl.name)) {
-        ctx.diag(ctx.diagnostics, decl.span.file, `Duplicate symbol name "${decl.name}" for var declaration.`);
-        ctx.varOffsetRef.current += size;
-        continue;
-      }
-      ctx.taken.add(decl.name);
-      ctx.pending.push({
-        kind: 'var',
-        name: decl.name,
-        section: 'var',
-        offset: ctx.varOffsetRef.current,
-        file: decl.span.file,
-        line: decl.span.start.line,
-        scope: 'global',
-        size,
-      });
-      ctx.varOffsetRef.current += size;
-    }
-  };
-  const lowerExternDecl = (ex: ExternDeclNode): void => {
-    const baseLower = ex.base?.toLowerCase();
-    if (baseLower !== undefined && !ctx.declaredBinNames.has(baseLower)) {
-      ctx.diag(
-        ctx.diagnostics,
-        ex.span.file,
-        `extern base "${ex.base}" does not reference a declared bin symbol.`,
-      );
-      return;
-    }
-    for (const fn of ex.funcs) {
-      if (ctx.taken.has(fn.name)) {
-        ctx.diag(ctx.diagnostics, fn.span.file, `Duplicate symbol name "${fn.name}".`);
-        continue;
-      }
-      ctx.taken.add(fn.name);
-      if (baseLower !== undefined) {
-        const offset = ctx.evalImmExpr(fn.at, ctx.env, ctx.diagnostics);
-        if (offset === undefined) {
-          ctx.diag(ctx.diagnostics, fn.span.file, `Failed to evaluate extern func offset for "${fn.name}".`);
-          continue;
-        }
-        if (offset < 0 || offset > 0xffff) {
-          ctx.diag(ctx.diagnostics, fn.span.file, `extern func "${fn.name}" offset out of range (0..65535).`);
-          continue;
-        }
-        ctx.deferredExterns.push({
-          name: fn.name,
-          baseLower,
-          addend: offset,
-          file: fn.span.file,
-          line: fn.span.start.line,
-        });
-        continue;
-      }
-      const addr = ctx.evalImmExpr(fn.at, ctx.env, ctx.diagnostics);
-      if (addr === undefined) {
-        ctx.diag(ctx.diagnostics, fn.span.file, `Failed to evaluate extern func address for "${fn.name}".`);
-        continue;
-      }
-      if (addr < 0 || addr > 0xffff) {
-        ctx.diag(ctx.diagnostics, fn.span.file, `extern func "${fn.name}" address out of range (0..65535).`);
-        continue;
-      }
-      ctx.symbols.push({
-        kind: 'label',
-        name: fn.name,
-        address: addr,
-        file: fn.span.file,
-        line: fn.span.start.line,
-        scope: 'global',
-      });
-    }
-  };
-  const { lowerBinDecl, lowerRawDataDecl } = createProgramLoweringDeclarationHelpers(ctx);
-  const lowerItem = (
-    item: ModuleItemNode | SectionItemNode,
-    namedSection?: { node: NamedSectionNode; sink: NamedSectionContributionSink },
-  ): void => {
-    if (item.kind === 'NamedSection') {
-      const sectionNode = item as NamedSectionNode;
-      const sink = ctx.namedSectionSinksByNode.get(sectionNode);
-      if (!sink) return;
-      const prevSection = ctx.activeSectionRef.current;
-      ctx.activeSectionRef.current = sectionNode.section;
-      ctx.withNamedSectionSink(sink, () => {
-        for (const sectionItem of sectionNode.items) {
-          lowerItem(sectionItem, { node: sectionNode, sink });
-        }
-      });
-      ctx.activeSectionRef.current = prevSection;
-      return;
-    }
-
-    if (item.kind === 'ConstDecl') {
-      const constItem = item as ConstDeclNode;
-      const v = ctx.env.consts.get(constItem.name);
-      if (v !== undefined) {
-        if (ctx.taken.has(constItem.name)) {
-          ctx.diag(ctx.diagnostics, constItem.span.file, `Duplicate symbol name "${constItem.name}".`);
-          return;
-        }
-        ctx.taken.add(constItem.name);
-        ctx.symbols.push({
-          kind: 'constant',
-          name: constItem.name,
-          value: v,
-          address: v & 0xffff,
-          file: constItem.span.file,
-          line: constItem.span.start.line,
-          scope: 'global',
-        });
-        ctx.recordLoweredAsmItem(
-          {
-            kind: 'const',
-            name: constItem.name,
-            value: { kind: 'literal', value: v },
-          },
-          constItem.span,
-        );
-      }
-      return;
-    }
-
-    if (item.kind === 'EnumDecl') {
-      const e = item as EnumDeclNode;
-      for (let idx = 0; idx < e.members.length; idx++) {
-        const member = e.members[idx]!;
-        const name = `${e.name}.${member}`;
-        if (ctx.env.enums.get(name) !== idx) continue;
-        if (ctx.taken.has(name)) {
-          ctx.diag(ctx.diagnostics, e.span.file, `Duplicate symbol name "${name}".`);
-          continue;
-        }
-        ctx.taken.add(name);
-        ctx.symbols.push({
-          kind: 'constant',
-          name,
-          value: idx,
-          address: idx & 0xffff,
-          file: e.span.file,
-          line: e.span.start.line,
-          scope: 'global',
-        });
-      }
-      return;
-    }
-
-    if (item.kind === 'Align') {
-      const a = item as AlignDirectiveNode;
-      const v = ctx.evalImmExpr(a.value, ctx.env, ctx.diagnostics);
-      if (v === undefined) {
-        ctx.diag(ctx.diagnostics, a.span.file, `Failed to evaluate align value.`);
-        return;
-      }
-      if (v <= 0) {
-        ctx.diag(ctx.diagnostics, a.span.file, `align value must be > 0.`);
-        return;
-      }
-      const current = namedSection
-        ? namedSection.sink.offset
-        : ctx.activeSectionRef.current === 'code'
-          ? ctx.codeOffsetRef.current
-          : ctx.activeSectionRef.current === 'data'
-            ? ctx.dataOffsetRef.current
-            : ctx.varOffsetRef.current;
-      const aligned = ctx.alignTo(current, v);
-      const pad = aligned - current;
-      if (pad > 0) {
-        ctx.recordLoweredAsmItem(
-          { kind: 'ds', size: { kind: 'literal', value: pad } },
-          a.span,
-        );
-      }
-      if (namedSection) alignNamedSection(namedSection.sink, v);
-      else ctx.advanceAlign(v);
-      return;
-    }
-
-    if (item.kind === 'ExternDecl') {
-      lowerExternDecl(item as ExternDeclNode);
-      return;
-    }
-
-    if (item.kind === 'BinDecl') {
-      lowerBinDecl(item as BinDeclNode, namedSection);
-      return;
-    }
-
-    if (item.kind === 'HexDecl') {
-      const hexDecl = item as HexDeclNode;
-      if (ctx.taken.has(hexDecl.name)) {
-        ctx.diag(ctx.diagnostics, hexDecl.span.file, `Duplicate symbol name "${hexDecl.name}".`);
-        return;
-      }
-      ctx.taken.add(hexDecl.name);
-      const parsed = ctx.loadHexInput(
-        hexDecl.span.file,
-        hexDecl.fromPath,
-        ctx.includeDirs,
-        (file, message) => ctx.diag(ctx.diagnostics, file, message),
-      );
-      if (!parsed) return;
-      for (const [addr, b] of parsed.bytes) {
-        if (ctx.hexBytes.has(addr)) {
-          ctx.diag(ctx.diagnostics, hexDecl.span.file, `HEX overlap at address ${addr}.`);
-          continue;
-        }
-        ctx.hexBytes.set(addr, b);
-      }
-      ctx.absoluteSymbols.push({
-        kind: 'data',
-        name: hexDecl.name,
-        address: parsed.minAddress,
-        file: hexDecl.span.file,
-        line: hexDecl.span.start.line,
-        scope: 'global',
-      });
-      return;
-    }
-
-    if (item.kind === 'OpDecl') {
-      const op = item as OpDeclNode;
-      const key = op.name.toLowerCase();
-      if (ctx.taken.has(op.name) && !ctx.declaredOpNames.has(key)) {
-        ctx.diag(ctx.diagnostics, op.span.file, `Duplicate symbol name "${op.name}".`);
-      } else {
-        ctx.taken.add(op.name);
-        ctx.declaredOpNames.add(key);
-      }
-      return;
-    }
-
-    if (item.kind === 'FuncDecl') {
-      if (namedSection && namedSection.node.section !== 'code') {
-        ctx.diag(
-          ctx.diagnostics,
-          item.span.file,
-          `Function "${item.name}" is not allowed inside data section "${namedSection.node.name}".`,
-        );
-        return;
-      }
-      ctx.lowerFunctionDecl({
-        ...ctx,
-        item,
-        ...(namedSection ? { pending: namedSection.sink.pendingSymbols } : {}),
-      });
-      return;
-    }
-
-    if (item.kind === 'DataBlock') {
-      if (namedSection && namedSection.node.section !== 'data') {
-        ctx.diag(
-          ctx.diagnostics,
-          item.span.file,
-          `Data declarations are not allowed inside code section "${namedSection.node.name}".`,
-        );
-        return;
-      }
-      if (namedSection) {
-        lowerDataBlock(ctx, item as DataBlockNode, {
-          section: namedSection.node.section,
-          bytes: namedSection.sink.bytes,
-          offsetRef: sinkOffsetRef(namedSection.sink),
-          pending: namedSection.sink.pendingSymbols,
-          startupInitActions: namedSection.sink.startupInitActions,
-        });
-      } else {
-        lowerDataBlock(ctx, item as DataBlockNode);
-      }
-      return;
-    }
-
-    if (item.kind === 'DataDecl') {
-      if (!namedSection || namedSection.node.section !== 'data') {
-        const sectionName = namedSection?.node.name ?? 'module scope';
-        ctx.diag(
-          ctx.diagnostics,
-          item.span.file,
-          `Data declarations are only allowed inside data sections${namedSection ? ` like "${sectionName}"` : ''}.`,
-        );
-        return;
-      }
-      lowerDataBlock(
-        ctx,
-        {
-          kind: 'DataBlock',
-          span: item.span,
-          decls: [item as DataDeclNode],
-        },
-        {
-          section: namedSection.node.section,
-          bytes: namedSection.sink.bytes,
-          offsetRef: sinkOffsetRef(namedSection.sink),
-          pending: namedSection.sink.pendingSymbols,
-          startupInitActions: namedSection.sink.startupInitActions,
-        },
-      );
-      return;
-    }
-
-    if (item.kind === 'RawDataDecl') {
-      lowerRawDataDecl(item as RawDataDeclNode, namedSection);
-      return;
-    }
-
-    if (item.kind === 'VarBlock' && item.scope === 'module') {
-      if (namedSection) {
-        ctx.diag(
-          ctx.diagnostics,
-          item.span.file,
-          `Module-scope var blocks are not allowed inside named section "${namedSection.node.name}".`,
-        );
-        return;
-      }
-      lowerVarBlock(item as VarBlockNode);
-    }
-  };
-
-  for (const module of ctx.program.files) {
-    ctx.activeSectionRef.current = 'code';
-    for (const item of module.items) lowerItem(item);
-  }
-
-  return {
-    codeOffset: ctx.codeOffsetRef.current,
-    dataOffset: ctx.dataOffsetRef.current,
-    varOffset: ctx.varOffsetRef.current,
-    pending: ctx.pending,
-    symbols: ctx.symbols,
-    absoluteSymbols: ctx.absoluteSymbols,
-    deferredExterns: ctx.deferredExterns,
-    codeBytes: ctx.codeBytes,
-    dataBytes: ctx.dataBytes,
-    hexBytes: ctx.hexBytes,
-  };
+// --- Phase 1: prescan declarations (callables, ops, storage aliases) ---
+export function preScanProgramDeclarations(ctx: PrescanContext): PrescanResult {
+  return runProgramPrescan(ctx);
 }
 
+// --- Phase 2: lower declarations and functions into section bytes ---
+export function lowerProgramDeclarations(ctx: LoweringContext): LoweringResult {
+  return runProgramLoweringTraversal(ctx);
+}
+
+// --- Phase 3: finalization (placement, fixups, emission) ---
 export { finalizeProgramEmission } from './programLoweringFinalize.js';

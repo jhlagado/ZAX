@@ -1,25 +1,16 @@
-import type { RecordFieldNode, SourceSpan, TypeDeclNode, UnionDeclNode } from './ast.js';
+import type { SourceSpan, TypeDeclNode, UnionDeclNode } from './ast.js';
 import type { SourceFile } from './source.js';
 import { span } from './source.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import { diagIfInferredArrayLengthNotAllowed, parseTypeExprFromText } from './parseImm.js';
 import {
-  diagInvalidBlockLine,
   diagInvalidHeaderLine,
   formatIdentifierToken,
-  looksLikeKeywordBodyDeclLine,
-  topLevelStartKeyword,
 } from './parseModuleCommon.js';
-import { stripLineComment as stripComment } from './parseParserShared.js';
+import { parseRecordFieldBlock, type RecordFieldLine } from './parseRecordFieldDecl.js';
 
-type RawLine = {
-  raw: string;
-  startOffset: number;
-  endOffset: number;
-  lineNo: number;
-  filePath: string;
-};
+type RawLine = RecordFieldLine;
 
 type ParseTypeContext = {
   file: SourceFile;
@@ -39,166 +30,6 @@ type ParsedUnionDecl = {
   node: UnionDeclNode;
   nextIndex: number;
 };
-
-function parseRecordFields(
-  name: string,
-  allowFuncKeywordStart: boolean,
-  startIndex: number,
-  ctx: ParseTypeContext,
-): {
-  fields: RecordFieldNode[];
-  nextIndex: number;
-  terminated: boolean;
-  endOffset: number;
-  interruptedByKeyword?: string;
-  interruptedByLine?: number;
-  interruptedByFilePath?: string;
-} {
-  const { file, lineCount, diagnostics, modulePath, getRawLine, isReservedTopLevelName } = ctx;
-  const fields: RecordFieldNode[] = [];
-  const fieldNamesLower = new Set<string>();
-  let terminated = false;
-  let interruptedByKeyword: string | undefined;
-  let interruptedByLine: number | undefined;
-  let interruptedByFilePath: string | undefined;
-  let endOffset = file.text.length;
-  let index = startIndex;
-
-  while (index < lineCount) {
-    const {
-      raw: rawField,
-      startOffset: so,
-      endOffset: eo,
-      lineNo: fieldLineNo,
-      filePath: fieldFilePath,
-    } = getRawLine(index);
-    const t = stripComment(rawField).trim();
-    const tLower = t.toLowerCase();
-    if (t.length === 0) {
-      index++;
-      continue;
-    }
-    if (tLower === 'end') {
-      terminated = true;
-      endOffset = eo;
-      index++;
-      break;
-    }
-    const topKeyword = topLevelStartKeyword(t);
-    if (topKeyword !== undefined) {
-      if (allowFuncKeywordStart && topKeyword === 'func') {
-        // func field forms are allowed inside unions in current parser behavior.
-      } else {
-        if (looksLikeKeywordBodyDeclLine(t)) {
-          diagInvalidBlockLine(
-            diagnostics,
-            fieldFilePath,
-            `${name} field declaration`,
-            t,
-            '<name>: <type>',
-            fieldLineNo,
-          );
-          index++;
-          continue;
-        }
-        interruptedByKeyword = topKeyword;
-        interruptedByLine = fieldLineNo;
-        interruptedByFilePath = fieldFilePath;
-        break;
-      }
-    }
-
-    const m = /^([^:]+)\s*:\s*(.+)$/.exec(t);
-    if (!m) {
-      diagInvalidBlockLine(
-        diagnostics,
-        fieldFilePath,
-        `${name} field declaration`,
-        t,
-        '<name>: <type>',
-        fieldLineNo,
-      );
-      index++;
-      continue;
-    }
-
-    const fieldName = m[1]!.trim();
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(fieldName)) {
-      diag(
-        diagnostics,
-        fieldFilePath,
-        `Invalid ${name} field name ${formatIdentifierToken(fieldName)}: expected <identifier>.`,
-        { line: fieldLineNo, column: 1 },
-      );
-      index++;
-      continue;
-    }
-    if (isReservedTopLevelName(fieldName)) {
-      diag(
-        diagnostics,
-        modulePath,
-        `Invalid ${name} field name "${fieldName}": collides with a top-level keyword.`,
-        { line: index + 1, column: 1 },
-      );
-      index++;
-      continue;
-    }
-    const fieldNameLower = fieldName.toLowerCase();
-    if (fieldNamesLower.has(fieldNameLower)) {
-      diag(diagnostics, fieldFilePath, `Duplicate ${name} field name "${fieldName}".`, {
-        line: fieldLineNo,
-        column: 1,
-      });
-      index++;
-      continue;
-    }
-    fieldNamesLower.add(fieldNameLower);
-    const typeText = m[2]!.trim();
-    const fieldSpan = span(file, so, eo);
-    const typeExpr = parseTypeExprFromText(typeText, fieldSpan, {
-      allowInferredArrayLength: false,
-    });
-    if (!typeExpr) {
-      if (
-        diagIfInferredArrayLengthNotAllowed(diagnostics, fieldFilePath, typeText, {
-          line: fieldLineNo,
-          column: 1,
-        })
-      ) {
-        index++;
-        continue;
-      }
-      diagInvalidBlockLine(
-        diagnostics,
-        fieldFilePath,
-        `${name} field declaration`,
-        t,
-        '<name>: <type>',
-        fieldLineNo,
-      );
-      index++;
-      continue;
-    }
-
-    fields.push({
-      kind: 'RecordField',
-      span: fieldSpan,
-      name: fieldName,
-      typeExpr,
-    });
-    index++;
-  }
-
-  return {
-    fields,
-    nextIndex: index,
-    terminated,
-    endOffset,
-    ...(interruptedByKeyword !== undefined ? { interruptedByKeyword } : {}),
-    ...(interruptedByLine !== undefined ? { interruptedByLine } : {}),
-    ...(interruptedByFilePath !== undefined ? { interruptedByFilePath } : {}),
-  };
-}
 
 export function parseTypeDecl(
   typeTail: string,
@@ -271,35 +102,17 @@ export function parseTypeDecl(
     };
   }
 
-  const record = parseRecordFields('record', false, startIndex + 1, ctx);
-  if (!record.terminated) {
-    if (
-      record.interruptedByKeyword !== undefined &&
-      record.interruptedByLine !== undefined &&
-      record.interruptedByFilePath !== undefined
-    ) {
-      diag(
-        diagnostics,
-        record.interruptedByFilePath,
-        `Unterminated type "${name}": expected "end" before "${record.interruptedByKeyword}"`,
-        { line: record.interruptedByLine, column: 1 },
-      );
-    } else {
-      diag(diagnostics, modulePath, `Unterminated type "${name}": missing "end"`, {
-        line: lineNo,
-        column: 1,
-      });
-    }
-  }
+  const record = parseRecordFieldBlock({
+    declarationKind: 'type',
+    declarationName: name,
+    fieldKind: 'record',
+    allowFuncKeywordStart: false,
+    declarationLineNo: lineNo,
+    startIndex: startIndex + 1,
+    ctx,
+  });
 
-  if (record.fields.length === 0) {
-    diag(diagnostics, modulePath, `Type "${name}" must contain at least one field`, {
-      line: lineNo,
-      column: 1,
-    });
-  }
-
-  const typeEnd = record.terminated ? record.endOffset : file.text.length;
+  const typeEnd = record.endOffset;
   const typeSpan = span(file, stmtSpan.start.offset, typeEnd);
   return {
     node: {
@@ -354,36 +167,17 @@ export function parseUnionDecl(
     return undefined;
   }
 
-  const record = parseRecordFields('union', true, startIndex + 1, ctx);
+  const record = parseRecordFieldBlock({
+    declarationKind: 'union',
+    declarationName: name,
+    fieldKind: 'union',
+    allowFuncKeywordStart: true,
+    declarationLineNo: lineNo,
+    startIndex: startIndex + 1,
+    ctx,
+  });
 
-  if (!record.terminated) {
-    if (
-      record.interruptedByKeyword !== undefined &&
-      record.interruptedByLine !== undefined &&
-      record.interruptedByFilePath !== undefined
-    ) {
-      diag(
-        diagnostics,
-        record.interruptedByFilePath,
-        `Unterminated union "${name}": expected "end" before "${record.interruptedByKeyword}"`,
-        { line: record.interruptedByLine, column: 1 },
-      );
-    } else {
-      diag(diagnostics, modulePath, `Unterminated union "${name}": missing "end"`, {
-        line: lineNo,
-        column: 1,
-      });
-    }
-  }
-
-  if (record.fields.length === 0) {
-    diag(diagnostics, modulePath, `Union "${name}" must contain at least one field`, {
-      line: lineNo,
-      column: 1,
-    });
-  }
-
-  const unionEnd = record.terminated ? record.endOffset : file.text.length;
+  const unionEnd = record.endOffset;
   return {
     node: {
       kind: 'UnionDecl',

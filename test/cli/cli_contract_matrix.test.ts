@@ -70,25 +70,29 @@ describe('cli contract matrix', () => {
     expect(opStackPolicyMissing.stderr).toContain('--op-stack-policy expects a value');
   }, 20_000);
 
-  it('rejects unsupported type tokens and output/type extension mismatches', async () => {
-    const work = await mkdtemp(join(tmpdir(), 'zax-cli-type-'));
-    const entry = join(work, 'main.zax');
-    await writeFile(entry, 'export func main()\n  nop\nend\n', 'utf8');
+  it(
+    'rejects unsupported type tokens and output/type extension mismatches',
+    async () => {
+      const work = await mkdtemp(join(tmpdir(), 'zax-cli-type-'));
+      const entry = join(work, 'main.zax');
+      await writeFile(entry, 'export func main()\n  nop\nend\n', 'utf8');
 
-    const unsupported = await runCli(['--type=rom', entry]);
-    expect(unsupported.code).toBe(2);
-    expect(unsupported.stderr).toContain('Unsupported --type "rom"');
+      const unsupported = await runCli(['--type=rom', entry]);
+      expect(unsupported.code).toBe(2);
+      expect(unsupported.stderr).toContain('Unsupported --type "rom"');
 
-    const badHexExt = await runCli(['--type', 'hex', '-o', join(work, 'out.bin'), entry]);
-    expect(badHexExt.code).toBe(2);
-    expect(badHexExt.stderr).toContain('--output must end with ".hex"');
+      const badHexExt = await runCli(['--type', 'hex', '-o', join(work, 'out.bin'), entry]);
+      expect(badHexExt.code).toBe(2);
+      expect(badHexExt.stderr).toContain('--output must end with ".hex"');
 
-    const badBinExt = await runCli(['--type', 'bin', '-o', join(work, 'out.hex'), entry]);
-    expect(badBinExt.code).toBe(2);
-    expect(badBinExt.stderr).toContain('--output must end with ".bin"');
+      const badBinExt = await runCli(['--type', 'bin', '-o', join(work, 'out.hex'), entry]);
+      expect(badBinExt.code).toBe(2);
+      expect(badBinExt.stderr).toContain('--output must end with ".bin"');
 
-    await rm(work, { recursive: true, force: true });
-  });
+      await rm(work, { recursive: true, force: true });
+    },
+    15_000,
+  );
 
   it('rejects unsupported --op-stack-policy mode tokens', async () => {
     const fixture = join(__dirname, '..', 'fixtures', 'pr271_op_stack_policy_delta_warn.zax');

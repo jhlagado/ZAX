@@ -3,8 +3,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import type { BinArtifact } from '../src/formats/types.js';
+import { expectDiagnostic, expectNoDiagnostics, expectNoErrors } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -13,7 +15,7 @@ describe('#738 select case ranges/groups', () => {
   it('supports grouped case ranges for reg8 selector dispatch', async () => {
     const entry = join(__dirname, 'fixtures', 'pr738_select_case_range_group_reg8.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics).toEqual([]);
+    expectNoDiagnostics(res.diagnostics);
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
 
@@ -28,8 +30,8 @@ describe('#738 select case ranges/groups', () => {
     const runtimeEntry = join(__dirname, 'fixtures', 'pr738_select_case_range_group_reg8.zax');
     const constRes = await compile(constEntry, {}, { formats: defaultFormatWriters });
     const runtimeRes = await compile(runtimeEntry, {}, { formats: defaultFormatWriters });
-    expect(constRes.diagnostics).toEqual([]);
-    expect(runtimeRes.diagnostics).toEqual([]);
+    expectNoDiagnostics(constRes.diagnostics);
+    expectNoDiagnostics(runtimeRes.diagnostics);
 
     const constBin = constRes.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     const runtimeBin = runtimeRes.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
@@ -45,19 +47,22 @@ describe('#738 select case ranges/groups', () => {
     const entry = join(__dirname, 'fixtures', 'pr738_select_case_range_overlap.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
-    expect(res.diagnostics.some((d) => d.message.includes('Duplicate case value 3.'))).toBe(true);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
+      messageIncludes: 'Duplicate case value 3.',
+    });
   });
 
   it('warns and clips partially unreachable reg8 case ranges', async () => {
     const entry = join(__dirname, 'fixtures', 'pr738_select_reg8_range_clip_warning.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
-    const warnings = res.diagnostics.filter(
-      (d) =>
-        d.severity === 'warning' &&
-        d.message.includes('reachable portion 250..255 is used'),
-    );
-    expect(warnings).toHaveLength(1);
+    expectNoErrors(res.diagnostics);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitWarning,
+      severity: 'warning',
+      messageIncludes: 'reachable portion 250..255 is used',
+    });
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
@@ -69,7 +74,7 @@ describe('#738 select case ranges/groups', () => {
   it('supports 16-bit selector range dispatch', async () => {
     const entry = join(__dirname, 'fixtures', 'pr738_select_reg16_range_dispatch.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expect(res.diagnostics).toEqual([]);
+    expectNoDiagnostics(res.diagnostics);
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
 

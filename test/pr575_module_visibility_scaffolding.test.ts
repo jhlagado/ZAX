@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import type { ProgramNode } from '../src/frontend/ast.js';
 import { parseModuleFile } from '../src/frontend/parser.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { canAccessQualifiedName } from '../src/moduleVisibility.js';
 import { buildEnv, evalImmExpr } from '../src/semantics/env.js';
 import { sizeOfTypeExpr } from '../src/semantics/layout.js';
+import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
 
 describe('PR575 module visibility scaffolding', () => {
   it('parses exported sectionless declarations and dotted type names', () => {
@@ -22,7 +24,7 @@ describe('PR575 module visibility scaffolding', () => {
       diagnostics,
     );
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(moduleFile.moduleId).toBe('root');
     expect(moduleFile.items[0]).toMatchObject({ kind: 'TypeDecl', exported: true, typeExpr: { kind: 'TypeName', name: 'dep.Word' } });
     expect(moduleFile.items[1]).toMatchObject({ kind: 'UnionDecl', exported: true });
@@ -50,7 +52,7 @@ describe('PR575 module visibility scaffolding', () => {
       diagnostics,
     );
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     const program = {
       kind: 'Program',
       span: root.span,
@@ -60,7 +62,7 @@ describe('PR575 module visibility scaffolding', () => {
 
     const env = buildEnv(program, diagnostics);
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(env.importedModuleIds!.get(root.path)).toEqual(new Set(['dep']));
     expect(env.visibleConsts!.get('dep.FOO')).toBe(7);
     expect(env.consts.has('dep.FOO')).toBe(false);
@@ -119,7 +121,16 @@ describe('PR575 module visibility scaffolding', () => {
       ),
     ).toBeUndefined();
     expect(sizeOfTypeExpr({ kind: 'TypeName', span: other.items[1]!.span, name: 'dep.Word' }, env, diagnostics)).toBeUndefined();
-    expect(diagnostics.some((d) => d.message === 'Unknown type "dep.Word".')).toBe(true);
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.SemanticsError,
+      severity: 'error',
+      message: 'Failed to evaluate const "FAIL".',
+    });
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.TypeError,
+      severity: 'error',
+      message: 'Unknown type "dep.Word".',
+    });
   });
 
   it('fails closed for qualified access when import entry is unavailable', () => {
@@ -150,7 +161,7 @@ describe('PR575 module visibility scaffolding', () => {
     const env = buildEnv(program, diagnostics);
     env.importedModuleIds!.delete(root.path);
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(canAccessQualifiedName('dep.FOO', root.path, env)).toBe(false);
     expect(canAccessQualifiedName('root.Local', root.path, env)).toBe(true);
     expect(
@@ -161,7 +172,11 @@ describe('PR575 module visibility scaffolding', () => {
       ),
     ).toBeUndefined();
     expect(sizeOfTypeExpr({ kind: 'TypeName', span: root.span, name: 'dep.Word' }, env, diagnostics)).toBeUndefined();
-    expect(diagnostics.some((d) => d.message === 'Unknown type "dep.Word".')).toBe(true);
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.TypeError,
+      severity: 'error',
+      message: 'Unknown type "dep.Word".',
+    });
   });
 
   it('uses resolved path-form import edges to determine visibility', () => {
@@ -191,7 +206,7 @@ describe('PR575 module visibility scaffolding', () => {
       ]),
     });
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(env.importedModuleIds!.get(root.path)).toEqual(new Set([dep.moduleId]));
     expect(env.consts.get('LOCAL')).toBe(7);
   });
@@ -219,7 +234,7 @@ describe('PR575 module visibility scaffolding', () => {
       ]),
     });
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(env.importedModuleIds!.get(root.path)).toEqual(new Set([dep.moduleId]));
     expect(env.consts.get('LOCAL')).toBe(7);
   });

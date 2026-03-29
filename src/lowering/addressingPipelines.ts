@@ -24,7 +24,7 @@ import {
   LOAD_BASE_FVAR,
   LOAD_BASE_GLOB,
   type StepPipeline,
-} from '../addressing/steps.js';
+} from './steps.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
 import type { EaExprNode, ImmExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';
 import type { EaResolution } from './eaResolution.js';

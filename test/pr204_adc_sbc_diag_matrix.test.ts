@@ -1,25 +1,61 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic, expectNoDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const PR204_FIXTURE = join(__dirname, 'fixtures', 'pr204_adc_sbc_diag_matrix_invalid.zax');
+
+type Row = {
+  label: string;
+  id: (typeof DiagnosticIds)[keyof typeof DiagnosticIds];
+  message: string;
+};
+
 describe('PR204: adc/sbc malformed-form diagnostics parity', () => {
-  it('emits explicit destination diagnostics for malformed two-operand forms', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr204_adc_sbc_diag_matrix_invalid.zax');
-    const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    const messages = res.diagnostics.map((d) => d.message);
+  it.each([
+    {
+      label: 'adc destination',
+      id: DiagnosticIds.EncodeError,
+      message: 'adc expects destination A or HL',
+    },
+    {
+      label: 'adc HL pair',
+      id: DiagnosticIds.EncodeError,
+      message: 'adc HL, rr expects BC/DE/HL/SP',
+    },
+    {
+      label: 'sbc destination',
+      id: DiagnosticIds.EncodeError,
+      message: 'sbc expects destination A or HL',
+    },
+    {
+      label: 'sbc HL pair',
+      id: DiagnosticIds.EncodeError,
+      message: 'sbc HL, rr expects BC/DE/HL/SP',
+    },
+  ] satisfies Row[])('$label — explicit destination diagnostics for malformed two-operand forms', async (row) => {
+    const res = await compile(PR204_FIXTURE, {}, { formats: defaultFormatWriters });
+    expectDiagnostic(res.diagnostics, {
+      id: row.id,
+      severity: 'error',
+      message: row.message,
+    });
+  });
 
-    expect(messages).toContain('adc expects destination A or HL');
-    expect(messages).toContain('adc HL, rr expects BC/DE/HL/SP');
-    expect(messages).toContain('sbc expects destination A or HL');
-    expect(messages).toContain('sbc HL, rr expects BC/DE/HL/SP');
-
-    expect(messages).not.toContain('adc has unsupported operand form');
-    expect(messages).not.toContain('sbc has unsupported operand form');
+  it('does not report generic unsupported-operand fallbacks for the adc/sbc matrix fixture', async () => {
+    const res = await compile(PR204_FIXTURE, {}, { formats: defaultFormatWriters });
+    expectNoDiagnostic(res.diagnostics, {
+      message: 'adc has unsupported operand form',
+    });
+    expectNoDiagnostic(res.diagnostics, {
+      message: 'sbc has unsupported operand form',
+    });
   });
 });

@@ -4,12 +4,13 @@ import { join } from 'node:path';
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import { compilePlacedProgram, flattenLoweredInstructions, isMemIxDisp, operandUsesIx } from './helpers/lowered_program.js';
+import { expectDiagnostic, expectNoErrors } from './helpers/diagnostics.js';
 
 describe('PR330: frame access + synthetic epilogue rules', () => {
   it('loads/stores frame slots without illegal IX+H/L forms and uses DE shuttle', async () => {
     const entry = join(__dirname, 'fixtures', 'pr330_frame_access_positive.zax');
     const { program, diagnostics } = await compilePlacedProgram(entry);
-    expect(diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expectNoErrors(diagnostics);
 
     const instrs = flattenLoweredInstructions(program);
     const hasLdRegFromIx = (reg: string, disp: number) =>
@@ -31,10 +32,9 @@ describe('PR330: frame access + synthetic epilogue rules', () => {
   it('rejects retn/reti when a framed function requires epilogue cleanup', async () => {
     const entry = join(__dirname, 'fixtures', 'pr330_retn_reti_negative.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    const messages = res.diagnostics.map((d) => d.message);
-
-    expect(
-      messages.some((m) => m.includes('not supported in functions that require cleanup')),
-    ).toBe(true);
+    expectDiagnostic(res.diagnostics, {
+      severity: 'error',
+      messageIncludes: 'not supported in functions that require cleanup',
+    });
   });
 });

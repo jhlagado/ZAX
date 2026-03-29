@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import type { Asm80Artifact } from '../src/formats/types.js';
+import { expectDiagnostic, expectNoErrors } from './helpers/diagnostics.js';
 
 describe('PR950: text-only include directive', () => {
   it('inlines included text before parsing', async () => {
@@ -13,7 +14,7 @@ describe('PR950: text-only include directive', () => {
       { emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expectNoErrors(res.diagnostics);
     const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
     expect(asm).toBeDefined();
     expect(asm!.text.toUpperCase()).toMatch(/LD A, \$0*1/);
@@ -26,7 +27,7 @@ describe('PR950: text-only include directive', () => {
       { emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
-    expect(res.diagnostics.some((d) => d.message.includes('Failed to resolve include'))).toBe(true);
+    expectDiagnostic(res.diagnostics, { messageIncludes: 'Failed to resolve include' });
   });
 
   it('resolves includes via -I search paths', async () => {
@@ -37,7 +38,7 @@ describe('PR950: text-only include directive', () => {
       { includeDirs: [includeDir], emitAsm80: true, emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expectNoErrors(res.diagnostics);
     const asm = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
     expect(asm).toBeDefined();
     expect(asm!.text.toUpperCase()).toMatch(/LD A, \$0*2/);
@@ -50,7 +51,9 @@ describe('PR950: text-only include directive', () => {
       { emitBin: false, emitHex: false, emitListing: false, emitD8m: false },
       { formats: defaultFormatWriters },
     );
-    const bad = res.diagnostics.find((d) => d.message.includes('Unsupported operand'));
-    expect(bad?.file).toContain('pr950_bad_include.inc');
+    expectDiagnostic(res.diagnostics, {
+      messageIncludes: 'Unsupported operand',
+      file: join(__dirname, 'fixtures', 'pr950_bad_include.inc'),
+    });
   });
 });

@@ -11,6 +11,7 @@ import {
   isMemName,
   isReg,
 } from './helpers/lowered_program.js';
+import { expectDiagnostic, expectNoErrors } from './helpers/diagnostics.js';
 
 describe('PR406: word edge cases', () => {
   it('rejects non-scalar storage names in word index position', async () => {
@@ -21,7 +22,7 @@ describe('PR406: word edge cases', () => {
       { formats: defaultFormatWriters },
     );
 
-    expect(res.diagnostics.some((d) => d.severity === 'error')).toBe(true);
+    expectDiagnostic(res.diagnostics, { severity: 'error' });
   });
 
   it('rejects byte-typed storage in word scalar load/store paths', async () => {
@@ -39,7 +40,7 @@ describe('PR406: word edge cases', () => {
   it('does not partially emit the scalar word fast path when only the source is scalar-fast-path eligible', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_mem_to_mem_partial_fast_path.zax');
     const res = await compilePlacedProgram(entry);
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expectNoErrors(res.diagnostics);
     const instrs = flattenLoweredInstructions(res.program);
 
     const hasAddHlHl = instrs.some(
@@ -79,7 +80,7 @@ describe('PR406: word edge cases', () => {
   it('uses the indexed load template plus scalar store when only the destination is scalar-fast-path eligible', async () => {
     const entry = join(__dirname, 'fixtures', 'pr406_word_mem_to_mem_mixed_reverse.zax');
     const res = await compilePlacedProgram(entry);
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    expectNoErrors(res.diagnostics);
     const instrs = flattenLoweredInstructions(res.program);
 
     const hasPushHl = instrs.some((ins) => ins.head === 'push' && isReg(ins.operands[0], 'HL'));
