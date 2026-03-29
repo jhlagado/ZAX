@@ -8,7 +8,7 @@ import { diag, diagAt } from './loweringDiagnostics.js';
 import type { EmitPhase1Workspace } from './emitPhase1Workspace.js';
 import type { EmitPhase1Helpers } from './emitPhase1Helpers.js';
 
-type Context = {
+type EmitFinalizationSetupContext = {
   /** Semantic environment for imm evaluation during finalization. */
   env: CompileEnv;
   /** Mutable diagnostic sink for placement and fixup phases. */
@@ -21,7 +21,7 @@ type Context = {
   helpers: EmitPhase1Helpers;
 };
 
-export function buildEmitFinalizationPhaseEnv(ctx: Context): EmitFinalizationPhaseEnv {
+export function buildEmitFinalizationPhaseEnv(ctx: EmitFinalizationSetupContext): EmitFinalizationPhaseEnv {
   return {
     namedSectionSinks: ctx.helpers.namedSectionSinks,
     diagnostics: ctx.diagnostics,

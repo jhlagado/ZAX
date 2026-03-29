@@ -9,7 +9,7 @@ import type {
   LoweredAsmStreamBlock,
 } from './loweredAsmTypes.js';
 
-type Context = {
+type EmitStateContext = {
   /** Optional named section metadata for contribution sinks. */
   namedSectionKeys?: NonBankedSectionKeyCollection;
   /** Full source text per file for listings. */
@@ -49,7 +49,7 @@ type Context = {
   typeDisplay: (typeExpr: import('../frontend/ast.js').TypeExprNode) => string;
 };
 
-export function createEmitStateHelpers(ctx: Context) {
+export function createEmitStateHelpers(ctx: EmitStateContext) {
   let activeSection: SectionKind = 'code';
   let codeOffset = 0;
   let dataOffset = 0;

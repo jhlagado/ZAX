@@ -1,6 +1,6 @@
 import type { AsmOperandNode, EaExprNode, ImmExprNode, OpDeclNode, OpMatcherNode } from '../frontend/ast.js';
 
-type Context = {
+type OpMatchingContext = {
   /** 8-bit register names for matching. */
   reg8: Set<string>;
   /** True when operand uses IX/IY indexed memory form. */
@@ -53,7 +53,7 @@ export type OpOverloadSelection =
 const fitsImm8 = (value: number): boolean => value >= -0x80 && value <= 0xff;
 const fitsImm16 = (value: number): boolean => value >= -0x8000 && value <= 0xffff;
 
-export function createOpMatchingHelpers(ctx: Context) {
+export function createOpMatchingHelpers(ctx: OpMatchingContext) {
   const enumImmExprFromOperand = (op: AsmOperandNode): ImmExprNode | undefined => {
     switch (op.kind) {
       case 'Imm':

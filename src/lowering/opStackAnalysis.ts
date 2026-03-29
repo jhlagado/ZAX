@@ -4,12 +4,12 @@ export type OpStackSummary =
   | { kind: 'known'; delta: number; hasUntrackedSpMutation: boolean }
   | { kind: 'complex' };
 
-type Context = {
+type OpStackAnalysisContext = {
   /** Resolves op declarations by name in `file`; `undefined` means no candidates (not an error by itself). */
   resolveOpCandidates: (name: string, file: string) => OpDeclNode[] | undefined;
 };
 
-export function createOpStackAnalysisHelpers({ resolveOpCandidates }: Context) {
+export function createOpStackAnalysisHelpers({ resolveOpCandidates }: OpStackAnalysisContext) {
   const opStackSummaryCache = new Map<OpDeclNode, OpStackSummary>();
 
   const opStackSummaryKey = (decl: OpDeclNode): string =>

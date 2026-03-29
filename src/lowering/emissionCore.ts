@@ -1,7 +1,7 @@
 import type { AsmOperandNode, ImmExprNode, SourceSpan } from '../frontend/ast.js';
 import { renderStepInstr, type StepInstr, type StepPipeline } from './steps.js';
 
-type Context = {
+type EmissionCoreContext = {
   /** Current code emission offset. */
   getCodeOffset: () => number;
   /** Sets absolute code offset cursor. */
@@ -36,7 +36,7 @@ type Context = {
   ) => void;
 };
 
-export function createEmissionCoreHelpers(ctx: Context) {
+export function createEmissionCoreHelpers(ctx: EmissionCoreContext) {
   const emitCodeBytes = (bs: Uint8Array, _file: string): number => {
     const start = ctx.getCodeOffset();
     let codeOffset = start;
