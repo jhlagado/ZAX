@@ -4,7 +4,7 @@ import {
   STORE_RP_FVAR,
   STORE_RP_GLOB,
   type StepPipeline,
-} from '../addressing/steps.js';
+} from './steps.js';
 import type { SourceSpan, TypeExprNode } from '../frontend/ast.js';
 import type { EaResolution } from './eaResolution.js';
 import type { ScalarKind } from './typeResolution.js';

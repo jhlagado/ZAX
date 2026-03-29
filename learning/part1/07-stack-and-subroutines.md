@@ -157,11 +157,11 @@ describes exactly what happens.
 `pop hl` is the inverse: virtually `ld hl, (sp)` happens first — two bytes are
 read from SP into HL — then SP is incremented by two.
 
-The operand can be any of AF, BC, DE, HL, IX, or IY. Many people misunderstand
-how the stack works, so let me be clear about this: the stack does not know
-whose value it is holding. All register pairs are saved to the same area of
+The operand can be any of AF, BC, DE, HL, IX, or IY. Every push writes two
+bytes to RAM at SP; every pop reads them back. The stack tracks only position —
+not what the bytes mean or where they came from. All register pairs are saved to the same area of
 memory — the bytes at and below SP. The stack is the same RAM where your
-program and variables reside. There is nothing "magical" about it.
+program and variables reside.
 
 A subroutine uses `push` / `pop` to preserve registers it needs to modify
 internally. The pattern:
@@ -210,18 +210,16 @@ about the stack.
 
 ## Shadow registers: saving state without the stack
 
-The Z80 has a second, hidden copy of A, F, B, C, D, E, H, and L — denoted A′,
-F′, B′, C′, D′, E′, H′, and L′. These are the **shadow registers**. You cannot
-use them directly in instructions. Two dedicated exchange instructions swap the
-main registers with their shadow counterparts:
+In a tight interrupt handler or innermost loop, saving BC, DE, and HL via
+`push` and `pop` costs six instructions — three pushes, three pops — and takes
+six bytes of stack space. `EXX` does the same job in a single instruction: it swaps
+BC, DE, and HL with a second hidden set of registers (BC′, DE′, HL′)
+simultaneously. A second instruction, `EX AF, AF′`, swaps A and F with their
+shadow counterparts.
 
-- `EX AF, AF′` swaps A and F with A′ and F′.
-- `EXX` swaps BC, DE, and HL with BC′, DE′, and HL′ simultaneously.
-
-One `EXX` moves six registers in a single instruction — much faster than six
-individual `push` / `pop` pairs. This makes the shadow registers useful for
-very tight interrupt handlers or innermost loops where you need to save and
-restore a full register state instantly.
+These are the **shadow registers** — a second, hidden copy of A, F, B, C, D,
+E, H, and L. You cannot use them directly in instructions; `EXX` and
+`EX AF, AF′` are the only way in.
 
 The trade-off is that there is only one shadow set. If both your main code and
 an interrupt handler rely on `EXX`, the interrupt can silently destroy the
@@ -385,10 +383,6 @@ balance: `call` pushed one word, `pop hl` consumed it. The stack is clean.
 This trick demonstrates the freedom assembly gives you: `call` and `ret` are
 not ceremonial pairs that must always appear together. They are stack
 operations, and you can use them however the stack discipline permits.
-
-`call` and `ret` are stack operations that happen to pair up in normal use.
-Nothing binds them mechanically — only the stack does. `call` pushed one word;
-`pop hl` consumed it. That is the whole contract.
 
 ---
 

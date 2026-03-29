@@ -1,4 +1,4 @@
-import { TEMPLATE_SW_DEBC } from '../addressing/steps.js';
+import { TEMPLATE_SW_DEBC } from './steps.js';
 import { DiagnosticIds } from '../diagnosticTypes.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
 import type {
@@ -12,7 +12,7 @@ import type {
   TypeExprNode,
 } from '../frontend/ast.js';
 import type { CompileEnv } from '../semantics/env.js';
-import type { StepPipeline } from '../addressing/steps.js';
+import type { StepPipeline } from './steps.js';
 import type { OpStackPolicyMode } from '../pipeline.js';
 import type { Callable, SourceSegmentTag } from './loweringTypes.js';
 import type { OpOverloadSelection } from './opMatching.js';
@@ -23,6 +23,21 @@ import { createAsmRangeLoweringHelpers } from './asmRangeLowering.js';
 import { createOpExpansionOrchestrationHelpers } from './opExpansionOrchestration.js';
 
 type ResolvedArrayType = { element: TypeExprNode; length?: number };
+type FunctionCallMaterializationContext = {
+  enforceEaRuntimeAtomBudget: (operand: AsmOperandNode, context: string) => boolean;
+  resolveScalarTypeForEa: (ea: EaExprNode) => ScalarKind | undefined;
+  enforceDirectCallSiteEaBudget: (operand: AsmOperandNode, calleeName: string) => boolean;
+  resolveEaTypeExpr: (ea: EaExprNode) => TypeExprNode | undefined;
+  pushEaAddress: (ea: EaExprNode, span: SourceSpan) => boolean;
+  pushMemValue: (ea: EaExprNode, want: 'byte' | 'word', span: SourceSpan) => boolean;
+  resolveScalarBinding: (name: string) => ScalarKind | undefined;
+  flattenEaDottedName: (ea: EaExprNode) => string | undefined;
+  buildEaWordPipeline: (ea: EaExprNode, span: SourceSpan) => StepPipeline | null;
+  emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
+  pushZeroExtendedReg8: (regName: string, span: SourceSpan) => boolean;
+  pushImm16: (value: number, span: SourceSpan) => boolean;
+};
+
 type Context = {
   diagnostics: Diagnostic[];
   asmItemSpanSourceTag: (span: SourceSpan) => SourceSegmentTag;
@@ -42,6 +57,7 @@ type Context = {
   setTrackedSpValid: (value: boolean) => void;
   getTrackedSpInvalid: () => boolean;
   setTrackedSpInvalid: (value: boolean) => void;
+  materialization: Readonly<FunctionCallMaterializationContext>;
   rawTypedCallWarningsEnabled: boolean;
   resolveCallable: (name: string, file: string) => Callable | undefined;
   diagAt: (diagnostics: Diagnostic[], span: SourceSpan, message: string) => void;
@@ -52,25 +68,16 @@ type Context = {
     severity: 'error' | 'warning',
     message: string,
   ) => void;
-  resolveScalarTypeForEa: (ea: EaExprNode) => ScalarKind | undefined;
-  enforceDirectCallSiteEaBudget: (operand: AsmOperandNode, calleeName: string) => boolean;
-  resolveEaTypeExpr: (ea: EaExprNode) => TypeExprNode | undefined;
   stackSlotTypes: Map<string, TypeExprNode>;
   storageTypes: Map<string, TypeExprNode>;
-  pushEaAddress: (ea: EaExprNode, span: SourceSpan) => boolean;
   resolveArrayType: (typeExpr: TypeExprNode, env?: CompileEnv) => ResolvedArrayType | undefined;
   sameTypeShape: (left: TypeExprNode, right: TypeExprNode) => boolean;
   typeDisplay: (typeExpr: TypeExprNode) => string;
-  resolveScalarBinding: (name: string) => ScalarKind | undefined;
-  pushMemValue: (ea: EaExprNode, want: 'byte' | 'word', span: SourceSpan) => boolean;
-  flattenEaDottedName: (ea: EaExprNode) => string | undefined;
   env: CompileEnv;
   evalImmExpr: (expr: ImmExprNode, env: CompileEnv, diagnostics: Diagnostic[]) => number | undefined;
   resolveScalarKind: (typeExpr: TypeExprNode) => ScalarKind | undefined;
   reg8: Set<string>;
   reg16: Set<string>;
-  buildEaWordPipeline: (ea: EaExprNode, span: SourceSpan) => StepPipeline | null;
-  emitStepPipeline: (pipe: StepPipeline, span: SourceSpan) => boolean;
   emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
   emitAbs16Fixup: (
     opcode: number,
@@ -79,8 +86,6 @@ type Context = {
     span: SourceSpan,
     asmText?: string,
   ) => void;
-  pushZeroExtendedReg8: (regName: string, span: SourceSpan) => boolean;
-  pushImm16: (value: number, span: SourceSpan) => boolean;
   syncToFlow: () => void;
   resolveOpCandidates: (name: string, file: string) => OpDeclNode[] | undefined;
   opStackPolicyMode: OpStackPolicyMode;
@@ -135,7 +140,7 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
     ctx.setCurrentCodeSegmentTag(ctx.asmItemSpanSourceTag(asmItem.span));
     try {
       for (const operand of asmItem.operands) {
-        if (!ctx.enforceEaRuntimeAtomBudget(operand, 'Source ea expression')) return;
+        if (!ctx.materialization.enforceEaRuntimeAtomBudget(operand, 'Source ea expression')) return;
       }
 
       const diagIfCallStackUnverifiable = (options?: {
@@ -188,11 +193,11 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
         const requiresDirectCallSiteEaBudget = (arg: AsmOperandNode): boolean => {
           if (arg.kind === 'Mem') return true;
           if (arg.kind !== 'Ea') return false;
-          return ctx.resolveScalarTypeForEa(arg.expr) === undefined;
+          return ctx.materialization.resolveScalarTypeForEa(arg.expr) === undefined;
         };
         for (const arg of args) {
           if (!requiresDirectCallSiteEaBudget(arg)) continue;
-          if (!ctx.enforceDirectCallSiteEaBudget(arg, calleeName)) return;
+          if (!ctx.materialization.enforceDirectCallSiteEaBudget(arg, calleeName)) return;
         }
 
         const typeForName = (name: string): TypeExprNode | undefined => {
@@ -200,14 +205,17 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
           return ctx.stackSlotTypes.get(lower) ?? ctx.storageTypes.get(lower);
         };
         const typeForArg = (arg: AsmOperandNode): TypeExprNode | undefined => {
-          if (arg.kind === 'Ea') return ctx.resolveEaTypeExpr(arg.expr);
+          if (arg.kind === 'Ea') return ctx.materialization.resolveEaTypeExpr(arg.expr);
           if (arg.kind === 'Imm' && arg.expr.kind === 'ImmName') return typeForName(arg.expr.name);
           return undefined;
         };
         const pushArgAddressFromName = (name: string): boolean =>
-          ctx.pushEaAddress({ kind: 'EaName', span: asmItem.span, name } as EaExprNode, asmItem.span);
+          ctx.materialization.pushEaAddress(
+            { kind: 'EaName', span: asmItem.span, name } as EaExprNode,
+            asmItem.span,
+          );
         const pushArgAddressFromOperand = (arg: AsmOperandNode): boolean => {
-          if (arg.kind === 'Ea') return ctx.pushEaAddress(arg.expr, asmItem.span);
+          if (arg.kind === 'Ea') return ctx.materialization.pushEaAddress(arg.expr, asmItem.span);
           if (arg.kind === 'Imm' && arg.expr.kind === 'ImmName') return pushArgAddressFromName(arg.expr.name);
           return false;
         };
@@ -240,19 +248,26 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
           return undefined;
         };
         const pushArgValueFromName = (name: string, want: 'byte' | 'word'): boolean => {
-          const scalar = ctx.resolveScalarBinding(name);
+          const scalar = ctx.materialization.resolveScalarBinding(name);
           if (scalar) {
-            return ctx.pushMemValue({ kind: 'EaName', span: asmItem.span, name } as EaExprNode, want, asmItem.span);
+            return ctx.materialization.pushMemValue(
+              { kind: 'EaName', span: asmItem.span, name } as EaExprNode,
+              want,
+              asmItem.span,
+            );
           }
-          return ctx.pushEaAddress({ kind: 'EaName', span: asmItem.span, name } as EaExprNode, asmItem.span);
+          return ctx.materialization.pushEaAddress(
+            { kind: 'EaName', span: asmItem.span, name } as EaExprNode,
+            asmItem.span,
+          );
         };
         const pushArgValueFromEa = (ea: EaExprNode, want: 'byte' | 'word'): boolean => {
-          const scalar = ctx.resolveScalarTypeForEa(ea);
-          if (scalar) return ctx.pushMemValue(ea, want, asmItem.span);
-          return ctx.pushEaAddress(ea, asmItem.span);
+          const scalar = ctx.materialization.resolveScalarTypeForEa(ea);
+          if (scalar) return ctx.materialization.pushMemValue(ea, want, asmItem.span);
+          return ctx.materialization.pushEaAddress(ea, asmItem.span);
         };
         const enumValueFromEa = (ea: EaExprNode): number | undefined => {
-          const name = ctx.flattenEaDottedName(ea);
+          const name = ctx.materialization.flattenEaDottedName(ea);
           if (!name) return undefined;
           return ctx.env.enums.get(name);
         };
@@ -286,7 +301,7 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
           const isByte = scalarKind === 'byte';
           if (isByte) {
             if (arg.kind === 'Reg' && ctx.reg8.has(arg.name.toUpperCase())) {
-              ok = ctx.pushZeroExtendedReg8(arg.name.toUpperCase(), asmItem.span);
+              ok = ctx.materialization.pushZeroExtendedReg8(arg.name.toUpperCase(), asmItem.span);
             } else if (arg.kind === 'Imm') {
               const v = ctx.evalImmExpr(arg.expr, ctx.env, ctx.diagnostics);
               if (v === undefined) {
@@ -295,13 +310,17 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
                   ctx.diagAt(ctx.diagnostics, asmItem.span, `Failed to evaluate argument "${param.name}".`);
                   ok = false;
                 }
-              } else ok = ctx.pushImm16(v & 0xff, asmItem.span);
+              } else ok = ctx.materialization.pushImm16(v & 0xff, asmItem.span);
             } else if (arg.kind === 'Ea') {
               const enumVal = enumValueFromEa(arg.expr);
-              if (enumVal !== undefined) ok = ctx.pushImm16(enumVal & 0xff, asmItem.span);
-              else ok = arg.explicitAddressOf ? ctx.pushEaAddress(arg.expr, asmItem.span) : pushArgValueFromEa(arg.expr, 'byte');
+              if (enumVal !== undefined) ok = ctx.materialization.pushImm16(enumVal & 0xff, asmItem.span);
+              else {
+                ok = arg.explicitAddressOf
+                  ? ctx.materialization.pushEaAddress(arg.expr, asmItem.span)
+                  : pushArgValueFromEa(arg.expr, 'byte');
+              }
             } else if (arg.kind === 'Mem') {
-              ok = ctx.pushMemValue(arg.expr, 'byte', asmItem.span);
+              ok = ctx.materialization.pushMemValue(arg.expr, 'byte', asmItem.span);
             } else {
               ctx.diagAt(ctx.diagnostics, asmItem.span, `Unsupported byte argument form for "${param.name}" in call to "${asmItem.head}".`);
               ok = false;
@@ -309,17 +328,20 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
           } else {
             if (arg.kind === 'Reg' && ctx.reg16.has(arg.name.toUpperCase())) {
               const regUp = arg.name.toUpperCase();
-              const pipe = ctx.buildEaWordPipeline({ kind: 'EaName', span: asmItem.span, name: param.name } as EaExprNode, asmItem.span);
+              const pipe = ctx.materialization.buildEaWordPipeline(
+                { kind: 'EaName', span: asmItem.span, name: param.name } as EaExprNode,
+                asmItem.span,
+              );
               if (pipe) {
                 const templated = TEMPLATE_SW_DEBC(regUp as 'DE' | 'BC', pipe);
-                if (ctx.emitStepPipeline(templated, asmItem.span)) {
+                if (ctx.materialization.emitStepPipeline(templated, asmItem.span)) {
                   pushedArgWords++;
                   continue;
                 }
               }
               ok = ctx.emitInstr('push', [{ kind: 'Reg', span: asmItem.span, name: regUp }], asmItem.span);
             } else if (arg.kind === 'Reg' && ctx.reg8.has(arg.name.toUpperCase())) {
-              ok = ctx.pushZeroExtendedReg8(arg.name.toUpperCase(), asmItem.span);
+              ok = ctx.materialization.pushZeroExtendedReg8(arg.name.toUpperCase(), asmItem.span);
             } else if (arg.kind === 'Imm') {
               const v = ctx.evalImmExpr(arg.expr, ctx.env, ctx.diagnostics);
               if (v === undefined) {
@@ -328,13 +350,17 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
                   ctx.diagAt(ctx.diagnostics, asmItem.span, `Failed to evaluate argument "${param.name}".`);
                   ok = false;
                 }
-              } else ok = ctx.pushImm16(v & 0xffff, asmItem.span);
+              } else ok = ctx.materialization.pushImm16(v & 0xffff, asmItem.span);
             } else if (arg.kind === 'Ea') {
               const enumVal = enumValueFromEa(arg.expr);
-              if (enumVal !== undefined) ok = ctx.pushImm16(enumVal & 0xffff, asmItem.span);
-              else ok = arg.explicitAddressOf ? ctx.pushEaAddress(arg.expr, asmItem.span) : pushArgValueFromEa(arg.expr, 'word');
+              if (enumVal !== undefined) ok = ctx.materialization.pushImm16(enumVal & 0xffff, asmItem.span);
+              else {
+                ok = arg.explicitAddressOf
+                  ? ctx.materialization.pushEaAddress(arg.expr, asmItem.span)
+                  : pushArgValueFromEa(arg.expr, 'word');
+              }
             } else if (arg.kind === 'Mem') {
-              ok = ctx.pushMemValue(arg.expr, 'word', asmItem.span);
+              ok = ctx.materialization.pushMemValue(arg.expr, 'word', asmItem.span);
             } else {
               ctx.diagAt(ctx.diagnostics, asmItem.span, `Unsupported word argument form for "${param.name}" in call to "${asmItem.head}".`);
               ok = false;
@@ -379,7 +405,7 @@ export function createFunctionCallLoweringHelpers(ctx: Context) {
         cloneImmExpr: ctx.cloneImmExpr,
         cloneEaExpr: ctx.cloneEaExpr,
         cloneOperand: ctx.cloneOperand,
-        flattenEaDottedName: ctx.flattenEaDottedName,
+        flattenEaDottedName: ctx.materialization.flattenEaDottedName,
         normalizeFixedToken: ctx.normalizeFixedToken,
         inverseConditionName: ctx.inverseConditionName,
         newHiddenLabel: ctx.newHiddenLabel,

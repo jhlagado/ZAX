@@ -45,4 +45,4 @@ export {
   TEMPLATE_S_ANY,
   TEMPLATE_S_HL,
   type StepPipeline,
-} from '../addressing/steps.js';
+} from './steps.js';

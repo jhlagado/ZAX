@@ -60,6 +60,10 @@ Use `func` when:
 - the function is called from many places and you want the compiler to enforce the calling convention
 - a consistent register-preservation boundary at the call site matters
 
+An `op` is pasted at every call site. If your `op` body is ten instructions long and you invoke it eight times, the binary contains eighty instructions — the same ten copied eight times. For a two- or three-instruction op this is correct and desirable; for something longer it is expensive. If you find yourself writing an `op` with more than five instructions, consider whether a `func` call would cost less in binary size than the repeated inlining.
+
+A ZAX `func` with a frame emits six overhead instructions — the prologue and epilogue — before and after the body. If the body itself is two or three instructions, the overhead is two to three times the cost of the work being done. For a short accumulator operation you will call in a tight loop, that overhead compounds. Use `op` when the body is shorter than the frame overhead; use `func` when the body is long enough that the overhead is negligible.
+
 `op` bodies have no preservation boundary of their own. Registers clobbered by an `op` body are clobbered in the caller's instruction stream, exactly as if you had written those instructions there yourself. A `func` call preserves all registers not in the return clause — the compiler generates the save/restore sequence.
 
 ---
@@ -93,7 +97,7 @@ The full set of synthetic 16-bit register transfers:
 | `ld bc, hl` | `ld b, h` / `ld c, l` |
 | `ld bc, de` | `ld b, d` / `ld c, e` |
 
-Each expands to exactly two bytes of machine code. The cost is the same as writing the pair by hand — ZAX adds nothing at run time.
+Each expands to two one-byte instructions — the same two `ld` moves you would write by hand. ZAX adds nothing at run time.
 
 ---
 
@@ -112,14 +116,9 @@ You have completed Volume 1.
 
 By this point you can:
 
-- explain bytes, words, addresses, the Z80 registers, and the hardware stack
-- write raw Z80 instructions: `ld`, `add`, `sub`, `cp`, `and`, `or`, `jp`, `jr`, `djnz`, `call`, `ret`, `push`, `pop`
-- use `section data` to declare named module storage
-- write a ZAX `func` with typed parameters and locals, accessed through raw IX-relative offsets
-- use `if`/`else` and `while` loops with `break` and `continue`
-- use `:=` for typed assignment and `step` for typed scalar mutation
-- write an `op` for inline named instruction sequences
-- use IXH/IXL/IYH/IYL and the ZAX pseudo-opcodes for 16-bit register moves
+- write a complete function that scans a table of bytes, makes comparisons, and returns a result — with typed parameters, a counting loop, and a frame-managed local for the running total
+- write a hardware polling routine that reads a status port, waits on a specific bit, and acts when the device signals ready
+- structure a multi-function program with named data sections, typed storage, and control flow that reads like the algorithm it implements
 
 **Volume 2: `learning/part2/`**
 

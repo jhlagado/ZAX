@@ -1,30 +1,68 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic, expectNoDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const PR210_FIXTURE = join(
+  __dirname,
+  'fixtures',
+  'pr210_jp_call_condition_vs_imm_diag_matrix_invalid.zax',
+);
+
+type Row = {
+  label: string;
+  id: (typeof DiagnosticIds)[keyof typeof DiagnosticIds];
+  message: string;
+};
+
 describe('PR210: conditional jp/call condition-vs-imm diagnostics parity', () => {
-  it('emits distinct diagnostics for invalid condition code vs invalid imm16', async () => {
-    const entry = join(
-      __dirname,
-      'fixtures',
-      'pr210_jp_call_condition_vs_imm_diag_matrix_invalid.zax',
-    );
-    const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    const messages = res.diagnostics.map((d) => d.message);
+  it.each([
+    {
+      label: 'jp cc',
+      id: DiagnosticIds.EncodeError,
+      message: 'jp cc expects valid condition code NZ/Z/NC/C/PO/PE/P/M',
+    },
+    {
+      label: 'jp cc imm',
+      id: DiagnosticIds.EncodeError,
+      message: 'jp cc, nn expects imm16',
+    },
+    {
+      label: 'call cc',
+      id: DiagnosticIds.EncodeError,
+      message: 'call cc expects valid condition code NZ/Z/NC/C/PO/PE/P/M',
+    },
+    {
+      label: 'call cc imm',
+      id: DiagnosticIds.EncodeError,
+      message: 'call cc, nn expects imm16',
+    },
+  ] satisfies Row[])('$label — distinct diagnostics for invalid condition code vs invalid imm16', async (row) => {
+    const res = await compile(PR210_FIXTURE, {}, { formats: defaultFormatWriters });
+    expectDiagnostic(res.diagnostics, {
+      id: row.id,
+      severity: 'error',
+      message: row.message,
+    });
+  });
 
-    expect(messages).toContain('jp cc expects valid condition code NZ/Z/NC/C/PO/PE/P/M');
-    expect(messages).toContain('jp cc, nn expects imm16');
-    expect(messages).toContain('call cc expects valid condition code NZ/Z/NC/C/PO/PE/P/M');
-    expect(messages).toContain('call cc, nn expects imm16');
-
-    expect(messages).not.toContain('jp cc, nn expects condition + imm16');
-    expect(messages).not.toContain('call cc, nn expects condition + imm16');
-    expect(messages.some((m) => m.startsWith('Unsupported instruction:'))).toBe(false);
+  it('does not collapse condition vs imm failures into a single placeholder diagnostic', async () => {
+    const res = await compile(PR210_FIXTURE, {}, { formats: defaultFormatWriters });
+    expectNoDiagnostic(res.diagnostics, {
+      message: 'jp cc, nn expects condition + imm16',
+    });
+    expectNoDiagnostic(res.diagnostics, {
+      message: 'call cc, nn expects condition + imm16',
+    });
+    expectNoDiagnostic(res.diagnostics, {
+      messageIncludes: 'Unsupported instruction:',
+    });
   });
 });

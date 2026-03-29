@@ -29,9 +29,6 @@ src/
   moduleLoader.ts         Import/include expansion, module graph walk, topo ordering, source capture
   pipeline.ts             Type contracts only: CompilerOptions, CompileResult, PipelineDeps
 
-  addressing/
-    steps.ts              Step-pipeline primitives (EA builders, load/store templates); section comments + see docs/reference/addressing-steps-overview.md
-
   diagnostics/
     types.ts              Diagnostic type + stable ID registry (ZAX000–ZAX501)
 
@@ -72,6 +69,7 @@ src/
     emit.ts               emitProgram orchestrator: wires workspace state (section byte maps, fixup queues, visibility, resolution helpers, createEmitProgramContext); invokes emitPipeline phases
     emitPipeline.ts       Emit phase seams: prescan → lowering → placement & artifacts; typed EmitProgramOptions / EmitProgramResult; delegates to programLowering + emitFinalization
     emitContextBuilder.ts Shared wiring for function/program lowering contexts used by emit.ts
+    steps.ts              Step-pipeline primitives (EA builders, load/store templates); section comments + see docs/reference/addressing-steps-overview.md
     ldLowering.ts         Typed LD lowering facade: form selection + encoding composition
     ldEncoding.ts         LD encoding core: context wiring, assignment plans, scalar/aggregate paths
     ldEncodingRegMemHelpers.ts Register/memory LD templates and EA pipelines for ldEncoding
@@ -90,11 +88,13 @@ src/
     asmInstructionLowering.ts lowerAsmInstructionDispatcher: ret/call/jp/jr/djnz dispatch
     functionBodySetup.ts  Flow state, labels, joinFlows, select helpers, sourceTagForSpan
     valueMaterialization.ts  pushEaAddress, pushMemValue, runtime linear expression analysis
+    valueMaterializationContext.ts  Lowering context for value materialization helpers
     opMatching.ts         Op overload matching, specificity, diagnostic formatting
     opExpansionOrchestration.ts  Op expansion: arity/overload check, stack-policy enforcement
     opExpansionExecution.ts     Op expansion: substitution + re-lowering
     opSubstitution.ts     Op parameter substitution (replace matcher params with args)
     emissionCore.ts       Core byte emission: emitCodeBytes, emitRawCodeBytes, emitStepPipeline
+    emitStepImports.ts    Step-instruction import collection for emit path
     fixupEmission.ts      Fixup emission: ABS16, REL8, condition opcode maps, symbolicTarget
     asmUtils.ts           ASM clone utilities (cloneImmExpr, cloneEaExpr), flattenEaDottedName
     runtimeAtomBudget.ts  Runtime-atom budget enforcement for indexed EA
@@ -325,7 +325,7 @@ uses a DE shuttle (`ex de,hl` / `ld d/e,(ix+d)` / `ex de,hl`) for these cases.
 
 ### 4.7 Lowering: Step Pipelines
 
-`addressing/steps.ts` defines a step-pipeline abstraction. A `StepPipeline` is an ordered list
+`lowering/steps.ts` defines a step-pipeline abstraction. A `StepPipeline` is an ordered list
 of `StepInstr` values. Steps are combined by templates (e.g., `TEMPLATE_L_ABC`,
 `TEMPLATE_LW_HL`) and then executed by `emitStepPipeline` in `emissionCore.ts`.
 

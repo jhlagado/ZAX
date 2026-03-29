@@ -212,14 +212,14 @@ of `case` constants, and runs the matching body. If no case matches and an
 `else` arm is present, the `else` body runs. After any arm finishes, control
 transfers to after the enclosing `end`. There is no fallthrough between cases.
 
-The same logic written in raw Z80, using `cp` + `jp Z`:
+The same logic written in raw Z80, using `cp` + `jp z`:
 
 ```zax
 ; raw: test A against three operator characters
 ld a, (op_byte)
-cp 0x2B              ; '+'
+cp $2B              ; '+'
 jp z, handle_plus
-cp 0x2D              ; '-'
+cp $2D              ; '-'
 jp z, handle_minus
 jp unknown_op
 handle_plus:
@@ -239,9 +239,9 @@ The same logic as a `select`:
 ; structured: select on A
 ld a, (op_byte)
 select A
-  case 0x2B          ; '+'
+  case $2B          ; '+'
     ; handle +
-  case 0x2D          ; '-'
+  case $2D          ; '-'
     ; handle -
   else
     ; unknown operator
@@ -260,11 +260,6 @@ dispatch sequence may modify A and flags, so do not rely on A still holding
 the selector value inside a case body. When the selector is any other register,
 that register is preserved across dispatch.
 
-For a real-world example of `select` in a larger program, see
-`learning/part2/examples/unit7/rpn_calculator.zax`. That file (Volume 2 material)
-dispatches on token kind constants using `select A` with three `case` arms,
-one for each operator type. The structure of the dispatch is directly readable
-from the case labels.
 
 ---
 
@@ -429,6 +424,16 @@ Read both files simultaneously. For each subroutine, compare:
 
 In the raw version, each of those requires at least one label and one explicit
 jump. In the structured version, each is expressed by the keyword that carries it.
+
+---
+
+## When to use `if`/`while`/`select` vs raw labels
+
+Use structured control flow when the branch or loop has a single entry and a single exit. `if`/`else`/`end` and `while`/`end` each map to exactly that shape — one way in, one way out. The compiler manages the labels; you name only the condition.
+
+Use raw labels and jumps when the control flow does not fit that shape: multiple exit points mid-loop, a branch that jumps into the middle of another block, or an interrupt handler that must jump to a specific address. Some Z80 programs genuinely need them. `jr`, `jp`, and `djnz` are always available alongside the structured keywords.
+
+Both are always available. Use whichever matches the shape of the logic.
 
 ---
 

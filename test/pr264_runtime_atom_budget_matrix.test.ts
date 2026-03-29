@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { compile } from '../src/compile.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import type { BinArtifact } from '../src/formats/types.js';
+import { expectDiagnostic, expectNoDiagnostics } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,7 +15,7 @@ describe('PR264: ea runtime-atom budget matrix', () => {
     const entry = join(__dirname, 'fixtures', 'pr264_runtime_atom_budget_valid.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
-    expect(res.diagnostics).toEqual([]);
+    expectNoDiagnostics(res.diagnostics);
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
   });
@@ -24,23 +25,15 @@ describe('PR264: ea runtime-atom budget matrix', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
     expect(res.artifacts).toEqual([]);
-    expect(
-      res.diagnostics.map((d) => ({
-        message: d.message,
-        line: d.line,
-        column: d.column,
-      })),
-    ).toEqual([
-      {
-        message: 'Source ea expression exceeds runtime-atom budget (max 1; found 2).',
-        line: 9,
-        column: 3,
-      },
-      {
-        message: 'Source ea expression exceeds runtime-atom budget (max 1; found 2).',
-        line: 10,
-        column: 3,
-      },
-    ]);
+    expect(res.diagnostics).toHaveLength(2);
+    expectDiagnostic(res.diagnostics, {
+      message: 'Source ea expression exceeds runtime-atom budget (max 1; found 2).',
+      line: 9,
+    });
+    expectDiagnostic(res.diagnostics, {
+      message: 'Source ea expression exceeds runtime-atom budget (max 1; found 2).',
+      line: 10,
+    });
+    expect(res.diagnostics.every((d) => d.column === 3)).toBe(true);
   });
 });

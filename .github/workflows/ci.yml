@@ -37,6 +37,25 @@ jobs:
           fi
           echo "changed_count=$(wc -l < changed_files.txt | tr -d ' ')" >> "$GITHUB_OUTPUT"
 
+      - name: Test layout guardrail
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base_sha="${{ github.event.pull_request.base.sha }}"
+            head_sha="${{ github.event.pull_request.head.sha }}"
+          else
+            before_sha="${{ github.event.before }}"
+            head_sha="${{ github.sha }}"
+            if [[ "$before_sha" == "0000000000000000000000000000000000000000" ]]; then
+              echo "test layout guardrail: initial push detected, skipping"
+              exit 0
+            fi
+            base_sha="$before_sha"
+          fi
+          export TEST_GUARDRAIL_BASE_SHA="$base_sha"
+          export TEST_GUARDRAIL_HEAD_SHA="$head_sha"
+          git diff --name-status "$base_sha" "$head_sha" | node ./scripts/ci/test-layout-guardrail.js
+
       - name: Classify change set
         id: classify
         shell: bash
@@ -127,6 +146,10 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Fixture coverage map (no drift vs generator)
+        if: runner.os == 'Linux'
+        run: npm run check:fixture-coverage
 
       - name: Test (coverage core)
         id: coverage_core_tests

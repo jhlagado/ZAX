@@ -28,6 +28,11 @@ type CliOptions = {
   includeDirs: string[];
 };
 
+type CliState = Omit<CliOptions, 'entryFile' | 'outputPath'> & {
+  entryFile: string | undefined;
+  outputPath: string | undefined;
+};
+
 function usage(): string {
   return [
     'zax [options] <entry.zax>',
@@ -58,159 +63,217 @@ function fail(message: string): never {
   throw Object.assign(new Error(message), { name: 'CliError' });
 }
 
-function parseArgs(argv: string[]): CliOptions | CliExit {
-  let outputPath: string | undefined;
-  let outputType: 'hex' | 'bin' = 'hex';
-  let emitBin = true;
-  let emitHex = true;
-  let emitD8m = true;
-  let emitListing = true;
-  let emitAsm80 = false;
-  let caseStyle: CaseStyleMode = 'off';
-  let opStackPolicy: OpStackPolicyMode = 'off';
-  let rawTypedCallWarnings = false;
-  const includeDirs: string[] = [];
-  let entryFile: string | undefined;
+function createDefaultCliState(): CliState {
+  return {
+    outputPath: undefined,
+    outputType: 'hex',
+    emitBin: true,
+    emitHex: true,
+    emitD8m: true,
+    emitListing: true,
+    emitAsm80: false,
+    caseStyle: 'off',
+    opStackPolicy: 'off',
+    rawTypedCallWarnings: false,
+    includeDirs: [],
+    entryFile: undefined,
+  };
+}
 
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]!;
-    if (a === '-h' || a === '--help') {
-      process.stdout.write(usage());
-      return { code: 0 };
-    }
-    if (a === '-V' || a === '--version') {
-      const require = createRequire(import.meta.url);
-      const here = dirname(fileURLToPath(import.meta.url));
-      const packageJsonPath = resolve(here, '..', '..', 'package.json');
-      const pkg = require(packageJsonPath) as { version?: unknown };
-      process.stdout.write(`${String(pkg.version ?? '0.0.0')}\n`);
-      return { code: 0 };
-    }
-    if (a === '-o' || a === '--output' || a.startsWith('--output=')) {
-      if (a.startsWith('--output=')) {
-        const v = a.slice('--output='.length);
-        if (!v) fail(`--output expects a value`);
-        outputPath = v;
-        continue;
-      }
-      const v = argv[++i];
-      if (!v) fail(`${a} expects a value`);
-      outputPath = v;
-      continue;
-    }
-    if (a === '-t' || a === '--type' || a.startsWith('--type=')) {
-      if (a.startsWith('--type=')) {
-        const v = a.slice('--type='.length);
-        if (!v) fail(`--type expects a value`);
-        if (v !== 'hex' && v !== 'bin') fail(`Unsupported --type "${v}" (expected hex|bin)`);
-        outputType = v;
-        continue;
-      }
-      const v = argv[++i];
-      if (!v) fail(`${a} expects a value`);
-      if (v !== 'hex' && v !== 'bin') fail(`Unsupported --type "${v}" (expected hex|bin)`);
-      outputType = v;
-      continue;
-    }
-    if (a === '-n' || a === '--nolist') {
-      emitListing = false;
-      continue;
-    }
-    if (a === '--nobin') {
-      emitBin = false;
-      continue;
-    }
-    if (a === '--nohex') {
-      emitHex = false;
-      continue;
-    }
-    if (a === '--nod8m') {
-      emitD8m = false;
-      continue;
-    }
-    if (a === '--asm80') {
-      emitAsm80 = true;
-      continue;
-    }
-    if (a === '--case-style' || a.startsWith('--case-style=')) {
-      const v = a.startsWith('--case-style=')
-        ? a.slice('--case-style='.length)
-        : ((argv[++i] ?? '') as string);
-      if (!v) fail(`--case-style expects a value`);
-      if (v !== 'off' && v !== 'upper' && v !== 'lower' && v !== 'consistent') {
-        fail(`Unsupported --case-style "${v}" (expected off|upper|lower|consistent)`);
-      }
-      caseStyle = v;
-      continue;
-    }
-    if (a === '--op-stack-policy' || a.startsWith('--op-stack-policy=')) {
-      const v = a.startsWith('--op-stack-policy=')
-        ? a.slice('--op-stack-policy='.length)
-        : ((argv[++i] ?? '') as string);
-      if (!v) fail(`--op-stack-policy expects a value`);
-      if (v !== 'off' && v !== 'warn' && v !== 'error') {
-        fail(`Unsupported --op-stack-policy "${v}" (expected off|warn|error)`);
-      }
-      opStackPolicy = v;
-      continue;
-    }
-    if (a === '--raw-typed-call-warn') {
-      rawTypedCallWarnings = true;
-      continue;
-    }
-    if (a === '-I' || a === '--include' || a.startsWith('--include=')) {
-      if (a.startsWith('--include=')) {
-        const v = a.slice('--include='.length);
-        if (!v) fail(`--include expects a value`);
-        includeDirs.push(v);
-        continue;
-      }
-      const v = argv[++i];
-      if (!v) fail(`${a} expects a value`);
-      includeDirs.push(v);
-      continue;
-    }
-    if (a.startsWith('-')) {
-      fail(`Unknown option "${a}"`);
-    }
-    if (entryFile !== undefined) {
-      fail(`Expected exactly one <entry.zax> argument (and it must be last)`);
-    }
-    if (i !== argv.length - 1) {
-      fail(`Expected exactly one <entry.zax> argument (and it must be last)`);
-    }
-    entryFile = a;
+function readFlagValue(argv: string[], indexRef: { current: number }, flag: string): string {
+  const value = argv[++indexRef.current];
+  if (!value) fail(`${flag} expects a value`);
+  return value;
+}
+
+function parseOutputPathArg(
+  arg: string,
+  argv: string[],
+  indexRef: { current: number },
+  state: CliState,
+): boolean {
+  if (arg !== '-o' && arg !== '--output' && !arg.startsWith('--output=')) return false;
+  if (arg.startsWith('--output=')) {
+    const value = arg.slice('--output='.length);
+    if (!value) fail(`--output expects a value`);
+    state.outputPath = value;
+    return true;
   }
+  state.outputPath = readFlagValue(argv, indexRef, arg);
+  return true;
+}
 
-  if (!entryFile) {
+function parseOutputTypeArg(
+  arg: string,
+  argv: string[],
+  indexRef: { current: number },
+  state: CliState,
+): boolean {
+  if (arg !== '-t' && arg !== '--type' && !arg.startsWith('--type=')) return false;
+  const value = arg.startsWith('--type=')
+    ? arg.slice('--type='.length)
+    : readFlagValue(argv, indexRef, arg);
+  if (!value) fail(`--type expects a value`);
+  if (value !== 'hex' && value !== 'bin') fail(`Unsupported --type "${value}" (expected hex|bin)`);
+  state.outputType = value;
+  return true;
+}
+
+function parseCaseStyleArg(
+  arg: string,
+  argv: string[],
+  indexRef: { current: number },
+  state: CliState,
+): boolean {
+  if (arg !== '--case-style' && !arg.startsWith('--case-style=')) return false;
+  const value = arg.startsWith('--case-style=')
+    ? arg.slice('--case-style='.length)
+    : readFlagValue(argv, indexRef, '--case-style');
+  if (!value) fail(`--case-style expects a value`);
+  if (value !== 'off' && value !== 'upper' && value !== 'lower' && value !== 'consistent') {
+    fail(`Unsupported --case-style "${value}" (expected off|upper|lower|consistent)`);
+  }
+  state.caseStyle = value;
+  return true;
+}
+
+function parseOpStackPolicyArg(
+  arg: string,
+  argv: string[],
+  indexRef: { current: number },
+  state: CliState,
+): boolean {
+  if (arg !== '--op-stack-policy' && !arg.startsWith('--op-stack-policy=')) return false;
+  const value = arg.startsWith('--op-stack-policy=')
+    ? arg.slice('--op-stack-policy='.length)
+    : readFlagValue(argv, indexRef, '--op-stack-policy');
+  if (!value) fail(`--op-stack-policy expects a value`);
+  if (value !== 'off' && value !== 'warn' && value !== 'error') {
+    fail(`Unsupported --op-stack-policy "${value}" (expected off|warn|error)`);
+  }
+  state.opStackPolicy = value;
+  return true;
+}
+
+function parseIncludeArg(
+  arg: string,
+  argv: string[],
+  indexRef: { current: number },
+  state: CliState,
+): boolean {
+  if (arg !== '-I' && arg !== '--include' && !arg.startsWith('--include=')) return false;
+  if (arg.startsWith('--include=')) {
+    const value = arg.slice('--include='.length);
+    if (!value) fail(`--include expects a value`);
+    state.includeDirs.push(value);
+    return true;
+  }
+  state.includeDirs.push(readFlagValue(argv, indexRef, arg));
+  return true;
+}
+
+function handleCliFastPath(arg: string): CliExit | undefined {
+  if (arg === '-h' || arg === '--help') {
+    process.stdout.write(usage());
+    return { code: 0 };
+  }
+  if (arg === '-V' || arg === '--version') {
+    const require = createRequire(import.meta.url);
+    const here = dirname(fileURLToPath(import.meta.url));
+    const packageJsonPath = resolve(here, '..', '..', 'package.json');
+    const pkg = require(packageJsonPath) as { version?: unknown };
+    process.stdout.write(`${String(pkg.version ?? '0.0.0')}\n`);
+    return { code: 0 };
+  }
+  return undefined;
+}
+
+function finalizeCliOptions(state: CliState): CliOptions {
+  if (!state.entryFile) {
     fail(`Expected exactly one <entry.zax> argument (and it must be last)`);
   }
 
-  if (outputType === 'hex' && !emitHex) fail(`--type hex requires HEX output to be enabled`);
-  if (outputType === 'bin' && !emitBin) fail(`--type bin requires BIN output to be enabled`);
+  if (state.outputType === 'hex' && !state.emitHex) {
+    fail(`--type hex requires HEX output to be enabled`);
+  }
+  if (state.outputType === 'bin' && !state.emitBin) {
+    fail(`--type bin requires BIN output to be enabled`);
+  }
 
-  if (outputPath) {
-    const ext = extname(outputPath).toLowerCase();
-    const wantExt = outputType === 'hex' ? '.hex' : '.bin';
+  if (state.outputPath) {
+    const ext = extname(state.outputPath).toLowerCase();
+    const wantExt = state.outputType === 'hex' ? '.hex' : '.bin';
     if (ext !== wantExt) {
-      fail(`--output must end with "${wantExt}" when --type is "${outputType}"`);
+      fail(`--output must end with "${wantExt}" when --type is "${state.outputType}"`);
     }
   }
 
   return {
-    entryFile,
-    ...(outputPath ? { outputPath } : {}),
-    outputType,
-    emitBin,
-    emitHex,
-    emitD8m,
-    emitListing,
-    emitAsm80,
-    caseStyle,
-    opStackPolicy,
-    rawTypedCallWarnings,
-    includeDirs,
+    entryFile: state.entryFile,
+    ...(state.outputPath ? { outputPath: state.outputPath } : {}),
+    outputType: state.outputType,
+    emitBin: state.emitBin,
+    emitHex: state.emitHex,
+    emitD8m: state.emitD8m,
+    emitListing: state.emitListing,
+    emitAsm80: state.emitAsm80,
+    caseStyle: state.caseStyle,
+    opStackPolicy: state.opStackPolicy,
+    rawTypedCallWarnings: state.rawTypedCallWarnings,
+    includeDirs: state.includeDirs,
   };
+}
+
+export function parseCliArgs(argv: string[]): CliOptions | CliExit {
+  const state = createDefaultCliState();
+  const indexRef = { current: 0 };
+
+  for (; indexRef.current < argv.length; indexRef.current++) {
+    const arg = argv[indexRef.current]!;
+    const fastPath = handleCliFastPath(arg);
+    if (fastPath) return fastPath;
+    if (parseOutputPathArg(arg, argv, indexRef, state)) continue;
+    if (parseOutputTypeArg(arg, argv, indexRef, state)) continue;
+    if (arg === '-n' || arg === '--nolist') {
+      state.emitListing = false;
+      continue;
+    }
+    if (arg === '--nobin') {
+      state.emitBin = false;
+      continue;
+    }
+    if (arg === '--nohex') {
+      state.emitHex = false;
+      continue;
+    }
+    if (arg === '--nod8m') {
+      state.emitD8m = false;
+      continue;
+    }
+    if (arg === '--asm80') {
+      state.emitAsm80 = true;
+      continue;
+    }
+    if (parseCaseStyleArg(arg, argv, indexRef, state)) continue;
+    if (parseOpStackPolicyArg(arg, argv, indexRef, state)) continue;
+    if (arg === '--raw-typed-call-warn') {
+      state.rawTypedCallWarnings = true;
+      continue;
+    }
+    if (parseIncludeArg(arg, argv, indexRef, state)) continue;
+    if (arg.startsWith('-')) {
+      fail(`Unknown option "${arg}"`);
+    }
+    if (state.entryFile !== undefined) {
+      fail(`Expected exactly one <entry.zax> argument (and it must be last)`);
+    }
+    if (indexRef.current !== argv.length - 1) {
+      fail(`Expected exactly one <entry.zax> argument (and it must be last)`);
+    }
+    state.entryFile = arg;
+  }
+
+  return finalizeCliOptions(state);
 }
 
 function artifactBase(entryFile: string, outputType: 'hex' | 'bin', outputPath?: string): string {
@@ -308,7 +371,7 @@ function compareDiagnosticsForCli(a: Diagnostic, b: Diagnostic): number {
 
 export async function runCli(argv: string[]): Promise<number> {
   try {
-    const parsed = parseArgs(argv);
+    const parsed = parseCliArgs(argv);
     if ('code' in parsed) return parsed.code;
 
     const base = artifactBase(parsed.entryFile, parsed.outputType, parsed.outputPath);

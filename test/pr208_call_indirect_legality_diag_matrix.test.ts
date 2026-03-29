@@ -1,27 +1,58 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
+import { expectDiagnostic, expectNoDiagnostic } from './helpers/diagnostics.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-describe('PR208: call indirect-form legality diagnostics parity', () => {
-  it('emits explicit diagnostics for unsupported indirect call targets', async () => {
-    const entry = join(
-      __dirname,
-      'fixtures',
-      'pr208_call_indirect_legality_diag_matrix_invalid.zax',
-    );
-    const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    const messages = res.diagnostics.map((d) => d.message);
+const PR208_FIXTURE = join(
+  __dirname,
+  'fixtures',
+  'pr208_call_indirect_legality_diag_matrix_invalid.zax',
+);
 
-    expect(messages).toContain('call does not support indirect targets; use imm16');
-    expect(messages).toContain('call cc, nn does not support indirect targets');
-    expect(messages).not.toContain('call expects imm16');
-    expect(messages).not.toContain('call cc, nn expects condition + imm16');
-    expect(messages.some((m) => m.startsWith('Unsupported instruction:'))).toBe(false);
+type Row = {
+  label: string;
+  id: (typeof DiagnosticIds)[keyof typeof DiagnosticIds];
+  message: string;
+};
+
+describe('PR208: call indirect-form legality diagnostics parity', () => {
+  it.each([
+    {
+      label: 'call indirect',
+      id: DiagnosticIds.EncodeError,
+      message: 'call does not support indirect targets; use imm16',
+    },
+    {
+      label: 'call cc indirect',
+      id: DiagnosticIds.EncodeError,
+      message: 'call cc, nn does not support indirect targets',
+    },
+  ] satisfies Row[])('$label — explicit diagnostics for unsupported indirect call targets', async (row) => {
+    const res = await compile(PR208_FIXTURE, {}, { formats: defaultFormatWriters });
+    expectDiagnostic(res.diagnostics, {
+      id: row.id,
+      severity: 'error',
+      message: row.message,
+    });
+  });
+
+  it('does not emit looser imm16 placeholder diagnostics for the call indirect matrix fixture', async () => {
+    const res = await compile(PR208_FIXTURE, {}, { formats: defaultFormatWriters });
+    expectNoDiagnostic(res.diagnostics, {
+      message: 'call expects imm16',
+    });
+    expectNoDiagnostic(res.diagnostics, {
+      message: 'call cc, nn expects condition + imm16',
+    });
+    expectNoDiagnostic(res.diagnostics, {
+      messageIncludes: 'Unsupported instruction:',
+    });
   });
 });
