@@ -24,6 +24,8 @@ import {
   LOAD_BASE_FVAR,
   LOAD_BASE_GLOB,
   type StepPipeline,
+  type StepReg16,
+  type StepReg8,
 } from './steps.js';
 import type { Diagnostic } from '../diagnosticTypes.js';
 import type { EaExprNode, ImmExprNode, SourceSpan, TypeExprNode } from '../frontend/ast.js';
@@ -100,8 +102,8 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
           const regLower = ea.index.reg.toLowerCase();
           if (!ctx.reg8.has(regLower.toUpperCase())) return null;
           return baseResolved.kind === 'abs'
-            ? EA_GLOB_REG(baseResolved.baseLower, regLower)
-            : EA_FVAR_REG(baseResolved.ixDisp, regLower);
+            ? EA_GLOB_REG(baseResolved.baseLower, regLower as StepReg8)
+            : EA_FVAR_REG(baseResolved.ixDisp, regLower as StepReg8);
         }
         case 'IndexReg16': {
           const rp = ea.index.reg.toUpperCase();
@@ -115,8 +117,8 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
               : [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA()];
           }
           return baseResolved.kind === 'abs'
-            ? EA_GLOB_RP(baseResolved.baseLower, rp)
-            : EA_FVAR_RP(baseResolved.ixDisp, rp);
+            ? EA_GLOB_RP(baseResolved.baseLower, rp as StepReg16)
+            : EA_FVAR_RP(baseResolved.ixDisp, rp as StepReg16);
         }
         case 'IndexEa': {
           const idxResolved = ctx.resolveEa(ea.index.expr, span);
@@ -191,21 +193,21 @@ export function createAddressingPipelineBuilders(ctx: AddressingPipelineContext)
 
         if (baseResolved.kind === 'abs') {
           if (ea.index.kind === 'IndexReg8') {
-            return EAW_GLOB_REG(baseResolved.baseLower, idxReg.toLowerCase(), wideElemSize);
+            return EAW_GLOB_REG(baseResolved.baseLower, idxReg.toLowerCase() as StepReg8, wideElemSize);
           }
           if (idxUpper === 'HL') {
             return [...LOAD_BASE_GLOB(baseResolved.baseLower), ...CALC_EA_WIDE(wideElemSize)];
           }
-          return EAW_GLOB_RP(baseResolved.baseLower, idxUpper, wideElemSize);
+          return EAW_GLOB_RP(baseResolved.baseLower, idxUpper as StepReg16, wideElemSize);
         }
         if (baseResolved.kind === 'stack') {
           if (ea.index.kind === 'IndexReg8') {
-            return EAW_FVAR_REG(baseResolved.ixDisp, idxReg.toLowerCase(), wideElemSize);
+            return EAW_FVAR_REG(baseResolved.ixDisp, idxReg.toLowerCase() as StepReg8, wideElemSize);
           }
           if (idxUpper === 'HL') {
             return [...LOAD_BASE_FVAR(baseResolved.ixDisp), ...CALC_EA_WIDE(wideElemSize)];
           }
-          return EAW_FVAR_RP(baseResolved.ixDisp, idxUpper, wideElemSize);
+          return EAW_FVAR_RP(baseResolved.ixDisp, idxUpper as StepReg16, wideElemSize);
         }
         return null;
       }
