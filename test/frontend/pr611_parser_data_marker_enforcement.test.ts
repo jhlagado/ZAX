@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { parseProgram } from '../../src/frontend/parser.js';
+import { expectDiagnostic } from '../helpers/diagnostics/index.js';
 
 describe('PR611 parser data marker enforcement', () => {
   it('rejects bare data marker lines inside named sections', () => {
@@ -26,7 +28,9 @@ describe('PR611 parser data marker enforcement', () => {
     expect(section.items[0]).toMatchObject({ kind: 'DataDecl', name: 'counter' });
 
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
       line: 2,
       column: 1,
       message:
@@ -42,15 +46,13 @@ describe('PR611 parser data marker enforcement', () => {
       diagnostics,
     );
 
-    expect(diagnostics).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          line: 1,
-          column: 1,
-          message:
-            'Legacy top-level "data ... end" blocks are removed; use direct declarations inside named data sections.',
-        }),
-      ]),
-    );
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      line: 1,
+      column: 1,
+      message:
+        'Legacy top-level "data ... end" blocks are removed; use direct declarations inside named data sections.',
+    });
   });
 });

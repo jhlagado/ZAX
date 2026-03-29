@@ -58,4 +58,9 @@ describe('test/helpers/diagnostics', () => {
     expectNoErrors(sampleDiagnostics.filter((d) => d.severity !== 'error'));
     expectNoDiagnostics([]);
   });
+
+  it('supports positional toHaveDiagnostic(id, severity) from Vitest setup', () => {
+    expect(sampleDiagnostics).toHaveDiagnostic(DiagnosticIds.TypeError, 'error');
+    expect(sampleDiagnostics).toHaveDiagnostic(DiagnosticIds.RawCallTypedTargetWarning, 'warning');
+  });
 });

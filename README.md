@@ -49,7 +49,8 @@ ZAX constructs and raw Z80 instructions mix freely. The machine model does not c
 [ZAX Language Spec](docs/spec/zax-spec.md) — normative specification.
 
 **Contributing?**
-[Dev Playbook](docs/reference/zax-dev-playbook.md) — workflow, review, and testing.
+[CONTRIBUTING.md](CONTRIBUTING.md) — branches, PRs, issues, and pre-push checks.
+[Dev Playbook](docs/reference/zax-dev-playbook.md) — deeper workflow and testing detail.
 
 ---
 
