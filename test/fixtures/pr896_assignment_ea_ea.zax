@@ -4,7 +4,7 @@ section data vars at $1000
   idx: byte = 1
   src_word: word = $1234
   dst_word: word = 0
-  ptr_slot: ptr = 0
+  ptr_slot: addr = 0
 end
 
 export func main()

@@ -300,13 +300,12 @@ Types exist for layout/width/intent only. No runtime type checks are emitted.
 
 - `byte` (8-bit unsigned)
 - `word` (16-bit unsigned)
-- `addr` (16-bit address)
-- `ptr` (16-bit pointer; treated as `addr` for codegen)
+- `addr` (16-bit address; used for raw addresses, pointers, and any 16-bit address-sized scalar storage)
 - `void` (function return type only)
 
 Notes (v0.1):
 
-- `ptr` is untyped in v0.1 (there is no `ptr<T>`). This is intentional; future versions may add optional pointer parameterization.
+- `addr` is untyped in v0.1 (there is no `ptr<T>` or typed pointers). This is intentional; future versions may add optional pointer parameterization.
 - `void` may only appear as a function return type. Using `void` as a variable type, parameter type, record field type, or array element type is a compile error.
 
 Type sizes (v0.1):
@@ -314,7 +313,6 @@ Type sizes (v0.1):
 - `sizeof(byte)` = 1
 - `sizeof(word)` = 2
 - `sizeof(addr)` = 2
-- `sizeof(ptr)` = 2
 - Composite types use exact semantic sizes.
 - `sizeof(T[n])` = `n * sizeof(T)`
 - `sizeof(record)` = `sum of field sizes`
@@ -327,13 +325,13 @@ Syntax:
 ````
 
 type Name byte
-type Ptr16 ptr
+type Ptr16 addr
 
 ```
 
 Type expressions (v0.2):
 
-- Scalar types: `byte`, `word`, `addr`, `ptr`
+- Scalar types: `byte`, `word`, `addr`
 - Arrays: `T[n]` (fixed length) or `T[]` (inferred length; see below). Nested arrays allowed.
 - Records: a record body starting on the next line and terminated by `end`
 
@@ -495,7 +493,7 @@ Layout rules:
 - Each field occupies its exact semantic size (`sizeof(fieldType)`).
 - The record's total size is `sum of field sizes`.
 - `byte` fields are 1 byte; `word` fields are 2 bytes.
-- `addr` and `ptr` fields are 2 bytes (same as `word`).
+- `addr` fields are 2 bytes (same as `word`).
 
 Field access:
 
@@ -530,7 +528,7 @@ Syntax:
 union Value
 b: byte
 w: word
-p: ptr
+p: addr
 end
 
 ```
@@ -1105,7 +1103,7 @@ Operand identifier resolution (v0.1):
 - Slot model in current ABI:
   - each argument is one 16-bit slot
   - local scalar storage declarations allocate one 16-bit slot each
-- Local storage allocation in this scope remains scalar-slot based (`byte`, `word`, `addr`, `ptr`, or aliases resolving to those scalar types).
+- Local storage allocation in this scope remains scalar-slot based (`byte`, `word`, `addr`, or aliases resolving to those scalar types).
 - Non-scalar locals are permitted only as alias declarations to direct module-scope storage (`name = GlobalStorageName`) and do not allocate frame slots.
 
 Frame shape:

@@ -20,7 +20,7 @@ describe('PR50: union declarations + union field EA access', () => {
       id: DiagnosticIds.EmitError,
       severity: 'error',
       message:
-        'Unsupported data type for "v" (expected byte/word/addr/ptr or fixed-length arrays of those).',
+        'Unsupported data type for "v" (expected byte/word/addr or fixed-length arrays of those).',
     });
   });
 });

@@ -17,11 +17,10 @@ out of registers you spill to memory yourself. ZAX typed variables replace that
 manual tracking: you give a value a name and a type, and the compiler handles
 where it lives.
 
-ZAX has four scalar storage types: `byte` (8-bit unsigned), `word` (16-bit
-unsigned), `addr` (16-bit, signals a memory address), and `ptr` (16-bit,
-signals a pointer to something). In these examples only `byte` and `word`
-appear — the others become relevant when you start working with arrays and
-records.
+ZAX has three scalar storage types: `byte` (8-bit unsigned), `word` (16-bit
+unsigned), and `addr` (16-bit, for memory addresses and other address-sized
+values). In these examples only `byte` and `word` appear — `addr` becomes
+relevant when you start working with arrays and records.
 
 You can declare storage in two places: named `data` sections at module scope,
 and `var` blocks inside function bodies.

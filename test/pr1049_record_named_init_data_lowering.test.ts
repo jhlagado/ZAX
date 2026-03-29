@@ -85,7 +85,7 @@ describe('PR1049 record data lowering', () => {
     });
     expectDiagnostic(result.diagnostics, {
       message:
-        'Unsupported record field type "pair" in initializer for "bad_nested" (expected byte/word/addr/ptr).',
+        'Unsupported record field type "pair" in initializer for "bad_nested" (expected byte/word/addr).',
     });
     expectDiagnostic(result.diagnostics, { message: 'Duplicate symbol name "dup".' });
   });

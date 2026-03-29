@@ -127,10 +127,10 @@ describe('sizeOfTypeExpr', () => {
     expectNoDiagnostics(diagnostics);
   });
 
-  it('treats ptr as 16-bit scalar', () => {
+  it('treats addr as 16-bit scalar', () => {
     const diagnostics: Diagnostic[] = [];
     const env = emptyEnv();
-    const res = sizeOfTypeExpr({ kind: 'TypeName', span: s(), name: 'ptr' }, env, diagnostics);
+    const res = sizeOfTypeExpr({ kind: 'TypeName', span: s(), name: 'addr' }, env, diagnostics);
     expect(res).toBe(2);
     expectNoDiagnostics(diagnostics);
   });

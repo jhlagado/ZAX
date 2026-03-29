@@ -51,7 +51,7 @@ condition_code          = "z" | "nz" | "c" | "nc" | "pe" | "po" | "m" | "p" ;
 named_section_kind      = "code" | "data" ;
 legacy_section_kind     = named_section_kind | "var" ;
 
-scalar_type             = "byte" | "word" | "addr" | "ptr" ;
+scalar_type             = "byte" | "word" | "addr" ;
 return_reg              = "HL" | "DE" | "BC" | "AF" ;
 
 reg8                    = "A" | "B" | "C" | "D" | "E" | "H" | "L" ;

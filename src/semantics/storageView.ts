@@ -40,7 +40,6 @@ export function resolveScalarKindInEnv(
   if (typeExpr.kind !== 'TypeName') return undefined;
   const lower = typeExpr.name.toLowerCase();
   if (lower === 'byte' || lower === 'word' || lower === 'addr') return lower;
-  if (lower === 'ptr') return 'addr';
   if (seen.has(lower)) return undefined;
   seen.add(lower);
   const decl = resolveVisibleType(typeExpr.name, typeExpr.span.file, env);
