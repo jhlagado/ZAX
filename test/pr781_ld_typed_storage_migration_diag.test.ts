@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import type { Diagnostic } from '../src/diagnosticTypes.js';
 import { createAsmInstructionLoweringHelpers } from '../src/lowering/asmInstructionLowering.js';
+import { expectDiagnostic } from './helpers/diagnostics/index.js';
 import type { AsmInstructionNode, AsmOperandNode, SourceSpan } from '../src/frontend/ast.js';
 
 const span: SourceSpan = {
@@ -88,7 +89,11 @@ describe('PR781 ld typed-storage migration diagnostics', () => {
     ctx.helper.lowerAsmInstructionDispatcher(ldItem);
 
     expect(ctx.diagnostics.length).toBeGreaterThan(0);
-    expect(ctx.diagnostics[0]?.message).toContain(':=');
+    expectDiagnostic(ctx.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
+      messageIncludes: ':=',
+    });
     expect(ctx.ldCalled).toBe(false);
   });
 
@@ -107,7 +112,11 @@ describe('PR781 ld typed-storage migration diagnostics', () => {
     ctx.helper.lowerAsmInstructionDispatcher(ldItem);
 
     expect(ctx.diagnostics.length).toBeGreaterThan(0);
-    expect(ctx.diagnostics[0]?.message).toContain(':=');
+    expectDiagnostic(ctx.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
+      messageIncludes: ':=',
+    });
     expect(ctx.ldCalled).toBe(false);
   });
 });

@@ -4,6 +4,7 @@ import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { parseOpParamsFromText, parseParamsFromText } from '../../src/frontend/parseParams.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
 import { parseProgram } from '../../src/frontend/parser.js';
+import { expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 describe('PR476 parameter parser extraction', () => {
   const file = makeSourceFile('pr476_parse_params_helpers.zax', '');
@@ -20,7 +21,7 @@ describe('PR476 parameter parser extraction', () => {
       ctx,
     );
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(params).toEqual([
       {
         kind: 'Param',
@@ -52,7 +53,7 @@ describe('PR476 parameter parser extraction', () => {
       ctx,
     );
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(params).toEqual([
       {
         kind: 'OpParam',
@@ -77,7 +78,7 @@ describe('PR476 parameter parser extraction', () => {
       diagnostics,
     );
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(program.files[0]?.items[0]).toMatchObject({ kind: 'FuncDecl', name: 'add' });
     expect(program.files[0]?.items[1]).toMatchObject({ kind: 'OpDecl', name: 'copy16' });
   });

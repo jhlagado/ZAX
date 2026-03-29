@@ -76,7 +76,7 @@ describe('PR862 := assignment parser/AST support', () => {
     });
 
     parsed = parse('hl := de');
-    expect(parsed.diagnostics).toEqual([]);
+    expectNoDiagnostics(parsed.diagnostics);
     expect(parsed.instr).toMatchObject({
       kind: 'AsmInstruction',
       head: ':=',
@@ -84,7 +84,7 @@ describe('PR862 := assignment parser/AST support', () => {
     });
 
     parsed = parse('de := a');
-    expect(parsed.diagnostics).toEqual([]);
+    expectNoDiagnostics(parsed.diagnostics);
     expect(parsed.instr).toMatchObject({
       kind: 'AsmInstruction',
       head: ':=',
@@ -92,7 +92,7 @@ describe('PR862 := assignment parser/AST support', () => {
     });
 
     parsed = parse('hl := @node.next');
-    expect(parsed.diagnostics).toEqual([]);
+    expectNoDiagnostics(parsed.diagnostics);
     expect(parsed.instr).toMatchObject({
       kind: 'AsmInstruction',
       head: ':=',

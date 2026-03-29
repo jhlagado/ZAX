@@ -5,6 +5,7 @@ export type OpStackSummary =
   | { kind: 'complex' };
 
 type Context = {
+  /** Resolves op declarations by name in `file`; `undefined` means no candidates (not an error by itself). */
   resolveOpCandidates: (name: string, file: string) => OpDeclNode[] | undefined;
 };
 

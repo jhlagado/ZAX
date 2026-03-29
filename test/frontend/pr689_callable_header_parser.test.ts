@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { parseCallableHeader } from '../../src/frontend/parseCallableHeader.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
+import { expectDiagnostic } from '../helpers/diagnostics/index.js';
 
 describe('PR689 callable header parser primitive', () => {
   it('parses shared callable header shape and params', () => {
@@ -49,7 +51,9 @@ describe('PR689 callable header parser primitive', () => {
 
     expect(parsed).toBeUndefined();
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
+    expectDiagnostic(diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
       message: 'Invalid op name "1bad": expected <identifier>.',
       line: 1,
       column: 1,

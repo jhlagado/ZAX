@@ -29,7 +29,7 @@ import type { CompileEnv } from '../semantics/env.js';
 import { evalImmExpr } from '../semantics/env.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { encodeInstruction } from '../z80/encode.js';
-import { createEaResolutionHelpers } from './eaResolution.js';
+import { buildEaResolutionContext, createEaResolutionHelpers } from './eaResolution.js';
 import { createEaMaterializationHelpers } from './eaMaterialization.js';
 import { createAddressingPipelineBuilders } from './addressingPipelines.js';
 import { createRuntimeImmediateHelpers } from './runtimeImmediates.js';
@@ -76,17 +76,26 @@ const REG8_CODES = new Map([
 ]);
 
 export type EmitPhase1Helpers = {
+  /** Flushes trailing user comments from the lowered asm recording buffer. */
   flushTrailingUserComments: () => void;
+  /** Live lowered asm stream (same ref as workspace). */
   loweredAsmStream: EmitPhase1Workspace['loweredAsmStream'];
+  /** Program-level lowering context (symbols, traversal, function lowerer). */
   programLoweringContext: ReturnType<typeof createEmitProgramContext>['programLoweringContext'];
+  /** Sinks for named section contributions during emit. */
   namedSectionSinks: ReturnType<typeof createEmitStateHelpers>['namedSectionSinks'];
 };
 
 type Context = {
+  /** Whole program AST. */
   program: ProgramNode;
+  /** Compile environment (consts, types, modules). */
   env: CompileEnv;
+  /** Shared diagnostic sink for emit phase 1. */
   diagnostics: Diagnostic[];
+  /** Optional emit options (listing sources, section keys, etc.). */
   options?: EmitProgramOptions;
+  /** Mutable workspace shared with program lowering. */
   workspace: EmitPhase1Workspace;
 };
 
@@ -246,22 +255,24 @@ export function createEmitPhase1Helpers(ctx: Context): EmitPhase1Helpers {
     isEnumName: (name) => ctx.env.enums.has(name),
   });
 
-  const { resolveEa } = createEaResolutionHelpers({
-    env: ctx.env,
-    diagnostics: ctx.diagnostics,
-    diagAt,
-    stackSlotOffsets: ctx.workspace.stackSlotOffsets,
-    stackSlotTypes: ctx.workspace.stackSlotTypes,
-    storageTypes: ctx.workspace.storageTypes,
-    moduleAliasTargets: ctx.workspace.moduleAliasTargets,
-    getLocalAliasTargets: () => ctx.workspace.localAliasTargets,
-    evalImmExpr: (expr) => evalImmExpr(expr, ctx.env, ctx.diagnostics),
-    evalImmNoDiag,
-    resolveScalarKind,
-    resolveAggregateType,
-    resolveEaTypeExpr,
-    sizeOfTypeExpr: (te) => sizeOfTypeExpr(te, ctx.env, ctx.diagnostics),
-  });
+  const { resolveEa } = createEaResolutionHelpers(
+    buildEaResolutionContext({
+      env: ctx.env,
+      diagnostics: ctx.diagnostics,
+      diagAt,
+      workspace: {
+        stackSlotOffsets: ctx.workspace.stackSlotOffsets,
+        stackSlotTypes: ctx.workspace.stackSlotTypes,
+        storageTypes: ctx.workspace.storageTypes,
+        moduleAliasTargets: ctx.workspace.moduleAliasTargets,
+        localAliasTargets: ctx.workspace.localAliasTargets,
+      },
+      resolveScalarKind,
+      resolveAggregateType,
+      resolveEaTypeExpr,
+      evalImmNoDiag,
+    }),
+  );
 
   const isIxIyIndexedMem = (op: AsmOperandNode): boolean =>
     op.kind === 'Mem' &&

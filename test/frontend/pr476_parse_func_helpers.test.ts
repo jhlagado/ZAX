@@ -5,6 +5,7 @@ import { parseTopLevelFuncDecl } from '../../src/frontend/parseFunc.js';
 import { parseParamsFromText } from '../../src/frontend/parseParams.js';
 import { parseProgram } from '../../src/frontend/parser.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
+import { expectNoDiagnostics } from '../helpers/diagnostics.js';
 
 describe('PR476 func parser extraction', () => {
   it('keeps top-level func parsing intact', () => {
@@ -61,7 +62,7 @@ describe('PR476 func parser extraction', () => {
       },
     );
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(parsed.nextIndex).toBe(7);
     expect(parsed.node).toMatchObject({
       kind: 'FuncDecl',
@@ -93,7 +94,7 @@ describe('PR476 func parser extraction', () => {
       diagnostics,
     );
 
-    expect(diagnostics).toEqual([]);
+    expectNoDiagnostics(diagnostics);
     expect(program.files[0]?.items[0]).toMatchObject({
       kind: 'FuncDecl',
       name: 'add',

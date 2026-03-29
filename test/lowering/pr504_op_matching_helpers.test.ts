@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AsmOperandNode, OpDeclNode, SourceSpan } from '../src/frontend/ast.js';
-import { createOpMatchingHelpers } from '../src/lowering/opMatching.js';
+import type { AsmOperandNode, OpDeclNode, SourceSpan } from '../../src/frontend/ast.js';
+import { createOpMatchingHelpers } from '../../src/lowering/opMatching.js';
 
 const span: SourceSpan = {
   file: 'test.zax',

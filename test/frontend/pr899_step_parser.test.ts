@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import type { Diagnostic } from '../../src/diagnosticTypes.js';
+import { expectDiagnostic } from '../helpers/diagnostics/index.js';
 import { parseAsmInstruction } from '../../src/frontend/parseAsmInstruction.js';
 import { makeSourceFile, span } from '../../src/frontend/source.js';
 
@@ -77,7 +79,11 @@ describe('PR899 step parser support', () => {
       const parsed = parse(text);
       expect(parsed.instr).toBeUndefined();
       expect(parsed.diagnostics.length).toBeGreaterThan(0);
-      expect(parsed.diagnostics[0]?.message.toLowerCase()).toContain('step');
+      expectDiagnostic(parsed.diagnostics, {
+        id: DiagnosticIds.ParseError,
+        severity: 'error',
+        messageIncludes: 'step',
+      });
     }
   });
 });
