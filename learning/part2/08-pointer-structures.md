@@ -280,7 +280,7 @@ Each step is one line. But if a data structure required following a chain of
 fields — loading a node, reading one of its pointer fields, treating that as a
 node, reading another field — each hop would need its own address-load and cast.
 The current language has no way to express a pointer dereference path in a single
-step. `ptr` fields carry no type information: `next: addr` says that `next`
+step. `addr` fields carry no type information: `next: addr` says that `next`
 holds an address, but not that it is the address of another `ListNode`. That
 annotation must be written at the use site, every time, as `<ListNode>`.
 

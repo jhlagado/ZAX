@@ -68,7 +68,7 @@ Both contain the identical 15 keywords. Changes to one must be manually mirrored
 #### 4. Scalar Types — NOT validated at parse time
 
 - `parseImm.ts` `parseTypeExprFromText`: accepts any identifier as a type name
-- The valid scalar set `byte | word | addr | ptr` is in the grammar doc but the parser does not distinguish them from user-defined type names
+- The valid scalar set `byte | word | addr` is in the grammar doc but the parser does not distinguish them from user-defined type names
 
 #### 5. Operator Precedence — hardcoded switch statement
 
@@ -126,7 +126,7 @@ export const RETURN_REGISTERS = ['HL', 'DE', 'BC', 'AF'] as const;
 export const CONDITION_CODES = ['z', 'nz', 'c', 'nc', 'pe', 'po', 'm', 'p'] as const;
 
 // --- Scalar Types ---
-export const SCALAR_TYPES = ['byte', 'word', 'addr', 'ptr'] as const;
+export const SCALAR_TYPES = ['byte', 'word', 'addr'] as const;
 
 // --- Top-level Keywords ---
 export const TOP_LEVEL_KEYWORDS = [

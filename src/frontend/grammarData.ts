@@ -122,7 +122,7 @@ export const ASM_CONTROL_KEYWORD_LIST = [
 ] as const;
 export const ASM_CONTROL_KEYWORDS = new Set<string>(ASM_CONTROL_KEYWORD_LIST);
 
-export const SCALAR_TYPE_LIST = ['byte', 'word', 'addr', 'ptr'] as const;
+export const SCALAR_TYPE_LIST = ['byte', 'word', 'addr'] as const;
 export const SCALAR_TYPES = new Set<string>(SCALAR_TYPE_LIST);
 
 export const IMM_OPERATOR_PRECEDENCE = [

@@ -3842,11 +3842,10 @@ out of registers you spill to memory yourself. ZAX typed variables replace that
 manual tracking: you give a value a name and a type, and the compiler handles
 where it lives.
 
-ZAX has four scalar storage types: `byte` (8-bit unsigned), `word` (16-bit
-unsigned), `addr` (16-bit, signals a memory address), and `ptr` (16-bit,
-signals a pointer to something). In these examples only `byte` and `word`
-appear — the others become relevant when you start working with arrays and
-records.
+ZAX has three scalar storage types: `byte` (8-bit unsigned), `word` (16-bit
+unsigned), and `addr` (16-bit, for memory addresses and other address-sized
+values). In these examples only `byte` and `word` appear — `addr` becomes
+relevant when you start working with arrays and records.
 
 You can declare storage in two places: named `data` sections at module scope,
 and `var` blocks inside function bodies.
@@ -6392,7 +6391,7 @@ Each step is one line. But if a data structure required following a chain of
 fields — loading a node, reading one of its pointer fields, treating that as a
 node, reading another field — each hop would need its own address-load and cast.
 The current language has no way to express a pointer dereference path in a single
-step. `ptr` fields carry no type information: `next: addr` says that `next`
+step. `addr` fields carry no type information: `next: addr` says that `next`
 holds an address, but not that it is the address of another `ListNode`. That
 annotation must be written at the use site, every time, as `<ListNode>`.
 

@@ -21,7 +21,6 @@ function scalarSize(name: string): number | undefined {
       return 1;
     case 'word':
     case 'addr':
-    case 'ptr':
       return 2;
     default:
       return undefined;

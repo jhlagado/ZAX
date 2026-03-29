@@ -526,13 +526,13 @@ clarity.
 
 #### 2D: Linked List (K&R §6.5)
 
-A linked list node can be written today with a `ptr` field in an ordinary
+A linked list node can be written today with an `addr` field in an ordinary
 record, and traversed with `<Node>base.tail`:
 
 ```zax
 type Node
   value: word
-  next:  ptr       ; holds address of the next Node (or 0 for end-of-list)
+  next:  addr      ; holds address of the next Node (or 0 for end-of-list)
 end
 
 section data heap at $8400
@@ -566,7 +566,7 @@ The algorithm is fully expressible. The ergonomic gaps to note and document:
 
 - **No null literal** — `0` serves as null but there is no named sentinel.
   Using `addr` zero is a convention, not a language guarantee.
-- **`ptr` is untyped** — the `next` field is `ptr`, not `ptr<Node>`. The cast
+- **`addr` is untyped** — the `next` field is `addr`, not `ptr<Node>`. The cast
   `<Node>hl.next` must be written explicitly at every dereference site.
   Self-referential record declarations would allow the type to carry that
   intent, eliminating the cast at each traversal step.
@@ -579,9 +579,9 @@ and surfaces real friction.
 
 #### 2E: Binary Search Tree
 
-Same analysis as the linked list. A BST node has two `ptr` children (`left`,
+Same analysis as the linked list. A BST node has two `addr` children (`left`,
 `right`). Insert and search are fully expressible using `<Node>hl.left` and
-`<Node>hl.right`. The same ergonomic gaps apply: untyped `ptr` fields,
+`<Node>hl.right`. The same ergonomic gaps apply: untyped `addr` fields,
 explicit casts at each traversal, null-as-zero convention, fixed pool
 allocation.
 
@@ -655,7 +655,7 @@ than speculation.
 | Example Gap                                                                      | Status                                                                                                                        |
 | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | RPN calculator / quicksort software stack                                        | Stack-typed local or push/pop op idiom — not yet on roadmap                                                                   |
-| Linked list, BST — untyped `ptr` fields, explicit casts, null-as-zero convention | Pointer-typing ergonomics — Tier 2 friction; self-referential record declarations would improve precision, not yet on roadmap |
+| Linked list, BST — untyped `addr` fields, explicit casts, null-as-zero convention | Pointer-typing ergonomics — Tier 2 friction; self-referential record declarations would improve precision, not yet on roadmap |
 | Eight queens labeled exit                                                        | `break` / named exit — not yet on roadmap; course surfaces this                                                               |
 | Word frequency string ops                                                        | Standard `op` library — library workstream, separate from language/compiler roadmap                                           |
 | Ring buffer with exact-size sizeof                                               | Exact-size layout stream (#817–820) — complete                                                                                |
@@ -779,7 +779,7 @@ expresses them awkwardly, the gap is precisely located.
 | 5    | Records            | Ring buffer                                                        | `type`, `record`, `section data`, `sizeof`/`offsetof`, exact-size awareness                    |
 | 6    | Recursion          | Towers of Hanoi, recursive sum, recursive reverse                  | Recursive `func`, IX frame discipline, `<Type>base.tail`                                       |
 | 7    | Composition        | RPN calculator                                                     | All of the above: `op`, `record`, `select` ranges, `func`, software stack                      |
-| 8    | Pointer Structures | Linked list, BST                                                   | `ptr` fields, `<Type>base.tail` traversal, null-sentinel convention, fixed-pool allocation     |
+| 8    | Pointer Structures | Linked list, BST                                                   | `addr` fields, `<Type>base.tail` traversal, null-sentinel convention, fixed-pool allocation     |
 | 9    | Gaps and Futures   | Eight queens                                                       | Control-flow pressure case; `break` / `continue` now available, future design pressure remains |
 
 Unit 9 is intentionally incomplete. It is a design dialogue between the course
