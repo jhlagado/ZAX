@@ -10,35 +10,52 @@ import { expectDiagnostic, expectNoDiagnostic } from './helpers/diagnostics.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const PR211_FIXTURE = join(__dirname, 'fixtures', 'pr211_jr_djnz_diag_matrix_invalid.zax');
+
+type Row = {
+  label: string;
+  id: (typeof DiagnosticIds)[keyof typeof DiagnosticIds];
+  message: string;
+};
+
 describe('PR211: jr/djnz malformed-form diagnostics parity', () => {
-  it('emits explicit diagnostics for invalid condition, disp, and indirect forms', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr211_jr_djnz_diag_matrix_invalid.zax');
-    const res = await compile(entry, {}, { formats: defaultFormatWriters });
-    expectDiagnostic(res.diagnostics, {
+  it.each([
+    {
+      label: 'jr cc',
       id: DiagnosticIds.EmitError,
-      severity: 'error',
       message: 'jr cc expects valid condition code NZ/Z/NC/C',
-    });
-    expectDiagnostic(res.diagnostics, {
+    },
+    {
+      label: 'jr cc disp reg',
       id: DiagnosticIds.EmitError,
-      severity: 'error',
       message: 'jr cc, disp does not support register targets; expects disp8',
-    });
-    expectDiagnostic(res.diagnostics, {
+    },
+    {
+      label: 'jr cc disp indirect',
       id: DiagnosticIds.EmitError,
-      severity: 'error',
       message: 'jr cc, disp does not support indirect targets',
-    });
-    expectDiagnostic(res.diagnostics, {
+    },
+    {
+      label: 'jr indirect',
       id: DiagnosticIds.EmitError,
-      severity: 'error',
       message: 'jr does not support indirect targets; expects disp8',
-    });
-    expectDiagnostic(res.diagnostics, {
+    },
+    {
+      label: 'djnz indirect',
       id: DiagnosticIds.EmitError,
-      severity: 'error',
       message: 'djnz does not support indirect targets; expects disp8',
+    },
+  ] satisfies Row[])('$label — explicit diagnostics for invalid condition, disp, and indirect forms', async (row) => {
+    const res = await compile(PR211_FIXTURE, {}, { formats: defaultFormatWriters });
+    expectDiagnostic(res.diagnostics, {
+      id: row.id,
+      severity: 'error',
+      message: row.message,
     });
+  });
+
+  it('does not emit looser jr placeholder diagnostics for the jr/djnz matrix fixture', async () => {
+    const res = await compile(PR211_FIXTURE, {}, { formats: defaultFormatWriters });
     expectNoDiagnostic(res.diagnostics, {
       message: 'jr cc, disp expects NZ/Z/NC/C + disp8',
     });
