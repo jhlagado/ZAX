@@ -325,6 +325,10 @@ ex de, hl         ; HL now points past dest; DE points past source
   name each field by its offset without moving IX.
 - To reach entry `n` at runtime, either load `table_base + n` into IX using
   compile-time arithmetic, or add the index to HL with `add hl, de`.
+- When you need to emit raw bytes without a named type — byte tables from
+  existing data, word address vectors, or space reservations — use the raw data
+  directives `db`, `dw`, and `ds` inside a `section data` or `section code`
+  block. These directives are fully specified in the language spec (Section 6.6).
 
 ---
 
