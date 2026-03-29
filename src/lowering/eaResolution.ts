@@ -67,7 +67,7 @@ export type EAResolutionContext = {
   sizeOfTypeExpr: (te: TypeExprNode) => number | undefined;
 };
 
-/** Workspace fields that feed EA resolution (emit phase 1 `EmitPhase1Workspace` slice). */
+/** Storage slice fields that feed EA resolution (`EmitPhase1Workspace.storage` plus the same keys). */
 export type EaResolutionWorkspaceSlice = {
   /** See {@link EAResolutionContext.stackSlotOffsets}. */
   stackSlotOffsets: Map<string, number>;

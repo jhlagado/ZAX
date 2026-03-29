@@ -645,12 +645,15 @@ const finalized = runEmitPlacementAndArtifactPhase(
 
 ### 10.2 Phase 1 — Workspace Setup
 
-`createEmitPhase1Workspace()` in `emitPhase1Workspace.ts` initialises the mutable data structures that will be written into during lowering:
+`createEmitPhase1Workspace()` in `emitPhase1Workspace.ts` initialises the mutable data structures that will be written into during lowering. The workspace has five top-level sub-objects (instead of one flat bag):
 
-- **Section byte maps:** three independent `Map<number, number>` instances for `code`, `data`, and `var` sections. Keys are 0-based offsets; values are bytes.
-- **Offset counters:** `codeOffsetRef`, `dataOffsetRef`, `varOffsetRef` — mutable reference objects `{ current: number }` that track how far each section has been written.
-- **Fixup queues:** `fixups` (absolute 16-bit) and `rel8Fixups` (relative 8-bit signed) — arrays of pending relocations to be resolved in phase 4.
-- **Symbol lists and source segments:** arrays that accumulate `PendingSymbol` and `EmittedSourceSegment` entries as each function is lowered.
+- **`emission`:** merged and per-section byte maps, listing `codeSourceSegments`, and the lowered-asm stream buffers.
+- **`symbols`:** symbol tables, `PendingSymbol` queues, `taken` names, and `fixups` / `rel8Fixups` pending relocation entries.
+- **`callables`:** per-file and merged callable/op maps, declared `op`/`bin` name sets, and visibility resolver closures.
+- **`config`:** `opStackPolicyMode`, `rawTypedCallWarningsEnabled`, `primaryFile`, and `includeDirs`.
+- **`storage`:** `storageTypes`, alias maps, stack slot maps, `rawAddressSymbols`, and section `baseExprs`.
+
+Phase 1 helpers still create per-phase offset refs (`codeOffsetRef`, and similar) inside `createEmitStateHelpers`; those live alongside the workspace, not inside it.
 
 `createEmitPhase1Helpers()` in `emitPhase1Helpers.ts` then wires callbacks and utilities around the workspace to build the `ProgramLoweringContext` that phases 2–3 consume.
 
