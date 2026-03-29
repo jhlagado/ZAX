@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../src/compile.js';
+import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../src/formats/index.js';
 import type { BinArtifact } from '../src/formats/types.js';
 import {
@@ -29,9 +30,13 @@ describe('PR272: runtime affine index/offset lowering', () => {
 
     expect(res.artifacts).toEqual([]);
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
       messageIncludes: 'runtime multiplier must be a power-of-2',
     });
     expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.EmitError,
+      severity: 'error',
       messageIncludes:
         'is unsupported. Use a single scalar runtime atom with +, -, *, <<',
     });

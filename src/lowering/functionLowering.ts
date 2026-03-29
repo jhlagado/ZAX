@@ -27,7 +27,13 @@ import {
 // This module owns the per-function lowering coordinator. It assembles the
 // function-local helpers, state, and diagnostics around the extracted
 // rewriting, frame-setup, body-setup, and call-lowering submodules.
-type ResolvedArrayType = { element: TypeExprNode; length?: number };
+/** Array shape extracted for lowering; `length` omitted when unknown. */
+type ResolvedArrayType = {
+  /** Element type expression. */
+  element: TypeExprNode;
+  /** Fixed length when statically known. */
+  length?: number;
+};
 export type FunctionLoweringItemContext = {
   /** Set by: program lowering construction. Used by: frame setup, body orchestration. */
   readonly item: FuncDeclNode;
@@ -280,11 +286,17 @@ export type FunctionLoweringSharedContext = FunctionLoweringDiagnosticsContext &
   FunctionLoweringAstUtilityContext &
   FunctionLoweringRegisterContext;
 
+/**
+ * Entry context for lowering a whole function. Narrower phase views are
+ * {@link FrameContext}, {@link BodyContext}, and {@link RewriteContext} (#1123).
+ */
 export type FunctionLoweringContext = FunctionLoweringItemContext & FunctionLoweringSharedContext;
+
+export type { BodyContext, FrameContext, RewriteContext } from './functionLoweringPhases.js';
 
 export function lowerFunctionDecl(ctx: FunctionLoweringContext): void {
   const setup = prepareFunctionLoweringSetupPhase(ctx);
   const frame = runFunctionFrameSetupPhase(setup);
-  const body = prepareFunctionBodyLoweringPhase(setup, frame);
-  finalizeFunctionLoweringPhase(setup, body);
+  const body = prepareFunctionBodyLoweringPhase({ ...setup, frame });
+  finalizeFunctionLoweringPhase({ ...setup, frame, body });
 }

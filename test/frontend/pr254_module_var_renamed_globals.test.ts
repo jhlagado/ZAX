@@ -3,7 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { compile } from '../../src/compile.js';
+import { DiagnosticIds } from '../../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
+import { expectDiagnostic } from '../helpers/diagnostics/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,10 +16,12 @@ describe('PR254 parser: module var removal', () => {
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expect(res.artifacts).toEqual([]);
     expect(res.diagnostics).toHaveLength(1);
-    expect(res.diagnostics[0]?.message).toBe(
-      `Legacy "var ... end" storage blocks are removed; use direct declarations inside named data sections.`,
-    );
-    expect(res.diagnostics[0]?.line).toBe(1);
-    expect(res.diagnostics[0]?.column).toBe(1);
+    expectDiagnostic(res.diagnostics, {
+      id: DiagnosticIds.ParseError,
+      severity: 'error',
+      message: `Legacy "var ... end" storage blocks are removed; use direct declarations inside named data sections.`,
+      line: 1,
+      column: 1,
+    });
   });
 });

@@ -13,6 +13,7 @@ export type DiagnosticExpectation = {
   messageIncludes?: string;
   file?: string;
   line?: number;
+  column?: number;
 };
 
 export function makeDiagnosticMatcher(expected: DiagnosticExpectation) {
@@ -29,6 +30,7 @@ export function makeDiagnosticMatcher(expected: DiagnosticExpectation) {
   }
   if (expected.file !== undefined) shape.file = expected.file;
   if (expected.line !== undefined) shape.line = expected.line;
+  if (expected.column !== undefined) shape.column = expected.column;
   return expect.objectContaining(shape);
 }
 

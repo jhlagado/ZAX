@@ -8,23 +8,35 @@ import type { NonBankedSectionKeyId } from '../sectionKeys.js';
 import { formatNonBankedSectionKey } from '../sectionKeys.js';
 
 export type PlacedNamedSectionContribution = {
+  /** Sink carrying bytes/fixups for one contribution. */
   sink: NamedSectionContributionSink;
+  /** Assigned base address for this contribution. */
   baseAddress: number;
 };
 
 export type PlacedNamedSectionRegion = {
+  /** Stable section key id. */
   keyId: NonBankedSectionKeyId;
+  /** Logical section kind. */
   section: 'code' | 'data';
+  /** Section display name. */
   name: string;
+  /** Region base address. */
   baseAddress: number;
+  /** Total span in bytes. */
   totalSize: number;
+  /** Inclusive end address when known; `undefined` while sizing. */
   endAddress: number | undefined;
+  /** Ordered contributions in this region. */
   contributions: PlacedNamedSectionContribution[];
 };
 
 type Context = {
+  /** Diagnostic sink. */
   diagnostics: Diagnostic[];
+  /** Compile environment for imm eval. */
   env: CompileEnv;
+  /** Evaluates imm with env; `undefined` if not const. */
   evalImmExpr: (expr: ImmExprNode, env: CompileEnv, diagnostics: Diagnostic[]) => number | undefined;
 };
 

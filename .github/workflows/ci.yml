@@ -147,6 +147,10 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Fixture coverage map (no drift vs generator)
+        if: runner.os == 'Linux'
+        run: npm run check:fixture-coverage
+
       - name: Test (coverage core)
         id: coverage_core_tests
         run: npm run test:ci:coverage-core

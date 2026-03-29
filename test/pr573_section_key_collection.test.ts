@@ -4,6 +4,7 @@ import { DiagnosticIds } from '../src/diagnosticTypes.js';
 import type { Diagnostic } from '../src/diagnosticTypes.js';
 import { parseProgram } from '../src/frontend/parser.js';
 import { collectNonBankedSectionKeys, createNonBankedSectionKey } from '../src/sectionKeys.js';
+import { expectDiagnostic } from './helpers/diagnostics/index.js';
 
 describe('PR573 non-banked section key collection', () => {
   it('validates the section key constructor boundary', () => {
@@ -66,7 +67,7 @@ describe('PR573 non-banked section key collection', () => {
       ['code', 'shared', 'dep.zax', 1],
     ]);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
+    expectDiagnostic(diagnostics, {
       id: DiagnosticIds.EmitError,
       severity: 'error',
       file: 'dep.zax',
@@ -88,7 +89,7 @@ describe('PR573 non-banked section key collection', () => {
     collectNonBankedSectionKeys(program, diagnostics);
 
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
+    expectDiagnostic(diagnostics, {
       id: DiagnosticIds.EmitError,
       severity: 'error',
       file: 'missing-anchor.zax',
@@ -112,7 +113,7 @@ describe('PR573 non-banked section key collection', () => {
     expect(collected.orderedAnchors).toHaveLength(1);
     expect(collected.orderedContributions).toHaveLength(0);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
+    expectDiagnostic(diagnostics, {
       id: DiagnosticIds.EmitWarning,
       severity: 'warning',
       file: 'empty-anchor.zax',
