@@ -877,13 +877,13 @@ Three declaration forms are valid inside a `var` block:
 
 | Form                       | Meaning                                                                  |
 | -------------------------- | ------------------------------------------------------------------------ |
-| `name: Type`               | allocates a scalar frame slot, zero-initialized                          |
-| `name: Type = valueExpr`   | allocates a scalar frame slot, initialized to `valueExpr`                |
+| `name: Type`               | allocates a scalar frame slot, zero-initialized (or a record/union pointer slot — see below) |
+| `name: Type = valueExpr`   | allocates a scalar frame slot, initialized to `valueExpr` (not allowed for record/union `Type`) |
 | `name = GlobalStorageName` | alias — no frame slot; binds a local name to direct module-scope storage |
 
 The **typed alias form** `name: Type = rhs` is always a compile error.
 
-Only scalar types (`byte`, `word`, `addr`, or aliases resolving to those) may have frame slots. Non-scalar locals (arrays, records) are allowed only as alias declarations to direct module-scope storage — they name an existing address but allocate no storage:
+Scalar types (`byte`, `word`, `addr`, or aliases resolving to those) use frame slots as usual. A **record or union** type in a local `var` allocates one 16-bit slot that holds an address; omit the initializer and assign a pointer before use. Field access on that name (`.field`) dereferences through the stored address. Other non-scalar locals (arrays, records without this slot rule) are allowed only as alias declarations to direct module-scope storage — they name an existing address but allocate no storage:
 
 ```zax
 section data vars at $8000

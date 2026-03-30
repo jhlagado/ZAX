@@ -11,11 +11,13 @@ node to the next, you must follow a stored address — a pointer — rather than
 increment an index. That act of following a pointer is the defining operation
 in this chapter.
 
-The ZAX syntax for following a pointer to a named field is
-`<Type>local.field`, where `local` holds an address and `Type` names the
-record the compiler should interpret it as. You still load the address into HL
-and work with raw Z80 registers, but the field access names the field rather
-than hard-coding a byte offset. The next section shows the syntax directly.
+To follow a pointer to a named field you can either **declare the local with the
+record type** (`current_ptr: ListNode`) or hold an untyped `addr` and use **typed
+reinterpretation** (`<ListNode>current_ptr.field`) at each field access. The first
+form keeps the traversal readable: the slot still stores a 16-bit address, but
+the compiler knows which record layout to use for `.value` and `.next`. The
+second form is the general case when the pointer lives in an `addr` variable or
+register-sized path.
 
 ---
 
@@ -23,8 +25,8 @@ than hard-coding a byte offset. The next section shows the syntax directly.
 
 The syntax is `<Type>local.field`, where `local` holds an address and
 `Type` is the record type you want to interpret it as. The compiler resolves
-`field` against `Type`'s declaration and emits the appropriate IX-relative load
-or constant-offset dereference.
+`field` against `Type`'s declaration and emits the appropriate load or store
+through that address.
 
 Consider the `ListNode` record from `linked_list.zax`:
 
@@ -36,8 +38,7 @@ end
 ```
 
 Each node has a one-byte value and a two-byte address pointing to the next node.
-Given a local `current_ptr: addr` that holds the address of the current node in
-the list, you read the value with:
+With an **addr** local, you read the value with:
 
 ```zax
 a := <ListNode>current_ptr.value
@@ -49,7 +50,15 @@ And you advance to the next node with:
 current_ptr := <ListNode>current_ptr.next
 ```
 
-These two lines are the core of the traversal. Everything else — the null check,
+With a **typed** local `current_ptr: ListNode` (no initializer), the same
+operations are written without the cast:
+
+```zax
+a := current_ptr.value
+current_ptr := current_ptr.next
+```
+
+These lines are the core of the traversal. Everything else — the null check,
 the accumulation — is the supporting work around them.
 
 ---
@@ -86,14 +95,14 @@ The traversal in `list_sum` has this shape:
       ret
     end
 
-    a := <ListNode>current_ptr.value
+    a := current_ptr.value
     ld e, a
     ld d, 0
     hl := total_value
     add hl, de
     total_value := hl
 
-    current_ptr := <ListNode>current_ptr.next
+    current_ptr := current_ptr.next
 
     ld a, 1
     or a
@@ -109,7 +118,7 @@ null sentinel: a stored `addr` of zero means "no next node." The test uses the
 and L are zero, without using a compare instruction. When the pointer is null,
 the function returns `total_value` in HL.
 
-When the pointer is non-null, the typed reinterpretation reads the `value` byte
+When the pointer is non-null, the field access reads the `value` byte
 into A. The byte is zero-extended into DE — `ld e, a` / `ld d, 0` — and added
 to the running total in HL. Then `current_ptr` is updated from its own `next`
 field, and the loop continues.
@@ -268,27 +277,22 @@ See `learning/part2/examples/unit8/reg_pair.zax`.
 
 ## The Verbosity of Pointer Traversal
 
-Both examples follow the same pattern at every pointer access site: load the
-address into HL, apply the typed cast, name the field. For a structure with
-several pointer hops, this becomes a repeating sequence:
+The linked list example uses a **typed local** (`current_ptr: ListNode`) so field
+access does not repeat `<ListNode>` on every line. The tree example (`bst.zax`)
+still uses an `addr` local and typed reinterpretation at each hop, because
+that program was written in the older style:
 
 ```zax
-current_ptr := <ListNode>current_ptr.next
+current_ptr := <TreeNode>current_ptr.next
 ```
 
-Each step is one line. But if a data structure required following a chain of
-fields — loading a node, reading one of its pointer fields, treating that as a
-node, reading another field — each hop would need its own address-load and cast.
-The current language has no way to express a pointer dereference path in a single
-step. `addr` fields carry no type information: `next: addr` says that `next`
-holds an address, but not that it is the address of another `ListNode`. That
-annotation must be written at the use site, every time, as `<ListNode>`.
+When the pointer is held in an `addr` variable, `next: addr` carries no record
+type: the cast names which layout `next` points to.
 
-The cost is real. You always know exactly what the machine is doing — but for
-deeply linked structures, the repeated type annotation adds noise that obscures
-the algorithm's shape. This is a genuine limitation, and it shows up clearly in
-`linked_list.zax` and `bst.zax`. Chapter 09 records it alongside the other open
-gaps from the course.
+For a structure with several pointer hops, each step still needs a load and a
+field path. The language does not fold a multi-hop `a.b.c` through pointers into
+one expression. Chapter 09 records remaining gaps alongside other design
+questions.
 
 ---
 
@@ -297,8 +301,9 @@ gaps from the course.
 - `type RecordName` / `field: type` / `end` defines a record. Fields have
   explicit types; the compiler tracks offsets.
 - `<Type>local.field` applies a type cast at the access site to read or write
-  a field through a stored address. This is the ZAX expression for pointer
-  dereference.
+  a field through a stored `addr` (or register-sized base). A local declared with
+  a record or union type (`local: RecordName`) uses the same slot width and can
+  use `.field` without the cast.
 - The null sentinel is stored address zero. The test is `ld a, h` / `or l` /
   `if Z` — the same `or` trick used throughout the course to test a 16-bit
   value for zero without a compare.

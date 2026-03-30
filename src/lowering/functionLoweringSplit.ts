@@ -53,6 +53,7 @@ export function splitFunctionLoweringSharedContext(
       env: shared.env,
       resolveScalarBinding: shared.resolveScalarBinding,
       resolveScalarKind: shared.resolveScalarKind,
+      resolveAggregateType: shared.resolveAggregateType,
       resolveEaTypeExpr: shared.resolveEaTypeExpr,
       resolveScalarTypeForEa: shared.resolveScalarTypeForEa,
       resolveScalarTypeForLd: shared.resolveScalarTypeForLd,
