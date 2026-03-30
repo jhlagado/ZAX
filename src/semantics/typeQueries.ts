@@ -203,6 +203,12 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
   const resolveEaTypeExpr = (ea: EaExprNode): TypeExprNode | undefined =>
     resolveEaTypeExprInternal(ea, new Set<string>());
 
+  const stackSlotAggregateIsAddrWidth = (
+    nameLower: string,
+    typeExpr: TypeExprNode,
+  ): boolean =>
+    ctx.stackSlotTypes.has(nameLower) && resolveAggregateType(typeExpr) !== undefined;
+
   const resolveScalarBinding = (name: string): ScalarKind | undefined => {
     const lower = name.toLowerCase();
     if (ctx.rawAddressSymbols.has(lower)) return undefined;
@@ -215,7 +221,28 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
         return resolveEaTypeExpr(aliasTarget);
       })();
     if (!typeExpr) return undefined;
-    return resolveScalarKind(typeExpr);
+    const sk = resolveScalarKind(typeExpr);
+    if (sk) return sk;
+    if (stackSlotAggregateIsAddrWidth(lower, typeExpr)) return 'addr';
+    return undefined;
+  };
+
+  /**
+   * Record/union-typed locals occupy one addr-sized frame slot that stores a
+   * pointer; value loads (ld, calls, mem push) must use the word at that slot,
+   * not the slot address. When `resolveScalarKind(typeExpr)` is undefined but
+   * the name is a stack slot with an aggregate type, treat as `addr` width.
+   */
+  const scalarKindForEaValueSemantics = (
+    ea: EaExprNode,
+    typeExpr: TypeExprNode,
+  ): ScalarKind | undefined => {
+    const sk = resolveScalarKind(typeExpr);
+    if (sk) return sk;
+    if (ea.kind === 'EaName' && stackSlotAggregateIsAddrWidth(ea.name.toLowerCase(), typeExpr)) {
+      return 'addr';
+    }
+    return undefined;
   };
 
   /**
@@ -228,7 +255,7 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
     if (base && ctx.rawAddressSymbols.has(base.toLowerCase())) return undefined;
     const typeExpr = resolveEaTypeExpr(ea);
     if (!typeExpr) return undefined;
-    return resolveScalarKind(typeExpr);
+    return scalarKindForEaValueSemantics(ea, typeExpr);
   };
 
   /**
@@ -240,16 +267,7 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
     if (ea.kind === 'EaName' && ctx.rawAddressSymbols.has(ea.name.toLowerCase())) return undefined;
     const typeExpr = resolveEaTypeExpr(ea);
     if (!typeExpr) return undefined;
-    const sk = resolveScalarKind(typeExpr);
-    if (sk) return sk;
-    if (
-      ea.kind === 'EaName' &&
-      ctx.stackSlotTypes.has(ea.name.toLowerCase()) &&
-      resolveAggregateType(typeExpr)
-    ) {
-      return 'addr';
-    }
-    return undefined;
+    return scalarKindForEaValueSemantics(ea, typeExpr);
   };
 
   return {
