@@ -2,7 +2,7 @@
 
 # Chapter 8 — Pointer Structures
 
-The Chapter 08 examples work with data that is not laid out as a flat array. A
+The examples in Chapter 8 traverse and search data that is not laid out as a flat array. A
 linked list is a chain of individually addressable nodes, each holding a value
 and the address of the next node in the chain. A binary search tree is a
 hierarchy of nodes where each node holds a value and the addresses of its left
@@ -203,8 +203,7 @@ Compare this with the linked list traversal: the list uses a `while` loop
 because the structure is linear — there is always at most one next step. The
 BST uses recursion because the structure is branching — at each node, the
 algorithm commits to one of two subtrees, and the choice depends on a
-comparison. Recursion maps onto that shape directly: the call stack mirrors the path from
-root to target node.
+comparison. Recursion maps onto that shape directly: the call stack mirrors the path from root to target node.
 
 See `learning/part2/examples/unit8/bst.zax`.
 
@@ -297,8 +296,7 @@ the type and the cast is the only way to name it.
 One limitation remains: chaining through multiple pointer hops in a single
 expression — `a.b.c` where each step loads through a pointer — is not yet
 supported. Each hop needs its own intermediate assignment to HL before the next
-field can be accessed. Chapter 09 records this alongside other open design
-questions.
+field can be accessed.
 
 ---
 
@@ -306,10 +304,10 @@ questions.
 
 - `type RecordName` / `field: type` / `end` defines a record. Fields have
   explicit types; the compiler tracks offsets.
-- A field declared as `@TypeName` stores a 2-byte address and carries the type:
-  `left: @TreeNode` means "a pointer to a TreeNode." Field access on that field
-  dereferences through the stored address automatically. The same form works for
-  locals (`var cur: @ListNode`) and parameters (`func f(node: @TreeNode)`).
+- `@TypeName` in a field, local, or parameter stores a 2-byte address and carries
+  the record type, making `.field` access cast-free at every use site.
+  `left: @TreeNode`, `var cur: @ListNode`, and `func f(node: @TreeNode)` all
+  follow the same pattern.
 - `<Type>base.field` casts at the access site when the base is a register (`HL`,
   `DE`) or an untyped `addr`. Prefer the `@TypeName` declaration form wherever
   the pointer has a fixed type — it removes the cast from every use site.
