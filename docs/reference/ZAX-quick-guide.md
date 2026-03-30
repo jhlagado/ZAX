@@ -110,7 +110,7 @@ Common outputs:
 | `.bin`        | flat binary image                                 |
 | `.hex`        | Intel HEX output                                  |
 | `.lst`        | deterministic byte dump with symbol table         |
-| `.d8dbg.json` | D8 Debug Map for Debug80 and compatible tools     |
+| `.d8.json` | D8 Debug Map for Debug80 and compatible tools     |
 | `.z80`        | ASM80-compatible lowered source (assembler-valid) |
 
 By default, ZAX derives all artifact paths from the primary output path. Use `-o <file>` to set the primary output; `-t hex` or `-t bin` to choose the primary type (default: `hex`). Suppress individual outputs with `--nolist`, `--nobin`, `--nohex`, `--nod8m`. Emit ASM80 output explicitly with `--asm80`.
@@ -2149,7 +2149,7 @@ When writing Intel HEX output:
 
 - Only written bytes appear in output records. Gap addresses are not zero-filled into intermediate records.
 
-The `.lst` file is a deterministic byte dump with an ASCII gutter and symbol table. Sparse unwritten bytes appear as `..` in the hex column. Empty spans are collapsed into `; ... gap $XXXX..$YYYY` markers. For debugger-grade source mapping, use the `.d8dbg.json` (D8M) output.
+The `.lst` file is a deterministic byte dump with an ASCII gutter and symbol table. Sparse unwritten bytes appear as `..` in the hex column. Empty spans are collapsed into `; ... gap $XXXX..$YYYY` markers. For debugger-grade source mapping, use the `.d8.json` (D8M) output.
 
 ### 11.10 A Complete Layout Example
 

@@ -75,7 +75,7 @@ Output files for each compiled source:
 | `.bin`         | Flat binary            |
 | `.lst`         | Byte dump + symbols    |
 | `.asm`         | Lowered instruction trace |
-| `.d8dbg.json`  | Debug80 map            |
+| `.d8.json`     | Debug80 map            |
 
 ```
 zax [options] <entry.zax>

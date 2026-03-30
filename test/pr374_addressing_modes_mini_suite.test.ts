@@ -45,9 +45,9 @@ const miniSuite = [...byteMiniSuite, ...wordMiniSuite];
 
 describe('PR374: addressing mini-suite fixtures stay locked', () => {
   for (const stem of miniSuite) {
-    it(`${stem} matches checked-in d8dbg fixtures`, async () => {
+    it(`${stem} matches checked-in d8 map fixtures`, async () => {
       const entry = join(__dirname, '..', 'test', 'language-tour', `${stem}.zax`);
-      const d8Path = join(__dirname, '..', 'test', 'language-tour', `${stem}.d8dbg.json`);
+      const d8Path = join(__dirname, '..', 'test', 'language-tour', `${stem}.d8.json`);
 
       const expectedD8Text = await readFile(d8Path, 'utf8');
 

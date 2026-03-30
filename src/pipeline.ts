@@ -25,7 +25,7 @@ export interface CompilerOptions {
   emitBin?: boolean;
   /** Emit Intel HEX (`.hex`). */
   emitHex?: boolean;
-  /** Emit D8 Debug Map (`.d8dbg.json`). */
+  /** Emit D8 Debug Map (`.d8.json`). */
   emitD8m?: boolean;
   /** Emit listing (`.lst`). */
   emitListing?: boolean;

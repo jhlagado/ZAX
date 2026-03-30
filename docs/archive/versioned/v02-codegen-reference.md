@@ -18,4 +18,4 @@ This is the minimal, living reference for v0.2 codegen. Everything else for v0.2
 - HL-preserve cases use per-local swap init; HL-return cases use simple init.
 - IX+d word transfers involving HL must shuttle via DE; never emit IX+H/L hidden forms.
 - One synthetic epilogue per framed func; pops preserved regs in reverse, then `ld sp,ix`, `pop ix`, `ret`; all `ret`/`ret cc` rewrite there when cleanup is needed.
-- Language-tour regen must emit only `.asm` + `.d8dbg.json` (guarded by `test/regenerate_language_tour_outputs.test.ts`).
+- Language-tour regen must emit only `.asm` + `.d8.json` (guarded by `test/regenerate_language_tour_outputs.test.ts`).

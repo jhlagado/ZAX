@@ -9,7 +9,7 @@ import { exists, normalizePathForCompare, runCli } from '../helpers/cli.js';
 async function expectNoArtifacts(base: string): Promise<void> {
   expect(await exists(`${base}.hex`)).toBe(false);
   expect(await exists(`${base}.bin`)).toBe(false);
-  expect(await exists(`${base}.d8dbg.json`)).toBe(false);
+  expect(await exists(`${base}.d8.json`)).toBe(false);
   expect(await exists(`${base}.lst`)).toBe(false);
 }
 

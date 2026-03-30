@@ -1704,7 +1704,7 @@ ZAX is a compiler: it may lower a single source line into multiple machine instr
 
 The recommended mapping format is **D8 Debug Map (D8M) v1**, used by Debug80. It is a JSON file whose canonical name is:
 
-- `<artifactBase>.d8dbg.json`
+- `<artifactBase>.d8.json`
 
 At a minimum, a ZAX compiler can populate:
 
@@ -1863,7 +1863,7 @@ ZAX uses a single “primary output path” to derive sibling artifacts.
     - Intel HEX: `artifactBase + ".hex"`
     - Flat binary: `artifactBase + ".bin"`
     - Listing: `artifactBase + ".lst"`
-    - Debug map (D8M v1): `artifactBase + ".d8dbg.json"`
+    - Debug map (D8M v1): `artifactBase + ".d8.json"`
     - ASM80-compatible lowered source: `artifactBase + ".z80"` (opt-in)
 
 Listing note:
@@ -1871,7 +1871,7 @@ Listing note:
 - In v0.1, `.lst` is a deterministic byte dump with an ASCII gutter plus a symbol table (not a full source listing).
 - Sparse/unwritten bytes inside the written range are rendered as `..` in the hex column.
 - Fully empty line spans are collapsed into deterministic `; ... gap $XXXX..$YYYY` markers.
-- Use `.d8dbg.json` (D8M) for debugger-grade source mapping.
+- Use `.d8.json` (D8M) for debugger-grade source mapping.
 - D8M emits sparse contiguous `segments` plus `addressWidth: 16` and `endianness: "little"` metadata.
 - Intel HEX output emits only records for written addresses (sparse gaps are not zero-filled into intermediate records).
 
@@ -1894,7 +1894,7 @@ Keep switches intentionally small:
 - `-n, --nolist` Suppress `.lst`
 - `--nobin` Suppress `.bin`
 - `--nohex` Suppress `.hex`
-- `--nod8m` Suppress `.d8dbg.json`
+- `--nod8m` Suppress `.d8.json`
 - `--asm80` Emit ASM80-compatible lowered source (`.z80`)
 - `-I, --include <dir>` Add import search path (repeatable)
 - `--case-style <mode>` Optional case-style linting for asm keywords/registers
@@ -1924,7 +1924,7 @@ Debug80 expects to find:
 
 - `<artifactBase>.hex`
 - `<artifactBase>.lst` (unless suppressed)
-- `<artifactBase>.d8dbg.json`
+- `<artifactBase>.d8.json`
 
 Co-locating these artifacts via the `--output`/artifactBase rule is the simplest integration strategy.
 

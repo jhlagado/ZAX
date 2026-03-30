@@ -27,7 +27,7 @@ describe('cli artifacts', () => {
 
     expect(await exists(join(work, 'out.hex'))).toBe(true);
     expect(await exists(join(work, 'out.bin'))).toBe(true);
-    expect(await exists(join(work, 'out.d8dbg.json'))).toBe(true);
+    expect(await exists(join(work, 'out.d8.json'))).toBe(true);
     expect(await exists(join(work, 'out.lst'))).toBe(true);
 
     await rm(work, { recursive: true, force: true });
@@ -44,7 +44,7 @@ describe('cli artifacts', () => {
 
     expect(await exists(join(work, 'main.hex'))).toBe(true);
     expect(await exists(join(work, 'main.bin'))).toBe(true);
-    expect(await exists(join(work, 'main.d8dbg.json'))).toBe(true);
+    expect(await exists(join(work, 'main.d8.json'))).toBe(true);
     expect(await exists(join(work, 'main.lst'))).toBe(true);
 
     await rm(work, { recursive: true, force: true });
@@ -59,15 +59,15 @@ describe('cli artifacts', () => {
     const res = await runCli(['-o', outHex, entry]);
     expect(res.code).toBe(0);
 
-    const d8dbgPath = join(work, 'out.d8dbg.json');
-    const d8dbg = JSON.parse(await readFile(d8dbgPath, 'utf8')) as {
+    const d8Path = join(work, 'out.d8.json');
+    const d8Map = JSON.parse(await readFile(d8Path, 'utf8')) as {
       generator?: { entryAddress?: number; entrySymbol?: string };
       symbols?: Array<{ name: string; kind: string; address?: number }>;
     };
-    expect(d8dbg.generator?.entrySymbol).toBe('main');
-    expect(d8dbg.generator?.entryAddress).toBe(0x0100);
+    expect(d8Map.generator?.entrySymbol).toBe('main');
+    expect(d8Map.generator?.entryAddress).toBe(0x0100);
     expect(
-      d8dbg.symbols?.some((s) => s.name === 'main' && s.kind === 'label' && s.address === 0x0100),
+      d8Map.symbols?.some((s) => s.name === 'main' && s.kind === 'label' && s.address === 0x0100),
     ).toBe(true);
 
     await rm(work, { recursive: true, force: true });
@@ -84,7 +84,7 @@ describe('cli artifacts', () => {
 
     expect(await exists(join(work, 'out.hex'))).toBe(true);
     expect(await exists(join(work, 'out.bin'))).toBe(false);
-    expect(await exists(join(work, 'out.d8dbg.json'))).toBe(false);
+    expect(await exists(join(work, 'out.d8.json'))).toBe(false);
     expect(await exists(join(work, 'out.lst'))).toBe(false);
 
     await rm(work, { recursive: true, force: true });
@@ -127,7 +127,7 @@ describe('cli artifacts', () => {
 
     expect(await exists(join(work, 'out.bin'))).toBe(true);
     expect(await exists(join(work, 'out.hex'))).toBe(false);
-    expect(await exists(join(work, 'out.d8dbg.json'))).toBe(false);
+    expect(await exists(join(work, 'out.d8.json'))).toBe(false);
     expect(await exists(join(work, 'out.lst'))).toBe(false);
 
     await rm(work, { recursive: true, force: true });
