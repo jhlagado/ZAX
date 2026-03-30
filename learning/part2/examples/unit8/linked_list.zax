@@ -1,8 +1,8 @@
 ; linked_list.zax
 ;
 ; Source/problem: traverse and sum a singly-linked list.
-; Unit 8 example: addr-linked traversal using direct typed reinterpretation from
-; an addr local.
+; Unit 8 example: list traversal using a typed local that holds a node pointer;
+; field access dereferences through the stored address.
 
 type ListNode
   value: byte
@@ -35,7 +35,7 @@ end
 
 export func list_sum(): HL
   var
-    current_ptr: addr = 0
+    current_ptr: ListNode
     total_value: word = 0
   end
 
@@ -52,14 +52,14 @@ export func list_sum(): HL
       ret
     end
 
-    a := <ListNode>current_ptr.value
+    a := current_ptr.value
     ld e, a
     ld d, 0
     hl := total_value
     add hl, de
     total_value := hl
 
-    current_ptr := <ListNode>current_ptr.next
+    current_ptr := current_ptr.next
 
     ld a, 1
     or a

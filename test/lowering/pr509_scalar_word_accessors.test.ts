@@ -24,6 +24,7 @@ describe('#509 scalar word accessor routing', () => {
       typeExpr.kind === 'TypeName' && (typeExpr.name === 'byte' || typeExpr.name === 'word' || typeExpr.name === 'addr')
         ? typeExpr.name
         : undefined,
+    resolveAggregateType: () => undefined,
   });
 
   const absWord = (): EaResolution => ({
