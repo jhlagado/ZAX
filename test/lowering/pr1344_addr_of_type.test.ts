@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 import { join } from 'node:path';
 
 import { compile } from '../../src/compile.js';
