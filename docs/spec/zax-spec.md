@@ -305,7 +305,7 @@ Types exist for layout/width/intent only. No runtime type checks are emitted.
 
 Notes (v0.1):
 
-- `addr` is untyped. It carries no element-type information. Every dereference through an `addr` value requires an explicit typed reinterpretation at the use site: `<Type>local.field` (Section 7.2.1), unless the pointer is held in a function-local variable declared with a record or union type (Section 8.4): then `.field` applies to the stored address directly. There is no `ptr` keyword in ZAX; use `addr` for raw address-typed storage, or a record/union typed local when you want field access without repeating `<Type>`.
+- `addr` is untyped. It carries no element-type information. Every dereference through an `addr` value requires an explicit typed reinterpretation at the use site: `<Type>local.field` (Section 7.2.1), unless the pointer is declared with a record or union type using the `@TypeName` form (Section 4.1.1): then `.field` applies to the stored address directly. There is no `ptr` keyword in ZAX; use `addr` for raw untyped address storage, or `@TypeName` when the pointer has a known element type.
 - `void` may only appear as a function return type. Using `void` as a variable type, parameter type, record field type, or array element type is a compile error.
 
 Type sizes (v0.1):
@@ -313,10 +313,44 @@ Type sizes (v0.1):
 - `sizeof(byte)` = 1
 - `sizeof(word)` = 2
 - `sizeof(addr)` = 2
+- `sizeof(@T)` = 2 (always addr-sized, regardless of `T`)
 - Composite types use exact semantic sizes.
 - `sizeof(T[n])` = `n * sizeof(T)`
 - `sizeof(record)` = `sum of field sizes`
 - `sizeof(union)` = `max field size`
+
+#### 4.1.1 Typed Pointer Type: `@TypeName`
+
+`@TypeName` is a typed pointer type. It occupies 2 bytes (the same width as
+`addr`) and carries the target record or union type as metadata. It may appear
+in:
+
+- record and union field declarations: `left: @TreeNode`
+- function-local `var` declarations: `var cur: @ListNode`
+- function parameter declarations: `func f(node: @TreeNode, ...)`
+
+**Semantics:**
+
+- A declaration of the form `name: @T` stores a 2-byte address at runtime.
+  The `@T` annotation tells the compiler that the address points to a record
+  or union of type `T`.
+- Field access on a `@T`-typed name (`.field`) dereferences through the stored
+  address automatically. No explicit `<Type>` cast is needed at the use site.
+- Assignment to the bare name (`cur := expr`) stores a new address into the
+  slot. Assignment through a field (`cur.field := expr`) writes through the
+  stored address.
+- A local or parameter declared as `@T` may not have a constant initializer.
+  Assign before use.
+- Self-referential fields (`left: TreeNode` inside `type TreeNode`) are a
+  compile error. Use `left: @TreeNode` to express a typed pointer to the same
+  type.
+- `<Type>base.field` remains valid and is still required when the base is a
+  register (`HL`, `DE`, `BC`, `IX`, `IY`) or an untyped `addr` value.
+
+**Style guidance:** Prefer `@TypeName` over `addr` whenever the pointer has a
+known element type. `field: addr` in a record, or `var p: addr` followed by
+`<T>p.field` at every access site, is a code smell. Use `field: @T` and
+`var p: @T` instead.
 
 ### 4.2 Type Aliases
 
