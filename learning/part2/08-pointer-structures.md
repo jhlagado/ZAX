@@ -300,6 +300,10 @@ questions.
 
 - `type RecordName` / `field: type` / `end` defines a record. Fields have
   explicit types; the compiler tracks offsets.
+- A local declared with a record or union type (`local: RecordName`) holds an
+  addr-sized slot (one pointer word). You can use `.field` without a cast, and
+  you can pass the local name as an `addr` or `word` argument like any other
+  pointer value.
 - `<Type>local.field` applies a type cast at the access site to read or write
   a field through a stored `addr` (or register-sized base). A local declared with
   a record or union type (`local: RecordName`) uses the same slot width and can
