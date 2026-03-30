@@ -120,6 +120,7 @@ Potentially unreferenced fixtures: 209
 | pr1334_record_local_init_negative.zax | 1 |
 | pr1338_typed_local_addr_arg.zax | 1 |
 | pr134_alu_arity_diag_invalid.zax | 1 |
+| pr1340_aggregate_param.zax | 1 |
 | pr135_isa_jr_djnz_invalid.zax | 0 |
 | pr135_isa_jr_djnz.zax | 0 |
 | pr136_bit_indexed_dest_invalid.zax | 1 |
@@ -870,6 +871,7 @@ Excluded from the main fixture inventory (`.keep`, `.gitkeep`).
 | pr1334_record_local_init_negative.zax | test/lowering/pr1334_typed_aggregate_local.test.ts |
 | pr1338_typed_local_addr_arg.zax | test/lowering/pr1338_typed_local_addr_arg_call.test.ts |
 | pr134_alu_arity_diag_invalid.zax | test/pr134_alu_arity_diag.test.ts |
+| pr1340_aggregate_param.zax | test/lowering/pr1340_aggregate_param.test.ts |
 | pr135_isa_jr_djnz_invalid.zax |  |
 | pr135_isa_jr_djnz.zax |  |
 | pr136_bit_indexed_dest_invalid.zax | test/pr136_bit_indexed_dest_invalid.test.ts |
