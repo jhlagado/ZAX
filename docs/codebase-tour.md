@@ -59,7 +59,7 @@ ZAX is a structured assembler for the Z80 processor. It accepts `.zax` source fi
 - **Named sections** with placement anchors, enabling fine-grained memory-map control.
 - **Import system** — modules can split across files.
 
-The compiler turns this into standard Z80 machine code, producing flat binary, Intel HEX, a listing file, a debug-map JSON (`.d8dbg.json`), and optionally a lowered plain-Z80 source file (`.z80`).
+The compiler turns this into standard Z80 machine code, producing flat binary, Intel HEX, a listing file, a debug-map JSON (`.d8.json`), and optionally a lowered plain-Z80 source file (`.z80`).
 
 ---
 
@@ -274,7 +274,7 @@ Compiling a ZAX program happens in a clearly phased pipeline. Before looking at 
          │  EmittedByteMap + SymbolEntry[] + LoweredAsmProgram
          ▼
 ┌─────────────────┐
-│  Format Writers │  Produce .bin, .hex, .d8dbg.json, .lst, .z80
+│  Format Writers │  Produce .bin, .hex, .d8.json, .lst, .z80
 └─────────────────┘
 ```
 
@@ -870,7 +870,7 @@ Writes a flat binary. It finds the lowest and highest addresses in the byte map,
 Produces Intel HEX format. The byte map is split into records of up to 16 bytes each. Each record is a `:LLAAAATT…CC` line with length, address, type, data, and checksum. Terminates with the `:00000001FF` end record.
 
 ### `writeD8m.ts`
-Writes a JSON debug map (`.d8dbg.json`) consumed by the D8 debugger. Contains:
+Writes a JSON debug map (`.d8.json`) consumed by the D8 debugger. Contains:
 - The entry address and entry symbol name (found by looking for `main` or the startup label).
 - The full symbol table, with kinds (`label`, `data`, `var`, `const`, `enum`), addresses, sizes, and source file/line info.
 - Source-segment attribution (which byte ranges correspond to which source lines).
@@ -934,7 +934,7 @@ test/
 
 ### Golden Tests (`language-tour/`)
 
-Each `.zax` file in `language-tour/` has a matching `.d8dbg.json` committed alongside it. The test runner compiles the `.zax` source and compares the output symbol table and entry-point against the golden JSON. These tests exercise the full end-to-end pipeline.
+Each `.zax` file in `language-tour/` has a matching `.d8.json` committed alongside it. The test runner compiles the `.zax` source and compares the output symbol table and entry-point against the golden JSON. These tests exercise the full end-to-end pipeline.
 
 ### PR Regression Tests
 
