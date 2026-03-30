@@ -240,7 +240,16 @@ export function createTypeResolutionHelpers(ctx: TypeResolutionContext) {
     if (ea.kind === 'EaName' && ctx.rawAddressSymbols.has(ea.name.toLowerCase())) return undefined;
     const typeExpr = resolveEaTypeExpr(ea);
     if (!typeExpr) return undefined;
-    return resolveScalarKind(typeExpr);
+    const sk = resolveScalarKind(typeExpr);
+    if (sk) return sk;
+    if (
+      ea.kind === 'EaName' &&
+      ctx.stackSlotTypes.has(ea.name.toLowerCase()) &&
+      resolveAggregateType(typeExpr)
+    ) {
+      return 'addr';
+    }
+    return undefined;
   };
 
   return {

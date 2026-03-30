@@ -305,7 +305,7 @@ Types exist for layout/width/intent only. No runtime type checks are emitted.
 
 Notes (v0.1):
 
-- `addr` is untyped. It carries no element-type information. Every dereference through an `addr` value requires an explicit typed reinterpretation at the use site: `<Type>local.field` (Section 7.2.1). There is no `ptr` keyword in ZAX; use `addr` for all address-typed storage.
+- `addr` is untyped. It carries no element-type information. Every dereference through an `addr` value requires an explicit typed reinterpretation at the use site: `<Type>local.field` (Section 7.2.1), unless the pointer is held in a function-local variable declared with a record or union type (Section 8.4): then `.field` applies to the stored address directly. There is no `ptr` keyword in ZAX; use `addr` for raw address-typed storage, or a record/union typed local when you want field access without repeating `<Type>`.
 - `void` may only appear as a function return type. Using `void` as a variable type, parameter type, record field type, or array element type is a compile error.
 
 Type sizes (v0.1):
@@ -954,6 +954,7 @@ Rules:
 - valid base forms in v1 are:
   - `HL`, `DE`, `BC`, `IX`, `IY`
   - scalar names of type `word` or `addr`
+  - function-local names declared with a record or union type (same slot as `addr`; the cast is optional when accessing `.field` on the bare name)
   - parenthesized base-plus-constant or base-minus-constant forms built from
     those bases
 - invalid base forms in v1 include:
@@ -1170,8 +1171,9 @@ Operand identifier resolution (v0.1):
 - Slot model in current ABI:
   - each argument is one 16-bit slot
   - local scalar storage declarations allocate one 16-bit slot each
-- Local storage allocation in this scope remains scalar-slot based (`byte`, `word`, `addr`, or aliases resolving to those scalar types).
-- Non-scalar locals are permitted only as alias declarations to direct module-scope storage (`name = GlobalStorageName`) and do not allocate frame slots.
+- Local storage allocation in this scope is primarily scalar-slot based (`byte`, `word`, `addr`, or aliases resolving to those scalar types).
+- A function-local `var` may also declare a name with a record or union type: it occupies one 16-bit frame slot that stores an address (the same width as `addr`). Field access on that name (`.field`) dereferences through the stored address; no constant initializer is permitted at declaration. Assignment to the bare name stores a new address; assignment to a field writes through the stored address.
+- Other non-scalar locals (for example array types) are permitted only as alias declarations to direct module-scope storage (`name = GlobalStorageName`) and do not allocate frame slots.
 
 Frame shape:
 
@@ -1673,7 +1675,8 @@ next_char
 - Compilers should emit diagnostics that distinguish typed-call boundary guarantees from raw Z80 `call` behavior.
 - Padding warnings tied to power-of-two semantic layout are retired. Future non-power-of-two cost hints, if added, are advisory lowering diagnostics rather than layout rules.
 - Compilers must emit an error for typed alias forms (`name: Type = rhs`) in function-local `var`.
-- Compilers must emit an error for non-scalar local storage declarations without alias initialization.
+- Compilers must emit an error for non-scalar local storage declarations that are neither a record/union typed pointer slot (Section 8.4) nor a module-scope alias form.
+- Compilers must emit an error when a record- or union-typed local includes a constant initializer.
 
 ## 12. Examples (Non-normative)
 

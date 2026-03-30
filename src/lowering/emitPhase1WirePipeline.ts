@@ -373,6 +373,7 @@ export function wireEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhase1
   } = createScalarWordAccessorHelpers({
     emitStepPipeline,
     resolveScalarKind,
+    resolveAggregateType,
   });
 
   const {

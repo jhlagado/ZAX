@@ -153,6 +153,9 @@ export function createEaResolutionHelpers(ctx: EAResolutionContext) {
           if (scalar === 'word' || scalar === 'addr') {
             return { kind: 'indirect', ixDisp: slotOff, addend: 0 };
           }
+          if (slotType && ctx.resolveAggregateType(slotType)) {
+            return { kind: 'indirect', ixDisp: slotOff, addend: 0 };
+          }
           return { kind: 'invalid', message: reinterpretBaseMessage(expr) };
         }
 
@@ -197,6 +200,14 @@ export function createEaResolutionHelpers(ctx: EAResolutionContext) {
             const slotType = ctx.stackSlotTypes.get(baseLower);
             const scalarKind = slotType ? ctx.resolveScalarKind(slotType) : undefined;
             if (slotType && scalarKind === undefined) {
+              const agg = ctx.resolveAggregateType(slotType);
+              if (agg) {
+                return {
+                  kind: 'stack',
+                  ixDisp: slotOff,
+                  typeExpr: slotType,
+                };
+              }
               return {
                 kind: 'indirect',
                 ixDisp: slotOff,
@@ -252,6 +263,19 @@ export function createEaResolutionHelpers(ctx: EAResolutionContext) {
           const v = ctx.evalImmNoDiag(expr.offset);
           if (v === undefined) return undefined;
           const delta = expr.kind === 'EaAdd' ? v : -v;
+          if (
+            base.kind === 'stack' &&
+            base.typeExpr &&
+            ctx.resolveAggregateType(base.typeExpr)
+          ) {
+            if (delta === 0) return base;
+            return {
+              kind: 'indirect',
+              ixDisp: base.ixDisp,
+              addend: delta,
+              typeExpr: base.typeExpr,
+            };
+          }
           if (base.kind === 'abs') return { ...base, addend: base.addend + delta };
           if (base.kind === 'indirect') return { ...base, addend: base.addend + delta };
           return { ...base, ixDisp: base.ixDisp + delta };
@@ -289,6 +313,18 @@ export function createEaResolutionHelpers(ctx: EAResolutionContext) {
                   kind: 'indirect',
                   ixDisp: base.ixDisp,
                   addend: base.addend + off,
+                  typeExpr: f.typeExpr,
+                };
+              }
+              if (
+                base.kind === 'stack' &&
+                base.typeExpr &&
+                ctx.resolveAggregateType(base.typeExpr)
+              ) {
+                return {
+                  kind: 'indirect',
+                  ixDisp: base.ixDisp,
+                  addend: off,
                   typeExpr: f.typeExpr,
                 };
               }

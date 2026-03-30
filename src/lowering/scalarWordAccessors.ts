@@ -7,16 +7,24 @@ import {
 } from './steps.js';
 import type { SourceSpan, TypeExprNode } from '../frontend/ast.js';
 import type { EaResolution } from './eaResolution.js';
-import type { ScalarKind } from './typeResolution.js';
+import type { AggregateType, ScalarKind } from './typeResolution.js';
 
 type ScalarWordAccessorContext = {
   emitStepPipeline: (pipeline: StepPipeline, span: SourceSpan) => boolean;
   resolveScalarKind: (typeExpr: TypeExprNode) => ScalarKind | undefined;
+  resolveAggregateType: (typeExpr: TypeExprNode) => AggregateType | undefined;
 };
 
 export function createScalarWordAccessorHelpers(ctx: ScalarWordAccessorContext) {
-  const scalarKindOfResolution = (resolved: EaResolution | undefined): ScalarKind | undefined =>
-    resolved?.typeExpr ? ctx.resolveScalarKind(resolved.typeExpr) : undefined;
+  const scalarKindOfResolution = (resolved: EaResolution | undefined): ScalarKind | undefined => {
+    if (!resolved?.typeExpr) return undefined;
+    const sk = ctx.resolveScalarKind(resolved.typeExpr);
+    if (sk) return sk;
+    if (resolved.kind === 'stack' && ctx.resolveAggregateType(resolved.typeExpr)) {
+      return 'addr';
+    }
+    return undefined;
+  };
 
   const isWordCompatibleScalarKind = (
     scalar: ScalarKind | undefined,
