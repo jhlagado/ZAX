@@ -1,8 +1,7 @@
 ; linked_list.zax
 ;
 ; Source/problem: traverse and sum a singly-linked list.
-; Unit 8 example: list traversal using a typed local that holds a node pointer;
-; field access dereferences through the stored address.
+; Unit 8 example: @ListNode typed-pointer field and local; cast-free traversal.
 
 type ListNode
   value: byte

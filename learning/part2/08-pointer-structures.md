@@ -22,14 +22,14 @@ declaration carries the type.
 
 ---
 
-## Typed Reinterpretation: `<Type>local.field`
+## Typed Pointer Fields and Locals
 
-The syntax is `<Type>local.field`, where `local` holds an address and
-`Type` is the record type you want to interpret it as. The compiler resolves
-`field` against `Type`'s declaration and emits the appropriate load or store
-through that address.
+The `@TypeName` form in a field declaration or local variable names the record
+type that the pointer points to. The compiler uses that annotation to resolve
+`.field` access without requiring a cast at every use site.
 
-Consider the `ListNode` record from `linked_list.zax`:
+The `ListNode` record in `linked_list.zax` declares its `next` field as
+`@ListNode`:
 
 ```zax
 type ListNode
@@ -38,22 +38,23 @@ type ListNode
 end
 ```
 
-The `next` field is declared as `@ListNode` — a 2-byte address that points to
-another `ListNode`. Given a local `current_ptr: @ListNode`, you read the value
-and advance with:
+With a local `current_ptr: @ListNode`, the value read and the pointer advance
+are both cast-free:
 
 ```zax
 a := current_ptr.value
 current_ptr := current_ptr.next
 ```
 
-No cast is needed. The compiler knows from the declaration that `current_ptr`
-holds a pointer to a `ListNode`, and that `next` in turn holds a pointer to
-another `ListNode`. These two lines are the core of the traversal. Everything
-else — the null check, the accumulation — is the supporting work around them.
+The compiler knows from the local's declaration that it holds a pointer to a
+`ListNode`, and from the field's declaration that `next` holds a pointer to
+another `ListNode`. These two lines are the core of every linked traversal.
+Everything else — the null check, the accumulation — is the supporting work
+around them.
 
-When the base is a register or an untyped `addr`, the explicit cast form is
-still used: `<ListNode>hl.value` reads the `value` field through HL.
+When the base is a register (`HL`, `DE`, `BC`) or an untyped `addr` variable,
+no declaration carries the type and the explicit cast is still required:
+`<ListNode>hl.value`.
 
 ---
 
@@ -273,26 +274,31 @@ See `learning/part2/examples/unit8/reg_pair.zax`.
 
 ## Typed Pointers: `@TypeName`
 
-Both examples in this chapter use the `@TypeName` form to declare typed pointer
-fields and parameters. A field declared as `@TreeNode` stores a 2-byte address
-and carries the type through to every field access — no cast is needed at the use
-site. The same form works for locals and parameters:
+Pointer-linked traversal needs the type at the declaration, not at the access
+site. Repeating `<TreeNode>` on every field read is noise that obscures the
+algorithm. The `@TypeName` form solves this: declare the pointer with its type
+once, and every `.field` access is cast-free from that point forward.
+
+The same form works in fields, locals, and parameters:
 
 ```zax
-var cur: @ListNode       ; local: addr-sized slot, typed as pointing to ListNode
-func f(node: @TreeNode)  ; parameter: addr-sized slot, typed as pointing to TreeNode
+type TreeNode
+  left:  @TreeNode       ; field: 2-byte pointer, carries TreeNode type
+  right: @TreeNode
+end
+var cur: @ListNode        ; local: addr-sized slot, typed as pointing to ListNode
+func f(node: @TreeNode)   ; parameter: addr-sized slot, typed as pointing to TreeNode
 ```
 
-Declare the pointer once with its type; use `.field` everywhere without repeating
-the cast. Reserve `<Type>base.field` for the cases where the base is a register
-(`HL`, `DE`, `BC`) or an untyped `addr` value — situations where no declaration
-carries the type.
+Reserve `<Type>base.field` for the cases where the base is a register (`HL`,
+`DE`, `BC`) or an untyped `addr` value — situations where no declaration carries
+the type and the cast is the only way to name it.
 
-One limitation remains: `next: @ListNode` declares that `next` holds a pointer
-to a `ListNode`, but `addr` itself carries no element type. Chaining through
-multiple hops in a single expression — `a.b.c` where each step follows a pointer
-— is not yet supported. Each hop needs its own intermediate assignment to HL.
-Chapter 09 records this alongside other open design questions.
+One limitation remains: chaining through multiple pointer hops in a single
+expression — `a.b.c` where each step loads through a pointer — is not yet
+supported. Each hop needs its own intermediate assignment to HL before the next
+field can be accessed. Chapter 09 records this alongside other open design
+questions.
 
 ---
 
