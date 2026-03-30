@@ -17,7 +17,7 @@ import type { OpStackPolicyMode } from '../pipeline.js';
 import type { Callable, ResolvedArrayType, SourceSegmentTag } from './loweringTypes.js';
 import type { OpOverloadSelection } from './opMatching.js';
 import type { OpStackSummary } from './opStackAnalysis.js';
-import type { ScalarKind } from './typeResolution.js';
+import type { AggregateType, ScalarKind } from './typeResolution.js';
 import type { FlowState, OpExpansionFrame } from './functionBodySetup.js';
 import { createAsmRangeLoweringHelpers } from './asmRangeLowering.js';
 import { createOpExpansionOrchestrationHelpers } from './opExpansionOrchestration.js';
@@ -75,6 +75,7 @@ type FunctionCallLoweringHelpersContext = {
   env: CompileEnv;
   evalImmExpr: (expr: ImmExprNode, env: CompileEnv, diagnostics: Diagnostic[]) => number | undefined;
   resolveScalarKind: (typeExpr: TypeExprNode) => ScalarKind | undefined;
+  resolveAggregateType: (typeExpr: TypeExprNode) => AggregateType | undefined;
   reg8: Set<string>;
   reg16: Set<string>;
   emitInstr: (head: string, operands: AsmOperandNode[], span: SourceSpan) => boolean;
@@ -275,7 +276,9 @@ export function createFunctionCallLoweringHelpers(ctx: FunctionCallLoweringHelpe
         for (let ai = args.length - 1; ai >= 0; ai--) {
           const arg = args[ai]!;
           const param = params[ai]!;
-          const scalarKind = ctx.resolveScalarKind(param.typeExpr);
+          const scalarKind =
+            ctx.resolveScalarKind(param.typeExpr) ??
+            (ctx.resolveAggregateType(param.typeExpr) ? 'addr' : undefined);
           if (!scalarKind) {
             const argType = typeForArg(arg);
             if (!argType) {
