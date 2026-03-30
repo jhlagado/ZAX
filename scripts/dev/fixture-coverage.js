@@ -35,7 +35,7 @@ const FIXTURE_EXTENSIONS = new Set([
   '.bin',
   '.hex',
   '.json',
-  '.d8dbg.json',
+  '.d8.json',
   '.lst',
   '.asm80',
   '.z80',

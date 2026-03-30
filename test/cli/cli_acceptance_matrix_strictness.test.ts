@@ -18,7 +18,7 @@ function artifactPath(base: string, kind: ArtifactKind): string {
     case 'hex':
       return `${base}.hex`;
     case 'd8m':
-      return `${base}.d8dbg.json`;
+      return `${base}.d8.json`;
     case 'lst':
       return `${base}.lst`;
   }

@@ -43,7 +43,7 @@ function usage(): string {
     '  -n, --nolist          Suppress .lst',
     '      --nobin           Suppress .bin',
     '      --nohex           Suppress .hex',
-    '      --nod8m           Suppress .d8dbg.json',
+    '      --nod8m           Suppress .d8.json',
     '      --asm80           Emit assembler-valid lowered source (.z80)',
     '      --case-style <m>  Case-style lint mode: off|upper|lower|consistent',
     '      --op-stack-policy <m> Op stack-policy mode: off|warn|error',
@@ -299,7 +299,7 @@ async function writeArtifacts(
 
   const hexPath = `${base}.hex`;
   const binPath = `${base}.bin`;
-  const d8mPath = `${base}.d8dbg.json`;
+  const d8mPath = `${base}.d8.json`;
   const lstPath = `${base}.lst`;
   const asm80Path = `${base}.z80`;
 

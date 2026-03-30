@@ -9,7 +9,7 @@ live codebase.
 ## 1. What ZAX Is
 
 ZAX is a structured assembler for Z80-family targets. It compiles `.zax` source files directly
-to binary output (`.bin`, Intel HEX `.hex`, D8 debug map `.d8dbg.json`, listing `.lst`, and
+to binary output (`.bin`, Intel HEX `.hex`, D8 debug map `.d8.json`, listing `.lst`, and
 ASM80 lowered output `.z80`). There is no external linker. The compiler
 is a single-pass whole-program tool
 written in TypeScript and runs on Node.js ≥ 20.
@@ -37,7 +37,7 @@ src/
     index.ts              Format writer factory
     writeAsm80.ts         ASM80 lowered source writer (.z80)
     writeBin.ts           Binary writer (.bin)
-    writeD8m.ts           D8 debug map writer (.d8dbg.json)
+    writeD8m.ts           D8 debug map writer (.d8.json)
     writeHex.ts           Intel HEX writer (.hex)
     writeListing.ts       Listing writer (.lst)
     range.ts              Byte-range utilities
@@ -157,7 +157,7 @@ compile(entryFile, options, deps)           [compile.ts]
   └─ format writers                         [formats/*.ts via compile PipelineDeps]
        ├─ writeBin → .bin
        ├─ writeHex → .hex
-       ├─ writeD8m → .d8dbg.json
+       ├─ writeD8m → .d8.json
        ├─ writeListing → .lst
        └─ writeAsm80 → .z80
 ```
@@ -178,7 +178,7 @@ pin the right seam and refactors do not blur responsibilities.
   contracts. Emit-time work is further staged via `emitPipeline.ts` (prescan → lowering →
   placement and artifacts) so tests and refactors can target the right seam within lowering.
 - **Format writers**: serialize already-lowered artifacts. Writers may change representation
-  (`.bin`, `.hex`, `.lst`, `.d8dbg.json`, `.z80`) but should not change compilation semantics.
+  (`.bin`, `.hex`, `.lst`, `.d8.json`, `.z80`) but should not change compilation semantics.
 - **CLI wiring**: selects inputs, options, and requested output artifacts. The CLI should not add
   language behavior that differs from direct `compile(...)` use.
 

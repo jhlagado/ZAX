@@ -22,7 +22,7 @@ describe('PR284: entry contract requires main and emits D8 metadata', () => {
     expect(res.artifacts).toEqual([]);
   });
 
-  it('emits generator entry metadata in d8dbg when main exists', async () => {
+  it('emits generator entry metadata in d8 map when main exists', async () => {
     const entry = join(__dirname, '..', 'fixtures', 'pr1_minimal.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expectNoErrors(res.diagnostics);
