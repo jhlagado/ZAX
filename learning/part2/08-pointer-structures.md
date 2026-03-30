@@ -11,13 +11,14 @@ node to the next, you must follow a stored address — a pointer — rather than
 increment an index. That act of following a pointer is the defining operation
 in this chapter.
 
-To follow a pointer to a named field you can either **declare the local with the
-record type** (`current_ptr: ListNode`) or hold an untyped `addr` and use **typed
-reinterpretation** (`<ListNode>current_ptr.field`) at each field access. The first
-form keeps the traversal readable: the slot still stores a 16-bit address, but
-the compiler knows which record layout to use for `.value` and `.next`. The
-second form is the general case when the pointer lives in an `addr` variable or
-register-sized path.
+ZAX has two ways to express a typed pointer. A field declared as `@TreeNode`
+stores a 2-byte address and tells the compiler which record layout to use when
+you access `.value`, `.left`, or `.right` — no cast required at the use site. A
+local or parameter declared the same way (`cur: @ListNode`, `node: @TreeNode`)
+works identically: the slot holds an address, and `.field` dereferences through
+it automatically. The explicit cast form `<Type>base.field` remains available
+when the base is a register (`HL`, `DE`) or an untyped `addr` — cases where no
+declaration carries the type.
 
 ---
 
@@ -33,33 +34,26 @@ Consider the `ListNode` record from `linked_list.zax`:
 ```zax
 type ListNode
   value: byte
-  next: addr
+  next:  @ListNode
 end
 ```
 
-Each node has a one-byte value and a two-byte address pointing to the next node.
-With an **addr** local, you read the value with:
-
-```zax
-a := <ListNode>current_ptr.value
-```
-
-And you advance to the next node with:
-
-```zax
-current_ptr := <ListNode>current_ptr.next
-```
-
-With a **typed** local `current_ptr: ListNode` (no initializer), the same
-operations are written without the cast:
+The `next` field is declared as `@ListNode` — a 2-byte address that points to
+another `ListNode`. Given a local `current_ptr: @ListNode`, you read the value
+and advance with:
 
 ```zax
 a := current_ptr.value
 current_ptr := current_ptr.next
 ```
 
-These lines are the core of the traversal. Everything else — the null check,
-the accumulation — is the supporting work around them.
+No cast is needed. The compiler knows from the declaration that `current_ptr`
+holds a pointer to a `ListNode`, and that `next` in turn holds a pointer to
+another `ListNode`. These two lines are the core of the traversal. Everything
+else — the null check, the accumulation — is the supporting work around them.
+
+When the base is a register or an untyped `addr`, the explicit cast form is
+still used: `<ListNode>hl.value` reads the `value` field through HL.
 
 ---
 
@@ -142,21 +136,22 @@ target value. The node record is:
 ```zax
 type TreeNode
   value: byte
-  left: addr
-  right: addr
+  left:  @TreeNode
+  right: @TreeNode
 end
 ```
 
-Each node has a value and two child addresses. The search function
-`bst_contains` is recursive. It takes a node address and a target value, and
-returns 1 in HL if the target is in the subtree rooted at that node, 0
-otherwise.
+Each node has a value and two child pointers. The `left` and `right` fields are
+declared as `@TreeNode` — each stores a 2-byte address pointing to another
+`TreeNode`, or zero for a missing child. The search function `bst_contains` is
+recursive. It takes a typed node pointer and a target value, and returns 1 in HL
+if the target is in the subtree rooted at that node, 0 otherwise.
 
 The null check is the base case — if the address is zero, the target is not
 present:
 
 ```zax
-func bst_contains(node_ptr: addr, target_value: byte): HL
+func bst_contains(node_ptr: @TreeNode, target_value: byte): HL
   hl := node_ptr
   ld a, h
   or l
@@ -172,7 +167,7 @@ After the null check, the value at the current node is read and compared to
 the target:
 
 ```zax
-  a := <TreeNode>node_ptr.value
+  a := node_ptr.value
   b := target_value
   cp b
   if Z
@@ -180,12 +175,12 @@ the target:
     ret
   end
   if C
-    hl := <TreeNode>node_ptr.right
+    hl := node_ptr.right
     bst_contains hl, target_value
     ret
   end
 
-  hl := <TreeNode>node_ptr.left
+  hl := node_ptr.left
   bst_contains hl, target_value
 ```
 
@@ -197,10 +192,11 @@ node's value is less than the target, meaning the target must be in the right
 subtree. If neither condition holds (A > B), the search continues into the left
 subtree.
 
-The child address is retrieved with `<TreeNode>node_ptr.right` or `<TreeNode>
-node_ptr.left`, loaded into HL, and then passed directly as the first argument
-to the recursive call. Each recursive invocation handles its own null check, so
-the pattern is uniform at every level of the tree.
+The child pointer is retrieved with `node_ptr.right` or `node_ptr.left`.
+Because `node_ptr` is declared as `@TreeNode`, the compiler dereferences through
+the stored address automatically. The result is loaded into HL and passed
+directly as the first argument to the recursive call. Each recursive invocation
+handles its own null check, so the pattern is uniform at every level of the tree.
 
 Compare this with the linked list traversal: the list uses a `while` loop
 because the structure is linear — there is always at most one next step. The
@@ -275,24 +271,28 @@ See `learning/part2/examples/unit8/reg_pair.zax`.
 
 ---
 
-## The Verbosity of Pointer Traversal
+## Typed Pointers: `@TypeName`
 
-The linked list example uses a **typed local** (`current_ptr: ListNode`) so field
-access does not repeat `<ListNode>` on every line. The tree example (`bst.zax`)
-still uses an `addr` local and typed reinterpretation at each hop, because
-that program was written in the older style:
+Both examples in this chapter use the `@TypeName` form to declare typed pointer
+fields and parameters. A field declared as `@TreeNode` stores a 2-byte address
+and carries the type through to every field access — no cast is needed at the use
+site. The same form works for locals and parameters:
 
 ```zax
-current_ptr := <TreeNode>current_ptr.next
+var cur: @ListNode       ; local: addr-sized slot, typed as pointing to ListNode
+func f(node: @TreeNode)  ; parameter: addr-sized slot, typed as pointing to TreeNode
 ```
 
-When the pointer is held in an `addr` variable, `next: addr` carries no record
-type: the cast names which layout `next` points to.
+Declare the pointer once with its type; use `.field` everywhere without repeating
+the cast. Reserve `<Type>base.field` for the cases where the base is a register
+(`HL`, `DE`, `BC`) or an untyped `addr` value — situations where no declaration
+carries the type.
 
-For a structure with several pointer hops, each step still needs a load and a
-field path. The language does not fold a multi-hop `a.b.c` through pointers into
-one expression. Chapter 09 records remaining gaps alongside other design
-questions.
+One limitation remains: `next: @ListNode` declares that `next` holds a pointer
+to a `ListNode`, but `addr` itself carries no element type. Chaining through
+multiple hops in a single expression — `a.b.c` where each step follows a pointer
+— is not yet supported. Each hop needs its own intermediate assignment to HL.
+Chapter 09 records this alongside other open design questions.
 
 ---
 
@@ -300,14 +300,13 @@ questions.
 
 - `type RecordName` / `field: type` / `end` defines a record. Fields have
   explicit types; the compiler tracks offsets.
-- A local declared with a record or union type (`local: RecordName`) holds an
-  addr-sized slot (one pointer word). You can use `.field` without a cast, and
-  you can pass the local name as an `addr` or `word` argument like any other
-  pointer value.
-- `<Type>local.field` applies a type cast at the access site to read or write
-  a field through a stored `addr` (or register-sized base). A local declared with
-  a record or union type (`local: RecordName`) uses the same slot width and can
-  use `.field` without the cast.
+- A field declared as `@TypeName` stores a 2-byte address and carries the type:
+  `left: @TreeNode` means "a pointer to a TreeNode." Field access on that field
+  dereferences through the stored address automatically. The same form works for
+  locals (`var cur: @ListNode`) and parameters (`func f(node: @TreeNode)`).
+- `<Type>base.field` casts at the access site when the base is a register (`HL`,
+  `DE`) or an untyped `addr`. Prefer the `@TypeName` declaration form wherever
+  the pointer has a fixed type — it removes the cast from every use site.
 - The null sentinel is stored address zero. The test is `ld a, h` / `or l` /
   `if Z` — the same `or` trick used throughout the course to test a 16-bit
   value for zero without a compare.

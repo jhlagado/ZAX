@@ -6,7 +6,7 @@
 
 type ListNode
   value: byte
-  next: addr
+  next:  @ListNode
 end
 
 section data vars at $8000
@@ -35,7 +35,7 @@ end
 
 export func list_sum(): HL
   var
-    current_ptr: ListNode
+    current_ptr: @ListNode
     total_value: word = 0
   end
 
