@@ -566,6 +566,7 @@ export function prepareFunctionBodyLoweringPhase(ctx: BodyContext): FunctionBody
     env: fp.types.env,
     evalImmExpr: fp.types.evalImmExpr,
     resolveScalarKind: fp.types.resolveScalarKind,
+    resolveAggregateType: fp.types.resolveAggregateType,
     reg8: fp.registers.reg8,
     reg16: fp.registers.reg16,
     emitInstr,
