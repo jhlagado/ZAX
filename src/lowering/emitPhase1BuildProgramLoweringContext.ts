@@ -147,6 +147,7 @@ export function buildEmitProgramLoweringContext(
       env: ctx.env,
       resolveScalarBinding,
       resolveScalarKind,
+      resolveAggregateType,
       resolveEaTypeExpr,
       resolveScalarTypeForEa,
       resolveScalarTypeForLd,

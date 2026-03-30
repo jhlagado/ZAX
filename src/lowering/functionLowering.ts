@@ -16,7 +16,7 @@ import type { Callable, PendingSymbol, ResolvedArrayType, SourceSegmentTag } fro
 import type { OpOverloadSelection } from './opMatching.js';
 import type { OpStackSummary } from './opStackAnalysis.js';
 import type { EaResolution } from './eaResolution.js';
-import type { ScalarKind } from './typeResolution.js';
+import type { AggregateType, ScalarKind } from './typeResolution.js';
 import {
   finalizeFunctionLoweringPhase,
   prepareFunctionBodyLoweringPhase,
@@ -152,6 +152,8 @@ export type FunctionLoweringTypeContext = {
   readonly resolveScalarBinding: (name: string) => ScalarKind | undefined;
   /** Set by: emit/context construction. Used by: asm rewriting, frame setup, call lowering. */
   readonly resolveScalarKind: (typeExpr: TypeExprNode) => ScalarKind | undefined;
+  /** Set by: emit/context construction. Used by: frame setup (typed pointer locals). */
+  readonly resolveAggregateType: (typeExpr: TypeExprNode) => AggregateType | undefined;
   /** Set by: emit/context construction. Used by: frame setup and call lowering. */
   readonly resolveEaTypeExpr: (ea: EaExprNode) => TypeExprNode | undefined;
   /** Set by: emit/context construction. Used by: call lowering. */

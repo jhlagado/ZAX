@@ -10,7 +10,7 @@ import type {
 import type { CompileEnv } from '../semantics/env.js';
 import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
 import type { PendingSymbol, SourceSegmentTag } from './loweringTypes.js';
-import type { ScalarKind } from './typeResolution.js';
+import type { AggregateType, ScalarKind } from './typeResolution.js';
 
 type LocalInitializerNameStatus = 'constant' | 'non-constant' | 'unknown';
 
@@ -43,6 +43,7 @@ export type FunctionFrameSetupTypingContext = {
   readonly env: CompileEnv;
   readonly resolveScalarBinding: (name: string) => ScalarKind | undefined;
   readonly resolveScalarKind: (typeExpr: TypeExprNode) => ScalarKind | undefined;
+  readonly resolveAggregateType: (typeExpr: TypeExprNode) => AggregateType | undefined;
   readonly resolveEaTypeExpr: (ea: EaExprNode) => TypeExprNode | undefined;
   readonly evalImmExpr: (
     expr: ImmExprNode,
@@ -162,7 +163,7 @@ export function initializeFunctionFrame(ctx: FunctionFrameSetupContext): Functio
     diag,
     diagAt,
   } = ctx;
-  const { env, resolveScalarBinding, resolveScalarKind, resolveEaTypeExpr, evalImmExpr } =
+  const { env, resolveScalarBinding, resolveScalarKind, resolveAggregateType, resolveEaTypeExpr, evalImmExpr } =
     ctx.typing;
   const { stackSlotOffsets, stackSlotTypes, localAliasTargets, storageTypes, moduleAliasTargets } =
     ctx.storage;
@@ -201,25 +202,41 @@ export function initializeFunctionFrame(ctx: FunctionFrameSetupContext): Functio
     const declLower = decl.name.toLowerCase();
     if (decl.form === 'typed') {
       const scalarKind = resolveScalarKind(decl.typeExpr);
-      if (!scalarKind) {
-        diagAt(
-          diagnostics,
-          decl.span,
-          `Non-scalar local storage declaration "${decl.name}" requires alias form ("${decl.name} = rhs").`,
-        );
+      if (scalarKind) {
+        const localIxDisp = -(2 * (localSlotCount + 1));
+        stackSlotOffsets.set(declLower, localIxDisp);
+        stackSlotTypes.set(declLower, decl.typeExpr);
+        localSlotCount++;
+        const init = decl.initializer;
+        localScalarInitializers.push({
+          name: decl.name,
+          ...(init ? { expr: init.expr } : {}),
+          span: decl.span,
+          scalarKind,
+        });
         continue;
       }
-      const localIxDisp = -(2 * (localSlotCount + 1));
-      stackSlotOffsets.set(declLower, localIxDisp);
-      stackSlotTypes.set(declLower, decl.typeExpr);
-      localSlotCount++;
-      const init = decl.initializer;
-      localScalarInitializers.push({
-        name: decl.name,
-        ...(init ? { expr: init.expr } : {}),
-        span: decl.span,
-        scalarKind,
-      });
+      const aggregate = resolveAggregateType(decl.typeExpr);
+      if (aggregate) {
+        if (decl.initializer !== undefined) {
+          diagAt(
+            diagnostics,
+            decl.span,
+            `Local "${decl.name}" of record or union type cannot have a constant initializer; assign after declaration.`,
+          );
+          continue;
+        }
+        const localIxDisp = -(2 * (localSlotCount + 1));
+        stackSlotOffsets.set(declLower, localIxDisp);
+        stackSlotTypes.set(declLower, decl.typeExpr);
+        localSlotCount++;
+        continue;
+      }
+      diagAt(
+        diagnostics,
+        decl.span,
+        `Non-scalar local storage declaration "${decl.name}" requires alias form ("${decl.name} = rhs").`,
+      );
       continue;
     }
 

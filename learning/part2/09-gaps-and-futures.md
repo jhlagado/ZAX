@@ -125,11 +125,11 @@ course. It is now implemented. The course examples use it.
   No structured alternative exists yet; the gap is recorded and the design is
   open.
 
-- _Typed dereference annotation._ `linked_list.zax` and `bst.zax` both require
-  `<Type>local.field` at every traversal step. The `addr` type carries no type
-  information. Every dereference must repeat the type annotation at the use site.
-  The design is not settled. See `docs/design/` for live design work as it
-  progresses.
+- _Typed dereference annotation._ `bst.zax` still uses `<Type>local.field` at
+  each traversal step when the cursor is an `addr` local. The linked list
+  example uses a record-typed local (`current_ptr: ListNode`) so field access
+  does not repeat the cast; `addr` itself still carries no type information.
+  General ergonomics for pointer-heavy code remain an open design area.
 
 - _Software-stack storage verbosity._ `rpn_calculator.zax` requires storing
   every `pop_word` result into a local immediately to survive the next
