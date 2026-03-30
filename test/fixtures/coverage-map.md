@@ -11,9 +11,9 @@
 
 **Include/import graph cycles detected** (see section below).
 
-Total fixture files (excludes sentinels): 519
+Total fixture files (excludes sentinels): 522
 Sentinel files: 1
-Reachable from tests (direct refs ∪ fixture closure): 310
+Reachable from tests (direct refs ∪ fixture closure): 313
 Potentially unreferenced fixtures: 209
 
 ## Direct test reference counts
@@ -121,6 +121,8 @@ Potentially unreferenced fixtures: 209
 | pr1338_typed_local_addr_arg.zax | 1 |
 | pr134_alu_arity_diag_invalid.zax | 1 |
 | pr1340_aggregate_param.zax | 1 |
+| pr1344_addr_of_type_positive.zax | 1 |
+| pr1344_self_ref_requires_addr.zax | 1 |
 | pr135_isa_jr_djnz_invalid.zax | 0 |
 | pr135_isa_jr_djnz.zax | 0 |
 | pr136_bit_indexed_dest_invalid.zax | 1 |
@@ -872,6 +874,8 @@ Excluded from the main fixture inventory (`.keep`, `.gitkeep`).
 | pr1338_typed_local_addr_arg.zax | test/lowering/pr1338_typed_local_addr_arg_call.test.ts |
 | pr134_alu_arity_diag_invalid.zax | test/pr134_alu_arity_diag.test.ts |
 | pr1340_aggregate_param.zax | test/lowering/pr1340_aggregate_param.test.ts |
+| pr1344_addr_of_type_positive.zax | test/lowering/pr1344_addr_of_type.test.ts |
+| pr1344_self_ref_requires_addr.zax | test/lowering/pr1344_addr_of_type.test.ts |
 | pr135_isa_jr_djnz_invalid.zax |  |
 | pr135_isa_jr_djnz.zax |  |
 | pr136_bit_indexed_dest_invalid.zax | test/pr136_bit_indexed_dest_invalid.test.ts |

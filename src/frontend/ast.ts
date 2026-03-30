@@ -433,6 +433,7 @@ export type AsmOperandNode =
  */
 export type TypeExprNode =
   | { kind: 'TypeName'; span: SourceSpan; name: string }
+  | { kind: 'AddrOfType'; span: SourceSpan; target: TypeExprNode }
   | { kind: 'ArrayType'; span: SourceSpan; element: TypeExprNode; length?: number }
   | { kind: 'RecordType'; span: SourceSpan; fields: RecordFieldNode[] };
 

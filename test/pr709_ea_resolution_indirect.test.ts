@@ -83,6 +83,7 @@ function makeHelpers() {
         if (typeExpr.kind === 'RecordType') return { kind: 'record', fields: typeExpr.fields };
         return undefined;
       },
+      resolvePointedToType: () => undefined,
       resolveEaTypeExpr: () => undefined,
     }),
   );

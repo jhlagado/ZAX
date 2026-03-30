@@ -131,6 +131,7 @@ export type EmitPhase1WireResult = {
   materializeEaAddressToHL: ReturnType<typeof createEaMaterializationHelpers>['materializeEaAddressToHL'];
   lowerLdWithEa: ReturnType<typeof createLdLoweringHelpers>['lowerLdWithEa'];
   resolveAggregateType: ReturnType<typeof createTypeResolutionHelpers>['resolveAggregateType'];
+  resolvePointedToType: ReturnType<typeof createTypeResolutionHelpers>['resolvePointedToType'];
   resolveScalarBinding: ReturnType<typeof createTypeResolutionHelpers>['resolveScalarBinding'];
   resolveScalarKind: ReturnType<typeof createTypeResolutionHelpers>['resolveScalarKind'];
   resolveEaTypeExpr: ReturnType<typeof createTypeResolutionHelpers>['resolveEaTypeExpr'];
@@ -150,6 +151,7 @@ export function wireEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhase1
 
   const {
     resolveAggregateType,
+    resolvePointedToType,
     resolveArrayType,
     resolveEaTypeExpr,
     resolveScalarBinding,
@@ -311,6 +313,7 @@ export function wireEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhase1
       },
       resolveScalarKind,
       resolveAggregateType,
+      resolvePointedToType,
       resolveEaTypeExpr,
       evalImmNoDiag,
     }),
@@ -537,6 +540,7 @@ export function wireEmitPhase1Helpers(ctx: EmitPhase1HelpersContext): EmitPhase1
     materializeEaAddressToHL,
     lowerLdWithEa,
     resolveAggregateType,
+    resolvePointedToType,
     resolveScalarBinding,
     resolveScalarKind,
     resolveEaTypeExpr,

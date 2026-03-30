@@ -54,6 +54,8 @@ export function parseRecordFieldDecl(
   line: RecordFieldLine,
   fieldNamesLower: Set<string>,
   ctx: RecordFieldValidationContext,
+  /** When set, a bare field type equal to this name (recursive record/union) is rejected in favor of `@Name`. */
+  declaringTypeName?: string,
 ): RecordFieldNode | undefined {
   const { file, diagnostics, modulePath, isReservedTopLevelName } = ctx;
   const { startOffset, endOffset, lineNo, filePath } = line;
@@ -124,6 +126,20 @@ export function parseRecordFieldDecl(
     return undefined;
   }
 
+  if (
+    declaringTypeName !== undefined &&
+    typeExpr.kind === 'TypeName' &&
+    typeExpr.name.toLowerCase() === declaringTypeName.toLowerCase()
+  ) {
+    diag(
+      diagnostics,
+      filePath,
+      `Self-referential field type "${typeExpr.name}" requires a typed pointer; use @${typeExpr.name}.`,
+      { line: lineNo, column: 1 },
+    );
+    return undefined;
+  }
+
   fieldNamesLower.add(fieldNameLower);
   return {
     kind: 'RecordField',
@@ -138,6 +154,7 @@ function parseRecordFields(
   allowFuncKeywordStart: boolean,
   startIndex: number,
   ctx: RecordFieldBlockContext,
+  declarationName: string,
 ): ParsedRecordFields {
   const { file, lineCount, diagnostics, modulePath, getRawLine, isReservedTopLevelName } = ctx;
   const fields: RecordFieldNode[] = [];
@@ -188,12 +205,19 @@ function parseRecordFields(
       }
     }
 
-    const field = parseRecordFieldDecl(fieldKind, fieldText, fieldLine, fieldNamesLower, {
-      file,
-      diagnostics,
-      modulePath,
-      isReservedTopLevelName,
-    });
+    const field = parseRecordFieldDecl(
+      fieldKind,
+      fieldText,
+      fieldLine,
+      fieldNamesLower,
+      {
+        file,
+        diagnostics,
+        modulePath,
+        isReservedTopLevelName,
+      },
+      declarationName,
+    );
     if (field) fields.push(field);
     index++;
   }
@@ -228,7 +252,7 @@ export function parseRecordFieldBlock(params: {
     ctx,
   } = params;
   const { file, diagnostics, modulePath } = ctx;
-  const parsed = parseRecordFields(fieldKind, allowFuncKeywordStart, startIndex, ctx);
+  const parsed = parseRecordFields(fieldKind, allowFuncKeywordStart, startIndex, ctx, declarationName);
 
   if (!parsed.terminated) {
     if (
