@@ -1,13 +1,13 @@
 ; bst.zax
 ;
-; Source/problem: search a binary search tree using addr-linked records.
-; Unit 8 example: recursive traversal using direct typed reinterpretation from
-; an addr parameter.
+; Source/problem: search a binary search tree using typed-pointer records.
+; Unit 8 example: recursive traversal using @TypeName fields and a typed
+; parameter — no explicit casts at field access sites.
 
 type TreeNode
   value: byte
-  left: addr
-  right: addr
+  left:  @TreeNode
+  right: @TreeNode
 end
 
 section data vars at $8000
@@ -47,7 +47,7 @@ func init_tree()
   tree_root := @root_node
 end
 
-func bst_contains(node_ptr: addr, target_value: byte): HL
+func bst_contains(node_ptr: @TreeNode, target_value: byte): HL
   hl := node_ptr
   ld a, h
   or l
@@ -56,7 +56,7 @@ func bst_contains(node_ptr: addr, target_value: byte): HL
     ret
   end
 
-  a := <TreeNode>node_ptr.value
+  a := node_ptr.value
   b := target_value
   cp b
   if Z
@@ -64,12 +64,12 @@ func bst_contains(node_ptr: addr, target_value: byte): HL
     ret
   end
   if C
-    hl := <TreeNode>node_ptr.right
+    hl := node_ptr.right
     bst_contains hl, target_value
     ret
   end
 
-  hl := <TreeNode>node_ptr.left
+  hl := node_ptr.left
   bst_contains hl, target_value
 end
 
