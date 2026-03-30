@@ -11,9 +11,9 @@
 
 **Include/import graph cycles detected** (see section below).
 
-Total fixture files (excludes sentinels): 518
+Total fixture files (excludes sentinels): 519
 Sentinel files: 1
-Reachable from tests (direct refs ∪ fixture closure): 309
+Reachable from tests (direct refs ∪ fixture closure): 310
 Potentially unreferenced fixtures: 209
 
 ## Direct test reference counts
@@ -118,6 +118,7 @@ Potentially unreferenced fixtures: 209
 | pr132_control_flow_arity_invalid.zax | 1 |
 | pr133_arity_diag_matrix_invalid.zax | 1 |
 | pr1334_record_local_init_negative.zax | 1 |
+| pr1338_typed_local_addr_arg.zax | 1 |
 | pr134_alu_arity_diag_invalid.zax | 1 |
 | pr135_isa_jr_djnz_invalid.zax | 0 |
 | pr135_isa_jr_djnz.zax | 0 |
@@ -867,6 +868,7 @@ Excluded from the main fixture inventory (`.keep`, `.gitkeep`).
 | pr132_control_flow_arity_invalid.zax | test/pr132_control_flow_arity_diag.test.ts |
 | pr133_arity_diag_matrix_invalid.zax | test/pr133_arity_diag_matrix.test.ts |
 | pr1334_record_local_init_negative.zax | test/lowering/pr1334_typed_aggregate_local.test.ts |
+| pr1338_typed_local_addr_arg.zax | test/lowering/pr1338_typed_local_addr_arg_call.test.ts |
 | pr134_alu_arity_diag_invalid.zax | test/pr134_alu_arity_diag.test.ts |
 | pr135_isa_jr_djnz_invalid.zax |  |
 | pr135_isa_jr_djnz.zax |  |
