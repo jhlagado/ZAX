@@ -26,6 +26,8 @@ type D8mSegment = {
   start: number;
   end: number;
   lstLine: number;
+  /** 1-based `.zax` source line when known; omitted for synthetic / unknown-line segments. */
+  line?: number;
   kind: 'code' | 'data' | 'directive' | 'label' | 'macro' | 'unknown';
   confidence: 'high' | 'medium' | 'low';
 };
@@ -138,6 +140,9 @@ function compareD8mSegments(a: D8mSegment, b: D8mSegment): number {
   if (a.start !== b.start) return a.start - b.start;
   if (a.end !== b.end) return a.end - b.end;
   if (a.lstLine !== b.lstLine) return a.lstLine - b.lstLine;
+  const aLine = a.line ?? 0;
+  const bLine = b.line ?? 0;
+  if (aLine !== bLine) return aLine - bLine;
   const kindCmp = a.kind.localeCompare(b.kind);
   if (kindCmp !== 0) return kindCmp;
   return a.confidence.localeCompare(b.confidence);
@@ -219,6 +224,7 @@ export function writeD8m(
       start: segment.start,
       end: segment.end,
       lstLine: segment.line,
+      line: segment.line,
       kind: segment.kind,
       confidence: segment.confidence,
     });

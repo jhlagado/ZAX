@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readdir } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { compile } from '../src/compile.js';
@@ -32,18 +32,7 @@ describe('examples', () => {
 
     for (const entry of entries) {
       const res = await compile(entry, {}, { formats: defaultFormatWriters });
-      const name = basename(entry);
-      if (name === 'hello.zax') {
-        expect(diagnosticsSnapshot(res)).toEqual([
-          {
-            id: 'ZAX300',
-            message: 'Unresolved symbol "hl" in 16-bit fixup.',
-            severity: 'error',
-          },
-        ]);
-      } else {
-        expect(res.diagnostics).toEqual([]);
-      }
+      expect(res.diagnostics).toEqual([]);
     }
   });
 

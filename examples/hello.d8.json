@@ -11,6 +11,7 @@
           "start": 256,
           "end": 267,
           "lstLine": 9,
+          "line": 9,
           "kind": "code",
           "confidence": "high"
         },
@@ -25,6 +26,7 @@
           "start": 267,
           "end": 270,
           "lstLine": 10,
+          "line": 10,
           "kind": "code",
           "confidence": "high"
         },
@@ -32,6 +34,7 @@
           "start": 270,
           "end": 278,
           "lstLine": 9,
+          "line": 9,
           "kind": "code",
           "confidence": "high"
         },
@@ -39,6 +42,7 @@
           "start": 278,
           "end": 290,
           "lstLine": 19,
+          "line": 19,
           "kind": "code",
           "confidence": "high"
         },
@@ -46,6 +50,7 @@
           "start": 290,
           "end": 293,
           "lstLine": 20,
+          "line": 20,
           "kind": "code",
           "confidence": "high"
         },
@@ -53,6 +58,7 @@
           "start": 293,
           "end": 296,
           "lstLine": 21,
+          "line": 21,
           "kind": "code",
           "confidence": "high"
         },
@@ -60,6 +66,7 @@
           "start": 296,
           "end": 297,
           "lstLine": 23,
+          "line": 23,
           "kind": "code",
           "confidence": "high"
         },
@@ -67,6 +74,7 @@
           "start": 297,
           "end": 298,
           "lstLine": 24,
+          "line": 24,
           "kind": "code",
           "confidence": "high"
         },
@@ -74,6 +82,7 @@
           "start": 298,
           "end": 307,
           "lstLine": 25,
+          "line": 25,
           "kind": "code",
           "confidence": "high"
         },
@@ -81,6 +90,7 @@
           "start": 307,
           "end": 308,
           "lstLine": 26,
+          "line": 26,
           "kind": "code",
           "confidence": "high"
         },
@@ -88,6 +98,7 @@
           "start": 308,
           "end": 309,
           "lstLine": 27,
+          "line": 27,
           "kind": "code",
           "confidence": "high"
         },
@@ -95,6 +106,7 @@
           "start": 309,
           "end": 310,
           "lstLine": 28,
+          "line": 28,
           "kind": "code",
           "confidence": "high"
         },
@@ -102,6 +114,7 @@
           "start": 310,
           "end": 311,
           "lstLine": 29,
+          "line": 29,
           "kind": "code",
           "confidence": "high"
         },
@@ -109,6 +122,7 @@
           "start": 311,
           "end": 312,
           "lstLine": 30,
+          "line": 30,
           "kind": "code",
           "confidence": "high"
         },
@@ -116,6 +130,7 @@
           "start": 312,
           "end": 315,
           "lstLine": 31,
+          "line": 31,
           "kind": "code",
           "confidence": "high"
         },
@@ -123,12 +138,13 @@
           "start": 315,
           "end": 324,
           "lstLine": 19,
+          "line": 19,
           "kind": "code",
           "confidence": "high"
         },
         {
           "start": 4096,
-          "end": 4208,
+          "end": 4198,
           "lstLine": 0,
           "kind": "unknown",
           "confidence": "low"
@@ -180,7 +196,7 @@
         {
           "name": "__zax_startup",
           "kind": "label",
-          "address": 4112,
+          "address": 4106,
           "scope": "global"
         },
         {
@@ -201,7 +217,7 @@
     },
     {
       "start": 4096,
-      "end": 4208
+      "end": 4198
     }
   ],
   "fileList": [
@@ -259,7 +275,7 @@
     {
       "name": "__zax_startup",
       "kind": "label",
-      "address": 4112,
+      "address": 4106,
       "file": "hello.zax",
       "scope": "global"
     },
@@ -276,6 +292,6 @@
   "generator": {
     "tool": "zax",
     "entrySymbol": "__zax_startup",
-    "entryAddress": 4112
+    "entryAddress": 4106
   }
 }
