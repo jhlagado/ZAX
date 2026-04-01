@@ -11,6 +11,7 @@
           "start": 256,
           "end": 267,
           "lstLine": 6,
+          "line": 6,
           "kind": "code",
           "confidence": "high"
         },
@@ -25,6 +26,7 @@
           "start": 267,
           "end": 288,
           "lstLine": 7,
+          "line": 7,
           "kind": "code",
           "confidence": "high"
         },
@@ -32,6 +34,7 @@
           "start": 288,
           "end": 291,
           "lstLine": 8,
+          "line": 8,
           "kind": "code",
           "confidence": "high"
         },
@@ -39,6 +42,7 @@
           "start": 291,
           "end": 299,
           "lstLine": 6,
+          "line": 6,
           "kind": "code",
           "confidence": "high"
         },
@@ -46,6 +50,7 @@
           "start": 299,
           "end": 311,
           "lstLine": 11,
+          "line": 11,
           "kind": "code",
           "confidence": "high"
         },
@@ -53,6 +58,7 @@
           "start": 311,
           "end": 314,
           "lstLine": 12,
+          "line": 12,
           "kind": "code",
           "confidence": "high"
         },
@@ -60,6 +66,7 @@
           "start": 314,
           "end": 323,
           "lstLine": 11,
+          "line": 11,
           "kind": "code",
           "confidence": "high"
         },

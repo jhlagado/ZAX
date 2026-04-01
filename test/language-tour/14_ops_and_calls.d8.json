@@ -11,6 +11,7 @@
           "start": 256,
           "end": 267,
           "lstLine": 19,
+          "line": 19,
           "kind": "code",
           "confidence": "high"
         },
@@ -25,6 +26,7 @@
           "start": 267,
           "end": 270,
           "lstLine": 20,
+          "line": 20,
           "kind": "code",
           "confidence": "high"
         },
@@ -32,6 +34,7 @@
           "start": 270,
           "end": 276,
           "lstLine": 21,
+          "line": 21,
           "kind": "code",
           "confidence": "high"
         },
@@ -39,6 +42,7 @@
           "start": 276,
           "end": 279,
           "lstLine": 22,
+          "line": 22,
           "kind": "macro",
           "confidence": "high"
         },
@@ -46,6 +50,7 @@
           "start": 279,
           "end": 287,
           "lstLine": 19,
+          "line": 19,
           "kind": "code",
           "confidence": "high"
         },
@@ -53,6 +58,7 @@
           "start": 287,
           "end": 295,
           "lstLine": 25,
+          "line": 25,
           "kind": "code",
           "confidence": "high"
         },
@@ -60,6 +66,7 @@
           "start": 295,
           "end": 300,
           "lstLine": 27,
+          "line": 27,
           "kind": "code",
           "confidence": "high"
         },
@@ -67,6 +74,7 @@
           "start": 300,
           "end": 304,
           "lstLine": 25,
+          "line": 25,
           "kind": "code",
           "confidence": "high"
         },
@@ -74,6 +82,7 @@
           "start": 304,
           "end": 307,
           "lstLine": 30,
+          "line": 30,
           "kind": "macro",
           "confidence": "high"
         },
@@ -81,6 +90,7 @@
           "start": 307,
           "end": 316,
           "lstLine": 31,
+          "line": 31,
           "kind": "code",
           "confidence": "high"
         },
@@ -88,6 +98,7 @@
           "start": 316,
           "end": 324,
           "lstLine": 32,
+          "line": 32,
           "kind": "code",
           "confidence": "high"
         },
@@ -95,6 +106,7 @@
           "start": 324,
           "end": 333,
           "lstLine": 25,
+          "line": 25,
           "kind": "code",
           "confidence": "high"
         },

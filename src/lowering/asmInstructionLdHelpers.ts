@@ -158,6 +158,9 @@ export function createAsmInstructionLdHelpers(ctx: LdHelperContext) {
     const srcName = src.kind === 'Reg' ? src.name.toUpperCase() : undefined;
     const memExpr = dst.kind === 'Mem' ? dst.expr : src.kind === 'Mem' ? src.expr : undefined;
     if (!memExpr || memExpr.kind !== 'EaName') return false;
+    // Register-indirect `(hl)`, `(bc)`, `(de)`, `(ix)`, `(iy)` use `EaName`; these are not
+    // the absolute-address `ld r/(nn)` forms handled below (see `isRegisterLikeMemEa`).
+    if (ctx.reg16.has(memExpr.name.toUpperCase())) return false;
     const baseLower = resolveRawLabelName(memExpr.name).toLowerCase();
     if (ctx.isFrameSlotName(baseLower)) return false;
 
