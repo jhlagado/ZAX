@@ -113,6 +113,8 @@ Common outputs:
 | `.d8.json` | D8 Debug Map for Debug80 and compatible tools     |
 | `.z80`        | ASM80-compatible lowered source (assembler-valid) |
 
+In `.d8.json` (D8M v1), source-attributed per-file `segments` include **`line`**: the canonical **1-based line number in the `.zax` source** for debuggers (e.g. Debug80); **`lstLine`** remains listing-oriented correlation on the same segment.
+
 By default, ZAX derives all artifact paths from the primary output path. Use `-o <file>` to set the primary output; `-t hex` or `-t bin` to choose the primary type (default: `hex`). Suppress individual outputs with `--nolist`, `--nobin`, `--nohex`, `--nod8m`. Emit ASM80 output explicitly with `--asm80`.
 
 Useful diagnostic options:
