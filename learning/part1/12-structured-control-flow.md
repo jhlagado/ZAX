@@ -1,6 +1,6 @@
-[← Functions and the IX Frame](10-functions-and-the-ix-frame.md) | [Part 1](README.md) | [Typed Assignment →](12-typed-assignment.md)
+[← Functions and the IX Frame](11-functions-and-the-ix-frame.md) | [Part 1](README.md) | [Typed Assignment →](13-typed-assignment.md)
 
-# Chapter 11 — Structured Control Flow
+# Chapter 12 — Structured Control Flow
 
 This chapter introduces `if`/`else`, `while`, `repeat...until`, `break`, and
 `continue` — the structured replacements for manual flag-test-and-jump
@@ -10,7 +10,7 @@ sequences and invented loop labels.
 
 ## What structured control flow replaces
 
-Chapter 9 ended with two specific annoyances in the raw code.
+Chapter 10 ended with two specific annoyances in the raw code.
 
 The first: invented labels everywhere. Every branch needs at least one label.
 `find_max` needed `find_max_loop:` and `find_max_no_update:`. `count_above`
@@ -137,7 +137,7 @@ loop from B, copy B into A and `or a`:
 ```zax
 ld b, 10
 ld a, b           ; copy B into A
-or a              ; sets Z if A is zero, NZ if non-zero (see Chapter 4)
+or a              ; sets Z if A is zero, NZ if non-zero (see Chapter 5)
 while NZ
   dec b
   ld a, b
@@ -145,15 +145,17 @@ while NZ
 end
 ```
 
-The `or a` pattern for flag-establishment was introduced in Chapter 4 and applied
-to loop-entry guards in Chapter 5. The same reasoning applies here. Use
+The `or a` pattern for flag-establishment was introduced in Chapter 5 and applied
+to loop-entry guards in Chapter 6. The same reasoning applies here. Use
 `ld a, b / or a` to convert a register value into a flag state before `while`.
 
-The back edge of a `while` loop also tests the condition. Every `continue` or
-fall-through to the `end` line re-runs the condition test. That means the loop
-body is responsible for re-establishing the flags on every path that does not
-exit via `break` or `ret`. If `dec b` is followed by `ld a, b / or a` inside the
-body, then the back-edge test sees the correct NZ state for the next iteration.
+The back edge of a `while` loop is a conditional branch — apply the
+flag-before-branch check every time you write one: which instruction last set
+the flag? Does anything between that instruction and the back-edge test touch
+that flag? Every `continue` or fall-through to the `end` line re-runs the
+condition test, so the loop body is responsible for re-establishing the flags on
+every such path. If `dec b` is followed by `ld a, b / or a` inside the body,
+the back-edge test sees the correct NZ state for the next iteration.
 
 ---
 
@@ -357,16 +359,16 @@ that register is preserved across dispatch.
 ## Before and after: the same two loops
 
 The example file `learning/part1/examples/10_structured_control.zax` rewrites
-`find_max` and `count_above` from Chapter 9 using `while` and `if`. Here are
+`find_max` and `count_above` from Chapter 10 using `while` and `if`. Here are
 the two versions side by side.
 
 The inline listings below are adapted from that example file. The shipped file
 already uses `:=` and `step` in a few places where the final code is clearer,
 but the chapter keeps the raw IX-relative forms in the listings so you can
-focus on the control-flow rewrite before Chapter 12 introduces the assignment
+focus on the control-flow rewrite before Chapter 13 introduces the assignment
 surface explicitly.
 
-**`find_max` — raw (Chapter 9):**
+**`find_max` — raw (Chapter 10):**
 
 ```zax
 func find_max(): AF
@@ -416,7 +418,7 @@ end
 No labels. `while NZ` expresses "loop while B is non-zero." `if NC` expresses
 "update if the current byte is not less than the running maximum." The condition
 and the consequence are adjacent and visually nested. Every frame access uses
-the raw IX-relative form from Chapter 10.
+the raw IX-relative form from Chapter 11.
 
 This version uses `dec b` instead of `djnz` because `while` already handles
 the branch-back. `djnz` fused decrement-and-branch into one instruction; with
@@ -432,7 +434,7 @@ them. The `ld a, b / or a` re-establishes the flag state from B's current
 value. `djnz` cannot be directly replaced by `dec b / jr nz` in a `while` loop
 without this flag-establishment step.
 
-**`count_above` — raw (Chapter 9):**
+**`count_above` — raw (Chapter 10):**
 
 ```zax
 func count_above(): AF
@@ -500,7 +502,7 @@ count it." The skip label is gone.
 ## The example: `learning/part1/examples/10_structured_control.zax`
 
 The example file contains `main`, `find_max_cf`, and `count_above_cf`. It uses
-the same table and produces the same results as Chapter 9:
+the same table and produces the same results as Chapter 10:
 maximum = 91, above-64 count = 3. The only difference is in how the subroutine
 bodies are written. The file is the final cleaned-up version, so you will see
 `:=` and `step` where the chapter listings above kept the raw IX-relative frame
@@ -560,4 +562,84 @@ Both are always available. Use whichever matches the shape of the logic.
 
 ---
 
-[← Functions and the IX Frame](10-functions-and-the-ix-frame.md) | [Part 1](README.md) | [Typed Assignment →](12-typed-assignment.md)
+## Exercises
+
+**1. The stale-flag trap.** Identify the bug in the following code and explain what flag state `while NZ` actually reads:
+
+```zax
+ld b, 10
+while NZ
+  ; body
+  dec b
+end
+```
+
+Write the corrected version that properly tests whether B is non-zero before entering the loop.
+
+**2. Convert a raw loop.** Rewrite the following raw loop using `while` and `if`, removing the user-defined labels. The behaviour must be identical — same exit condition, same update logic.
+
+```zax
+ld b, 8
+scan_loop:
+  ld a, (hl)
+  cp 0
+  jr z, found_zero
+  inc hl
+  djnz scan_loop
+  jr scan_done
+found_zero:
+  ld (zero_addr), hl
+scan_done:
+```
+
+*(Hint: you will need `or a` before `while` to establish flags from B. Inside the loop, `inc hl` should come before the `dec b` / flag re-establishment for this to be cleanest. Preserve the "store HL when zero is found" behaviour in the `if Z` branch.)*
+
+**3. `break` vs `continue` in nested loops.** In the nested loop below, identify which loop each `break` and `continue` exits or restarts:
+
+```zax
+ld a, b
+or a
+while NZ           ; outer loop (A)
+  ld a, c
+  or a
+  while NZ         ; inner loop (B)
+    ld a, (hl)
+    or a
+    if Z
+      break        ; (1) — which loop?
+    end
+    cp 64
+    if NC
+      continue     ; (2) — which loop? What flags must be set?
+    end
+    inc hl
+    dec c
+    ld a, c
+    or a
+  end
+  dec b
+  ld a, b
+  or a
+end
+```
+
+For `continue` (2): what instruction must execute immediately before `continue` to ensure the `while NZ` test fires correctly on the next iteration?
+
+**4. `while` vs `repeat...until`.** Rewrite the following `while` loop as a `repeat...until` loop that produces exactly the same result. Then explain one situation where `repeat...until` would be the *wrong* choice — i.e. a case where the loop body must not execute if the initial count is zero.
+
+```zax
+ld a, b
+or a
+while NZ
+  ld a, (hl)
+  out ($10), a
+  inc hl
+  dec b
+  ld a, b
+  or a
+end
+```
+
+---
+
+[← Functions and the IX Frame](11-functions-and-the-ix-frame.md) | [Part 1](README.md) | [Typed Assignment →](13-typed-assignment.md)

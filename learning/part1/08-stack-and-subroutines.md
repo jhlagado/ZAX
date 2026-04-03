@@ -1,6 +1,6 @@
-[← Data Tables and Indexed Access](06-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](08-io-and-ports.md)
+[← Data Tables and Indexed Access](07-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](09-io-and-ports.md)
 
-# Chapter 7 — Stack and Subroutines
+# Chapter 8 — Stack and Subroutines
 
 This chapter explains how `call` and `ret` work, how the hardware stack
 operates, and how to write reusable subroutines that receive values through
@@ -131,11 +131,32 @@ func my_sub(): AF
 end
 ```
 
-This is different from raw labeled subroutines — code you reach with `call
-label` but that is not wrapped in a ZAX `func`. Those are plain Z80: the
-assembler inserts nothing, so they **do** require an explicit `ret`. Chapter 9
-shows several such subroutines. In Chapters 10–13 you write ZAX `func` blocks
-exclusively, and the compiler handles the return for you.
+> **ZAX `func` vs raw labeled subroutine — know which one you are writing**
+>
+> These two forms look similar but have different rules.
+>
+> **Raw labeled subroutine** — a block of instructions with a label at the top, called with `call label`. The assembler inserts nothing. You write every instruction, including the final `ret`. The return clause does not exist.
+>
+> ```zax
+> my_raw_sub:
+>   ld a, b
+>   add a, c
+>   ret              ; required — assembler will not add it for you
+> ```
+>
+> **ZAX `func` block** — a named block opened with `func` and closed with `end`. ZAX emits register save/restore pushes and pops, and a final `ret`, automatically when it processes `end`. You do not write the closing `ret`.
+>
+> ```zax
+> func my_zax_sub(): AF
+>   ld a, b
+>   add a, c
+>   ; no ret needed here — ZAX emits it at end
+> end
+> ```
+>
+> The practical consequence: if you write a raw labeled subroutine and forget `ret`, the CPU will fall through into whatever bytes follow the last instruction — which is almost always wrong. If you write a ZAX `func` and add an extra `ret` at `end`, you have an unreachable instruction but no error. Use `ret` inside a `func` only for early exits — places where you want to return before reaching `end`.
+>
+> Chapter 10 uses raw labeled subroutines. Chapters 11–14 use ZAX `func` blocks exclusively.
 
 Omitting the return clause when the function leaves a meaningful value in A is
 a bug: the compiler's `pop AF` in the epilogue will overwrite A before
@@ -212,17 +233,17 @@ about the stack.
 
 In a tight interrupt handler or innermost loop, saving BC, DE, and HL via
 `push` and `pop` costs six instructions — three pushes, three pops — and takes
-six bytes of stack space. `EXX` does the same job in a single instruction: it swaps
+six bytes of stack space. `exx` does the same job in a single instruction: it swaps
 BC, DE, and HL with a second hidden set of registers (BC′, DE′, HL′)
-simultaneously. A second instruction, `EX AF, AF′`, swaps A and F with their
+simultaneously. A second instruction, `ex af, af′`, swaps A and F with their
 shadow counterparts.
 
 These are the **shadow registers** — a second, hidden copy of A, F, B, C, D,
-E, H, and L. You cannot use them directly in instructions; `EXX` and
-`EX AF, AF′` are the only way in.
+E, H, and L. You cannot use them directly in instructions; `exx` and
+`ex af, af′` are the only way in.
 
 The trade-off is that there is only one shadow set. If both your main code and
-an interrupt handler rely on `EXX`, the interrupt can silently destroy the
+an interrupt handler rely on `exx`, the interrupt can silently destroy the
 values the main code stored. `push` and `pop` work at any nesting depth; shadow
 registers do not. Use them when speed matters and you can guarantee that only
 one context uses them at a time.
@@ -400,8 +421,8 @@ operations, and you can use them however the stack discipline permits.
 - Unbalanced push/pop causes `ret` to jump to garbage, because the wrong bytes
   are at the top of the stack when `ret` reads the return address.
 - `ret cc` returns conditionally; the stack must be balanced at that point too.
-- The shadow registers (A′–L′) provide one-instruction save/restore via `EXX`
-  and `EX AF, AF′`, but only one context can use them safely at a time.
+- The shadow registers (A′–L′) provide one-instruction save/restore via `exx`
+  and `ex af, af′`, but only one context can use them safely at a time.
 - Subroutines can call other subroutines. Each call pushes a return address;
   each ret pops one. The stack depth grows with each nested call.
 - A ZAX `func` block emits the cleanup and `ret` automatically at `end`. A
@@ -411,4 +432,46 @@ operations, and you can use them however the stack discipline permits.
 
 ---
 
-[← Data Tables and Indexed Access](06-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](08-io-and-ports.md)
+## Exercises
+
+**1. Stack trace.** Work through these four instructions by hand, tracking the stack and register values at each step. Assume SP starts at `$C000` and that the values in the registers before the sequence are: AF = `$1234`, BC = `$5678`.
+
+```zax
+push af
+push bc
+pop de
+pop hl
+```
+
+After all four instructions: what is in DE? What is in HL? What is SP? *(Remember: the stack is last-in-first-out — the pair pushed last is the first to be popped.)*
+
+**2. Spot the push/pop mismatch.** This subroutine has a stack-balance bug. Identify it and explain precisely what will happen when `ret` executes:
+
+```zax
+func count_nonzero(): AF
+  push bc
+  push de
+  ld b, $08
+  ld c, 0
+count_loop:
+  ld a, (hl)
+  or a
+  jr z, skip
+  inc c
+skip:
+  inc hl
+  djnz count_loop
+  ld a, c
+  pop bc
+end
+```
+
+Write the corrected version.
+
+**3. Write a subroutine.** Write a ZAX `func` called `double_byte` that receives a byte value in B and returns B × 2 in A. The function should use the `: AF` return clause so that A reaches the caller intact. Then write the three lines of `main` that pass the value 15 to the function, call it, and store the result in a variable named `doubled`.
+
+**4. The `or a / sbc hl, de` pattern.** The `max_word` subroutine in the chapter uses `or a` immediately before `sbc hl, de`. Explain what `or a` does to the carry flag and why omitting it would produce wrong results. Then explain the `add hl, de` that follows on the carry-clear path — why is it needed, and what does HL hold after `sbc hl, de` on that path?
+
+---
+
+[← Data Tables and Indexed Access](07-data-tables-and-indexed-access.md) | [Part 1](README.md) | [I/O and Ports →](09-io-and-ports.md)

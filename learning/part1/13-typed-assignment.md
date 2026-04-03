@@ -1,6 +1,6 @@
-[← Structured Control Flow](11-structured-control-flow.md) | [Part 1](README.md) | [Op Macros and Pseudo-opcodes →](13-op-macros-and-pseudo-opcodes.md)
+[← Structured Control Flow](12-structured-control-flow.md) | [Part 1](README.md) | [Op Macros and Pseudo-opcodes →](14-op-macros-and-pseudo-opcodes.md)
 
-# Chapter 12 — Typed Assignment
+# Chapter 13 — Typed Assignment
 
 You have spent two chapters writing `ld a, (ix+running_max+0)` and `ld (ix+cnt+0), a` by hand. You know what each frame access costs, you know where the offsets come from, and you know the low-byte / high-byte drill for word-sized slots. This chapter introduces `:=`, the typed assignment operator, which automates all of that — shorthand for what you already do.
 
@@ -21,7 +21,7 @@ total := hl     ; store HL into 'total'
 
 `ld` is a raw Z80 instruction — you choose the operand form and the assembler encodes it exactly as written. `:=` is a typed assignment: the compiler checks that the left side is writable storage, checks that the right side is a compatible value, and emits whatever instruction sequence is needed.
 
-For a byte-sized local, `count := a` emits a single `ld (ix-N), a` — exactly what you wrote by hand in Chapters 10 and 11.
+For a byte-sized local, `count := a` emits a single `ld (ix-N), a` — exactly what you wrote by hand in Chapters 11 and 12.
 
 For a word-sized local, the story is different. The Z80 cannot load HL directly from an IX-relative address. So when you write `hl := total`, the compiler emits:
 
@@ -118,7 +118,7 @@ step count, 5        ; count := count + 5
 
 The amount, when given, must be a constant the compiler can evaluate — a literal or a named `const`. `step` returns no value and does not set flags reliably; it is a pure mutation of the named location.
 
-In Chapter 11, you incremented a counter by hand:
+In Chapter 12, you incremented a counter by hand:
 
 ```zax
 ld a, (ix+cnt+0)
@@ -137,9 +137,9 @@ step cursor, STRIDE     ; cursor := cursor + 4
 
 ## Before and after: the same two loops
 
-Here are the `find_max` and `count_above` functions rewritten with `:=` and `step`, so you can compare them with the raw IX versions from Chapters 10 and 11.
+Here are the `find_max` and `count_above` functions rewritten with `:=` and `step`, so you can compare them with the raw IX versions from Chapters 11 and 12.
 
-**`find_max` — raw IX (Chapter 10):**
+**`find_max` — raw IX (Chapter 11):**
 
 ```zax
   ld a, (hl)
@@ -167,7 +167,7 @@ find_max_skip:
 
 The generated code is identical. `running_max := a` emits `ld (ix-N), a`. `a := running_max` emits `ld a, (ix-N)`. The names resolve to the same offsets. The `:=` form is easier to read.
 
-**`count_above` — raw IX (Chapter 10):**
+**`count_above` — raw IX (Chapter 11):**
 
 ```zax
   ld a, (ix+cnt+0)
@@ -237,4 +237,56 @@ Both are always available. Neither is required. The choice is about what reads m
 
 ---
 
-[← Structured Control Flow](11-structured-control-flow.md) | [Part 1](README.md) | [Op Macros and Pseudo-opcodes →](13-op-macros-and-pseudo-opcodes.md)
+## Exercises
+
+**1. Expand `:=` by hand.** Write out the exact Z80 instruction sequence that the compiler emits for each of these `:=` statements. Give the numeric IX offset for each slot, assuming `total` is a `word` local at offset −4 (low byte at IX−4, high byte at IX−3) and `count` is a `byte` local at offset −1.
+
+```zax
+count := a          ; (a)
+a := count          ; (b)
+total := hl         ; (c)
+hl := total         ; (d)
+step count          ; (e)
+```
+
+**2. Type mismatch.** Explain why each of these `:=` statements is a compile error. State what type conflict the compiler detects and what you would need to change to make each line legal:
+
+```zax
+total := count      ; total is word, count is byte
+count := total      ; count is byte, total is word
+```
+
+For each case, write the corrected form that compiles — either using a different register to bridge the width or accessing only the byte lane you need.
+
+**3. Rewrite with `:=`.** Here is a raw-IX function body from Chapter 11. Rewrite it using `:=` and `step` where appropriate, keeping raw Z80 instructions for operations that have no `:=` equivalent:
+
+```zax
+  ld l, (ix+tbl+0)
+  ld h, (ix+tbl+1)
+  ld b, (ix+len+0)
+count_loop:
+  ld a, (hl)
+  cp (ix+threshold+0)
+  jr c, count_skip
+  jr z, count_skip
+  ld a, (ix+cnt+0)
+  inc a
+  ld (ix+cnt+0), a
+count_skip:
+  inc hl
+  djnz count_loop
+  ld a, (ix+cnt+0)
+```
+
+**4. Bare name vs dereference.** A function has a local declared as `var ptr: addr = 0 end`. Explain the difference between these two forms and what instruction each generates:
+
+```zax
+hl := ptr           ; (a)
+ld hl, (ptr)        ; (b)
+```
+
+Which form gives you the address stored in the local variable `ptr`? Which form treats `ptr` as if it were a fixed absolute address in memory? When would form (b) cause a silent bug?
+
+---
+
+[← Structured Control Flow](12-structured-control-flow.md) | [Part 1](README.md) | [Op Macros and Pseudo-opcodes →](14-op-macros-and-pseudo-opcodes.md)

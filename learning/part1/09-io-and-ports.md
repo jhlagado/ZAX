@@ -1,6 +1,6 @@
-[← Stack and Subroutines](07-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](09-a-phase-a-program.md)
+[← Stack and Subroutines](08-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](10-a-phase-a-program.md)
 
-# Chapter 8 — I/O and Ports
+# Chapter 9 — I/O and Ports
 
 The Z80 has two distinct address spaces: the memory space you have been using
 since Chapter 1, and a separate **I/O space** of 256 numbered ports. The `in`
@@ -140,7 +140,7 @@ end
 ```
 
 HL advances one byte per iteration. B counts down from the caller-supplied
-count. This is the same DJNZ-counted walk pattern from Chapter 5, applied to
+count. This is the same DJNZ-counted walk pattern from Chapter 6, applied to
 output rather than calculation.
 
 ---
@@ -237,9 +237,19 @@ here is a port selector, not a data register.
 whether the byte read was zero. `and $01` then narrows the test to bit 0 before
 the conditional branch.
 
-**`send_block`** — a DJNZ loop from Chapter 5 applied to output. B counts the
+**`send_block`** — a DJNZ loop from Chapter 6 applied to output. B counts the
 bytes; HL steps through source memory; C holds the port. The call site sets all
 three before the call.
+
+---
+
+## A note on interrupts
+
+Everything in this chapter uses `in` and `out` to poll a peripheral: the CPU loops checking the status port until the device is ready. This works but keeps the CPU busy the entire time it is waiting.
+
+The Z80 also supports **interrupts**: a hardware signal that tells the CPU to stop what it is doing, run a short handler routine, and then resume where it left off. Interrupt handlers typically use `in` and `out` to communicate with the device that raised the interrupt — the same instructions, the same port numbers. The difference is that the CPU does not sit in a loop; it only runs the I/O code when the hardware demands it.
+
+Interrupts involve the `di`, `ei`, `im`, and `reti` instructions, and they interact with the shadow registers and stack in ways that require care. They are outside the scope of Part 1. If you intend to write interrupt-driven I/O, the Z80 interrupt modes and the conventions for interrupt service routines are covered in the hardware reference for your platform.
 
 ---
 
@@ -254,10 +264,29 @@ three before the call.
 - `in r, (C)` reads from the port in C into any 8-bit register. Flags (S, Z,
   P/V) are set based on the value read.
 - A polling loop tests a status port in a loop until a ready condition is met,
-  then reads the data port.
+  then reads the data port. Polling occupies the CPU while it waits; interrupt-driven I/O hands control back to the main program between events.
 - Port numbers are platform-defined. The examples here use abstract constants
   and demonstrate the instructions themselves, not any specific hardware.
 
 ---
 
-[← Stack and Subroutines](07-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](09-a-phase-a-program.md)
+## Exercises
+
+**1. Flag behaviour of `in`.** Explain the difference in flag behaviour between these two forms:
+
+```zax
+in a, (IN_PORT)   ; form A
+in a, (C)         ; form B
+```
+
+After which form can you safely write `jr z, handle_zero` without any additional instruction? After which form must you add `or a` first? Write the minimum correct version for each case that branches to a label `is_zero` if the byte read was zero.
+
+**2. Modify the ready-check loop.** The `poll_and_recv` function in the chapter waits for bit 0 of the status port. Change it to wait for bit 3 instead. Write the modified function. *(Hint: you need to change exactly one value — the mask in the `and` instruction. What is the bit-3 mask in hex?)*
+
+**3. Write a receive loop.** The chapter shows `send_block` but not its counterpart. Write a ZAX `func` called `recv_block` that reads B bytes from the port in C into memory starting at the address in HL. The function should use the same structure as `send_block` — a DJNZ loop with `in` instead of `out`.
+
+**4. Port number in C.** In the `out (C), b` form, what does the value in C represent — is it the data being sent or the destination port number? Write the three instructions needed to send the byte `$7F` to port `$20` using the register-addressed form.
+
+---
+
+[← Stack and Subroutines](08-stack-and-subroutines.md) | [Part 1](README.md) | [A Complete Program →](10-a-phase-a-program.md)

@@ -1,7 +1,7 @@
-; Chapter 08 example: typed local variables, := assignment, step
-; Rewrites the Phase A capstone logic from Chapter 07 using typed locals.
+; Chapter 13 example: typed local variables, := assignment, step
+; Rewrites the Phase A capstone logic from Chapter 10 using typed locals.
 ; The program scans a byte table, finds the maximum value, and counts
-; entries strictly greater than 64 — the same two tasks as Chapter 07.
+; entries strictly greater than 64 — the same two tasks as Chapter 10.
 ; Compare the subroutine bodies here with find_max and count_above in
 ; examples/intro/07_phase_a_capstone.zax to see what typed storage replaces.
 

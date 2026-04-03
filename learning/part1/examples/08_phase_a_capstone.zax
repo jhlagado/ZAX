@@ -1,4 +1,4 @@
-; Chapter 07 example: Phase A capstone — find the maximum value in a byte table
+; Chapter 10 example: Phase A capstone — find the maximum value in a byte table
 ; Uses: data table (db), DJNZ loop, subroutine call, conditional branch
 
 const TableLen = 8               ; number of entries to scan
@@ -61,7 +61,7 @@ func count_above(): AF
                                  ; (push/pop used here only to demonstrate
                                  ;  the pattern; in this case B and C were
                                  ;  already in registers, so the push/pop is
-                                 ;  the overhead named in Chapter 07)
+                                 ;  the overhead named in Chapter 10)
 
   ; Reset B from the caller's value: the pop above already did that.
 count_above_loop:

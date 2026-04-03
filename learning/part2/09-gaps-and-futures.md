@@ -144,21 +144,6 @@ course. It is now implemented. The course examples use it.
   grounded in `binary_search.zax` and `bubble_sort.zax`. It requires a
   compiler change and cannot be worked around in a library.
 
-**Where ZAX stands after these examples**:
-
-You still choose registers, write mnemonics, manage flags, and decide what
-lives in ROM versus RAM. The compiler adds names, typed offsets, function frames,
-and structured control flow. The `.z80` output is deterministic:
-every source line maps to a predictable instruction sequence that you can read
-and verify. The gaps above are the places where the current surface still
-requires manual workarounds. They are recorded as such, and design work on them
-is tracked in `docs/design/`.
-
-The eight-queens example ends the course at the right point. It is a real
-program — it compiles, runs, and finds a solution. The `found_solution` flag
-is the workaround; `break` and `continue` are the progress. Both show up in
-the same source file.
-
 ---
 
 ## Summary
@@ -219,6 +204,33 @@ the same source file.
 
 - `docs/design/` — live design work on the open gaps identified above
 - `docs/spec/zax-spec.md` — the normative language surface
+
+---
+
+## Where the Course Ends
+
+You still choose registers, write mnemonics, manage flags, and decide what lives
+in ROM versus RAM. The compiler adds names, typed offsets, function frames, and
+structured control flow. The `.z80` output is deterministic: every source line
+maps to a predictable instruction sequence that you can read and verify.
+
+The course started by showing you ten bytes of raw machine code at address
+`$0000`. It ends with a recursive backtracking search that places eight queens
+on a chessboard, uses typed locals and named parameters, and escapes its inner
+loop with `break` and `continue`. The same Z80 instructions are underneath
+every line. Nothing is hidden that you have not already seen.
+
+The gaps in this chapter are genuine — they are the places where the current
+surface still requires manual workarounds and the design is not finished. That
+is an honest position for a real tool. `eight_queens.zax` compiles, runs, and
+finds a solution. The `found_solution` flag is the workaround; `break` and
+`continue` are the progress. Both show up in the same file.
+
+The next step is yours. Take a problem that matters to you — something that
+runs on constrained hardware, or benefits from knowing exactly what the machine
+is doing — and write it in ZAX. The gaps will surface where they matter for
+that specific program. The tools to address them are the raw Z80 instructions
+you already know how to use.
 
 ---
 
