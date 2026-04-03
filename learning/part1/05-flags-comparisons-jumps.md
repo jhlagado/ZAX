@@ -1,6 +1,6 @@
-[← Assembly Language](03-assembly-language.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](05-counting-loops-and-djnz.md)
+[← Memory Access and Data](04-memory-access-and-data.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](06-counting-loops-and-djnz.md)
 
-# Chapter 4 — Flags, Comparisons, and Jumps
+# Chapter 5 — Flags, Comparisons, and Jumps
 
 Every program makes decisions. The Z80 makes them by recording the outcome of
 each operation in the flags register, then testing those flags to decide where
@@ -253,6 +253,37 @@ non-zero, Z is clear, and execution falls through.
 
 ---
 
+> **The Flag-Before-Branch Check**
+>
+> Every time you write a conditional jump (`jp cc`, `jr cc`), apply this
+> three-step check. It takes seconds once it becomes habit, and it catches the
+> most common class of silent Z80 bugs before they happen.
+>
+> **Step 1 — Which instruction set the flag you're testing?**
+> Scan backward from the jump until you find the instruction that last modified
+> the flag. For Z, the candidates are: `cp`, `sub`, `and`, `or`, `xor`, `inc`,
+> `dec`, `add`, `sbc`, `in r,(C)`. For C, the candidates are: `cp`, `sub`,
+> `add`, `adc`, `sbc`, `and`, `or`, `xor`, `rl*`, `rr*`.
+>
+> **Step 2 — Does anything between that instruction and the jump also touch
+> that flag?**
+> `ld` instructions never touch flags — they are safe to place between a
+> comparison and a jump. `inc` and `dec` update most flags but leave C alone.
+> Arithmetic and logical instructions update all flags. If something in between
+> modifies the flag you are testing, the jump will read the wrong value.
+>
+> **Step 3 — Is the flag's meaning what you think it is?**
+> C means different things after `add` (carry out of bit 7) versus after `cp`
+> or `sub` (unsigned borrow — set when A was less than the operand). Z always
+> means "result was zero," but "result" after `cp` is the discarded difference,
+> not a stored value.
+>
+> Chapters 6 through 14 will refer back to this check by name: **flag-before-branch**.
+> Whenever you see a note like "apply the flag-before-branch check here," run
+> through these three steps.
+
+---
+
 ## Short relative jump: `jr`
 
 `jp` encodes a full 16-bit target address in its three instruction bytes.
@@ -275,7 +306,7 @@ For short loops and nearby tests, `jr` saves a byte per jump and the range is
 rarely a problem. For anything that might be far away, or when you need a
 condition that `jr` does not support, `jp` is the safe choice. The assembler
 will tell you if a `jr` target is out of range. Jump range limits for `jr` and
-the related `djnz` instruction (Chapter 5) are in
+the related `djnz` instruction (Chapter 6) are in
 [Appendix 2](../appendices/02-registers-flags-and-conditions.md).
 
 ---
@@ -389,8 +420,9 @@ After five iterations, `counter` holds 5 and B holds 0.
 Pay attention to which instruction sets Z here. `dec b` sets it — not
 `ld (counter), a`, which never touches flags at all. `jp nz` reads whatever
 `dec b` left. An `ld` between a comparison and a `jp` leaves the flags
-unchanged; a `dec` replaces them entirely. Getting this wrong is one of the
-most common sources of silent bugs in Z80 programs.
+unchanged; a `dec` replaces them entirely. This is exactly the situation the
+flag-before-branch check is designed to catch: identify the instruction that
+set the flag, then verify that nothing between it and the jump has changed it.
 
 **Section D — logical operations.** A is loaded with `$F3` (`%11110011`), then
 `and $0F` clears bits 7–4 and keeps bits 3–0. Result: `$03`. Z is clear.
@@ -432,10 +464,53 @@ always 0. A is zeroed, Z is set, C is cleared, in one instruction.
   `jp nz, skip` jumps away when not-equal; what follows is the equal case.
 - `jr` is a 2-byte relative jump, limited to roughly ±128 bytes and four
   conditions. Use it when the target is close; use `jp` otherwise.
-- When a `jp` tests a flag, trace back to find which instruction set it.
-  An `ld` between a comparison and a `jp` leaves the flags unchanged; `dec`
-  and `inc` replace them. Getting this wrong produces silent wrong results.
+- **Flag-before-branch check**: every time you write a conditional jump, ask
+  three questions: (1) which instruction last set the flag? (2) does anything
+  between that instruction and the jump also modify that flag? (3) does the
+  flag mean what you think it does in this context? `ld` never changes flags;
+  `dec` and `inc` replace most flags but leave C alone; arithmetic replaces
+  all flags. Getting this wrong produces silent wrong results — apply the check
+  every time, until it is automatic.
 
 ---
 
-[← Assembly Language](03-assembly-language.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](05-counting-loops-and-djnz.md)
+## Exercises
+
+**1. Flag prediction.** For each instruction or short sequence below, state whether Z is set or clear and whether C is set or clear after execution. Do not run the code yet — work it out on paper:
+
+```zax
+ld a, 5
+cp 5        ; Z = ? C = ?
+
+ld a, 5
+cp 6        ; Z = ? C = ?
+
+ld a, 5
+cp 3        ; Z = ? C = ?
+
+ld a, 0
+dec a       ; Z = ? C = ?
+```
+
+Once you have your answers, confirm them in the emulator using step mode and the register display.
+
+**2. Apply the flag-before-branch check.** The following snippet is meant to load 10 into `count` only when A holds the value 5, and do nothing otherwise. Find the bug:
+
+```zax
+ld a, 5
+cp 5
+ld b, 10
+jp nz, skip
+ld (count), b
+skip:
+```
+
+Apply the three-question flag-before-branch check: (1) which instruction last set the flag before `jp nz`? (2) does anything between that instruction and the jump modify that flag? (3) does the condition mean what the author intended? State what the code actually does, then write the corrected version.
+
+**3. Count down with flags.** Write a loop that starts with A = 10 and decrements A until A reaches zero. The loop body should store A to a named variable `last_a` on every iteration. Use `dec a` and a conditional jump — no DJNZ (that comes in Chapter 6). After the loop exits, what value is in A? What value is in `last_a`?
+
+**4. Bit test.** A status byte is stored at address `$8000`. Bit 2 is a "ready" flag. Write the two instructions needed to test bit 2 and jump to a label `not_ready` if the flag is clear, without disturbing any other bits in A. *(Hint: `and $04` isolates bit 2.)*
+
+---
+
+[← Memory Access and Data](04-memory-access-and-data.md) | [Part 1](README.md) | [Counting Loops and DJNZ →](06-counting-loops-and-djnz.md)

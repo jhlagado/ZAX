@@ -1,4 +1,4 @@
-; Chapter 09 example: if/else and while — Phase B rewrite of the capstone
+; Chapter 12 example: if/else and while — Phase B rewrite of the capstone
 ; Rewrites the two subroutines from 07_phase_a_capstone.zax using structured
 ; control flow.  The data and results are identical; the structure is different.
 ;

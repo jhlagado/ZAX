@@ -1,14 +1,14 @@
-[← I/O and Ports](08-io-and-ports.md) | [Part 1](README.md) | [Functions and the IX Frame →](10-functions-and-the-ix-frame.md)
+[← I/O and Ports](09-io-and-ports.md) | [Part 1](README.md) | [Functions and the IX Frame →](11-functions-and-the-ix-frame.md)
 
-# Chapter 9 — A Complete Program
+# Chapter 10 — A Complete Program
 
-This chapter builds a complete program using the techniques from Chapters 3–7:
+This chapter builds a complete program using the techniques from Chapters 3–9:
 a data table, a DJNZ loop, subroutines called from the loop, conditional
-branches, and push/pop register preservation. Chapter 8 covered I/O and ports —
+branches, and push/pop register preservation. Chapter 9 covered I/O and ports —
 a separate hardware concern. This capstone focuses on data operations in memory,
 which is where the friction points in raw Z80 programming are most visible.
 The two subroutines that result expose exactly those friction points — the
-problems Chapters 10–13 address.
+problems Chapters 11–14 address.
 
 ---
 
@@ -51,7 +51,7 @@ program will process. The vars section at `$8020` holds the two result bytes.
 
 ## The return clause and register survival
 
-Chapter 7 established that the return clause on a `func` declaration controls
+Chapter 8 established that the return clause on a `func` declaration controls
 which registers the compiler saves and restores. Both `find_max` and
 `count_above` return their result in A, so both are declared `func ...: AF` —
 which tells ZAX not to save and restore AF, leaving A intact for the caller.
@@ -106,11 +106,12 @@ end
 ```
 
 `find_max` scans the table and returns the largest byte in A. The loop body uses
-C as a temporary to hold the current element. `cp c` compares A (the running
-maximum) with C (the current element). The rule from Chapter 4: carry is set
-when A is less than C. `jr nc` skips the `ld a, c` update when A is already
-greater than or equal to C. After eight iterations, A = 91 (`$5B`), the largest
-value in the table.
+C as a temporary to hold the current element. Apply the flag-before-branch check
+on `cp c` / `jr nc`: `cp c` establishes the flag, `jr nc` reads it immediately
+— nothing changes the flag between them. Carry clear after `cp c` means A ≥ C,
+so `jr nc` skips the update and the running maximum is left alone. `ld a, c`
+runs only when carry was set — meaning A was less than C and C is a new maximum.
+After eight iterations, A = 91 (`$5B`), the largest value in the table.
 
 This subroutine uses B (via DJNZ) and C (as a temporary). The label comment at
 the top of a real program would say "Clobbers: A, B, C, HL" — all four are
@@ -120,7 +121,7 @@ modified by the time the function returns.
 
 ## `count_above`: the cost of manual register discipline
 
-`count_above` works, but it contains a push/pop pair that does no useful work — the explanation is below the code.
+`count_above` works. It also contains code that does nothing, for a reason worth understanding directly.
 
 ```zax
 func count_above(): AF
@@ -144,23 +145,29 @@ end
 `count_above` receives the table base in HL, the length in B, and the threshold
 in C. It counts entries strictly greater than C and returns the count in A.
 
-It needs a separate counter, D, to accumulate the count. But D must be
-initialized to zero before the loop. This creates a problem: the only way to
-zero D without disturbing B and C — which carry the function's inputs — is to
-do it before the loop touches B. The `push bc / ld d, 0 / pop bc` block saves
-B and C, performs the initialization, and restores them.
+It needs a separate counter, D, to accumulate the count. D must be initialised
+to zero before the loop. That sounds trivial — `ld d, 0` — but the programmer
+writing this code has B and C already in use as inputs. Can `ld d, 0` disturb B
+or C? A moment's thought says no — `ld d, 0` only touches D. But the
+`push bc / ld d, 0 / pop bc` sequence is here anyway. The programmer was not
+sure, saved BC to be safe, and moved on.
 
-Actually, `ld d, 0` does not disturb B or C in this specific case, so the
-push/pop achieves nothing mechanically. But the push/pop is here because you cannot
-name your variables in raw Z80 — you have to pick a register, and you cannot
-easily see at a glance which registers are already in use for what. When you
-cannot name things, you save everything and hope.
+This is the real cost of register-only programming: **you cannot trust your own
+reasoning about what a register holds at any given moment.** With three inputs
+and a counter all living in different registers, keeping a correct mental model
+of register ownership requires ongoing effort. When that effort lapses — even
+briefly — the instinct is to save everything and restore it, whether or not it
+was at risk. The push/pop pair is not a bug; it is the programmer's hedge
+against uncertainty. In a longer function with more registers in flight, that
+hedge is often correct. Here it happens to be unnecessary.
 
-The double `cp c` in the loop body is another cost. A single `cp c` sets carry
-when A < C and clears it when A >= C, but "greater than" requires distinguishing
-A == C from A > C. One `cp` gives the less-than test; a second `cp` is needed
-to isolate the equality case. This is correct but redundant: the same comparison
-is performed twice for each element.
+The double `cp c` in the loop body is a separate cost of a different kind.
+`cp c` sets carry when A < C, and sets Z when A == C. To test "strictly greater
+than" you need both: carry clear *and* Z clear. The raw code tests them with two
+separate `cp c` / `jr` pairs — the comparison runs twice per element. This is
+not a mistake; it is what the instruction set requires when you have no
+structured greater-than operator. The code is correct and the cost is small. But
+the intent — "skip unless A > C" — is not visible until you trace both branches.
 
 ---
 
@@ -220,15 +227,15 @@ the intent instead of the mechanism.
 
 ## What the next chapters address
 
-Chapters 10–13 each fix one of the problems above.
+Chapters 11–14 each fix one of the problems above.
 
-**ZAX functions** (Chapter 10) replace register-passing conventions with named parameters and local variables. The compiler builds an IX-relative stack frame; you access every value with standard `ld a, (ix+name+0)` instructions. No push/pop needed to protect inputs while you initialize something else.
+**ZAX functions** (Chapter 11) replace register-passing conventions with named parameters and local variables. The compiler builds an IX-relative stack frame; you access every value with standard `ld a, (ix+name+0)` instructions. No push/pop needed to protect inputs while you initialize something else.
 
-**Structured control flow** (Chapter 11) replaces labels and jumps with `if`/`else` and `while`/`break`/`continue`. The compiler generates the same conditional branches — you just do not write the labels.
+**Structured control flow** (Chapter 12) replaces labels and jumps with `if`/`else` and `while`/`break`/`continue`. The compiler generates the same conditional branches — you just do not write the labels.
 
-**Typed assignment** (Chapter 12) introduces `:=`, which automates the IX-relative loads and stores you wrote by hand in Chapters 10–11. The compiler picks registers, handles word-sized slots, and checks types.
+**Typed assignment** (Chapter 13) introduces `:=`, which automates the IX-relative loads and stores you wrote by hand in Chapters 11–12. The compiler picks registers, handles word-sized slots, and checks types.
 
-**Op macros** (Chapter 13) let you name a short instruction sequence and expand it inline at every call site, with no frame overhead.
+**Op macros** (Chapter 14) let you name a short instruction sequence and expand it inline at every call site, with no frame overhead.
 
 None of this hides the machine. Everything translates to the same Z80 instructions as before. What changes is that the source shows the intent, and the compiler writes the scaffolding.
 
@@ -247,9 +254,30 @@ None of this hides the machine. Everything translates to the same Z80 instructio
   have to manage them correctly.
 - Push/pop pairs appear when a function needs to initialize a register that
   already holds an input. The real problem is not having named variables.
-- Chapters 10–13 — ZAX functions, `if`/`while`, `:=`, and `op` — each address
+- Chapters 11–14 — ZAX functions, `if`/`while`, `:=`, and `op` — each address
   one of these problems, while generating the same Z80 output.
 
 ---
 
-[← I/O and Ports](08-io-and-ports.md) | [Part 1](README.md) | [Functions and the IX Frame →](10-functions-and-the-ix-frame.md)
+## Exercises
+
+**1. Trace `find_max` by hand.** The table is `{ 23, 47, 91, 5, 67, 12, 88, 34 }`. Step through `find_max` iteration by iteration, recording the value of A (the running maximum) and C (the current element) after each `ld c, (hl)`. Fill in the table:
+
+| Iteration | C (current) | A before cp | Update A? | A after |
+|-----------|-------------|-------------|-----------|---------|
+| 1 | 23 | 0 | yes | 23 |
+| 2 | 47 | 23 | ? | ? |
+| 3 | 91 | ? | ? | ? |
+| … | … | … | … | … |
+
+What is A when the loop exits? Does it match the expected result (91)?
+
+**2. The invisible side effect.** `main` reloads `ld hl, values` before calling `count_above`. Why? What value would HL hold after `find_max` returns if you did not reload it? What would `count_above` scan if HL were not reloaded, and what result would `above_64` receive?
+
+**3. Find the redundancy.** The `count_above` function runs `cp c` twice in the loop body. Explain in one sentence why each `cp c` is there and what flag it is testing. Could you combine them into a single test using a different jump? *(Hint: after the first `jr c, skip`, you know A is ≥ C. What additional condition do you need to check?)*
+
+**4. Add a third task.** Extend the program to also count entries that are strictly less than 32, storing the count in a new variable named `below_32`. Write just the additional subroutine and the three lines in `main` that call it. Identify which registers carry each argument and what you must reload before the call.
+
+---
+
+[← I/O and Ports](09-io-and-ports.md) | [Part 1](README.md) | [Functions and the IX Frame →](11-functions-and-the-ix-frame.md)
