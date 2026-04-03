@@ -1,4 +1,4 @@
-; Chapter 05 example: byte table defined in a data section, read via HL loop
+; Chapter 7 example: byte table defined in a data section, read via HL loop
 ; and also via IX+d displaced access for record-like field access
 
 const TableLen  = 6              ; number of entries in scores table

@@ -1,4 +1,4 @@
-; Chapter 06 example: call/ret, register passing, and push/pop preservation
+; Chapter 8 example: call/ret, register passing, and push/pop preservation
 
 section data vars at $8000
   result_add:  byte = 0          ; byte sum returned from add_bytes

@@ -1,16 +1,16 @@
-[← Flags, Comparisons, Jumps](04-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](06-data-tables-and-indexed-access.md)
+[← Flags, Comparisons, Jumps](05-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](07-data-tables-and-indexed-access.md)
 
-# Chapter 5 — Counting Loops and DJNZ
+# Chapter 6 — Counting Loops and DJNZ
 
-The `dec b / jp nz` loop from Chapter 4 uses two instructions where one would do.
+The `dec b / jp nz` loop from Chapter 5 uses two instructions where one would do.
 This chapter shows the single-instruction replacement, and the three loop forms
 you will reach for most often: counted, sentinel, and flag-exit.
 
 ---
 
-## Chapter 4 left a two-instruction pattern
+## Chapter 5 left a two-instruction pattern
 
-Chapter 4 ended with this loop shape:
+Chapter 5 ended with this loop shape:
 
 ```zax
 ld b, Limit
@@ -322,4 +322,43 @@ determines when to stop.
 
 ---
 
-[← Flags, Comparisons, Jumps](04-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](06-data-tables-and-indexed-access.md)
+## Exercises
+
+**1. The zero-count trap.** Explain what happens when this code runs. How many times does the loop body execute? Why?
+
+```zax
+ld a, (count_value)   ; suppose count_value holds 0 at runtime
+ld b, a
+loop_top:
+  ; ... body ...
+  djnz loop_top
+```
+
+Write the corrected version that skips the loop entirely when `count_value` is zero.
+
+**2. Modify the sum loop.** The DJNZ sum loop from the chapter accumulates all five entries in `addends = { 3, 7, 2, 8, 5 }`. Change the loop so that it finds the **minimum** value instead of the sum. The result should be stored in a variable named `minimum`. *(Hint: start `minimum` at 255 and update it whenever the current byte is smaller. Chapter 5's `cp` and `jr nc` are the tools.)*
+
+**3. Sentinel loop — find the zero.** A table of bytes ends with a zero sentinel:
+
+```zax
+section data rom at $8010
+  message: byte[6] = { $41, $42, $43, $00, $44, $45 }
+end
+```
+
+Write a sentinel loop that scans `message` and stores the **index** (0-based position) of the first zero byte into a variable named `zero_pos`. The loop must also handle the case where no zero is found within the first six bytes — store `$FF` in `zero_pos` in that case.
+
+**4. Loop analysis.** The flag-exit loop in the chapter example exits when the accumulated sum reaches or exceeds `$10` (16). The data is `{ 3, 7, 2, 8, 5 }`. Trace through the loop iteration by iteration:
+
+| Iteration | Byte added | A after add | `cp $10` → C set? | Exit? |
+|-----------|-----------|-------------|-------------------|-------|
+| 1 | 3 | ? | ? | ? |
+| 2 | 7 | ? | ? | ? |
+| 3 | 2 | ? | ? | ? |
+| 4 | 8 | ? | ? | ? |
+
+Fill in the table. After the loop exits, what value is stored in `flagval`? Now change the threshold from `$10` to `$0C` (12) and redo the trace — does the loop exit one iteration earlier?
+
+---
+
+[← Flags, Comparisons, Jumps](05-flags-comparisons-jumps.md) | [Part 1](README.md) | [Data Tables and Indexed Access →](07-data-tables-and-indexed-access.md)

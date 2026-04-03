@@ -1,5 +1,5 @@
-; Chapter 10 example: typed func parameters, typed return values, and op
-; Solves the same two problems as Chapters 07–09 using the full Phase B surface:
+; Chapter 11 example: typed func parameters, typed return values, and op
+; Solves the same two problems as Chapters 08–10 using the full Phase B surface:
 ; typed parameters, typed locals, structured control flow, and an op.
 ;
 ; The op 'load_and_or' names the repeated pattern of loading A from a register

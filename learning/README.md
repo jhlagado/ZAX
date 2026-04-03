@@ -1,5 +1,7 @@
 # Learning ZAX
 
+**New to assembly? Start with the [Introduction](INTRODUCTION.md)** — it explains what assembly language is, why the Z80 is a good machine to learn it on, and what you'll be able to do when you finish.
+
 Two parts. Read them in order.
 
 If you want the whole learning corpus as one GitHub-readable document, use [Learning Book](BOOK.md).

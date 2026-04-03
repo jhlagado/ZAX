@@ -1,4 +1,4 @@
-; Chapter 3 example: constants, named storage, load/store via labels
+; Chapter 4 example: constants, named storage, load/store via labels
 
 const MaxCount  = 10             ; a named constant: value 10
 

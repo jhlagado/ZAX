@@ -1,6 +1,6 @@
-[← Typed Assignment](12-typed-assignment.md) | [Part 1](README.md) | [Part 2 →](../part2/README.md)
+[← Typed Assignment](13-typed-assignment.md) | [Part 1](README.md) | [Part 2 →](../part2/README.md)
 
-# Chapter 13 — Op Macros and Pseudo-opcodes
+# Chapter 14 — Op Macros and Pseudo-opcodes
 
 This chapter covers two features that extend the Z80's native instruction set without adding run-time cost: `op`, which lets you name a short instruction sequence and expand it inline at every call site, and the ZAX pseudo-opcodes, which let you write `ld hl, de` as if the Z80 had a 16-bit register copy instruction.
 
@@ -256,6 +256,58 @@ Each expands to two one-byte instructions — the same two `ld` moves you would 
 
 ---
 
+## Exercises
+
+**1. Write an `op`.** The pattern `ld a, b / or a` (or with any 8-bit register) appears before every `while NZ` loop in the structured code. Define an `op` called `test_reg` with a `reg8` parameter that expands to the two-instruction sequence. Then write the invocations needed before these two loops:
+
+```zax
+; Loop driven by B
+while NZ
+  ; ...
+  dec b
+end
+
+; Loop driven by C
+while NZ
+  ; ...
+  dec c
+end
+```
+
+**2. `op` vs `func` cost comparison.** You have a six-instruction sequence you need to use in five places in your program. Compare the total instruction count in the binary for each approach: (a) a `func` call — include the six instructions plus the `call`, `ret`, and frame overhead; (b) an `op` — include the six instructions repeated at all five call sites. Which produces fewer total instructions? At what body length would the two approaches produce the same total instruction count? *(Assume frameless function: 2 overhead instructions — `call` and `ret`.)*
+
+**3. Overload resolution.** Given these two `op` declarations:
+
+```zax
+op clr(dst: reg16)
+  ld dst, 0
+end
+
+op clr(dst: HL)
+  ld hl, 0
+end
+```
+
+State which overload the compiler selects for each of these call sites, and why:
+
+```zax
+clr HL    ; which overload?
+clr DE    ; which overload?
+clr BC    ; which overload?
+```
+
+Now add a third overload `op clr(dst: DE)` and state what happens when you call `clr DE`.
+
+**4. Pseudo-opcode expansion.** Write the exact raw Z80 instruction pair that each pseudo-opcode expands to, and explain why ZAX provides these but does not provide, say, `ld hl, af`:
+
+```zax
+ld hl, de
+ld de, bc
+ld bc, hl
+```
+
+---
+
 ## Part 1 complete
 
 You have completed Volume 1.
@@ -283,4 +335,4 @@ You are ready.
 
 ---
 
-[← Typed Assignment](12-typed-assignment.md) | [Part 1](README.md) | [Part 2 →](../part2/README.md)
+[← Typed Assignment](13-typed-assignment.md) | [Part 1](README.md) | [Part 2 →](../part2/README.md)

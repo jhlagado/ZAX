@@ -1,6 +1,6 @@
-[← Counting Loops and DJNZ](05-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](07-stack-and-subroutines.md)
+[← Counting Loops and DJNZ](06-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](08-stack-and-subroutines.md)
 
-# Chapter 6 — Data Tables and Indexed Access
+# Chapter 7 — Data Tables and Indexed Access
 
 Once your data lives in a table, you need two things: a way to process every
 entry in order, and a way to reach one specific entry directly. HL handles the
@@ -220,10 +220,11 @@ ld (max_score), a
 ```
 
 A holds the running maximum. Each iteration loads the current byte into C and
-compares A with C using `cp c`. The rule from Chapter 4: after `cp c`, carry is
-set if A is less than C. `jr nc` skips the update when A is already greater than
-or equal to C. `ld a, c` runs only when a new maximum is found. After six
-entries, `max_score` holds 60 (`$3C`).
+compares A with C using `cp c`. Apply the flag-before-branch check: `cp c` is
+the instruction that sets the flag; `jr nc` reads it immediately after with
+nothing in between; carry being clear means A ≥ C, so `jr nc` skips the update
+and the running maximum is unchanged. `ld a, c` runs only when `cp c` found A
+less than C — a new maximum. After six entries, `max_score` holds 60 (`$3C`).
 
 **Section C — IX+d access on a packed record table.**
 
@@ -298,7 +299,7 @@ the same scan in the decrementing direction.
 `ldir`, `lddr`, `cpir`, and `cpdr` are raw Z80 mnemonics used directly in ZAX,
 exactly like `djnz` — the assembler emits them as-is.
 
-When both HL and DE are live pointers — as they are during any `ldir` sequence — you sometimes need to exchange them. After a copy, the destination you wrote may become the source for the next pass, or you need to hand that address to a routine that expects it in HL. Without a swap instruction, exchanging the two pairs takes six instructions and clobbers A. `EX DE, HL` does it in one: afterward, DE holds what HL had and HL holds what DE had, and nothing else changes.
+When both HL and DE are live pointers — as they are during any `ldir` sequence — you sometimes need to exchange them. After a copy, the destination you wrote may become the source for the next pass, or you need to hand that address to a routine that expects it in HL. Without a swap instruction, exchanging the two pairs takes six instructions and clobbers A. `ex de, hl` does it in one: afterward, DE holds what HL had and HL holds what DE had, and nothing else changes.
 
 ```zax
 ld hl, source
@@ -332,4 +333,38 @@ ex de, hl         ; HL now points past dest; DE points past source
 
 ---
 
-[← Counting Loops and DJNZ](05-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](07-stack-and-subroutines.md)
+## Exercises
+
+**1. Post-loop pointer value.** The HL sum loop in the chapter starts with `ld hl, scores` where `scores` is at address `$8000` and contains six entries. After the loop completes all six iterations, what address does HL hold? What byte would `ld a, (hl)` read at that point? Is that byte part of `scores`?
+
+**2. Address versus value.** Explain the difference in effect between these two instructions:
+
+```zax
+ld hl, scores      ; (a)
+ld a, (scores)     ; (b)
+```
+
+Which instruction loads the number 10 (the first element of the table) into a register? Which loads the memory address where 10 is stored?
+
+**3. IX record access.** You have three three-byte records packed in memory, each with the layout: `id` at offset 0, `hi` at offset 1, `lo` at offset 2. The table starts at address `$8010`. Write the IX loads to read all three fields of the **third** record (index 2) into registers A, B, and C respectively. Start by computing the address you need to load into IX.
+
+**4. Find the bug.** The following loop is meant to find the maximum score in the `scores` table, but it has a subtle error. Identify what goes wrong and explain what value `max_score` will hold at the end:
+
+```zax
+ld hl, scores
+ld b, TableLen
+ld a, 0
+max_loop:
+  cp (hl)
+  jr nc, no_new_max
+  ld a, (hl)
+no_new_max:
+  djnz max_loop
+ld (max_score), a
+```
+
+*(Hint: `inc hl` is missing somewhere. Where? And what does HL read on every iteration as a result?)*
+
+---
+
+[← Counting Loops and DJNZ](06-counting-loops-and-djnz.md) | [Part 1](README.md) | [Stack and Subroutines →](08-stack-and-subroutines.md)

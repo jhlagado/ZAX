@@ -14,13 +14,13 @@ A few examples from the Z80 instruction set:
 
 | Byte sequence | Instruction | What it does |
 |---------------|-------------|--------------|
-| `$3E n` | `LD A, n` | Load the constant value `n` into A |
-| `$06 n` | `LD B, n` | Load the constant value `n` into B |
-| `$47` | `LD B, A` | Copy A into B |
-| `$80` | `ADD A, B` | Add B to A; result goes into A |
-| `$32 lo hi` | `LD (nn), A` | Store A at the 16-bit address `nn` |
-| `$3A lo hi` | `LD A, (nn)` | Load A from the 16-bit address `nn` |
-| `$76` | `HALT` | Stop the CPU |
+| `$3E n` | `ld a, n` | Load the constant value `n` into A |
+| `$06 n` | `ld b, n` | Load the constant value `n` into B |
+| `$47` | `ld b, a` | Copy A into B |
+| `$80` | `add a, b` | Add B to A; result goes into A |
+| `$32 lo hi` | `ld (nn), a` | Store A at the 16-bit address `nn` |
+| `$3A lo hi` | `ld a, (nn)` | Load A from the 16-bit address `nn` |
+| `$76` | `halt` | Stop the CPU |
 
 Address operands always follow the Z80's little-endian convention: low byte first, high byte second. The address `$8000` appears in the instruction stream as `$00 $80`. For a searchable reference of the full Z80 instruction set, see [Appendix 4](../appendices/04-classic-z80-instruction-support.md).
 
@@ -76,9 +76,9 @@ Result:          ; the assembler records "Result" as the current address
   DB 0           ; allocate one byte at this address, initial value 0
 ```
 
-(`DB` stands for "define byte." `DW` defines a 16-bit word.) From this point on, writing `LD (Result), A` in the code is equivalent to writing `LD ($8000), A` — but you never have to know or write `$8000`. The assembler handles it.
+(`DB` stands for "define byte." `DW` defines a 16-bit word.) From this point on, writing `ld (Result), a` in the code is equivalent to writing `ld ($8000), a` — but you never have to know or write `$8000`. The assembler handles it.
 
-Labels also name positions within the code — the targets of jumps and branches. Instead of writing `JP $0034`, you write `JP loop_top`, and the assembler works out the address of `loop_top` itself.
+Labels also name positions within the code — the targets of jumps and branches. Instead of writing `jp $0034`, you write `jp loop_top`, and the assembler works out the address of `loop_top` itself.
 
 Machine code is just bytes. Assembly adds names for addresses.
 
