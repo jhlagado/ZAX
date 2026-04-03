@@ -1,4 +1,4 @@
-; Chapter 04 example: cp, or a, conditional jp, label-based counted loop, and logical ops
+; Chapter 5 example: cp, or a, conditional jp, label-based counted loop, and logical ops
 
 const Limit = 5                  ; loop will run this many times
 

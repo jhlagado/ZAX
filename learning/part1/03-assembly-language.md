@@ -1,4 +1,4 @@
-[← Machine Code](02-machine-code.md) | [Part 1](README.md) | [Flags, Comparisons, Jumps →](04-flags-comparisons-jumps.md)
+[← Machine Code](02-machine-code.md) | [Part 1](README.md) | [Memory Access and Data →](04-memory-access-and-data.md)
 
 # Chapter 3 — Assembly Language
 
@@ -10,7 +10,7 @@ the code stops looking like something a human being can reason about.
 Assembly solves exactly that problem. The CPU still runs the same machine code,
 but you get readable instruction names, names for addresses, and a source file
 you can actually inspect without decoding hex in your head. This chapter
-introduces that surface: `LD`, constants, named storage, and the first file
+introduces that surface: `ld`, constants, named storage, and the first file
 layout rules you need in ZAX.
 
 ---
@@ -52,6 +52,44 @@ and address names; the CPU still runs the same bytes.
 
 ---
 
+## What ZAX adds — and what it doesn't
+
+You just saw two things in that program that are not Z80 instructions: `export
+func main()` and `section data state at $8000`. These are ZAX constructs. It
+is worth being clear about the boundary.
+
+**Raw Z80 assembly** gives you instruction mnemonics (`ld`, `add`, `jp`, `call`
+…), labels for addresses, and directives for placing data (`db`, `dw`). That is
+all. There are no functions, no local variables, no control-flow keywords. Every
+classic Z80 assembler provides roughly this surface.
+
+**ZAX adds** the following on top:
+
+- `func` / `export func` — declares a named function with an optional parameter
+  list and return type; the compiler builds a stack frame for it
+- `section data` / `section code` — names a region of memory and declares what
+  lives there
+- `var` — declares typed local variables inside a function
+- `if` / `else` / `while` / `repeat…until` / `select` / `case` — structured
+  control flow keywords that compile to standard Z80 conditional jumps
+- `:=` — a typed assignment operator for reading and writing frame slots
+- `step` — increments or decrements a named variable in place
+- `op` — defines an inline macro that expands at each call site
+- `const` — names a compile-time constant (this exists in classic assemblers
+  too, but ZAX's `const` participates in the type system)
+
+**What ZAX does not add** is a runtime system, a garbage collector, or any
+hidden instructions. Every ZAX construct compiles to Z80 instructions you could
+have written by hand — and in Chapters 5 through 9 you will write them by hand,
+so you will always know what any ZAX keyword generates.
+
+If you try to look up `func` or `while` in a Z80 instruction reference, you
+won't find them. They are ZAX. The lowercase mnemonics — `ld`, `add`, `cp`,
+`djnz`, `call`, `ret` — are Z80 instructions, and any Z80 reference covers
+them.
+
+---
+
 ## Sections and Memory Layout
 
 A Z80 program still has to respect the memory map from Chapter 1. Code has to
@@ -90,27 +128,40 @@ entry point, not from the first line in the file.
 
 ---
 
-## The LD Instruction
+## The `ld` Instruction
 
-`LD` is the most frequently used instruction in Z80 assembly. It copies a value from a source to a destination:
+`ld` is the most frequently used instruction in Z80 assembly. It copies a value from a source to a destination:
 
 ```
 ld destination, source
 ```
 
-`LD` is a pure copy. The destination receives the value, the source stays as it
+`ld` is a pure copy. The destination receives the value, the source stays as it
 was, and the flags register is untouched.
 
-Every legal `LD` has a source and a destination. A source can be a register,
+Every legal `ld` has a source and a destination. A source can be a register,
 an immediate constant encoded directly in the instruction, or a byte in memory.
-A destination can be a register or a byte in memory. **Parentheses always mean
-memory**: `LD A, B` copies register B into A, while `LD A, (HL)` reads the
-byte at the address held in HL. Miss the parentheses and you have written a
-completely different instruction.
+A destination can be a register or a byte in memory.
 
-The Z80 implements specific pairings of those source and destination types —
-not all combinations are legal. The families below show exactly which ones
-exist.
+---
+
+> **The Parentheses Rule — memorise this before reading further**
+>
+> **Parentheses always mean "go to this address in memory."**
+>
+> `ld a, b` copies register B into A — no memory involved.
+> `ld a, (hl)` reads the *byte at the address held in HL* from memory.
+>
+> Missing or adding parentheses writes a completely different instruction —
+> one the assembler will happily accept, silently doing the wrong thing.
+> Every beginner gets bitten by this. Now you know to watch for it.
+
+---
+
+The Z80 implements specific pairings of source and destination types —
+not all combinations are legal. This chapter covers the two forms used in the
+examples here. Chapter 4 covers the memory access forms and the complete LD
+forms table.
 
 ### 8-bit register to register
 
@@ -133,113 +184,6 @@ ld b, $FF       ; B = 255
 ld hl, $8000    ; HL = $8000
 ld ix, $4000    ; IX = $4000
 ```
-
-### Memory access through HL
-
-Load an address into HL and it points to that location in memory. `(HL)` means
-the byte at the address HL holds — you can read or write it directly.
-
-```zax
-ld a, (hl)     ; A = byte at address HL
-ld (hl), a     ; byte at address HL = A
-ld b, (hl)     ; B = byte at address HL
-ld (hl), 19    ; byte at address HL = 19
-```
-
-Any of A, B, C, D, E, H, L can appear on either side when the other side is
-`(HL)`. BC and DE also have indirect forms, but only with A — `ld a, (bc)` and
-`ld (de), a`. The standard pattern is: load an address into
-HL, read or write with `(HL)`, increment HL, repeat.
-
-IX and IY support displaced addressing — covered in Chapter 6 when the use case makes it concrete.
-
-### Memory access through BC or DE
-
-Only A can be used with `(BC)` or `(DE)`:
-
-```zax
-ld a, (bc)     ; A = byte at address BC
-ld (de), a     ; byte at address DE = A
-```
-
-These are compact single-byte opcodes with A hardcoded in the instruction
-encoding. The Z80 has no opcodes for `LD B, (BC)` or any other register
-with those indirect modes — the assembler will tell you if you try.
-
-### Direct memory address
-
-A can be loaded from or stored to a fixed 16-bit address. Register pairs can also transfer both bytes in one instruction (little-endian, as always):
-
-```zax
-ld a, ($8000)      ; A = byte at $8000
-ld ($8001), a      ; byte at $8001 = A
-ld hl, ($8002)     ; HL = word at $8002–$8003
-ld ($8004), bc     ; word at $8004–$8005 = BC
-```
-
-### Two memory locations cannot be combined
-
-There is no instruction that copies one memory address directly to another. You must go through a register:
-
-```zax
-; No such instruction: ld ($8001), ($8000)
-
-; Do this instead:
-ld a, ($8000)
-ld ($8001), a
-```
-
-This catches everyone at first. The CPU can talk to memory or to its own
-registers, but it cannot move data from one memory location to another without
-passing it through a register on the way.
-
-Both this and the `(BC)`/`(DE)` restriction above are examples of the same
-reality: the Z80's instruction set was built from the combinations that fit the
-original opcode space, not from a consistent scheme. You cannot predict which
-forms exist from a general rule; you learn them through use.
-[Appendix 4](../appendices/04-classic-z80-instruction-support.md) has the
-complete searchable list.
-
-### Summary of LD forms
-
-| Form | Example | Notes |
-|------|---------|-------|
-| reg8 ← reg8 | `ld a, b` | Any 8-bit register to any other |
-| reg8 ← n | `ld b, $FF` | Immediate 8-bit constant |
-| reg16 ← nn | `ld hl, $8000` | Immediate 16-bit constant |
-| reg8 ← (HL) | `ld c, (hl)` | Read byte at address HL |
-| (HL) ← reg8 | `ld (hl), d` | Write byte to address HL |
-| (HL) ← n | `ld (hl), 0` | Write immediate to address HL |
-| A ← (BC) | `ld a, (bc)` | Read byte at address BC; A only |
-| (DE) ← A | `ld (de), a` | Write A to address DE; A only |
-| A ← (nn) | `ld a, ($8000)` | Read byte from fixed address |
-| (nn) ← A | `ld ($8001), a` | Write A to fixed address |
-| reg16 ← (nn) | `ld hl, ($8002)` | Read 16-bit word from memory |
-| (nn) ← reg16 | `ld ($8004), hl` | Write 16-bit word to memory |
-| SP ← reg16 | `ld sp, hl` | SP = HL (or IX or IY) |
-
-For a compact LD quick table and the full addressing-shape reference, see [Appendix 3](../appendices/03-addressing-prefixes-and-instruction-forms.md).
-
----
-
-## Signed and Unsigned Values
-
-The same byte can mean two different things depending on how you choose to read it.
-
-As an **unsigned** value, the byte holds 0 to 255. The bit pattern `$FF` is 255.
-
-As a **signed** value using two's complement, bit 7 is the sign bit. If bit 7 is 0 the value is positive (0 to 127). If bit 7 is 1 the value is negative (−128 to −1). The bit pattern `$FF` is −1. The bit pattern `$80` is −128.
-
-To compute the two's complement of a positive value: invert all bits and add one. The two's complement of `$01` (`%00000001`) is `%11111110 + 1 = %11111111 = $FF`, which is −1.
-
-`ADD A, B` performs the same bitwise addition regardless — the result byte is
-identical whether you treat the inputs as signed or unsigned. Where the difference surfaces: `$80 +
-$01` gives `$81`. Read as unsigned that is 128 + 1 = 129. Read as signed that
-is −128 + 1 = −127. Same instruction, same output, two different numbers. The
-bug appears when one part of your program writes a value intending it as signed
-and another reads it as unsigned. The common landmark values (`$00`, `$7F`,
-`$80`, `$FF`) and their signed and unsigned meanings are in
-[Appendix 2](../appendices/02-registers-flags-and-conditions.md).
 
 ---
 
@@ -284,13 +228,10 @@ memory address:
 ```zax
 ld a, (count)         ; A = byte at address of count
 ld (count), a         ; byte at address of count = A
-
-ld hl, $1234
-ld (scratch), hl      ; word at address of scratch = HL
-ld hl, (scratch)      ; HL = word at address of scratch
 ```
 
-The parentheses mean the same thing everywhere:
+The parentheses mean the same thing everywhere — this is the Parentheses Rule
+from earlier applied to named storage:
 
 | Notation | Meaning |
 |----------|---------|
@@ -298,26 +239,31 @@ The parentheses mean the same thing everywhere:
 | `ld a, (count)` | Read byte at the address of `count` |
 | `ld a, ($8000)` | Read byte at address `$8000` |
 
-**Parentheses always mean "go to this address in memory."**
+Same rule, three different ways of specifying the address. The parentheses are
+always the signal: *leave the name/register/value as-is and go to that location
+in memory instead.*
+
+Word-size access (`ld hl, (scratch)`) and the full set of memory addressing
+forms are covered in Chapter 4.
 
 ---
 
 ## ADD, INC, and DEC
 
-`ADD A, B` adds B to A and **writes the result back into A**. The original
+`add a, b` adds B to A and **writes the result back into A**. The original
 value of A is gone after the instruction; the next instruction sees A's new
 value. If you need A's original value later, copy it to another register before
-the `ADD`.
+the `add`.
 
-`INC r` adds 1 to register r; `DEC r` subtracts 1. Both modify the register in
-place and update the flags. `DEC` sets the Zero flag when the result reaches
-zero, which Chapters 4 and 5 put to use.
+`inc r` adds 1 to register r; `dec r` subtracts 1. Both modify the register in
+place and update the flags. `dec` sets the Zero flag when the result reaches
+zero, which Chapters 5 and 6 put to use.
 
 ---
 
 ## The Examples
 
-Three example files accompany this chapter. Each one is a complete program you can assemble and run.
+Two example files accompany this chapter. Each one is a complete program you can assemble and run.
 
 ### `00_first_program.zax`
 
@@ -348,50 +294,88 @@ end
 
 The final two instructions, `ld d, h` and `ld e, l`, copy HL into DE one byte at a time. After both, DE holds `$1234`. There is no single instruction that copies one register pair into another; you always do it as two 8-bit moves.
 
-### `02_constants_and_labels.zax`
+Example `02_constants_and_labels.zax` demonstrates word-size memory access and is walked through in Chapter 4.
 
-```zax
-const MaxCount  = 10
+---
 
-export func main()
-  ld a, MaxCount
-  ld (count), a
+## When Your Program Does the Wrong Thing
 
-  ld hl, $1234
-  ld (scratch), hl
+You have compilable code now. At some point — probably soon — a program will produce the wrong result, or no result, or simply crash the emulator. Assembly gives you no runtime errors, no stack traces, and no error messages. The CPU silently executes whatever bytes are in memory. Here is how to find out what went wrong.
 
-  ld hl, (scratch)
-end
+### Step 1: Read the assembler listing
 
-section data state at $8000
-  count:   byte = 0
-  scratch: word = 0
-end
-```
+Compile with the listing flag (check the ZAX CLI for `--list` or similar). The listing shows each source line alongside the hex bytes it generated and the address where they were placed. Before running a program, glance at the listing and confirm:
 
-`ld a, MaxCount` — the assembler sees `MaxCount` and writes `10` into the instruction. This is an immediate load; no memory access happens.
+- Did every instruction assemble without an error or warning?
+- Is the data section placed where you intended? (`count` at `$8000`, `scratch` at `$8001`?)
+- Does the entry point (`main`) start at `$0000`, or wherever your memory map expects it?
 
-`ld (count), a` — stores A at the address of `count`. The parentheses mean "memory at this address."
+A misplaced section is one of the most common sources of programs that compile cleanly and then do nothing sensible at all.
 
-`ld (scratch), hl` and `ld hl, (scratch)` do the same thing at word size: the
-two-byte value in HL is written into `scratch`, then read back. The assembler
-reserved two consecutive bytes for `scratch` automatically — that is what
-declaring it as `word` instead of `byte` does.
+### Step 2: Use the emulator's step mode
+
+Every Z80 emulator has a way to single-step: execute one instruction and pause. Use it for the first several programs in this course. Before each step, ask yourself: *what should this instruction do to which register?* After the step, check whether the register holds what you expected.
+
+If a register has the wrong value after an instruction, you have found the exact point of failure. Now ask why: was the source register already wrong before this instruction? Work backward from the wrong value to the instruction that produced it.
+
+### Step 3: Watch the flags
+
+After any instruction that modifies flags — `add`, `sub`, `cp`, `and`, `or`, `xor`, `inc`, `dec` — check what the flags register actually contains in the emulator's register display. Compare it to what you expected. A jump that branches the wrong way almost always traces back to a flag that was set differently than you thought.
+
+Apply the flag-before-branch check from Chapter 5 when this happens: identify which instruction set the flag, then verify nothing between that instruction and the jump changed it.
+
+### Step 4: Check memory after the program halts
+
+Most Z80 emulators let you inspect any memory address after execution. When a program stores a result to a named variable, halt execution and look at the address where that variable lives. If the value is wrong, you know the computation failed somewhere. If the value is correct but the program still behaves unexpectedly, the problem may be in how the result is being used later.
+
+For the examples in this chapter: after `00_first_program.zax` runs, address `$8000` should hold `$08`. If it doesn't, step through the program one instruction at a time until you see where the value diverges from what you expected.
+
+That four-step process — listing check, step mode, flag watch, memory inspection — is everything you need to debug the programs in this course. More advanced techniques (breakpoints, watchpoints, memory maps) build on these same fundamentals.
 
 ---
 
 ## Summary
 
 - Sections tell the assembler where named storage belongs in memory; in this chapter the examples pin data sections explicitly with `at $XXXX`
-- `LD` copies a value from source to destination without affecting flags; not all combinations are legal — consult the forms table
-- Parentheses always mean "memory at this address" — whether in `(HL)`, `(count)`, or `($8000)`
-- Two memory locations cannot appear in a single `LD`; you must go through a register
-- Unsigned bytes hold 0–255; signed bytes use two's complement (bit 7 = sign, range −128 to +127)
+- `ld` copies a value from source to destination without affecting flags; the two forms used here are register-to-register and immediate — Chapter 4 covers the memory access forms and the complete forms table
+- Parentheses always mean "memory at this address" — whether in `(hl)`, `(count)`, or `($8000)`
 - `const` names a fixed value substituted at assembly time; it produces no output bytes
-- `EX DE, HL` swaps the two register pairs in one instruction — introduced in Chapter 6 when both HL and DE are in use as pointers
-- `ADD A, B` writes the result back into A, destroying its previous value; copy A to another register first if you need it later
-- `INC r` and `DEC r` add or subtract 1 in place and update the flags; `DEC` sets the Zero flag at zero, making it useful as a loop counter
+- `ex de, hl` swaps the two register pairs in one instruction — introduced in Chapter 7 when both HL and DE are in use as pointers
+- `add a, b` writes the result back into A, destroying its previous value; copy A to another register first if you need it later
+- `inc r` and `dec r` add or subtract 1 in place and update the flags; `dec` sets the Zero flag at zero, making it useful as a loop counter
 
 ---
 
-[← Machine Code](02-machine-code.md) | [Part 1](README.md) | [Flags, Comparisons, Jumps →](04-flags-comparisons-jumps.md)
+## Exercises
+
+**1. Register trace.** Step through this sequence in your head and write down the value in each register after every instruction executes:
+
+```zax
+ld a, $10
+ld b, a
+ld a, $06
+add a, b
+ld c, a
+```
+
+When you reach the end: what is in A? B? C? Has anything changed in HL? Now assemble the snippet (add the `export func main() … end` wrapper and a data section for any storage you need) and confirm in the emulator.
+
+**2. Copy HL into DE — without using `ld de, hl`.** There is no single Z80 instruction that copies one 16-bit register pair directly into another. Write the two `ld` instructions needed to move the value in HL into DE using only 8-bit register moves. Then write a second version that achieves the same result using the stack (`push` / `pop`) — a technique you will meet formally in Chapter 8.
+
+**3. Constants versus labels.** Given this data section:
+
+```zax
+const Base = $8000
+
+section data state at $8000
+  count: byte = 0
+end
+```
+
+Explain the difference between `Base` and `count` in terms of what each name means to the assembler and what code they produce. Which one occupies a byte in the output binary? Which one is zero bytes in the output?
+
+**4. `dec` and the Zero flag.** Starting with `ld b, 3`, execute `dec b` three times in a row. Write down the value in B after each `dec`. After which `dec` instruction is the Zero flag set? (Chapter 6 will use this exact mechanism to build counted loops.)
+
+---
+
+[← Machine Code](02-machine-code.md) | [Part 1](README.md) | [Memory Access and Data →](04-memory-access-and-data.md)

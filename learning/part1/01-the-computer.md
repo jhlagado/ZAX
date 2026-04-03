@@ -40,6 +40,8 @@ When a word is stored in memory, it occupies two consecutive bytes. Which byte c
 
 ## Hexadecimal
 
+You will need to read hex constantly in Z80 work. The emulator's memory display shows addresses and byte values in hex. The assembler listing shows opcodes in hex. When a program crashes and the emulator shows `PC = $00C3`, `A = $FF`, that is hex. When you look up an instruction in a reference and see the opcode is `$3E`, that is hex. When you declare a constant with `const Base = $8000`, that is hex.
+
 Writing out eight bits every time you mean a byte value is tedious and error-prone. Instead, Z80 programmers almost universally use **hexadecimal** — base 16 — and so will you. Hexadecimal numbers are prefixed with `$` throughout this book.
 
 Hexadecimal uses sixteen digits: `0`–`9` for values 0–9, then `A`–`F` for values 10–15. The key property that makes hexadecimal useful in this context is that exactly four bits correspond to exactly one hexadecimal digit. Converting between hex and binary requires no arithmetic — just split the bits into groups of four and substitute each group directly.
@@ -124,26 +126,22 @@ Here is the complete Z80 register set:
 
 When B and C are used as the pair BC, B holds the high byte and C holds the low byte — the same pattern as DE (D high, E low) and HL (H high, L low). IX and IY follow the same rule with their halves. So for example if HL = `$1A2B`, then H = `$1A` and L = `$2B`.
 
-The Z80 also has a second, hidden copy of A, F, B, C, D, E, H, and L called the **shadow registers**. They are covered in Chapter 7, where you will have a practical reason to use them. For a compact register reference, see [Appendix 2](../appendices/02-registers-flags-and-conditions.md).
+The Z80 also has a second, hidden copy of A, F, B, C, D, E, H, and L called the **shadow registers**. They are covered in Chapter 8, where you will have a practical reason to use them. For a compact register reference, see [Appendix 2](../appendices/02-registers-flags-and-conditions.md).
 
 ---
 
 ## The Flags Register
 
-The flags register F records the outcome of the last operation — each flag is one bit. Z (zero) and C (carry) are the two you will use from the start; S (sign) becomes relevant when signed arithmetic arrives in Chapter 4. The other three — H, P/V, and N — appear in specific contexts and are covered when those contexts arise.
+The flags register F records the outcome of the last operation. Each flag is a single bit — set (1) or clear (0). The two you will use from the very beginning are:
 
-| Bit | Symbol | Name | Meaning |
-|-----|--------|------|---------|
-| 7 | S | Sign | Set if the result, interpreted as a signed number, is negative (i.e. bit 7 of the result is 1). |
-| 6 | Z | Zero | Set if the result is zero. |
-| 5 | — | | Undefined. |
-| 4 | H | Half carry | Used by the DAA instruction for BCD arithmetic. You will not need this unless you are working with BCD data. |
-| 3 | — | | Undefined. |
-| 2 | P/V | Parity / Overflow | Reports overflow in signed arithmetic, or parity after certain block operations. Covered in Chapter 4 (signed arithmetic) and Chapter 8 (I/O). |
-| 1 | N | Subtract | Set by subtraction instructions; used internally by DAA. You will not read this flag directly. |
-| 0 | C | Carry | Set if the last operation produced a carry out of bit 7, or a borrow in the case of subtraction. |
+| Symbol | Name | Set when |
+|--------|------|----------|
+| Z | Zero | The result of the last operation was zero |
+| C | Carry | The last addition produced a carry out of bit 7, or the last subtraction required a borrow |
 
-Not every instruction updates every flag. Some instructions update all flags; some update only Z and C; some leave all flags unchanged. A compact flags and condition-codes reference is in [Appendix 2](../appendices/02-registers-flags-and-conditions.md).
+These two flags drive most of the branching you will write in Chapters 3 through 9. The Z80 has four more flags — S (sign), H (half carry), P/V (parity/overflow), and N (subtract). They appear in specific contexts and are introduced when those contexts arise. The full flags reference is in [Appendix 2](../appendices/02-registers-flags-and-conditions.md); there is no need to memorise all six now.
+
+Not every instruction updates every flag. Notably, `ld` instructions — the ones you will write most often — do not affect flags at all. Chapter 5 explains which instructions set which flags and why the distinction matters.
 
 ---
 
@@ -152,6 +150,27 @@ Not every instruction updates every flag. Some instructions update all flags; so
 The CPU does one thing, over and over: read the byte at address PC, interpret it as an instruction, carry it out, and advance PC to the next instruction. This is the **fetch-execute cycle**.
 
 The Z80 starts with PC at `$0000` after a reset. The first byte fetched is therefore the byte at address `$0000` — whatever memory the hardware has mapped there. Some instructions are one byte long, some are two, three, or four. After executing an instruction, PC advances by exactly as many bytes as that instruction occupied, unless the instruction itself changes PC — jumps and calls do exactly that.
+
+---
+
+## A First Glimpse at a Real Program
+
+Before the summary, here is a concrete preview of what this all looks like. The following is a complete Z80 program — ten bytes of raw machine code placed in memory starting at address `$0000`:
+
+```
+$0000:  3E 05        ; load 5 into register A
+$0002:  47           ; copy A into register B
+$0003:  3E 03        ; load 3 into register A
+$0005:  80           ; add B to A  →  A = 8
+$0006:  32 00 80     ; store A at address $8000
+$0009:  76           ; halt
+```
+
+When the CPU resets, PC is `$0000`. It fetches `$3E`, recognises it as a two-byte "load constant into A" instruction, reads the next byte (`$05`), loads 5 into A, and advances PC to `$0002`. It continues instruction by instruction until it reaches `$76` (HALT) and stops. Address `$8000` now holds `$08` — the value 8.
+
+Every concept from this chapter is visible in those ten bytes: the fetch-execute cycle (PC advancing through each instruction), the registers (A and B used as working storage), memory (the result written to an address), and the 16-bit address bus (the target `$8000` encoded in two bytes, low byte first — little-endian).
+
+Chapter 2 decodes this program byte by byte and explains why writing programs this way — as raw hex — quickly becomes impractical. Chapter 3 shows the same program written in assembly, which is how you will write every program in this course.
 
 ---
 
@@ -164,7 +183,8 @@ The Z80 starts with PC at `$0000` after a reset. The first byte fetched is there
 - The Z80 is little-endian: the low byte of a word is stored at the lower address
 - The memory map (which addresses are ROM, which are RAM) varies by system; PC starts at `$0000` after reset, so that address must contain valid code
 - The CPU has 20+ named registers; the main working registers are A, BC, DE, HL, IX, IY, SP, and PC
-- The flags register F records results of operations; its bits (S, Z, H, P/V, N, C) control conditional branches
+- The flags register F records the outcome of the last operation; Z (zero) and C (carry) are the two you will use first — the full flags reference is in Appendix 2
+- `ld` instructions do not affect flags; arithmetic and comparison instructions do — this distinction matters when writing conditional branches
 - PC always holds the address of the next instruction; the CPU fetches and executes endlessly
 
 ---

@@ -11,19 +11,7 @@ keeps the working patterns visible before the language grows wider.
 
 ## Variables and Types
 
-In raw Z80 code, every intermediate value lives in a register or at a
-hand-chosen memory address. You track which register holds what, and if you run
-out of registers you spill to memory yourself. ZAX typed variables replace that
-manual tracking: you give a value a name and a type, and the compiler handles
-where it lives.
-
-ZAX has three scalar storage types: `byte` (8-bit unsigned), `word` (16-bit
-unsigned), and `addr` (16-bit, for memory addresses and other address-sized
-values). In these examples only `byte` and `word` appear — `addr` becomes
-relevant when you start working with arrays and records.
-
-You can declare storage in two places: named `data` sections at module scope,
-and `var` blocks inside function bodies.
+ZAX has three scalar storage types: `byte` (8-bit unsigned), `word` (16-bit unsigned), and `addr` (16-bit, for memory addresses). In these examples only `byte` and `word` appear — `addr` becomes relevant when you start working with arrays and records.
 
 A `var` block declares function-local scalars with optional initializers:
 
@@ -37,58 +25,15 @@ func power(base: word, exponent: word): HL
 end
 ```
 
-Each local occupies a 16-bit slot in the function's stack frame. The
-initializer value is emitted at function entry, before any instructions in the
-body run. The `var` block is terminated by its own `end`; a second `end` closes
-the function itself.
-
-The compiler allocates and initialises locals before the register-save push
-sequence. Reading the `.z80` output for a framed function, you will see
-`LD HL, imm16` / `PUSH HL` pairs for each initialised local at the top of the
-prologue.
+Each local occupies a 16-bit slot in the IX stack frame. The `var` block is closed by its own `end`; a second `end` closes the function. *(Part 1 Chapter 11 covers the full frame layout.)*
 
 ---
 
 ## The `:=` Assignment Operator
 
-In raw Z80, moving a value between a register and a named location means writing
-the `ld` instruction yourself, with the exact register and address. That works,
-but it means you always have to know the address, remember which register holds
-what, and keep those details consistent by hand.
+`:=` assigns from right to left between typed storage and a register. The compiler resolves names to frame offsets and emits the right instruction sequence — including multi-instruction sequences for word-sized locals. *(Part 1 Chapter 13 covers the full detail.)*
 
-`:=` is the way you read or write a named variable without spelling out the
-load or store sequence yourself. When you write:
-
-```zax
-remaining := exponent
-```
-
-you are telling the compiler: "put the value of `exponent` into `remaining`."
-The compiler figures out where both of those live (in the function's stack frame,
-in a specific register, as a named constant) and emits the right instruction
-sequence. You write the intent; the compiler does the mechanical part.
-
-`:=` works in both directions. You can read a local into a register:
-
-```zax
-hl := result             ; load the local 'result' into HL
-```
-
-Or write a register back into a local:
-
-```zax
-result := hl             ; store HL into the local 'result'
-```
-
-This is different from `ld`. When you write `ld hl, $FF00` you are writing a
-specific Z80 instruction — "load HL with this constant." When you write
-`hl := result` you are describing a transfer between a named storage location
-and a register, and the compiler works out the instruction to use. For a local
-`word` variable, that might take more than one instruction internally, because
-the Z80's indexed addressing has constraints. You do not need to know the
-details — that is the point.
-
-In practice, both `:=` and `ld` appear in the same function body:
+In practice, `:=` and raw Z80 instructions appear together in the same function body:
 
 ```zax
     hl := remaining     ; typed load: read frame local into HL
@@ -102,60 +47,34 @@ In practice, both `:=` and `ld` appear in the same function body:
 
 (Adapted from `learning/part2/examples/unit1/exp_squaring.zax`, lines 60–66.)
 
-The `ld a, l` and `and 1` are raw Z80 instructions — testing a specific bit
-of a specific register. The `:=` lines on either side are named transfers to
-and from the local `remaining`. Both appear naturally together. Raw instructions
-when you are doing register-level work; `:=` when you want to read or write a
-named local without tracking the address yourself.
+Raw instructions for register-level work; `:=` when you want to read or write a named local without tracking the address yourself. Both appear freely in the same body.
 
 ---
 
 ## Functions
 
-Every computation in the Chapter 01 examples lives inside a `func`. You have
-seen `func` in Volume 1 — here is a quick recap of the parts that matter most
-in these examples.
-
-A function declaration names the function, lists its parameters with types, and
-says which register carries the result:
+A function declaration names the function, lists parameters with types, and declares the return register:
 
 ```zax
 func gcd_iterative(left_input: word, right_input: word): HL
 ```
 
-`left_input` and `right_input` are the inputs. Both are `word` — a 16-bit
-unsigned value. The `: HL` at the end says two things: HL will carry the result
-when the function returns, and the compiler will automatically save and restore
-AF, BC, and DE around the function body so the caller does not have to worry
-about them.
-
-Inside the function, you use the parameter names directly — `left_input`,
-`right_input` — with `:=` to read or write them. The compiler handles the
-addressing; you just use the name.
-
-Calling a function with arguments looks like this:
+`: HL` means HL carries the result and the compiler saves/restores AF, BC, and DE. Parameters are accessed by name via `:=`. Calling a function with arguments:
 
 ```zax
     mul_u16 result, factor
     result := hl
 ```
 
-`mul_u16` takes two `word` arguments. After it returns, the result is in HL.
-The `:=` then stores it into the local `result`.
+`mul_u16` takes two `word` arguments; after it returns the result is in HL and `:=` stores it into a local.
 
 ---
 
 ## Basic Control Flow: `if` and `while`
 
-ZAX structured control flow works on the Z80 flag register, which is exactly
-what you would use for a conditional branch in raw assembly. The difference is
-that the compiler generates the hidden labels and conditional jumps — you write
-the condition code keyword, not a `jp` instruction.
+Any Z80 condition code is valid: `if NZ`, `if Z`, `if C`, `if NC`, `if M`, `if P`, `if PE`, `if PO`. The compiler generates the hidden labels and jumps; you write the condition and the body. Flags must be established by a Z80 instruction immediately before the `if` or `while`. *(Part 1 Chapters 5 and 12 cover the full rules.)*
 
-`if NZ`, `if Z`, `if C`, `if NC`, `if M`, `if P`, `if PE`, `if PO` — any Z80
-condition code is valid. The condition is tested at the `if` keyword using the
-current flag state. It is always your responsibility to establish the correct flags with a Z80
-instruction immediately before the condition:
+A concrete pattern from the Chapter 01 examples: testing whether a 16-bit value is zero:
 
 ```zax
     hl := right
@@ -169,58 +88,21 @@ instruction immediately before the condition:
 
 (Adapted from `learning/part2/examples/unit1/gcd_iterative.zax`, lines 20–26.)
 
-The `or l` instruction sets Z if HL is zero. The `if Z` block then handles the
-base case. This is the standard Z80 null-check pattern: OR H with L, or OR A
-with itself to test A, then branch on Z or NZ.
-
-`while <cc>` tests the condition on entry and at the back edge after each
-iteration. If the condition is false on entry, the body never runs. The entry
-flag rule therefore always applies: flags must correctly represent the loop
-condition before the first `while` test, not only at the back edge. The body
-must also re-establish the flags before control reaches the back edge:
-
-```zax
-    ld a, 1
-    or a            ; establish NZ before the first while test
-    while NZ
-      ; ... loop body ...
-
-      ld a, 1
-      or a            ; re-establish NZ for the next iteration
-    end
-```
-
-`ld a, 1` / `or a` is the reliable way to establish NZ. It appears
-at entry and at the back edge whenever the loop condition must be guaranteed.
-If Z=1 on entry to a `while NZ` loop, the body never executes regardless of
-what is inside it.
+`or l` ORs H and L together; Z is set if the result is zero, clear otherwise. The `if Z` block handles the base case. `while <cc>` tests the same condition on entry and at the back edge — the flag-before-branch rule applies at both points. The body is responsible for re-establishing the correct flags before control reaches the back edge.
 
 ---
 
 ## `step`
 
-`step path` increments a typed scalar location by one. `step path, amount`
-adds a signed compile-time integer to it. Both forms work on locals,
-module-scope variables, record fields, and array elements — any typed scalar
-storage path.
+`step path` increments a typed scalar by one. `step path, amount` adds any signed compile-time integer. The amount must be a literal or a `const` — not a runtime variable.
 
 ```zax
-    step index_value         ; increment the word local 'index_value' by 1
-    step remaining, -1       ; decrement the word local 'remaining' by 1
-    step offset, 4           ; add 4 to 'offset'
+    step index_value         ; +1
+    step remaining, -1       ; -1
+    step offset, 4           ; +4
 ```
 
-`step` lowers to a read-modify-write sequence at the storage path. Writing
-`step remaining, -1` instead of loading `remaining` into HL, subtracting, and
-storing it back keeps the operation at the name level rather than the register
-level.
-
-The amount, when present, must be a compile-time constant: a literal or a
-`const` declaration. You cannot pass a runtime variable as the step amount.
-
-In the Chapter 01 examples, `step` is the standard way to advance or retreat a
-counter local. You will see it throughout the loops that drive counting and
-iteration.
+`step` is the standard way to advance or retreat a counter local throughout the Chapter 01 loops. *(Part 1 Chapter 13 covers `step` in full.)*
 
 ---
 
