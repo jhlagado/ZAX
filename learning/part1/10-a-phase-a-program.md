@@ -79,8 +79,7 @@ explicit: every register used to pass arguments is loaded immediately before eac
 The table base address `values` must be loaded into HL again before each call
 because `find_max` advances HL past the end of the table. HL holds different
 values after each call. Nothing in the language tells you that HL was modified —
-I say this directly, because it only surfaces as a bug once a program grows large
-enough. You find out by reading the function, or by running the program and
+this kind of side effect is invisible in a short program and only surfaces as a bug once the code grows. You find out by reading the function, or by running the program and
 getting wrong results.
 
 ---

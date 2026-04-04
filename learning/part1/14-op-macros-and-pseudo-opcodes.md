@@ -184,7 +184,7 @@ has a unique best match for every call pattern you intend to use.
 
 ## When to use `op` vs `func`
 
-Here is how I decide between the two.
+The decision is practical, and a few concrete rules cover most cases.
 
 Use `op` when:
 
@@ -333,7 +333,7 @@ Volume 2 covers the constructs and patterns needed for larger programs:
 - **Modules and `import`** — splitting programs across files
 - **Pointer structures** — typed reinterpretation, linked lists, trees
 
-You are ready.
+You have built this understanding from first principles. Part 2 assumes it and moves forward from there.
 
 ---
 

@@ -105,9 +105,7 @@ know the relationship — equal, less than, greater than — without changing A.
 
 ## Logical operations: `and`, `or`, `xor`
 
-The three logical instructions each take a value, apply a bitwise operation
-against A, and store the result back in A. All three clear the carry flag and
-set Z if the result is zero.
+Three instructions complete the core toolkit: `and`, `or`, and `xor`. Each applies a bitwise operation between a mask value and A, stores the result back in A, clears C, and sets Z if the result is zero. You reach for these whenever you need to work with individual bits: isolating a status flag from a hardware port byte, setting or clearing a single bit without disturbing the others, or testing whether a byte is zero without running a comparison.
 
 `and n` keeps only the bits where the mask has 1. Use it to isolate part of a
 byte:
@@ -472,6 +470,12 @@ always 0. A is zeroed, Z is set, C is cleared, in one instruction.
   `dec` and `inc` replace most flags but leave C alone; arithmetic replaces
   all flags. Getting this wrong produces silent wrong results — apply the check
   every time, until it is automatic.
+
+---
+
+## What Comes Next
+
+Chapter 6 shows the single instruction the Z80 provides for exactly the loop pattern built at the end of this chapter — decrement a counter, branch if not zero, fall through when done. One instruction instead of two, shorter in every sense, and the foundation of a fuller loop vocabulary that covers counted, sentinel, and flag-exit forms.
 
 ---
 

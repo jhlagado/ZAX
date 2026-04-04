@@ -2,12 +2,9 @@
 
 # Chapter 2 — Arrays and Loops
 
-The Chapter 02 examples introduce arrays and the full loop surface: `while`,
-`break`, and `continue`. The algorithms in this chapter — sorting and searching
-over small byte arrays — are chosen deliberately. They require indexed storage,
-they loop over it repeatedly, and they exit loops early under specific
-conditions. That last requirement is what makes `break` and `continue` earn
-their place in this chapter.
+Sorting a sequence. Finding the first element that satisfies a condition. Stopping the search the moment you have what you need. These are the first real algorithms in this course — and they need two things Chapter 1 deliberately avoided: indexed storage and the ability to exit a loop before it counts to zero.
+
+This chapter introduces both. The algorithms are small — sorting and searching over byte arrays — but they are rich enough to need everything the loop surface offers. `while`, `break`, and `continue` earn their place here because the problems actually require them, not as demonstrations.
 
 ---
 
@@ -29,7 +26,7 @@ There is no padding. If you write `word[4]`, you get exactly eight bytes: four
 two-byte elements. The compiler tracks exact sizes and uses them to compute
 element strides for indexed access.
 
-The Chapter 02 examples give these sizes names rather than repeating the
+These examples give sizes names rather than repeating the
 literal everywhere:
 
 ```zax
@@ -47,7 +44,7 @@ declarations (`byte[8]`) currently require literal values.
 
 Declaring an array as a function local is not directly supported for variable-
 length storage — function `var` blocks only hold scalars. Working arrays for
-Chapter 02 algorithms live in named `data` sections at module scope, which is the
+these algorithms live in named `data` sections at module scope, which is the
 normal home for data that persists across function calls.
 
 ---
@@ -72,7 +69,7 @@ low half of HL, which is the register pair the Z80 uses for most memory
 addressing. Loading the index into L and leaving H as zero gives you a valid
 16-bit address offset with minimal fuss.
 
-This is the register-as-index convention throughout the Chapter 02 examples: load
+This is the register-as-index convention throughout these examples: load
 the index into L (or occasionally B), perform the array access, then advance
 the index with `step` or with an arithmetic instruction.
 
@@ -93,8 +90,8 @@ compiler emits the required address calculation and write instruction.
 
 One indexing detail is worth remembering: `values[HL]` uses HL directly as a
 16-bit index into the array. `values[(HL)]` reads a byte from memory at address
-HL and uses that byte as the index. These mean different things. The Chapter 02
-examples use the direct form: the index is a value held in a register, not
+HL and uses that byte as the index. These mean different things. These examples
+use the direct form: the index is a value held in a register, not
 a value pointed to by a register.
 
 ---
@@ -107,7 +104,7 @@ chapter 02 examples use this form because the loop bounds are checked upfront �
 every sort and search knows its range before it starts.
 
 ZAX also has a `repeat ... until <cc>` form that runs the body at least once
-and tests the condition at the bottom. None of the Chapter 02 examples require
+and tests the condition at the bottom. None of the examples in this chapter require
 it.
 
 ---
@@ -294,10 +291,10 @@ Insertion sort works by maintaining a sorted prefix of the array. For each new
 element (the `hold_value`), it finds the correct insertion position in the
 prefix and shifts elements right to make room.
 
-The Chapter 02 version implements this recursively through the helper
+This version of the sort implements the shift recursively through the helper
 `insert_hole`, which walks leftward through the prefix comparing adjacent
-elements. The recursion depth is bounded by the array length; for short arrays
-this is fine. The function exits early via `ret` in two cases: when the scan
+elements. The recursion depth is bounded by the array length — never deeper than
+the number of elements in the sorted prefix at the time of insertion. The function exits early via `ret` in two cases: when the scan
 reaches index 0 (nowhere further left to shift), or when it finds an element
 that is already in the correct relative order.
 
@@ -436,7 +433,7 @@ See `learning/part2/examples/unit2/binary_search.zax`.
 ### Prime sieve
 
 The sieve of Eratosthenes marks all composite numbers in a flag array. It is
-the most algorithmically interesting Chapter 02 example because it has nested loops
+the most algorithmically interesting example in this chapter because it has nested loops
 and uses both `break` and `continue` — the full loop-control surface.
 
 The outer loop iterates over candidate factors from 2 to `StopFactor`. For each

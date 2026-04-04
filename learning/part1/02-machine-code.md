@@ -105,4 +105,10 @@ The CPU still sees bytes. The assembler changes what you write — not what it e
 
 ---
 
+## What Comes Next
+
+The hex program you just decoded by hand appears again in Chapter 3 — this time written in ZAX assembly, with names where the numbers were. You will recognise every instruction; what changes is that you can read them without decoding, the assembler computes every address automatically, and a named variable can move without touching a single call site.
+
+---
+
 [← The Computer](01-the-computer.md) | [Part 1](README.md) | [Assembly Language →](03-assembly-language.md)

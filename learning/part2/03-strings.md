@@ -2,14 +2,11 @@
 
 # Chapter 3 — Strings
 
-The Chapter 03 examples shift the focus from indexed arrays to pointer-walked memory.
-A null-terminated string is just a sequence of bytes with a zero at the end. That
-simple convention drives everything in this chapter: every algorithm either walks
-until it finds the zero, or copies until it copies the zero.
+A null-terminated string is one of the most direct representations in systems programming: a sequence of bytes with a zero at the end. That single convention drives everything in this chapter — every algorithm either walks until it finds the zero, or copies until it copies the zero.
 
-What changes compared to Chapter 02 is how registers are used. In Chapter 02, the index
+What shifts compared to Chapter 2 is how registers are used. In Chapter 2, the index
 lived in a typed local and the array base was a fixed symbol; you loaded the index
-into L or B and did a single array access. In Chapter 03, the current position lives
+into L or B and did a single array access. Here, the current position lives
 in HL or DE directly — the pointer is the thing that advances. Typed storage paths
 appear where they help (buffering a character into a local, storing the running
 total of a conversion), but the traversal itself is raw Z80 pointer work: `ld a,
@@ -37,7 +34,7 @@ The `or a` instruction ORs A with itself — it has no effect on A but sets or c
 the Z flag depending on whether A is zero. `if Z` then handles the terminator.
 This is the standard Z80 way to test a byte for zero without disturbing
 its value (unlike `cp 0`, which also sets Z but incurs a second immediate operand).
-Six of the seven Chapter 03 examples use this pattern as the core of their
+Six of the seven examples in this chapter use this pattern as the core of their
 traversal loop. The exception is `itoa.zax`, which generates digits by repeated
 division into a scratch buffer and terminates by index counter, not by null
 sentinel.
@@ -232,8 +229,7 @@ repeatedly by 10. Because division produces least-significant digits first, the
 digits accumulate into a scratch buffer in reverse order. A second pass then
 copies them into the output buffer in forward order.
 
-The division uses the `div_u16` helper — the same repeated-subtraction routine
-that appears in the Chapter 01 arithmetic examples — and `times_ten` is used again to
+The division uses the `div_u16` helper — the same repeated-subtraction routine from Chapter 1 — and `times_ten` is used again to
 recover the digit: the remainder from `remaining - quotient * 10` gives the raw
 digit value. Adding `'0'` converts it to an ASCII character.
 
