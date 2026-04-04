@@ -105,9 +105,7 @@ know the relationship — equal, less than, greater than — without changing A.
 
 ## Logical operations: `and`, `or`, `xor`
 
-The three logical instructions each take a value, apply a bitwise operation
-against A, and store the result back in A. All three clear the carry flag and
-set Z if the result is zero.
+Three instructions complete the core toolkit: `and`, `or`, and `xor`. Each applies a bitwise operation between a mask value and A, stores the result back in A, clears C, and sets Z if the result is zero. You reach for these whenever you need to work with individual bits: isolating a status flag from a hardware port byte, setting or clearing a single bit without disturbing the others, or testing whether a byte is zero without running a comparison.
 
 `and n` keeps only the bits where the mask has 1. Use it to isolate part of a
 byte:

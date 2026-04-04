@@ -2,14 +2,9 @@
 
 # Chapter 7 — Composition
 
-The Chapter 07 example is an RPN calculator. It is the first program in this course
-that is built from more than one source file. `rpn_calculator.zax` is the
-lesson. `word_stack.zax` is a support module that the calculator imports — it
-provides a push and a pop operation over a typed word array, and the calculator
-uses these without caring about their implementation. This separation is small
-but representative: it shows how ZAX `import` works, how a module-qualified
-call is written, and how a well-chosen interface lets a higher-level algorithm
-stay focused on what it is actually computing.
+Every program so far in this course has been a single file. This chapter introduces the first program that is not: an RPN calculator split across two source files. `rpn_calculator.zax` is the calculator itself. `word_stack.zax` is a separate module that the calculator imports — it provides push and pop over a typed word array, and the calculator uses these operations without caring how they are implemented.
+
+The separation is small but representative. It shows how ZAX `import` works, how a module-qualified call is written, and how a well-chosen interface lets the higher-level algorithm stay focused on what it is computing rather than how the stack is maintained.
 
 ---
 

@@ -2,14 +2,9 @@
 
 # Chapter 8 — Pointer Structures
 
-The examples in Chapter 8 traverse and search data that is not laid out as a flat array. A
-linked list is a chain of individually addressable nodes, each holding a value
-and the address of the next node in the chain. A binary search tree is a
-hierarchy of nodes where each node holds a value and the addresses of its left
-and right children. Both structures share a common requirement: to move from one
-node to the next, you must follow a stored address — a pointer — rather than
-increment an index. That act of following a pointer is the defining operation
-in this chapter.
+A flat array is simple to navigate: every element is the same size, and you move from one to the next by adding a stride. Not all data fits that shape. A linked list chains nodes through stored addresses — each node holds a value and a pointer to the next one. A binary search tree branches at each node, left or right depending on a comparison, following pointers rather than offsets.
+
+Both structures share a single defining operation: to get from one node to the next, you load an address out of a field and use it to reach the next record. That act — reading a stored pointer and following it — is what this chapter is about.
 
 ZAX has two ways to express a typed pointer. A field declared as `@TreeNode`
 stores a 2-byte address and tells the compiler which record layout to use when
