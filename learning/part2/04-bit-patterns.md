@@ -2,16 +2,9 @@
 
 # Chapter 4 — Bit Patterns
 
-The Chapter 04 examples stay close to the machine. The Z80 bit-manipulation
-instructions — `srl`, `rr`, `and`, `or`, `xor`, `bit` — appear directly as
-mnemonics in ZAX source. What ZAX adds is the surrounding structure: typed
-locals that carry algorithm state between steps, `if` blocks that branch on
-bit tests, and the `while NZ` loop form used throughout the course.
+Individual bits matter more in hardware programming than almost anywhere else. A status register where each bit signals a different peripheral condition. A serial byte arriving one bit at a time. A packed byte where you need to set bit 2 without disturbing bits 0, 1, or 3–7. The Z80 has dedicated instructions for all of this — `srl`, `rr`, `rl`, `bit`, alongside the `and`/`or`/`xor` from Part 1 — and this chapter uses them directly, with typed locals carrying state between steps and structured loops doing the iteration.
 
-Each of the four examples is a single loop that shifts through a byte, testing
-or transforming one bit per iteration. Reading them requires knowing what each
-Z80 instruction does to the flags and registers. The prose explains the
-algorithm built on top of those instructions.
+Each example in this chapter is a single loop that processes a byte one bit at a time. They are short. What makes them worth reading carefully is that the interesting work happens at the instruction level — knowing what each Z80 bit instruction does to flags and registers is what lets you follow the algorithm.
 
 ---
 
@@ -195,14 +188,14 @@ See `learning/part2/examples/unit4/getbits.zax`.
 
 ## Patterns Common to All Four Examples
 
-Looking across the Chapter 04 examples, several ZAX patterns recur:
+Looking across these four examples, several ZAX patterns recur:
 
 **The shift-and-test skeleton.** Every example loops over a fixed number of bit
 positions, shifting a working value right by one at each step and acting on the
 low bit. The loop body is a few instructions around `srl a`, `and 1`, and a
 conditional action.
 
-**The `while NZ` form with a counter.** Counting loops in Chapter 04 use `while NZ`
+**The `while NZ` form with a counter.** Counting loops in this chapter use `while NZ`
 with a byte counter decremented by `step ..., -1`. The loop exits when the counter reaches
 zero — the `or a` on the counter value sets Z, which terminates the loop. This
 is the same counter-driven `while NZ` pattern introduced in Chapter 01.
@@ -213,8 +206,8 @@ instruction sequence that operates on named registers. The `op` form is the righ
 tool when a small sequence has a clear input/output register contract and appears
 in a tight loop.
 
-**Typed locals as algorithm state, raw Z80 for the bit work.** In every Chapter 04
-example, the algorithmic state — the working value, the counter, the accumulating
+**Typed locals as algorithm state, raw Z80 for the bit work.** In every example in
+this chapter, the algorithmic state — the working value, the counter, the accumulating
 result — lives in typed byte locals in the `var` block. The actual bit operations
 (`srl`, `and`, `xor`, `bit`, `or`) operate on A and B directly. The `:=`
 assignments move values between the typed locals and the register file as needed.

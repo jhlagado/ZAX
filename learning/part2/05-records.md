@@ -2,15 +2,9 @@
 
 # Chapter 5 — Records
 
-The Chapter 05 examples introduce typed aggregate state. Up to this point, every
-algorithm has worked with scalars — individual bytes and words. A record collects
-multiple named fields into a single compound value, and an array of records brings
-both structured access and interesting layout questions together.
+Up to this point, every algorithm has worked with scalars — individual bytes and words. A record collects multiple named fields into a single compound value: an `id`, a `length`, a `status`, stored together and accessed by name rather than by raw offset. An array of records brings both structured access and layout questions: how big is each element? What address does the third record start at?
 
-The Chapter 05 example corpus is a single file: `ring_buffer.zax`. It is compact, but
-it covers a lot of ground. It defines a record type, declares an array of that
-record type at a non-power-of-two size, stores and retrieves field values through
-typed paths, and implements a bounded FIFO queue with a modular index.
+This chapter works through one focused example — a bounded ring buffer — that is compact enough to read in one sitting but covers everything: defining a record type, declaring an array of records at a non-power-of-two size, storing and retrieving field values through typed paths, and implementing a FIFO queue with a modular index.
 
 ---
 
@@ -58,7 +52,7 @@ a store — the compiler emits the address calculation for `entries + B * 3 + 0`
 and a `ld` instruction to write A there. On the right side, it would be a load.
 The same path notation works for both read and write.
 
-This is one of the clearest ZAX benefits in the Chapter 05 example: the field access
+This is one of the clearest ZAX benefits in this example: the field access
 reads as `entries[B].value` rather than as a hand-computed offset load. When the
 `Entry` type definition changes, the offsets update automatically.
 

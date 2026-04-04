@@ -2,10 +2,7 @@
 
 # Chapter 1 — Foundations
 
-The Chapter 01 examples work with arithmetic and number-theory algorithms.
-There are no arrays, records, or pointer operations — just functions, typed
-locals, and structured control flow over integer computations. That scope
-keeps the working patterns visible before the language grows wider.
+Arithmetic and number theory make good first examples for this part of the course: the algorithms are self-contained, the results are easy to verify by hand, and they use every ZAX feature that later chapters build on — without arrays, records, or pointer operations complicating the picture. Working through power, GCD, Fibonacci, square root, and decimal digit count gives you a solid footing before the data structures start getting interesting.
 
 ---
 
@@ -74,7 +71,7 @@ func gcd_iterative(left_input: word, right_input: word): HL
 
 Any Z80 condition code is valid: `if NZ`, `if Z`, `if C`, `if NC`, `if M`, `if P`, `if PE`, `if PO`. The compiler generates the hidden labels and jumps; you write the condition and the body. Flags must be established by a Z80 instruction immediately before the `if` or `while`. *(Part 1 Chapters 5 and 12 cover the full rules.)*
 
-A concrete pattern from the Chapter 01 examples: testing whether a 16-bit value is zero:
+A concrete pattern from these examples: testing whether a 16-bit value is zero:
 
 ```zax
     hl := right
@@ -102,7 +99,7 @@ A concrete pattern from the Chapter 01 examples: testing whether a 16-bit value 
     step offset, 4           ; +4
 ```
 
-`step` is the standard way to advance or retreat a counter local throughout the Chapter 01 loops. *(Part 1 Chapter 13 covers `step` in full.)*
+`step` is the standard way to advance or retreat a counter local throughout these loops. *(Part 1 Chapter 13 covers `step` in full.)*
 
 ---
 
@@ -116,7 +113,7 @@ Both functions share the same loop structure: a `while NZ` loop that counts
 down a countdown local, returning early when the count reaches zero.
 
 `step remaining, -1` decrements `remaining` at the bottom of each iteration.
-This is the first example of a common Chapter 01 pattern: a counting loop with an
+This is the first example of a common pattern in this chapter: a counting loop with an
 explicit zero check at the top and a decrement at the bottom.
 
 See `learning/part2/examples/unit1/power.zax`.
