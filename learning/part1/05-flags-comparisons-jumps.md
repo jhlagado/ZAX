@@ -473,6 +473,12 @@ always 0. A is zeroed, Z is set, C is cleared, in one instruction.
 
 ---
 
+## What Comes Next
+
+Chapter 6 shows the single instruction the Z80 provides for exactly the loop pattern built at the end of this chapter — decrement a counter, branch if not zero, fall through when done. One instruction instead of two, shorter in every sense, and the foundation of a fuller loop vocabulary that covers counted, sentinel, and flag-exit forms.
+
+---
+
 ## Exercises
 
 **1. Flag prediction.** For each instruction or short sequence below, state whether Z is set or clear and whether C is set or clear after execution. Do not run the code yet — work it out on paper:

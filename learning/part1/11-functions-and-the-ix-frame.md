@@ -60,7 +60,7 @@ pop ix           ; restore caller's IX
 ret
 ```
 
-Six instructions of overhead — three in, three out — plus any register saves. A raw `call` and `ret` are two instructions with no frame at all. I want to be clear about this: the frame is not free.
+Six instructions of overhead — three in, three out — plus any register saves. A raw `call` and `ret` are two instructions with no frame at all. The frame is not free.
 
 ### What the frame looks like in memory
 

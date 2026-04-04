@@ -168,6 +168,12 @@ After the program runs: `$8000` holds `10` (`$0A`), and `$8001`–`$8002` hold `
 
 ---
 
+## What Comes Next
+
+Every program so far has done its work in a straight line. Chapter 5 adds the ability to branch — to ask whether a value is zero, whether one number is greater than another, whether a carry occurred — and act on the answer. The flags register is what makes that possible, and understanding it is what separates instruction lookup from actual Z80 programming.
+
+---
+
 ## Exercises
 
 **1. Memory form identification.** Classify each instruction below using the LD forms table: identify the row it belongs to and state whether the instruction reads from or writes to memory.

@@ -422,6 +422,12 @@ operations, and you can use them however the stack discipline permits.
 
 ---
 
+## What Comes Next
+
+Every program so far has been self-contained — loads constants, processes data in memory, stores a result. Chapter 9 breaks that boundary. The Z80 has a separate address space for hardware peripherals, and two instructions — `in` and `out` — are the only way to cross it. The subroutine structure you have just learned is exactly what peripheral drivers are built from.
+
+---
+
 ## Exercises
 
 **1. Stack trace.** Work through these four instructions by hand, tracking the stack and register values at each step. Assume SP starts at `$C000` and that the values in the registers before the sequence are: AF = `$1234`, BC = `$5678`.

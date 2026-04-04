@@ -562,6 +562,12 @@ Both are always available. Use whichever matches the shape of the logic.
 
 ---
 
+## What Comes Next
+
+The control flow is clean. What hasn't changed is frame access — every read or write to a local still requires a manual `ld a, (ix±d)` or `ld (ix±d), a`, with the offset calculated by hand. Chapter 13 introduces `:=`, which replaces that pattern: name the local on one side, a register on the other, and the compiler works out the offset and instruction sequence for you.
+
+---
+
 ## Exercises
 
 **1. The stale-flag trap.** Identify the bug in the following code and explain what flag state `while NZ` actually reads:

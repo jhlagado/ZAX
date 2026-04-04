@@ -335,6 +335,12 @@ ex de, hl         ; HL now points past dest; DE points past source
 
 ---
 
+## What Comes Next
+
+Everything so far has been a single block of code. Chapter 8 introduces the stack and the `call`/`ret` instructions that make reusable subroutines possible — code you can jump into from anywhere, run, and reliably return from. The same tables and loops from this chapter will start appearing inside named, callable routines, and the programs will start to look like programs.
+
+---
+
 ## Exercises
 
 **1. Post-loop pointer value.** The HL sum loop in the chapter starts with `ld hl, scores` where `scores` is at address `$8000` and contains six entries. After the loop completes all six iterations, what address does HL hold? What byte would `ld a, (hl)` read at that point? Is that byte part of `scores`?

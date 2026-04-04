@@ -80,9 +80,10 @@ Unlike `out`, the `in` instruction **sets flags**. After `in r, (C)`:
 - H and N are reset.
 - C (carry) is unaffected.
 
-`in r, (C)` sets flags; the immediate form `in a, (n)` leaves them unchanged.
-If you need to branch on whether the input is zero and you used the immediate
-form, follow it with `or a` to test A.
+`in r, (C)` sets flags; the immediate form `in a, (n)` does not — an
+asymmetry the Z80 manual documents without explanation, and one that trips people
+up. If you read a port with the immediate form and then need to branch on the
+value, follow it with `or a` to set flags explicitly before the conditional jump.
 
 ---
 
@@ -244,7 +245,7 @@ Everything in this chapter uses `in` and `out` to poll a peripheral: the CPU loo
 
 The Z80 also supports **interrupts**: a hardware signal that tells the CPU to stop what it is doing, run a short handler routine, and then resume where it left off. Interrupt handlers typically use `in` and `out` to communicate with the device that raised the interrupt — the same instructions, the same port numbers. The difference is that the CPU does not sit in a loop; it only runs the I/O code when the hardware demands it.
 
-Interrupts involve the `di`, `ei`, `im`, and `reti` instructions, and they interact with the shadow registers and stack in ways that require care. They are outside the scope of Part 1. If you intend to write interrupt-driven I/O, the Z80 interrupt modes and the conventions for interrupt service routines are covered in the hardware reference for your platform.
+Interrupts involve the `di`, `ei`, `im`, and `reti` instructions, and they interact with the shadow registers and the stack in ways that need careful setup — the full treatment covers interrupt modes, ISR calling conventions, and re-entrancy, which is more than a section can carry. Part 1 uses polling throughout. When you are ready to take on interrupt-driven I/O, start with the Z80 interrupt mode documentation for your target platform and read the ISR conventions before writing a single line of a handler.
 
 ---
 
@@ -262,6 +263,12 @@ Interrupts involve the `di`, `ei`, `im`, and `reti` instructions, and they inter
   then reads the data port. Polling occupies the CPU while it waits; interrupt-driven I/O hands control back to the main program between events.
 - Port numbers are platform-defined. The examples here use abstract constants
   and demonstrate the instructions themselves, not any specific hardware.
+
+---
+
+## What Comes Next
+
+Chapter 10 brings everything together. It builds a complete program — data table, DJNZ loop, subroutines, conditional branches, register preservation — using the full set of techniques from Chapters 3–9. The program is deliberately designed to be slightly uncomfortable to read back: the friction it exposes is real, it accumulates as programs grow, and Chapters 11–14 are the answer to it.
 
 ---
 
