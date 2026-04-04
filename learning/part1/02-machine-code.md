@@ -2,7 +2,9 @@
 
 # Chapter 2 — Machine Code
 
-A program is a sequence of bytes in memory. The CPU fetches one byte, executes the corresponding operation, advances PC, and fetches the next. This chapter shows what that looks like concretely — actual opcodes, an actual hex program decoded instruction by instruction, and the reason assembly was invented.
+A program is a sequence of bytes in memory. The CPU fetches one byte, executes the corresponding operation, advances PC, and fetches the next.
+
+This chapter makes that concrete. You will decode a real hex program by hand — instruction by instruction, byte by byte — and by the end you will understand exactly why assembly was invented. Not as a vague answer, but as an obvious one: you will have just experienced what it feels like to maintain raw machine code yourself.
 
 ---
 

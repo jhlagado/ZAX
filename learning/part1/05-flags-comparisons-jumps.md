@@ -2,10 +2,9 @@
 
 # Chapter 5 — Flags, Comparisons, and Jumps
 
-Every program makes decisions. The Z80 makes them by recording the outcome of
-each operation in the flags register, then testing those flags to decide where
-execution goes next. This chapter introduces both: what the flags record, how `cp` and the logical
-operations set them, and how `jp` uses them.
+Every program makes decisions. The Z80 makes them by recording the outcome of each operation in the flags register, then testing those flags to decide where execution goes next.
+
+This is also where Z80 programming starts to feel like a discipline rather than just instruction lookup. Knowing which instruction last set a flag — and whether anything between that instruction and your branch might have changed it — is a skill you will use in every program you write. It takes a little time to feel automatic. This chapter names the technique and gives you the tools.
 
 ---
 
@@ -57,6 +56,8 @@ unsigned values you can usually ignore S.
 result outside −128 to +127. After logical instructions and rotates it reports
 parity: set when the result has an even number of 1 bits. The instruction
 reference will tell you which meaning applies.
+
+P/V is the flag that confuses people longest. If the dual meaning is unclear right now, that is fine — put it aside until you need it. Z and C will carry you through most of Part 1.
 
 For the full flags reference and all condition codes, see
 [Appendix 2](../appendices/02-registers-flags-and-conditions.md).

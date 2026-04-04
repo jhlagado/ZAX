@@ -2,13 +2,9 @@
 
 # Chapter 10 — A Complete Program
 
-This chapter builds a complete program using the techniques from Chapters 3–9:
-a data table, a DJNZ loop, subroutines called from the loop, conditional
-branches, and push/pop register preservation. Chapter 9 covered I/O and ports —
-a separate hardware concern. This capstone focuses on data operations in memory,
-which is where the friction points in raw Z80 programming are most visible.
-The two subroutines that result expose exactly those friction points — the
-problems Chapters 11–14 address.
+You know enough Z80 to write real programs now. This chapter does exactly that — builds one from scratch, using the full set of techniques from Chapters 3–9: a data table, a DJNZ loop, subroutines called from the loop, conditional branches, and push/pop register preservation.
+
+The result works. It is also slightly uncomfortable to read back, and deliberately so. The two subroutines expose the friction that accumulates in raw Z80 code as programs grow: register ownership becomes fuzzy, identical offset expressions scatter across the code, and protecting a caller's registers takes more ceremony than the logic itself. That friction is real, and naming it is the point. Chapters 11–14 address it directly.
 
 ---
 

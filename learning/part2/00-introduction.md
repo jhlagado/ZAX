@@ -4,18 +4,11 @@
 
 ## What This Volume Is For
 
-This volume is the second stage of the ZAX course.
+If you worked through Part 1, you have covered a lot of ground. You started with raw machine code and learned to read it byte by byte. You wrote programs that scan tables, call subroutines, push and pop registers, and drive hardware through I/O ports. By the end you were writing structured ZAX programs where the compiler generates the jump labels and frame offsets while you describe what the code is meant to do — and the machine still executes exactly what you wrote.
 
-It assumes you already know the basic machine model: registers, flags, memory,
-subroutines, and ordinary loop structure on the Z80. Volume 1 under
-`learning/part1/` covers those foundations from the ground up. This volume starts
-later. Its job is to show how larger ZAX programs are organised once those
-basics are already familiar.
+Part 2 picks up from there. The Z80 mechanics are the same — registers, flags, the stack, the fetch-execute cycle. What changes is the scale of the problems and the ZAX features that help keep that scale manageable. You have seen typed locals, structured control flow, `:=` assignment, and `op` macros; now you will use all of them together on non-trivial programs.
 
-The chapters are built around practical programs. They cover arrays, strings,
-bit manipulation, records, recursion, composition, pointer structures, and a
-capstone search problem. Each one works through real ZAX code that solves a
-non-trivial problem, and shows how the language helps keep that code readable.
+The chapters are built around practical problems: arrays, strings, bit manipulation, records, recursion, pointer structures, and a capstone search algorithm. Each one works through real ZAX code and shows how the language keeps larger programs readable without hiding what the CPU is doing.
 
 ## What ZAX Gives You Here
 
