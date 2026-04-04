@@ -293,8 +293,8 @@ prefix and shifts elements right to make room.
 
 This version of the sort implements the shift recursively through the helper
 `insert_hole`, which walks leftward through the prefix comparing adjacent
-elements. The recursion depth is bounded by the array length; for short arrays
-this is fine. The function exits early via `ret` in two cases: when the scan
+elements. The recursion depth is bounded by the array length — never deeper than
+the number of elements in the sorted prefix at the time of insertion. The function exits early via `ret` in two cases: when the scan
 reaches index 0 (nowhere further left to shift), or when it finds an element
 that is already in the correct relative order.
 

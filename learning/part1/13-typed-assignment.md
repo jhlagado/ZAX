@@ -237,6 +237,12 @@ Both are always available. Neither is required. The choice is about what reads m
 
 ---
 
+## What Comes Next
+
+One more tool completes the ZAX surface. Chapter 14 introduces `op` macros — named inline operations that look like instructions but expand to any sequence the compiler can generate. They are how ZAX provides `mul_u16`, `div_u16`, and the other multi-step operations the Z80 itself doesn't have, and how you can define new ones when the built-in set doesn't cover your problem.
+
+---
+
 ## Exercises
 
 **1. Expand `:=` by hand.** Write out the exact Z80 instruction sequence that the compiler emits for each of these `:=` statements. Give the numeric IX offset for each slot, assuming `total` is a `word` local at offset −4 (low byte at IX−4, high byte at IX−3) and `count` is a `byte` local at offset −1.

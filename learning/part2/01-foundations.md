@@ -103,7 +103,7 @@ A concrete pattern from these examples: testing whether a 16-bit value is zero:
 
 ---
 
-## The Chapter 01 Programs
+## The Programs
 
 ### Power: repeated multiplication
 
