@@ -170,6 +170,8 @@ Now the loop exits when the sentinel is found, or when all TableLen entries have
 been checked without a match. The role of DJNZ here is purely a safety bound,
 not the primary exit condition.
 
+The third loop form uses the same structure — DJNZ as a guard, a separate condition as the real exit — but the exit condition is arithmetic rather than a value match.
+
 ---
 
 ## Flag-exit loops

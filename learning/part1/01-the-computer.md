@@ -8,7 +8,7 @@ You decide what goes in every register, what address every memory access targets
 
 ZAX is an assembler for the Z80 that adds some structure on top — named variables, typed storage, and control flow keywords like `if` and `while` — but the underlying model is the same. Every ZAX program compiles down to Z80 machine code, and understanding that machine code is what this book teaches.
 
-This chapter describes the Z80 itself: its memory, its registers, and the cycle by which it executes instructions. Everything in the rest of the book depends on this picture.
+This chapter is mostly geography. It describes the Z80's memory, its registers, and the cycle by which it executes instructions. Not every detail will feel important right now — some of it will only click once you have written a few programs. Come back if something from a later chapter seems mysterious; the answer is usually here.
 
 ---
 

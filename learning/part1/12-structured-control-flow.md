@@ -2,9 +2,9 @@
 
 # Chapter 12 — Structured Control Flow
 
-This chapter introduces `if`/`else`, `while`, `repeat...until`, `break`, and
-`continue` — the structured replacements for manual flag-test-and-jump
-sequences and invented loop labels.
+Every loop you have written so far ends with a label you invented, a conditional jump back to it, and the quiet discipline of remembering which flag the jump tests and what instruction last set it. Every branch is a `jp nz, some_label` with the name `some_label` doing all the work of explaining intent. The code is correct, but reading it requires following the labels rather than reading the structure.
+
+This chapter removes that overhead. `if`/`else`, `while`, `repeat...until`, `break`, and `continue` compile to the same conditional jumps and labels you have been writing by hand — the compiler generates the boilerplate, and you write what the code means.
 
 ---
 
