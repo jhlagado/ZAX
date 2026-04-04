@@ -2,7 +2,9 @@
 
 # Chapter 14 — Op Macros and Pseudo-opcodes
 
-This chapter covers two features that extend the Z80's native instruction set without adding run-time cost: `op`, which lets you name a short instruction sequence and expand it inline at every call site, and the ZAX pseudo-opcodes, which let you write `ld hl, de` as if the Z80 had a 16-bit register copy instruction.
+Some operations recur constantly: saving a register pair to a temp location, swapping two values, doing a 16-bit arithmetic step the Z80 has no direct opcode for. Each time, you write the same two or three instructions. The code is correct, but the repetition hides the intent — a reader sees the mechanics, not the purpose.
+
+`op` names a short instruction sequence and expands it inline at every call site, with no `call`, no frame, and no `ret`. The ZAX pseudo-opcodes go further: they let you write `ld hl, de` as if the Z80 had a 16-bit register copy instruction, even though it doesn't. This chapter covers both.
 
 ---
 

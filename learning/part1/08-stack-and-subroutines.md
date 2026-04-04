@@ -2,9 +2,9 @@
 
 # Chapter 8 — Stack and Subroutines
 
-This chapter explains how `call` and `ret` work, how the hardware stack
-operates, and how to write reusable subroutines that receive values through
-registers and return results to the caller.
+Every program you have written so far is a single block of instructions that runs from top to bottom. That works for small tasks. But larger programs need to reuse logic — the same comparison, the same output routine, the same byte-copying sequence — called from a dozen different places. Without a way to jump away and come back, you would copy those instructions everywhere you needed them and maintain every copy separately.
+
+`call` and `ret` solve this. This chapter explains how they work, how the hardware stack supports them, and how to write subroutines that receive inputs through registers and hand results back to the caller.
 
 ---
 

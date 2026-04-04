@@ -2,14 +2,9 @@
 
 # Chapter 9 — I/O and Ports
 
-The Z80 has two distinct address spaces: the memory space you have been using
-since Chapter 1, and a separate **I/O space** of 256 numbered ports. The `in`
-and `out` instructions transfer bytes between CPU registers and these ports
-without touching memory at all.
+So far, every program in this course has been self-contained: it loads constants, processes data in memory, and produces a result that sits in RAM. Nothing comes in from outside. Nothing goes out. Real hardware doesn't work that way — a keyboard needs to send bytes to the CPU, a display needs to receive them, a timer needs to signal that something has happened.
 
-On real hardware, ports connect to peripherals: keyboard controllers, display
-chips, timers, serial interfaces. The port number selects which device the CPU
-is talking to. This chapter treats port numbers as abstract placeholders — the Z80 mechanism
+The Z80 handles this through a separate **I/O space** of 256 numbered ports. The `in` and `out` instructions transfer bytes between CPU registers and these ports without touching memory at all. On real hardware, each port number selects a different peripheral. This chapter treats port numbers as abstract placeholders — the Z80 mechanism
 is what matters here; the mapping of numbers to devices varies by platform and
 is for your hardware documentation to define.
 

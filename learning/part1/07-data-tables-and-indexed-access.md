@@ -309,6 +309,8 @@ ldir              ; copy 64 bytes; HL and DE now point past the copied region
 ex de, hl         ; HL now points past dest; DE points past source
 ```
 
+`ldir` and `ex de, hl` are tools for when you need to move data in bulk. For element-by-element work on a single table, the DJNZ-over-HL pattern from the first section is usually clearer.
+
 ---
 
 ## Summary

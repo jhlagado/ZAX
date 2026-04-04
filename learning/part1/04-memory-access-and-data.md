@@ -2,7 +2,9 @@
 
 # Chapter 4 — Memory Access and Data Representation
 
-Chapter 3 introduced the `ld` instruction and its simplest forms: register-to-register copies and immediate loads. This chapter covers the forms that reach into memory, surveys the complete set of legal `ld` shapes in a reference table, and explains how the Z80 represents signed and unsigned values in the same byte.
+The programs in Chapter 3 could only talk to registers and a single named byte. That's enough to add two numbers, but not enough to scan a table, process a string, or read from hardware. All of those require reaching into memory — and the Z80 has several specific ways to do it, each suited to a different pattern.
+
+This chapter covers all of them, collects them into a reference table, and explains something that will matter more and more as you go: how the same byte can mean completely different things depending on how you choose to read it.
 
 ---
 
@@ -82,6 +84,8 @@ Both this and the `(BC)`/`(DE)` restriction above are examples of the same reali
 
 ## Summary of LD forms
 
+The table below is a reference — not something to memorise before you continue. Scan it once to see what shapes exist, then return to it when a specific form comes up in code.
+
 | Form | Example | Notes |
 |------|---------|-------|
 | reg8 ← reg8 | `ld a, b` | Any 8-bit register to any other |
@@ -111,6 +115,8 @@ As an **unsigned** value, the byte holds 0 to 255. The bit pattern `$FF` is 255.
 As a **signed** value using two's complement, bit 7 is the sign bit. If bit 7 is 0 the value is positive (0 to 127). If bit 7 is 1 the value is negative (−128 to −1). The bit pattern `$FF` is −1. The bit pattern `$80` is −128.
 
 To compute the two's complement of a positive value: invert all bits and add one. The two's complement of `$01` (`%00000001`) is `%11111110 + 1 = %11111111 = $FF`, which is −1.
+
+If the invert-and-add-one rule feels like a formula to memorise rather than something that makes sense yet, that is completely normal — two's complement is one of those things that clicks properly only once you have used it a few times. The practical point that matters right now is in the next paragraph.
 
 `add a, b` performs the same bitwise addition regardless — the result byte is identical whether you treat the inputs as signed or unsigned. Where the difference surfaces: `$80 + $01` gives `$81`. Read as unsigned that is 128 + 1 = 129. Read as signed that is −128 + 1 = −127. Same instruction, same output, two different numbers. The bug appears when one part of your program writes a value intending it as signed and another reads it as unsigned. The common landmark values (`$00`, `$7F`, `$80`, `$FF`) and their signed and unsigned meanings are in
 [Appendix 2](../appendices/02-registers-flags-and-conditions.md).
