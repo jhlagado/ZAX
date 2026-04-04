@@ -2,19 +2,9 @@
 
 # Chapter 6 — Recursion
 
-The Chapter 06 examples show recursive decomposition using the same `func` construct
-that has appeared throughout the course. ZAX handles recursion the same way it
-handles any other call: every `func` call — whether the callee is a different
-function or the same function calling itself — gets a fresh stack frame. The
-compiler does not distinguish recursive from non-recursive calls. Each invocation
-has its own independent locals, and you do not need to save state manually across
-the recursive boundary.
+Recursion in ZAX works the same way it works in any language with a proper call stack. Every `func` call — whether the callee is a different function or the same function calling itself — gets a fresh stack frame. The compiler does not distinguish recursive from non-recursive calls. Each invocation has its own independent locals, and you do not need to save state manually across the recursive boundary.
 
-What changes in Chapter 06 is the algorithmic shape. These examples do not loop over
-a flat array or advance a pointer; they reduce a problem into a smaller version of
-itself, recurse, and combine the result on the way back. That "on the way back"
-structure — work done after the recursive call returns — is what makes the call
-stack load-bearing in a way it was not in the iterative examples.
+What changes in this chapter is the algorithmic shape. These examples do not loop over a flat array or advance a pointer; they reduce a problem into a smaller version of itself, recurse, and combine the result on the way back. That "on the way back" structure — work done after the recursive call returns — is what makes the call stack load-bearing in a way it was not in the iterative examples.
 
 ---
 
@@ -31,7 +21,7 @@ previous frame's IX is restored. Each level sees its own `var` block values,
 completely independent.
 
 Chapter 01 noted that recursive functions look and work like non-recursive
-ones. Chapter 06 demonstrates this at greater depth: `hanoi_count` calls itself twice
+ones. This chapter demonstrates that at greater depth: `hanoi_count` calls itself twice
 per invocation and stores both results in frame locals, `array_sum_recursive`
 calls itself once and adds to the result on unwind, and `array_reverse_recursive`
 calls itself with a narrower range at each level. None of these require any

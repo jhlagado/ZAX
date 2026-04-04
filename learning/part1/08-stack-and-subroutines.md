@@ -8,17 +8,11 @@ Every program you have written so far is a single block of instructions that run
 
 ---
 
-## What a subroutine is
+## What a subroutine actually is
 
-A subroutine is a block of instructions that can be called from multiple places
-in a program. The caller executes `call address`, the CPU runs the subroutine,
-and when the subroutine executes `ret`, control returns to the instruction
-immediately after the `call`.
+Before the mechanics: a useful mental model. The Z80 has no hardware concept of a function call. There is no special mode the CPU enters, no register tracking call depth, no difference between bytes at a call site and bytes inside a subroutine body. `call label` does two things — pushes an address, jumps. `ret` does one thing — pops that address back into PC. The subroutine abstraction is entirely a matter of discipline, not a hardware guarantee.
 
-Without subroutines, a programmer who needs the same logic in three places must
-copy those instructions to three locations and maintain three copies. With
-subroutines, the instructions appear once and each caller reaches them with a
-single `call`.
+That matters because any failure of discipline — an unbalanced push/pop, a missing `ret`, a jump that skips the cleanup — produces a silent wrong result with nothing to indicate where it went wrong. The mechanics below are what make that discipline reliable.
 
 ---
 
@@ -170,13 +164,9 @@ result. If A carries the result, declare `: AF`.
 `push` and `pop` are most clearly described in terms of virtual `ld`
 instructions.
 
-`push hl`: SP is decremented by two, then virtually `ld (sp), hl` happens —
-the contents of HL are written to the two bytes at the new SP address. I say
-virtually because `ld (sp), hl` is not an actual Z80 instruction, but it
-describes exactly what happens.
+`push hl`: SP is decremented by two, then the contents of HL are written to the two bytes at the new SP address — as if `ld (sp), hl` were an instruction. (`ld (sp), hl` is not an actual Z80 opcode, but that description captures the behaviour exactly.)
 
-`pop hl` is the inverse: virtually `ld hl, (sp)` happens first — two bytes are
-read from SP into HL — then SP is incremented by two.
+`pop hl` is the inverse: two bytes are read from the address in SP into HL, then SP is incremented by two — as if `ld hl, (sp)` were an instruction.
 
 The operand can be any of AF, BC, DE, HL, IX, or IY. Every push writes two
 bytes to RAM at SP; every pop reads them back. The stack tracks only position —
@@ -429,6 +419,12 @@ operations, and you can use them however the stack discipline permits.
   trailing `ret` is not needed. Use `ret` inside a `func` only for early exits.
   Raw labeled subroutines — code reached by `call label` outside a ZAX `func`
   — are plain Z80 and do require an explicit `ret`.
+
+---
+
+## What Comes Next
+
+Every program so far has been self-contained — loads constants, processes data in memory, stores a result. Chapter 9 breaks that boundary. The Z80 has a separate address space for hardware peripherals, and two instructions — `in` and `out` — are the only way to cross it. The subroutine structure you have just learned is exactly what peripheral drivers are built from.
 
 ---
 

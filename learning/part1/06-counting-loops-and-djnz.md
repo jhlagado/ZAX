@@ -301,9 +301,9 @@ A flag-exit loop is right when the stopping condition is "some computed quantity
 has crossed a threshold." It exits on an arithmetic result, with DJNZ again
 serving only as the overrun guard.
 
-In practice, most raw Z80 loops are counted loops with DJNZ as the primary
-exit. The sentinel and flag-exit forms appear when the content or computation
-determines when to stop.
+In practice, most Z80 loops are counted loops — DJNZ is compact, and the
+iteration count is usually known before the loop starts. Reach for the sentinel
+or flag-exit forms when the data itself determines where to stop, not you.
 
 ---
 
@@ -321,6 +321,12 @@ determines when to stop.
   overrun guard.
 - A flag-exit loop uses a flag condition as the primary exit, with DJNZ again
   as the overrun guard.
+
+---
+
+## What Comes Next
+
+A counted loop over a register is useful for arithmetic. A counted loop over a table is useful for nearly everything else — scanning for a value, summing scores, copying a buffer, finding the end of a string. Chapter 7 covers the table structures that give DJNZ something worth walking over, and the indexed access instructions that let you reach into them precisely, without juggling HL every instruction.
 
 ---
 
