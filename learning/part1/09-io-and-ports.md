@@ -283,7 +283,7 @@ in a, (C)         ; form B
 
 After which form can you safely write `jr z, handle_zero` without any additional instruction? After which form must you add `or a` first? Write the minimum correct version for each case that branches to a label `is_zero` if the byte read was zero.
 
-**2. Modify the ready-check loop.** The `poll_and_recv` function in the chapter waits for bit 0 of the status port. Change it to wait for bit 3 instead. Write the modified function. *(Hint: you need to change exactly one value — the mask in the `and` instruction. What is the bit-3 mask in hex?)*
+**2. Modify the ready-check loop.** The `poll_and_recv` function in the chapter waits for bit 0 of the status port. Change it to wait for bit 3 instead. Write the modified function. _(Hint: you need to change exactly one value — the mask in the `and` instruction. What is the bit-3 mask in hex?)_
 
 **3. Write a receive loop.** The chapter shows `send_block` but not its counterpart. Write a ZAX `func` called `recv_block` that reads B bytes from the port in C into memory starting at the address in HL. The function should use the same structure as `send_block` — a DJNZ loop with `in` instead of `out`.
 
