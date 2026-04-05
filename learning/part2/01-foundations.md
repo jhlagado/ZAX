@@ -22,13 +22,13 @@ func power(base: word, exponent: word): HL
 end
 ```
 
-Each local occupies a 16-bit slot in the IX stack frame. The `var` block is closed by its own `end`; a second `end` closes the function. *(Part 1 Chapter 11 covers the full frame layout.)*
+Each local occupies a 16-bit slot in the IX stack frame. The `var` block is closed by its own `end`; a second `end` closes the function. _(Part 1 Chapter 11 covers the full frame layout.)_
 
 ---
 
 ## The `:=` Assignment Operator
 
-`:=` assigns from right to left between typed storage and a register. The compiler resolves names to frame offsets and emits the right instruction sequence — including multi-instruction sequences for word-sized locals. *(Part 1 Chapter 13 covers the full detail.)*
+`:=` assigns from right to left between typed storage and a register. The compiler resolves names to frame offsets and emits the right instruction sequence — including multi-instruction sequences for word-sized locals. _(Part 1 Chapter 13 covers the full detail.)_
 
 In practice, `:=` and raw Z80 instructions appear together in the same function body:
 
@@ -69,7 +69,7 @@ func gcd_iterative(left_input: word, right_input: word): HL
 
 ## Basic Control Flow: `if` and `while`
 
-Any Z80 condition code is valid: `if NZ`, `if Z`, `if C`, `if NC`, `if M`, `if P`, `if PE`, `if PO`. The compiler generates the hidden labels and jumps; you write the condition and the body. Flags must be established by a Z80 instruction immediately before the `if` or `while`. *(Part 1 Chapters 5 and 12 cover the full rules.)*
+Any Z80 condition code is valid: `if NZ`, `if Z`, `if C`, `if NC`, `if M`, `if P`, `if PE`, `if PO`. The compiler generates the hidden labels and jumps; you write the condition and the body. Flags must be established by a Z80 instruction immediately before the `if` or `while`. _(Part 1 Chapters 5 and 12 cover the full rules.)_
 
 A concrete pattern from these examples: testing whether a 16-bit value is zero:
 
@@ -99,7 +99,7 @@ A concrete pattern from these examples: testing whether a 16-bit value is zero:
     step offset, 4           ; +4
 ```
 
-`step` is the standard way to advance or retreat a counter local throughout these loops. *(Part 1 Chapter 13 covers `step` in full.)*
+`step` is the standard way to advance or retreat a counter local throughout these loops. _(Part 1 Chapter 13 covers `step` in full.)_
 
 ---
 

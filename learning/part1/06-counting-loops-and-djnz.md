@@ -344,7 +344,7 @@ loop_top:
 
 Write the corrected version that skips the loop entirely when `count_value` is zero.
 
-**2. Modify the sum loop.** The DJNZ sum loop from the chapter accumulates all five entries in `addends = { 3, 7, 2, 8, 5 }`. Change the loop so that it finds the **minimum** value instead of the sum. The result should be stored in a variable named `minimum`. *(Hint: start `minimum` at 255 and update it whenever the current byte is smaller. Chapter 5's `cp` and `jr nc` are the tools.)*
+**2. Modify the sum loop.** The DJNZ sum loop from the chapter accumulates all five entries in `addends = { 3, 7, 2, 8, 5 }`. Change the loop so that it finds the **minimum** value instead of the sum. The result should be stored in a variable named `minimum`. _(Hint: start `minimum` at 255 and update it whenever the current byte is smaller. Chapter 5's `cp` and `jr nc` are the tools.)_
 
 **3. Sentinel loop — find the zero.** A table of bytes ends with a zero sentinel:
 
@@ -359,11 +359,11 @@ Write a sentinel loop that scans `message` and stores the **index** (0-based pos
 **4. Loop analysis.** The flag-exit loop in the chapter example exits when the accumulated sum reaches or exceeds `$10` (16). The data is `{ 3, 7, 2, 8, 5 }`. Trace through the loop iteration by iteration:
 
 | Iteration | Byte added | A after add | `cp $10` → C set? | Exit? |
-|-----------|-----------|-------------|-------------------|-------|
-| 1 | 3 | ? | ? | ? |
-| 2 | 7 | ? | ? | ? |
-| 3 | 2 | ? | ? | ? |
-| 4 | 8 | ? | ? | ? |
+| --------- | ---------- | ----------- | ----------------- | ----- |
+| 1         | 3          | ?           | ?                 | ?     |
+| 2         | 7          | ?           | ?                 | ?     |
+| 3         | 2          | ?           | ?                 | ?     |
+| 4         | 8          | ?           | ?                 | ?     |
 
 Fill in the table. After the loop exits, what value is stored in `flagval`? Now change the threshold from `$10` to `$0C` (12) and redo the trace — does the loop exit one iteration earlier?
 

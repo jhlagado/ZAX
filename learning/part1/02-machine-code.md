@@ -14,15 +14,15 @@ The byte (or bytes) that represent an instruction are called its **opcode**. Eac
 
 A few examples from the Z80 instruction set:
 
-| Byte sequence | Instruction | What it does |
-|---------------|-------------|--------------|
-| `$3E n` | `ld a, n` | Load the constant value `n` into A |
-| `$06 n` | `ld b, n` | Load the constant value `n` into B |
-| `$47` | `ld b, a` | Copy A into B |
-| `$80` | `add a, b` | Add B to A; result goes into A |
-| `$32 lo hi` | `ld (nn), a` | Store A at the 16-bit address `nn` |
-| `$3A lo hi` | `ld a, (nn)` | Load A from the 16-bit address `nn` |
-| `$76` | `halt` | Stop the CPU |
+| Byte sequence | Instruction  | What it does                        |
+| ------------- | ------------ | ----------------------------------- |
+| `$3E n`       | `ld a, n`    | Load the constant value `n` into A  |
+| `$06 n`       | `ld b, n`    | Load the constant value `n` into B  |
+| `$47`         | `ld b, a`    | Copy A into B                       |
+| `$80`         | `add a, b`   | Add B to A; result goes into A      |
+| `$32 lo hi`   | `ld (nn), a` | Store A at the 16-bit address `nn`  |
+| `$3A lo hi`   | `ld a, (nn)` | Load A from the 16-bit address `nn` |
+| `$76`         | `halt`       | Stop the CPU                        |
 
 Address operands always follow the Z80's little-endian convention: low byte first, high byte second. The address `$8000` appears in the instruction stream as `$00 $80`. For a searchable reference of the full Z80 instruction set, see [Appendix 4](../appendices/04-classic-z80-instruction-support.md).
 

@@ -174,6 +174,7 @@ fails. If two overloads match equally — neither is more specific than the othe
 has a unique best match for every call pattern you intend to use.
 
 **Specificity ranking (from most to least specific):**
+
 1. Fixed-register match (e.g., `A`, `HL`)
 2. Class match (`reg8`, `reg16`, `imm8`, `mem8`, `mem16`)
 3. Wider class match (`imm16`, `ea`)
@@ -228,14 +229,14 @@ The assembler emits the two-instruction sequence automatically. No new opcode is
 
 The full set of synthetic 16-bit register transfers:
 
-| Pseudo-opcode | Expands to |
-|---------------|------------|
-| `ld hl, de` | `ld h, d` / `ld l, e` |
-| `ld hl, bc` | `ld h, b` / `ld l, c` |
-| `ld de, hl` | `ld d, h` / `ld e, l` |
-| `ld de, bc` | `ld d, b` / `ld e, c` |
-| `ld bc, hl` | `ld b, h` / `ld c, l` |
-| `ld bc, de` | `ld b, d` / `ld c, e` |
+| Pseudo-opcode | Expands to            |
+| ------------- | --------------------- |
+| `ld hl, de`   | `ld h, d` / `ld l, e` |
+| `ld hl, bc`   | `ld h, b` / `ld l, c` |
+| `ld de, hl`   | `ld d, h` / `ld e, l` |
+| `ld de, bc`   | `ld d, b` / `ld e, c` |
+| `ld bc, hl`   | `ld b, h` / `ld c, l` |
+| `ld bc, de`   | `ld b, d` / `ld c, e` |
 
 Each expands to two one-byte instructions — the same two `ld` moves you would write by hand. ZAX adds nothing at run time.
 
@@ -276,7 +277,7 @@ while NZ
 end
 ```
 
-**2. `op` vs `func` cost comparison.** You have a six-instruction sequence you need to use in five places in your program. Compare the total instruction count in the binary for each approach: (a) a `func` call — include the six instructions plus the `call`, `ret`, and frame overhead; (b) an `op` — include the six instructions repeated at all five call sites. Which produces fewer total instructions? At what body length would the two approaches produce the same total instruction count? *(Assume frameless function: 2 overhead instructions — `call` and `ret`.)*
+**2. `op` vs `func` cost comparison.** You have a six-instruction sequence you need to use in five places in your program. Compare the total instruction count in the binary for each approach: (a) a `func` call — include the six instructions plus the `call`, `ret`, and frame overhead; (b) an `op` — include the six instructions repeated at all five call sites. Which produces fewer total instructions? At what body length would the two approaches produce the same total instruction count? _(Assume frameless function: 2 overhead instructions — `call` and `ret`.)_
 
 **3. Overload resolution.** Given these two `op` declarations:
 
