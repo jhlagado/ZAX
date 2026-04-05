@@ -439,7 +439,7 @@ pop de
 pop hl
 ```
 
-After all four instructions: what is in DE? What is in HL? What is SP? *(Remember: the stack is last-in-first-out — the pair pushed last is the first to be popped.)*
+After all four instructions: what is in DE? What is in HL? What is SP? _(Remember: the stack is last-in-first-out — the pair pushed last is the first to be popped.)_
 
 **2. Spot the push/pop mismatch.** This subroutine has a stack-balance bug. Identify it and explain precisely what will happen when `ret` executes:
 
