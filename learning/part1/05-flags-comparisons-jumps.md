@@ -30,12 +30,12 @@ of the things that takes time to do automatically when reading Z80 code.
 
 The four flags you will use most:
 
-| Flag | Name | Set when |
-|------|------|----------|
-| Z | Zero | Result is zero |
-| C | Carry | Arithmetic produced a carry out of bit 7, or a borrow in subtraction |
-| S | Sign | Bit 7 of the result is 1 |
-| P/V | Parity/Overflow | Result parity is even; or signed overflow occurred |
+| Flag | Name            | Set when                                                             |
+| ---- | --------------- | -------------------------------------------------------------------- |
+| Z    | Zero            | Result is zero                                                       |
+| C    | Carry           | Arithmetic produced a carry out of bit 7, or a borrow in subtraction |
+| S    | Sign            | Bit 7 of the result is 1                                             |
+| P/V  | Parity/Overflow | Result parity is even; or signed overflow occurred                   |
 
 **Z** is the one you will reach for constantly. After `sub` or `cp`, Z is set
 when the two values were equal. After `dec`, Z is set when a register reaches
@@ -205,11 +205,11 @@ Z is set. The `n` prefix means "not": `nz` is "not zero", `nc` is "not carry".
 
 The condition codes you will use most:
 
-| Code | Meaning |
-|------|---------|
-| `z` | Jump if Z is set |
+| Code | Meaning            |
+| ---- | ------------------ |
+| `z`  | Jump if Z is set   |
 | `nz` | Jump if Z is clear |
-| `c` | Jump if C is set |
+| `c`  | Jump if C is set   |
 | `nc` | Jump if C is clear |
 
 `jp` also supports `m` (S set), `p` (S clear), `pe` (P/V set), and `po` (P/V
@@ -294,12 +294,12 @@ instruction itself, but the instruction is one byte shorter.
 `jr nz, label` jumps to `label` if Z is clear. The conditional forms support
 `z`, `nz`, `c`, and `nc` only — fewer conditions than `jp`.
 
-| | `jp` | `jr` |
-|---|---|---|
-| Address encoding | Full 16-bit address | Signed 8-bit displacement |
-| Instruction size | 3 bytes | 2 bytes |
-| Reach | Anywhere in 64K | ≈ 128 bytes backward / 127 forward |
-| Conditions available | z, nz, c, nc, m, p, pe, po | z, nz, c, nc only |
+|                      | `jp`                       | `jr`                               |
+| -------------------- | -------------------------- | ---------------------------------- |
+| Address encoding     | Full 16-bit address        | Signed 8-bit displacement          |
+| Instruction size     | 3 bytes                    | 2 bytes                            |
+| Reach                | Anywhere in 64K            | ≈ 128 bytes backward / 127 forward |
+| Conditions available | z, nz, c, nc, m, p, pe, po | z, nz, c, nc only                  |
 
 For short loops and nearby tests, `jr` saves a byte per jump and the range is
 rarely a problem. For anything that might be far away, or when you need a
@@ -313,8 +313,7 @@ the related `djnz` instruction (Chapter 6) are in
 ## Detecting a negative number: the `cp $80` technique
 
 Suppose A holds a signed value and you need its absolute value. The first step
-is finding out whether it is negative. A signed byte stores values from −128 to
-127. Negative values have bit 7 set, which means their unsigned interpretation
+is finding out whether it is negative. A signed byte stores values from −128 to 127. Negative values have bit 7 set, which means their unsigned interpretation
 is 128 or greater. You can test which half A falls in by comparing it against
 128 as an unsigned value:
 
@@ -514,7 +513,7 @@ Apply the three-question flag-before-branch check: (1) which instruction last se
 
 **3. Count down with flags.** Write a loop that starts with A = 10 and decrements A until A reaches zero. The loop body should store A to a named variable `last_a` on every iteration. Use `dec a` and a conditional jump — no DJNZ (that comes in Chapter 6). After the loop exits, what value is in A? What value is in `last_a`?
 
-**4. Bit test.** A status byte is stored at address `$8000`. Bit 2 is a "ready" flag. Write the two instructions needed to test bit 2 and jump to a label `not_ready` if the flag is clear, without disturbing any other bits in A. *(Hint: `and $04` isolates bit 2.)*
+**4. Bit test.** A status byte is stored at address `$8000`. Bit 2 is a "ready" flag. Write the two instructions needed to test bit 2 and jump to a label `not_ready` if the flag is clear, without disturbing any other bits in A. _(Hint: `and $04` isolates bit 2.)_
 
 ---
 

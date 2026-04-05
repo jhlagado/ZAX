@@ -353,7 +353,6 @@ dispatch sequence may modify A and flags, so do not rely on A still holding
 the selector value inside a case body. When the selector is any other register,
 that register is preserved across dispatch.
 
-
 ---
 
 ## Before and after: the same two loops
@@ -598,7 +597,7 @@ found_zero:
 scan_done:
 ```
 
-*(Hint: you will need `or a` before `while` to establish flags from B. Inside the loop, `inc hl` should come before the `dec b` / flag re-establishment for this to be cleanest. Preserve the "store HL when zero is found" behaviour in the `if Z` branch.)*
+_(Hint: you will need `or a` before `while` to establish flags from B. Inside the loop, `inc hl` should come before the `dec b` / flag re-establishment for this to be cleanest. Preserve the "store HL when zero is found" behaviour in the `if Z` branch.)_
 
 **3. `break` vs `continue` in nested loops.** In the nested loop below, identify which loop each `break` and `continue` exits or restarts:
 
@@ -631,7 +630,7 @@ end
 
 For `continue` (2): what instruction must execute immediately before `continue` to ensure the `while NZ` test fires correctly on the next iteration?
 
-**4. `while` vs `repeat...until`.** Rewrite the following `while` loop as a `repeat...until` loop that produces exactly the same result. Then explain one situation where `repeat...until` would be the *wrong* choice — i.e. a case where the loop body must not execute if the initial count is zero.
+**4. `while` vs `repeat...until`.** Rewrite the following `while` loop as a `repeat...until` loop that produces exactly the same result. Then explain one situation where `repeat...until` would be the _wrong_ choice — i.e. a case where the loop body must not execute if the initial count is zero.
 
 ```zax
 ld a, b

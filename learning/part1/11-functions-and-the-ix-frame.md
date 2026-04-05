@@ -272,7 +272,7 @@ func process(src: addr, count: byte, limit: byte): AF
 end
 ```
 
-Draw the stack layout diagram at the start of the function body (after the prologue). For each parameter and local, state its IX offset and whether you would access it with `+0` only or `+0`/`+1`. *(Hint: parameters are pushed right-to-left in call order, so the first argument ends up at the highest positive offset.)*
+Draw the stack layout diagram at the start of the function body (after the prologue). For each parameter and local, state its IX offset and whether you would access it with `+0` only or `+0`/`+1`. _(Hint: parameters are pushed right-to-left in call order, so the first argument ends up at the highest positive offset.)_
 
 **2. The IXH/IXL trap.** A framed function contains this sequence:
 

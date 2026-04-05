@@ -158,7 +158,7 @@ hedge is often correct. Here it happens to be unnecessary.
 
 The double `cp c` in the loop body is a separate cost of a different kind.
 `cp c` sets carry when A < C, and sets Z when A == C. To test "strictly greater
-than" you need both: carry clear *and* Z clear. The raw code tests them with two
+than" you need both: carry clear _and_ Z clear. The raw code tests them with two
 separate `cp c` / `jr` pairs — the comparison runs twice per element. This is
 not a mistake; it is what the instruction set requires when you have no
 structured greater-than operator. The code is correct and the cost is small. But
@@ -259,17 +259,17 @@ None of this hides the machine. Everything translates to the same Z80 instructio
 **1. Trace `find_max` by hand.** The table is `{ 23, 47, 91, 5, 67, 12, 88, 34 }`. Step through `find_max` iteration by iteration, recording the value of A (the running maximum) and C (the current element) after each `ld c, (hl)`. Fill in the table:
 
 | Iteration | C (current) | A before cp | Update A? | A after |
-|-----------|-------------|-------------|-----------|---------|
-| 1 | 23 | 0 | yes | 23 |
-| 2 | 47 | 23 | ? | ? |
-| 3 | 91 | ? | ? | ? |
-| … | … | … | … | … |
+| --------- | ----------- | ----------- | --------- | ------- |
+| 1         | 23          | 0           | yes       | 23      |
+| 2         | 47          | 23          | ?         | ?       |
+| 3         | 91          | ?           | ?         | ?       |
+| …         | …           | …           | …         | …       |
 
 What is A when the loop exits? Does it match the expected result (91)?
 
 **2. The invisible side effect.** `main` reloads `ld hl, values` before calling `count_above`. Why? What value would HL hold after `find_max` returns if you did not reload it? What would `count_above` scan if HL were not reloaded, and what result would `above_64` receive?
 
-**3. Find the redundancy.** The `count_above` function runs `cp c` twice in the loop body. Explain in one sentence why each `cp c` is there and what flag it is testing. Could you combine them into a single test using a different jump? *(Hint: after the first `jr c, skip`, you know A is ≥ C. What additional condition do you need to check?)*
+**3. Find the redundancy.** The `count_above` function runs `cp c` twice in the loop body. Explain in one sentence why each `cp c` is there and what flag it is testing. Could you combine them into a single test using a different jump? _(Hint: after the first `jr c, skip`, you know A is ≥ C. What additional condition do you need to check?)_
 
 **4. Add a third task.** Extend the program to also count entries that are strictly less than 32, storing the count in a new variable named `below_32`. Write just the additional subroutine and the three lines in `main` that call it. Identify which registers carry each argument and what you must reload before the call.
 

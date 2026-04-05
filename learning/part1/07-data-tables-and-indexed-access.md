@@ -371,7 +371,7 @@ no_new_max:
 ld (max_score), a
 ```
 
-*(Hint: `inc hl` is missing somewhere. Where? And what does HL read on every iteration as a result?)*
+_(Hint: `inc hl` is missing somewhere. Where? And what does HL read on every iteration as a result?)_
 
 ---
 

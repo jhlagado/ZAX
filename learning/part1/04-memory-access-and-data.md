@@ -28,7 +28,7 @@ IX and IY support displaced addressing — `(ix+d)` reads the byte at address IX
 > Parentheses always mean "go to this address in memory."
 >
 > `ld a, b` copies register B into A — no memory involved.
-> `ld a, (hl)` reads the *byte at the address held in HL* from memory.
+> `ld a, (hl)` reads the _byte at the address held in HL_ from memory.
 >
 > Missing or adding parentheses writes a completely different instruction —
 > one the assembler will happily accept, silently doing the wrong thing.
@@ -86,21 +86,21 @@ Both this and the `(BC)`/`(DE)` restriction above are examples of the same reali
 
 The table below is a reference — not something to memorise before you continue. Scan it once to see what shapes exist, then return to it when a specific form comes up in code.
 
-| Form | Example | Notes |
-|------|---------|-------|
-| reg8 ← reg8 | `ld a, b` | Any 8-bit register to any other |
-| reg8 ← n | `ld b, $FF` | Immediate 8-bit constant |
-| reg16 ← nn | `ld hl, $8000` | Immediate 16-bit constant |
-| reg8 ← (HL) | `ld c, (hl)` | Read byte at address HL |
-| (HL) ← reg8 | `ld (hl), d` | Write byte to address HL |
-| (HL) ← n | `ld (hl), 0` | Write immediate to address HL |
-| A ← (BC) | `ld a, (bc)` | Read byte at address BC; A only |
-| (DE) ← A | `ld (de), a` | Write A to address DE; A only |
-| A ← (nn) | `ld a, ($8000)` | Read byte from fixed address |
-| (nn) ← A | `ld ($8001), a` | Write A to fixed address |
-| reg16 ← (nn) | `ld hl, ($8002)` | Read 16-bit word from memory |
-| (nn) ← reg16 | `ld ($8004), hl` | Write 16-bit word to memory |
-| SP ← reg16 | `ld sp, hl` | SP = HL (or IX or IY) |
+| Form         | Example          | Notes                           |
+| ------------ | ---------------- | ------------------------------- |
+| reg8 ← reg8  | `ld a, b`        | Any 8-bit register to any other |
+| reg8 ← n     | `ld b, $FF`      | Immediate 8-bit constant        |
+| reg16 ← nn   | `ld hl, $8000`   | Immediate 16-bit constant       |
+| reg8 ← (HL)  | `ld c, (hl)`     | Read byte at address HL         |
+| (HL) ← reg8  | `ld (hl), d`     | Write byte to address HL        |
+| (HL) ← n     | `ld (hl), 0`     | Write immediate to address HL   |
+| A ← (BC)     | `ld a, (bc)`     | Read byte at address BC; A only |
+| (DE) ← A     | `ld (de), a`     | Write A to address DE; A only   |
+| A ← (nn)     | `ld a, ($8000)`  | Read byte from fixed address    |
+| (nn) ← A     | `ld ($8001), a`  | Write A to fixed address        |
+| reg16 ← (nn) | `ld hl, ($8002)` | Read 16-bit word from memory    |
+| (nn) ← reg16 | `ld ($8004), hl` | Write 16-bit word to memory     |
+| SP ← reg16   | `ld sp, hl`      | SP = HL (or IX or IY)           |
 
 For a compact LD quick table and the full addressing-shape reference, see [Appendix 3](../appendices/03-addressing-prefixes-and-instruction-forms.md).
 
@@ -196,7 +196,7 @@ ld hl, (scratch)
 ld b, $FF
 ```
 
-*(Hint: re-read the two-memory-locations section and the note about what `ld` cannot do.)*
+_(Hint: re-read the two-memory-locations section and the note about what `ld` cannot do.)_
 
 **3. Signed or unsigned?** For each byte value below, give both the unsigned interpretation (0–255) and the signed two's complement interpretation (−128 to +127):
 
