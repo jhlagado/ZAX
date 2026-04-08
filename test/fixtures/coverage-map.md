@@ -11,9 +11,9 @@
 
 **Include/import graph cycles detected** (see section below).
 
-Total fixture files (excludes sentinels): 523
+Total fixture files (excludes sentinels): 524
 Sentinel files: 1
-Reachable from tests (direct refs ∪ fixture closure): 314
+Reachable from tests (direct refs ∪ fixture closure): 315
 Potentially unreferenced fixtures: 209
 
 ## Direct test reference counts
@@ -40,6 +40,7 @@ Potentially unreferenced fixtures: 209
 | isa_indexed_incdec.zax | 0 |
 | isa_indexed_ld.zax | 0 |
 | isa_indexed_rotates.zax | 0 |
+| issue1356_named_section_ld_hl_indirect.zax | 1 |
 | parser_case_invalid_value_comma.zax | 1 |
 | parser_case_invalid_value_list.zax | 1 |
 | parser_case_missing_value.zax | 1 |
@@ -794,6 +795,7 @@ Excluded from the main fixture inventory (`.keep`, `.gitkeep`).
 | isa_indexed_incdec.zax |  |
 | isa_indexed_ld.zax |  |
 | isa_indexed_rotates.zax |  |
+| issue1356_named_section_ld_hl_indirect.zax | test/backend/issue1356_named_section_ld_hl.test.ts |
 | parser_case_invalid_value_comma.zax | test/frontend/pr97_parser_span_structured_control.test.ts |
 | parser_case_invalid_value_list.zax | test/frontend/pr97_parser_span_structured_control.test.ts |
 | parser_case_missing_value.zax | test/frontend/pr97_parser_span_structured_control.test.ts |

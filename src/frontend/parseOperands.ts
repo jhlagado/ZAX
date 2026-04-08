@@ -334,6 +334,17 @@ export function parseAsmOperand(
 
   if (t.startsWith('(') && t.endsWith(')')) {
     const inner = t.slice(1, -1).trim();
+    // Classic Z80 register-indirect memory `(hl)` / `(bc)` / `(de)` — not `EaName` for a symbol
+    // spelled "hl" (see #1356). Aligns with `parseEaIndexFromText` treating `(hl)` as `IndexMemHL`.
+    const classicMemIndirect = /^(hl|bc|de)$/i.exec(inner);
+    if (classicMemIndirect) {
+      const name = canonicalRegisterToken(classicMemIndirect[1]!);
+      return {
+        kind: 'Mem',
+        span: operandSpan,
+        expr: { kind: 'EaName', span: operandSpan, name },
+      };
+    }
     const ea = parseEaExprFromText(filePath, inner, operandSpan, diagnostics);
     if (ea) return { kind: 'Mem', span: operandSpan, expr: ea };
     const imm = parseImmExprFromText(filePath, inner, operandSpan, diagnostics, emitDiagnostics);
