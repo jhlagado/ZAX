@@ -37,7 +37,7 @@ push de
 push hl
 ld hl, $1234
 push hl
-DB $CD, $00, $00
+DB $CD, $00, $01
 inc sp
 inc sp
 __zax_epilogue_1:

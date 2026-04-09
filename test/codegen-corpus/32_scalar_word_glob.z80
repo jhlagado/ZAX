@@ -13,8 +13,8 @@ add ix, sp
 push af
 push bc
 push de
-DB $2A, $00, $00
-DB $22, $00, $00
+DB $2A, $00, $20
+DB $22, $00, $20
 __zax_epilogue_0:
 pop de
 pop bc
@@ -32,7 +32,7 @@ push af
 push bc
 push de
 push hl
-DB $CD, $00, $00
+DB $CD, $00, $01
 __zax_epilogue_1:
 pop hl
 pop de

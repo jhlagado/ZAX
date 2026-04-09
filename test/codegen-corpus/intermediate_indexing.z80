@@ -66,13 +66,13 @@ push af
 push bc
 push de
 push hl
-DB $3A, $00, $00
+DB $3A, $00, $10
 ld h, $00
 ld l, a
 push hl
 pop hl
 push hl
-DB $21, $00, $00
+DB $21, $03, $10
 pop de
 add hl, de
 push hl
@@ -80,15 +80,15 @@ pop hl
 DB $7E
 push de
 push hl
-DB $11, $00, $00
-DB $2A, $00, $00
+DB $11, $03, $10
+DB $2A, $01, $10
 add hl, de
 ld a, (HL)
 pop hl
 pop de
 push de
 push hl
-DB $11, $00, $00
+DB $11, $03, $10
 add hl, de
 ld a, (HL)
 pop hl
@@ -97,13 +97,13 @@ DB $7E
 ld l, a
 ld h, $00
 push hl
-DB $21, $00, $00
+DB $21, $03, $10
 pop de
 add hl, de
 push hl
 pop hl
 DB $7E
-DB $3A, $00, $00
+DB $3A, $00, $10
 ld h, $00
 ld l, a
 push hl
@@ -112,7 +112,7 @@ add hl, hl
 add hl, hl
 add hl, hl
 push hl
-DB $21, $00, $00
+DB $21, $13, $10
 pop de
 add hl, de
 push hl
