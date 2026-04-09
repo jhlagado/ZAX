@@ -44,7 +44,7 @@ describe('PR453: codegen corpus workflow', () => {
       await access(join(__dirname, '..', manifest.mirrorDir, `${entry.name}.zax`));
       await access(join(__dirname, '..', manifest.mirrorDir, `${entry.name}.bin`));
       await access(join(__dirname, '..', manifest.mirrorDir, `${entry.name}.hex`));
-      await access(join(__dirname, '..', manifest.mirrorDir, `${entry.name}.asm`));
+      await access(join(__dirname, '..', manifest.mirrorDir, `${entry.name}.z80`));
     }
 
     const opcodeHexNames = (await readdir(join(__dirname, '..', manifest.opcodeHexDir)))
