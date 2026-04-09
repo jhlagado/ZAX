@@ -29,7 +29,7 @@ export interface CompilerOptions {
   emitD8m?: boolean;
   /** Emit listing (`.lst`). */
   emitListing?: boolean;
-  /** Emit ASM80-compatible lowered source (`.z80`). */
+  /** Emit ASM80-compatible lowered source (`.asm`). */
   emitAsm80?: boolean;
   /** Optional case-style lint mode for asm keywords/register tokens. */
   caseStyle?: CaseStyleMode;

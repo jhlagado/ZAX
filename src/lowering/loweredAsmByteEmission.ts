@@ -87,6 +87,54 @@ function namedContributionKey(contributionOrder?: number): string {
   return `contrib:${contributionOrder ?? 'unknown'}`;
 }
 
+/** Byte length of a lowered item as emitted into a section (matches {@link emitLoweredAsmItemBytes}). */
+export function loweredAsmItemEmittedSize(item: LoweredAsmItem, env: CompileEnv): number {
+  switch (item.kind) {
+    case 'label':
+    case 'const':
+    case 'comment':
+      return 0;
+    case 'db':
+      return item.values.length;
+    case 'dw':
+      return item.values.length * 2;
+    case 'ds': {
+      const size = evalLoweredImmExpr(item.size, env);
+      if (size === undefined || size < 0) return 0;
+      return size;
+    }
+    case 'instr':
+      return item.bytes?.length ?? 0;
+  }
+}
+
+/**
+ * After link-time fixups are applied to `finalBytes`, patch lowered `instr` byte arrays
+ * (including `@raw` placeholders from abs16/rel8 fixups) so ASM80 listings match the
+ * merged image.
+ */
+export function syncLoweredAsmInstructionBytesFromFinalBytes(
+  program: LoweredAsmProgram,
+  finalBytes: Map<number, number>,
+  env: CompileEnv,
+): void {
+  for (const block of program.blocks) {
+    if (block.kind !== 'section') continue;
+    let offset = 0;
+    const origin = block.origin;
+    for (const item of block.items) {
+      if (item.kind === 'instr' && item.bytes && item.bytes.length > 0) {
+        const base = origin + offset;
+        for (let i = 0; i < item.bytes.length; i++) {
+          const b = finalBytes.get(base + i);
+          if (b !== undefined) item.bytes[i] = b;
+        }
+      }
+      offset += loweredAsmItemEmittedSize(item, env);
+    }
+  }
+}
+
 function emitLoweredAsmItemBytes(
   item: LoweredAsmItem,
   ctx: LoweredAsmByteEmissionContext,
