@@ -117,6 +117,28 @@ function parseRawDataSize(
   return { kind: 'RawDataDecl', span: lineSpan, name: '', directive: 'ds', size: expr };
 }
 
+/**
+ * Parses a `db`/`dw`/`ds` line with no leading label (continuation bytes after a labeled block).
+ */
+export function parseBareRawDataDirective(
+  directiveText: string,
+  lineNo: number,
+  lineSpan: SourceSpan,
+  filePath: string,
+  diagnostics: Diagnostic[],
+): RawDataDeclNode | undefined {
+  const match = /^(db|dw|ds)\b(.*)$/i.exec(directiveText.trim());
+  if (!match) return undefined;
+  const directive = match[1]!.toLowerCase() as 'db' | 'dw' | 'ds';
+  const payload = match[2]!.trim();
+  const parsed =
+    directive === 'ds'
+      ? parseRawDataSize(payload, lineNo, lineSpan, filePath, diagnostics)
+      : parseRawDataValues(directive, payload, lineNo, lineSpan, filePath, diagnostics);
+  if (!parsed) return undefined;
+  return { ...parsed, name: '', span: lineSpan };
+}
+
 export function parseRawDataDirective(
   label: PendingRawLabel,
   directiveText: string,
