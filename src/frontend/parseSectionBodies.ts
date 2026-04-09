@@ -4,6 +4,7 @@ import { parseDataDeclLine } from './parseData.js';
 import { parseDiag as diag } from './parseDiagnostics.js';
 import type { ParseItemContext, ParseItemResult } from './parseModuleItemDispatch.js';
 import {
+  parseBareRawDataDirective,
   parseRawDataDirective,
   type PendingRawLabel,
 } from './parseRawDataDirectives.js';
@@ -106,6 +107,13 @@ export function parseSectionBodyItem(args: {
       }
       ctx.pendingRawLabel = { name: labelName, span: stmtSpan, lineNo, filePath };
       return { nextIndex: index + 1 };
+    }
+
+    if (looksLikeRawDataDirectiveStart(rest)) {
+      const parsedBare = parseBareRawDataDirective(rest, lineNo, stmtSpan, filePath, diagnostics);
+      if (parsedBare) {
+        return { nextIndex: index + 1, node: parsedBare };
+      }
     }
   } else if (looksLikeRawDataDirectiveStart(rest)) {
     diag(
