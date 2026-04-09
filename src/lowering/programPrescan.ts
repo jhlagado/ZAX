@@ -148,7 +148,9 @@ function preScanItem(
   if (item.kind === 'RawDataDecl') {
     if (namedSection && namedSection.section !== 'data') return;
     const decl = item as RawDataDeclNode;
-    ctx.rawAddressSymbols.add(decl.name.toLowerCase());
+    if (decl.name.length > 0) {
+      ctx.rawAddressSymbols.add(decl.name.toLowerCase());
+    }
   }
 }
 

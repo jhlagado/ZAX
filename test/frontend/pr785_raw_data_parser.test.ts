@@ -84,6 +84,25 @@ end
     expect(dataDecl).toBeDefined();
   });
 
+  it('allows additional db lines without a new label (continuation)', () => {
+    const { diagnostics, module } = parse(`
+section data bmp at $4100
+  bitmap:
+  db %00111100, %00000000, %11000011
+  db %01000010, %00000000, %10111101
+end
+    `);
+
+    expectNoDiagnostics(diagnostics);
+    const section = getFirstSection(module);
+    const rawItems = section.items.filter(
+      (item): item is RawDataDeclNode => item.kind === 'RawDataDecl',
+    );
+    expect(rawItems).toHaveLength(2);
+    expect(rawItems[0]).toMatchObject({ name: 'bitmap', directive: 'db' });
+    expect(rawItems[1]).toMatchObject({ name: '', directive: 'db' });
+  });
+
   it('rejects raw directives outside data sections', () => {
     const { diagnostics } = parse(`
 db 1, 2, 3

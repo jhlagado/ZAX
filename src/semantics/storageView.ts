@@ -97,7 +97,9 @@ export function collectModuleStorage(program: ProgramNode, env: CompileEnv): Mod
       case 'BinDecl':
       case 'HexDecl':
       case 'RawDataDecl':
-        rawAddressSymbols.add(item.name.toLowerCase());
+        if (item.name.length > 0) {
+          rawAddressSymbols.add(item.name.toLowerCase());
+        }
         return;
       default:
         return;

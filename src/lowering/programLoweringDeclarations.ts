@@ -156,21 +156,23 @@ export function createProgramLoweringDeclarationHelpers(ctx: Context): {
       return;
     }
 
-    const okToDeclareSymbol = !ctx.taken.has(decl.name);
-    if (!okToDeclareSymbol) {
-      ctx.diag(ctx.diagnostics, decl.span.file, `Duplicate symbol name "${decl.name}".`);
-    } else {
-      ctx.taken.add(decl.name);
-      namedSection.sink.pendingSymbols.push({
-        kind: 'data',
-        name: decl.name,
-        section: namedSection.node.section,
-        offset: namedSection.sink.offset,
-        file: decl.span.file,
-        line: decl.span.start.line,
-        scope: 'global',
-      });
-      ctx.recordLoweredAsmItem({ kind: 'label', name: decl.name }, decl.span);
+    if (decl.name.length > 0) {
+      const okToDeclareSymbol = !ctx.taken.has(decl.name);
+      if (!okToDeclareSymbol) {
+        ctx.diag(ctx.diagnostics, decl.span.file, `Duplicate symbol name "${decl.name}".`);
+      } else {
+        ctx.taken.add(decl.name);
+        namedSection.sink.pendingSymbols.push({
+          kind: 'data',
+          name: decl.name,
+          section: namedSection.node.section,
+          offset: namedSection.sink.offset,
+          file: decl.span.file,
+          line: decl.span.start.line,
+          scope: 'global',
+        });
+        ctx.recordLoweredAsmItem({ kind: 'label', name: decl.name }, decl.span);
+      }
     }
 
     const emitByte = (b: number): void => {
