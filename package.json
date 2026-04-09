@@ -1,6 +1,6 @@
 {
   "name": "@jhlagado/zax",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "ZAX assembler for the Z80 family (Node.js CLI)",
   "license": "GPL-3.0-only",
   "engines": {
