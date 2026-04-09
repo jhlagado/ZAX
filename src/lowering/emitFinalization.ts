@@ -24,6 +24,7 @@ import {
 import {
   emitLoweredAsmBlockBytes,
   emitLoweredAsmProgramBytes,
+  syncLoweredAsmInstructionBytesFromFinalBytes,
 } from './loweredAsmByteEmission.js';
 import {
   buildStartupInitRegion,
@@ -213,6 +214,8 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
     context.bytes,
     context.symbols,
   );
+
+  syncLoweredAsmInstructionBytesFromFinalBytes(placedProgram, context.bytes, context.env);
 
   const mergedSourceSegments = [...placedSourceSegments, ...sourceSegments].sort((a, b) =>
     a.start === b.start ? a.end - b.end : a.start - b.start,

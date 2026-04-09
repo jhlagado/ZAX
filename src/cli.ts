@@ -44,7 +44,7 @@ function usage(): string {
     '      --nobin           Suppress .bin',
     '      --nohex           Suppress .hex',
     '      --nod8m           Suppress .d8.json',
-    '      --asm80           Emit assembler-valid lowered source (.z80)',
+    '      --asm80           Emit assembler-valid lowered source (.asm)',
     '      --case-style <m>  Case-style lint mode: off|upper|lower|consistent',
     '      --op-stack-policy <m> Op stack-policy mode: off|warn|error',
     '      --raw-typed-call-warn Emit warnings for raw call to typed callable targets',
