@@ -188,7 +188,7 @@ export const compile: CompileFn = async (
       diagnostics.push({
         id: DiagnosticIds.Unknown,
         severity: 'warning',
-        message: 'emitAsm80=true but no asm80 writer is configured; skipping .z80 artifact.',
+        message: 'emitAsm80=true but no asm80 writer is configured; skipping .asm artifact.',
         file: program.entryFile,
       });
     }
