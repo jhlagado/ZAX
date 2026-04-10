@@ -19,7 +19,14 @@
     "./tooling": {
       "types": "./dist/src/api-tooling.d.ts",
       "import": "./dist/src/api-tooling.js"
-    }
+    },
+    "./cli": {
+      "types": "./dist/src/cli.d.ts",
+      "import": "./dist/src/cli.js",
+      "require": "./dist/src/cli.js",
+      "default": "./dist/src/cli.js"
+    },
+    "./package.json": "./package.json"
   },
   "types": "dist/src/index.d.ts",
   "bin": {
