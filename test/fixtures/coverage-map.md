@@ -11,9 +11,9 @@
 
 **Include/import graph cycles detected** (see section below).
 
-Total fixture files (excludes sentinels): 529
+Total fixture files (excludes sentinels): 530
 Sentinel files: 1
-Reachable from tests (direct refs ∪ fixture closure): 316
+Reachable from tests (direct refs ∪ fixture closure): 317
 Potentially unreferenced fixtures: 213
 
 ## Direct test reference counts
@@ -133,6 +133,7 @@ Potentially unreferenced fixtures: 213
 | pr135_isa_jr_djnz_invalid.zax | 0 |
 | pr135_isa_jr_djnz.zax | 0 |
 | pr136_bit_indexed_dest_invalid.zax | 1 |
+| pr1367_op_port_imm_substitution.zax | 1 |
 | pr137_cb_rotate_two_operand_invalid.zax | 1 |
 | pr138_rel8_out_of_range_matrix.zax | 0 |
 | pr138_rel8_valid_matrix.zax | 0 |
@@ -897,6 +898,7 @@ Excluded from the main fixture inventory (`.keep`, `.gitkeep`).
 | pr135_isa_jr_djnz_invalid.zax |  |
 | pr135_isa_jr_djnz.zax |  |
 | pr136_bit_indexed_dest_invalid.zax | test/pr136_bit_indexed_dest_invalid.test.ts |
+| pr1367_op_port_imm_substitution.zax | test/lowering/pr1367_op_port_imm_substitution.test.ts |
 | pr137_cb_rotate_two_operand_invalid.zax | test/pr137_cb_rotate_two_operand_invalid.test.ts |
 | pr138_rel8_out_of_range_matrix.zax |  |
 | pr138_rel8_valid_matrix.zax |  |
