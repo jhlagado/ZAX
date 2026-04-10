@@ -7,6 +7,21 @@
     "node": ">=20"
   },
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./compile": {
+      "types": "./dist/src/api-compile.d.ts",
+      "import": "./dist/src/api-compile.js"
+    },
+    "./tooling": {
+      "types": "./dist/src/api-tooling.d.ts",
+      "import": "./dist/src/api-tooling.js"
+    }
+  },
+  "types": "dist/src/index.d.ts",
   "bin": {
     "zax": "dist/src/cli.js"
   },

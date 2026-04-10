@@ -47,6 +47,7 @@ ZAX constructs and raw Z80 instructions mix freely. The machine model does not c
 **Want the language reference?**
 [ZAX Quick Guide](docs/reference/ZAX-quick-guide.md) — full syntax in practical terms.
 [ZAX Language Spec](docs/spec/zax-spec.md) — normative specification.
+[Tooling API](docs/tooling-api.md) — stable Node imports for parse/load/analyze/compile.
 
 **Contributing?**
 [CONTRIBUTING.md](CONTRIBUTING.md) — branches, PRs, issues, and pre-push checks.
@@ -86,6 +87,16 @@ zax [options] <entry.zax>
   -V, --version
   -h, --help
 ```
+
+## Programmatic API
+
+`@jhlagado/zax` now exposes documented, semver-governed Node entry points:
+
+- `@jhlagado/zax` — root barrel for the stable public surface
+- `@jhlagado/zax/tooling` — Layer A/B APIs for parsing, loading, spans, diagnostics, and semantics-only analysis
+- `@jhlagado/zax/compile` — Layer C compile API plus default format writers
+
+Deep imports like `@jhlagado/zax/dist/src/moduleLoader.js` are not part of the supported contract. Use the public barrels above instead. See [docs/tooling-api.md](docs/tooling-api.md) for examples and compatibility policy.
 
 ---
 
