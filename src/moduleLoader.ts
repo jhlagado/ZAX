@@ -30,16 +30,27 @@ export type LoadedProgram = {
   resolvedImportGraph: Map<string, string[]>;
 };
 
+export interface LoadProgramOptions extends Pick<CompilerOptions, 'includeDirs'> {
+  preloadedText?: string;
+  signal?: AbortSignal;
+}
+
 type ExpandedSource = { text: string; lineFiles: string[]; lineBaseLines: number[] };
 type ModuleEdges = Map<string, Map<string, { line: number; column: number }>>;
 type ImportTarget = ReturnType<typeof importTargets>[number];
+
+function throwIfAborted(signal?: AbortSignal): void {
+  signal?.throwIfAborted();
+}
 
 async function readModuleSource(
   modulePath: string,
   diagnostics: Diagnostic[],
   importer?: string,
   preloadedText?: string,
+  signal?: AbortSignal,
 ): Promise<string | undefined> {
+  throwIfAborted(signal);
   try {
     return preloadedText ?? (await readFile(modulePath, 'utf8'));
   } catch (err) {
@@ -87,10 +98,12 @@ async function resolveIncludeSource(
   includeDirs: string[],
   diagnostics: Diagnostic[],
   sourceTexts: Map<string, string>,
+  signal?: AbortSignal,
 ): Promise<{ resolved: string; resolvedText: string } | 'hard-failure' | undefined> {
   const candidates = resolveIncludeCandidates(modulePath, spec, includeDirs);
 
   for (const c of candidates) {
+    throwIfAborted(signal);
     try {
       const resolvedText = await readFile(c, 'utf8');
       const resolvedKey = normalizePath(c);
@@ -132,8 +145,9 @@ async function expandIncludesForFile(args: {
   diagnostics: Diagnostic[];
   sourceTexts: Map<string, string>;
   includeStack: string[];
+  signal?: AbortSignal;
 }): Promise<ExpandedSource | undefined> {
-  const { modulePath, sourceText, includeDirs, diagnostics, sourceTexts, includeStack } = args;
+  const { modulePath, sourceText, includeDirs, diagnostics, sourceTexts, includeStack, signal } = args;
   const moduleKey = normalizePath(modulePath);
   if (!sourceTexts.has(moduleKey)) sourceTexts.set(moduleKey, sourceText);
   const lines = sourceText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
@@ -142,6 +156,7 @@ async function expandIncludesForFile(args: {
   const lineBaseLines: number[] = [];
 
   for (let i = 0; i < lines.length; i++) {
+    throwIfAborted(signal);
     const raw = lines[i] ?? '';
     const stripped = stripLineComment(raw).trim();
     const lineNo = i + 1;
@@ -162,6 +177,7 @@ async function expandIncludesForFile(args: {
       includeDirs,
       diagnostics,
       sourceTexts,
+      signal,
     );
     if (resolvedInclude === 'hard-failure') return undefined;
     if (!resolvedInclude) {
@@ -193,6 +209,7 @@ async function expandIncludesForFile(args: {
       diagnostics,
       sourceTexts,
       includeStack: [...includeStack, resolvedInclude.resolved],
+      ...(signal ? { signal } : {}),
     });
     if (expanded === undefined) return undefined;
 
@@ -233,10 +250,12 @@ async function resolveImportSource(
   imp: ImportTarget,
   includeDirs: string[],
   diagnostics: Diagnostic[],
+  signal?: AbortSignal,
 ): Promise<{ resolved: string; resolvedText: string } | 'hard-failure' | undefined> {
   const candidates = resolveImportCandidates(modulePath, imp, includeDirs);
 
   for (const c of candidates) {
+    throwIfAborted(signal);
     try {
       return { resolved: c, resolvedText: await readFile(c, 'utf8') };
     } catch (err) {
@@ -377,7 +396,7 @@ function collectModuleTraversal(entryPath: string, edges: ModuleEdges): string[]
 export async function loadProgram(
   entryFile: string,
   diagnostics: Diagnostic[],
-  options: Pick<CompilerOptions, 'includeDirs'>,
+  options: LoadProgramOptions,
 ): Promise<LoadedProgram | undefined> {
   const entryPath = normalizePath(entryFile);
   const modules = new Map<string, ModuleFileNode>();
@@ -386,16 +405,18 @@ export async function loadProgram(
   const edges = new Map<string, Map<string, { line: number; column: number }>>();
   const includeDirs = (options.includeDirs ?? []).map(normalizePath);
   const moduleIdRootDir = dirname(entryPath);
+  const signal = options.signal;
 
   const loadModule = async (
     modulePath: string,
     importer?: string,
     preloadedText?: string,
   ): Promise<void> => {
+    throwIfAborted(signal);
     const p = normalizePath(modulePath);
     if (modules.has(p)) return;
 
-    const sourceText = await readModuleSource(p, diagnostics, importer, preloadedText);
+    const sourceText = await readModuleSource(p, diagnostics, importer, preloadedText, signal);
     if (sourceText === undefined) return;
     if (!sourceTexts.has(p)) sourceTexts.set(p, sourceText);
     const expanded = await expandIncludesForFile({
@@ -405,6 +426,7 @@ export async function loadProgram(
       diagnostics,
       sourceTexts,
       includeStack: [p],
+      ...(signal ? { signal } : {}),
     });
     if (expanded === undefined) return;
 
@@ -415,7 +437,7 @@ export async function loadProgram(
     edges.set(p, new Map());
 
     for (const imp of importTargets(moduleFile)) {
-      const resolvedImport = await resolveImportSource(p, imp, includeDirs, diagnostics);
+      const resolvedImport = await resolveImportSource(p, imp, includeDirs, diagnostics, signal);
       if (resolvedImport === 'hard-failure') return;
       if (!resolvedImport) continue;
 
@@ -424,7 +446,7 @@ export async function loadProgram(
     }
   };
 
-  await loadModule(entryPath);
+  await loadModule(entryPath, undefined, options.preloadedText);
   if (hasErrors(diagnostics)) return undefined;
 
   if (!validateCanonicalModuleIds(modules, moduleIdRootDir, diagnostics)) return undefined;
