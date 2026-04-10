@@ -1,20 +1,16 @@
 import { dirname } from 'node:path';
 
+import { analyzeLoadedProgram } from './analysis.js';
 import { hasErrors, normalizePath } from './compileShared.js';
 import type { Diagnostic } from './diagnosticTypes.js';
 import { DiagnosticIds } from './diagnosticTypes.js';
 import type { CompileFn, CompilerOptions, CompileResult, PipelineDeps } from './pipeline.js';
 
-import type { ModuleItemNode, ProgramNode, SectionItemNode } from './frontend/ast.js';
-import { lintCaseStyle } from './lintCaseStyle.js';
 import { emitProgram } from './lowering/emit.js';
 import { STARTUP_ENTRY_LABEL } from './lowering/startupInit.js';
 import type { Artifact } from './formats/types.js';
 import { collectNonBankedSectionKeys } from './sectionKeys.js';
 import { loadProgram } from './moduleLoader.js';
-import { validateAssignmentAcceptance } from './semantics/assignmentAcceptance.js';
-import { buildEnv } from './semantics/env.js';
-import { validateStepAcceptance } from './semantics/stepAcceptance.js';
 
 function withDefaults(
   options: CompilerOptions,
@@ -36,18 +32,6 @@ function withDefaults(
   return { emitBin, emitHex, emitD8m, emitListing, emitAsm80 };
 }
 
-
-function hasMainFunction(program: ProgramNode): boolean {
-  const hasMainInItems = (items: Array<ModuleItemNode | SectionItemNode>): boolean => {
-    for (const item of items) {
-      if (item.kind === 'FuncDecl' && item.name.toLowerCase() === 'main') return true;
-      if (item.kind === 'NamedSection' && item.section === 'code' && hasMainInItems(item.items)) return true;
-    }
-    return false;
-  };
-  return program.files.some((moduleFile) => hasMainInItems(moduleFile.items));
-}
-
 /**
  * Compile a ZAX program starting from an entry file.
  *
@@ -62,11 +46,10 @@ export const compile: CompileFn = async (
   deps: PipelineDeps,
 ): Promise<CompileResult> => {
   const entryPath = normalizePath(entryFile);
-  const moduleIdRootDir = dirname(entryPath);
   const diagnostics: Diagnostic[] = [];
   const loaded = await loadProgram(entryPath, diagnostics, options);
   if (!loaded) return { diagnostics, artifacts: [] };
-  const { program, sourceTexts, sourceLineComments, moduleTraversal, resolvedImportGraph } = loaded;
+  const { program, sourceTexts, sourceLineComments, moduleTraversal } = loaded;
 
   if (hasErrors(diagnostics)) {
     return { diagnostics, artifacts: [] };
@@ -77,53 +60,13 @@ export const compile: CompileFn = async (
     return { diagnostics, artifacts: [] };
   }
 
-  const hasNonImportDeclaration = program.files.some((moduleFile) =>
-    moduleFile.items.some((item) => item.kind !== 'Import'),
-  );
-  if (!hasNonImportDeclaration) {
-    diagnostics.push({
-      id: DiagnosticIds.SemanticsError,
-      severity: 'error',
-      message: 'Program contains no declarations or instruction streams.',
-      file: program.entryFile,
-      ...(program.span?.start
-        ? { line: program.span.start.line, column: program.span.start.column }
-        : {}),
-    });
-    return { diagnostics, artifacts: [] };
-  }
-
-  if ((options.requireMain ?? false) && !hasMainFunction(program)) {
-    diagnostics.push({
-      id: DiagnosticIds.SemanticsError,
-      severity: 'error',
-      message: 'Program must define a callable "main" entry function.',
-      file: program.entryFile,
-      ...(program.span?.start
-        ? { line: program.span.start.line, column: program.span.start.column }
-        : {}),
-    });
-    return { diagnostics, artifacts: [] };
-  }
-
-  lintCaseStyle(program, sourceTexts, options.caseStyle ?? 'off', diagnostics);
-
-  const env = buildEnv(program, diagnostics, {
-    moduleIdRootDir,
-    resolvedImportGraph,
+  const analysis = analyzeLoadedProgram(loaded, {
+    ...(options.caseStyle !== undefined ? { caseStyle: options.caseStyle } : {}),
+    ...(options.requireMain !== undefined ? { requireMain: options.requireMain } : {}),
   });
-  if (hasErrors(diagnostics)) {
-    return { diagnostics, artifacts: [] };
-  }
-
-  validateAssignmentAcceptance(program, env, diagnostics);
-  if (hasErrors(diagnostics)) {
-    return { diagnostics, artifacts: [] };
-  }
-  validateStepAcceptance(program, env, diagnostics);
-  if (hasErrors(diagnostics)) {
-    return { diagnostics, artifacts: [] };
-  }
+  diagnostics.push(...analysis.diagnostics);
+  if (hasErrors(diagnostics) || !analysis.env) return { diagnostics, artifacts: [] };
+  const env = analysis.env;
 
   const { map, symbols, placedLoweredAsmProgram } = emitProgram(program, env, diagnostics, {
     ...(options.includeDirs ? { includeDirs: options.includeDirs } : {}),

@@ -11,10 +11,10 @@
 
 **Include/import graph cycles detected** (see section below).
 
-Total fixture files (excludes sentinels): 524
+Total fixture files (excludes sentinels): 529
 Sentinel files: 1
-Reachable from tests (direct refs ∪ fixture closure): 315
-Potentially unreferenced fixtures: 209
+Reachable from tests (direct refs ∪ fixture closure): 316
+Potentially unreferenced fixtures: 213
 
 ## Direct test reference counts
 
@@ -40,6 +40,7 @@ Potentially unreferenced fixtures: 209
 | isa_indexed_incdec.zax | 0 |
 | isa_indexed_ld.zax | 0 |
 | isa_indexed_rotates.zax | 0 |
+| issue1356_named_section_ld_bc_de_indirect.zax | 1 |
 | issue1356_named_section_ld_hl_indirect.zax | 1 |
 | parser_case_invalid_value_comma.zax | 1 |
 | parser_case_invalid_value_list.zax | 1 |
@@ -124,7 +125,11 @@ Potentially unreferenced fixtures: 209
 | pr1340_aggregate_param.zax | 1 |
 | pr1344_addr_of_type_positive.zax | 1 |
 | pr1344_self_ref_requires_addr.zax | 1 |
+| pr1349_ld_a_indirect_bc.zax | 0 |
+| pr1349_ld_a_indirect_de.zax | 0 |
 | pr1349_ld_a_indirect_hl.zax | 1 |
+| pr1349_ld_indirect_bc_store.zax | 0 |
+| pr1349_ld_indirect_de_store.zax | 0 |
 | pr135_isa_jr_djnz_invalid.zax | 0 |
 | pr135_isa_jr_djnz.zax | 0 |
 | pr136_bit_indexed_dest_invalid.zax | 1 |
@@ -614,6 +619,10 @@ Not reachable from any test’s literal `fixtures/...` reference via the include
 - pr12_call_wrong_arity.zax
 - pr12_extern_call.zax
 - pr12_func_call_forward.zax
+- pr1349_ld_a_indirect_bc.zax
+- pr1349_ld_a_indirect_de.zax
+- pr1349_ld_indirect_bc_store.zax
+- pr1349_ld_indirect_de_store.zax
 - pr135_isa_jr_djnz.zax
 - pr135_isa_jr_djnz_invalid.zax
 - pr138_rel8_out_of_range_matrix.zax
@@ -795,6 +804,7 @@ Excluded from the main fixture inventory (`.keep`, `.gitkeep`).
 | isa_indexed_incdec.zax |  |
 | isa_indexed_ld.zax |  |
 | isa_indexed_rotates.zax |  |
+| issue1356_named_section_ld_bc_de_indirect.zax | test/backend/issue1356_named_section_ld_hl.test.ts |
 | issue1356_named_section_ld_hl_indirect.zax | test/backend/issue1356_named_section_ld_hl.test.ts |
 | parser_case_invalid_value_comma.zax | test/frontend/pr97_parser_span_structured_control.test.ts |
 | parser_case_invalid_value_list.zax | test/frontend/pr97_parser_span_structured_control.test.ts |
@@ -879,7 +889,11 @@ Excluded from the main fixture inventory (`.keep`, `.gitkeep`).
 | pr1340_aggregate_param.zax | test/lowering/pr1340_aggregate_param.test.ts |
 | pr1344_addr_of_type_positive.zax | test/lowering/pr1344_addr_of_type.test.ts |
 | pr1344_self_ref_requires_addr.zax | test/lowering/pr1344_addr_of_type.test.ts |
+| pr1349_ld_a_indirect_bc.zax |  |
+| pr1349_ld_a_indirect_de.zax |  |
 | pr1349_ld_a_indirect_hl.zax | test/backend/pr1349_ld_a_indirect_hl_regression.test.ts |
+| pr1349_ld_indirect_bc_store.zax |  |
+| pr1349_ld_indirect_de_store.zax |  |
 | pr135_isa_jr_djnz_invalid.zax |  |
 | pr135_isa_jr_djnz.zax |  |
 | pr136_bit_indexed_dest_invalid.zax | test/pr136_bit_indexed_dest_invalid.test.ts |
