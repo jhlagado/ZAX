@@ -1405,6 +1405,7 @@ Operand substitution (v0.1):
 - `op` parameters bind to parsed operands (AST operands), not text.
   - `reg8`/`reg16` parameters substitute the matched register token(s).
   - `imm8`/`imm16` parameters substitute the immediate expression value.
+  - Immediate port operands in `in a,(n)` / `out (n), r` use the same immediate expression substitution: the `n` position binds like other `imm8`/`imm16` parameters.
   - `ea` parameters substitute the storage-location expression (without implicit parentheses).
   - `mem8`/`mem16` parameters substitute the full dereference operand including parentheses.
     - Example: if `src: mem8` matches `(hero.flags)`, then `ld a, src` emits `ld a, (hero.flags)`.

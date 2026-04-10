@@ -79,6 +79,9 @@ export function createOpSubstitutionHelpers(ctx: OpSubstitutionContext) {
       return { ...operand, expr: substituteImm(operand.expr) };
     }
     if (operand.kind === 'Imm') return { ...operand, expr: substituteImm(operand.expr) };
+    if (operand.kind === 'PortImm8') {
+      return { ...operand, expr: substituteImm(operand.expr) };
+    }
     if ((operand.kind === 'Ea' || operand.kind === 'Mem') && operand.expr.kind === 'EaName') {
       const bound = ctx.bindings.get(operand.expr.name.toLowerCase());
       if (bound?.kind === 'Ea') return ctx.cloneOperand(bound);
@@ -191,6 +194,9 @@ export function createOpSubstitutionHelpers(ctx: OpSubstitutionContext) {
         ...operand,
         expr: substituteEaWithOpLabels(operand.expr),
       };
+    }
+    if (operand.kind === 'PortImm8') {
+      return { ...operand, expr: substituteImmWithOpLabels(operand.expr, localLabelMap) };
     }
     return substituteOperand(operand);
   };

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4
+
+- Op expansion: `imm8` / `imm16` parameters now substitute into immediate port operands (`in a,(n)` / `out (n), r` — `PortImm8`).
+
 ## Unreleased
 
 - Added stable `exports` entry points for `@jhlagado/zax`, `@jhlagado/zax/tooling`, and `@jhlagado/zax/compile`.
