@@ -152,6 +152,16 @@ function rangesOverlap(a: SymbolAddressRange, b: SymbolAddressRange): boolean {
   return a.start < b.end && b.start < a.end;
 }
 
+function hasOverlappingSourceSegment(
+  sourceSegmentsByFile: ReadonlyMap<string, EmittedSourceSegment[]>,
+  file: string,
+  range: SymbolAddressRange,
+): boolean {
+  return (sourceSegmentsByFile.get(file) ?? []).some((segment) =>
+    rangesOverlap({ start: segment.start, end: segment.end }, range),
+  );
+}
+
 /**
  * Create a minimal D8 Debug Map (D8M) v1 JSON artifact.
  *
@@ -229,6 +239,15 @@ export function writeD8m(
       confidence: segment.confidence,
     });
   }
+  const sourceSegmentsByFile = new Map<string, EmittedSourceSegment[]>();
+  for (const segment of normalizedSourceSegments) {
+    const entries = sourceSegmentsByFile.get(segment.file);
+    if (entries) {
+      entries.push(segment);
+    } else {
+      sourceSegmentsByFile.set(segment.file, [segment]);
+    }
+  }
 
   const symbolRangesByFile = new Map<string, SymbolAddressRange[]>();
   for (const symbol of serializedSymbols) {
@@ -258,10 +277,12 @@ export function writeD8m(
       .sort((a, b) => a.localeCompare(b));
     const targets = fileKeys.length > 0 ? fileKeys : [fileList[0] ?? ''];
     for (const target of targets) {
+      if (hasOverlappingSourceSegment(sourceSegmentsByFile, target, segmentRange)) continue;
       ensureFileEntry(target).segments.push({
         start: segment.start,
         end: segment.end,
-        lstLine: 0,
+        // Synthetic file-attribution segments have no exact source line; use a valid fallback.
+        lstLine: 1,
         kind: 'unknown',
         confidence: 'low',
       });

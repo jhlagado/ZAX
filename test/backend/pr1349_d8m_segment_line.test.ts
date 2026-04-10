@@ -37,7 +37,7 @@ describe('PR1349 D8M segment line (canonical source line)', () => {
     expect(code?.confidence).toBe('high');
   });
 
-  it('omits line on synthetic low-confidence segments when the source line is unknown', () => {
+  it('omits line and keeps lstLine valid on synthetic low-confidence segments', () => {
     const map: EmittedByteMap = {
       bytes: new Map<number, number>([[0x0200, 0xc9]]),
     };
@@ -53,6 +53,36 @@ describe('PR1349 D8M segment line (canonical source line)', () => {
     const low = segs.find((s) => s.kind === 'unknown' && s.confidence === 'low');
     expect(low).toBeDefined();
     expect(low).not.toHaveProperty('line');
-    expect(low?.lstLine).toBe(0);
+    expect(low?.lstLine).toBe(1);
+  });
+
+  it('does not emit overlapping synthetic file segments when source-attributed segments already exist', () => {
+    const map: EmittedByteMap = {
+      bytes: new Map<number, number>([
+        [0x0100, 0x00],
+        [0x0101, 0x00],
+      ]),
+      sourceSegments: [
+        {
+          start: 0x0100,
+          end: 0x0102,
+          file: 'sample.zax',
+          line: 42,
+          column: 1,
+          kind: 'code',
+          confidence: 'high',
+        },
+      ],
+    };
+    const symbols: SymbolEntry[] = [
+      { kind: 'label', name: 'sample', address: 0x0100, file: 'sample.zax', scope: 'global' },
+    ];
+    const artifact = writeD8m(map, symbols);
+    const files = artifact.json.files as Record<
+      string,
+      { segments?: Array<Record<string, unknown>> }
+    >;
+    const segs = files['sample.zax']?.segments ?? [];
+    expect(segs.some((s) => s.kind === 'unknown' && s.confidence === 'low')).toBe(false);
   });
 });
