@@ -16,13 +16,6 @@
           "confidence": "high"
         },
         {
-          "start": 256,
-          "end": 333,
-          "lstLine": 0,
-          "kind": "unknown",
-          "confidence": "low"
-        },
-        {
           "start": 267,
           "end": 270,
           "lstLine": 20,
@@ -113,7 +106,7 @@
         {
           "start": 4096,
           "end": 4190,
-          "lstLine": 0,
+          "lstLine": 1,
           "kind": "unknown",
           "confidence": "low"
         }
