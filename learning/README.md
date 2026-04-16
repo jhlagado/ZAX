@@ -4,7 +4,7 @@
 
 Two parts. Read them in order.
 
-If you want the whole learning corpus as one GitHub-readable document, use [Learning Book](BOOK.md).
+> **Hosted documentation** — the full course is published as a searchable, navigable book at **[jhlagado.github.io/debug80-docs/zax-book/](https://jhlagado.github.io/debug80-docs/zax-book/)**, with Mermaid diagram support for future chapters.
 
 ---
 
