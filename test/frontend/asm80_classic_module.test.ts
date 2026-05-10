@@ -72,6 +72,19 @@ describe('classic ASM80 module parser', () => {
     });
   });
 
+  it('parses single-quoted raw data characters as immediates', () => {
+    const diagnostics: unknown[] = [];
+    const module = parseClassicModule('/classic.z80', ".dw 'A'\n", diagnostics as never[]);
+
+    expect(diagnostics).toEqual([]);
+    expect(module.items[0]).toMatchObject({
+      kind: 'ClassicRawData',
+      directive: 'dw',
+      valuesText: "'A'",
+      values: [{ kind: 'ImmLiteral', value: 0x41 }],
+    });
+  });
+
   it('parses MON3 db string fragments without splitting quoted contents', () => {
     const diagnostics: unknown[] = [];
     const module = parseClassicModule(

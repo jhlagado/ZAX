@@ -186,6 +186,20 @@ describe('asm80 directive lowering integration', () => {
     expect([...bin.bytes]).toEqual([0x28, 0x03, 0x10, 0xfe, 0x04, 0x01]);
   });
 
+  it('compiles single-quoted character literals in raw words', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-word-char-'));
+    const entry = join(dir, 'word-char.z80');
+    writeFileSync(entry, ['.org 0100H', ".dw 'A'", '.binfrom 0100H', '.end'].join('\n'), 'utf8');
+
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    if (!bin) throw new Error('missing bin artifact');
+    expect([...bin.bytes]).toEqual([0x41, 0x00]);
+  });
+
   it('emits parsed db string fragments and string-character expressions', () => {
     const diagnostics: Diagnostic[] = [];
     const module = parseClassicModuleFile(

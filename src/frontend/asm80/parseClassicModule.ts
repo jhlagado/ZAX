@@ -24,6 +24,13 @@ function parseClassicRawValues(
   for (const part of parts) {
     const rawString = parseWholeQuotedString(part);
     if (rawString !== undefined) {
+      if (part[0] === "'" && rawString.length === 1) {
+        const expr = parseImmExprFromText(path, part, lineSpan, diagnostics);
+        if (expr) {
+          out.push(expr);
+          continue;
+        }
+      }
       out.push({ kind: 'ClassicString', value: rawString });
       continue;
     }
