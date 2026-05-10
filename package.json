@@ -1,6 +1,6 @@
 {
   "name": "@jhlagado/zax",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "ZAX assembler for the Z80 family (Node.js CLI)",
   "license": "GPL-3.0-only",
   "engines": {
@@ -58,6 +58,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint:fix": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
+    "fallow": "fallow",
+    "fallow:dead-code": "fallow dead-code",
+    "fallow:dupes": "fallow dupes",
+    "fallow:health": "fallow health",
+    "fallow:audit": "fallow audit --base main",
     "pretest": "mkdir -p coverage/.tmp",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -81,6 +86,7 @@
     "@types/node": "^22.13.1",
     "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^10.1.0",
+    "fallow": "^2.54.2",
     "globals": "^17.4.0",
     "prettier": "^3.5.0",
     "typescript": "^5.7.3",

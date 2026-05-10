@@ -12,7 +12,7 @@ const __dirname = dirname(__filename);
 
 describe('typed aggregate locals (addr-sized pointer slots)', () => {
   it('compiles linked_list example with record-typed local and field access without cast', async () => {
-    const entry = join(__dirname, '..', '..', 'learning', 'part2', 'examples', 'unit8', 'linked_list.zax');
+    const entry = join(__dirname, '..', 'fixtures', 'pr1334_linked_list.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
     expectNoErrors(res.diagnostics);
   });
