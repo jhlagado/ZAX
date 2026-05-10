@@ -25,6 +25,13 @@ const describeMon3 =
     ? describe
     : describe.skip;
 
+function summarizeErrors(errors: Array<{ file: string; line: number; message: string }>): string {
+  return errors
+    .slice(0, 25)
+    .map((diagnostic) => `${diagnostic.file}:${diagnostic.line}: ${diagnostic.message}`)
+    .join('\n');
+}
+
 describeMon3('ASM80 MON3 acceptance', () => {
   it('compiles MON3 and matches the reference binary bytes', async () => {
     const res = await compile(
@@ -32,13 +39,22 @@ describeMon3('ASM80 MON3 acceptance', () => {
       { emitBin: true, emitHex: false, emitD8m: false, emitListing: false },
       { formats: defaultFormatWriters },
     );
-    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const errors = res.diagnostics.filter((d) => d.severity === 'error');
+    expect(errors, summarizeErrors(errors)).toEqual([]);
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
     if (!bin) throw new Error('missing bin artifact');
 
-    expect(Buffer.from(bin.bytes)).toEqual(readFileSync(manifest.referenceBin));
+    const actual = Buffer.from(bin.bytes);
+    const expected = readFileSync(manifest.referenceBin);
+    const firstMismatch = actual.findIndex((value, index) => value !== expected[index]);
+
+    expect(actual.length, `actual length ${actual.length}, expected length ${expected.length}`).toBe(
+      expected.length,
+    );
+    expect(firstMismatch, `first mismatch at offset ${firstMismatch}`).toBe(-1);
+    expect(actual).toEqual(expected);
   });
 });
 
