@@ -51,11 +51,50 @@ export interface ModuleFileNode extends BaseNode {
 }
 
 /**
+ * A classic ASM80 source file parsed into source-ordered top-level assembler items.
+ */
+export interface ClassicModuleFileNode extends BaseNode {
+  kind: 'ClassicModuleFile';
+  path: string;
+  items: ClassicItemNode[];
+}
+
+export type ClassicItemNode =
+  | ClassicEquNode
+  | ClassicOrgNode
+  | ClassicBinFromNode
+  | ClassicEndNode
+  | AsmLabelNode
+  | (AsmInstructionNode & { operandText?: string })
+  | (RawDataDeclNode & { valuesText?: string });
+
+export interface ClassicEquNode extends BaseNode {
+  kind: 'ClassicEqu';
+  name: string;
+  exprText: string;
+}
+
+export interface ClassicOrgNode extends BaseNode {
+  kind: 'ClassicOrg';
+  exprText: string;
+}
+
+export interface ClassicBinFromNode extends BaseNode {
+  kind: 'ClassicBinFrom';
+  exprText: string;
+}
+
+export interface ClassicEndNode extends BaseNode {
+  kind: 'ClassicEnd';
+}
+
+/**
  * Top-level items permitted in a module file.
  */
 export type ModuleItemNode =
   | ImportNode
   | NamedSectionNode
+  | ClassicItemNode
   | ConstDeclNode
   | EnumDeclNode
   | DataBlockNode
@@ -263,6 +302,7 @@ export type RawDataDeclNode =
       name: string;
       directive: 'db' | 'dw';
       values: ImmExprNode[];
+      valuesText?: string;
     }
   | {
       kind: 'RawDataDecl';
@@ -397,6 +437,8 @@ export interface AsmInstructionNode extends BaseNode {
   /** Canonical lower-case instruction mnemonic or a built-in symbolic head like ":=". */
   head: string;
   operands: AsmOperandNode[];
+  /** Original unparsed operand tail for classic ASM80 source preservation. */
+  operandText?: string;
 }
 
 /**
@@ -512,6 +554,8 @@ export type OffsetofPathStepNode =
 export type Node =
   | ProgramNode
   | ModuleFileNode
+  | ClassicModuleFileNode
+  | ClassicItemNode
   | ModuleItemNode
   | RawDataDeclNode
   | VarDeclNode

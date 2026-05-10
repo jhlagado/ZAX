@@ -78,6 +78,12 @@ export function diagIfInferredArrayLengthNotAllowed(
 
 export function parseNumberLiteral(text: string): number | undefined {
   const t = text.trim();
+  if (/^[0-9][0-9A-Fa-f]*[Hh]$/.test(t)) {
+    return Number.parseInt(t.slice(0, -1), 16);
+  }
+  if (/^[01]+[Bb]$/.test(t)) {
+    return Number.parseInt(t.slice(0, -1), 2);
+  }
   if (/^\$[0-9A-Fa-f]+$/.test(t)) {
     return Number.parseInt(t.slice(1), 16);
   }
@@ -195,7 +201,10 @@ function tokenizeImm(text: string): ImmToken[] | undefined {
       out.push({ kind: 'num', text: String(value) });
       continue;
     }
-    const num = /^(\$[0-9A-Fa-f]+|%[01]+|0b[01]+|[0-9]+)/.exec(s.slice(i));
+    const num =
+      /^(\$[0-9A-Fa-f]+|%[01]+|0b[01]+|[0-9][0-9A-Fa-f]*[Hh]|[01]+[Bb]|[0-9]+)/.exec(
+        s.slice(i),
+      );
     if (num) {
       out.push({ kind: 'num', text: num[0] });
       i += num[0].length;

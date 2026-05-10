@@ -21,6 +21,44 @@ describe('PR476 immediate-expression parsing extraction', () => {
     expect(parseNumberLiteral('garbage')).toBeUndefined();
   });
 
+  it('parses ASM80 trailing-base numeric literals', () => {
+    expect(parseNumberLiteral('0FFH')).toBe(0xff);
+    expect(parseNumberLiteral('0ffh')).toBe(0xff);
+    expect(parseNumberLiteral('1010B')).toBe(0b1010);
+    expect(parseNumberLiteral('1010b')).toBe(0b1010);
+    expect(parseNumberLiteral('00000000b')).toBe(0);
+    expect(parseNumberLiteral('FFH')).toBeUndefined();
+    expect(parseNumberLiteral('102B')).toBeUndefined();
+
+    const diagnostics: Diagnostic[] = [];
+
+    expect(parseImmExprFromText(file.path, '0FFH', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmLiteral',
+      value: 0xff,
+    });
+    expect(parseImmExprFromText(file.path, '0ffh', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmLiteral',
+      value: 0xff,
+    });
+    expect(parseImmExprFromText(file.path, '1010B', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmLiteral',
+      value: 0b1010,
+    });
+    expect(parseImmExprFromText(file.path, '1010b', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmLiteral',
+      value: 0b1010,
+    });
+    expect(parseImmExprFromText(file.path, 'FFH', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmName',
+      name: 'FFH',
+    });
+    expect(parseImmExprFromText(file.path, '00000000b', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmLiteral',
+      value: 0,
+    });
+    expectNoDiagnostics(diagnostics);
+  });
+
   it('keeps type parsing behavior intact', () => {
     expect(parseTypeExprFromText('word[2]', zeroSpan, { allowInferredArrayLength: false })).toEqual(
       {

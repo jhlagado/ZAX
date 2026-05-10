@@ -1,4 +1,5 @@
 import type { Diagnostic } from './diagnosticTypes.js';
+import type { SourceMode } from './frontend/sourceMode.js';
 import type { Artifact, FormatWriters } from './formats/types.js';
 
 export type CaseStyleMode = 'off' | 'upper' | 'lower' | 'consistent';
@@ -41,6 +42,8 @@ export interface CompilerOptions {
   requireMain?: boolean;
   /** Default code section base address when no `section code at` is provided. */
   defaultCodeBase?: number;
+  /** Source syntax mode. When omitted, inferred from the entry file extension. */
+  sourceMode?: SourceMode;
 }
 
 /**

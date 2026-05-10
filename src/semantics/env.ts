@@ -1,4 +1,3 @@
-
 import type { Diagnostic, DiagnosticId } from '../diagnosticTypes.js';
 import { DiagnosticIds } from '../diagnosticTypes.js';
 import { dirname, resolve } from 'node:path';
@@ -12,6 +11,7 @@ import type {
   ProgramNode,
   TypeDeclNode,
   UnionDeclNode,
+  SourceSpan,
 } from '../frontend/ast.js';
 import { canonicalModuleId } from '../moduleIdentity.js';
 import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
@@ -201,8 +201,44 @@ type CollectedDecls = {
   types: Array<TypeDeclNode | UnionDeclNode>;
   callables: Array<FuncDeclNode | ExternDeclNode>;
   enums: EnumDeclNode[];
-  consts: ConstDeclNode[];
+  consts: ConstLikeDecl[];
 };
+
+type ClassicEquDecl = {
+  kind: string;
+  span: SourceSpan;
+  name: string;
+  exported?: boolean;
+  value?: ImmExprNode;
+  expr?: ImmExprNode;
+};
+
+type ConstLikeDecl = ConstDeclNode | ClassicEquDecl;
+
+function isClassicEquDecl(item: {
+  kind: string;
+  name?: unknown;
+  value?: unknown;
+  expr?: unknown;
+}): item is ClassicEquDecl {
+  return (
+    (item.kind === 'ClassicEqu' || item.kind === 'ClassicEquDecl' || item.kind === 'EquDecl') &&
+    typeof item.name === 'string' &&
+    ((item.value as { kind?: unknown } | undefined)?.kind !== undefined ||
+      (item.expr as { kind?: unknown } | undefined)?.kind !== undefined)
+  );
+}
+
+function constValueExpr(item: ConstLikeDecl): ImmExprNode {
+  if (item.kind === 'ConstDecl') return (item as ConstDeclNode).value;
+  const expr = (item as ClassicEquDecl).value ?? (item as ClassicEquDecl).expr;
+  if (!expr) throw new Error('Classic equ declaration is missing an expression.');
+  return expr;
+}
+
+function isClassicCaseInsensitiveConst(item: ConstLikeDecl): boolean {
+  return item.kind !== 'ConstDecl';
+}
 
 function importedModuleIdsForFile(
   moduleFile: ProgramNode['files'][number],
@@ -214,7 +250,9 @@ function importedModuleIdsForFile(
   if (graph) {
     const resolvedTargets = graph.get(moduleFile.path);
     if (!resolvedTargets) return new Set();
-    return new Set(resolvedTargets.map((targetPath) => canonicalModuleId(targetPath, moduleIdRootDir)));
+    return new Set(
+      resolvedTargets.map((targetPath) => canonicalModuleId(targetPath, moduleIdRootDir)),
+    );
   }
   return new Set(
     imports.map((importNode) => {
@@ -250,7 +288,16 @@ export function buildEnv(
 
   if (program.files.length === 0) {
     diag(diagnostics, program.entryFile, 'No module files to compile.');
-    return { consts, enums, types, moduleIds, importedModuleIds, visibleConsts, visibleEnums, visibleTypes };
+    return {
+      consts,
+      enums,
+      types,
+      moduleIds,
+      importedModuleIds,
+      visibleConsts,
+      visibleEnums,
+      visibleTypes,
+    };
   }
 
   const moduleIdRootDir = options?.moduleIdRootDir ?? dirname(program.entryFile);
@@ -282,6 +329,10 @@ export function buildEnv(
         return;
       }
       if (item.kind === 'ConstDecl') {
+        collected.consts.push(item);
+        return;
+      }
+      if (isClassicEquDecl(item)) {
         collected.consts.push(item);
       }
     });
@@ -350,7 +401,8 @@ export function buildEnv(
         if (!claim('enum member', qualifiedName, e.span.file)) continue;
         enums.set(qualifiedName, idx);
         if (e.exported) {
-          const moduleId = moduleIds.get(e.span.file) ?? canonicalModuleId(e.span.file, moduleIdRootDir);
+          const moduleId =
+            moduleIds.get(e.span.file) ?? canonicalModuleId(e.span.file, moduleIdRootDir);
           const exportedName = `${moduleId}.${qualifiedName}`;
           visibleEnums.set(exportedName, idx);
         }
@@ -379,12 +431,13 @@ export function buildEnv(
       }
       if (!claim('const', item.name, item.span.file)) continue;
 
-      const v = evalImmExpr(item.value, env, diagnostics);
+      const v = evalImmExpr(constValueExpr(item), env, diagnostics);
       if (v === undefined) {
         diag(diagnostics, item.span.file, `Failed to evaluate const "${item.name}".`);
         continue;
       }
       consts.set(item.name, v);
+      if (isClassicCaseInsensitiveConst(item)) consts.set(item.name.toLowerCase(), v);
       if (item.exported) {
         const moduleId =
           moduleIds.get(item.span.file) ?? canonicalModuleId(item.span.file, moduleIdRootDir);

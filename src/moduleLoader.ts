@@ -5,9 +5,11 @@ import { hasErrors, normalizePath } from './compileShared.js';
 import type { Diagnostic } from './diagnosticTypes.js';
 import { DiagnosticIds } from './diagnosticTypes.js';
 import type { ModuleFileNode, ProgramNode } from './frontend/ast.js';
+import { parseClassicModuleFile } from './frontend/asm80/parseClassicModule.js';
 import { parseModuleFile } from './frontend/parser.js';
 import { stripLineComment } from './frontend/parseParserShared.js';
 import { makeSourceFile } from './frontend/source.js';
+import { inferSourceMode, type SourceMode } from './frontend/sourceMode.js';
 import { canonicalModuleId } from './moduleIdentity.js';
 import {
   importTargets,
@@ -30,7 +32,7 @@ export type LoadedProgram = {
   resolvedImportGraph: Map<string, string[]>;
 };
 
-export interface LoadProgramOptions extends Pick<CompilerOptions, 'includeDirs'> {
+export interface LoadProgramOptions extends Pick<CompilerOptions, 'includeDirs' | 'sourceMode'> {
   preloadedText?: string;
   signal?: AbortSignal;
 }
@@ -41,6 +43,15 @@ type ImportTarget = ReturnType<typeof importTargets>[number];
 
 function throwIfAborted(signal?: AbortSignal): void {
   signal?.throwIfAborted();
+}
+
+function includeDirectiveForLine(raw: string, sourceMode: SourceMode): string | undefined {
+  const stripped = stripLineComment(raw).trim();
+  const match =
+    sourceMode === 'asm80'
+      ? /^\s*\.include\s+"([^"]+)"\s*$/i.exec(stripped)
+      : /^\s*include\s+"([^"]+)"\s*$/.exec(stripped);
+  return match?.[1];
 }
 
 async function readModuleSource(
@@ -141,13 +152,23 @@ async function resolveIncludeSource(
 async function expandIncludesForFile(args: {
   modulePath: string;
   sourceText: string;
+  sourceMode: SourceMode;
   includeDirs: string[];
   diagnostics: Diagnostic[];
   sourceTexts: Map<string, string>;
   includeStack: string[];
   signal?: AbortSignal;
 }): Promise<ExpandedSource | undefined> {
-  const { modulePath, sourceText, includeDirs, diagnostics, sourceTexts, includeStack, signal } = args;
+  const {
+    modulePath,
+    sourceText,
+    sourceMode,
+    includeDirs,
+    diagnostics,
+    sourceTexts,
+    includeStack,
+    signal,
+  } = args;
   const moduleKey = normalizePath(modulePath);
   if (!sourceTexts.has(moduleKey)) sourceTexts.set(moduleKey, sourceText);
   const lines = sourceText.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
@@ -158,17 +179,15 @@ async function expandIncludesForFile(args: {
   for (let i = 0; i < lines.length; i++) {
     throwIfAborted(signal);
     const raw = lines[i] ?? '';
-    const stripped = stripLineComment(raw).trim();
     const lineNo = i + 1;
-    const match = /^\s*include\s+"([^"]+)"\s*$/.exec(stripped);
-    if (!match) {
+    const spec = includeDirectiveForLine(raw, sourceMode);
+    if (!spec) {
       out.push(raw);
       lineFiles.push(modulePath);
       lineBaseLines.push(lineNo);
       continue;
     }
 
-    const spec = match[1]!;
     const resolvedInclude = await resolveIncludeSource(
       modulePath,
       raw,
@@ -205,6 +224,7 @@ async function expandIncludesForFile(args: {
     const expanded = await expandIncludesForFile({
       modulePath: resolvedInclude.resolved,
       sourceText: resolvedInclude.resolvedText,
+      sourceMode,
       includeDirs,
       diagnostics,
       sourceTexts,
@@ -228,7 +248,10 @@ function parseExpandedModuleFile(
   modulePath: string,
   expanded: ExpandedSource,
   diagnostics: Diagnostic[],
+  sourceMode: SourceMode,
 ): ModuleFileNode | undefined {
+  if (sourceMode === 'asm80') return parseClassicModuleFile(modulePath, expanded.text, diagnostics);
+
   try {
     const sourceFile = makeSourceFile(modulePath, expanded.text);
     sourceFile.lineFiles = expanded.lineFiles;
@@ -406,6 +429,7 @@ export async function loadProgram(
   const includeDirs = (options.includeDirs ?? []).map(normalizePath);
   const moduleIdRootDir = dirname(entryPath);
   const signal = options.signal;
+  const explicitSourceMode = options.sourceMode;
 
   const loadModule = async (
     modulePath: string,
@@ -419,9 +443,11 @@ export async function loadProgram(
     const sourceText = await readModuleSource(p, diagnostics, importer, preloadedText, signal);
     if (sourceText === undefined) return;
     if (!sourceTexts.has(p)) sourceTexts.set(p, sourceText);
+    const sourceMode = explicitSourceMode ?? inferSourceMode(p);
     const expanded = await expandIncludesForFile({
       modulePath: p,
       sourceText,
+      sourceMode,
       includeDirs,
       diagnostics,
       sourceTexts,
@@ -430,7 +456,7 @@ export async function loadProgram(
     });
     if (expanded === undefined) return;
 
-    const moduleFile = parseExpandedModuleFile(p, expanded, diagnostics);
+    const moduleFile = parseExpandedModuleFile(p, expanded, diagnostics, sourceMode);
     if (!moduleFile) return;
     modules.set(p, moduleFile);
     recordSourceLineComments(sourceLineComments, expanded);

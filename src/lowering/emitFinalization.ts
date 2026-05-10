@@ -178,6 +178,9 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
     }
   }
 
+  const mergedCodeBytes = new Map([...context.codeBytes, ...emission.codeBytes]);
+  const mergedDataBytes = new Map([...context.dataBytes, ...emission.dataBytes]);
+
   const { writtenRange, sourceSegments } = finalizeProgramEmission({
     diagnostics: context.diagnostics,
     diag: context.diag,
@@ -194,8 +197,8 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
     deferredExterns: context.deferredExterns,
     fixups: context.fixups,
     rel8Fixups: context.rel8Fixups,
-    codeBytes: emission.codeBytes,
-    dataBytes: emission.dataBytes,
+    codeBytes: mergedCodeBytes,
+    dataBytes: mergedDataBytes,
     hexBytes: context.hexBytes,
     bytes: context.bytes,
     codeSourceSegments: context.codeSourceSegments,

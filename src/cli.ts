@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import { compile } from './compile.js';
 import type { Diagnostic } from './diagnosticTypes.js';
+import { inferSourceMode, type SourceMode } from './frontend/sourceMode.js';
 import { defaultFormatWriters } from './formats/index.js';
 import type { Artifact } from './formats/types.js';
 import type { CaseStyleMode, OpStackPolicyMode } from './pipeline.js';
@@ -26,9 +27,10 @@ type CliOptions = {
   opStackPolicy: OpStackPolicyMode;
   rawTypedCallWarnings: boolean;
   includeDirs: string[];
+  sourceMode: SourceMode;
 };
 
-type CliState = Omit<CliOptions, 'entryFile' | 'outputPath'> & {
+type CliState = Omit<CliOptions, 'entryFile' | 'outputPath' | 'sourceMode'> & {
   entryFile: string | undefined;
   outputPath: string | undefined;
 };
@@ -221,6 +223,7 @@ function finalizeCliOptions(state: CliState): CliOptions {
     opStackPolicy: state.opStackPolicy,
     rawTypedCallWarnings: state.rawTypedCallWarnings,
     includeDirs: state.includeDirs,
+    sourceMode: inferSourceMode(state.entryFile),
   };
 }
 
@@ -388,6 +391,7 @@ export async function runCli(argv: string[]): Promise<number> {
         opStackPolicy: parsed.opStackPolicy,
         rawTypedCallWarnings: parsed.rawTypedCallWarnings,
         includeDirs: parsed.includeDirs,
+        sourceMode: parsed.sourceMode,
         requireMain: true,
         defaultCodeBase: 0x0100,
       },
