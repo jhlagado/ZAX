@@ -200,6 +200,42 @@ describe('asm80 directive lowering integration', () => {
     expect([...bin.bytes]).toEqual([0x41, 0x00]);
   });
 
+  it('resolves classic equates used as absolute memory operands', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-equ-abs-mem-'));
+    const entry = join(dir, 'equ-abs-mem.z80');
+    writeFileSync(
+      entry,
+      ['.org 0100H', 'BUF: .equ 0900H', 'ld hl,(BUF)', '.binfrom 0100H', '.end'].join('\n'),
+      'utf8',
+    );
+
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    if (!bin) throw new Error('missing bin artifact');
+    expect([...bin.bytes]).toEqual([0x2a, 0x00, 0x09]);
+  });
+
+  it('compiles classic IX/IY indexed memory operands', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-ixiy-indexed-'));
+    const entry = join(dir, 'ixiy-indexed.z80');
+    writeFileSync(
+      entry,
+      ['.org 0100H', 'ld a,(ix+0)', 'ld a,(iy+12)', '.binfrom 0100H', '.end'].join('\n'),
+      'utf8',
+    );
+
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    if (!bin) throw new Error('missing bin artifact');
+    expect([...bin.bytes]).toEqual([0xdd, 0x7e, 0x00, 0xfd, 0x7e, 0x0c]);
+  });
+
   it('emits parsed db string fragments and string-character expressions', () => {
     const diagnostics: Diagnostic[] = [];
     const module = parseClassicModuleFile(

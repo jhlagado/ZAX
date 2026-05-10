@@ -85,6 +85,39 @@ describe('classic ASM80 module parser', () => {
     });
   });
 
+  it('keeps post-end binfrom while ignoring ordinary post-end source', () => {
+    const diagnostics: unknown[] = [];
+    const module = parseClassicModule(
+      '/classic.z80',
+      ['.org 0100H', '.db 1', '.end', 'after: nop', '.binfrom 0100H'].join('\n'),
+      diagnostics as never[],
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(module.items.map((item: ClassicItemNode) => item.kind)).toEqual([
+      'ClassicOrg',
+      'ClassicRawData',
+      'ClassicEnd',
+      'ClassicBinFrom',
+    ]);
+  });
+
+  it('does not let post-end string equates affect pre-end raw data', () => {
+    const diagnostics: unknown[] = [];
+    const module = parseClassicModule(
+      '/classic.z80',
+      ['.db MSG', '.end', 'MSG: .equ "XY"'].join('\n'),
+      diagnostics as never[],
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(module.items[0]).toMatchObject({
+      kind: 'ClassicRawData',
+      directive: 'db',
+      values: [{ kind: 'ImmName', name: 'MSG' }],
+    });
+  });
+
   it('parses MON3 db string fragments without splitting quoted contents', () => {
     const diagnostics: unknown[] = [];
     const module = parseClassicModule(
