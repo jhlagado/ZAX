@@ -434,12 +434,17 @@ ASM80 documents useful features that are not first-milestone requirements:
 - `.ent`
 - `.binto`
 - `.pragma`
+- VS Code extension work and LSP/language-server integration
 
 These should be tracked as follow-up compatibility slices, not bundled into the
 MON3 milestone unless the corpus proves they are needed. Macro and repeat
 features should remain out of scope unless the project explicitly reopens the
 baseline, because ZAX's long-term abstraction direction is OPS and typed
 language features rather than ASM80 text macros.
+
+Editor integration is also outside this audit's current execution scope. The
+first milestone should prove parser, lowering, and artifact compatibility before
+VS Code or LSP work is scheduled.
 
 ## First milestone acceptance criteria
 

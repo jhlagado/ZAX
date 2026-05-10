@@ -101,6 +101,8 @@ Do not implement these for the first compatibility level:
 - text-substitution macro semantics
 - non-Z80 processor compatibility
 - broad ASM80 directive coverage not used by MON3 or selected follow-up samples
+- VS Code extension work or LSP/language-server integration
+- Debug80 workflow integration beyond compatibility reference checks
 
 Macros are deliberately out of scope. They are not used by MON3, they are not
 the common subset this project is targeting, and they conflict with the

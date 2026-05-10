@@ -71,4 +71,83 @@ describe('classic ASM80 module parser', () => {
       values: [{ kind: 'ClassicString', value: 'A,B' }, { kind: 'ImmLiteral', value: 0 }],
     });
   });
+
+  it('parses MON3 db string fragments without splitting quoted contents', () => {
+    const diagnostics: unknown[] = [];
+    const module = parseClassicModule(
+      '/classic.z80',
+      [
+        '.db "Enter ",0',
+        ".db '<_>?)!@#$%^&*( : +|'",
+        '.db "2025.16"',
+        '.db "A,B",0',
+        '.db "a"-"A"',
+      ].join('\n'),
+      diagnostics as never[],
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(module.items).toMatchObject([
+      {
+        kind: 'ClassicRawData',
+        directive: 'db',
+        valuesText: '"Enter ",0',
+        values: [{ kind: 'ClassicString', value: 'Enter ' }, { kind: 'ImmLiteral', value: 0 }],
+      },
+      {
+        kind: 'ClassicRawData',
+        directive: 'db',
+        valuesText: "'<_>?)!@#$%^&*( : +|'",
+        values: [{ kind: 'ClassicString', value: '<_>?)!@#$%^&*( : +|' }],
+      },
+      {
+        kind: 'ClassicRawData',
+        directive: 'db',
+        valuesText: '"2025.16"',
+        values: [{ kind: 'ClassicString', value: '2025.16' }],
+      },
+      {
+        kind: 'ClassicRawData',
+        directive: 'db',
+        valuesText: '"A,B",0',
+        values: [{ kind: 'ClassicString', value: 'A,B' }, { kind: 'ImmLiteral', value: 0 }],
+      },
+      {
+        kind: 'ClassicRawData',
+        directive: 'db',
+        valuesText: '"a"-"A"',
+        values: [
+          {
+            kind: 'ImmBinary',
+            op: '-',
+            left: { kind: 'ImmLiteral', value: 97 },
+            right: { kind: 'ImmLiteral', value: 65 },
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('expands multi-character string equates in db values', () => {
+    const diagnostics: unknown[] = [];
+    const module = parseClassicModule(
+      '/classic.z80',
+      ['.db REL_TXT,0', 'REL_TXT: .equ "2025.16"'].join('\n'),
+      diagnostics as never[],
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(module.items).toMatchObject([
+      {
+        kind: 'ClassicRawData',
+        directive: 'db',
+        values: [{ kind: 'ClassicString', value: '2025.16' }, { kind: 'ImmLiteral', value: 0 }],
+      },
+      {
+        kind: 'ClassicEqu',
+        name: 'REL_TXT',
+        exprText: '"2025.16"',
+      },
+    ]);
+  });
 });

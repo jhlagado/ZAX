@@ -9,6 +9,7 @@ import type { NamedSectionContributionSink } from './sectionContributions.js';
 
 import type { Context } from './programLowering.js';
 import type { SectionKind } from './loweringTypes.js';
+import { evalImmExpr as evalImmExprWithEnv } from '../semantics/env.js';
 
 type NamedSectionTarget = { node: NamedSectionNode; sink: NamedSectionContributionSink };
 type RawValueLike =
@@ -49,6 +50,19 @@ function rawImmValue(value: RawValueLike): ImmExprNode | undefined {
   if (typeof value === 'string') return undefined;
   if (!('kind' in value)) return undefined;
   return value.kind.startsWith('Imm') ? (value as ImmExprNode) : undefined;
+}
+
+function containsCurrentLocation(expr: ImmExprNode): boolean {
+  switch (expr.kind) {
+    case 'ImmCurrentLocation':
+      return true;
+    case 'ImmUnary':
+      return containsCurrentLocation(expr.expr);
+    case 'ImmBinary':
+      return containsCurrentLocation(expr.left) || containsCurrentLocation(expr.right);
+    default:
+      return false;
+  }
 }
 
 export function createProgramLoweringDeclarationHelpers(ctx: Context): {
@@ -355,6 +369,17 @@ export function createProgramLoweringDeclarationHelpers(ctx: Context): {
       writeByte((value >> 8) & 0xff);
     };
 
+    const currentAddress = (): number | undefined => {
+      const offset =
+        namedSection?.sink.offset ??
+        (activeSection === 'code' ? ctx.codeOffsetRef.current : ctx.dataOffsetRef.current);
+      if (namedSection) return namedSection.sink.anchor.node.anchor ? undefined : offset;
+      const baseExpr = activeSection === 'code' ? ctx.baseExprs.code : ctx.baseExprs.data;
+      if (!baseExpr) return offset;
+      const base = ctx.evalImmExpr(baseExpr, ctx.env, ctx.diagnostics);
+      return base === undefined ? undefined : base + offset;
+    };
+
     if (decl.directive === 'ds') {
       if (!decl.size) {
         ctx.diag(ctx.diagnostics, decl.span.file, `Raw data size is missing for "${name}".`);
@@ -450,8 +475,20 @@ export function createProgramLoweringDeclarationHelpers(ctx: Context): {
         continue;
       }
 
-      loweredValues.push(ctx.lowerImmExprForLoweredAsm(imm));
-      const evaluated = ctx.evalImmExpr(imm, ctx.env, ctx.diagnostics);
+      const current = containsCurrentLocation(imm) ? currentAddress() : undefined;
+      if (containsCurrentLocation(imm) && current === undefined) {
+        ctx.diag(ctx.diagnostics, decl.span.file, `Failed to evaluate current location.`);
+        if (decl.directive === 'db') writeByte(0);
+        else writeWord(0);
+        continue;
+      }
+      const evaluated =
+        current === undefined
+          ? ctx.evalImmExpr(imm, ctx.env, ctx.diagnostics)
+          : evalImmExprWithEnv(imm, ctx.env, ctx.diagnostics, { currentLocation: current });
+      loweredValues.push(
+        evaluated === undefined ? ctx.lowerImmExprForLoweredAsm(imm) : { kind: 'literal', value: evaluated },
+      );
       if (evaluated !== undefined) {
         if (decl.directive === 'db') writeByte(evaluated);
         else writeWord(evaluated);

@@ -37,4 +37,12 @@ describe('classic ASM80 logical line parser', () => {
       valuesText: '"A;B",0',
     });
   });
+
+  it('preserves AF prime suffix while stripping trailing comments', () => {
+    expect(parseClassicLine('/classic.z80', "ex af,af'           ;start saving registers", 1, 0)).toEqual({
+      kind: 'instruction',
+      head: 'ex',
+      operandText: "af,af'",
+    });
+  });
 });

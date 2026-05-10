@@ -59,6 +59,82 @@ describe('PR476 immediate-expression parsing extraction', () => {
     expectNoDiagnostics(diagnostics);
   });
 
+  it('parses ASM80 current-location expressions', () => {
+    const diagnostics: Diagnostic[] = [];
+
+    expect(parseImmExprFromText(file.path, '$', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmCurrentLocation',
+    });
+    expect(parseImmExprFromText(file.path, '$+3', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmBinary',
+      op: '+',
+      left: { kind: 'ImmCurrentLocation' },
+      right: { kind: 'ImmLiteral', value: 3 },
+    });
+    expect(parseImmExprFromText(file.path, '$ - 4', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmBinary',
+      op: '-',
+      left: { kind: 'ImmCurrentLocation' },
+      right: { kind: 'ImmLiteral', value: 4 },
+    });
+    expect(parseImmExprFromText(file.path, '$-APITable', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmBinary',
+      op: '-',
+      left: { kind: 'ImmCurrentLocation' },
+      right: { kind: 'ImmName', name: 'APITable' },
+    });
+    expect(
+      parseImmExprFromText(file.path, '($-DSAPIFunctions)/2', zeroSpan, diagnostics),
+    ).toMatchObject({
+      kind: 'ImmBinary',
+      op: '/',
+      left: {
+        kind: 'ImmBinary',
+        op: '-',
+        left: { kind: 'ImmCurrentLocation' },
+        right: { kind: 'ImmName', name: 'DSAPIFunctions' },
+      },
+      right: { kind: 'ImmLiteral', value: 2 },
+    });
+    expect(parseImmExprFromText(file.path, '$Label', zeroSpan, diagnostics)).toBeUndefined();
+
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        message: 'Invalid imm expression: $Label',
+      }),
+    ]);
+  });
+
+  it('parses ASM80 one-character double-quoted expressions', () => {
+    const diagnostics: Diagnostic[] = [];
+
+    expect(parseImmExprFromText(file.path, '" "', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmLiteral',
+      value: 0x20,
+    });
+    expect(parseImmExprFromText(file.path, '":"', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmLiteral',
+      value: 0x3a,
+    });
+    expect(parseImmExprFromText(file.path, '"Y"', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmLiteral',
+      value: 0x59,
+    });
+    expect(parseImmExprFromText(file.path, '"a"-"A"', zeroSpan, diagnostics)).toMatchObject({
+      kind: 'ImmBinary',
+      op: '-',
+      left: { kind: 'ImmLiteral', value: 0x61 },
+      right: { kind: 'ImmLiteral', value: 0x41 },
+    });
+    expect(parseImmExprFromText(file.path, '"NO"', zeroSpan, diagnostics)).toBeUndefined();
+
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        message: 'Invalid imm expression: "NO"',
+      }),
+    ]);
+  });
+
   it('keeps type parsing behavior intact', () => {
     expect(parseTypeExprFromText('word[2]', zeroSpan, { allowInferredArrayLength: false })).toEqual(
       {

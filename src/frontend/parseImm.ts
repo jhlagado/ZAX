@@ -101,6 +101,7 @@ export function parseNumberLiteral(text: string): number | undefined {
 
 type ImmToken =
   | { kind: 'num'; text: string }
+  | { kind: 'current' }
   | { kind: 'ident'; text: string }
   | { kind: 'op'; text: ImmOpToken }
   | { kind: 'comma' }
@@ -168,6 +169,19 @@ function tokenizeImm(text: string): ImmToken[] | undefined {
       i += 2;
       continue;
     }
+    if (ch === '$') {
+      if (/^[0-9A-Fa-f]/.test(s[i + 1] ?? '')) {
+        const num = /^\$[0-9A-Fa-f]+/.exec(s.slice(i));
+        if (!num) return undefined;
+        out.push({ kind: 'num', text: num[0] });
+        i += num[0].length;
+        continue;
+      }
+      if (/^[A-Za-z_]/.test(s[i + 1] ?? '')) return undefined;
+      out.push({ kind: 'current' });
+      i++;
+      continue;
+    }
     if (ch === "'") {
       i++;
       if (i >= s.length) return undefined;
@@ -201,8 +215,41 @@ function tokenizeImm(text: string): ImmToken[] | undefined {
       out.push({ kind: 'num', text: String(value) });
       continue;
     }
+    if (ch === '"') {
+      i++;
+      if (i >= s.length) return undefined;
+
+      let value: number | undefined;
+      if (s[i] === '\\') {
+        i++;
+        if (i >= s.length) return undefined;
+        const esc = s[i]!;
+        i++;
+        if (esc === 'x') {
+          const hex = s.slice(i, i + 2);
+          if (!/^[0-9A-Fa-f]{2}$/.test(hex)) return undefined;
+          value = Number.parseInt(hex, 16);
+          i += 2;
+        } else {
+          const escaped = CHAR_ESCAPE_VALUES.get(esc);
+          if (escaped === undefined) return undefined;
+          value = escaped;
+        }
+      } else {
+        if (s[i] === '"' || s[i] === '\n' || s[i] === '\r') return undefined;
+        const cp = s.codePointAt(i);
+        if (cp === undefined) return undefined;
+        value = cp;
+        i += cp > 0xffff ? 2 : 1;
+      }
+
+      if (i >= s.length || s[i] !== '"') return undefined;
+      i++;
+      out.push({ kind: 'num', text: String(value) });
+      continue;
+    }
     const num =
-      /^(\$[0-9A-Fa-f]+|%[01]+|0b[01]+|[0-9][0-9A-Fa-f]*[Hh]|[01]+[Bb]|[0-9]+)/.exec(
+      /^(%[01]+|0b[01]+|[0-9][0-9A-Fa-f]*[Hh]|[01]+[Bb]|[0-9]+)/.exec(
         s.slice(i),
       );
     if (num) {
@@ -334,6 +381,10 @@ export function parseImmExprFromText(
       const n = parseNumberLiteral(t.text);
       if (n === undefined) return undefined;
       return immLiteral(filePath, exprSpan, n);
+    }
+    if (t.kind === 'current') {
+      idx++;
+      return { kind: 'ImmCurrentLocation', span: { ...exprSpan, file: filePath } };
     }
     if (t.kind === 'ident') {
       if (t.text === 'sizeof' && tokens[idx + 1]?.kind === 'lparen') {

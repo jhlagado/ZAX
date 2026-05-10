@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { compile } from '../../src/compile.js';
+import type { Diagnostic } from '../../src/diagnosticTypes.js';
 import { defaultFormatWriters } from '../../src/formats/index.js';
 import type { BinArtifact } from '../../src/formats/types.js';
 
@@ -25,12 +26,102 @@ const describeMon3 =
     ? describe
     : describe.skip;
 
-function summarizeErrors(errors: Array<{ file: string; line: number; message: string }>): string {
-  return errors
-    .slice(0, 25)
-    .map((diagnostic) => `${diagnostic.file}:${diagnostic.line}: ${diagnostic.message}`)
-    .join('\n');
+function byteHex(value: number | undefined): string {
+  return value === undefined ? 'EOF' : `0x${value.toString(16).padStart(2, '0')}`;
 }
+
+function offsetHex(offset: number): string {
+  return `0x${offset.toString(16).padStart(4, '0')}`;
+}
+
+function diagnosticLocation(diagnostic: Diagnostic): string {
+  if (diagnostic.line === undefined || diagnostic.column === undefined) return diagnostic.file;
+  return `${diagnostic.file}:${diagnostic.line}:${diagnostic.column}`;
+}
+
+function summarizeDiagnostics(diagnostics: Diagnostic[], limit = 3): string {
+  const preview = diagnostics.slice(0, limit).map((diagnostic) =>
+    `${diagnosticLocation(diagnostic)}: ${diagnostic.severity} [${diagnostic.id}] ${
+      diagnostic.message
+    }`,
+  );
+  return [`Diagnostics preview (showing ${preview.length} of ${diagnostics.length}):`, ...preview].join(
+    '\n',
+  );
+}
+
+function findFirstMismatch(actual: Buffer, reference: Buffer): number {
+  const maxLength = Math.max(actual.length, reference.length);
+  for (let i = 0; i < maxLength; i++) {
+    if (actual[i] !== reference[i]) return i;
+  }
+  return -1;
+}
+
+function summarizeBinaryMismatch(actual: Buffer, reference: Buffer): string {
+  const firstMismatch = findFirstMismatch(actual, reference);
+  const lines = [`Binary length: actual=${actual.length} reference=${reference.length}`];
+  if (firstMismatch >= 0) {
+    lines.push(
+      `First mismatch @${offsetHex(firstMismatch)}: actual=${byteHex(
+        actual[firstMismatch],
+      )} reference=${byteHex(reference[firstMismatch])}`,
+    );
+  } else {
+    lines.push('First mismatch: none');
+  }
+  return lines.join('\n');
+}
+
+describe('MON3 acceptance failure summaries', () => {
+  it('summarizes diagnostics and byte mismatches concisely', () => {
+    expect(
+      summarizeDiagnostics([
+        {
+          id: 'ZAX100',
+          severity: 'error',
+          message: 'Unsupported classic instruction',
+          file: '/tmp/mon3.z80',
+          line: 12,
+          column: 5,
+        },
+        {
+          id: 'ZAX200',
+          severity: 'warning',
+          message: 'Unused label',
+          file: '/tmp/lib.z80',
+        },
+        {
+          id: 'ZAX300',
+          severity: 'error',
+          message: 'Another error',
+          file: '/tmp/lib.z80',
+          line: 40,
+          column: 1,
+        },
+        {
+          id: 'ZAX301',
+          severity: 'error',
+          message: 'Suppressed error',
+          file: '/tmp/lib.z80',
+          line: 41,
+          column: 1,
+        },
+      ]),
+    ).toBe(
+      [
+        'Diagnostics preview (showing 3 of 4):',
+        '/tmp/mon3.z80:12:5: error [ZAX100] Unsupported classic instruction',
+        '/tmp/lib.z80: warning [ZAX200] Unused label',
+        '/tmp/lib.z80:40:1: error [ZAX300] Another error',
+      ].join('\n'),
+    );
+
+    expect(summarizeBinaryMismatch(Buffer.from([0x00, 0x02]), Buffer.from([0x00, 0x01, 0x03]))).toBe(
+      'Binary length: actual=2 reference=3\nFirst mismatch @0x0001: actual=0x02 reference=0x01',
+    );
+  });
+});
 
 describeMon3('ASM80 MON3 acceptance', () => {
   it('compiles MON3 and matches the reference binary bytes', async () => {
@@ -40,7 +131,7 @@ describeMon3('ASM80 MON3 acceptance', () => {
       { formats: defaultFormatWriters },
     );
     const errors = res.diagnostics.filter((d) => d.severity === 'error');
-    expect(errors, summarizeErrors(errors)).toEqual([]);
+    if (errors.length > 0) throw new Error(summarizeDiagnostics(res.diagnostics));
 
     const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
     expect(bin).toBeDefined();
@@ -48,13 +139,11 @@ describeMon3('ASM80 MON3 acceptance', () => {
 
     const actual = Buffer.from(bin.bytes);
     const expected = readFileSync(manifest.referenceBin);
-    const firstMismatch = actual.findIndex((value, index) => value !== expected[index]);
+    const binarySummary = summarizeBinaryMismatch(actual, expected);
 
-    expect(actual.length, `actual length ${actual.length}, expected length ${expected.length}`).toBe(
-      expected.length,
-    );
-    expect(firstMismatch, `first mismatch at offset ${firstMismatch}`).toBe(-1);
-    expect(actual).toEqual(expected);
+    if (actual.length !== expected.length || findFirstMismatch(actual, expected) !== -1) {
+      throw new Error(binarySummary);
+    }
   });
 });
 

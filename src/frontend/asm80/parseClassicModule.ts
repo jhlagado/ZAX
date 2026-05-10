@@ -17,19 +17,51 @@ function parseClassicRawValues(
   valuesText: string,
   lineSpan: ReturnType<typeof span>,
   diagnostics: Diagnostic[],
+  stringEquates: Map<string, string>,
 ): unknown[] {
   const out: unknown[] = [];
   const parts = splitTopLevelComma(valuesText).map((part) => part.trim()).filter((part) => part.length > 0);
   for (const part of parts) {
-    const stringMatch = /^"([^"]*)"$/.exec(part);
-    if (stringMatch) {
-      out.push({ kind: 'ClassicString', value: stringMatch[1] ?? '' });
+    const rawString = parseWholeQuotedString(part);
+    if (rawString !== undefined) {
+      out.push({ kind: 'ClassicString', value: rawString });
       continue;
     }
-    const expr = parseImmExprFromText(path, part, lineSpan, diagnostics);
+    const stringEquate = /^[A-Za-z_][A-Za-z0-9_]*$/.exec(part)
+      ? stringEquates.get(part.toLowerCase())
+      : undefined;
+    if (stringEquate !== undefined) {
+      out.push({ kind: 'ClassicString', value: stringEquate });
+      continue;
+    }
+    const expr = parseImmExprFromText(path, normalizeDoubleQuotedCharExpr(part), lineSpan, diagnostics);
     if (expr) out.push(expr);
   }
   return out;
+}
+
+function parseWholeQuotedString(text: string): string | undefined {
+  if (text.length < 2) return undefined;
+  const quote = text[0];
+  if ((quote !== '"' && quote !== "'") || text[text.length - 1] !== quote) return undefined;
+
+  let value = '';
+  for (let i = 1; i < text.length - 1; i++) {
+    const ch = text[i]!;
+    if (ch === '\\') {
+      if (i + 1 >= text.length - 1) return undefined;
+      value += text[i + 1]!;
+      i++;
+      continue;
+    }
+    if (ch === quote) return undefined;
+    value += ch;
+  }
+  return value;
+}
+
+function normalizeDoubleQuotedCharExpr(text: string): string {
+  return text.replace(/"([^"\\])"/g, (_match, char: string) => `'${char}'`);
 }
 
 function splitTopLevelComma(text: string): string[] {
@@ -95,6 +127,16 @@ export function parseClassicModule(
   let pendingRawLabel: AsmLabelNode | undefined;
 
   const lines = sourceText.split(/\r?\n/);
+  const stringEquates = new Map<string, string>();
+  for (let index = 0; index < lines.length; index++) {
+    const parsed = parseClassicLine(path, lines[index]!, index + 1, file.lineStarts[index] ?? 0);
+    if (parsed?.kind !== 'equ') continue;
+    const rawString = parseWholeQuotedString(parsed.exprText);
+    if (rawString !== undefined && rawString.length > 1) {
+      stringEquates.set(parsed.name.toLowerCase(), rawString);
+    }
+  }
+
   for (let index = 0; index < lines.length; index++) {
     const raw = lines[index]!;
     const lineStart = file.lineStarts[index] ?? sourceText.length;
@@ -129,7 +171,13 @@ export function parseClassicModule(
           span: lineSpan,
           name: parsed.name,
           exprText: parsed.exprText,
-          value: parseImmExprFromText(path, parsed.exprText, lineSpan, _diagnostics),
+          value: parseImmExprFromText(
+            path,
+            normalizeDoubleQuotedCharExpr(parsed.exprText),
+            lineSpan,
+            _diagnostics,
+            !stringEquates.has(parsed.name.toLowerCase()),
+          ),
         } as unknown as ClassicItemNode);
         pendingRawLabel = undefined;
         break;
@@ -166,7 +214,13 @@ export function parseClassicModule(
           span: lineSpan,
           name,
           directive: parsed.directive,
-          values: parseClassicRawValues(path, parsed.valuesText, lineSpan, _diagnostics),
+          values: parseClassicRawValues(
+            path,
+            parsed.valuesText,
+            lineSpan,
+            _diagnostics,
+            stringEquates,
+          ),
           valuesText: parsed.valuesText,
         } as unknown as ClassicItemNode;
         if (parsed.label) {

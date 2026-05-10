@@ -70,7 +70,7 @@ subset without translating it by hand".
 4. Keep the AST/lowering boundary close to the existing implementation.
 5. Add fixture tests that compile ASM80-style source and compare emitted bytes.
 6. Reintroduce ZAX features one layer at a time: typed globals, then structured
-   control, then functions, then op macros.
+   control, then functions, then OPS abstractions.
 
 ## Non-goals for the first milestone
 
@@ -81,6 +81,7 @@ subset without translating it by hand".
 - full segment-system compatibility before the chosen corpus requires it
 - replacing labels and `call` with `func`
 - changing `ld` back into typed-storage transfer
+- VS Code extension work or LSP/language-server integration
 
 ASM80's text macro system is deliberately out of scope. MON3 does not use it,
 it is not part of the common subset being targeted, and ZAX should grow in the

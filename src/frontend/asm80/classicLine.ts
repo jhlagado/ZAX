@@ -54,7 +54,7 @@ function stripAsm80Comment(text: string): string {
       inString = !inString;
       continue;
     }
-    if (!inString && ch === "'") {
+    if (!inString && ch === "'" && (inChar || i === 0 || !/[A-Za-z0-9_]/.test(text[i - 1]!))) {
       inChar = !inChar;
       continue;
     }

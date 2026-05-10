@@ -493,6 +493,7 @@ export interface RecordFieldNode extends BaseNode {
  */
 export type ImmExprNode =
   | { kind: 'ImmLiteral'; span: SourceSpan; value: number }
+  | { kind: 'ImmCurrentLocation'; span: SourceSpan }
   | { kind: 'ImmName'; span: SourceSpan; name: string }
   | { kind: 'ImmSizeof'; span: SourceSpan; typeExpr: TypeExprNode }
   | { kind: 'ImmOffsetof'; span: SourceSpan; typeExpr: TypeExprNode; path: OffsetofPathNode }

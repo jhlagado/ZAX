@@ -96,6 +96,7 @@ export type FunctionFrameSetupResult = {
 function collectImmExprNames(expr: ImmExprNode): string[] {
   switch (expr.kind) {
     case 'ImmLiteral':
+    case 'ImmCurrentLocation':
     case 'ImmSizeof':
       return [];
     case 'ImmName':
