@@ -25,6 +25,13 @@ Recursive include tree:
 - `/Users/johnhardy/Documents/projects/MON3/src/pata_fat32.z80`
 - `/Users/johnhardy/Documents/projects/MON3/src/rtc.z80`
 
+Adjacent secondary sample:
+
+- `/Users/johnhardy/Documents/projects/MON3/src/api_includes.z80`
+
+`api_includes.z80` is useful for future comparison, but it is not currently
+part of the recursive `mon3.z80` include path.
+
 Observed size:
 
 - 10,865 total lines
@@ -417,9 +424,9 @@ ASM80 documents useful features that are not first-milestone requirements:
 - `.align` (early follow-up and preferred spelling for raw alignment)
 - `DUP` in `db`/`dw` (lower priority)
 - `.if`, `.ifn`, `.else`, `.endif`
-- `.macro`, `.rept`, `.endm` (skip for this language direction unless a real
-  corpus forces the issue)
-- `.block`, `.endblock` (skip with macros/repeat for now)
+- `.macro`, `.rept`, `.endm` (explicitly out of scope for this language
+  direction)
+- `.block`, `.endblock` (explicitly out of scope with macros/repeat)
 - `.include file:block`
 - `.cseg`, `.dseg`, `.eseg`, `.bsseg`
 - `.incbin`
@@ -429,7 +436,10 @@ ASM80 documents useful features that are not first-milestone requirements:
 - `.pragma`
 
 These should be tracked as follow-up compatibility slices, not bundled into the
-MON3 milestone unless the corpus proves they are needed.
+MON3 milestone unless the corpus proves they are needed. Macro and repeat
+features should remain out of scope unless the project explicitly reopens the
+baseline, because ZAX's long-term abstraction direction is OPS and typed
+language features rather than ASM80 text macros.
 
 ## First milestone acceptance criteria
 

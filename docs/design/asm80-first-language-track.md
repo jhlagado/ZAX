@@ -1,6 +1,6 @@
 # ASM80-first language track
 
-Status: exploratory direction after the 0.3.0 release line
+Status: accepted direction after the 0.3.0 release line
 
 ## Purpose
 
@@ -15,6 +15,11 @@ first. Advanced ZAX features remain valuable, but they should be reintroduced
 above a classic Z80 assembler surface instead of being required at the entry
 point.
 
+The long-term goal is for ZAX to replace ASM80 in the Z80 toolchain. During the
+migration, ASM80 remains the reference assembler and fallback, but the intended
+destination is that `.asm`, `.z80`, and ZAX-extended assembler source are all
+compiled by ZAX.
+
 ## Baseline rule
 
 The initial compatibility target is a stripped-down assembler-facing ZAX:
@@ -26,13 +31,17 @@ The initial compatibility target is a stripped-down assembler-facing ZAX:
 - origin/location control
 - raw data directives
 - comments
-- includes only if required by the chosen corpus
+- includes
+- output-range directives needed by the chosen corpus
 
-For this track, functions, op macros, typed globals, records, unions, modules,
-and structured control flow are existing ZAX features but not the first thing to
+For this track, functions, OPS, typed globals, records, unions, modules, and
+structured control flow are existing ZAX features but not the first thing to
 design around. They should stay available in the implementation until there is a
 reason to gate or reshape them, but the acceptance target is classic assembler
 source first.
+
+The compatibility target is not full ASM80. It is the documented subset in
+`docs/design/asm80-compatibility-baseline.md`.
 
 ## First corpus
 
@@ -66,10 +75,17 @@ subset without translating it by hand".
 ## Non-goals for the first milestone
 
 - ASM80 macro-system compatibility
+- `.macro`, `.rept`, `.endm`, `.block`, and `.endblock`
 - non-Z80 processor support
-- full segment-system compatibility before the MON3 subset requires it
+- broad ASM80 directive compatibility before a real corpus requires it
+- full segment-system compatibility before the chosen corpus requires it
 - replacing labels and `call` with `func`
 - changing `ld` back into typed-storage transfer
+
+ASM80's text macro system is deliberately out of scope. MON3 does not use it,
+it is not part of the common subset being targeted, and ZAX should grow in the
+direction of safer higher-level features such as OPS rather than carrying a
+primitive text-substitution system for compatibility alone.
 
 Typed ZAX storage remains a value-level feature. Raw labels remain address-level
 assembler symbols. That distinction is one of the strongest parts of the
