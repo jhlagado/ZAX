@@ -6,6 +6,7 @@ import type { ScalarKind } from './typeResolution.js';
 export function immExprUsesAnyRegister(expr: ImmExprNode, names: ReadonlySet<string>): boolean {
   switch (expr.kind) {
     case 'ImmLiteral':
+    case 'ImmCurrentLocation':
     case 'ImmSizeof':
       return false;
     case 'ImmName':

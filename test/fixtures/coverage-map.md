@@ -11,15 +11,16 @@
 
 **Include/import graph cycles detected** (see section below).
 
-Total fixture files (excludes sentinels): 530
+Total fixture files (excludes sentinels): 532
 Sentinel files: 1
-Reachable from tests (direct refs ∪ fixture closure): 317
-Potentially unreferenced fixtures: 213
+Reachable from tests (direct refs ∪ fixture closure): 318
+Potentially unreferenced fixtures: 214
 
 ## Direct test reference counts
 
 | Fixture | Referencing tests (direct) |
 | --- | --- |
+| asm80/mon3-manifest.json | 0 |
 | corpus/basic_control_flow.zax | 0 |
 | corpus/intermediate_indexing.zax | 0 |
 | corpus/invalid_runtime_atom_budget.zax | 0 |
@@ -119,6 +120,7 @@ Potentially unreferenced fixtures: 213
 | pr131_isa_zero_operand_core_invalid.zax | 1 |
 | pr132_control_flow_arity_invalid.zax | 1 |
 | pr133_arity_diag_matrix_invalid.zax | 1 |
+| pr1334_linked_list.zax | 1 |
 | pr1334_record_local_init_negative.zax | 1 |
 | pr1338_typed_local_addr_arg.zax | 1 |
 | pr134_alu_arity_diag_invalid.zax | 1 |
@@ -561,6 +563,7 @@ At least one directed cycle exists in the fixture→fixture graph. Edges listed 
 
 Not reachable from any test’s literal `fixtures/...` reference via the include/import rules above. Verify before deleting.
 
+- asm80/mon3-manifest.json
 - corpus/basic_control_flow.zax
 - corpus/intermediate_indexing.zax
 - corpus/invalid_runtime_atom_budget.zax
@@ -785,6 +788,7 @@ Excluded from the main fixture inventory (`.keep`, `.gitkeep`).
 
 | Fixture | Referencing tests |
 | --- | --- |
+| asm80/mon3-manifest.json |  |
 | corpus/basic_control_flow.zax |  |
 | corpus/intermediate_indexing.zax |  |
 | corpus/invalid_runtime_atom_budget.zax |  |
@@ -884,6 +888,7 @@ Excluded from the main fixture inventory (`.keep`, `.gitkeep`).
 | pr131_isa_zero_operand_core_invalid.zax | test/backend/pr131_isa_zero_operand_core_diag.test.ts |
 | pr132_control_flow_arity_invalid.zax | test/pr132_control_flow_arity_diag.test.ts |
 | pr133_arity_diag_matrix_invalid.zax | test/pr133_arity_diag_matrix.test.ts |
+| pr1334_linked_list.zax | test/lowering/pr1334_typed_aggregate_local.test.ts |
 | pr1334_record_local_init_negative.zax | test/lowering/pr1334_typed_aggregate_local.test.ts |
 | pr1338_typed_local_addr_arg.zax | test/lowering/pr1338_typed_local_addr_arg_call.test.ts |
 | pr134_alu_arity_diag_invalid.zax | test/pr134_alu_arity_diag.test.ts |

@@ -1,4 +1,3 @@
-
 import type { Diagnostic, DiagnosticId } from '../diagnosticTypes.js';
 import { DiagnosticIds } from '../diagnosticTypes.js';
 import { dirname, resolve } from 'node:path';
@@ -9,9 +8,12 @@ import type {
   FuncDeclNode,
   ImportNode,
   ImmExprNode,
+  AsmInstructionNode,
+  AsmOperandNode,
   ProgramNode,
   TypeDeclNode,
   UnionDeclNode,
+  SourceSpan,
 } from '../frontend/ast.js';
 import { canonicalModuleId } from '../moduleIdentity.js';
 import { resolveVisibleConst, resolveVisibleEnum } from '../moduleVisibility.js';
@@ -80,6 +82,7 @@ export function evalImmExpr(
   expr: ImmExprNode,
   env: CompileEnv,
   diagnostics?: Diagnostic[],
+  options?: { currentLocation?: number },
 ): number | undefined {
   const unqualifiedEnumCandidates = (name: string): string[] => {
     if (name.includes('.')) return [];
@@ -94,6 +97,8 @@ export function evalImmExpr(
   switch (expr.kind) {
     case 'ImmLiteral':
       return expr.value;
+    case 'ImmCurrentLocation':
+      return options?.currentLocation;
     case 'ImmName': {
       const fromConst = resolveVisibleConst(expr.name, expr.span.file, env);
       if (fromConst !== undefined) return fromConst;
@@ -124,12 +129,12 @@ export function evalImmExpr(
         expr.typeExpr,
         expr.path,
         env,
-        (inner) => evalImmExpr(inner, env, diagnostics),
+        (inner) => evalImmExpr(inner, env, diagnostics, options),
         diagnostics,
       );
     }
     case 'ImmUnary': {
-      const v = evalImmExpr(expr.expr, env, diagnostics);
+      const v = evalImmExpr(expr.expr, env, diagnostics, options);
       if (v === undefined) return undefined;
       switch (expr.op) {
         case '+':
@@ -143,8 +148,8 @@ export function evalImmExpr(
       return undefined;
     }
     case 'ImmBinary': {
-      const l = evalImmExpr(expr.left, env, diagnostics);
-      const r = evalImmExpr(expr.right, env, diagnostics);
+      const l = evalImmExpr(expr.left, env, diagnostics, options);
+      const r = evalImmExpr(expr.right, env, diagnostics, options);
       if (l === undefined || r === undefined) return undefined;
       switch (expr.op) {
         case '*':
@@ -201,8 +206,236 @@ type CollectedDecls = {
   types: Array<TypeDeclNode | UnionDeclNode>;
   callables: Array<FuncDeclNode | ExternDeclNode>;
   enums: EnumDeclNode[];
-  consts: ConstDeclNode[];
+  consts: ConstLikeDecl[];
 };
+
+type ClassicEquDecl = {
+  kind: string;
+  span: SourceSpan;
+  name: string;
+  exported?: boolean;
+  value?: ImmExprNode;
+  expr?: ImmExprNode;
+};
+
+type ConstLikeDecl = ConstDeclNode | ClassicEquDecl;
+
+function isClassicEquDecl(item: {
+  kind: string;
+  name?: unknown;
+  value?: unknown;
+  expr?: unknown;
+}): item is ClassicEquDecl {
+  return (
+    (item.kind === 'ClassicEqu' || item.kind === 'ClassicEquDecl' || item.kind === 'EquDecl') &&
+    typeof item.name === 'string' &&
+    ((item.value as { kind?: unknown } | undefined)?.kind !== undefined ||
+      (item.expr as { kind?: unknown } | undefined)?.kind !== undefined)
+  );
+}
+
+function constValueExpr(item: ConstLikeDecl): ImmExprNode {
+  if (item.kind === 'ConstDecl') return (item as ConstDeclNode).value;
+  const expr = (item as ClassicEquDecl).value ?? (item as ClassicEquDecl).expr;
+  if (!expr) throw new Error('Classic equ declaration is missing an expression.');
+  return expr;
+}
+
+function isClassicCaseInsensitiveConst(item: ConstLikeDecl): boolean {
+  return item.kind !== 'ConstDecl';
+}
+
+function containsCurrentLocation(expr: ImmExprNode): boolean {
+  switch (expr.kind) {
+    case 'ImmCurrentLocation':
+      return true;
+    case 'ImmUnary':
+      return containsCurrentLocation(expr.expr);
+    case 'ImmBinary':
+      return containsCurrentLocation(expr.left) || containsCurrentLocation(expr.right);
+    default:
+      return false;
+  }
+}
+
+function isClassicItem(item: { kind: string }): boolean {
+  return (
+    item.kind === 'ClassicOrg' ||
+    item.kind === 'ClassicEqu' ||
+    item.kind === 'ClassicRawData' ||
+    item.kind === 'AsmLabel' ||
+    item.kind === 'AsmInstruction'
+  );
+}
+
+function isIndexedOperand(op: AsmOperandNode | undefined): boolean {
+  if (!op) return false;
+  const expr = op.kind === 'Mem' ? op.expr : op.kind === 'Ea' ? op.expr : undefined;
+  return expr?.kind === 'EaIndex' && expr.index.kind === 'IndexMemIxIy';
+}
+
+function reg(op: AsmOperandNode | undefined): string | undefined {
+  if (!op) return undefined;
+  if (op.kind === 'Reg') return op.name.toUpperCase();
+  if (op.kind === 'Imm' && op.expr.kind === 'ImmName') return op.expr.name.toUpperCase();
+  return undefined;
+}
+
+function classicInstructionSize(item: AsmInstructionNode): number {
+  const head = item.head.toLowerCase();
+  const ops = item.operands;
+  const r0 = reg(ops[0]);
+  const r1 = reg(ops[1]);
+  const indexed = isIndexedOperand(ops[0]) || isIndexedOperand(ops[1]);
+  const ixiyReg = (name: string | undefined): boolean =>
+    name === 'IX' || name === 'IY' || name === 'IXH' || name === 'IXL' || name === 'IYH' || name === 'IYL';
+
+  if (
+    [
+      'cpi',
+      'cpir',
+      'ldi',
+      'ldir',
+      'lddr',
+      'ini',
+      'outi',
+      'neg',
+      'reti',
+      'retn',
+      'rld',
+    ].includes(head)
+  ) {
+    return 2;
+  }
+  if (['nop', 'ccf', 'cpl', 'daa', 'exx', 'rlca', 'rrca', 'rla', 'rra', 'scf'].includes(head)) {
+    return 1;
+  }
+  if (head === 'jr' || head === 'djnz') return 2;
+  if (head === 'call') return 3;
+  if (head === 'jp') return ops[0]?.kind === 'Mem' && ixiyReg(regFromMem(ops[0])) ? 2 : ops[0]?.kind === 'Mem' ? 1 : 3;
+  if (head === 'ret') return 1;
+  if (head === 'rst') return 1;
+  if (head === 'push' || head === 'pop') return ixiyReg(r0) ? 2 : 1;
+  if (head === 'ex') return ixiyReg(r1) || indexed ? 2 : 1;
+  if (head === 'in' || head === 'out') return 2;
+  if (['bit', 'res', 'set', 'rl', 'rr', 'rlc', 'rrc', 'sla', 'srl'].includes(head)) return indexed ? 4 : 2;
+  if (head === 'inc' || head === 'dec') return indexed ? 3 : ixiyReg(r0) ? 2 : 1;
+  if (['add', 'adc', 'sbc'].includes(head)) {
+    if (r0 === 'HL' && r1) return 1;
+    if ((r0 === 'IX' || r0 === 'IY') && r1) return 2;
+    if (r0 === 'HL') return 2;
+    if (indexed) return 3;
+    return ops[1]?.kind === 'Imm' || (ops.length === 1 && ops[0]?.kind === 'Imm') ? 2 : 1;
+  }
+  if (['sub', 'and', 'or', 'xor', 'cp'].includes(head)) return indexed ? 3 : ops[0]?.kind === 'Imm' ? 2 : 1;
+  if (head === 'ld') {
+    if (indexed) return ops[0]?.kind === 'Imm' || ops[1]?.kind === 'Imm' ? 4 : 3;
+    if (ixiyReg(r0) || ixiyReg(r1)) return ops[1]?.kind === 'Imm' ? 4 : 2;
+    if (ops[0]?.kind === 'Mem' || ops[1]?.kind === 'Mem') {
+      const memReg = ops[0]?.kind === 'Mem' ? r1 : r0;
+      return memReg === 'A' && (regFromMem(ops[0]) === 'BC' || regFromMem(ops[0]) === 'DE' || regFromMem(ops[1]) === 'BC' || regFromMem(ops[1]) === 'DE')
+        ? 1
+        : memReg === 'HL'
+          ? 3
+          : 3;
+    }
+    if (ops[1]?.kind === 'Imm') return r0 && ['BC', 'DE', 'HL', 'SP'].includes(r0) ? 3 : 2;
+    return 1;
+  }
+  return 1;
+}
+
+function regFromMem(op: AsmOperandNode | undefined): string | undefined {
+  if (!op || op.kind !== 'Mem') return undefined;
+  if (op.expr.kind === 'EaName') return op.expr.name.toUpperCase();
+  if (op.expr.kind === 'EaIndex' && op.expr.index.kind === 'IndexMemIxIy') return op.expr.index.base;
+  return undefined;
+}
+
+function classicRawDataSize(item: { directive?: string; values?: unknown[]; size?: ImmExprNode }, env: CompileEnv): number {
+  const values = item.values ?? [];
+  if (item.directive === 'ds') {
+    return item.size ? (evalImmExpr(item.size, env) ?? 0) : 0;
+  }
+  if (item.directive === 'dw') return values.length * 2;
+  if (item.directive === 'cstr') return classicStringLength(values[0]) + 1;
+  if (item.directive === 'pstr') return classicStringLength(values[0]) + 1;
+  if (item.directive === 'istr') return classicStringLength(values[0]);
+  return values.reduce<number>((size, value) => size + classicStringLength(value, 1), 0);
+}
+
+function classicStringLength(value: unknown, fallback = 0): number {
+  if (typeof value === 'string') return value.length;
+  if (
+    value &&
+    typeof value === 'object' &&
+    'kind' in value &&
+    (value.kind === 'ClassicString' || value.kind === 'StringLiteral' || value.kind === 'RawString')
+  ) {
+    const text =
+      'value' in value && typeof value.value === 'string'
+        ? value.value
+        : 'text' in value && typeof value.text === 'string'
+          ? value.text
+          : undefined;
+    return text?.length ?? fallback;
+  }
+  return fallback;
+}
+
+function seedClassicCurrentLocationEquates(program: ProgramNode, env: CompileEnv): void {
+  for (const mf of program.files) {
+    if (!mf.items.some((item) => isClassicItem(item))) continue;
+    const scratchEnv: CompileEnv = { ...env, consts: new Map(env.consts) };
+    let current = 0;
+    for (const item of mf.items) {
+      const kind = (item as { kind: string }).kind;
+      switch (kind) {
+        case 'ClassicOrg': {
+          const expr = (item as { value?: ImmExprNode; expr?: ImmExprNode }).value ?? (item as { expr?: ImmExprNode }).expr;
+          const value = expr ? evalImmExpr(expr, scratchEnv) : undefined;
+          if (value !== undefined) current = value;
+          break;
+        }
+        case 'AsmLabel': {
+          const label = item as { name: string };
+          scratchEnv.consts.set(label.name, current);
+          scratchEnv.consts.set(label.name.toLowerCase(), current);
+          break;
+        }
+        case 'ClassicEqu': {
+          const equ = item as ClassicEquDecl;
+          const expr = equ.value ?? equ.expr;
+          if (expr) {
+            const value = containsCurrentLocation(expr)
+              ? evalImmExpr(expr, scratchEnv, undefined, { currentLocation: current })
+              : evalImmExpr(expr, scratchEnv);
+            if (value !== undefined) {
+              env.consts.set(equ.name, value);
+              env.consts.set(equ.name.toLowerCase(), value);
+              scratchEnv.consts.set(equ.name, value);
+              scratchEnv.consts.set(equ.name.toLowerCase(), value);
+            }
+          }
+          break;
+        }
+        case 'ClassicRawData':
+          {
+            const raw = item as { name?: string; directive?: string; values?: unknown[]; size?: ImmExprNode };
+            if (raw.name) {
+              scratchEnv.consts.set(raw.name, current);
+              scratchEnv.consts.set(raw.name.toLowerCase(), current);
+            }
+            current += classicRawDataSize(raw, scratchEnv);
+          }
+          break;
+        case 'AsmInstruction':
+          current += classicInstructionSize(item as AsmInstructionNode);
+          break;
+      }
+    }
+  }
+}
 
 function importedModuleIdsForFile(
   moduleFile: ProgramNode['files'][number],
@@ -214,7 +447,9 @@ function importedModuleIdsForFile(
   if (graph) {
     const resolvedTargets = graph.get(moduleFile.path);
     if (!resolvedTargets) return new Set();
-    return new Set(resolvedTargets.map((targetPath) => canonicalModuleId(targetPath, moduleIdRootDir)));
+    return new Set(
+      resolvedTargets.map((targetPath) => canonicalModuleId(targetPath, moduleIdRootDir)),
+    );
   }
   return new Set(
     imports.map((importNode) => {
@@ -250,7 +485,16 @@ export function buildEnv(
 
   if (program.files.length === 0) {
     diag(diagnostics, program.entryFile, 'No module files to compile.');
-    return { consts, enums, types, moduleIds, importedModuleIds, visibleConsts, visibleEnums, visibleTypes };
+    return {
+      consts,
+      enums,
+      types,
+      moduleIds,
+      importedModuleIds,
+      visibleConsts,
+      visibleEnums,
+      visibleTypes,
+    };
   }
 
   const moduleIdRootDir = options?.moduleIdRootDir ?? dirname(program.entryFile);
@@ -282,6 +526,10 @@ export function buildEnv(
         return;
       }
       if (item.kind === 'ConstDecl') {
+        collected.consts.push(item);
+        return;
+      }
+      if (isClassicEquDecl(item)) {
         collected.consts.push(item);
       }
     });
@@ -350,7 +598,8 @@ export function buildEnv(
         if (!claim('enum member', qualifiedName, e.span.file)) continue;
         enums.set(qualifiedName, idx);
         if (e.exported) {
-          const moduleId = moduleIds.get(e.span.file) ?? canonicalModuleId(e.span.file, moduleIdRootDir);
+          const moduleId =
+            moduleIds.get(e.span.file) ?? canonicalModuleId(e.span.file, moduleIdRootDir);
           const exportedName = `${moduleId}.${qualifiedName}`;
           visibleEnums.set(exportedName, idx);
         }
@@ -369,6 +618,8 @@ export function buildEnv(
     visibleTypes,
   };
 
+  seedClassicCurrentLocationEquates(program, env);
+
   for (const mf of program.files) {
     const collected = collectedByFile.get(mf.path);
     if (!collected) continue;
@@ -378,13 +629,15 @@ export function buildEnv(
         continue;
       }
       if (!claim('const', item.name, item.span.file)) continue;
+      if (isClassicCaseInsensitiveConst(item) && consts.has(item.name.toLowerCase())) continue;
 
-      const v = evalImmExpr(item.value, env, diagnostics);
+      const v = evalImmExpr(constValueExpr(item), env, diagnostics);
       if (v === undefined) {
         diag(diagnostics, item.span.file, `Failed to evaluate const "${item.name}".`);
         continue;
       }
       consts.set(item.name, v);
+      if (isClassicCaseInsensitiveConst(item)) consts.set(item.name.toLowerCase(), v);
       if (item.exported) {
         const moduleId =
           moduleIds.get(item.span.file) ?? canonicalModuleId(item.span.file, moduleIdRootDir);

@@ -16,6 +16,7 @@ function cloneOffsetofPath(path: OffsetofPathNode): OffsetofPathNode {
 
 export function cloneImmExpr(expr: ImmExprNode): ImmExprNode {
   if (expr.kind === 'ImmLiteral') return { ...expr };
+  if (expr.kind === 'ImmCurrentLocation') return { ...expr };
   if (expr.kind === 'ImmName') return { ...expr };
   if (expr.kind === 'ImmSizeof') return { ...expr };
   if (expr.kind === 'ImmOffsetof') return { ...expr, path: cloneOffsetofPath(expr.path) };

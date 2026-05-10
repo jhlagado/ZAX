@@ -38,6 +38,7 @@ export function createRuntimeAtomBudgetHelpers(ctx: RuntimeAtomBudgetContext) {
   const countRuntimeAtomsInImmExpr = (expr: ImmExprNode): number => {
     switch (expr.kind) {
       case 'ImmLiteral':
+      case 'ImmCurrentLocation':
       case 'ImmSizeof':
         return 0;
       case 'ImmOffsetof':

@@ -33,7 +33,11 @@ These do not override the spec.
 Only active design work stays here.
 
 - `docs/design/exact-size-layout-and-indexing.md`
+- `docs/design/asm80-compatibility-baseline.md`
+- `docs/design/asm80-first-language-track.md`
+- `docs/design/asm80-mon3-compatibility-audit.md`
 - `docs/design/grammar-parser-convergence-plan.md`
+- `docs/design/vscode-language-services-direction.md`
 - `docs/design/z80-programming-with-zax.md`
 - `docs/design/zax-algorithms-course.md`
 

@@ -65,6 +65,7 @@ export function createFunctionAsmRewritingHelpers(
   ): { expr: ImmExprNode; ok: boolean } => {
     switch (expr.kind) {
       case 'ImmLiteral':
+      case 'ImmCurrentLocation':
       case 'ImmSizeof':
         return { expr, ok: true };
       case 'ImmName': {
@@ -105,6 +106,7 @@ export function createFunctionAsmRewritingHelpers(
   ): { expr: ImmExprNode; ok: boolean } => {
     switch (expr.kind) {
       case 'ImmLiteral':
+      case 'ImmCurrentLocation':
       case 'ImmSizeof':
         return { expr, ok: true };
       case 'ImmName': {
