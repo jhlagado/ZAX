@@ -161,7 +161,11 @@ slice of this baseline:
 
 The remaining baseline work is to harden acceptance around the full MON3 build:
 
-- compare ZAX output against the current ASM80/MON3 reference artifact
+- resolve the current MON3 source/reference metadata mismatch: ZAX now compiles
+  the recursive source tree without diagnostics and emits 16 KiB, but the
+  opt-in byte comparison first differs at output offset `0x3ff8` because the
+  source defines `REL_TXT: .equ "2025.16"` while the checked-in reference binary
+  contains `BC25.16`
 - make source-location diagnostics good enough for real MON3 failures
 - keep expanding tests from real MON3 slices rather than synthetic syntax only
 - decide how `.asm` and `.z80` are introduced into the wider Debug80 toolchain

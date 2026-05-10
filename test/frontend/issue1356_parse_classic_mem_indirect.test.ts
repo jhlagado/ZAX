@@ -18,4 +18,5 @@ describe('Issue #1356: (hl)/(bc)/(de) asm mem operands are register-indirect', (
     expect(op.expr.name).toMatch(/^(HL|BC|DE)$/);
     expect(op.expr.name).toBe(text.replace(/[()]/g, '').toUpperCase());
   });
+
 });

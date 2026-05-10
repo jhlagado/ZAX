@@ -113,6 +113,9 @@ function memSymbolicTarget(
     (op.expr.kind === 'EaAdd' || op.expr.kind === 'EaSub') &&
     op.expr.base.kind === 'EaName'
   ) {
+    if (op.expr.base.name.toUpperCase() === 'IX' || op.expr.base.name.toUpperCase() === 'IY') {
+      return undefined;
+    }
     return ctx.symbolicTargetFromExpr({
       kind: 'ImmBinary',
       span: op.span,

@@ -132,11 +132,13 @@ export function parseClassicModule(
   const file = makeSourceFile(path, sourceText);
   const items: ClassicItemNode[] = [];
   let pendingRawLabel: AsmLabelNode | undefined;
+  let ended = false;
 
   const lines = sourceText.split(/\r?\n/);
   const stringEquates = new Map<string, string>();
   for (let index = 0; index < lines.length; index++) {
     const parsed = parseClassicLine(path, lines[index]!, index + 1, file.lineStarts[index] ?? 0);
+    if (parsed?.kind === 'end') break;
     if (parsed?.kind !== 'equ') continue;
     const rawString = parseWholeQuotedString(parsed.exprText);
     if (rawString !== undefined && rawString.length > 1) {
@@ -150,6 +152,7 @@ export function parseClassicModule(
     const lineSpan = span(file, lineStart, rawLineEndOffset(sourceText, lineStart));
     const parsed = parseClassicLine(path, raw, index + 1, lineStart);
     if (!parsed) continue;
+    if (ended && parsed.kind !== 'binfrom') continue;
 
     switch (parsed.kind) {
       case 'label': {
@@ -241,7 +244,9 @@ export function parseClassicModule(
       }
       case 'end':
         items.push({ kind: 'ClassicEnd', span: lineSpan });
-        return { kind: 'ClassicModuleFile', span: span(file, 0, sourceText.length), path, items };
+        ended = true;
+        pendingRawLabel = undefined;
+        break;
     }
   }
 
