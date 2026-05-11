@@ -6,8 +6,7 @@ import { diagAt } from './loweringDiagnostics.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
 import type { NonBankedSectionKeyId } from '../sectionKeys.js';
 import { formatNonBankedSectionKey } from '../sectionKeys.js';
-import { parseNumberLiteral } from '../frontend/parseImm.js';
-import { resolveClassicEquSymbol } from './classicEquResolution.js';
+import { createFixupBaseResolver } from './fixupBaseResolution.js';
 
 export type PlacedNamedSectionContribution = {
   /** Sink carrying bytes/fixups for one contribution. */
@@ -293,25 +292,7 @@ export function resolvePlacedNamedSectionFixups(
     if (sym.kind === 'constant' || sym.address === undefined) continue;
     addrByNameLower.set(sym.name.toLowerCase(), sym.address);
   }
-  const resolveFixupBase = (nameLower: string, visiting = new Set<string>()): number | undefined => {
-    const sym = addrByNameLower.get(nameLower);
-    if (sym !== undefined) return sym;
-    const literal = parseNumberLiteral(nameLower);
-    if (literal !== undefined) return literal;
-    if (/^-?[0-9]+$/.test(nameLower)) return Number.parseInt(nameLower, 10);
-    return resolveClassicEquSymbol(
-      nameLower,
-      {
-        env,
-        lookupSymbol: (name) => addrByNameLower.get(name),
-        cacheResolved: (name, value) => {
-          addrByNameLower.set(name, value);
-          env.consts.set(name, value);
-        },
-      },
-      visiting,
-    );
-  };
+  const resolveFixupBase = createFixupBaseResolver({ env, addrByNameLower });
 
   for (const placed of placedContributions) {
     const sink = placed.sink;
