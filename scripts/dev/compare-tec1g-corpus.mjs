@@ -39,13 +39,13 @@ function findAsm80() {
   return undefined;
 }
 
-function walkZ80Files(root) {
+function walkAsm80Files(root) {
   const out = [];
   for (const entry of readdirSync(root, { withFileTypes: true })) {
     const path = join(root, entry.name);
     if (entry.isDirectory()) {
-      out.push(...walkZ80Files(path));
-    } else if (entry.isFile() && entry.name.toLowerCase().endsWith('.z80')) {
+      out.push(...walkAsm80Files(path));
+    } else if (entry.isFile() && /\.(z80|asm)$/i.test(entry.name)) {
       out.push(path);
     }
   }
@@ -93,13 +93,25 @@ function binaryFromListingRange(bytes, range) {
   return bytes.subarray(range.start, end);
 }
 
+function sourceStem(source) {
+  return basename(source).replace(/\.(z80|asm)$/i, '');
+}
+
+function copySiblingAsm80Sources(source, workDir) {
+  for (const entry of readdirSync(dirname(source), { withFileTypes: true })) {
+    if (entry.isFile() && /\.(z80|asm)$/i.test(entry.name)) {
+      copyFileSync(join(dirname(source), entry.name), join(workDir, entry.name));
+    }
+  }
+}
+
 function runAsm80(source, asm80) {
-  const workDir = mkdtempSync(join(tmpdir(), 'zax-tec1g-asm80-one-'));
-  const outName = `${basename(source, '.z80')}.bin`;
+  const workDir = mkdtempSync(join(tmpdir(), 'zax-asm80-reference-one-'));
+  const outName = `${sourceStem(source)}.bin`;
   const sourceName = basename(source);
-  const listingPath = join(workDir, `${basename(source, '.z80')}.lst`);
+  const listingPath = join(workDir, `${sourceStem(source)}.lst`);
   try {
-    copyFileSync(source, join(workDir, sourceName));
+    copySiblingAsm80Sources(source, workDir);
     const result = run(asm80, ['-m', 'Z80', '-t', 'bin', '-o', outName, sourceName], {
       cwd: workDir,
     });
@@ -114,7 +126,7 @@ function runAsm80(source, asm80) {
 }
 
 function runZax(source, outDir) {
-  const outPath = join(outDir, `${basename(source, '.z80')}.bin`);
+  const outPath = join(outDir, `${sourceStem(source)}.bin`);
   const result = run(
     process.execPath,
     [
@@ -209,11 +221,11 @@ function main(argv) {
 
   const zaxOut = mkdtempSync(join(tmpdir(), 'zax-tec1g-zax-'));
   try {
-    const sources = walkZ80Files(root);
+    const sources = walkAsm80Files(root);
     const included = sources.filter((source) => !isMacroSource(source));
     const excluded = sources.filter(isMacroSource);
-    console.log(`TEC-1G root: ${root}`);
-    console.log(`Included .z80 files: ${included.length}`);
+    console.log(`ASM80 corpus root: ${root}`);
+    console.log(`Included .asm/.z80 files: ${included.length}`);
     console.log(`Excluded macro files: ${excluded.length}`);
     for (const source of excluded) console.log(`EXCLUDED macro ${relative(root, source)}`);
 

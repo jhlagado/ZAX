@@ -223,6 +223,10 @@ better treated as targeted ASM80 compatibility pressure rather than as a
 handwritten application corpus, because it intentionally exercises features
 such as `.incbin`, `.ent`, segment pragmas, and `DEFB`/`DEFW`.
 
+The Software-tree audit is tracked separately in
+`docs/design/asm80-software-compatibility-audit.md`. It is not part of the
+standing baseline gate.
+
 Defer preprocessor-heavy corpora such as
 `/Users/johnhardy/Documents/projects/2024/z80float` until there is an explicit
 decision to support `#include`/`#define`-style source preprocessing and
