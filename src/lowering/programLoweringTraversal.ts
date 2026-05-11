@@ -13,28 +13,17 @@ import type {
 } from '../frontend/ast.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
 import type { LoweringContext, LoweringResult } from './programLowering.js';
-import { evalImmExpr as evalImmExprWithEnv } from '../semantics/env.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { lowerDataBlock } from './programLoweringData.js';
 import { createProgramLoweringDeclarationHelpers } from './programLoweringDeclarations.js';
 import { lowerClassicInstruction } from './classicInstructionLowering.js';
+import { tryLowerClassicDirective } from './classicDirectiveLowering.js';
 import {
-  activeSectionAddress,
-  activeSectionOffset,
-  classicExpr,
-  type ClassicNode,
-  isClassicAlign,
   isClassicBinFrom,
   isClassicBinTo,
   isClassicEnd,
-  isClassicEqu,
-  isClassicOrg,
   isClassicRawData,
-  publishClassicAddressConst,
 } from './classicTraversalHelpers.js';
-
-const BINFROM_SYMBOL_NAME = '__zax_binfrom';
-const BINTO_SYMBOL_NAME = '__zax_binto';
 
 function sinkOffsetRef(sink: NamedSectionContributionSink) {
   return {
@@ -178,236 +167,6 @@ function lowerExternDecl(ctx: LoweringContext, externDecl: ExternDeclNode): void
   }
 }
 
-function lowerClassicEqu(ctx: LoweringContext, item: ClassicNode): void {
-  if (!item.name) return;
-  const lower = item.name.toLowerCase();
-  if (ctx.taken.has(lower)) {
-    ctx.diag(ctx.diagnostics, item.span.file, `Duplicate symbol name "${item.name}".`);
-    return;
-  }
-  ctx.taken.add(lower);
-  const expr = classicExpr(item);
-  const currentLocation = activeSectionAddress(ctx);
-  if (expr) {
-    const record =
-      currentLocation === undefined ? { expr } : { expr, currentLocation };
-    ctx.env.classicEquExprs?.set(item.name, record);
-    ctx.env.classicEquExprs?.set(item.name.toLowerCase(), record);
-  }
-  const value =
-    expr && currentLocation !== undefined
-      ? evalImmExprWithEnv(expr, ctx.env, ctx.diagnostics, { currentLocation })
-      : ctx.env.consts.get(item.name) ?? ctx.env.consts.get(item.name.toLowerCase());
-  if (value === undefined) {
-    if (expr) {
-      ctx.recordLoweredAsmItem(
-        { kind: 'const', name: item.name, value: ctx.lowerImmExprForLoweredAsm(expr) },
-        item.span,
-      );
-    }
-    return;
-  }
-  publishClassicAddressConst(ctx, item.name, value);
-  ctx.symbols.push({
-    kind: 'constant',
-    name: item.name,
-    value,
-    address: value & 0xffff,
-    file: item.span.file,
-    line: item.span.start.line,
-    scope: 'global',
-  });
-  ctx.recordLoweredAsmItem(
-    { kind: 'const', name: item.name, value: { kind: 'literal', value } },
-    item.span,
-  );
-}
-
-function lowerClassicOrg(ctx: LoweringContext, item: ClassicNode): void {
-  const expr = classicExpr(item);
-  if (!expr) {
-    ctx.diag(ctx.diagnostics, item.span.file, `Missing org address.`);
-    return;
-  }
-  const target = ctx.evalImmExpr(expr, ctx.env, ctx.diagnostics);
-  if (target === undefined) {
-    ctx.diag(ctx.diagnostics, item.span.file, `Failed to evaluate org address.`);
-    return;
-  }
-  if (target < 0 || target > 0xffff) {
-    ctx.diag(ctx.diagnostics, item.span.file, `org address out of range (0..65535).`);
-    return;
-  }
-  ctx.activeSectionRef.current = 'code';
-  if (ctx.codeOffsetRef.current === 0 && ctx.baseExprs.code === undefined) {
-    ctx.baseExprs.code = expr;
-    return;
-  }
-  const base = ctx.baseExprs.code
-    ? ctx.evalImmExpr(ctx.baseExprs.code, ctx.env, ctx.diagnostics)
-    : 0;
-  if (base === undefined) {
-    ctx.diag(ctx.diagnostics, item.span.file, `Failed to evaluate current code base address.`);
-    return;
-  }
-  const offset = target - base;
-  if (offset < 0 || offset > 0xffff) {
-    ctx.diag(
-      ctx.diagnostics,
-      item.span.file,
-      `org address is outside the current code placement range.`,
-    );
-    return;
-  }
-  if (offset < ctx.codeOffsetRef.current) {
-    ctx.diag(ctx.diagnostics, item.span.file, `org address overlaps earlier emitted code.`);
-    return;
-  }
-  const gap = offset - ctx.codeOffsetRef.current;
-  if (gap > 0) {
-    ctx.recordLoweredAsmItem({ kind: 'ds', size: { kind: 'literal', value: gap } }, item.span);
-    ctx.codeOffsetRef.current = offset;
-  }
-}
-
-function lowerClassicAlign(ctx: LoweringContext, item: ClassicNode): void {
-  const expr = classicExpr(item);
-  if (!expr) {
-    ctx.diag(ctx.diagnostics, item.span.file, `Missing align value.`);
-    return;
-  }
-  const value = ctx.evalImmExpr(expr, ctx.env, ctx.diagnostics);
-  if (value === undefined) {
-    ctx.diag(ctx.diagnostics, item.span.file, `Failed to evaluate align value.`);
-    return;
-  }
-  if (value <= 0) {
-    ctx.diag(ctx.diagnostics, item.span.file, `align value must be > 0.`);
-    return;
-  }
-  if (ctx.activeSectionRef.current === 'data') {
-    ctx.dataOffsetRef.current = ctx.alignTo(ctx.dataOffsetRef.current, value);
-    return;
-  }
-  const base = ctx.baseExprs.code
-    ? ctx.evalImmExpr(ctx.baseExprs.code, ctx.env, ctx.diagnostics)
-    : 0;
-  if (base === undefined) {
-    ctx.diag(ctx.diagnostics, item.span.file, `Failed to evaluate current code base address.`);
-    return;
-  }
-  const currentAddress = base + ctx.codeOffsetRef.current;
-  const alignedAddress = ctx.alignTo(currentAddress, value);
-  const alignedOffset = alignedAddress - base;
-  const gap = alignedOffset - ctx.codeOffsetRef.current;
-  if (gap > 0) {
-    ctx.recordLoweredAsmItem(
-      {
-        kind: 'ds',
-        size: { kind: 'literal', value: gap },
-        fill: { kind: 'literal', value: 0 },
-      },
-      item.span,
-    );
-  }
-  while (ctx.codeOffsetRef.current < alignedOffset) {
-    const offset = ctx.codeOffsetRef.current;
-    ctx.codeBytes.set(offset, 0);
-    ctx.codeOffsetRef.current = offset + 1;
-  }
-}
-
-function lowerClassicLabel(ctx: LoweringContext, item: ClassicNode): void {
-  if (!item.name) return;
-  const offset = activeSectionOffset(ctx);
-  const address = activeSectionAddress(ctx);
-  const lower = item.name.toLowerCase();
-  if (ctx.taken.has(lower)) {
-    ctx.diag(ctx.diagnostics, item.span.file, `Duplicate symbol name "${item.name}".`);
-    return;
-  }
-  ctx.taken.add(lower);
-  if (address !== undefined) publishClassicAddressConst(ctx, item.name, address);
-  ctx.pending.push({
-    kind: 'label',
-    name: item.name,
-    section: ctx.activeSectionRef.current,
-    offset,
-    file: item.span.file,
-    line: item.span.start.line,
-    scope: 'global',
-  });
-  ctx.recordLoweredAsmItem({ kind: 'label', name: item.name }, item.span);
-}
-
-function lowerClassicBinFrom(ctx: LoweringContext, item: ClassicNode): void {
-  const expr = classicExpr(item);
-  if (!expr) {
-    ctx.diag(ctx.diagnostics, item.span.file, `Missing binfrom address.`);
-    return;
-  }
-  const value = ctx.evalImmExpr(expr, ctx.env, ctx.diagnostics);
-  if (value === undefined) {
-    ctx.diag(ctx.diagnostics, item.span.file, `Failed to evaluate binfrom address.`);
-    return;
-  }
-  if (value < 0 || value > 0xffff) {
-    ctx.diag(ctx.diagnostics, item.span.file, `binfrom address out of range (0..65535).`);
-    return;
-  }
-  const existing = ctx.symbols.find(
-    (symbol) => symbol.kind === 'constant' && symbol.name === BINFROM_SYMBOL_NAME,
-  );
-  if (existing?.kind === 'constant') {
-    existing.value = value;
-    existing.address = value;
-    return;
-  }
-  ctx.symbols.push({
-    kind: 'constant',
-    name: BINFROM_SYMBOL_NAME,
-    value,
-    address: value,
-    file: item.span.file,
-    line: item.span.start.line,
-    scope: 'global',
-  });
-}
-
-function lowerClassicBinTo(ctx: LoweringContext, item: ClassicNode): void {
-  const expr = classicExpr(item);
-  if (!expr) {
-    ctx.diag(ctx.diagnostics, item.span.file, `Missing binto address.`);
-    return;
-  }
-  const value = ctx.evalImmExpr(expr, ctx.env, ctx.diagnostics);
-  if (value === undefined) {
-    ctx.diag(ctx.diagnostics, item.span.file, `Failed to evaluate binto address.`);
-    return;
-  }
-  if (value < 0 || value > 0xffff) {
-    ctx.diag(ctx.diagnostics, item.span.file, `binto address out of range (0..65535).`);
-    return;
-  }
-  const existing = ctx.symbols.find(
-    (symbol) => symbol.kind === 'constant' && symbol.name === BINTO_SYMBOL_NAME,
-  );
-  if (existing?.kind === 'constant') {
-    existing.value = value;
-    existing.address = value;
-    return;
-  }
-  ctx.symbols.push({
-    kind: 'constant',
-    name: BINTO_SYMBOL_NAME,
-    value,
-    address: value,
-    file: item.span.file,
-    line: item.span.start.line,
-    scope: 'global',
-  });
-}
-
 function lowerItem(
   ctx: LoweringContext,
   lowerBinDecl: ReturnType<typeof createProgramLoweringDeclarationHelpers>['lowerBinDecl'],
@@ -418,32 +177,9 @@ function lowerItem(
   item: any,
   namedSection?: { node: NamedSectionNode; sink: NamedSectionContributionSink },
 ): void {
-  if (isClassicEqu(item)) {
-    lowerClassicEqu(ctx, item as ClassicNode);
-    return;
-  }
-  if (isClassicOrg(item)) {
-    lowerClassicOrg(ctx, item as ClassicNode);
-    return;
-  }
-  if (isClassicAlign(item)) {
-    lowerClassicAlign(ctx, item as ClassicNode);
-    return;
-  }
-  if (isClassicBinFrom(item)) {
-    lowerClassicBinFrom(ctx, item as ClassicNode);
-    return;
-  }
-  if (isClassicBinTo(item)) {
-    lowerClassicBinTo(ctx, item as ClassicNode);
-    return;
-  }
-  if (item.kind === 'AsmLabel') {
-    lowerClassicLabel(ctx, item as unknown as ClassicNode);
-    return;
-  }
+  if (tryLowerClassicDirective(ctx, item)) return;
   if (item.kind === 'AsmInstruction') {
-    lowerClassicInstruction(ctx, item as unknown as ClassicNode);
+    lowerClassicInstruction(ctx, item);
     return;
   }
   if (isClassicRawData(item)) {
