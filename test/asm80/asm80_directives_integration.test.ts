@@ -678,6 +678,27 @@ describe('asm80 directive lowering integration', () => {
     expect([...bin.bytes]).toEqual([0xaa]);
   });
 
+  it('preserves reserve-only classic DS in emitted asm80', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-reserve-ds-asm80-'));
+    const entry = join(dir, 'reserve-ds-asm80.asm');
+    writeFileSync(
+      entry,
+      ['org 4000H', 'db 0AAH', 'RESERVE:', 'ds 2', 'db 055H', 'binfrom 4000H', 'end'].join('\n'),
+      'utf8',
+    );
+
+    const res = await compile(entry, { emitAsm80: true }, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    const asm80 = res.artifacts.find((a): a is Asm80Artifact => a.kind === 'asm80');
+    expect(bin).toBeDefined();
+    expect(asm80).toBeDefined();
+    if (!bin || !asm80) throw new Error('missing artifacts');
+    expect([...bin.bytes]).toEqual([0xaa, 0x00, 0x00, 0x55]);
+    expect(asm80.text).toContain('DS $02');
+  });
+
   it('compiles classic SRA A', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-sra-a-'));
     const entry = join(dir, 'sra-a.z80');
