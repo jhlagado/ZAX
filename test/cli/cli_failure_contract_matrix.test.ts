@@ -137,6 +137,58 @@ describe('cli failure contract matrix', () => {
     await rm(work, { recursive: true, force: true });
   });
 
+  it('returns code 1 for ASM80 include parser diagnostics at the included file', async () => {
+    const work = await mkdtemp(join(tmpdir(), 'zax-cli-asm80-include-error-'));
+    const entry = join(work, 'entry.z80');
+    const child = join(work, 'child.z80');
+    const outBin = join(work, 'out.bin');
+    const base = join(work, 'out');
+    await writeFile(
+      entry,
+      ['.org 0100H', '.include "child.z80"', '.binfrom 0100H'].join('\n'),
+      'utf8',
+    );
+    await writeFile(child, ['.db 1', '.db BAD+'].join('\n'), 'utf8');
+
+    const res = await runCli(['--nolist', '--nohex', '--nod8m', '-t', 'bin', '-o', outBin, entry]);
+
+    expect(res.code).toBe(1);
+    expect(res.stdout).toBe('');
+    expect(res.stderr).toContain(`${child}:2:1`);
+    expect(res.stderr).toContain('[ZAX100]');
+    expect(res.stderr).toContain('Invalid imm expression: BAD+');
+    expect(res.stderr).not.toContain(`${entry}:3:1`);
+    await expectNoArtifacts(base);
+
+    await rm(work, { recursive: true, force: true });
+  });
+
+  it('returns code 1 for ASM80 include encoder diagnostics at the included file', async () => {
+    const work = await mkdtemp(join(tmpdir(), 'zax-cli-asm80-include-encode-error-'));
+    const entry = join(work, 'entry.z80');
+    const child = join(work, 'child.z80');
+    const outBin = join(work, 'out.bin');
+    const base = join(work, 'out');
+    await writeFile(
+      entry,
+      ['.org 0100H', '.include "child.z80"', '.binfrom 0100H'].join('\n'),
+      'utf8',
+    );
+    await writeFile(child, 'ld a,300\n', 'utf8');
+
+    const res = await runCli(['--nolist', '--nohex', '--nod8m', '-t', 'bin', '-o', outBin, entry]);
+
+    expect(res.code).toBe(1);
+    expect(res.stdout).toBe('');
+    expect(res.stderr).toContain(`${child}:1:1`);
+    expect(res.stderr).toContain('[ZAX200]');
+    expect(res.stderr).toContain('ld A, n expects imm8');
+    expect(res.stderr).not.toContain(`${entry}:2:1`);
+    await expectNoArtifacts(base);
+
+    await rm(work, { recursive: true, force: true });
+  });
+
   it('returns code 1 for encoder diagnostics and writes no artifacts', async () => {
     const work = await mkdtemp(join(tmpdir(), 'zax-cli-encode-error-'));
     const entry = join(work, 'encode-error.zax');
