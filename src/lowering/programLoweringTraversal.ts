@@ -9,68 +9,32 @@ import type {
   HexDeclNode,
   NamedSectionNode,
   RawDataDeclNode,
-  SourceSpan,
   VarBlockNode,
 } from '../frontend/ast.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
 import type { LoweringContext, LoweringResult } from './programLowering.js';
+import { evalImmExpr as evalImmExprWithEnv } from '../semantics/env.js';
 import { sizeOfTypeExpr } from '../semantics/layout.js';
 import { lowerDataBlock } from './programLoweringData.js';
 import { createProgramLoweringDeclarationHelpers } from './programLoweringDeclarations.js';
 import { lowerClassicInstruction } from './classicInstructionLowering.js';
+import {
+  activeSectionAddress,
+  activeSectionOffset,
+  classicExpr,
+  type ClassicNode,
+  isClassicAlign,
+  isClassicBinFrom,
+  isClassicBinTo,
+  isClassicEnd,
+  isClassicEqu,
+  isClassicOrg,
+  isClassicRawData,
+  publishClassicAddressConst,
+} from './classicTraversalHelpers.js';
 
 const BINFROM_SYMBOL_NAME = '__zax_binfrom';
 const BINTO_SYMBOL_NAME = '__zax_binto';
-
-type ClassicNode = {
-  kind: string;
-  span: SourceSpan;
-  name?: string;
-  value?: import('../frontend/ast.js').ImmExprNode;
-  expr?: import('../frontend/ast.js').ImmExprNode;
-  directive?: 'db' | 'dw' | 'ds' | 'cstr' | 'pstr' | 'istr';
-  values?: unknown[];
-  size?: import('../frontend/ast.js').ImmExprNode;
-  fill?: import('../frontend/ast.js').ImmExprNode;
-  head?: string;
-  operands?: import('../frontend/ast.js').AsmOperandNode[];
-};
-
-function isKind(item: { kind: string }, ...kinds: string[]): boolean {
-  return kinds.includes(item.kind);
-}
-
-function isClassicEqu(item: { kind: string }): boolean {
-  return isKind(item, 'ClassicEqu', 'ClassicEquDecl', 'EquDecl');
-}
-
-function isClassicOrg(item: { kind: string }): boolean {
-  return isKind(item, 'ClassicOrg', 'ClassicOrgDirective', 'OrgDirective');
-}
-
-function isClassicAlign(item: { kind: string }): boolean {
-  return isKind(item, 'ClassicAlign', 'ClassicAlignDirective');
-}
-
-function isClassicRawData(item: { kind: string }): boolean {
-  return isKind(item, 'ClassicRawData', 'ClassicRawDataDecl') || 'valuesText' in item;
-}
-
-function isClassicBinFrom(item: { kind: string }): boolean {
-  return isKind(item, 'ClassicBinFrom', 'ClassicBinFromDirective', 'BinFromDirective');
-}
-
-function isClassicBinTo(item: { kind: string }): boolean {
-  return isKind(item, 'ClassicBinTo', 'ClassicBinToDirective', 'BinToDirective');
-}
-
-function isClassicEnd(item: { kind: string }): boolean {
-  return isKind(item, 'ClassicEnd', 'ClassicEndDirective');
-}
-
-function classicExpr(item: ClassicNode): import('../frontend/ast.js').ImmExprNode | undefined {
-  return item.value ?? item.expr;
-}
 
 function sinkOffsetRef(sink: NamedSectionContributionSink) {
   return {
@@ -216,14 +180,34 @@ function lowerExternDecl(ctx: LoweringContext, externDecl: ExternDeclNode): void
 
 function lowerClassicEqu(ctx: LoweringContext, item: ClassicNode): void {
   if (!item.name) return;
-  const value = ctx.env.consts.get(item.name) ?? ctx.env.consts.get(item.name.toLowerCase());
-  if (value === undefined) return;
   const lower = item.name.toLowerCase();
   if (ctx.taken.has(lower)) {
     ctx.diag(ctx.diagnostics, item.span.file, `Duplicate symbol name "${item.name}".`);
     return;
   }
   ctx.taken.add(lower);
+  const expr = classicExpr(item);
+  const currentLocation = activeSectionAddress(ctx);
+  if (expr) {
+    const record =
+      currentLocation === undefined ? { expr } : { expr, currentLocation };
+    ctx.env.classicEquExprs?.set(item.name, record);
+    ctx.env.classicEquExprs?.set(item.name.toLowerCase(), record);
+  }
+  const value =
+    expr && currentLocation !== undefined
+      ? evalImmExprWithEnv(expr, ctx.env, ctx.diagnostics, { currentLocation })
+      : ctx.env.consts.get(item.name) ?? ctx.env.consts.get(item.name.toLowerCase());
+  if (value === undefined) {
+    if (expr) {
+      ctx.recordLoweredAsmItem(
+        { kind: 'const', name: item.name, value: ctx.lowerImmExprForLoweredAsm(expr) },
+        item.span,
+      );
+    }
+    return;
+  }
+  publishClassicAddressConst(ctx, item.name, value);
   ctx.symbols.push({
     kind: 'constant',
     name: item.name,
@@ -335,20 +319,20 @@ function lowerClassicAlign(ctx: LoweringContext, item: ClassicNode): void {
 
 function lowerClassicLabel(ctx: LoweringContext, item: ClassicNode): void {
   if (!item.name) return;
+  const offset = activeSectionOffset(ctx);
+  const address = activeSectionAddress(ctx);
   const lower = item.name.toLowerCase();
   if (ctx.taken.has(lower)) {
     ctx.diag(ctx.diagnostics, item.span.file, `Duplicate symbol name "${item.name}".`);
     return;
   }
   ctx.taken.add(lower);
+  if (address !== undefined) publishClassicAddressConst(ctx, item.name, address);
   ctx.pending.push({
     kind: 'label',
     name: item.name,
     section: ctx.activeSectionRef.current,
-    offset:
-      ctx.activeSectionRef.current === 'data'
-        ? ctx.dataOffsetRef.current
-        : ctx.codeOffsetRef.current,
+    offset,
     file: item.span.file,
     line: item.span.start.line,
     scope: 'global',

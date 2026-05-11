@@ -447,15 +447,6 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
       }
     }
     const memOpcode = ldReg16MemOpcode(first.name);
-    const memValue = evalMemAddress(ctx, source);
-    if (memOpcode && memValue !== undefined) {
-      const bytes =
-        memOpcode.prefix !== undefined
-          ? Uint8Array.of(memOpcode.prefix, memOpcode.opcode, memValue & 0xff, (memValue >> 8) & 0xff)
-          : Uint8Array.of(memOpcode.opcode, memValue & 0xff, (memValue >> 8) & 0xff);
-      ctx.emitRawCodeBytes(bytes, item.span.file, `ld ${first.name},(${memValue})`);
-      return;
-    }
     const memSymbolic = memSymbolicTarget(ctx, source);
     if (memOpcode && memSymbolic) {
       if (memOpcode.prefix !== undefined) {
@@ -471,44 +462,44 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
       }
       return;
     }
+    const memValue = evalMemAddress(ctx, source);
+    if (memOpcode && memValue !== undefined) {
+      const bytes =
+        memOpcode.prefix !== undefined
+          ? Uint8Array.of(memOpcode.prefix, memOpcode.opcode, memValue & 0xff, (memValue >> 8) & 0xff)
+          : Uint8Array.of(memOpcode.opcode, memValue & 0xff, (memValue >> 8) & 0xff);
+      ctx.emitRawCodeBytes(bytes, item.span.file, `ld ${first.name},(${memValue})`);
+      return;
+    }
   }
   if (head === 'ld' && item.operands.length === 2) {
     const second = item.operands[1];
     if (first?.kind === 'Reg' && first.name.toUpperCase() === 'A' && second?.kind === 'Mem') {
-      const value = evalMemAddress(ctx, second);
-      if (value !== undefined) {
-        ctx.emitRawCodeBytes(Uint8Array.of(0x3a, value & 0xff, (value >> 8) & 0xff), item.span.file, 'ld a,(nn)');
-        return;
-      }
       const symbolic = memSymbolicTarget(ctx, second);
       if (symbolic) {
         ctx.emitAbs16Fixup(0x3a, symbolic.baseLower, symbolic.addend, item.span);
         return;
       }
-    }
-    if (first?.kind === 'Mem' && second?.kind === 'Reg' && second.name.toUpperCase() === 'A') {
-      const value = evalMemAddress(ctx, first);
+      const value = evalMemAddress(ctx, second);
       if (value !== undefined) {
-        ctx.emitRawCodeBytes(Uint8Array.of(0x32, value & 0xff, (value >> 8) & 0xff), item.span.file, 'ld (nn),a');
+        ctx.emitRawCodeBytes(Uint8Array.of(0x3a, value & 0xff, (value >> 8) & 0xff), item.span.file, 'ld a,(nn)');
         return;
       }
+    }
+    if (first?.kind === 'Mem' && second?.kind === 'Reg' && second.name.toUpperCase() === 'A') {
       const symbolic = memSymbolicTarget(ctx, first);
       if (symbolic) {
         ctx.emitAbs16Fixup(0x32, symbolic.baseLower, symbolic.addend, item.span);
         return;
       }
+      const value = evalMemAddress(ctx, first);
+      if (value !== undefined) {
+        ctx.emitRawCodeBytes(Uint8Array.of(0x32, value & 0xff, (value >> 8) & 0xff), item.span.file, 'ld (nn),a');
+        return;
+      }
     }
     if (first?.kind === 'Mem' && second?.kind === 'Reg') {
       const memOpcode = ldMemReg16Opcode(second.name);
-      const value = evalMemAddress(ctx, first);
-      if (memOpcode && value !== undefined) {
-        const bytes =
-          memOpcode.prefix !== undefined
-            ? Uint8Array.of(memOpcode.prefix, memOpcode.opcode, value & 0xff, (value >> 8) & 0xff)
-            : Uint8Array.of(memOpcode.opcode, value & 0xff, (value >> 8) & 0xff);
-        ctx.emitRawCodeBytes(bytes, item.span.file, `ld (nn),${second.name}`);
-        return;
-      }
       const symbolic = memSymbolicTarget(ctx, first);
       if (memOpcode && symbolic) {
         if (memOpcode.prefix !== undefined) {
@@ -522,6 +513,15 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
         } else {
           ctx.emitAbs16Fixup(memOpcode.opcode, symbolic.baseLower, symbolic.addend, item.span);
         }
+        return;
+      }
+      const value = evalMemAddress(ctx, first);
+      if (memOpcode && value !== undefined) {
+        const bytes =
+          memOpcode.prefix !== undefined
+            ? Uint8Array.of(memOpcode.prefix, memOpcode.opcode, value & 0xff, (value >> 8) & 0xff)
+            : Uint8Array.of(memOpcode.opcode, value & 0xff, (value >> 8) & 0xff);
+        ctx.emitRawCodeBytes(bytes, item.span.file, `ld (nn),${second.name}`);
         return;
       }
     }

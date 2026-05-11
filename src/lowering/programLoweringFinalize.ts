@@ -5,6 +5,8 @@ import type {
 import type { SectionKind } from './loweringTypes.js';
 import type { ProgramEmissionFinalizeContext } from './programLowering.js';
 import { parseNumberLiteral } from '../frontend/parseImm.js';
+import type { ImmExprNode } from '../frontend/ast.js';
+import { evalImmExpr as evalImmExprWithEnv } from '../semantics/env.js';
 
 export function computeSectionBases(
   ctx: Pick<ProgramEmissionFinalizeContext, 'baseExprs' | 'evalImmExpr' | 'env' | 'diagnostics' | 'diag' | 'primaryFile' | 'alignTo' | 'codeOffset' | 'dataOffset'>,
@@ -129,12 +131,87 @@ export function finalizeProgramEmission(ctx: ProgramEmissionFinalizeContext): {
     });
   }
 
-  const resolveFixupBase = (nameLower: string): number | undefined => {
+  const evalClassicAliasExpr = (
+    expr: ImmExprNode,
+    visiting: Set<string>,
+    currentLocation?: number,
+  ): number | undefined => {
+    const aliasEnv = { ...ctx.env, consts: new Map(ctx.env.consts) };
+    for (const [name, value] of addrByNameLower) aliasEnv.consts.set(name, value);
+    const value =
+      currentLocation === undefined
+        ? ctx.evalImmExpr(expr, aliasEnv, [])
+        : evalImmExprWithEnv(expr, aliasEnv, [], { currentLocation });
+    if (value !== undefined) return value;
+
+    switch (expr.kind) {
+      case 'ImmCurrentLocation':
+        return currentLocation;
+      case 'ImmName':
+        return resolveFixupBase(expr.name.toLowerCase(), visiting);
+      case 'ImmUnary': {
+        const v = evalClassicAliasExpr(expr.expr, visiting, currentLocation);
+        if (v === undefined) return undefined;
+        switch (expr.op) {
+          case '+':
+            return +v;
+          case '-':
+            return -v;
+          case '~':
+            return ~v;
+        }
+        return undefined;
+      }
+      case 'ImmBinary': {
+        const l = evalClassicAliasExpr(expr.left, visiting, currentLocation);
+        const r = evalClassicAliasExpr(expr.right, visiting, currentLocation);
+        if (l === undefined || r === undefined) return undefined;
+        switch (expr.op) {
+          case '*':
+            return l * r;
+          case '/':
+            return r === 0 ? undefined : (l / r) | 0;
+          case '%':
+            return r === 0 ? undefined : l % r;
+          case '+':
+            return l + r;
+          case '-':
+            return l - r;
+          case '&':
+            return l & r;
+          case '^':
+            return l ^ r;
+          case '|':
+            return l | r;
+          case '<<':
+            return l << r;
+          case '>>':
+            return l >> r;
+        }
+        return undefined;
+      }
+      default:
+        return undefined;
+    }
+  };
+
+  const resolveFixupBase = (nameLower: string, visiting = new Set<string>()): number | undefined => {
     const sym = addrByNameLower.get(nameLower);
     if (sym !== undefined) return sym;
     const literal = parseNumberLiteral(nameLower);
     if (literal !== undefined) return literal;
     if (/^-?[0-9]+$/.test(nameLower)) return Number.parseInt(nameLower, 10);
+    const equ = ctx.env.classicEquExprs?.get(nameLower);
+    if (equ) {
+      if (visiting.has(nameLower)) return undefined;
+      visiting.add(nameLower);
+      const value = evalClassicAliasExpr(equ.expr, visiting, equ.currentLocation);
+      if (value !== undefined) {
+        addrByNameLower.set(nameLower, value);
+        ctx.env.consts.set(nameLower, value);
+        return value;
+      }
+    }
     return undefined;
   };
 
