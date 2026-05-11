@@ -1,5 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
@@ -17,12 +19,28 @@ const classicAsm80Available = existsSync(classicParserPath);
 const classicModuleLoweringAvailable = true;
 const manifest = {
   source: '/Users/johnhardy/Documents/projects/MON3/src/mon3.z80',
-  referenceBin: '/Users/johnhardy/Documents/projects/MON3/MON3-1G_BC25-16.bin',
 };
-const mon3FilesAvailable = existsSync(manifest.source) && existsSync(manifest.referenceBin);
+
+function normalizeExecutableCandidate(candidate: string): string {
+  return candidate.includes('/') || candidate.includes('\\') ? resolve(candidate) : candidate;
+}
+
+const asm80Candidates = [
+  process.env.ASM80,
+  process.env.ASM80_PATH,
+  '/Users/johnhardy/Documents/projects/debug80/node_modules/.bin/asm80',
+  'asm80',
+]
+  .filter((candidate): candidate is string => candidate !== undefined && candidate.trim().length > 0)
+  .map(normalizeExecutableCandidate);
+const asm80 = asm80Candidates.find((candidate) => {
+  const probe = spawnSync(candidate, ['-h'], { encoding: 'utf8' });
+  return !probe.error;
+});
+const mon3FilesAvailable = existsSync(manifest.source);
 const runMon3Acceptance = process.env.ZAX_RUN_MON3_ACCEPTANCE === '1';
 const describeMon3 =
-  classicAsm80Available && classicModuleLoweringAvailable && mon3FilesAvailable && runMon3Acceptance
+  classicAsm80Available && classicModuleLoweringAvailable && mon3FilesAvailable && asm80 && runMon3Acceptance
     ? describe
     : describe.skip;
 
@@ -71,6 +89,45 @@ function summarizeBinaryMismatch(actual: Buffer, reference: Buffer): string {
     lines.push('First mismatch: none');
   }
   return lines.join('\n');
+}
+
+function copyAsm80SourceTree(source: string, outDir: string): void {
+  for (const entry of readdirSync(dirname(source))) {
+    if (entry.toLowerCase().endsWith('.z80')) {
+      copyFileSync(join(dirname(source), entry), join(outDir, entry));
+    }
+  }
+}
+
+function buildAsm80Reference(source: string): Buffer {
+  if (!asm80) throw new Error('asm80 executable not found');
+  const outDir = mkdtempSync(join(tmpdir(), 'zax-mon3-asm80-reference-'));
+  const outName = 'mon3-reference.bin';
+  const outBin = join(outDir, outName);
+  try {
+    copyAsm80SourceTree(source, outDir);
+    const result = spawnSync(
+      asm80,
+      ['-m', 'Z80', '-t', 'bin', '-o', outName, basename(source)],
+      {
+        cwd: outDir,
+        encoding: 'utf8',
+      },
+    );
+    if (result.error) throw result.error;
+    if (result.status !== 0) {
+      throw new Error(
+        [
+          `asm80 failed with status ${result.status}`,
+          result.stdout.trim(),
+          result.stderr.trim(),
+        ].filter((part) => part.length > 0).join('\n'),
+      );
+    }
+    return readFileSync(outBin);
+  } finally {
+    rmSync(outDir, { recursive: true, force: true });
+  }
 }
 
 describe('MON3 acceptance failure summaries', () => {
@@ -124,7 +181,7 @@ describe('MON3 acceptance failure summaries', () => {
 });
 
 describeMon3('ASM80 MON3 acceptance', () => {
-  it('compiles MON3 and matches the reference binary bytes', async () => {
+  it('compiles MON3 and matches a fresh ASM80-built reference binary', async () => {
     const res = await compile(
       manifest.source,
       { emitBin: true, emitHex: false, emitD8m: false, emitListing: false },
@@ -138,7 +195,7 @@ describeMon3('ASM80 MON3 acceptance', () => {
     if (!bin) throw new Error('missing bin artifact');
 
     const actual = Buffer.from(bin.bytes);
-    const expected = readFileSync(manifest.referenceBin);
+    const expected = buildAsm80Reference(manifest.source);
     const binarySummary = summarizeBinaryMismatch(actual, expected);
 
     if (actual.length !== expected.length || findFirstMismatch(actual, expected) !== -1) {
@@ -153,7 +210,11 @@ if (!classicAsm80Available || !classicModuleLoweringAvailable) {
   });
 } else if (!mon3FilesAvailable) {
   describe('ASM80 MON3 acceptance', () => {
-    it.todo('skipped: local MON3 source/reference binary is unavailable');
+    it.todo('skipped: local MON3 source is unavailable');
+  });
+} else if (!asm80) {
+  describe('ASM80 MON3 acceptance', () => {
+    it.todo('skipped: asm80 executable is unavailable');
   });
 } else if (!runMon3Acceptance) {
   describe('ASM80 MON3 acceptance', () => {
