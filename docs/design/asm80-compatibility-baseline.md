@@ -60,9 +60,9 @@ data, includes, expressions, placement, and a broad set of Z80 opcodes.
 | Area                     | Covered                                                                                                                                                    | Source of coverage                                 | Explicitly excluded or deferred                                      |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------- |
 | Source mode              | `.z80` and `.asm` classic ASM80 mode; `.zax` unchanged                                                                                                     | MON3, TEC-1G, `test/asm80/mon3_acceptance.test.ts` | Full ASM80 clone mode                                                |
-| Labels and equates       | Colon labels, label plus statement, `NAME: .equ`, `NAME .equ`, undotted `EQU`                                                                              | MON3, TEC-1G                                       | Macro-local and text-substitution label semantics                    |
+| Labels and equates       | Colon labels, label plus statement, `NAME: .equ`, `NAME .equ`, undotted `EQU`, forward and compound `EQU` aliases                                         | MON3, TEC-1G, Tetro                                | Macro-local and text-substitution label semantics                    |
 | Literals and expressions | Trailing `H`/`B`, `0xNN`, `$`, `+ - * /`, parentheses, one-character strings                                                                               | MON3, TEC-1G, directive tests                      | Broad ASM80 expression extensions unless corpus-driven               |
-| Data and directives      | `.org`, `.include`, `.db`, `.dw`, `.ds`, `.align`, `.cstr`, `.pstr`, `.istr`, `.binfrom`, `.binto`, `.end`; dotted, undotted, and mixed case where covered | MON3, TEC-1G, ASM80 directive/string/align tests   | dialect aliases such as `DEFB`/`DEFW`/`RMB`, `DUP`, `.incbin`, `.set`, segments, `.pragma`, `.ent` |
+| Data and directives      | `.org`, `.include`, `.db`, `.dw`, `.ds`, `.align`, `.cstr`, `.pstr`, `.istr`, `.binfrom`, `.binto`, `.end`; dotted, undotted, and mixed case where covered; trailing reserve-only `DS` does not extend the loadable binary | MON3, TEC-1G, Tetro, ASM80 directive/string/align tests | dialect aliases such as `DEFB`/`DEFW`/`RMB`, `DUP`, `.incbin`, `.set`, segments, `.pragma`, `.ent` |
 | Z80 syntax               | Ordinary MON3 instruction heads and operand/addressing forms; TEC-1G additions such as `SRA A` and `LD (addr),HL`                                          | MON3 audit, TEC-1G audit, opcode gap tests         | Instruction forms absent from real corpora do not block the baseline |
 | Includes and output      | Relative quoted includes, included-file diagnostics, post-`.end` `.binfrom`/`.binto`, no-`.org` sources starting at zero                                   | MON3, TEC-1G, directive and CLI diagnostics tests  | `.include file:block`                                                |
 | Baseline corpora         | MON3 recursive tree as the primary corpus; TEC-1G non-macro corpus as the secondary corpus                                                                 | `npm run test:asm80:baseline`                      | Macro-bearing TEC-1G `Education/tbasic.z80`                          |
@@ -78,6 +78,7 @@ The first compatibility level requires:
 - `.include "file"` with paths relative to the including file
 - `.db` with expressions and double-quoted string fragments
 - `.dw` with expressions and symbol fixups
+- `.ds count` and `.ds count, fill`
 - `.end`
 - `.binfrom`
 - ASM80 trailing-base literals such as `0FFH`, `0101b`, and `10101010B`
@@ -86,6 +87,10 @@ The first compatibility level requires:
 - current-location expressions using `$`
 - one-character string values in expressions
 - ordinary Z80 instruction syntax used by MON3
+
+`DS` reserves address space. A `DS` range between emitted bytes can affect the
+loadable binary by creating a gap, but a trailing reserve-only `DS` advances the
+assembly location without extending the cropped binary output.
 
 Early compatibility additions that are already useful even when not required by
 MON3:
@@ -172,7 +177,14 @@ slice of this baseline:
 - `.cstr`, `.pstr`, and `.istr`
 - `.binfrom`
 - `.end`
+- forward `EQU` aliases
+- compound `EQU` aliases that reference other forward aliases
+- `EQU` aliases in `DB` and `DW` operands
+- declaration-time `$` handling inside classic `EQU` expressions
+- reserve-only trailing `DS` binary trimming
 - lowered ASM80 artifact emission for recorded classic items
+- lowered ASM80 artifact preservation for resolved aliases and generated
+  padding/data directives
 - focused MON3 opcode-gap audit showing no unsupported encoder forms in the
   current recursive MON3 corpus
 
@@ -189,6 +201,11 @@ The secondary TEC-1G software corpus is tracked in
 `docs/design/asm80-tec1g-compatibility-audit.md`. It deliberately excludes
 sources containing `.macro`/`.endm`, and currently verifies 12 non-macro TEC-1G
 programs byte-for-byte against ASM80.
+
+The Tetro source tree is a useful follow-up corpus for loadable application
+semantics, especially reserve-only `DS` behavior. It is tracked as an opt-in
+acceptance check rather than a standing baseline gate until the project decides
+to promote it.
 
 ## Baseline corpora and gates
 

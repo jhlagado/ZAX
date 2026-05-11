@@ -504,6 +504,33 @@ describe('asm80 directive lowering integration', () => {
     expect([...bin.bytes]).toEqual([0x2a, 0x04, 0x40, 0x00, 0x00]);
   });
 
+  it('resolves repeated aliases inside a classic equ expression', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-repeated-forward-equ-'));
+    const entry = join(dir, 'repeated-forward-equ.asm');
+    writeFileSync(
+      entry,
+      [
+        'org 4000H',
+        'ALIAS equ TARGET',
+        'SUM equ ALIAS+ALIAS',
+        'dw SUM',
+        'TARGET:',
+        'db 0AAH',
+        'binfrom 4000H',
+        'end',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    if (!bin) throw new Error('missing bin artifact');
+    expect([...bin.bytes]).toEqual([0x04, 0x80, 0xaa]);
+  });
+
   it('preserves current-location context for deferred classic equ aliases', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-forward-equ-current-'));
     const entry = join(dir, 'forward-equ-current.asm');
