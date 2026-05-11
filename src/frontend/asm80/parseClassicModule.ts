@@ -152,7 +152,7 @@ export function parseClassicModule(
     const lineSpan = span(file, lineStart, rawLineEndOffset(sourceText, lineStart));
     const parsed = parseClassicLine(path, raw, index + 1, lineStart);
     if (!parsed) continue;
-    if (ended && parsed.kind !== 'binfrom') continue;
+    if (ended && parsed.kind !== 'binfrom' && parsed.kind !== 'binto') continue;
 
     switch (parsed.kind) {
       case 'label': {
@@ -209,6 +209,15 @@ export function parseClassicModule(
         } as ClassicItemNode);
         pendingRawLabel = undefined;
         break;
+      case 'binto':
+        items.push({
+          kind: 'ClassicBinTo',
+          span: lineSpan,
+          exprText: parsed.exprText,
+          value: parseImmExprFromText(path, parsed.exprText, lineSpan, _diagnostics),
+        } as ClassicItemNode);
+        pendingRawLabel = undefined;
+        break;
       case 'align': {
         const value = parseImmExprFromText(path, parsed.exprText, lineSpan, _diagnostics);
         if (value) {
@@ -233,6 +242,12 @@ export function parseClassicModule(
           ),
           valuesText: parsed.valuesText,
         } as unknown as ClassicItemNode;
+        if (parsed.directive === 'ds') {
+          const values = (rawData as unknown as { values?: unknown[] }).values;
+          const rawDataWithSize = rawData as unknown as { size?: unknown; fill?: unknown };
+          rawDataWithSize.size = values?.[0];
+          if (values?.[1]) rawDataWithSize.fill = values[1];
+        }
         if (parsed.label) {
           items.push({ kind: 'AsmLabel', span: lineSpan, name: parsed.label });
         } else if (pendingRawLabel) {

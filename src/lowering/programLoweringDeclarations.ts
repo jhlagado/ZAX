@@ -27,6 +27,7 @@ type RawDataLike = {
   directive: 'db' | 'dw' | 'ds' | 'cstr' | 'pstr' | 'istr';
   values?: RawValueLike[];
   size?: ImmExprNode;
+  fill?: ImmExprNode;
 };
 
 function rawStringValue(value: RawValueLike): string | undefined {
@@ -398,11 +399,16 @@ export function createProgramLoweringDeclarationHelpers(ctx: Context): {
         {
           kind: 'ds',
           size: ctx.lowerImmExprForLoweredAsm(decl.size),
-          fill: { kind: 'literal', value: 0 },
+          fill: decl.fill ? ctx.lowerImmExprForLoweredAsm(decl.fill) : { kind: 'literal', value: 0 },
         },
         decl.span,
       );
-      for (let i = 0; i < size; i++) writeByte(0);
+      const fill = decl.fill ? ctx.evalImmExpr(decl.fill, ctx.env, ctx.diagnostics) : 0;
+      if (fill === undefined) {
+        ctx.diag(ctx.diagnostics, decl.span.file, `Failed to evaluate raw data fill for "${name}".`);
+        return;
+      }
+      for (let i = 0; i < size; i++) writeByte(fill);
       return;
     }
 

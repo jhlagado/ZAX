@@ -168,6 +168,11 @@ The remaining baseline work is to harden acceptance around the full MON3 build:
 - keep expanding tests from real MON3 slices rather than synthetic syntax only
 - decide how `.asm` and `.z80` are introduced into the wider Debug80 toolchain
 
+The secondary TEC-1G software corpus is tracked in
+`docs/design/asm80-tec1g-compatibility-audit.md`. It deliberately excludes
+sources containing `.macro`/`.endm`, and currently verifies 12 non-macro TEC-1G
+programs byte-for-byte against ASM80.
+
 ## Acceptance threshold
 
 The compatibility baseline is reached when:

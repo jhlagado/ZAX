@@ -4,11 +4,12 @@ export type ClassicLine =
   | { kind: 'org'; exprText: string }
   | { kind: 'align'; exprText: string }
   | { kind: 'binfrom'; exprText: string }
+  | { kind: 'binto'; exprText: string }
   | { kind: 'end' }
   | {
       kind: 'rawData';
       label?: string;
-      directive: 'db' | 'dw' | 'cstr' | 'pstr' | 'istr';
+      directive: 'db' | 'dw' | 'ds' | 'cstr' | 'pstr' | 'istr';
       valuesText: string;
     }
   | { kind: 'instruction'; label?: string; head: string; operandText: string };
@@ -67,15 +68,23 @@ function parseStatement(text: string, label?: string): ClassicLine | undefined {
   const equ = /^\.?equ\b\s*(.+)$/i.exec(text);
   if (equ && label) return { kind: 'equ', name: label, exprText: equ[1]!.trim() };
 
-  const directive = /^\.([A-Za-z][A-Za-z0-9_]*)\b\s*(.*)$/.exec(text);
+  const directive = /^\.?([A-Za-z][A-Za-z0-9_]*)\b\s*(.*)$/.exec(text);
   if (directive) {
     const name = directive[1]!.toLowerCase();
     const payload = directive[2]!.trim();
     if (name === 'org') return { kind: 'org', exprText: payload };
     if (name === 'align') return { kind: 'align', exprText: payload };
     if (name === 'binfrom') return { kind: 'binfrom', exprText: payload };
+    if (name === 'binto') return { kind: 'binto', exprText: payload };
     if (name === 'end') return { kind: 'end' };
-    if (name === 'db' || name === 'dw' || name === 'cstr' || name === 'pstr' || name === 'istr') {
+    if (
+      name === 'db' ||
+      name === 'dw' ||
+      name === 'ds' ||
+      name === 'cstr' ||
+      name === 'pstr' ||
+      name === 'istr'
+    ) {
       return { kind: 'rawData', ...(label ? { label } : {}), directive: name, valuesText: payload };
     }
   }

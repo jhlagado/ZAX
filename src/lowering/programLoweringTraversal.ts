@@ -20,6 +20,7 @@ import { createProgramLoweringDeclarationHelpers } from './programLoweringDeclar
 import { lowerClassicInstruction } from './classicInstructionLowering.js';
 
 const BINFROM_SYMBOL_NAME = '__zax_binfrom';
+const BINTO_SYMBOL_NAME = '__zax_binto';
 
 type ClassicNode = {
   kind: string;
@@ -30,6 +31,7 @@ type ClassicNode = {
   directive?: 'db' | 'dw' | 'ds' | 'cstr' | 'pstr' | 'istr';
   values?: unknown[];
   size?: import('../frontend/ast.js').ImmExprNode;
+  fill?: import('../frontend/ast.js').ImmExprNode;
   head?: string;
   operands?: import('../frontend/ast.js').AsmOperandNode[];
 };
@@ -56,6 +58,10 @@ function isClassicRawData(item: { kind: string }): boolean {
 
 function isClassicBinFrom(item: { kind: string }): boolean {
   return isKind(item, 'ClassicBinFrom', 'ClassicBinFromDirective', 'BinFromDirective');
+}
+
+function isClassicBinTo(item: { kind: string }): boolean {
+  return isKind(item, 'ClassicBinTo', 'ClassicBinToDirective', 'BinToDirective');
 }
 
 function isClassicEnd(item: { kind: string }): boolean {
@@ -384,6 +390,40 @@ function lowerClassicBinFrom(ctx: LoweringContext, item: ClassicNode): void {
   });
 }
 
+function lowerClassicBinTo(ctx: LoweringContext, item: ClassicNode): void {
+  const expr = classicExpr(item);
+  if (!expr) {
+    ctx.diag(ctx.diagnostics, item.span.file, `Missing binto address.`);
+    return;
+  }
+  const value = ctx.evalImmExpr(expr, ctx.env, ctx.diagnostics);
+  if (value === undefined) {
+    ctx.diag(ctx.diagnostics, item.span.file, `Failed to evaluate binto address.`);
+    return;
+  }
+  if (value < 0 || value > 0xffff) {
+    ctx.diag(ctx.diagnostics, item.span.file, `binto address out of range (0..65535).`);
+    return;
+  }
+  const existing = ctx.symbols.find(
+    (symbol) => symbol.kind === 'constant' && symbol.name === BINTO_SYMBOL_NAME,
+  );
+  if (existing?.kind === 'constant') {
+    existing.value = value;
+    existing.address = value;
+    return;
+  }
+  ctx.symbols.push({
+    kind: 'constant',
+    name: BINTO_SYMBOL_NAME,
+    value,
+    address: value,
+    file: item.span.file,
+    line: item.span.start.line,
+    scope: 'global',
+  });
+}
+
 function lowerItem(
   ctx: LoweringContext,
   lowerBinDecl: ReturnType<typeof createProgramLoweringDeclarationHelpers>['lowerBinDecl'],
@@ -408,6 +448,10 @@ function lowerItem(
   }
   if (isClassicBinFrom(item)) {
     lowerClassicBinFrom(ctx, item as ClassicNode);
+    return;
+  }
+  if (isClassicBinTo(item)) {
+    lowerClassicBinTo(ctx, item as ClassicNode);
     return;
   }
   if (item.kind === 'AsmLabel') {
@@ -679,7 +723,7 @@ export function lowerProgramDeclarations(ctx: LoweringContext): LoweringResult {
         classicEnded = true;
         continue;
       }
-      if (classicEnded && !isClassicBinFrom(item)) continue;
+      if (classicEnded && !isClassicBinFrom(item) && !isClassicBinTo(item)) continue;
       lowerItem(ctx, lowerBinDecl, lowerRawDataDecl, lowerClassicRawDataDecl, item);
     }
   }
