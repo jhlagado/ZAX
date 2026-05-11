@@ -1,6 +1,10 @@
 import type { AsmOperandNode, ImmExprNode, SourceSpan } from '../frontend/ast.js';
-import { evalImmExpr as evalImmExprWithEnv } from '../semantics/env.js';
 import type { LoweringContext } from './programLowering.js';
+import {
+  activeClassicAddress,
+  containsCurrentLocation,
+  evalClassicImmAtCurrent,
+} from './classicTraversalHelpers.js';
 
 export type ClassicInstructionNode = {
   kind: string;
@@ -8,41 +12,6 @@ export type ClassicInstructionNode = {
   head?: string;
   operands?: AsmOperandNode[];
 };
-
-function containsCurrentLocation(expr: ImmExprNode): boolean {
-  switch (expr.kind) {
-    case 'ImmCurrentLocation':
-      return true;
-    case 'ImmUnary':
-      return containsCurrentLocation(expr.expr);
-    case 'ImmBinary':
-      return containsCurrentLocation(expr.left) || containsCurrentLocation(expr.right);
-    default:
-      return false;
-  }
-}
-
-function currentActiveAddress(ctx: LoweringContext): number | undefined {
-  const section = ctx.activeSectionRef.current;
-  const offset =
-    section === 'data'
-      ? ctx.dataOffsetRef.current
-      : section === 'var'
-        ? ctx.varOffsetRef.current
-        : ctx.codeOffsetRef.current;
-  const baseExpr = section === 'data' ? ctx.baseExprs.data : section === 'var' ? undefined : ctx.baseExprs.code;
-  if (!baseExpr) return offset;
-  const base = ctx.evalImmExpr(baseExpr, ctx.env, ctx.diagnostics);
-  return base === undefined ? undefined : base + offset;
-}
-
-function evalClassicImmAtCurrent(
-  ctx: LoweringContext,
-  expr: ImmExprNode,
-  currentLocation: number,
-): number | undefined {
-  return evalImmExprWithEnv(expr, ctx.env, ctx.diagnostics, { currentLocation });
-}
 
 function jpConditionOpcodeFromName(nameRaw: string): number | undefined {
   switch (nameRaw.toUpperCase()) {
@@ -195,7 +164,7 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
     targetExpr: ImmExprNode,
   ): boolean => {
     if (!containsCurrentLocation(targetExpr)) return false;
-    const current = currentActiveAddress(ctx);
+    const current = activeClassicAddress(ctx);
     if (current === undefined) {
       ctx.diag(ctx.diagnostics, item.span.file, `Failed to evaluate current location.`);
       return true;
@@ -221,7 +190,7 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
     opcode: number,
     targetExpr: ImmExprNode,
   ): boolean => {
-    const current = currentActiveAddress(ctx);
+    const current = activeClassicAddress(ctx);
     if (current === undefined) {
       ctx.diag(ctx.diagnostics, item.span.file, `Failed to evaluate current location.`);
       return true;
@@ -284,7 +253,7 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
   if (head === 'call') {
     if (item.operands.length === 1 && first?.kind === 'Imm') {
       if (containsCurrentLocation(first.expr)) {
-        const current = currentActiveAddress(ctx);
+        const current = activeClassicAddress(ctx);
         const target = current === undefined ? undefined : evalClassicImmAtCurrent(ctx, first.expr, current);
         if (target !== undefined) {
           ctx.emitRawCodeBytes(
@@ -339,7 +308,7 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
   }
   if (head === 'jp' && item.operands.length === 1 && first?.kind === 'Imm') {
     if (containsCurrentLocation(first.expr)) {
-      const current = currentActiveAddress(ctx);
+      const current = activeClassicAddress(ctx);
       const target = current === undefined ? undefined : evalClassicImmAtCurrent(ctx, first.expr, current);
       if (target !== undefined) {
         ctx.emitRawCodeBytes(
@@ -385,7 +354,7 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
         return;
       }
       if (containsCurrentLocation(target.expr)) {
-        const current = currentActiveAddress(ctx);
+        const current = activeClassicAddress(ctx);
         const value = current === undefined ? undefined : evalClassicImmAtCurrent(ctx, target.expr, current);
         if (value !== undefined) {
           ctx.emitRawCodeBytes(

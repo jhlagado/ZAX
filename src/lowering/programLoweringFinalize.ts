@@ -4,8 +4,7 @@ import type {
 } from '../formats/types.js';
 import type { SectionKind } from './loweringTypes.js';
 import type { ProgramEmissionFinalizeContext } from './programLowering.js';
-import { parseNumberLiteral } from '../frontend/parseImm.js';
-import { resolveClassicEquSymbol } from './classicEquResolution.js';
+import { createFixupBaseResolver } from './fixupBaseResolution.js';
 
 export function computeSectionBases(
   ctx: Pick<ProgramEmissionFinalizeContext, 'baseExprs' | 'evalImmExpr' | 'env' | 'diagnostics' | 'diag' | 'primaryFile' | 'alignTo' | 'codeOffset' | 'dataOffset'>,
@@ -130,25 +129,7 @@ export function finalizeProgramEmission(ctx: ProgramEmissionFinalizeContext): {
     });
   }
 
-  const resolveFixupBase = (nameLower: string, visiting = new Set<string>()): number | undefined => {
-    const sym = addrByNameLower.get(nameLower);
-    if (sym !== undefined) return sym;
-    const literal = parseNumberLiteral(nameLower);
-    if (literal !== undefined) return literal;
-    if (/^-?[0-9]+$/.test(nameLower)) return Number.parseInt(nameLower, 10);
-    const value = resolveClassicEquSymbol(nameLower, {
-      env: ctx.env,
-      lookupSymbol: (name) => addrByNameLower.get(name),
-      cacheResolved: (name, resolved) => {
-        addrByNameLower.set(name, resolved);
-        ctx.env.consts.set(name, resolved);
-      },
-    }, visiting);
-    if (value !== undefined) {
-      return value;
-    }
-    return undefined;
-  };
+  const resolveFixupBase = createFixupBaseResolver({ env: ctx.env, addrByNameLower });
 
   for (const fx of ctx.fixups) {
     const base = resolveFixupBase(fx.baseLower);
