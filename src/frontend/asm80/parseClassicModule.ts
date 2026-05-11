@@ -1,9 +1,14 @@
 import type { Diagnostic } from '../../diagnosticTypes.js';
 
-import type { AsmLabelNode, ClassicItemNode, ClassicModuleFileNode, ModuleFileNode } from '../ast.js';
+import type {
+  AsmLabelNode,
+  ClassicItemNode,
+  ClassicModuleFileNode,
+  ModuleFileNode,
+} from '../ast.js';
 import { parseAsmInstruction } from '../parseAsmInstruction.js';
 import { parseImmExprFromText } from '../parseImm.js';
-import { makeSourceFile, span } from '../source.js';
+import { makeSourceFile, type SourceFile, span } from '../source.js';
 import { parseClassicLine } from './classicLine.js';
 
 function rawLineEndOffset(sourceText: string, startOffset: number): number {
@@ -20,7 +25,9 @@ function parseClassicRawValues(
   stringEquates: Map<string, string>,
 ): unknown[] {
   const out: unknown[] = [];
-  const parts = splitTopLevelComma(valuesText).map((part) => part.trim()).filter((part) => part.length > 0);
+  const parts = splitTopLevelComma(valuesText)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
   for (const part of parts) {
     const rawString = parseWholeQuotedString(part);
     if (rawString !== undefined) {
@@ -41,7 +48,12 @@ function parseClassicRawValues(
       out.push({ kind: 'ClassicString', value: stringEquate });
       continue;
     }
-    const expr = parseImmExprFromText(path, normalizeDoubleQuotedCharExpr(part), lineSpan, diagnostics);
+    const expr = parseImmExprFromText(
+      path,
+      normalizeDoubleQuotedCharExpr(part),
+      lineSpan,
+      diagnostics,
+    );
     if (expr) out.push(expr);
   }
   return out;
@@ -128,8 +140,9 @@ export function parseClassicModule(
   path: string,
   sourceText: string,
   _diagnostics: Diagnostic[],
+  sourceFile?: SourceFile,
 ): ClassicModuleFileNode {
-  const file = makeSourceFile(path, sourceText);
+  const file = sourceFile ?? makeSourceFile(path, sourceText);
   const items: ClassicItemNode[] = [];
   let pendingRawLabel: AsmLabelNode | undefined;
   let ended = false;
@@ -150,6 +163,7 @@ export function parseClassicModule(
     const raw = lines[index]!;
     const lineStart = file.lineStarts[index] ?? sourceText.length;
     const lineSpan = span(file, lineStart, rawLineEndOffset(sourceText, lineStart));
+    const linePath = lineSpan.file;
     const parsed = parseClassicLine(path, raw, index + 1, lineStart);
     if (!parsed) continue;
     if (ended && parsed.kind !== 'binfrom' && parsed.kind !== 'binto') continue;
@@ -166,7 +180,7 @@ export function parseClassicModule(
           items.push({ kind: 'AsmLabel', span: lineSpan, name: parsed.label });
         }
         const instruction = parseAsmInstruction(
-          path,
+          linePath,
           parsed.operandText.length > 0 ? `${parsed.head} ${parsed.operandText}` : parsed.head,
           lineSpan,
           _diagnostics,
@@ -182,7 +196,7 @@ export function parseClassicModule(
           name: parsed.name,
           exprText: parsed.exprText,
           value: parseImmExprFromText(
-            path,
+            linePath,
             normalizeDoubleQuotedCharExpr(parsed.exprText),
             lineSpan,
             _diagnostics,
@@ -196,7 +210,7 @@ export function parseClassicModule(
           kind: 'ClassicOrg',
           span: lineSpan,
           exprText: parsed.exprText,
-          value: parseImmExprFromText(path, parsed.exprText, lineSpan, _diagnostics),
+          value: parseImmExprFromText(linePath, parsed.exprText, lineSpan, _diagnostics),
         } as ClassicItemNode);
         pendingRawLabel = undefined;
         break;
@@ -205,7 +219,7 @@ export function parseClassicModule(
           kind: 'ClassicBinFrom',
           span: lineSpan,
           exprText: parsed.exprText,
-          value: parseImmExprFromText(path, parsed.exprText, lineSpan, _diagnostics),
+          value: parseImmExprFromText(linePath, parsed.exprText, lineSpan, _diagnostics),
         } as ClassicItemNode);
         pendingRawLabel = undefined;
         break;
@@ -214,12 +228,12 @@ export function parseClassicModule(
           kind: 'ClassicBinTo',
           span: lineSpan,
           exprText: parsed.exprText,
-          value: parseImmExprFromText(path, parsed.exprText, lineSpan, _diagnostics),
+          value: parseImmExprFromText(linePath, parsed.exprText, lineSpan, _diagnostics),
         } as ClassicItemNode);
         pendingRawLabel = undefined;
         break;
       case 'align': {
-        const value = parseImmExprFromText(path, parsed.exprText, lineSpan, _diagnostics);
+        const value = parseImmExprFromText(linePath, parsed.exprText, lineSpan, _diagnostics);
         if (value) {
           items.push({ kind: 'ClassicAlign', span: lineSpan, value } as unknown as ClassicItemNode);
         }
@@ -234,7 +248,7 @@ export function parseClassicModule(
           name,
           directive: parsed.directive,
           values: parseClassicRawValues(
-            path,
+            linePath,
             parsed.valuesText,
             lineSpan,
             _diagnostics,
@@ -272,8 +286,9 @@ export function parseClassicModuleFile(
   path: string,
   sourceText: string,
   diagnostics: Diagnostic[],
+  sourceFile?: SourceFile,
 ): ModuleFileNode {
-  const parsed = parseClassicModule(path, sourceText, diagnostics);
+  const parsed = parseClassicModule(path, sourceText, diagnostics, sourceFile);
   return {
     kind: 'ModuleFile',
     span: parsed.span,
