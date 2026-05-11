@@ -150,6 +150,12 @@ function canonicalDirectiveForRejectedAlias(head: string): string | undefined {
   }
 }
 
+function headColumn(raw: string, head: string, label?: string): number {
+  const searchStart = label ? raw.indexOf(':') + 1 : 0;
+  const index = raw.toLowerCase().indexOf(head.toLowerCase(), searchStart);
+  return index < 0 ? 1 : index + 1;
+}
+
 export function parseClassicModule(
   path: string,
   sourceText: string,
@@ -199,7 +205,7 @@ export function parseClassicModule(
             _diagnostics,
             linePath,
             `${parsed.head.toUpperCase()} is not part of the supported ASM80 baseline; use ${canonicalDirective}.`,
-            { line: index + 1, column: raw.indexOf(parsed.head) + 1 },
+            { line: lineSpan.start.line, column: headColumn(raw, parsed.head, parsed.label) },
           );
           pendingRawLabel = undefined;
           break;
@@ -214,6 +220,18 @@ export function parseClassicModule(
         pendingRawLabel = undefined;
         break;
       }
+      case 'unsupportedDirective':
+        if (parsed.label) {
+          items.push({ kind: 'AsmLabel', span: lineSpan, name: parsed.label });
+        }
+        parseDiag(
+          _diagnostics,
+          linePath,
+          `Unsupported ASM80 directive ".${parsed.directive}". The supported baseline intentionally excludes macros and non-corpus directives.`,
+          { line: lineSpan.start.line, column: headColumn(raw, parsed.directive, parsed.label) },
+        );
+        pendingRawLabel = undefined;
+        break;
       case 'equ':
         items.push({
           kind: 'ClassicEqu',

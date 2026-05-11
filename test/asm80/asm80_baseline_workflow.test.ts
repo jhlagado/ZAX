@@ -14,6 +14,17 @@ describe('ASM80 baseline acceptance workflow', () => {
     expect(pkg.scripts?.['test:asm80:baseline']).toBe('node scripts/dev/run-asm80-baseline.mjs');
   });
 
+  it('keeps the Tetro acceptance check opt-in and separate from the standing baseline', () => {
+    const pkg = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')) as {
+      scripts?: Record<string, string>;
+    };
+
+    expect(pkg.scripts?.['test:asm80:tetro']).toBe(
+      'ZAX_RUN_TETRO_ACCEPTANCE=1 vitest run test/asm80/tetro_acceptance.test.ts',
+    );
+    expect(pkg.scripts?.['test:asm80:baseline']).not.toContain('tetro');
+  });
+
   it('documents the opt-in baseline command with both external corpora', () => {
     const doc = readFileSync(
       join(repoRoot, 'docs', 'reference', 'testing-verification-guide.md'),
@@ -34,6 +45,16 @@ describe('ASM80 baseline acceptance workflow', () => {
     expect(doc).toContain('MON3_SOURCE');
     expect(doc).toContain('TEC1G_SOFTWARE_ROOT');
     expect(doc).toContain('ASM80');
+  });
+
+  it('documents the opt-in Tetro acceptance command and source override', () => {
+    const doc = readFileSync(
+      join(repoRoot, 'docs', 'reference', 'testing-verification-guide.md'),
+      'utf8',
+    );
+
+    expect(doc).toContain('npm run test:asm80:tetro');
+    expect(doc).toContain('TETRO_SOURCE');
   });
 
   it('wires the baseline wrapper to the documented override variables', () => {
