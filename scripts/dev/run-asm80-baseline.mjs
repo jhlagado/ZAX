@@ -3,7 +3,10 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const mon3Source = '/Users/johnhardy/Documents/projects/MON3/src/mon3.z80';
+const mon3Source =
+  process.env.MON3_SOURCE ?? '/Users/johnhardy/Documents/projects/MON3/src/mon3.z80';
+const tec1gSoftwareRoot =
+  process.env.TEC1G_SOFTWARE_ROOT ?? '/Users/johnhardy/Documents/projects/TEC-1G/Software';
 
 function normalizeExecutableCandidate(candidate) {
   return candidate.includes('/') || candidate.includes('\\') ? resolve(candidate) : candidate;
@@ -44,7 +47,7 @@ const commands = [
   {
     label: 'TEC-1G ASM80 corpus comparison',
     command: 'node',
-    args: ['scripts/dev/compare-tec1g-corpus.mjs'],
+    args: ['scripts/dev/compare-tec1g-corpus.mjs', tec1gSoftwareRoot],
     env: {},
   },
 ];
@@ -66,6 +69,13 @@ function runStep(step) {
 
 if (!existsSync(mon3Source)) {
   console.error(`MON3 source not found: ${mon3Source}`);
+  console.error('Set MON3_SOURCE to override the local MON3 entry path.');
+  process.exit(1);
+}
+
+if (!existsSync(tec1gSoftwareRoot)) {
+  console.error(`TEC-1G software root not found: ${tec1gSoftwareRoot}`);
+  console.error('Set TEC1G_SOFTWARE_ROOT to override the local TEC-1G software path.');
   process.exit(1);
 }
 

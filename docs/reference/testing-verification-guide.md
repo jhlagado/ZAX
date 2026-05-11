@@ -49,6 +49,16 @@ against a fresh ASM80-built reference, and runs the TEC-1G non-macro corpus
 comparison. It depends on sibling local projects/tools, so normal CI does not
 run it by default.
 
+The default local paths match the maintainer workspace. Override them when your
+checkout layout differs:
+
+```sh
+MON3_SOURCE=/path/to/MON3/src/mon3.z80 \
+TEC1G_SOFTWARE_ROOT=/path/to/TEC-1G/Software \
+ASM80=/path/to/asm80 \
+npm run test:asm80:baseline
+```
+
 For docs-only changes, check changed docs paths with Prettier:
 
 ```sh
