@@ -12,8 +12,10 @@ describe('classic ASM80 logical line parser', () => {
       '        .org BASE_ADDR+08H',
       '        .db "Enter ",0',
       '        .dw DATA_FROM',
+      '        ds 2,0',
       '        .binfrom 0C000H',
-      '        .end',
+      '        .binto 0C010H',
+      '        END',
     ].map((text, index) => parseClassicLine('/classic.z80', text, index + 1, 0));
 
     expect(lines).toEqual([
@@ -24,8 +26,25 @@ describe('classic ASM80 logical line parser', () => {
       { kind: 'org', exprText: 'BASE_ADDR+08H' },
       { kind: 'rawData', directive: 'db', valuesText: '"Enter ",0' },
       { kind: 'rawData', directive: 'dw', valuesText: 'DATA_FROM' },
+      { kind: 'rawData', directive: 'ds', valuesText: '2,0' },
       { kind: 'binfrom', exprText: '0C000H' },
+      { kind: 'binto', exprText: '0C010H' },
       { kind: 'end' },
+    ]);
+  });
+
+  it('parses undotted ASM80 data and placement directives', () => {
+    const lines = ['ORG 4000H', 'DB "OK"', 'DW START', 'DS 3', 'BINFROM 4000H', 'BINTO 4004H'].map(
+      (text, index) => parseClassicLine('/classic.z80', text, index + 1, 0),
+    );
+
+    expect(lines).toEqual([
+      { kind: 'org', exprText: '4000H' },
+      { kind: 'rawData', directive: 'db', valuesText: '"OK"' },
+      { kind: 'rawData', directive: 'dw', valuesText: 'START' },
+      { kind: 'rawData', directive: 'ds', valuesText: '3' },
+      { kind: 'binfrom', exprText: '4000H' },
+      { kind: 'binto', exprText: '4004H' },
     ]);
   });
 

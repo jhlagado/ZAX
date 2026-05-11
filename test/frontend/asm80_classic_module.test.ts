@@ -85,11 +85,11 @@ describe('classic ASM80 module parser', () => {
     });
   });
 
-  it('keeps post-end binfrom while ignoring ordinary post-end source', () => {
+  it('keeps post-end binary range directives while ignoring ordinary post-end source', () => {
     const diagnostics: unknown[] = [];
     const module = parseClassicModule(
       '/classic.z80',
-      ['.org 0100H', '.db 1', '.end', 'after: nop', '.binfrom 0100H'].join('\n'),
+      ['.org 0100H', '.db 1', '.end', 'after: nop', '.binfrom 0100H', '.binto 0101H'].join('\n'),
       diagnostics as never[],
     );
 
@@ -99,6 +99,29 @@ describe('classic ASM80 module parser', () => {
       'ClassicRawData',
       'ClassicEnd',
       'ClassicBinFrom',
+      'ClassicBinTo',
+    ]);
+  });
+
+  it('parses classic ds size and optional fill values', () => {
+    const diagnostics: unknown[] = [];
+    const module = parseClassicModule('/classic.z80', ['buf: ds 2,0FFH', 'tail: .ds 1'].join('\n'), diagnostics as never[]);
+
+    expect(diagnostics).toEqual([]);
+    expect(module.items.filter((item) => (item as { kind: string }).kind === 'ClassicRawData')).toMatchObject([
+      {
+        kind: 'ClassicRawData',
+        name: 'buf',
+        directive: 'ds',
+        size: { kind: 'ImmLiteral', value: 2 },
+        fill: { kind: 'ImmLiteral', value: 0xff },
+      },
+      {
+        kind: 'ClassicRawData',
+        name: 'tail',
+        directive: 'ds',
+        size: { kind: 'ImmLiteral', value: 1 },
+      },
     ]);
   });
 

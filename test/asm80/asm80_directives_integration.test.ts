@@ -137,6 +137,73 @@ describe('asm80 directive lowering integration', () => {
     expect(bytes).toEqual([0x00, 0x00, 0x7e]);
   });
 
+  it('honors post-end binto as an inclusive binary upper bound', () => {
+    const { bytes, diagnostics } = emitBytes([
+      { kind: 'ClassicOrg', span: span(1), value: lit(0x4000, 1) },
+      {
+        kind: 'ClassicRawData',
+        span: span(2),
+        directive: 'db',
+        values: [lit(1, 2), lit(2, 2), lit(3, 2), lit(4, 2)],
+      },
+      { kind: 'ClassicEnd', span: span(3) },
+      { kind: 'ClassicBinFrom', span: span(4), value: lit(0x4001, 4) },
+      { kind: 'ClassicBinTo', span: span(5), value: lit(0x4002, 5) },
+    ]);
+
+    expect(diagnostics).toEqual([]);
+    expect(bytes).toEqual([2, 3]);
+  });
+
+  it('pads through binto when the upper bound extends past written bytes', () => {
+    const { bytes, diagnostics } = emitBytes([
+      { kind: 'ClassicOrg', span: span(1), value: lit(0x4000, 1) },
+      {
+        kind: 'ClassicRawData',
+        span: span(2),
+        directive: 'db',
+        values: [lit(1, 2)],
+      },
+      { kind: 'ClassicBinFrom', span: span(3), value: lit(0x4000, 3) },
+      { kind: 'ClassicBinTo', span: span(4), value: lit(0x4003, 4) },
+    ]);
+
+    expect(diagnostics).toEqual([]);
+    expect(bytes).toEqual([1, 0, 0, 0]);
+  });
+
+  it('compiles undotted directives, ds fill, 0x literals, and binto from classic source', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-tec1g-directives-'));
+    const entry = join(dir, 'tec1g-directives.z80');
+    writeFileSync(
+      entry,
+      ['ORG 4000H', 'API: EQU 0x10', 'DB API', 'DS 2,0FFH', 'DB 4', 'END', '.binfrom 4000H', '.binto 4002H'].join('\n'),
+      'utf8',
+    );
+
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    if (!bin) throw new Error('missing bin artifact');
+    expect([...bin.bytes]).toEqual([0x10, 0xff, 0xff]);
+  });
+
+  it('compiles classic source without org from address zero', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-no-org-'));
+    const entry = join(dir, 'no-org.z80');
+    writeFileSync(entry, ['xor a', 'jr $', '.binto 0003H'].join('\n'), 'utf8');
+
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    if (!bin) throw new Error('missing bin artifact');
+    expect([...bin.bytes]).toEqual([0xaf, 0x18, 0xfe, 0x00]);
+  });
+
   it('resolves ASM80 current-location expressions in relative branches and raw words', () => {
     const { bytes, diagnostics } = emitBytes([
       { kind: 'ClassicOrg', span: span(1), value: lit(0x0100, 1) },
@@ -234,6 +301,56 @@ describe('asm80 directive lowering integration', () => {
     expect(bin).toBeDefined();
     if (!bin) throw new Error('missing bin artifact');
     expect([...bin.bytes]).toEqual([0xdd, 0x7e, 0x00, 0xfd, 0x7e, 0x0c]);
+  });
+
+  it('compiles classic absolute 16-bit register stores', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-ld-mem-reg16-'));
+    const entry = join(dir, 'ld-mem-reg16.z80');
+    writeFileSync(
+      entry,
+      [
+        'org 0100H',
+        'PTR: equ 0900H',
+        'ld (PTR),hl',
+        'ld (PTR),bc',
+        'ld (PTR),de',
+        'ld (PTR),sp',
+        'ld (PTR),ix',
+        'ld (PTR),iy',
+        'binfrom 0100H',
+        'end',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    if (!bin) throw new Error('missing bin artifact');
+    expect([...bin.bytes]).toEqual([
+      0x22, 0x00, 0x09,
+      0xed, 0x43, 0x00, 0x09,
+      0xed, 0x53, 0x00, 0x09,
+      0xed, 0x73, 0x00, 0x09,
+      0xdd, 0x22, 0x00, 0x09,
+      0xfd, 0x22, 0x00, 0x09,
+    ]);
+  });
+
+  it('compiles classic SRA A', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-sra-a-'));
+    const entry = join(dir, 'sra-a.z80');
+    writeFileSync(entry, ['org 0100H', 'SRA A', 'binfrom 0100H', 'end'].join('\n'), 'utf8');
+
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    if (!bin) throw new Error('missing bin artifact');
+    expect([...bin.bytes]).toEqual([0xcb, 0x2f]);
   });
 
   it('emits parsed db string fragments and string-character expressions', () => {

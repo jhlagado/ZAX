@@ -63,6 +63,7 @@ export type ClassicItemNode =
   | ClassicEquNode
   | ClassicOrgNode
   | ClassicBinFromNode
+  | ClassicBinToNode
   | ClassicEndNode
   | AsmLabelNode
   | (AsmInstructionNode & { operandText?: string })
@@ -81,6 +82,11 @@ export interface ClassicOrgNode extends BaseNode {
 
 export interface ClassicBinFromNode extends BaseNode {
   kind: 'ClassicBinFrom';
+  exprText: string;
+}
+
+export interface ClassicBinToNode extends BaseNode {
+  kind: 'ClassicBinTo';
   exprText: string;
 }
 
@@ -310,6 +316,7 @@ export type RawDataDeclNode =
       name: string;
       directive: 'ds';
       size: ImmExprNode;
+      fill?: ImmExprNode;
     };
 
 /**

@@ -93,6 +93,9 @@ export function parseNumberLiteral(text: string): number | undefined {
   if (/^0b[01]+$/.test(t)) {
     return Number.parseInt(t.slice(2), 2);
   }
+  if (/^0x[0-9A-Fa-f]+$/i.test(t)) {
+    return Number.parseInt(t.slice(2), 16);
+  }
   if (/^[0-9]+$/.test(t)) {
     return Number.parseInt(t, 10);
   }
@@ -249,7 +252,7 @@ function tokenizeImm(text: string): ImmToken[] | undefined {
       continue;
     }
     const num =
-      /^(%[01]+|0b[01]+|[0-9][0-9A-Fa-f]*[Hh]|[01]+[Bb]|[0-9]+)/.exec(
+      /^([0-9][0-9A-Fa-f]*[Hh]|%[01]+|0b[01]+|0x[0-9A-Fa-f]+|[01]+[Bb]|[0-9]+)/i.exec(
         s.slice(i),
       );
     if (num) {

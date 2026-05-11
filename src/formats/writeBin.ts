@@ -2,6 +2,7 @@ import type { BinArtifact, EmittedByteMap, SymbolEntry, WriteBinOptions } from '
 import { getWrittenRange } from './range.js';
 
 const BINFROM_SYMBOL_NAME = '__zax_binfrom';
+const BINTO_SYMBOL_NAME = '__zax_binto';
 
 /**
  * Create a flat binary artifact from an emitted address->byte map.
@@ -20,9 +21,13 @@ export function writeBin(
   const symbolStart = symbols.find(
     (symbol) => symbol.kind === 'constant' && symbol.name === BINFROM_SYMBOL_NAME,
   );
+  const symbolEnd = symbols.find(
+    (symbol) => symbol.kind === 'constant' && symbol.name === BINTO_SYMBOL_NAME,
+  );
   const start =
     optionStart ?? (symbolStart?.kind === 'constant' ? symbolStart.value : writtenStart);
-  const out = new Uint8Array(Math.max(0, end - start));
+  const exclusiveEnd = symbolEnd?.kind === 'constant' ? symbolEnd.value + 1 : end;
+  const out = new Uint8Array(Math.max(0, exclusiveEnd - start));
   for (let i = 0; i < out.length; i++) {
     const addr = start + i;
     out[i] = map.bytes.get(addr) ?? 0;

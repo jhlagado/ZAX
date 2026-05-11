@@ -392,8 +392,8 @@ export async function runCli(argv: string[]): Promise<number> {
         rawTypedCallWarnings: parsed.rawTypedCallWarnings,
         includeDirs: parsed.includeDirs,
         sourceMode: parsed.sourceMode,
-        requireMain: true,
-        defaultCodeBase: 0x0100,
+        requireMain: parsed.sourceMode === 'zax',
+        defaultCodeBase: parsed.sourceMode === 'zax' ? 0x0100 : 0,
       },
       { formats: defaultFormatWriters },
     );

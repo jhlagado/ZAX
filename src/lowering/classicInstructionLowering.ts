@@ -97,6 +97,25 @@ function ldReg16MemOpcode(nameRaw: string): { prefix?: number; opcode: number } 
   }
 }
 
+function ldMemReg16Opcode(nameRaw: string): { prefix?: number; opcode: number } | undefined {
+  switch (nameRaw.toUpperCase()) {
+    case 'BC':
+      return { prefix: 0xed, opcode: 0x43 };
+    case 'DE':
+      return { prefix: 0xed, opcode: 0x53 };
+    case 'HL':
+      return { opcode: 0x22 };
+    case 'SP':
+      return { prefix: 0xed, opcode: 0x73 };
+    case 'IX':
+      return { prefix: 0xdd, opcode: 0x22 };
+    case 'IY':
+      return { prefix: 0xfd, opcode: 0x22 };
+    default:
+      return undefined;
+  }
+}
+
 function memSymbolicTarget(
   ctx: LoweringContext,
   op: AsmOperandNode | undefined,
@@ -447,6 +466,33 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
       const symbolic = memSymbolicTarget(ctx, first);
       if (symbolic) {
         ctx.emitAbs16Fixup(0x32, symbolic.baseLower, symbolic.addend, item.span);
+        return;
+      }
+    }
+    if (first?.kind === 'Mem' && second?.kind === 'Reg') {
+      const memOpcode = ldMemReg16Opcode(second.name);
+      const value = evalMemAddress(ctx, first);
+      if (memOpcode && value !== undefined) {
+        const bytes =
+          memOpcode.prefix !== undefined
+            ? Uint8Array.of(memOpcode.prefix, memOpcode.opcode, value & 0xff, (value >> 8) & 0xff)
+            : Uint8Array.of(memOpcode.opcode, value & 0xff, (value >> 8) & 0xff);
+        ctx.emitRawCodeBytes(bytes, item.span.file, `ld (nn),${second.name}`);
+        return;
+      }
+      const symbolic = memSymbolicTarget(ctx, first);
+      if (memOpcode && symbolic) {
+        if (memOpcode.prefix !== undefined) {
+          ctx.emitAbs16FixupPrefixed(
+            memOpcode.prefix,
+            memOpcode.opcode,
+            symbolic.baseLower,
+            symbolic.addend,
+            item.span,
+          );
+        } else {
+          ctx.emitAbs16Fixup(memOpcode.opcode, symbolic.baseLower, symbolic.addend, item.span);
+        }
         return;
       }
     }
