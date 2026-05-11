@@ -1,5 +1,6 @@
 import type { Diagnostic } from '../diagnosticTypes.js';
-import type { CompileEnv } from '../semantics/env.js';
+import type { ImmExprNode } from '../frontend/ast.js';
+import { evalImmExpr as evalImmExprWithEnv, type CompileEnv } from '../semantics/env.js';
 import type { LoweredAsmBlock, LoweredAsmProgram, LoweredAsmItem, LoweredImmExpr } from './loweredAsmTypes.js';
 import type { SectionKind } from './loweringTypes.js';
 
@@ -22,6 +23,82 @@ const toByte = (value: number): number => value & 0xff;
 const toWord = (value: number): number => value & 0xffff;
 
 function evalLoweredImmExpr(expr: LoweredImmExpr, env: CompileEnv): number | undefined {
+  const evalClassicAliasExpr = (
+    classicExpr: ImmExprNode,
+    visiting: Set<string>,
+    currentLocation?: number,
+  ): number | undefined => {
+    const value =
+      currentLocation === undefined
+        ? evalImmExprWithEnv(classicExpr, env)
+        : evalImmExprWithEnv(classicExpr, env, undefined, { currentLocation });
+    if (value !== undefined) return value;
+
+    switch (classicExpr.kind) {
+      case 'ImmCurrentLocation':
+        return currentLocation;
+      case 'ImmName':
+        return evalClassicAliasSymbol(classicExpr.name, visiting);
+      case 'ImmUnary': {
+        const v = evalClassicAliasExpr(classicExpr.expr, visiting, currentLocation);
+        if (v === undefined) return undefined;
+        switch (classicExpr.op) {
+          case '+':
+            return +v;
+          case '-':
+            return -v;
+          case '~':
+            return ~v;
+        }
+        return undefined;
+      }
+      case 'ImmBinary': {
+        const left = evalClassicAliasExpr(classicExpr.left, visiting, currentLocation);
+        const right = evalClassicAliasExpr(classicExpr.right, visiting, currentLocation);
+        if (left === undefined || right === undefined) return undefined;
+        switch (classicExpr.op) {
+          case '*':
+            return left * right;
+          case '/':
+            return right === 0 ? undefined : Math.trunc(left / right);
+          case '%':
+            return right === 0 ? undefined : left % right;
+          case '+':
+            return left + right;
+          case '-':
+            return left - right;
+          case '&':
+            return left & right;
+          case '^':
+            return left ^ right;
+          case '|':
+            return left | right;
+          case '<<':
+            return left << right;
+          case '>>':
+            return left >> right;
+        }
+        return undefined;
+      }
+      default:
+        return undefined;
+    }
+  };
+
+  const evalClassicAliasSymbol = (name: string, visiting = new Set<string>()): number | undefined => {
+    const direct = env.consts.get(name) ?? env.enums.get(name);
+    if (direct !== undefined) return direct;
+    const lower = name.toLowerCase();
+    const alt = env.consts.get(lower) ?? env.enums.get(lower);
+    if (alt !== undefined) return alt;
+    const equ = env.classicEquExprs?.get(name) ?? env.classicEquExprs?.get(lower);
+    if (!equ || visiting.has(lower)) return undefined;
+    visiting.add(lower);
+    const value = evalClassicAliasExpr(equ.expr, visiting, equ.currentLocation);
+    if (value !== undefined) env.consts.set(lower, value);
+    return value;
+  };
+
   switch (expr.kind) {
     case 'literal':
       return expr.value;
@@ -31,6 +108,8 @@ function evalLoweredImmExpr(expr: LoweredImmExpr, env: CompileEnv): number | und
       const lower = expr.name.toLowerCase();
       const alt = env.consts.get(lower) ?? env.enums.get(lower);
       if (alt !== undefined) return alt + expr.addend;
+      const classicAlias = evalClassicAliasSymbol(expr.name);
+      if (classicAlias !== undefined) return classicAlias + expr.addend;
       return undefined;
     }
     case 'unary': {

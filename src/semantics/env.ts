@@ -67,6 +67,7 @@ export interface CompileEnv {
   visibleConsts?: Map<string, number>;
   visibleEnums?: Map<string, number>;
   visibleTypes?: Map<string, TypeDeclNode | UnionDeclNode>;
+  classicEquExprs?: Map<string, { expr: ImmExprNode; currentLocation?: number }>;
 }
 
 const diag = diagSemanticsError;
@@ -330,15 +331,17 @@ function classicInstructionSize(item: AsmInstructionNode): number {
   if (['sub', 'and', 'or', 'xor', 'cp'].includes(head)) return indexed ? 3 : ops[0]?.kind === 'Imm' ? 2 : 1;
   if (head === 'ld') {
     if (indexed) return ops[0]?.kind === 'Imm' || ops[1]?.kind === 'Imm' ? 4 : 3;
-    if (ixiyReg(r0) || ixiyReg(r1)) return ops[1]?.kind === 'Imm' ? 4 : 2;
     if (ops[0]?.kind === 'Mem' || ops[1]?.kind === 'Mem') {
+      const memOp = ops[0]?.kind === 'Mem' ? ops[0] : ops[1];
       const memReg = ops[0]?.kind === 'Mem' ? r1 : r0;
-      return memReg === 'A' && (regFromMem(ops[0]) === 'BC' || regFromMem(ops[0]) === 'DE' || regFromMem(ops[1]) === 'BC' || regFromMem(ops[1]) === 'DE')
-        ? 1
-        : memReg === 'HL'
-          ? 3
-          : 3;
+      const indirectReg = regFromMem(memOp);
+      if (indirectReg) {
+        if (memReg === 'A' && (indirectReg === 'BC' || indirectReg === 'DE')) return 1;
+        if (indirectReg === 'HL') return 1;
+      }
+      return memReg && ['BC', 'DE', 'SP', 'IX', 'IY'].includes(memReg) ? 4 : 3;
     }
+    if (ixiyReg(r0) || ixiyReg(r1)) return ops[1]?.kind === 'Imm' ? 4 : 2;
     if (ops[1]?.kind === 'Imm') return r0 && ['BC', 'DE', 'HL', 'SP'].includes(r0) ? 3 : 2;
     return 1;
   }
@@ -407,6 +410,8 @@ function seedClassicCurrentLocationEquates(program: ProgramNode, env: CompileEnv
           const equ = item as ClassicEquDecl;
           const expr = equ.value ?? equ.expr;
           if (expr) {
+            env.classicEquExprs?.set(equ.name, { expr, currentLocation: current });
+            env.classicEquExprs?.set(equ.name.toLowerCase(), { expr, currentLocation: current });
             const value = containsCurrentLocation(expr)
               ? evalImmExpr(expr, scratchEnv, undefined, { currentLocation: current })
               : evalImmExpr(expr, scratchEnv);
@@ -475,6 +480,7 @@ export function buildEnv(
   options?: BuildEnvOptions,
 ): CompileEnv {
   const consts = new Map<string, number>();
+  const classicEquExprs = new Map<string, { expr: ImmExprNode; currentLocation?: number }>();
   const enums = new Map<string, number>();
   const types = new Map<string, TypeDeclNode | UnionDeclNode>();
   const moduleIds = new Map<string, string>();
@@ -616,6 +622,7 @@ export function buildEnv(
     visibleConsts,
     visibleEnums,
     visibleTypes,
+    classicEquExprs,
   };
 
   seedClassicCurrentLocationEquates(program, env);
@@ -631,8 +638,20 @@ export function buildEnv(
       if (!claim('const', item.name, item.span.file)) continue;
       if (isClassicCaseInsensitiveConst(item) && consts.has(item.name.toLowerCase())) continue;
 
-      const v = evalImmExpr(constValueExpr(item), env, diagnostics);
+      const expr = constValueExpr(item);
+      if (isClassicCaseInsensitiveConst(item)) {
+        if (!classicEquExprs.has(item.name)) classicEquExprs.set(item.name, { expr });
+        if (!classicEquExprs.has(item.name.toLowerCase())) {
+          classicEquExprs.set(item.name.toLowerCase(), { expr });
+        }
+      }
+      const beforeDiagnostics = diagnostics.length;
+      const v = evalImmExpr(expr, env, diagnostics);
       if (v === undefined) {
+        if (isClassicCaseInsensitiveConst(item)) {
+          diagnostics.splice(beforeDiagnostics);
+          continue;
+        }
         diag(diagnostics, item.span.file, `Failed to evaluate const "${item.name}".`);
         continue;
       }

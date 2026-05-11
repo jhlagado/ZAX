@@ -96,6 +96,19 @@ export function createProgramLoweringDeclarationHelpers(ctx: Context): {
     return undefined;
   };
 
+  const publishClassicAddressConst = (
+    name: string,
+    activeSection: SectionKind,
+    offset: number,
+  ): void => {
+    const baseExpr = activeSection === 'code' ? ctx.baseExprs.code : ctx.baseExprs.data;
+    const base = baseExpr ? ctx.evalImmExpr(baseExpr, ctx.env, ctx.diagnostics) : 0;
+    if (base === undefined) return;
+    const address = base + offset;
+    ctx.env.consts.set(name, address);
+    ctx.env.consts.set(name.toLowerCase(), address);
+  };
+
   const lowerBinDecl = (binDecl: BinDeclNode, namedSection?: NamedSectionTarget): void => {
     const withTempSection = (section: SectionKind, fn: () => void): void => {
       const prev = ctx.activeSectionRef.current;
@@ -334,6 +347,7 @@ export function createProgramLoweringDeclarationHelpers(ctx: Context): {
         const offset =
           namedSection?.sink.offset ??
           (activeSection === 'code' ? ctx.codeOffsetRef.current : ctx.dataOffsetRef.current);
+        publishClassicAddressConst(name, activeSection, offset);
         const pending = {
           kind: 'label' as const,
           name,
@@ -395,17 +409,27 @@ export function createProgramLoweringDeclarationHelpers(ctx: Context): {
         );
         return;
       }
+      const fill = decl.fill ? ctx.evalImmExpr(decl.fill, ctx.env, ctx.diagnostics) : undefined;
+      if (decl.fill && fill === undefined) {
+        ctx.diag(ctx.diagnostics, decl.span.file, `Failed to evaluate raw data fill for "${name}".`);
+        return;
+      }
       ctx.recordLoweredAsmItem(
         {
           kind: 'ds',
           size: ctx.lowerImmExprForLoweredAsm(decl.size),
-          fill: decl.fill ? ctx.lowerImmExprForLoweredAsm(decl.fill) : { kind: 'literal', value: 0 },
+          ...(decl.fill ? { fill: ctx.lowerImmExprForLoweredAsm(decl.fill) } : {}),
         },
         decl.span,
       );
-      const fill = decl.fill ? ctx.evalImmExpr(decl.fill, ctx.env, ctx.diagnostics) : 0;
       if (fill === undefined) {
-        ctx.diag(ctx.diagnostics, decl.span.file, `Failed to evaluate raw data fill for "${name}".`);
+        if (namedSection) {
+          namedSection.sink.offset += size;
+        } else if (activeSection === 'code') {
+          ctx.codeOffsetRef.current += size;
+        } else {
+          ctx.dataOffsetRef.current += size;
+        }
         return;
       }
       for (let i = 0; i < size; i++) writeByte(fill);

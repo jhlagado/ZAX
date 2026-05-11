@@ -287,9 +287,7 @@ export function parseClassicModule(
           rawDataWithSize.size = values?.[0];
           if (values?.[1]) rawDataWithSize.fill = values[1];
         }
-        if (parsed.label) {
-          items.push({ kind: 'AsmLabel', span: lineSpan, name: parsed.label });
-        } else if (pendingRawLabel) {
+        if (!parsed.label && pendingRawLabel) {
           items.pop();
         }
         items.push(rawData);

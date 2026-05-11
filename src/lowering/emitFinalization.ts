@@ -216,6 +216,7 @@ export function finalizeEmitProgram(context: EmitFinalizationContext): {
     context.diagnostics,
     context.bytes,
     context.symbols,
+    context.env,
   );
 
   syncLoweredAsmInstructionBytesFromFinalBytes(placedProgram, context.bytes, context.env);

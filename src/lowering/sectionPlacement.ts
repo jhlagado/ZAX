@@ -1,11 +1,12 @@
 import type { Diagnostic } from '../diagnosticTypes.js';
 import type { SymbolEntry } from '../formats/types.js';
-import type { CompileEnv } from '../semantics/env.js';
+import { evalImmExpr, type CompileEnv } from '../semantics/env.js';
 import type { ImmExprNode, SourceSpan } from '../frontend/ast.js';
 import { diagAt } from './loweringDiagnostics.js';
 import type { NamedSectionContributionSink } from './sectionContributions.js';
 import type { NonBankedSectionKeyId } from '../sectionKeys.js';
 import { formatNonBankedSectionKey } from '../sectionKeys.js';
+import { parseNumberLiteral } from '../frontend/parseImm.js';
 
 export type PlacedNamedSectionContribution = {
   /** Sink carrying bytes/fixups for one contribution. */
@@ -281,18 +282,105 @@ export function resolvePlacedNamedSectionFixups(
   diagnostics: Diagnostic[],
   bytes: Map<number, number>,
   symbols: SymbolEntry[],
+  env: CompileEnv,
 ): void {
   const addrByNameLower = new Map<string, number>();
+  for (const [name, value] of env.consts) {
+    addrByNameLower.set(name.toLowerCase(), value);
+  }
   for (const sym of symbols) {
     if (sym.kind === 'constant' || sym.address === undefined) continue;
     addrByNameLower.set(sym.name.toLowerCase(), sym.address);
   }
+  const evalClassicAliasExpr = (
+    expr: ImmExprNode,
+    visiting: Set<string>,
+    currentLocation?: number,
+  ): number | undefined => {
+    const aliasEnv = { ...env, consts: new Map(env.consts) };
+    for (const [name, value] of addrByNameLower) aliasEnv.consts.set(name, value);
+    const value =
+      currentLocation === undefined
+        ? evalImmExpr(expr, aliasEnv)
+        : evalImmExpr(expr, aliasEnv, undefined, { currentLocation });
+    if (value !== undefined) return value;
+
+    switch (expr.kind) {
+      case 'ImmCurrentLocation':
+        return currentLocation;
+      case 'ImmName':
+        return resolveFixupBase(expr.name.toLowerCase(), visiting);
+      case 'ImmUnary': {
+        const v = evalClassicAliasExpr(expr.expr, visiting, currentLocation);
+        if (v === undefined) return undefined;
+        switch (expr.op) {
+          case '+':
+            return +v;
+          case '-':
+            return -v;
+          case '~':
+            return ~v;
+        }
+        return undefined;
+      }
+      case 'ImmBinary': {
+        const l = evalClassicAliasExpr(expr.left, visiting, currentLocation);
+        const r = evalClassicAliasExpr(expr.right, visiting, currentLocation);
+        if (l === undefined || r === undefined) return undefined;
+        switch (expr.op) {
+          case '*':
+            return l * r;
+          case '/':
+            return r === 0 ? undefined : (l / r) | 0;
+          case '%':
+            return r === 0 ? undefined : l % r;
+          case '+':
+            return l + r;
+          case '-':
+            return l - r;
+          case '&':
+            return l & r;
+          case '^':
+            return l ^ r;
+          case '|':
+            return l | r;
+          case '<<':
+            return l << r;
+          case '>>':
+            return l >> r;
+        }
+        return undefined;
+      }
+      default:
+        return undefined;
+    }
+  };
+
+  const resolveFixupBase = (nameLower: string, visiting = new Set<string>()): number | undefined => {
+    const sym = addrByNameLower.get(nameLower);
+    if (sym !== undefined) return sym;
+    const literal = parseNumberLiteral(nameLower);
+    if (literal !== undefined) return literal;
+    if (/^-?[0-9]+$/.test(nameLower)) return Number.parseInt(nameLower, 10);
+    const equ = env.classicEquExprs?.get(nameLower);
+    if (equ) {
+      if (visiting.has(nameLower)) return undefined;
+      visiting.add(nameLower);
+      const value = evalClassicAliasExpr(equ.expr, visiting, equ.currentLocation);
+      if (value !== undefined) {
+        addrByNameLower.set(nameLower, value);
+        env.consts.set(nameLower, value);
+        return value;
+      }
+    }
+    return undefined;
+  };
 
   for (const placed of placedContributions) {
     const sink = placed.sink;
 
     for (const fx of sink.fixups) {
-      const base = addrByNameLower.get(fx.baseLower);
+      const base = resolveFixupBase(fx.baseLower);
       const addr = base === undefined ? undefined : base + fx.addend;
       if (addr === undefined) {
         const where = startOf(sink);
@@ -318,7 +406,7 @@ export function resolvePlacedNamedSectionFixups(
     }
 
     for (const fx of sink.rel8Fixups) {
-      const base = addrByNameLower.get(fx.baseLower);
+      const base = resolveFixupBase(fx.baseLower);
       const target = base === undefined ? undefined : base + fx.addend;
       if (target === undefined) {
         const where = startOf(sink);
