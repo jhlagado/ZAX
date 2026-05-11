@@ -37,6 +37,18 @@ Run full suite when your slice touches broad behavior:
 npm test
 ```
 
+Run the opt-in external ASM80 replacement baseline when touching classic ASM80
+parsing, lowering, CLI binary output, or ASM80 compatibility docs:
+
+```sh
+npm run test:asm80:baseline
+```
+
+This builds the local ZAX CLI, runs the MON3 byte-for-byte acceptance test
+against a fresh ASM80-built reference, and runs the TEC-1G non-macro corpus
+comparison. It depends on sibling local projects/tools, so normal CI does not
+run it by default.
+
 For docs-only changes, check changed docs paths with Prettier:
 
 ```sh
