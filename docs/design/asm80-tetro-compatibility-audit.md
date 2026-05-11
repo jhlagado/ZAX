@@ -53,7 +53,7 @@ operands and data directives.
 Tetro should stay opt-in for now:
 
 ```sh
-ZAX_RUN_TETRO_ACCEPTANCE=1 npx vitest run test/asm80/tetro_acceptance.test.ts
+npm run test:asm80:tetro
 ```
 
 Promotion into `npm run test:asm80:baseline` should be a deliberate decision,

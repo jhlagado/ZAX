@@ -126,22 +126,51 @@ describe('classic ASM80 module parser', () => {
   });
 
   it('rejects non-baseline dialect aliases with canonical directive guidance', () => {
-    const diagnostics: { message: string }[] = [];
+    const diagnostics: { message: string; line?: number; column?: number }[] = [];
     const module = parseClassicModule(
       '/classic.z80',
-      ['bytes: DEFB 1,2', 'words: defw 1234H', 'buf: RMB 8'].join('\n'),
+      ['DEFB_LABEL: DEFB 1,2', 'DEFW_LABEL: defw 1234H', 'RMB_LABEL: RMB 8'].join('\n'),
       diagnostics as never[],
     );
 
     expect(module.items).toMatchObject([
-      { kind: 'AsmLabel', name: 'bytes' },
-      { kind: 'AsmLabel', name: 'words' },
-      { kind: 'AsmLabel', name: 'buf' },
+      { kind: 'AsmLabel', name: 'DEFB_LABEL' },
+      { kind: 'AsmLabel', name: 'DEFW_LABEL' },
+      { kind: 'AsmLabel', name: 'RMB_LABEL' },
     ]);
     expect(diagnostics.map((diagnostic) => diagnostic.message)).toEqual([
       'DEFB is not part of the supported ASM80 baseline; use DB.',
       'DEFW is not part of the supported ASM80 baseline; use DW.',
       'RMB is not part of the supported ASM80 baseline; use DS.',
+    ]);
+    expect(diagnostics.map((diagnostic) => [diagnostic.line, diagnostic.column])).toEqual([
+      [1, 13],
+      [2, 13],
+      [3, 12],
+    ]);
+  });
+
+  it('rejects unsupported ASM80 directives before they reach instruction encoding', () => {
+    const diagnostics: { message: string; line?: number; column?: number }[] = [];
+    const module = parseClassicModule(
+      '/classic.z80',
+      ['.macro FOO', 'incbin_label: .incbin "data.bin"', 'pragma_label: .pragma anything'].join('\n'),
+      diagnostics as never[],
+    );
+
+    expect(module.items).toMatchObject([
+      { kind: 'AsmLabel', name: 'incbin_label' },
+      { kind: 'AsmLabel', name: 'pragma_label' },
+    ]);
+    expect(diagnostics.map((diagnostic) => diagnostic.message)).toEqual([
+      'Unsupported ASM80 directive ".macro". The supported baseline intentionally excludes macros and non-corpus directives.',
+      'Unsupported ASM80 directive ".incbin". The supported baseline intentionally excludes macros and non-corpus directives.',
+      'Unsupported ASM80 directive ".pragma". The supported baseline intentionally excludes macros and non-corpus directives.',
+    ]);
+    expect(diagnostics.map((diagnostic) => [diagnostic.line, diagnostic.column])).toEqual([
+      [1, 2],
+      [2, 16],
+      [3, 16],
     ]);
   });
 

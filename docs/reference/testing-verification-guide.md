@@ -59,6 +59,23 @@ ASM80=/path/to/asm80 \
 npm run test:asm80:baseline
 ```
 
+Run the opt-in Tetro application check when touching loadable binary range
+semantics, `DS` behavior, or classic `EQU` resolution:
+
+```sh
+npm run test:asm80:tetro
+```
+
+This builds a fresh ASM80 reference from the local Tetro source tree and trims
+the ASM80 64K output to the populated listing range before comparing it with
+ZAX output. Override the default source path and ASM80 executable when needed:
+
+```sh
+TETRO_SOURCE=/path/to/tetro.asm \
+ASM80=/path/to/asm80 \
+npm run test:asm80:tetro
+```
+
 For docs-only changes, check changed docs paths with Prettier:
 
 ```sh

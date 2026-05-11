@@ -16,6 +16,7 @@ describe('classic ASM80 logical line parser', () => {
       '        .binfrom 0C000H',
       '        .binto 0C010H',
       '        END',
+      '        set 4,(hl)',
     ].map((text, index) => parseClassicLine('/classic.z80', text, index + 1, 0));
 
     expect(lines).toEqual([
@@ -30,6 +31,7 @@ describe('classic ASM80 logical line parser', () => {
       { kind: 'binfrom', exprText: '0C000H' },
       { kind: 'binto', exprText: '0C010H' },
       { kind: 'end' },
+      { kind: 'instruction', head: 'set', operandText: '4,(hl)' },
     ]);
   });
 

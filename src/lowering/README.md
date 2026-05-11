@@ -41,8 +41,12 @@ Lowering turns the typed AST + semantic environment into:
 ### Program-level lowering
 
 - `programLowering.ts`
-- `programLoweringDeclarations.ts` (bin/hex/raw decls)
+- `programLoweringTraversal.ts` (module item dispatch, including classic ASM80 directive dispatch)
+- `programLoweringDeclarations.ts` (bin/raw decls, including classic ASM80 raw data)
 - `programLoweringData.ts` (data blocks / initializers)
+- `classicInstructionLowering.ts` (ASM80 instruction compatibility overlay)
+- `classicEquResolution.ts` (classic ASM80 `EQU` alias resolution)
+- `classicTraversalHelpers.ts` (classic ASM80 traversal/address helpers)
 - `emitVisibility.ts` (callable/op visibility)
 
 ### Function-level lowering

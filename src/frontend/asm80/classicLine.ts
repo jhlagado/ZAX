@@ -6,6 +6,7 @@ export type ClassicLine =
   | { kind: 'binfrom'; exprText: string }
   | { kind: 'binto'; exprText: string }
   | { kind: 'end' }
+  | { kind: 'unsupportedDirective'; label?: string; directive: string }
   | {
       kind: 'rawData';
       label?: string;
@@ -86,6 +87,18 @@ function parseStatement(text: string, label?: string): ClassicLine | undefined {
       name === 'istr'
     ) {
       return { kind: 'rawData', ...(label ? { label } : {}), directive: name, valuesText: payload };
+    }
+    if (text.trimStart().startsWith('.')) {
+      return { kind: 'unsupportedDirective', ...(label ? { label } : {}), directive: name };
+    }
+    if (
+      name === 'macro' ||
+      name === 'rept' ||
+      name === 'endm' ||
+      name === 'block' ||
+      name === 'endblock'
+    ) {
+      return { kind: 'unsupportedDirective', ...(label ? { label } : {}), directive: name };
     }
   }
 
