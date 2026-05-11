@@ -250,7 +250,12 @@ function parseExpandedModuleFile(
   diagnostics: Diagnostic[],
   sourceMode: SourceMode,
 ): ModuleFileNode | undefined {
-  if (sourceMode === 'asm80') return parseClassicModuleFile(modulePath, expanded.text, diagnostics);
+  if (sourceMode === 'asm80') {
+    const sourceFile = makeSourceFile(modulePath, expanded.text);
+    sourceFile.lineFiles = expanded.lineFiles;
+    sourceFile.lineBaseLines = expanded.lineBaseLines;
+    return parseClassicModuleFile(modulePath, expanded.text, diagnostics, sourceFile);
+  }
 
   try {
     const sourceFile = makeSourceFile(modulePath, expanded.text);
@@ -490,7 +495,10 @@ export async function loadProgram(
     sourceLineComments,
     moduleTraversal: collectModuleTraversal(entryPath, edges),
     resolvedImportGraph: new Map(
-      Array.from(edges.entries(), ([modulePath, moduleEdges]) => [modulePath, Array.from(moduleEdges.keys())]),
+      Array.from(edges.entries(), ([modulePath, moduleEdges]) => [
+        modulePath,
+        Array.from(moduleEdges.keys()),
+      ]),
     ),
   };
 }

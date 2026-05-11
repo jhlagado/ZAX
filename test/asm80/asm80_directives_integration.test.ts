@@ -36,7 +36,12 @@ function current(line = 1): ImmExprNode {
   return { kind: 'ImmCurrentLocation', span: span(line) };
 }
 
-function binary(op: Extract<ImmExprNode, { kind: 'ImmBinary' }>['op'], left: ImmExprNode, right: ImmExprNode, line = 1): ImmExprNode {
+function binary(
+  op: Extract<ImmExprNode, { kind: 'ImmBinary' }>['op'],
+  left: ImmExprNode,
+  right: ImmExprNode,
+  line = 1,
+): ImmExprNode {
   return { kind: 'ImmBinary', span: span(line), op, left, right };
 }
 
@@ -70,7 +75,11 @@ describe('asm80 directive lowering integration', () => {
   it('compiles EX AF,AF prime with a trailing comment', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-af-prime-'));
     const entry = join(dir, 'af-prime.z80');
-    writeFileSync(entry, [".org 0100H", "ex af,af'           ;start saving registers"].join('\n'), 'utf8');
+    writeFileSync(
+      entry,
+      ['.org 0100H', "ex af,af'           ;start saving registers"].join('\n'),
+      'utf8',
+    );
 
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
@@ -177,7 +186,16 @@ describe('asm80 directive lowering integration', () => {
     const entry = join(dir, 'tec1g-directives.z80');
     writeFileSync(
       entry,
-      ['ORG 4000H', 'API: EQU 0x10', 'DB API', 'DS 2,0FFH', 'DB 4', 'END', '.binfrom 4000H', '.binto 4002H'].join('\n'),
+      [
+        'ORG 4000H',
+        'API: EQU 0x10',
+        'DB API',
+        'DS 2,0FFH',
+        'DB 4',
+        'END',
+        '.binfrom 4000H',
+        '.binto 4002H',
+      ].join('\n'),
       'utf8',
     );
 
@@ -330,12 +348,8 @@ describe('asm80 directive lowering integration', () => {
     expect(bin).toBeDefined();
     if (!bin) throw new Error('missing bin artifact');
     expect([...bin.bytes]).toEqual([
-      0x22, 0x00, 0x09,
-      0xed, 0x43, 0x00, 0x09,
-      0xed, 0x53, 0x00, 0x09,
-      0xed, 0x73, 0x00, 0x09,
-      0xdd, 0x22, 0x00, 0x09,
-      0xfd, 0x22, 0x00, 0x09,
+      0x22, 0x00, 0x09, 0xed, 0x43, 0x00, 0x09, 0xed, 0x53, 0x00, 0x09, 0xed, 0x73, 0x00, 0x09,
+      0xdd, 0x22, 0x00, 0x09, 0xfd, 0x22, 0x00, 0x09,
     ]);
   });
 
@@ -351,6 +365,29 @@ describe('asm80 directive lowering integration', () => {
     expect(bin).toBeDefined();
     if (!bin) throw new Error('missing bin artifact');
     expect([...bin.bytes]).toEqual([0xcb, 0x2f]);
+  });
+
+  it('reports diagnostics from classic ASM80 includes at the included file', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-include-diag-'));
+    const entry = join(dir, 'entry.z80');
+    const child = join(dir, 'child.z80');
+    writeFileSync(
+      entry,
+      ['.org 0100H', '.include "child.z80"', '.binfrom 0100H'].join('\n'),
+      'utf8',
+    );
+    writeFileSync(child, ['.db 1', '.db BAD+'].join('\n'), 'utf8');
+
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          file: child,
+          line: 2,
+        }),
+      ]),
+    );
   });
 
   it('emits parsed db string fragments and string-character expressions', () => {
