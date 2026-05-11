@@ -1,19 +1,21 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { basename, dirname, join, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const repoRoot = resolve(dirname(__filename), '..', '..');
 const defaultSource = '/Users/johnhardy/Documents/projects/MON3/src/mon3.z80';
-const defaultReference = '/Users/johnhardy/Documents/projects/MON3/MON3-1G_BC25-16.bin';
 
 function usage() {
   return [
     'Usage: node scripts/dev/compare-mon3-binary.mjs [source.z80] [reference.bin]',
     '',
     `Default source: ${defaultSource}`,
-    `Default reference: ${defaultReference}`,
+    'Default reference: fresh asm80 build from the same source tree',
+    'Set ASM80 or ASM80_PATH to choose the asm80 executable.',
   ].join('\n');
 }
 
@@ -63,6 +65,10 @@ function summarizeBinaryMismatch(actual, reference) {
   return lines.join('\n');
 }
 
+function normalizeExecutableCandidate(candidate) {
+  return candidate.includes('/') || candidate.includes('\\') ? resolve(candidate) : candidate;
+}
+
 async function loadCompiler() {
   const compilePath = resolve(repoRoot, 'dist', 'src', 'compile.js');
   const formatsPath = resolve(repoRoot, 'dist', 'src', 'formats', 'index.js');
@@ -77,6 +83,60 @@ async function loadCompiler() {
   return { compile, defaultFormatWriters };
 }
 
+function findAsm80() {
+  const candidates = [
+    process.env.ASM80,
+    process.env.ASM80_PATH,
+    '/Users/johnhardy/Documents/projects/debug80/node_modules/.bin/asm80',
+    'asm80',
+  ]
+    .filter((candidate) => candidate && candidate.trim().length > 0)
+    .map(normalizeExecutableCandidate);
+  for (const candidate of candidates) {
+    const probe = spawnSync(candidate, ['-h'], { encoding: 'utf8' });
+    if (!probe.error) return candidate;
+  }
+  return undefined;
+}
+
+function copyAsm80SourceTree(source, outDir) {
+  for (const entry of readdirSync(dirname(source))) {
+    if (entry.toLowerCase().endsWith('.z80')) {
+      copyFileSync(join(dirname(source), entry), join(outDir, entry));
+    }
+  }
+}
+
+function buildAsm80Reference(source, asm80) {
+  const outDir = mkdtempSync(join(tmpdir(), 'zax-mon3-asm80-reference-'));
+  const outName = 'mon3-reference.bin';
+  const outBin = join(outDir, outName);
+  try {
+    copyAsm80SourceTree(source, outDir);
+    const result = spawnSync(
+      asm80,
+      ['-m', 'Z80', '-t', 'bin', '-o', outName, basename(source)],
+      {
+        cwd: outDir,
+        encoding: 'utf8',
+      },
+    );
+    if (result.error) throw result.error;
+    if (result.status !== 0) {
+      throw new Error(
+        [
+          `asm80 failed with status ${result.status}`,
+          result.stdout.trim(),
+          result.stderr.trim(),
+        ].filter((part) => part.length > 0).join('\n'),
+      );
+    }
+    return readFileSync(outBin);
+  } finally {
+    rmSync(outDir, { recursive: true, force: true });
+  }
+}
+
 async function main(argv) {
   if (argv.includes('--help') || argv.includes('-h')) {
     console.log(usage());
@@ -88,9 +148,11 @@ async function main(argv) {
   }
 
   const source = argv[0] ?? defaultSource;
-  const referencePath = argv[1] ?? defaultReference;
+  const referencePath = argv[1];
   if (!existsSync(source)) throw new Error(`MON3 source not found: ${source}`);
-  if (!existsSync(referencePath)) throw new Error(`Reference binary not found: ${referencePath}`);
+  if (referencePath !== undefined && !existsSync(referencePath)) {
+    throw new Error(`Reference binary not found: ${referencePath}`);
+  }
 
   const { compile, defaultFormatWriters } = await loadCompiler();
   const res = await compile(
@@ -110,7 +172,14 @@ async function main(argv) {
   if (!bin) throw new Error('Compiler did not emit a bin artifact.');
 
   const actual = Buffer.from(bin.bytes);
-  const reference = readFileSync(referencePath);
+  let reference;
+  if (referencePath !== undefined) {
+    reference = readFileSync(referencePath);
+  } else {
+    const asm80 = findAsm80();
+    if (!asm80) throw new Error('asm80 executable not found. Set ASM80 or ASM80_PATH.');
+    reference = buildAsm80Reference(source, asm80);
+  }
   console.log(summarizeBinaryMismatch(actual, reference));
   return actual.length === reference.length && findFirstMismatch(actual, reference) === -1 ? 0 : 1;
 }
