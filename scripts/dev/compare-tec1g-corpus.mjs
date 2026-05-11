@@ -100,11 +100,9 @@ function runAsm80(source, asm80) {
   const listingPath = join(workDir, `${basename(source, '.z80')}.lst`);
   try {
     copyFileSync(source, join(workDir, sourceName));
-    const result = run(
-      asm80,
-      ['-m', 'Z80', '-t', 'bin', '-o', outName, sourceName],
-      { cwd: workDir },
-    );
+    const result = run(asm80, ['-m', 'Z80', '-t', 'bin', '-o', outName, sourceName], {
+      cwd: workDir,
+    });
     if (result.error) return { ok: false, message: result.error.message };
     if (result.status !== 0) return { ok: false, message: compactError(result) };
     const bytes = readFileSync(join(workDir, outName));
@@ -119,7 +117,17 @@ function runZax(source, outDir) {
   const outPath = join(outDir, `${basename(source, '.z80')}.bin`);
   const result = run(
     process.execPath,
-    [join(repoRoot, 'dist', 'src', 'cli.js'), '--nolist', '--nohex', '--nod8m', '-t', 'bin', '-o', outPath, source],
+    [
+      join(repoRoot, 'dist', 'src', 'cli.js'),
+      '--nolist',
+      '--nohex',
+      '--nod8m',
+      '-t',
+      'bin',
+      '-o',
+      outPath,
+      source,
+    ],
     { cwd: repoRoot },
   );
   if (result.error) return { ok: false, message: result.error.message };
@@ -149,6 +157,13 @@ function hex(value, width = 4) {
   return `0x${value.toString(16).padStart(width, '0')}`;
 }
 
+function byteWindow(bytes, center, radius = 4) {
+  if (center === undefined || center < 0) return '[]';
+  const start = Math.max(0, center - radius);
+  const end = Math.min(bytes.length, center + radius + 1);
+  return `[${Array.from(bytes.subarray(start, end), (byte) => hex(byte, 2)).join(' ')}]`;
+}
+
 function comparableAsm80Bytes(asm) {
   return asm.bytes;
 }
@@ -159,8 +174,21 @@ function compareBytes(actual, asm) {
   if (mismatch < 0) return `match bytes=${actual.length}`;
   const actualByte = actual[mismatch];
   const referenceByte = comparableReference[mismatch];
-  const range = asm.range ? ` range=${hex(asm.range.start)}..${hex(Math.max(asm.range.start, asm.range.end) - 1)}` : '';
-  return `mismatch actual=${actual.length} reference=${comparableReference.length}${range} first=${hex(mismatch)} zax=${actualByte === undefined ? 'EOF' : hex(actualByte, 2)} asm80=${referenceByte === undefined ? 'EOF' : hex(referenceByte, 2)}`;
+  const range = asm.range
+    ? ` range=${hex(asm.range.start)}..${hex(Math.max(asm.range.start, asm.range.end) - 1)}`
+    : '';
+  return [
+    `mismatch actual=${actual.length} reference=${comparableReference.length}`,
+    `lengthDelta=${actual.length - comparableReference.length}`,
+    range.trim(),
+    `first=${hex(mismatch)}`,
+    `zax=${actualByte === undefined ? 'EOF' : hex(actualByte, 2)}`,
+    `asm80=${referenceByte === undefined ? 'EOF' : hex(referenceByte, 2)}`,
+    `zaxWindow=${byteWindow(actual, mismatch)}`,
+    `asm80Window=${byteWindow(comparableReference, mismatch)}`,
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 function main(argv) {
@@ -194,7 +222,8 @@ function main(argv) {
       const rel = relative(root, source);
       const asm = runAsm80(source, asm80);
       const zax = runZax(source, zaxOut);
-      const matched = asm.ok && zax.ok && findFirstMismatch(zax.bytes, comparableAsm80Bytes(asm)) < 0;
+      const matched =
+        asm.ok && zax.ok && findFirstMismatch(zax.bytes, comparableAsm80Bytes(asm)) < 0;
       if (!matched) failures++;
       const status =
         asm.ok && zax.ok

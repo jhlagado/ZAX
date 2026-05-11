@@ -24,4 +24,43 @@ describe('ASM80 baseline acceptance workflow', () => {
     expect(doc).toContain('MON3');
     expect(doc).toContain('TEC-1G');
   });
+
+  it('documents local path overrides for the external baseline', () => {
+    const doc = readFileSync(
+      join(repoRoot, 'docs', 'reference', 'testing-verification-guide.md'),
+      'utf8',
+    );
+
+    expect(doc).toContain('MON3_SOURCE');
+    expect(doc).toContain('TEC1G_SOFTWARE_ROOT');
+    expect(doc).toContain('ASM80');
+  });
+
+  it('wires the baseline wrapper to the documented override variables', () => {
+    const script = readFileSync(join(repoRoot, 'scripts', 'dev', 'run-asm80-baseline.mjs'), 'utf8');
+
+    expect(script).toContain('process.env.MON3_SOURCE');
+    expect(script).toContain('process.env.TEC1G_SOFTWARE_ROOT');
+    expect(script).toContain('process.env.ASM80');
+  });
+
+  it('wires the MON3 acceptance test to the documented source override', () => {
+    const testSource = readFileSync(
+      join(repoRoot, 'test', 'asm80', 'mon3_acceptance.test.ts'),
+      'utf8',
+    );
+
+    expect(testSource).toContain('process.env.MON3_SOURCE');
+  });
+
+  it('keeps TEC-1G mismatch diagnostics source and byte focused', () => {
+    const script = readFileSync(
+      join(repoRoot, 'scripts', 'dev', 'compare-tec1g-corpus.mjs'),
+      'utf8',
+    );
+
+    expect(script).toContain('lengthDelta=');
+    expect(script).toContain('zaxWindow=');
+    expect(script).toContain('asm80Window=');
+  });
 });

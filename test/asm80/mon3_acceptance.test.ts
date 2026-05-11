@@ -18,7 +18,7 @@ const classicParserPath = join(repoRoot, 'src', 'frontend', 'asm80', 'parseClass
 const classicAsm80Available = existsSync(classicParserPath);
 const classicModuleLoweringAvailable = true;
 const manifest = {
-  source: '/Users/johnhardy/Documents/projects/MON3/src/mon3.z80',
+  source: process.env.MON3_SOURCE ?? '/Users/johnhardy/Documents/projects/MON3/src/mon3.z80',
 };
 
 function normalizeExecutableCandidate(candidate: string): string {
@@ -31,7 +31,9 @@ const asm80Candidates = [
   '/Users/johnhardy/Documents/projects/debug80/node_modules/.bin/asm80',
   'asm80',
 ]
-  .filter((candidate): candidate is string => candidate !== undefined && candidate.trim().length > 0)
+  .filter(
+    (candidate): candidate is string => candidate !== undefined && candidate.trim().length > 0,
+  )
   .map(normalizeExecutableCandidate);
 const asm80 = asm80Candidates.find((candidate) => {
   const probe = spawnSync(candidate, ['-h'], { encoding: 'utf8' });
@@ -40,7 +42,11 @@ const asm80 = asm80Candidates.find((candidate) => {
 const mon3FilesAvailable = existsSync(manifest.source);
 const runMon3Acceptance = process.env.ZAX_RUN_MON3_ACCEPTANCE === '1';
 const describeMon3 =
-  classicAsm80Available && classicModuleLoweringAvailable && mon3FilesAvailable && asm80 && runMon3Acceptance
+  classicAsm80Available &&
+  classicModuleLoweringAvailable &&
+  mon3FilesAvailable &&
+  asm80 &&
+  runMon3Acceptance
     ? describe
     : describe.skip;
 
@@ -58,14 +64,18 @@ function diagnosticLocation(diagnostic: Diagnostic): string {
 }
 
 function summarizeDiagnostics(diagnostics: Diagnostic[], limit = 3): string {
-  const preview = diagnostics.slice(0, limit).map((diagnostic) =>
-    `${diagnosticLocation(diagnostic)}: ${diagnostic.severity} [${diagnostic.id}] ${
-      diagnostic.message
-    }`,
-  );
-  return [`Diagnostics preview (showing ${preview.length} of ${diagnostics.length}):`, ...preview].join(
-    '\n',
-  );
+  const preview = diagnostics
+    .slice(0, limit)
+    .map(
+      (diagnostic) =>
+        `${diagnosticLocation(diagnostic)}: ${diagnostic.severity} [${diagnostic.id}] ${
+          diagnostic.message
+        }`,
+    );
+  return [
+    `Diagnostics preview (showing ${preview.length} of ${diagnostics.length}):`,
+    ...preview,
+  ].join('\n');
 }
 
 function findFirstMismatch(actual: Buffer, reference: Buffer): number {
@@ -106,22 +116,16 @@ function buildAsm80Reference(source: string): Buffer {
   const outBin = join(outDir, outName);
   try {
     copyAsm80SourceTree(source, outDir);
-    const result = spawnSync(
-      asm80,
-      ['-m', 'Z80', '-t', 'bin', '-o', outName, basename(source)],
-      {
-        cwd: outDir,
-        encoding: 'utf8',
-      },
-    );
+    const result = spawnSync(asm80, ['-m', 'Z80', '-t', 'bin', '-o', outName, basename(source)], {
+      cwd: outDir,
+      encoding: 'utf8',
+    });
     if (result.error) throw result.error;
     if (result.status !== 0) {
       throw new Error(
-        [
-          `asm80 failed with status ${result.status}`,
-          result.stdout.trim(),
-          result.stderr.trim(),
-        ].filter((part) => part.length > 0).join('\n'),
+        [`asm80 failed with status ${result.status}`, result.stdout.trim(), result.stderr.trim()]
+          .filter((part) => part.length > 0)
+          .join('\n'),
       );
     }
     return readFileSync(outBin);
@@ -174,7 +178,9 @@ describe('MON3 acceptance failure summaries', () => {
       ].join('\n'),
     );
 
-    expect(summarizeBinaryMismatch(Buffer.from([0x00, 0x02]), Buffer.from([0x00, 0x01, 0x03]))).toBe(
+    expect(
+      summarizeBinaryMismatch(Buffer.from([0x00, 0x02]), Buffer.from([0x00, 0x01, 0x03])),
+    ).toBe(
       'Binary length: actual=2 reference=3\nFirst mismatch @0x0001: actual=0x02 reference=0x01',
     );
   });
@@ -204,7 +210,19 @@ describeMon3('ASM80 MON3 acceptance', () => {
   });
 });
 
-if (!classicAsm80Available || !classicModuleLoweringAvailable) {
+if (runMon3Acceptance && !mon3FilesAvailable) {
+  describe('ASM80 MON3 acceptance', () => {
+    it('requires the local MON3 source when opt-in acceptance is enabled', () => {
+      throw new Error(`MON3 source is unavailable: ${manifest.source}`);
+    });
+  });
+} else if (runMon3Acceptance && !asm80) {
+  describe('ASM80 MON3 acceptance', () => {
+    it('requires asm80 when opt-in acceptance is enabled', () => {
+      throw new Error('asm80 executable is unavailable. Set ASM80 or ASM80_PATH.');
+    });
+  });
+} else if (!classicAsm80Available || !classicModuleLoweringAvailable) {
   describe('ASM80 MON3 acceptance', () => {
     it.todo('BLOCKED: enable when classic ASM80 module parsing/lowering is wired into compile()');
   });
