@@ -3,16 +3,16 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { compile } from '../src/compile.js';
-import { defaultFormatWriters } from '../src/formats/index.js';
-import type { BinArtifact } from '../src/formats/types.js';
+import { compile } from '../../src/compile.js';
+import { defaultFormatWriters } from '../../src/formats/index.js';
+import type { BinArtifact } from '../../src/formats/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 describe('PR135 ZAX-mode JR/DJNZ displacement operands', () => {
   it('keeps numeric JR and DJNZ operands as rel8 displacements in ZAX mode', async () => {
-    const entry = join(__dirname, 'fixtures', 'pr135_isa_jr_djnz.zax');
+    const entry = join(__dirname, '..', 'fixtures', 'pr135_isa_jr_djnz.zax');
     const res = await compile(entry, {}, { formats: defaultFormatWriters });
 
     expect(res.diagnostics.filter((diagnostic) => diagnostic.severity === 'error')).toEqual([]);

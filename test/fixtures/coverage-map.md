@@ -900,7 +900,7 @@ Excluded from the main fixture inventory (`.keep`, `.gitkeep`).
 | pr1349_ld_indirect_bc_store.zax |  |
 | pr1349_ld_indirect_de_store.zax |  |
 | pr135_isa_jr_djnz_invalid.zax |  |
-| pr135_isa_jr_djnz.zax | test/pr135_isa_jr_djnz.test.ts |
+| pr135_isa_jr_djnz.zax | test/backend/pr135_isa_jr_djnz.test.ts |
 | pr136_bit_indexed_dest_invalid.zax | test/pr136_bit_indexed_dest_invalid.test.ts |
 | pr1367_op_port_imm_substitution.zax | test/lowering/pr1367_op_port_imm_substitution.test.ts |
 | pr137_cb_rotate_two_operand_invalid.zax | test/pr137_cb_rotate_two_operand_invalid.test.ts |
