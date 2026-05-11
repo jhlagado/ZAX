@@ -49,6 +49,13 @@ revisited, the preferred direction is to translate the specific behavior into a
 ZAX `ops`-style facility or a narrow assembler directive, not to implement the
 ASM80 text macro system.
 
+## Matrix Delta
+
+TEC-1G extends the central compatibility matrix with undotted directives,
+`.binto`, `DS count,fill`, `0xNN` literals, no-`.end` sources, no-`.org`
+sources that start at zero, `SRA A`, and absolute register stores such as
+`LD (addr),HL`.
+
 ## Added Coverage
 
 Compared with the MON3 baseline, the TEC-1G non-macro corpus adds useful

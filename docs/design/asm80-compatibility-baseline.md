@@ -55,6 +55,18 @@ The primary corpus is large enough to define the first practical subset:
 10,865 lines on the recursive build path, with normal labels, equates, raw
 data, includes, expressions, placement, and a broad set of Z80 opcodes.
 
+## Compatibility matrix
+
+| Area                     | Covered                                                                                                                                                    | Source of coverage                                 | Explicitly excluded or deferred                                      |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------------------------- |
+| Source mode              | `.z80` and `.asm` classic ASM80 mode; `.zax` unchanged                                                                                                     | MON3, TEC-1G, `test/asm80/mon3_acceptance.test.ts` | Full ASM80 clone mode                                                |
+| Labels and equates       | Colon labels, label plus statement, `NAME: .equ`, `NAME .equ`, undotted `EQU`                                                                              | MON3, TEC-1G                                       | Macro-local and text-substitution label semantics                    |
+| Literals and expressions | Trailing `H`/`B`, `0xNN`, `$`, `+ - * /`, parentheses, one-character strings                                                                               | MON3, TEC-1G, directive tests                      | Broad ASM80 expression extensions unless corpus-driven               |
+| Data and directives      | `.org`, `.include`, `.db`, `.dw`, `.ds`, `.align`, `.cstr`, `.pstr`, `.istr`, `.binfrom`, `.binto`, `.end`; dotted, undotted, and mixed case where covered | MON3, TEC-1G, ASM80 directive/string/align tests   | `DUP`, `.incbin`, `.set`, segments, `.pragma`, `.ent`                |
+| Z80 syntax               | Ordinary MON3 instruction heads and operand/addressing forms; TEC-1G additions such as `SRA A` and `LD (addr),HL`                                          | MON3 audit, TEC-1G audit, opcode gap tests         | Instruction forms absent from real corpora do not block the baseline |
+| Includes and output      | Relative quoted includes, included-file diagnostics, post-`.end` `.binfrom`/`.binto`, no-`.org` sources starting at zero                                   | MON3, TEC-1G, directive and CLI diagnostics tests  | `.include file:block`                                                |
+| Baseline corpora         | MON3 recursive tree as the primary corpus; TEC-1G non-macro corpus as the secondary corpus                                                                 | `npm run test:asm80:baseline`                      | Macro-bearing TEC-1G `Education/tbasic.z80`                          |
+
 ## Required syntax
 
 The first compatibility level requires:
@@ -117,19 +129,19 @@ them and they do not undermine the assembler-first ZAX direction.
 Where ZAX and ASM80 already cover the same raw assembler concept, prefer the
 ASM80 spelling for the assembler-facing surface:
 
-| Concept | Preferred assembler spelling |
-|---|---|
-| source inclusion | `.include "file"` |
-| raw equate | `NAME: .equ expr` or `NAME .equ expr` |
-| placement | `.org expr` |
-| raw bytes | `.db expr, ...` |
-| raw words | `.dw expr, ...` |
-| reserve bytes | `.ds size` |
-| alignment | `.align expr` |
-| C string | `.cstr "text"` |
-| Pascal string | `.pstr "text"` |
-| high-bit terminated string | `.istr "text"` |
-| binary start | `.binfrom expr` |
+| Concept                    | Preferred assembler spelling          |
+| -------------------------- | ------------------------------------- |
+| source inclusion           | `.include "file"`                     |
+| raw equate                 | `NAME: .equ expr` or `NAME .equ expr` |
+| placement                  | `.org expr`                           |
+| raw bytes                  | `.db expr, ...`                       |
+| raw words                  | `.dw expr, ...`                       |
+| reserve bytes              | `.ds size`                            |
+| alignment                  | `.align expr`                         |
+| C string                   | `.cstr "text"`                        |
+| Pascal string              | `.pstr "text"`                        |
+| high-bit terminated string | `.istr "text"`                        |
+| binary start               | `.binfrom expr`                       |
 
 This does not make every ZAX construct obsolete. `const` remains a clean
 ZAX-level declaration, and typed storage, structured control, records, unions,
@@ -172,6 +184,49 @@ The secondary TEC-1G software corpus is tracked in
 `docs/design/asm80-tec1g-compatibility-audit.md`. It deliberately excludes
 sources containing `.macro`/`.endm`, and currently verifies 12 non-macro TEC-1G
 programs byte-for-byte against ASM80.
+
+## Baseline corpora and gates
+
+The standing local compatibility gate is:
+
+```sh
+npm run test:asm80:baseline
+```
+
+That command builds ZAX, runs the MON3 acceptance test, and compares the TEC-1G
+non-macro corpus against ASM80:
+
+- `scripts/dev/run-asm80-baseline.mjs`
+- `test/asm80/mon3_acceptance.test.ts`
+- `scripts/dev/compare-tec1g-corpus.mjs`
+
+The command defaults to the maintainer workspace layout. Override paths with
+`MON3_SOURCE`, `TEC1G_SOFTWARE_ROOT`, and `ASM80` or `ASM80_PATH` when running
+the gate from another checkout layout.
+
+## Candidate follow-up corpora
+
+Additional corpora should be added deliberately, one set at a time, and only
+after excluding Tiny Basic and files containing `.macro` or `.endm`.
+
+Recommended next candidates:
+
+- `/Users/johnhardy/Documents/projects/Software/monitors`
+- `/Users/johnhardy/Documents/projects/Software/games`
+- `/Users/johnhardy/Documents/projects/Software/magazine_code`
+- `/Users/johnhardy/Documents/projects/2024/TEC-1_Dev`
+- `/Users/johnhardy/Documents/projects/2024/asm80-node/test`
+
+The `Software` tree is the best next real-world expansion point, especially
+the monitor, game, and magazine-code directories. The `asm80-node/test` tree is
+better treated as targeted ASM80 compatibility pressure rather than as a
+handwritten application corpus, because it intentionally exercises features
+such as `.incbin`, `.ent`, segment pragmas, and `DEFB`/`DEFW`.
+
+Defer preprocessor-heavy corpora such as
+`/Users/johnhardy/Documents/projects/2024/z80float` until there is an explicit
+decision to support `#include`/`#define`-style source preprocessing and
+multi-statement line continuations.
 
 ## Acceptance threshold
 
