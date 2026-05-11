@@ -125,6 +125,26 @@ describe('classic ASM80 module parser', () => {
     ]);
   });
 
+  it('rejects non-baseline dialect aliases with canonical directive guidance', () => {
+    const diagnostics: { message: string }[] = [];
+    const module = parseClassicModule(
+      '/classic.z80',
+      ['bytes: DEFB 1,2', 'words: defw 1234H', 'buf: RMB 8'].join('\n'),
+      diagnostics as never[],
+    );
+
+    expect(module.items).toMatchObject([
+      { kind: 'AsmLabel', name: 'bytes' },
+      { kind: 'AsmLabel', name: 'words' },
+      { kind: 'AsmLabel', name: 'buf' },
+    ]);
+    expect(diagnostics.map((diagnostic) => diagnostic.message)).toEqual([
+      'DEFB is not part of the supported ASM80 baseline; use DB.',
+      'DEFW is not part of the supported ASM80 baseline; use DW.',
+      'RMB is not part of the supported ASM80 baseline; use DS.',
+    ]);
+  });
+
   it('does not let post-end string equates affect pre-end raw data', () => {
     const diagnostics: unknown[] = [];
     const module = parseClassicModule(

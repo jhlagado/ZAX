@@ -271,6 +271,63 @@ describe('asm80 directive lowering integration', () => {
     expect([...bin.bytes]).toEqual([0x28, 0x03, 0x10, 0xfe, 0x04, 0x01]);
   });
 
+  it('treats classic JR and DJNZ numeric operands as absolute targets', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-absolute-branches-'));
+    const entry = join(dir, 'absolute-branches.z80');
+    writeFileSync(
+      entry,
+      ['.org 0100H', 'jr 0104H', 'djnz 0106H', 'jr z,0108H', '.binfrom 0100H', '.end'].join('\n'),
+      'utf8',
+    );
+
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    if (!bin) throw new Error('missing bin artifact');
+    expect([...bin.bytes]).toEqual([0x18, 0x02, 0x10, 0x02, 0x28, 0x02]);
+  });
+
+  it('rejects out-of-range classic numeric relative branch targets', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-absolute-branch-oob-'));
+    const entry = join(dir, 'absolute-branch-oob.z80');
+    writeFileSync(entry, ['.org 0100H', 'jr 2', 'djnz 2', '.binfrom 0100H', '.end'].join('\n'), 'utf8');
+
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          severity: 'error',
+          message: expect.stringContaining('jr relative branch displacement out of range'),
+        }),
+        expect.objectContaining({
+          severity: 'error',
+          message: expect.stringContaining('djnz relative branch displacement out of range'),
+        }),
+      ]),
+    );
+  });
+
+  it('compiles classic dollar-prefixed hex and RST trailing-H operands', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-hex-rst-'));
+    const entry = join(dir, 'hex-rst.z80');
+    writeFileSync(
+      entry,
+      ['.org 0100H', 'cp $FE', 'rst 20H', '.binfrom 0100H', '.end'].join('\n'),
+      'utf8',
+    );
+
+    const res = await compile(entry, {}, { formats: defaultFormatWriters });
+
+    expect(res.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+    const bin = res.artifacts.find((a): a is BinArtifact => a.kind === 'bin');
+    expect(bin).toBeDefined();
+    if (!bin) throw new Error('missing bin artifact');
+    expect([...bin.bytes]).toEqual([0xfe, 0xfe, 0xe7]);
+  });
+
   it('compiles single-quoted character literals in raw words', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'zax-asm80-word-char-'));
     const entry = join(dir, 'word-char.z80');

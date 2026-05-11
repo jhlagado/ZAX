@@ -70,9 +70,13 @@ Preferred ASM80 forms:
 | ASM80-style raw constants | `Name: .equ expr` or `Name .equ expr` |
 | ZAX-level constants | `const Name = expr` remains a clean ZAX spelling |
 | `align expr` | `.align expr` |
-| `db` / `dw` / `ds` raw data | `.db` / `.dw` / `.ds`, with undotted aliases tolerated |
+| `db` / `dw` / `ds` raw data | `.db` / `.dw` / `.ds`, with undotted ASM80 forms tolerated |
 | low-level string blobs | `.cstr`, `.pstr`, `.istr` where those encodings are intended |
 | binary output trim/start controls | `.binfrom` and later `.binto` |
+
+This tolerance is limited to the canonical ASM80 spellings already in the
+baseline. Dialect aliases such as `DEFB`, `DEFW`, and `RMB` should be
+normalized to `.db`, `.dw`, and `.ds` before ZAX sees the source.
 
 ZAX-only forms remain justified when they carry typed language semantics:
 

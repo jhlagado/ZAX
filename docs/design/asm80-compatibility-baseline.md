@@ -62,7 +62,7 @@ data, includes, expressions, placement, and a broad set of Z80 opcodes.
 | Source mode              | `.z80` and `.asm` classic ASM80 mode; `.zax` unchanged                                                                                                     | MON3, TEC-1G, `test/asm80/mon3_acceptance.test.ts` | Full ASM80 clone mode                                                |
 | Labels and equates       | Colon labels, label plus statement, `NAME: .equ`, `NAME .equ`, undotted `EQU`                                                                              | MON3, TEC-1G                                       | Macro-local and text-substitution label semantics                    |
 | Literals and expressions | Trailing `H`/`B`, `0xNN`, `$`, `+ - * /`, parentheses, one-character strings                                                                               | MON3, TEC-1G, directive tests                      | Broad ASM80 expression extensions unless corpus-driven               |
-| Data and directives      | `.org`, `.include`, `.db`, `.dw`, `.ds`, `.align`, `.cstr`, `.pstr`, `.istr`, `.binfrom`, `.binto`, `.end`; dotted, undotted, and mixed case where covered | MON3, TEC-1G, ASM80 directive/string/align tests   | `DUP`, `.incbin`, `.set`, segments, `.pragma`, `.ent`                |
+| Data and directives      | `.org`, `.include`, `.db`, `.dw`, `.ds`, `.align`, `.cstr`, `.pstr`, `.istr`, `.binfrom`, `.binto`, `.end`; dotted, undotted, and mixed case where covered | MON3, TEC-1G, ASM80 directive/string/align tests   | dialect aliases such as `DEFB`/`DEFW`/`RMB`, `DUP`, `.incbin`, `.set`, segments, `.pragma`, `.ent` |
 | Z80 syntax               | Ordinary MON3 instruction heads and operand/addressing forms; TEC-1G additions such as `SRA A` and `LD (addr),HL`                                          | MON3 audit, TEC-1G audit, opcode gap tests         | Instruction forms absent from real corpora do not block the baseline |
 | Includes and output      | Relative quoted includes, included-file diagnostics, post-`.end` `.binfrom`/`.binto`, no-`.org` sources starting at zero                                   | MON3, TEC-1G, directive and CLI diagnostics tests  | `.include file:block`                                                |
 | Baseline corpora         | MON3 recursive tree as the primary corpus; TEC-1G non-macro corpus as the secondary corpus                                                                 | `npm run test:asm80:baseline`                      | Macro-bearing TEC-1G `Education/tbasic.z80`                          |
@@ -113,6 +113,8 @@ Do not implement these for the first compatibility level:
 - text-substitution macro semantics
 - non-Z80 processor compatibility
 - broad ASM80 directive coverage not used by MON3 or selected follow-up samples
+- dialect directive aliases such as `DEFB`, `DEFW`, and `RMB`; normalize
+  imported source to `DB`, `DW`, and `DS` before assembly instead
 - VS Code extension work or LSP/language-server integration
 - Debug80 workflow integration beyond compatibility reference checks
 
@@ -149,6 +151,9 @@ modules, OPS, and other higher-level features remain ZAX extensions.
 
 The rule is narrower: raw assembler concepts should not force users to learn a
 second ZAX spelling when the ASM80 spelling is already familiar and adequate.
+For byte, word, and reserve directives, the canonical assembler surface is
+`DB`/`.db`, `DW`/`.dw`, and `DS`/`.ds`. Dialect aliases should be source
+normalization inputs, not additional ZAX core directive names.
 
 ## Current implementation status
 
@@ -219,9 +224,10 @@ Recommended next candidates:
 
 The `Software` tree is the best next real-world expansion point, especially
 the monitor, game, and magazine-code directories. The `asm80-node/test` tree is
-better treated as targeted ASM80 compatibility pressure rather than as a
-handwritten application corpus, because it intentionally exercises features
-such as `.incbin`, `.ent`, segment pragmas, and `DEFB`/`DEFW`.
+better treated as targeted compatibility pressure rather than as a handwritten
+application corpus, because it intentionally exercises features such as
+`.incbin`, `.ent`, and segment pragmas. Dialect aliases such as `DEFB`/`DEFW`
+belong in a source-normalization layer if those files are used.
 
 The Software-tree audit is tracked separately in
 `docs/design/asm80-software-compatibility-audit.md`. It is not part of the
