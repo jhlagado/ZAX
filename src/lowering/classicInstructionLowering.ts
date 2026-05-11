@@ -217,6 +217,32 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
     ctx.emitRawCodeBytes(Uint8Array.of(opcode, displacement & 0xff), item.span.file, `${head} ${displacement}`);
     return true;
   };
+  const emitRelativeAbsoluteTarget = (
+    opcode: number,
+    targetExpr: ImmExprNode,
+  ): boolean => {
+    const current = currentActiveAddress(ctx);
+    if (current === undefined) {
+      ctx.diag(ctx.diagnostics, item.span.file, `Failed to evaluate current location.`);
+      return true;
+    }
+    const target = evalClassicImmAtCurrent(ctx, targetExpr, current);
+    if (target === undefined) {
+      ctx.diag(ctx.diagnostics, item.span.file, `Failed to evaluate ${head} target.`);
+      return true;
+    }
+    const displacement = target - (current + 2);
+    if (displacement < -128 || displacement > 127) {
+      ctx.diag(
+        ctx.diagnostics,
+        item.span.file,
+        `${head} relative branch displacement out of range (-128..127): ${displacement}.`,
+      );
+      return true;
+    }
+    ctx.emitRawCodeBytes(Uint8Array.of(opcode, displacement & 0xff), item.span.file, `${head} ${displacement}`);
+    return true;
+  };
 
   if (head === 'djnz' && item.operands.length === 1 && first?.kind === 'Imm') {
     if (emitRelativeCurrentTarget(0x10, first.expr)) return;
@@ -225,6 +251,7 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
       ctx.emitRel8Fixup(0x10, symbolic.baseLower, symbolic.addend, item.span, 'djnz');
       return;
     }
+    if (emitRelativeAbsoluteTarget(0x10, first.expr)) return;
   }
   if (head === 'jr' && item.operands.length === 1 && first?.kind === 'Imm') {
     if (emitRelativeCurrentTarget(0x18, first.expr)) return;
@@ -233,6 +260,7 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
       ctx.emitRel8Fixup(0x18, symbolic.baseLower, symbolic.addend, item.span, 'jr');
       return;
     }
+    if (emitRelativeAbsoluteTarget(0x18, first.expr)) return;
   }
   if (head === 'jr' && item.operands.length === 2) {
     const cc =
@@ -250,6 +278,7 @@ export function lowerClassicInstruction(ctx: LoweringContext, item: ClassicInstr
         ctx.emitRel8Fixup(opcode, symbolic.baseLower, symbolic.addend, item.span, `jr ${cc}`);
         return;
       }
+      if (emitRelativeAbsoluteTarget(opcode, target.expr)) return;
     }
   }
   if (head === 'call') {

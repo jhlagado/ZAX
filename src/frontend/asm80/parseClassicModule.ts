@@ -7,6 +7,7 @@ import type {
   ModuleFileNode,
 } from '../ast.js';
 import { parseAsmInstruction } from '../parseAsmInstruction.js';
+import { parseDiag } from '../parseDiagnostics.js';
 import { parseImmExprFromText } from '../parseImm.js';
 import { makeSourceFile, type SourceFile, span } from '../source.js';
 import { parseClassicLine } from './classicLine.js';
@@ -136,6 +137,19 @@ function splitTopLevelComma(text: string): string[] {
   return parts;
 }
 
+function canonicalDirectiveForRejectedAlias(head: string): string | undefined {
+  switch (head.toLowerCase()) {
+    case 'defb':
+      return 'DB';
+    case 'defw':
+      return 'DW';
+    case 'rmb':
+      return 'DS';
+    default:
+      return undefined;
+  }
+}
+
 export function parseClassicModule(
   path: string,
   sourceText: string,
@@ -178,6 +192,17 @@ export function parseClassicModule(
       case 'instruction': {
         if (parsed.label) {
           items.push({ kind: 'AsmLabel', span: lineSpan, name: parsed.label });
+        }
+        const canonicalDirective = canonicalDirectiveForRejectedAlias(parsed.head);
+        if (canonicalDirective) {
+          parseDiag(
+            _diagnostics,
+            linePath,
+            `${parsed.head.toUpperCase()} is not part of the supported ASM80 baseline; use ${canonicalDirective}.`,
+            { line: index + 1, column: raw.indexOf(parsed.head) + 1 },
+          );
+          pendingRawLabel = undefined;
+          break;
         }
         const instruction = parseAsmInstruction(
           linePath,
