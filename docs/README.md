@@ -15,6 +15,10 @@ This directory is intentionally constrained. Every file below has a unique purpo
 
 - `ZAX-quick-guide.md`
   - Practical, chaptered user guide for day-to-day authoring.
+- `zax-book/`
+  - Full Learn ZAX Assembly course for programmers learning Z80 assembly through ZAX.
+- `zax-codebase/`
+  - Engineering manual for understanding, modifying, and extending the ZAX compiler.
 
 ## 3. Core Supporting References (Non-normative)
 
